@@ -1,0 +1,7 @@
+[gd_resource type="BoxMesh" load_steps=2 format=3 uid="uid://d20y4o6chy4mv"]
+
+[ext_resource type="Material" uid="uid://cvqmwnoov1v3h" path="res://Materials/flat_blue.tres" id="1_3ldk0"]
+
+[resource]
+resource_local_to_scene = true
+material = ExtResource("1_3ldk0")

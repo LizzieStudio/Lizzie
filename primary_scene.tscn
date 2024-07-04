@@ -1,0 +1,168 @@
+[gd_scene load_steps=21 format=3 uid="uid://caj4d7v430lhp"]
+
+[ext_resource type="Script" path="res://primary_scene.gd" id="1_ugmt5"]
+[ext_resource type="Script" path="res://Button.gd" id="1_yknp3"]
+[ext_resource type="Texture2D" uid="uid://cx7rrsbwfgw18" path="res://icon.svg" id="2_mvq54"]
+[ext_resource type="PackedScene" uid="uid://8ts0q3rup6h6" path="res://Scenes/table.tscn" id="4_s0yfi"]
+[ext_resource type="Script" path="res://Scripts/CameraController.cs" id="4_vrwqs"]
+[ext_resource type="Shader" path="res://Shaders/outline.gdshader" id="5_i1q0c"]
+[ext_resource type="Script" path="res://Scripts/Pickable.cs" id="5_xvap2"]
+[ext_resource type="BoxMesh" uid="uid://cg48h6bmt0vtd" path="res://Materials/red_cube.tres" id="7_c471e"]
+[ext_resource type="Material" uid="uid://c4qm7vo3ytfm4" path="res://Materials/flat_red.tres" id="7_yhoxj"]
+[ext_resource type="BoxMesh" uid="uid://d20y4o6chy4mv" path="res://Materials/blue_cube.tres" id="9_h4ht7"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_3udfo"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_jsd5h"]
+resource_local_to_scene = true
+material = ExtResource("7_yhoxj")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_gp8e6"]
+render_priority = 0
+shader = ExtResource("5_i1q0c")
+shader_parameter/outline_color = Color(0.898039, 0, 0, 1)
+shader_parameter/outline_width = 2.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_tnlsr"]
+material = SubResource("ShaderMaterial_gp8e6")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_l5emf"]
+size = Vector3(0.5, 3, 0.5)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_w06jb"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
+resource_local_to_scene = true
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_go1qh"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_at6bq"]
+
+[node name="PrimaryScene" type="Node3D"]
+script = ExtResource("1_ugmt5")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="Button" type="Button" parent="CanvasLayer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -38.5
+offset_top = -15.5
+offset_right = 38.5
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Load File"
+script = ExtResource("1_yknp3")
+
+[node name="FileDialog" type="FileDialog" parent="."]
+title = "Open a File"
+initial_position = 2
+size = Vector2i(340, 500)
+ok_button_text = "Open"
+file_mode = 0
+access = 2
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0.930368, 0.265167, 0)
+texture = ExtResource("2_mvq54")
+
+[node name="Table" parent="." instance=ExtResource("4_s0yfi")]
+collision_layer = 1
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.819202, 0, 0.573505, -0.353913, 0.786881, 0.505533, -0.45128, -0.617105, 0.644615, 0, 0, 1.7548)
+
+[node name="CameraBase" type="Node3D" parent="."]
+script = ExtResource("4_vrwqs")
+PitchSpeed = 2.0
+YawSpeed = 2.0
+ZoomSpeed = 30.0
+PanSpeed = 0.1
+
+[node name="Camera3D" type="Camera3D" parent="CameraBase"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+fov = 73.6372
+
+[node name="GameObjects" type="Node" parent="."]
+
+[node name="Cube" type="RigidBody3D" parent="GameObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+physics_material_override = SubResource("PhysicsMaterial_3udfo")
+max_contacts_reported = 5
+contact_monitor = true
+script = ExtResource("5_xvap2")
+Name = "Red"
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/Cube"]
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_jsd5h")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Cube"]
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_tnlsr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Cube"]
+shape = SubResource("BoxShape3D_l5emf")
+
+[node name="Cube2" type="RigidBody3D" parent="GameObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 2.27959)
+physics_material_override = SubResource("PhysicsMaterial_w06jb")
+max_contacts_reported = 5
+contact_monitor = true
+script = ExtResource("5_xvap2")
+Name = "Blue"
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/Cube2"]
+mesh = ExtResource("9_h4ht7")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Cube2"]
+mesh = SubResource("BoxMesh_tnlsr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Cube2"]
+shape = SubResource("BoxShape3D_mvaa4")
+
+[node name="Cube3" type="RigidBody3D" parent="GameObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -3.06632)
+physics_material_override = SubResource("PhysicsMaterial_go1qh")
+max_contacts_reported = 5
+contact_monitor = true
+script = ExtResource("5_xvap2")
+Name = "White"
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/Cube3"]
+mesh = ExtResource("7_c471e")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Cube3"]
+mesh = SubResource("BoxMesh_tnlsr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Cube3"]
+shape = SubResource("BoxShape3D_mvaa4")
+
+[node name="DragNode" type="Node3D" parent="."]
+
+[node name="DragPlane" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+collision_layer = 4
+collision_mask = 4
+input_ray_pickable = false
+physics_material_override = SubResource("PhysicsMaterial_b00ve")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DragPlane"]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("WorldBoundaryShape3D_at6bq")
+
+[connection signal="pressed" from="CanvasLayer/Button" to="CanvasLayer/Button" method="_on_pressed"]
+[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
+[connection signal="mouse_entered" from="GameObjects/Cube" to="GameObjects/Cube" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="GameObjects/Cube" to="GameObjects/Cube" method="_on_mouse_exited"]
+[connection signal="mouse_entered" from="GameObjects/Cube2" to="GameObjects/Cube2" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="GameObjects/Cube2" to="GameObjects/Cube2" method="_on_mouse_exited"]
+[connection signal="mouse_entered" from="GameObjects/Cube3" to="GameObjects/Cube3" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="GameObjects/Cube3" to="GameObjects/Cube3" method="_on_mouse_exited"]

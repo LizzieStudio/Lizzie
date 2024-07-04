@@ -1,0 +1,32 @@
+[gd_scene load_steps=2 format=3 uid="uid://caj4d7v430lhp"]
+
+[ext_resource type="Script" path="res://Button.gd" id="1_yknp3"]
+
+[node name="PrimaryScene" type="Node3D"]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Button" type="Button" parent="CanvasLayer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -38.5
+offset_top = -15.5
+offset_right = 38.5
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Load File"
+script = ExtResource("1_yknp3")
+
+[node name="FileDialog" type="FileDialog" parent="CanvasLayer"]
+title = "Open a File"
+initial_position = 2
+size = Vector2i(275, 159)
+visible = true
+ok_button_text = "Open"
+file_mode = 0
+
+[connection signal="pressed" from="CanvasLayer/Button" to="CanvasLayer/Button" method="_on_pressed"]

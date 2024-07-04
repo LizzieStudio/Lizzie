@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3 uid="uid://bu2cehifhcovw"]
+
+[ext_resource type="Texture2D" uid="uid://cx7rrsbwfgw18" path="res://icon.svg" id="1_m16k1"]
+[ext_resource type="Script" path="res://2DTest.gd" id="1_pln44"]
+
+[node name="2dTest" type="Node2D"]
+script = ExtResource("1_pln44")
+
+[node name="FileDialog" type="FileDialog" parent="."]
+title = "Open a File"
+initial_position = 2
+size = Vector2i(500, 500)
+visible = true
+ok_button_text = "Open"
+file_mode = 0
+access = 2
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(243, 340)
+texture = ExtResource("1_m16k1")
+
+[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
