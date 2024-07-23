@@ -1,0 +1,176 @@
+[gd_scene load_steps=27 format=3 uid="uid://cowe0s13p72sk"]
+
+[ext_resource type="PackedScene" uid="uid://8ts0q3rup6h6" path="res://Scenes/table.tscn" id="1_5pgii"]
+[ext_resource type="Script" path="res://Scripts/CameraController.cs" id="2_cp28l"]
+[ext_resource type="Script" path="res://Scripts/Pickable.cs" id="3_kd3us"]
+[ext_resource type="Material" uid="uid://c4qm7vo3ytfm4" path="res://Materials/flat_red.tres" id="4_nmvt2"]
+[ext_resource type="Shader" path="res://Shaders/outline.gdshader" id="5_7nogy"]
+[ext_resource type="BoxMesh" uid="uid://d20y4o6chy4mv" path="res://Materials/blue_cube.tres" id="6_rk77l"]
+[ext_resource type="BoxMesh" uid="uid://cg48h6bmt0vtd" path="res://Materials/red_cube.tres" id="7_nxpdb"]
+[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="8_4vfu3"]
+[ext_resource type="Texture2D" uid="uid://jkpxes8koyxv" path="res://Textures/card_back.jpg" id="9_un3jw"]
+[ext_resource type="Script" path="res://Scripts/Pseudo2DCamera.cs" id="10_sm27h"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_3udfo"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_jsd5h"]
+resource_local_to_scene = true
+material = ExtResource("4_nmvt2")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_gp8e6"]
+render_priority = 0
+shader = ExtResource("5_7nogy")
+shader_parameter/outline_color = Color(0.898039, 0, 0, 1)
+shader_parameter/outline_width = 2.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_tnlsr"]
+material = SubResource("ShaderMaterial_gp8e6")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_l5emf"]
+size = Vector3(0.5, 3, 0.5)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_w06jb"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
+resource_local_to_scene = true
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_go1qh"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aoobi"]
+albedo_texture = ExtResource("8_4vfu3")
+
+[sub_resource type="QuadMesh" id="QuadMesh_xkr24"]
+material = SubResource("StandardMaterial3D_aoobi")
+size = Vector2(0.64, 0.89)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iw286"]
+albedo_texture = ExtResource("9_un3jw")
+
+[sub_resource type="QuadMesh" id="QuadMesh_ybq2j"]
+material = SubResource("StandardMaterial3D_iw286")
+size = Vector2(0.64, 0.89)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
+size = Vector3(0.64, 0.89, 0.03)
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_at6bq"]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_d3epo"]
+
+[node name="3DScenePhysics" type="Node3D"]
+
+[node name="Table" parent="." instance=ExtResource("1_5pgii")]
+collision_layer = 1
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.819202, 2.19727e-07, 0.573505, -0.353913, 0.786881, 0.505534, -0.45128, -0.617105, 0.644614, 0, 0, 1.7548)
+
+[node name="CameraBase" type="Node3D" parent="."]
+script = ExtResource("2_cp28l")
+PitchSpeed = 2.0
+YawSpeed = 2.0
+ZoomSpeed = 30.0
+PanSpeed = 0.1
+
+[node name="Camera3D" type="Camera3D" parent="CameraBase"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+fov = 73.6372
+
+[node name="GameObjects" type="Node" parent="."]
+
+[node name="Cube" type="RigidBody3D" parent="GameObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+physics_material_override = SubResource("PhysicsMaterial_3udfo")
+max_contacts_reported = 5
+contact_monitor = true
+script = ExtResource("3_kd3us")
+Name = "Red"
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/Cube"]
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_jsd5h")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Cube"]
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_tnlsr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Cube"]
+shape = SubResource("BoxShape3D_l5emf")
+
+[node name="Cube2" type="RigidBody3D" parent="GameObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 2.27959)
+physics_material_override = SubResource("PhysicsMaterial_w06jb")
+max_contacts_reported = 5
+contact_monitor = true
+script = ExtResource("3_kd3us")
+Name = "Blue"
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/Cube2"]
+mesh = ExtResource("6_rk77l")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Cube2"]
+mesh = SubResource("BoxMesh_tnlsr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Cube2"]
+shape = SubResource("BoxShape3D_mvaa4")
+
+[node name="Cube3" type="RigidBody3D" parent="GameObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -3.06632)
+physics_material_override = SubResource("PhysicsMaterial_go1qh")
+max_contacts_reported = 5
+contact_monitor = true
+script = ExtResource("3_kd3us")
+Name = "White"
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/Cube3"]
+mesh = ExtResource("7_nxpdb")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Cube3"]
+mesh = SubResource("BoxMesh_tnlsr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Cube3"]
+shape = SubResource("BoxShape3D_mvaa4")
+
+[node name="CardSample" type="RigidBody3D" parent="GameObjects"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 3.21458, 2.33457, 0)
+
+[node name="MeshFace" type="MeshInstance3D" parent="GameObjects/CardSample"]
+mesh = SubResource("QuadMesh_xkr24")
+
+[node name="MeshBack" type="MeshInstance3D" parent="GameObjects/CardSample"]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.02, 0, 0)
+mesh = SubResource("QuadMesh_ybq2j")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/CardSample"]
+transform = Transform3D(1, 0, 0, 0, 0.841039, -0.540974, 0, 0.540974, 0.841039, 0, 0, 0)
+shape = SubResource("BoxShape3D_bjoi2")
+
+[node name="DragNode" type="Node3D" parent="."]
+
+[node name="DragPlane" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+collision_layer = 4
+collision_mask = 4
+input_ray_pickable = false
+physics_material_override = SubResource("PhysicsMaterial_b00ve")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DragPlane"]
+shape = SubResource("WorldBoundaryShape3D_at6bq")
+
+[node name="Pseudo2DCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 13.4348, 0)
+attributes = SubResource("CameraAttributesPractical_d3epo")
+projection = 1
+current = true
+size = 12.0
+script = ExtResource("10_sm27h")
+ZoomSpeed = 10.0
+
+[connection signal="mouse_entered" from="GameObjects/Cube" to="GameObjects/Cube" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="GameObjects/Cube" to="GameObjects/Cube" method="_on_mouse_exited"]
+[connection signal="mouse_entered" from="GameObjects/Cube2" to="GameObjects/Cube2" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="GameObjects/Cube2" to="GameObjects/Cube2" method="_on_mouse_exited"]
+[connection signal="mouse_entered" from="GameObjects/Cube3" to="GameObjects/Cube3" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="GameObjects/Cube3" to="GameObjects/Cube3" method="_on_mouse_exited"]

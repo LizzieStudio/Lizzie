@@ -8,7 +8,8 @@ public partial class UI : CanvasLayer
 	[Export] private Color baseFontColor;
 
 	private HBoxContainer modeButtons;
-	
+
+	public event EventHandler<MasterModeChangeArgs> MasterModeChange;
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -75,6 +76,7 @@ public partial class UI : CanvasLayer
 		}
 		
 		CurMasterMode = mode;
+		MasterModeChange?.Invoke(this, new MasterModeChangeArgs{NewMode =mode});
 	}
 
 
@@ -96,6 +98,11 @@ public partial class UI : CanvasLayer
 		SetMasterMode(MasterMode.Designer);
 	}
 	
+}
+
+public class MasterModeChangeArgs : EventArgs
+{
+	public UI.MasterMode NewMode { get; set; }
 }
 
 

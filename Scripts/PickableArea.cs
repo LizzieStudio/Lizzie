@@ -1,9 +1,9 @@
 using Godot;
 using System;
 
-public partial class Pickable : RigidBody3D
+public partial class PickableArea : Area3D
 {
-	VisualInstance3D mainMesh;
+VisualInstance3D mainMesh;
 	Node3D highlightMesh;
 
 	
@@ -13,12 +13,21 @@ public partial class Pickable : RigidBody3D
 
 	private float _jiggleHeight = 0.01f;
 	// Called when the node enters the scene tree for the first time.
+
+	[Export] private float _highlightScale = 1.1f;
+	private float _curScale = 1;
+	
 	public override void _Ready()
 	{
+		_curScale = 1;
 		mainMesh = GetNode<VisualInstance3D>("ObjectMesh");
 		highlightMesh = GetNode<Node3D>("HighlightMesh");
 		highlightMesh.Visible = false;
 		IsMouseSelected = false;
+
+		this.MouseEntered += _on_mouse_entered;
+		this.MouseExited += _on_mouse_exited;
+
 		//this.CanSleep = false;
 	}
 
@@ -93,8 +102,20 @@ public partial class Pickable : RigidBody3D
 		set
 		{
 			_isSelected = value;
-			highlightMesh.Visible = value;
-			mainMesh.Visible = !value;
+
+			if (_isSelected)
+			{
+				Scale *= _highlightScale;
+				_curScale = _highlightScale;
+			}
+			else
+			{
+				Scale /= _curScale;
+				_curScale = 1;
+			}
+			
+			//highlightMesh.Visible = value;
+			//mainMesh.Visible = !value;
 		}
 	}
 
@@ -128,7 +149,3 @@ public partial class Pickable : RigidBody3D
 		}
 	}
 }
-
-
-
-
