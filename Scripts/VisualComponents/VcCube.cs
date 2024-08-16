@@ -52,7 +52,8 @@ public partial class VcCube : VisualComponentBase
 		{
 			Scale = new Vector3(Height, Width, Length);
 		}
-		
+
+		YHeight = Height;
 		
 		SetColor(CubeColor);
 		

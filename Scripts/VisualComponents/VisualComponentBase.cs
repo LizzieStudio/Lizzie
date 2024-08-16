@@ -64,7 +64,7 @@ public abstract partial class VisualComponentBase : Area3D
 	public virtual string InstanceName { get; set; }
 	public virtual Polygon2D YProjection { get; private set; }
 	
-	public virtual float YHeight { get; private set; }
+	public virtual float YHeight { get; protected set; }
 	
 	/// <summary>
 	/// The set of Shape3Ds that define the collision volume. Will be a single Shape3D for most items.

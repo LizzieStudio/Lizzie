@@ -19,6 +19,8 @@ public partial class Pseudo2DCamera : Camera3D
 
 	private bool _spawnMode;
 	private VisualComponentBase _spawnComponent;
+
+	private bool _stackingUpdateRequired;
 	
 	[Export] private float ZoomSpeed { get; set; } = 2f;
 	[Export] private float YawSpeed { get; set; } = 1;
@@ -44,7 +46,17 @@ public partial class Pseudo2DCamera : Camera3D
 			_spawnComponent.Position = ShootRay(GetViewport().GetMousePosition());
 		}
 	}
-	
+
+	public override void _PhysicsProcess(double delta)
+	{
+		base._PhysicsProcess(delta);
+		if (_stackingUpdateRequired)
+		{
+			CollisionTest();
+			_stackingUpdateRequired = false;
+		}
+	}
+
 	public override void _UnhandledInput(InputEvent @event)
 	{
 		if (!Current) return;
@@ -275,6 +287,8 @@ public partial class Pseudo2DCamera : Camera3D
 				c.QueueFree();
 			}
 			*/
+
+			_stackingUpdateRequired = true;
 		}
 
 		
@@ -376,6 +390,7 @@ public partial class Pseudo2DCamera : Camera3D
 	{
 		var children = _gameObjects.GetChildren();
 
+		Dictionary<int, List<int>> collDic = new();
 		for (int i = 0; i < children.Count - 1; i++)
 		{
 			var ci = children[i] as VisualComponentBase;
@@ -391,11 +406,54 @@ public partial class Pseudo2DCamera : Camera3D
 				if (ci.OverlapsArea(cj))
 				{
 					GD.Print($"Area {i} overlaps Area {j}");
+					//add to dictionary
+					if (collDic.ContainsKey(i))
+					{
+						collDic[i].Add(j);
+					}
+					else
+					{
+						collDic.Add(i, new List<int>{j});
+					}
 				}
 			}
 		}
 		
 		GD.Print("Collision check complete");
+
+		/*
+		foreach (var r in collDic)
+		{
+			string s = String.Empty;
+			foreach (var q in r.Value)
+			{
+				s += $"{q} ";
+			}
+			
+			GD.Print($"{r.Key} collides with {s}");
+		}
+		*/
+		
+		//loop through all the objects and check the dictionary (which is in Z order) and stack
+		for (int i = 0; i < children.Count; i++)
+		{
+			var ci = children[i] as VisualComponentBase;
+			if (ci is null) continue;
+			
+			float floor = 0;
+
+			if (collDic.ContainsKey(i))
+			{
+				foreach (var o in collDic[i])
+				{
+					var co = children[o] as VisualComponentBase;
+					if (co != null) floor += co.YHeight;
+				}
+			}
+
+			ci.Position = new Vector3(ci.Position.X, floor + (ci.YHeight / 2f), ci.Position.Z);
+		}
+		
 	}
 	
 }

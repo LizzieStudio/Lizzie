@@ -38,9 +38,10 @@ public partial class VcDisc : VisualComponentBase
 		}
 		
 		
-		//create cube
+		//create cylinder
 		Scale = new Vector3(Diameter, Height, Diameter);
 		
+		YHeight = Height;
 		SetColor(DiscColor);
 		
 		return true;

@@ -47,10 +47,7 @@ public partial class UI : CanvasLayer
 		p.TestFunction();
 	}
 
-	private void StackingTest()
-	{
-		
-	}
+
 	
 	private void OnInsertMenuSelection(long id)
 	{

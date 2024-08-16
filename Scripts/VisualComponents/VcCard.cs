@@ -27,7 +27,6 @@ public partial class VcCard : VisualComponentBase
 		base._Process(delta);
 	}
 
-
 	public override bool ProcessCommand(string action)
 	{
 		GD.Print($"Received {action}");
@@ -113,6 +112,7 @@ public partial class VcCard : VisualComponentBase
 		mat2.AlbedoTexture = tb;
 		_backSurface.MaterialOverride = mat2;
 
+		YHeight = 0.03f;
 		
 		//create card
 		Scale = new Vector3(Width, Scale.Y, Height);
