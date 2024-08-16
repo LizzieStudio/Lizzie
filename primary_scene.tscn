@@ -1,7 +1,6 @@
-[gd_scene load_steps=14 format=3 uid="uid://caj4d7v430lhp"]
+[gd_scene load_steps=20 format=3 uid="uid://caj4d7v430lhp"]
 
 [ext_resource type="Script" path="res://Scripts/GameController.cs" id="1_hibmt"]
-[ext_resource type="Script" path="res://Button.gd" id="1_yknp3"]
 [ext_resource type="Script" path="res://Scripts/UI.cs" id="2_a0mv7"]
 [ext_resource type="PackedScene" uid="uid://c10pvpfntkay3" path="res://Scenes/3d_scene_no_physics.tscn" id="3_6khan"]
 [ext_resource type="Script" path="res://Scripts/ComponentDefinition.cs" id="4_eclwi"]
@@ -13,6 +12,13 @@
 [ext_resource type="Resource" uid="uid://cp47ebupgytwa" path="res://Scenes/ComponentPanels/CubePanel.tres" id="12_6reuv"]
 [ext_resource type="Resource" uid="uid://crthu53rha88m" path="res://Scenes/ComponentPanels/MeshPanel.tres" id="12_ccm2a"]
 [ext_resource type="Resource" uid="uid://bctoe33s67u03" path="res://Scenes/ComponentPanels/DiscPanel.tres" id="13_5qcje"]
+[ext_resource type="PackedScene" uid="uid://bmimebxb37rro" path="res://Scenes/ComponentPanels/cube_panel.tscn" id="13_gbiwn"]
+[ext_resource type="PackedScene" uid="uid://gticvk17jrfq" path="res://Scenes/ComponentPanels/disc_panel.tscn" id="14_u4hc7"]
+[ext_resource type="PackedScene" uid="uid://bmitdjv4ha061" path="res://Scenes/ComponentPanels/die_panel.tscn" id="15_mybtt"]
+[ext_resource type="PackedScene" uid="uid://chacoe302ooah" path="res://Scenes/ComponentPanels/single_card_panel.tscn" id="16_j3qli"]
+[ext_resource type="PackedScene" uid="uid://bifubswbhqkkp" path="res://Scenes/ComponentPanels/deck_panel.tscn" id="17_mgf4o"]
+[ext_resource type="PackedScene" uid="uid://diovg4u3xl1qn" path="res://Scenes/ComponentPanels/token_panel.tscn" id="18_c5hxe"]
+[ext_resource type="PackedScene" uid="uid://div11bya2rlmh" path="res://Scenes/ComponentPanels/mesh_panel.tscn" id="19_xcrb0"]
 
 [node name="PrimaryScene" type="Node3D"]
 script = ExtResource("1_hibmt")
@@ -20,16 +26,6 @@ script = ExtResource("1_hibmt")
 [node name="UI" type="CanvasLayer" parent="."]
 script = ExtResource("2_a0mv7")
 highlightFontColor = Color(0.54902, 0.694118, 1, 1)
-
-[node name="Button" type="Button" parent="UI"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -147.0
-offset_bottom = 31.0
-grow_horizontal = 0
-text = "Texture Load Test"
-script = ExtResource("1_yknp3")
 
 [node name="Mode" type="HBoxContainer" parent="UI"]
 anchors_preset = 5
@@ -78,6 +74,7 @@ title = "Insert"
 title = "Help"
 
 [node name="ComponentDefinition" type="HBoxContainer" parent="UI"]
+visible = false
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -96,17 +93,17 @@ _components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"),
 layout_mode = 2
 
 [node name="ComponentPanel" type="Panel" parent="UI/ComponentDefinition"]
-custom_minimum_size = Vector2(225, 450)
+custom_minimum_size = Vector2(450, 450)
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="UI/ComponentDefinition/ComponentPanel"]
+[node name="DialogButtonMargins" type="MarginContainer" parent="UI/ComponentDefinition/ComponentPanel"]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -60.0
+offset_left = -124.0
 offset_top = -40.0
 grow_horizontal = 0
 grow_vertical = 0
@@ -115,10 +112,58 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="Button" type="Button" parent="UI/ComponentDefinition/ComponentPanel/MarginContainer"]
+[node name="DialogButtonLayout" type="HBoxContainer" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins"]
+layout_mode = 2
+
+[node name="CancelButton" type="Button" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins/DialogButtonLayout"]
+layout_mode = 2
+size_flags_horizontal = 8
+text = "Cancel"
+
+[node name="CreateButton" type="Button" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins/DialogButtonLayout"]
 layout_mode = 2
 size_flags_horizontal = 8
 text = "Create"
+
+[node name="ComponentTabs" type="TabContainer" parent="UI"]
+visible = false
+custom_minimum_size = Vector2(450, 450)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Cube" parent="UI/ComponentTabs" instance=ExtResource("13_gbiwn")]
+layout_mode = 2
+
+[node name="Disc" parent="UI/ComponentTabs" instance=ExtResource("14_u4hc7")]
+visible = false
+layout_mode = 2
+
+[node name="Die" parent="UI/ComponentTabs" instance=ExtResource("15_mybtt")]
+visible = false
+layout_mode = 2
+
+[node name="Card" parent="UI/ComponentTabs" instance=ExtResource("16_j3qli")]
+visible = false
+layout_mode = 2
+
+[node name="Deck" parent="UI/ComponentTabs" instance=ExtResource("17_mgf4o")]
+layout_mode = 2
+
+[node name="Token" parent="UI/ComponentTabs" instance=ExtResource("18_c5hxe")]
+layout_mode = 2
+
+[node name="Mesh Panel" parent="UI/ComponentTabs" instance=ExtResource("19_xcrb0")]
+visible = false
+layout_mode = 2
 
 [node name="FileDialog" type="FileDialog" parent="."]
 title = "Open a File"
@@ -130,7 +175,6 @@ access = 2
 
 [node name="3DSceneNoPhysics" parent="." instance=ExtResource("3_6khan")]
 
-[connection signal="pressed" from="UI/Button" to="UI/Button" method="_on_pressed"]
 [connection signal="pressed" from="UI/Mode/Play2D" to="UI" method="_on_play_2d_pressed"]
 [connection signal="pressed" from="UI/Mode/Play3D" to="UI" method="_on_play_3d_pressed"]
 [connection signal="pressed" from="UI/Mode/Designer" to="UI" method="_on_designer_pressed"]

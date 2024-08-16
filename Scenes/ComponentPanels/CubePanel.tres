@@ -8,3 +8,5 @@ script = ExtResource("1_6fawt")
 ComponentName = "Cube"
 Icon = ExtResource("2_v2dtj")
 DefinitionDialogName = "res://Scenes/ComponentPanels/cube_panel.tscn"
+PrototypeName = "res://Scenes/VisualComponents/VcCube.tscn"
+ComponentType = 0

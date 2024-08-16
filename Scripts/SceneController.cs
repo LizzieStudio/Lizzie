@@ -3,16 +3,16 @@ using System;
 
 public partial class SceneController : Node3D
 {
-	private Camera3D _2dCamera;
-	private Camera3D _3dCamera;
+	private Pseudo2DCamera _2dCamera;
+	private CameraController _3dCamera;
 	
 	
 	public enum SceneMode {TwoD, ThreeDFixed, ThreeDPhysics, Creator}
 
 	public override void _Ready()
 	{
-		_3dCamera = GetNode<Camera3D>("CameraBase/Camera3D");
-		_2dCamera = GetNode<Camera3D>("Pseudo2DCamera");
+		_3dCamera = GetNode<CameraController>("CameraBase");
+		_2dCamera = GetNode<Pseudo2DCamera>("Pseudo2DCamera");
 	}
 
 	public virtual void SetMode(SceneMode mode)
@@ -32,5 +32,21 @@ public partial class SceneController : Node3D
 			default:
 				throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
 		}
+	}
+	
+	public void EnterSpawnMode(VisualComponentBase component)
+	{
+		_2dCamera.EnterSpawnMode(component);
+	}
+
+	public void ExitSpawnMode()
+	{
+		_2dCamera.ExitSpawnMode();
+	}
+
+	public void TestFunction()
+	{
+		var p = GetNode<Pseudo2DCamera>("Pseudo2DCamera");
+		p.CollisionTest();
 	}
 }

@@ -8,3 +8,5 @@ script = ExtResource("2_d5pkd")
 ComponentName = "Deck"
 Icon = ExtResource("1_epte0")
 DefinitionDialogName = "res://Scenes/ComponentPanels/deck_panel.tscn"
+PrototypeName = ""
+ComponentType = 6

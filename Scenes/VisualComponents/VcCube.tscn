@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3 uid="uid://nb5tbtxvfm53"]
+
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcCube.cs" id="1_f3ciw"]
+[ext_resource type="BoxMesh" uid="uid://d20y4o6chy4mv" path="res://Materials/blue_cube.tres" id="2_dl1ok"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
+resource_local_to_scene = true
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_2ue6n"]
+size = Vector3(1, 100, 1)
+
+[node name="Cube" type="Area3D"]
+script = ExtResource("1_f3ciw")
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="."]
+mesh = ExtResource("2_dl1ok")
+skeleton = NodePath("")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_mvaa4")
+
+[node name="Area3D" type="Area3D" parent="."]
+input_ray_pickable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("BoxShape3D_2ue6n")

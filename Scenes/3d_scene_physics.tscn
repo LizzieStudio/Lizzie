@@ -37,6 +37,8 @@ resource_local_to_scene = true
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_go1qh"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aoobi"]
+transparency = 1
+albedo_color = Color(1, 1, 1, 0.443137)
 albedo_texture = ExtResource("8_4vfu3")
 
 [sub_resource type="QuadMesh" id="QuadMesh_xkr24"]
@@ -111,6 +113,7 @@ Name = "Blue"
 mesh = ExtResource("6_rk77l")
 
 [node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Cube2"]
+visible = false
 mesh = SubResource("BoxMesh_tnlsr")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Cube2"]

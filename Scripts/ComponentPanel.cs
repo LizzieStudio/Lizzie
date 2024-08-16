@@ -6,23 +6,22 @@ using System.Diagnostics;
 public partial class ComponentPanel : Panel
 {
 	[Export] private ComponentTemplate[] components;
+
+	private Button _create;
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		foreach (var c in components)
-		{
-			var scene = ResourceLoader.Load<PackedScene>(c.DefinitionDialogName).Instantiate();
 
-			if (scene is CanvasItem ci)
-			{
-				ci.Visible = true;
-				AddChild(ci);
-				GD.Print($"Adding {c.DefinitionDialogName}");
-			}
-			
+	}
+
+	private void CreatePressed()
+	{
+		foreach (var o in GetChildren())
+		{
 			
 		}
+
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.

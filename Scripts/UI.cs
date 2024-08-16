@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.ComponentModel;
 
 public partial class UI : CanvasLayer
 {
@@ -10,6 +11,12 @@ public partial class UI : CanvasLayer
 	private HBoxContainer modeButtons;
 
 	public event EventHandler<MasterModeChangeArgs> MasterModeChange;
+
+	private ComponentDefinition _componentDefinition;
+
+	private PopupMenu _insertMenu;
+	private PopupMenu _helpMenu;
+	
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -18,12 +25,53 @@ public partial class UI : CanvasLayer
 		var buttons = modeButtons.GetChildren();
 		baseFontColor = new Color(1, 1, 1, 1);
 		
+		SetMasterMode(MasterMode.TwoD);
+
+		_componentDefinition = GetNode<ComponentDefinition>("ComponentDefinition");
+		_componentDefinition.CreateObject += OnCreateObject;
+		_componentDefinition.CancelDialog += OnCancelCreate;
+
+		_insertMenu = GetNode<PopupMenu>("MenuBar/Insert");
+		_insertMenu.AddItem("Component",1);
+		_insertMenu.AddItem("Zone", 2);
+		_insertMenu.IdPressed += OnInsertMenuSelection;
 		
-		//test
-		if (buttons[1] is Button b)
-		{
-			b.AddThemeColorOverride("font_color",highlightFontColor);
-		}
+		_helpMenu = GetNode<PopupMenu>("MenuBar/Help");
+		_helpMenu.AddItem("Test Function",1);
+		_helpMenu.IdPressed += OnHelpMenuSelection;
+	}
+
+	private void OnHelpMenuSelection(long id)
+	{
+		var p = GetParent<GameController>();
+		p.TestFunction();
+	}
+
+	private void StackingTest()
+	{
+		
+	}
+	
+	private void OnInsertMenuSelection(long id)
+	{
+		if (id == 1) _componentDefinition.Visible = true;
+	}
+
+	private void OnInsertPressed()
+	{
+		_componentDefinition.Visible = true;
+	}
+
+	public event EventHandler<CreateObjectEventArgs> CreateObject;
+	private void OnCreateObject(object sender, CreateObjectEventArgs args)
+	{
+		_componentDefinition.Visible = false;
+		CreateObject?.Invoke(this, args);
+	}
+
+	private void OnCancelCreate(object sender, EventArgs e)
+	{
+		_componentDefinition.Visible = false;
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.

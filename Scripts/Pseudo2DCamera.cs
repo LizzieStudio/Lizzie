@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 public partial class Pseudo2DCamera : Camera3D
 {
@@ -13,10 +14,15 @@ public partial class Pseudo2DCamera : Camera3D
 
 	private Vector2 _mouseStartDragPos;
 	private Vector3 _objectStartDragPos;
+
+	private float _tableSize = 100;
+
+	private bool _spawnMode;
+	private VisualComponentBase _spawnComponent;
 	
-	[Export] private float ZoomSpeed { get; set; } = 0.2f;
+	[Export] private float ZoomSpeed { get; set; } = 2f;
 	[Export] private float YawSpeed { get; set; } = 1;
-	[Export] private float PanSpeed { get; set; } = 1;
+	[Export] private float PanSpeed { get; set; } = 10;
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -32,10 +38,16 @@ public partial class Pseudo2DCamera : Camera3D
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+		if (_spawnMode)
+		{
+			_spawnComponent.Visible = true;
+			_spawnComponent.Position = ShootRay(GetViewport().GetMousePosition());
+		}
 	}
 	
-	public override void _Input(InputEvent @event)
+	public override void _UnhandledInput(InputEvent @event)
 	{
+		if (!Current) return;
 		
 		int pitch = 0;
 		int yaw = 0;
@@ -45,6 +57,14 @@ public partial class Pseudo2DCamera : Camera3D
 
 		Vector2 mouseMotion = new Vector2(0, 0);
 		Vector2 mousePos = new Vector2(0, 0);
+
+		
+		if (_spawnMode && Input.IsMouseButtonPressed(MouseButton.Left))
+		{
+			var targetPos = ShootRay(GetViewport().GetMousePosition());
+
+			SpawnComponent(targetPos);
+		}
 		
 		if (@event is InputEventMouseMotion mouse)
 		{
@@ -76,7 +96,7 @@ public partial class Pseudo2DCamera : Camera3D
 		
 		
 		
-		if (Input.IsMouseButtonPressed(MouseButton.Left))
+		if (Input.IsMouseButtonPressed(MouseButton.Left) && !_spawnMode)
 		{
 			if (_isDragging)
 			{
@@ -122,6 +142,12 @@ public partial class Pseudo2DCamera : Camera3D
 			if (ke.Keycode == Key.Q) zoom--;
 			if (ke.Keycode == Key.E) zoom++;
 
+			if (ke.Keycode == Key.Escape) ExitSpawnMode();
+
+			if (Input.IsActionJustPressed("flip"))
+			{
+				SendCommand("Flip");
+			}
 		}
 		
 		var delta = (float)GetProcessDeltaTime();
@@ -137,7 +163,7 @@ public partial class Pseudo2DCamera : Camera3D
 
 		float z = Size;
 		z += zoom * delta * ZoomSpeed;
-		z = Mathf.Clamp(z, 2, 40);
+		z = Mathf.Clamp(z, 2, _tableSize * 1.1f);
 		Size = z;
 
 		var transform = Transform;
@@ -146,7 +172,28 @@ public partial class Pseudo2DCamera : Camera3D
 
 		Rotation = new Vector3(-3.14159f/2f, 0, _totYaw);
 	}
+
+	private void SendCommand(string command)
+	{
+		_selectedObject = GetSelectedObject();
+		if (_selectedObject == null) return;
+
+		GD.Print($"Sending {command}");
+		_selectedObject.ProcessCommand(command);
+	}
 	
+	private void SpawnComponent(Vector3 spawnPos)
+	{
+		if (_spawnComponent == null) return;
+
+		var newComp = (VisualComponentBase)_spawnComponent.Duplicate();
+		newComp.Build(_spawnComponent.Parameters);
+		newComp.DimMode(false);
+		newComp.Position = new Vector3(spawnPos.X, 0, spawnPos.Z);
+		
+		_gameObjects.AddChild(newComp);
+	}
+
 	private bool _isDragging = false;
 	private void StartDrag()
 	{
@@ -287,13 +334,13 @@ public partial class Pseudo2DCamera : Camera3D
 		return o;
 	}
 
-	private PickableArea _selectedObject;
+	private VisualComponentBase _selectedObject;
 
-	private PickableArea GetSelectedObject()
+	private VisualComponentBase GetSelectedObject()
 	{
 		foreach (var n in _gameObjects.GetChildren())
 		{
-			if (n is PickableArea { IsMouseSelected: true } p)
+			if (n is VisualComponentBase { IsMouseSelected: true } p)
 			{
 				return p;
 			}
@@ -301,4 +348,54 @@ public partial class Pseudo2DCamera : Camera3D
 
 		return null;
 	}
+
+	public void EnterSpawnMode(VisualComponentBase component)
+	{
+		_spawnMode = true;
+		_spawnComponent = component;
+		_spawnComponent.DimMode(true);
+		_gameObjects.AddChild(component);
+	}
+
+	public void ExitSpawnMode()
+	{
+		GD.Print("Exit Spawn Mode");
+		_spawnMode = false;
+
+		if (!IsInstanceValid(_spawnComponent)) return;
+		
+		if (_spawnComponent == null) return;
+		
+		if (_spawnComponent.IsQueuedForDeletion()) return;
+		
+		_spawnComponent?.QueueFree();
+		//_spawnComponent = null;
+	}
+
+	public void CollisionTest()
+	{
+		var children = _gameObjects.GetChildren();
+
+		for (int i = 0; i < children.Count - 1; i++)
+		{
+			var ci = children[i] as VisualComponentBase;
+
+			if (ci.StackingCollider == null) continue;
+			
+			for (int j = i + 1; j < children.Count; j++)
+			{
+				var cj = children[j] as VisualComponentBase;
+
+				if (cj.StackingCollider == null) continue;
+
+				if (ci.OverlapsArea(cj))
+				{
+					GD.Print($"Area {i} overlaps Area {j}");
+				}
+			}
+		}
+		
+		GD.Print("Collision check complete");
+	}
+	
 }

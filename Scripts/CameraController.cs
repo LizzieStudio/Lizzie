@@ -10,6 +10,8 @@ public partial class CameraController : Node3D
 
 	[Export] private float PanSpeed { get; set; } = 10;
 
+	private float _tableSize = 100;
+
 	private Node _gameObjects;
 
 	private Camera3D _camera;
@@ -23,7 +25,7 @@ public partial class CameraController : Node3D
 	private float _totYaw = 0;
 
 	private Node3D _dragNode;
-	private Pickable _dragSource;
+	private VisualComponentBase _dragSource;
 	private VisualInstance3D _dragMesh;
 	private StaticBody3D _dragPlane;
 	private float _dragOffset;		//distance from the Y of the object origin to the bottom edge
@@ -134,7 +136,7 @@ public partial class CameraController : Node3D
 
 		float z = _camera.Position.Z;
 		z += zoom * delta * ZoomSpeed;
-		z = Mathf.Clamp(z, 2, 40);
+		z = Mathf.Clamp(z, 2, _tableSize * 1.1f);
 		_camera.Position = new Vector3(0, 0, z);
 
 		var transform = Transform;
@@ -148,6 +150,7 @@ public partial class CameraController : Node3D
 	{
 		
 	}
+	
 	
 	private Vector3 ShootRay(Vector2 position)
 	{
@@ -175,24 +178,26 @@ public partial class CameraController : Node3D
 		return o;
 	}
 
-	private Pickable _selectedObject;
+	private VisualComponentBase _selectedObject;
 
-	private Pickable GetSelectedObject()
+	private VisualComponentBase GetSelectedObject()
 	{
 		foreach (var n in _gameObjects.GetChildren())
 		{
-			if (n is Pickable { IsMouseSelected: true } p)
+			if (n is VisualComponentBase { IsMouseSelected: true } p)
 			{
 				return p;
 			}
 		}
 
+		
 		return null;
 	}
 
 	private bool _isDragging = false;
 	private void StartDrag()
 	{
+		GD.Print("StartDrag");
 		_selectedObject = GetSelectedObject();
 		if (_selectedObject == null)
 		{
@@ -269,6 +274,7 @@ public partial class CameraController : Node3D
 	{
 		if (_selectedObject == null) return;
 
+		GD.Print("ProcessDrag");
 		var rotAxis = axis.Rotated(-Rotation.Y);
 		
 		var dragSpeed = 0.05f;
@@ -285,7 +291,7 @@ public partial class CameraController : Node3D
 		_dragNode.Position = targetPos;
 	}
 
-	private float MinY(Pickable pickable, VisualInstance3D ghost)
+	private float MinY(VisualComponentBase pickable, VisualInstance3D ghost)
 	{
 		//TODO This routine does not deal properly if multiple objects are stacked at the drag location
 		//since the moving object AABB may not be intersecting with all of them
@@ -304,7 +310,7 @@ public partial class CameraController : Node3D
 		foreach (var n in _gameObjects.GetChildren())
 		{
 			i++;
-			if (n is Pickable p)
+			if (n is VisualComponentBase p)
 			{
 				GD.Print($"Checking {p.Name}");
 				if (p == pickable) continue;
@@ -353,4 +359,12 @@ public partial class CameraController : Node3D
 			GD.Print(aabb.GetEndpoint(i));
 		}
 	}
+
+	public bool Current
+	{
+		get => _camera.Current;
+		set => _camera.Current = value;
+	}
+	
+
 }

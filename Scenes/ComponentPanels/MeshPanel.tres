@@ -8,3 +8,5 @@ script = ExtResource("2_v7yp0")
 ComponentName = "Mesh"
 Icon = ExtResource("1_kykan")
 DefinitionDialogName = "res://Scenes/ComponentPanels/mesh_panel.tscn"
+PrototypeName = ""
+ComponentType = 8

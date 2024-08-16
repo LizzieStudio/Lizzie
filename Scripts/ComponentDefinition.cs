@@ -15,6 +15,10 @@ public partial class ComponentDefinition : HBoxContainer
 	private string _buttonTemplate = "res://Scenes/ComponentPanels/component_type_button.tscn";	//button to copy for 'sidepane' buttons.
 
 	private Dictionary<string, CanvasItem> _panelDictionary = new();
+
+	private Button _createButton;
+
+	private Button _cancelButton;
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -24,6 +28,8 @@ public partial class ComponentDefinition : HBoxContainer
 		
 		var bg = new ButtonGroup();
 
+		bool firstButton = true;
+		
 		foreach (var c in _components)
 		{
 			var b = CreateButton(c.ComponentName, c.Icon, bg);
@@ -33,18 +39,51 @@ public partial class ComponentDefinition : HBoxContainer
 			_componentPanel.AddChild(ci);
 
 			_panelDictionary.Add(c.ComponentName, ci);
-		}
-		
-		
-	}
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
+			if (firstButton)
+			{
+				b.ButtonPressed = true;
+				UpdatePanelVisibility(c.ComponentName);
+				firstButton = false;
+			}
+		}
+
+		_createButton = GetNode<Button>("ComponentPanel/DialogButtonMargins/DialogButtonLayout/CreateButton");
+		_createButton.Pressed += CreateClicked;
+
+		_cancelButton = GetNode<Button>("ComponentPanel/DialogButtonMargins/DialogButtonLayout/CancelButton");
+		_cancelButton.Pressed += CancelClicked;
 	}
+	
 
 	private string _curItem;
 
+	private void CreateClicked()
+	{
+		if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
+		{
+			GD.Print($"{_panelDictionary[CurName].Name} is CPDR");
+			CreateObjectEventArgs e = new()
+			{
+				ComponentType = NameToType(CurName),
+				Params = r.GetParams(),
+			};
+
+			e.PrototypeName = _components.First(x => x.ComponentName == CurName).PrototypeName;
+					
+			CreateObject?.Invoke(this, e);
+		}
+		else
+		{
+			GD.PrintErr($"{_panelDictionary[CurName].Name} is NOT CPDR");
+		}
+	}
+
+	private void CancelClicked()
+	{
+		CancelDialog?.Invoke(this, EventArgs.Empty);
+	}
+	
 	public string CurName
 	{
 		get => _curItem;
@@ -65,14 +104,12 @@ public partial class ComponentDefinition : HBoxContainer
 
 	private Button CreateButton(string name, Texture2D icon, ButtonGroup bg)
 	{
-		GD.Print($"Trying to create {name}, {_buttonTemplate}");
 		var scene = ResourceLoader.Load<PackedScene>(_buttonTemplate).Instantiate();
 		
 		GD.Print(scene.Name);
 		
 		if (scene is Button b)
 		{
-			GD.Print($"Creating button {name}");
 			b.Text = name;
 			b.Icon = icon;
 			b.ButtonGroup = bg;
@@ -94,13 +131,36 @@ public partial class ComponentDefinition : HBoxContainer
 	private CanvasItem CreateComponentPanel(string _panelTemplate)
 	{
 		var scene = ResourceLoader.Load<PackedScene>(_panelTemplate).Instantiate();
-
+		
 		if (scene is CanvasItem ci)
 		{
 			ci.Visible = false;	 //all panels start out hidden
 			return ci;
 		}
+		
+		GD.Print("Not Canvas Item");
 
 		return null;
 	}
+	
+	public event EventHandler<CreateObjectEventArgs> CreateObject;
+	public event EventHandler<EventArgs> CancelDialog; 
+
+	public VisualComponentBase.VisualComponentType NameToType(string name)
+	{
+		return _components.First(x => x.ComponentName == name).ComponentType;
+	}
+
+	public string TypeToName(VisualComponentBase.VisualComponentType componentType)
+	{
+		return _components.First(x => x.ComponentType == componentType).ComponentName;
+	}
+}
+
+public class CreateObjectEventArgs: EventArgs
+{
+	public Dictionary<string, object> Params { get; set; }
+	public VisualComponentBase.VisualComponentType ComponentType { get; set; }
+	
+	public string PrototypeName { get; set; }
 }

@@ -8,3 +8,5 @@ script = ExtResource("2_g4pbp")
 ComponentName = "Die"
 Icon = ExtResource("1_ff517")
 DefinitionDialogName = "res://Scenes/ComponentPanels/die_panel.tscn"
+PrototypeName = ""
+ComponentType = 7

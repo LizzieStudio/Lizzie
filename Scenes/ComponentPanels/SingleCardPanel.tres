@@ -8,3 +8,5 @@ script = ExtResource("2_mslke")
 ComponentName = "Card"
 Icon = ExtResource("1_gka1p")
 DefinitionDialogName = "res://Scenes/ComponentPanels/single_card_panel.tscn"
+PrototypeName = "res://Scenes/VisualComponents/VcCard.tscn"
+ComponentType = 5

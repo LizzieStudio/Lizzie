@@ -1,5 +1,7 @@
 using Godot;
 using System;
+using System.Collections.Generic;
+using System.Runtime.Loader;
 
 public partial class GameController : Node3D
 {
@@ -14,8 +16,29 @@ public partial class GameController : Node3D
 
 		_uiController = GetNode<UI>("UI");
 		_uiController.MasterModeChange += OnMasterModeChange;
+		_uiController.CreateObject += OnCreateObject;
 	}
 
+	private void OnCreateObject(object sender, CreateObjectEventArgs args)
+	{
+		VisualComponentBase component = SpawnComponent(args.PrototypeName);
+		
+		if (component == null)
+		{
+			GD.PrintErr("Null Spawn Component");
+			return;
+		}
+
+		if (component.Build(args.Params))
+		{
+			_mainScene.EnterSpawnMode(component);
+		}
+		else
+		{
+			GD.PrintErr("Error building component");
+		}
+	}
+	
 	private void OnMasterModeChange(object sender, MasterModeChangeArgs e)
 	{
 		switch (e.NewMode)
@@ -36,5 +59,22 @@ public partial class GameController : Node3D
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+	}
+
+	public VisualComponentBase SpawnComponent(string prototype)
+	{
+		var scene = ResourceLoader.Load<PackedScene>(prototype).Instantiate();
+
+		if (scene is VisualComponentBase vcb)
+		{ 
+			return vcb;
+		}
+		return null;
+	}
+	
+	//test function
+	public void TestFunction()
+	{
+		_mainScene.TestFunction();
 	}
 }

@@ -1,43 +1,11 @@
-[gd_scene load_steps=21 format=3 uid="uid://c10pvpfntkay3"]
+[gd_scene load_steps=10 format=3 uid="uid://c10pvpfntkay3"]
 
 [ext_resource type="Script" path="res://Scripts/SceneController.cs" id="1_4ynb0"]
 [ext_resource type="PackedScene" uid="uid://8ts0q3rup6h6" path="res://Scenes/table.tscn" id="1_7yafe"]
 [ext_resource type="Script" path="res://Scripts/CameraController.cs" id="2_0y0is"]
-[ext_resource type="Shader" path="res://Shaders/outline.gdshader" id="5_6tu2r"]
-[ext_resource type="BoxMesh" uid="uid://d20y4o6chy4mv" path="res://Materials/blue_cube.tres" id="6_go5bg"]
-[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="8_4gjdd"]
-[ext_resource type="Texture2D" uid="uid://jkpxes8koyxv" path="res://Textures/card_back.jpg" id="9_5dtno"]
-[ext_resource type="Script" path="res://Scripts/PickableArea.cs" id="9_jusl5"]
+[ext_resource type="PackedScene" uid="uid://nb5tbtxvfm53" path="res://Scenes/VisualComponents/VcCube.tscn" id="4_f5icd"]
+[ext_resource type="PackedScene" uid="uid://b1ijg1er07n50" path="res://Scenes/VisualComponents/VcCard.tscn" id="5_t1yu5"]
 [ext_resource type="Script" path="res://Scripts/Pseudo2DCamera.cs" id="10_mgbfc"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_gp8e6"]
-render_priority = 0
-shader = ExtResource("5_6tu2r")
-shader_parameter/outline_color = Color(0.898039, 0, 0, 1)
-shader_parameter/outline_width = 2.0
-
-[sub_resource type="BoxMesh" id="BoxMesh_tnlsr"]
-material = SubResource("ShaderMaterial_gp8e6")
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
-resource_local_to_scene = true
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aoobi"]
-albedo_texture = ExtResource("8_4gjdd")
-
-[sub_resource type="QuadMesh" id="QuadMesh_xkr24"]
-material = SubResource("StandardMaterial3D_aoobi")
-size = Vector2(0.64, 0.89)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iw286"]
-albedo_texture = ExtResource("9_5dtno")
-
-[sub_resource type="QuadMesh" id="QuadMesh_ybq2j"]
-material = SubResource("StandardMaterial3D_iw286")
-size = Vector2(0.64, 0.89)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
-size = Vector3(0.64, 0.89, 0.03)
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
 
@@ -49,6 +17,7 @@ size = Vector3(0.64, 0.89, 0.03)
 script = ExtResource("1_4ynb0")
 
 [node name="Table" parent="." instance=ExtResource("1_7yafe")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
 collision_layer = 1
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
@@ -58,7 +27,7 @@ transform = Transform3D(0.819202, 2.19727e-07, 0.573505, -0.353913, 0.786881, 0.
 script = ExtResource("2_0y0is")
 PitchSpeed = 2.0
 YawSpeed = 2.0
-ZoomSpeed = 30.0
+ZoomSpeed = 100.0
 PanSpeed = 0.1
 
 [node name="Camera3D" type="Camera3D" parent="CameraBase"]
@@ -67,36 +36,10 @@ fov = 73.6372
 
 [node name="GameObjects" type="Node" parent="."]
 
-[node name="BlueCube" type="Area3D" parent="GameObjects"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.95461)
-script = ExtResource("9_jusl5")
+[node name="BlueCube" parent="GameObjects" instance=ExtResource("4_f5icd")]
 
-[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/BlueCube"]
-mesh = ExtResource("6_go5bg")
-skeleton = NodePath("")
-
-[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/BlueCube"]
-mesh = SubResource("BoxMesh_tnlsr")
-skeleton = NodePath("")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/BlueCube"]
-shape = SubResource("BoxShape3D_mvaa4")
-
-[node name="Card" type="Area3D" parent="GameObjects"]
+[node name="Card" parent="GameObjects" instance=ExtResource("5_t1yu5")]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
-script = ExtResource("9_jusl5")
-
-[node name="ObjectMesh" type="MeshInstance3D" parent="GameObjects/Card"]
-mesh = SubResource("QuadMesh_xkr24")
-skeleton = NodePath("")
-
-[node name="HighlightMesh" type="MeshInstance3D" parent="GameObjects/Card"]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
-mesh = SubResource("QuadMesh_ybq2j")
-skeleton = NodePath("")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="GameObjects/Card"]
-shape = SubResource("BoxShape3D_bjoi2")
 
 [node name="DragNode" type="Node3D" parent="."]
 
@@ -111,12 +54,12 @@ physics_material_override = SubResource("PhysicsMaterial_b00ve")
 shape = SubResource("WorldBoundaryShape3D_at6bq")
 
 [node name="Pseudo2DCamera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 13.4348, 0)
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 100, 0)
 rotation_order = 0
 attributes = SubResource("CameraAttributesPractical_d3epo")
 projection = 1
 current = true
-size = 12.0
+size = 110.0
 script = ExtResource("10_mgbfc")
-ZoomSpeed = 10.0
+ZoomSpeed = 100.0
 PanSpeed = 0.25

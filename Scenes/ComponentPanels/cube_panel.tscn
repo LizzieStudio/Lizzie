@@ -1,13 +1,15 @@
-[gd_scene format=3 uid="uid://bmimebxb37rro"]
+[gd_scene load_steps=2 format=3 uid="uid://bmimebxb37rro"]
+
+[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/CubePanelDialogResult.cs" id="1_fg2ce"]
 
 [node name="Cube Panel" type="MarginContainer"]
-visible = false
 offset_right = 40.0
 offset_bottom = 40.0
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
+script = ExtResource("1_fg2ce")
 
 [node name="GridContainer" type="GridContainer" parent="."]
 layout_mode = 2
@@ -18,10 +20,9 @@ layout_mode = 2
 text = "Name  "
 horizontal_alignment = 2
 
-[node name="LineEdit" type="LineEdit" parent="GridContainer"]
+[node name="ItemName" type="LineEdit" parent="GridContainer"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-alignment = 2
 
 [node name="Label6" type="Label" parent="GridContainer"]
 layout_mode = 2
@@ -31,6 +32,23 @@ horizontal_alignment = 2
 layout_mode = 2
 horizontal_alignment = 2
 
+[node name="Label4" type="Label" parent="GridContainer"]
+layout_mode = 2
+text = "Height  "
+horizontal_alignment = 2
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="GridContainer"]
+layout_mode = 2
+
+[node name="Height" type="LineEdit" parent="GridContainer/HBoxContainer3"]
+layout_mode = 2
+text = "6"
+alignment = 2
+
+[node name="Label" type="Label" parent="GridContainer/HBoxContainer3"]
+layout_mode = 2
+text = "mm"
+
 [node name="Label5" type="Label" parent="GridContainer"]
 layout_mode = 2
 text = "Length  "
@@ -39,7 +57,7 @@ horizontal_alignment = 2
 [node name="HBoxContainer4" type="HBoxContainer" parent="GridContainer"]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="GridContainer/HBoxContainer4"]
+[node name="Length" type="LineEdit" parent="GridContainer/HBoxContainer4"]
 layout_mode = 2
 text = "6"
 alignment = 2
@@ -56,29 +74,12 @@ horizontal_alignment = 2
 [node name="HBoxContainer2" type="HBoxContainer" parent="GridContainer"]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="GridContainer/HBoxContainer2"]
+[node name="Width" type="LineEdit" parent="GridContainer/HBoxContainer2"]
 layout_mode = 2
 text = "6"
 alignment = 2
 
 [node name="Label" type="Label" parent="GridContainer/HBoxContainer2"]
-layout_mode = 2
-text = "mm"
-
-[node name="Label4" type="Label" parent="GridContainer"]
-layout_mode = 2
-text = "Height  "
-horizontal_alignment = 2
-
-[node name="HBoxContainer3" type="HBoxContainer" parent="GridContainer"]
-layout_mode = 2
-
-[node name="LineEdit" type="LineEdit" parent="GridContainer/HBoxContainer3"]
-layout_mode = 2
-text = "6"
-alignment = 2
-
-[node name="Label" type="Label" parent="GridContainer/HBoxContainer3"]
 layout_mode = 2
 text = "mm"
 
@@ -88,7 +89,7 @@ layout_mode = 2
 text = "Color  "
 horizontal_alignment = 2
 
-[node name="ColorPickerButton" type="ColorPickerButton" parent="GridContainer"]
+[node name="Color" type="ColorPickerButton" parent="GridContainer"]
 layout_mode = 2
 
 [node name="Label8" type="Label" parent="GridContainer"]
@@ -104,7 +105,7 @@ layout_mode = 2
 text = "Quantity  "
 horizontal_alignment = 2
 
-[node name="LineEdit2" type="LineEdit" parent="GridContainer"]
+[node name="Quantity" type="LineEdit" parent="GridContainer"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 alignment = 2

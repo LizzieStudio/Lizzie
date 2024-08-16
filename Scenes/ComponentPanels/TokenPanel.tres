@@ -8,3 +8,5 @@ script = ExtResource("2_fyr57")
 ComponentName = "Token"
 Icon = ExtResource("1_v2irg")
 DefinitionDialogName = "res://Scenes/ComponentPanels/token_panel.tscn"
+PrototypeName = ""
+ComponentType = 3

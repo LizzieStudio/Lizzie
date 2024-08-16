@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://div11bya2rlmh"]
 
-[node name="Cube Panel" type="MarginContainer"]
+[node name="Mesh Panel" type="MarginContainer"]
 offset_right = 40.0
 offset_bottom = 40.0
 theme_override_constants/margin_left = 10
