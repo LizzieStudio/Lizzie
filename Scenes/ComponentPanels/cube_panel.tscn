@@ -42,7 +42,7 @@ layout_mode = 2
 
 [node name="Height" type="LineEdit" parent="GridContainer/HBoxContainer3"]
 layout_mode = 2
-text = "6"
+text = "10"
 alignment = 2
 
 [node name="Label" type="Label" parent="GridContainer/HBoxContainer3"]
@@ -59,7 +59,7 @@ layout_mode = 2
 
 [node name="Length" type="LineEdit" parent="GridContainer/HBoxContainer4"]
 layout_mode = 2
-text = "6"
+text = "10"
 alignment = 2
 
 [node name="Label" type="Label" parent="GridContainer/HBoxContainer4"]
@@ -76,7 +76,7 @@ layout_mode = 2
 
 [node name="Width" type="LineEdit" parent="GridContainer/HBoxContainer2"]
 layout_mode = 2
-text = "6"
+text = "10"
 alignment = 2
 
 [node name="Label" type="Label" parent="GridContainer/HBoxContainer2"]

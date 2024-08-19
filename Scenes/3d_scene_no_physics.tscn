@@ -1,10 +1,8 @@
-[gd_scene load_steps=10 format=3 uid="uid://c10pvpfntkay3"]
+[gd_scene load_steps=8 format=3 uid="uid://c10pvpfntkay3"]
 
 [ext_resource type="Script" path="res://Scripts/SceneController.cs" id="1_4ynb0"]
 [ext_resource type="PackedScene" uid="uid://8ts0q3rup6h6" path="res://Scenes/table.tscn" id="1_7yafe"]
 [ext_resource type="Script" path="res://Scripts/CameraController.cs" id="2_0y0is"]
-[ext_resource type="PackedScene" uid="uid://nb5tbtxvfm53" path="res://Scenes/VisualComponents/VcCube.tscn" id="4_f5icd"]
-[ext_resource type="PackedScene" uid="uid://b1ijg1er07n50" path="res://Scenes/VisualComponents/VcCard.tscn" id="5_t1yu5"]
 [ext_resource type="Script" path="res://Scripts/Pseudo2DCamera.cs" id="10_mgbfc"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
@@ -17,7 +15,6 @@
 script = ExtResource("1_4ynb0")
 
 [node name="Table" parent="." instance=ExtResource("1_7yafe")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
 collision_layer = 1
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
@@ -35,11 +32,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
 fov = 73.6372
 
 [node name="GameObjects" type="Node" parent="."]
-
-[node name="BlueCube" parent="GameObjects" instance=ExtResource("4_f5icd")]
-
-[node name="Card" parent="GameObjects" instance=ExtResource("5_t1yu5")]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
 
 [node name="DragNode" type="Node3D" parent="."]
 

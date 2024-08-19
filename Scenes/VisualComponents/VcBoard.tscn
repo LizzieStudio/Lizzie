@@ -1,0 +1,56 @@
+[gd_scene load_steps=11 format=3 uid="uid://b5pk5elbfleth"]
+
+[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="2_gev5a"]
+[ext_resource type="Texture2D" uid="uid://jkpxes8koyxv" path="res://Textures/card_back.jpg" id="3_fgt6y"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q2yne"]
+albedo_texture = ExtResource("2_gev5a")
+
+[sub_resource type="QuadMesh" id="QuadMesh_xkr24"]
+material = SubResource("StandardMaterial3D_q2yne")
+orientation = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_p26tt"]
+albedo_texture = ExtResource("3_fgt6y")
+
+[sub_resource type="QuadMesh" id="QuadMesh_ybq2j"]
+material = SubResource("StandardMaterial3D_p26tt")
+flip_faces = true
+orientation = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
+size = Vector3(1, 0.03, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mesye"]
+size = Vector3(1, 100, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0sugy"]
+albedo_color = Color(0.505344, 0.505344, 0.505344, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_dg08o"]
+material = SubResource("StandardMaterial3D_0sugy")
+size = Vector3(1, 0.98, 1)
+
+[node name="Card" type="Area3D"]
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("QuadMesh_xkr24")
+skeleton = NodePath("")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, -0.5, 0)
+mesh = SubResource("QuadMesh_ybq2j")
+skeleton = NodePath("")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_bjoi2")
+
+[node name="Area3D" type="Area3D" parent="."]
+input_ray_pickable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("BoxShape3D_mesye")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_dg08o")

@@ -14,7 +14,7 @@ public partial class VcCard : VisualComponentBase
 		ComponentType = VisualComponentType.Card;
 		_backSurface = GetNode<MeshInstance3D>("HighlightMesh");
 		_frontSurface = GetNode<MeshInstance3D>("ObjectMesh");
-		
+		StackingCollider = GetNode<Area3D>("Area3D");
 	
 	}
 
@@ -27,15 +27,14 @@ public partial class VcCard : VisualComponentBase
 		base._Process(delta);
 	}
 
-	public override bool ProcessCommand(string action)
+	public override bool ProcessCommands()
 	{
-		GD.Print($"Received {action}");
-		if (action.ToUpper() == "FLIP")
+		if (Input.IsActionJustPressed("flip"))
 		{
 			StartFlip();
 			return true;
 		}
-
+		
 		return false;
 	}
 

@@ -3,7 +3,6 @@
 [ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_qeff1"]
 
 [node name="TokenPanel" type="MarginContainer"]
-visible = false
 offset_right = 40.0
 offset_bottom = 40.0
 theme_override_constants/margin_left = 10
@@ -77,7 +76,7 @@ layout_mode = 2
 
 [node name="LineEdit" type="LineEdit" parent="GridContainer/HBoxContainer7"]
 layout_mode = 2
-text = "3"
+text = "2"
 alignment = 2
 
 [node name="Label" type="Label" parent="GridContainer/HBoxContainer7"]

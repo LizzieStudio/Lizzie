@@ -9,6 +9,7 @@ public partial class VcDisc : VisualComponentBase
 		base._Ready();
 		Visible = true;
 		ComponentType = VisualComponentType.Disc;
+		StackingCollider = GetNode<Area3D>("Area3D");
 	}
 
 	public override bool Build(Dictionary<string, object> parameters)

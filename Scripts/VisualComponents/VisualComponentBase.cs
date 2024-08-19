@@ -56,7 +56,7 @@ public abstract partial class VisualComponentBase : Area3D
 	/// </summary>
 	/// <param name="action"></param>
 	/// <returns>true if action consumed by object. Else false</returns>
-	public virtual bool ProcessCommand(string action)
+	public virtual bool ProcessCommands()
 	{
 		return false;
 	}
@@ -65,6 +65,13 @@ public abstract partial class VisualComponentBase : Area3D
 	public virtual Polygon2D YProjection { get; private set; }
 	
 	public virtual float YHeight { get; protected set; }
+	
+	/// <summary>
+	/// Sets the Z-order for stacking. A "0" is the lowest - on the table.
+	/// If two items have the same Z-Order (should never happen), then
+	/// there is no guarantee which will go first.
+	/// </summary>
+	public int ZOrder { get; set; }
 	
 	/// <summary>
 	/// The set of Shape3Ds that define the collision volume. Will be a single Shape3D for most items.

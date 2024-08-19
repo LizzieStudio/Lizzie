@@ -2,7 +2,7 @@ using Godot;
 using System;
 using System.Diagnostics;
 
-public partial class CameraController : Node3D
+public partial class CameraController : Node3D, ICameraBase
 {
 	[Export] private float PitchSpeed { get; set; } = 1;
 	[Export] private float YawSpeed { get; set; } = 1;
@@ -32,6 +32,9 @@ public partial class CameraController : Node3D
 
 	private float _dragHeight;		//the distance from the center of the object to the bottom edge
 	
+	private bool _spawnMode;
+	private VisualComponentBase _spawnComponent;
+	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -43,107 +46,18 @@ public partial class CameraController : Node3D
 		 _dragPlane = GetParent().GetNode<StaticBody3D>("DragPlane");
 	}
 
+	public override void _Process(double delta)
+	{
+		if (_spawnMode)
+		{
+			_spawnComponent.Visible = true;
+			_spawnComponent.Position = ShootRay(GetViewport().GetMousePosition());
+		}
+	}
+
 	public override void _Input(InputEvent @event)
 	{
-		if (!_camera.Current) return;
 		
-		int pitch = 0;
-		int yaw = 0;
-		int zoom = 0;
-
-		int rayLength = 1000;
-
-		Vector2 mouseMotion = new Vector2(0, 0);
-		
-		if (@event is InputEventMouseMotion mouse)
-		{
-			mouseMotion = mouse.Relative;
-			
-			if (Input.IsMouseButtonPressed(MouseButton.Right))
-			{
-				_totPitch += (-0.2f * mouse.Relative.Y / 100);
-				_totYaw += (-0.2f * mouse.Relative.X / 100);
-			}
-			
-			if (Input.IsMouseButtonPressed(MouseButton.Middle))
-			{
-				var curGP = GlobalPosition;
-				GlobalPosition = curGP + new Vector3(-mouse.Relative.X * PanSpeed, 0, -mouse.Relative.Y * PanSpeed);
-			}
-		}
-
-		if (Input.IsMouseButtonPressed(MouseButton.Left))
-		{
-			if (_isDragging)
-			{
-				ProcessDrag(mouseMotion);
-			}
-			else
-			{
-				StartDrag();
-			}
-		}
-		else
-		{
-			if (_isDragging) StopDrag();
-		}
-		
-
-
-
-		if (@event is InputEventMouseButton buttons)
-		{
-			
-			if (buttons.ButtonIndex == MouseButton.WheelUp) zoom--;
-			if (buttons.ButtonIndex == MouseButton.WheelDown) zoom++;
-			
-			
-		}
-		
-		
-		if (@event is InputEventKey ke)
-		{
-			if (ke.Keycode == Key.Space)
-			{
-				Transform = _baseTransform;
-				_camera.Position = _baseCamPos;
-			}
-			if (ke.Keycode == Key.W) pitch++;
-			if (ke.Keycode == Key.S) pitch--;
-
-			if (ke.Keycode == Key.D) yaw++;
-			if (ke.Keycode == Key.A) yaw--;
-			
-			if (ke.Keycode == Key.Q) zoom--;
-			if (ke.Keycode == Key.E) zoom++;
-
-		}
-		
-		var delta = (float)GetProcessDeltaTime();
-		
-		_totYaw += (YawSpeed * delta * yaw);
-		
-		_totPitch += (PitchSpeed * delta * pitch);
-		_totPitch = Mathf.Clamp(_totPitch, -Mathf.Pi / 2, -0.08f);
-
-		if (Input.IsKeyPressed(Key.Space))
-		{
-			_totYaw = 0;
-			_totPitch = -0.08f;
-		}
-
-		Rotation = new Vector3(_totPitch, _totYaw, 0);
-
-		float z = _camera.Position.Z;
-		z += zoom * delta * ZoomSpeed;
-		z = Mathf.Clamp(z, 2, _tableSize * 1.1f);
-		_camera.Position = new Vector3(0, 0, z);
-
-		var transform = Transform;
-		transform.Basis = Basis.Identity;
-		Transform = transform;
-
-		Rotation = new Vector3(_totPitch, _totYaw, 0);
 	}
 
 	public override void _PhysicsProcess(double delta)
@@ -195,7 +109,8 @@ public partial class CameraController : Node3D
 	}
 
 	private bool _isDragging = false;
-	private void StartDrag()
+
+	public void StartDrag()
 	{
 		GD.Print("StartDrag");
 		_selectedObject = GetSelectedObject();
@@ -232,34 +147,23 @@ public partial class CameraController : Node3D
 		}
 	}
 
-	private void StopDrag()
+	public void StopDrag()
 	{
 		if (_selectedObject != null)
 		{
 			_selectedObject.IsDragging = false;
-			//_selectedObject.CanSleep = false;
-			//_selectedObject.Sleeping = false;
 		
-			float offSet = _dragOffset;
 		
-			var minY = MinY(_dragSource, _dragMesh);
-			GD.Print($"miny: {minY} offset:{offSet}");
-			minY = Mathf.Max(minY, offSet) + _dragHeight/2f;
+			//float offSet = _dragOffset;
+		
+			//var minY = MinY(_dragSource, _dragMesh);
+			//GD.Print($"miny: {minY} offset:{offSet}");
+			//minY = Mathf.Max(minY, offSet) + _dragHeight/2f;
 			
-			_selectedObject.Position = new Vector3( _dragNode.Position.X, minY, _dragNode.Position.Z);
-
-			//_selectedObject.FreezeMode = RigidBody3D.FreezeModeEnum.Kinematic;
+			_selectedObject.Position = _dragNode.Position;
 
 			_selectedObject = null;
 			_isDragging = false;
-
-			foreach (var n in _gameObjects.GetChildren())
-			{
-				if (n is Pickable p)
-				{
-					p.DoJiggle();
-				}
-			}
 			
 			foreach (var c in _dragNode.GetChildren())
 			{
@@ -270,7 +174,7 @@ public partial class CameraController : Node3D
 		_dragSource = null;
 	}
 
-	private void ProcessDrag(Vector2 axis)
+	public void ProcessDrag(Vector2 axis)
 	{
 		if (_selectedObject == null) return;
 
@@ -290,6 +194,113 @@ public partial class CameraController : Node3D
 		
 		_dragNode.Position = targetPos;
 	}
+
+	public void ProcessViewEvent(InputEvent @event)
+	{
+		int pitch = 0;
+		int yaw = 0;
+		int zoom = 0;
+
+		int rayLength = 1000;
+
+		Vector2 mouseMotion = new Vector2(0, 0);
+		
+		if (@event is InputEventMouseMotion mouse)
+		{
+			mouseMotion = mouse.Relative;
+			
+			if (Input.IsMouseButtonPressed(MouseButton.Right))
+			{
+				_totPitch += (-0.2f * mouse.Relative.Y / 100);
+				_totYaw += (-0.2f * mouse.Relative.X / 100);
+			}
+			
+			if (Input.IsMouseButtonPressed(MouseButton.Middle))
+			{
+				var curGP = GlobalPosition;
+				GlobalPosition = curGP + new Vector3(-mouse.Relative.X * PanSpeed, 0, -mouse.Relative.Y * PanSpeed);
+			}
+		}
+
+
+		if (@event is InputEventMouseButton buttons)
+		{
+			
+			if (buttons.ButtonIndex == MouseButton.WheelUp) zoom--;
+			if (buttons.ButtonIndex == MouseButton.WheelDown) zoom++;
+		}
+		
+		
+		if (@event is InputEventKey ke)
+		{
+			if (ke.Keycode == Key.W) pitch++;
+			if (ke.Keycode == Key.S) pitch--;
+
+			if (ke.Keycode == Key.D) yaw++;
+			if (ke.Keycode == Key.A) yaw--;
+			
+		}
+		
+		var delta = (float)GetProcessDeltaTime();
+		
+		_totYaw += (YawSpeed * delta * yaw);
+		
+		_totPitch += (PitchSpeed * delta * pitch);
+		_totPitch = Mathf.Clamp(_totPitch, -Mathf.Pi / 2, -0.08f);
+		
+		Rotation = new Vector3(_totPitch, _totYaw, 0);
+
+		var transform = Transform;
+		transform.Basis = Basis.Identity;
+		Transform = transform;
+
+		Rotation = new Vector3(_totPitch, _totYaw, 0);
+	}
+
+	public void ZoomIn()
+	{
+		UpdateZoom(-1);
+	}
+
+	public void ZoomOut()
+	{
+		UpdateZoom(1);
+	}
+
+
+	private void UpdateZoom(float zoom)
+	{
+		var delta = (float)GetProcessDeltaTime();
+		float z = _camera.Position.Z;
+		z += zoom * delta * ZoomSpeed;
+		z = Mathf.Clamp(z, 2, _tableSize * 1.1f);
+		_camera.Position = new Vector3(0, 0, z);
+	}
+
+	public Vector3 GetSpawnPos() => ShootRay(GetViewport().GetMousePosition());
+
+	
+	public void EnterSpawnMode(VisualComponentBase component)
+	{
+		_spawnMode = true;
+		_spawnComponent = component;
+	}
+
+	public void ExitSpawnMode()
+	{
+		GD.Print("Exit Spawn Mode");
+		_spawnMode = false;
+		_spawnComponent = null;
+	}
+
+	public void ResetView()
+	{
+		Transform = _baseTransform;
+		_camera.Position = _baseCamPos;
+		_totYaw = 0;
+		_totPitch = -0.08f;
+	}
+
 
 	private float MinY(VisualComponentBase pickable, VisualInstance3D ghost)
 	{
@@ -316,14 +327,8 @@ public partial class CameraController : Node3D
 				if (p == pickable) continue;
 				if (p.Aabb.Intersects(targetAabb))
 				{
-					GD.Print($"{p.Name} intersects. MaxY:{MaxYfromAabb(p.Aabb)}");
 					minY = Mathf.Max(minY, MaxYfromAabb(p.Aabb));
 				}
-				else
-				{
-					GD.Print($"{p.Name} does not intersect");
-				}
-				
 			}
 		}
 
