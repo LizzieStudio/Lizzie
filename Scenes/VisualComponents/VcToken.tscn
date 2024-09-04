@@ -33,21 +33,21 @@ albedo_color = Color(0.505344, 0.505344, 0.505344, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_dg08o"]
 material = SubResource("StandardMaterial3D_0sugy")
-size = Vector3(0.95, 0.95, 0.95)
+size = Vector3(0.95, 0.9, 0.95)
 
 [sub_resource type="BoxMesh" id="BoxMesh_ggpqp"]
 material = ExtResource("4_1unop")
 
-[node name="Board" type="Area3D"]
+[node name="Token" type="Area3D"]
 script = ExtResource("1_bofsg")
 
 [node name="ObjectMesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.49, 0)
 mesh = SubResource("QuadMesh_xkr24")
 skeleton = NodePath("")
 
 [node name="BackMesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, -0.48, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.49, 0)
 mesh = SubResource("QuadMesh_ybq2j")
 skeleton = NodePath("")
 
@@ -63,5 +63,5 @@ shape = SubResource("BoxShape3D_mesye")
 [node name="SideMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_dg08o")
 
-[node name="HilightMesh" type="MeshInstance3D" parent="."]
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_ggpqp")

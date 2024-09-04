@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 public partial class VcToken : VisualComponentBase
 {
@@ -25,6 +26,17 @@ public partial class VcToken : VisualComponentBase
 			ProcessFlip(delta);
 		}
 		base._Process(delta);
+	}
+	
+	public override bool ProcessCommand(SceneController.VisualCommand command)
+	{
+		if (command == SceneController.VisualCommand.Flip)
+		{
+			StartFlip();
+			return true;
+		}
+		
+		return base.ProcessCommand(command);
 	}
 	
 
@@ -93,25 +105,43 @@ public partial class VcToken : VisualComponentBase
 
 		FrontImage = parameters["FrontImage"].ToString();
 		BackImage = parameters["BackImage"].ToString();
+
+		ImageTexture tf;
 		
-		var tf = LoadTexture(FrontImage);
+		if (File.Exists(FrontImage)) tf = LoadTexture(FrontImage);
+
+		var vt = new Texture2D();
+		if (parameters.ContainsKey("QuickTexture"))
+		{
+			vt = parameters["QuickTexture"] as ViewportTexture;
+		}
+		
+		var vt2 = new Texture2D();
+		if (parameters.ContainsKey("QuickTextureBack"))
+		{
+			vt2 = parameters["QuickTextureBack"] as Texture2D;
+		}
 		
 		var mat = new StandardMaterial3D();
-		mat.AlbedoTexture = tf;
+		//mat.AlbedoTexture = tf;
+		mat.AlbedoTexture = vt;
 		_frontSurface.MaterialOverride = mat;
 		
-		var tb = LoadTexture(BackImage);
 		
 		var mat2 = new StandardMaterial3D();
 
-		if (!string.IsNullOrEmpty(BackImage))
+		if (File.Exists(BackImage))
 		{
+			var tb = LoadTexture(BackImage);
+
 			mat2.AlbedoTexture = tb;
 		}
 		else
 		{
-			mat2.AlbedoColor = new Color(0, 0, 0);
+			//mat2.AlbedoColor = new Color(0, 0, 0);
 		}
+		
+		mat2.AlbedoTexture = vt2;
 		
 		_backSurface.MaterialOverride = mat2;
 

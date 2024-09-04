@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://caj4d7v430lhp"]
+[gd_scene load_steps=25 format=3 uid="uid://caj4d7v430lhp"]
 
 [ext_resource type="Script" path="res://Scripts/GameController.cs" id="1_hibmt"]
 [ext_resource type="Script" path="res://Scripts/UI.cs" id="2_a0mv7"]
@@ -9,6 +9,7 @@
 [ext_resource type="Resource" uid="uid://cjw75xmuh5hm1" path="res://Scenes/ComponentPanels/SingleCardPanel.tres" id="9_56ys6"]
 [ext_resource type="Resource" uid="uid://cvcpmheck0rjq" path="res://Scenes/ComponentPanels/DeckPanel.tres" id="10_711is"]
 [ext_resource type="Resource" uid="uid://bodj2sxcbs4l8" path="res://Scenes/ComponentPanels/DiePanel.tres" id="11_14nhc"]
+[ext_resource type="StyleBox" uid="uid://h7d22x1q85ky" path="res://Themes/GrayStyleBox.tres" id="12_3v46o"]
 [ext_resource type="Resource" uid="uid://cp47ebupgytwa" path="res://Scenes/ComponentPanels/CubePanel.tres" id="12_6reuv"]
 [ext_resource type="Resource" uid="uid://crthu53rha88m" path="res://Scenes/ComponentPanels/MeshPanel.tres" id="12_ccm2a"]
 [ext_resource type="Resource" uid="uid://bctoe33s67u03" path="res://Scenes/ComponentPanels/DiscPanel.tres" id="13_5qcje"]
@@ -21,6 +22,13 @@
 [ext_resource type="Texture2D" uid="uid://41ftdwu6bvkv" path="res://Textures/UI/lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="19_mftnr"]
 [ext_resource type="PackedScene" uid="uid://div11bya2rlmh" path="res://Scenes/ComponentPanels/mesh_panel.tscn" id="19_xcrb0"]
 [ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
+
+[sub_resource type="Theme" id="Theme_a3w6s"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_xnkas"]
+font_size = 32
+font_color = Color(0, 0, 0, 1)
+outline_size = 1
 
 [node name="PrimaryScene" type="Node3D"]
 script = ExtResource("1_hibmt")
@@ -76,7 +84,6 @@ title = "Insert"
 title = "Help"
 
 [node name="ComponentDefinition" type="HBoxContainer" parent="UI"]
-visible = false
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -88,6 +95,7 @@ offset_right = 20.0
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = SubResource("Theme_a3w6s")
 script = ExtResource("4_eclwi")
 _components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"), ExtResource("7_la08l"), ExtResource("8_dwpay"), ExtResource("9_56ys6"), ExtResource("10_711is"), ExtResource("11_14nhc"), ExtResource("12_ccm2a")])
 
@@ -95,8 +103,9 @@ _components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"),
 layout_mode = 2
 
 [node name="ComponentPanel" type="Panel" parent="UI/ComponentDefinition"]
-custom_minimum_size = Vector2(450, 450)
+custom_minimum_size = Vector2(800, 450)
 layout_mode = 2
+theme_override_styles/panel = ExtResource("12_3v46o")
 
 [node name="DialogButtonMargins" type="MarginContainer" parent="UI/ComponentDefinition/ComponentPanel"]
 layout_mode = 1
@@ -190,6 +199,47 @@ item_5/id = 5
 item_5/separator = true
 item_6/text = "Delete"
 item_6/id = 4
+
+[node name="SubViewport" type="SubViewport" parent="UI"]
+size = Vector2i(128, 128)
+
+[node name="ColorRect" type="ColorRect" parent="UI/SubViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0.32549, 1, 1)
+
+[node name="Label" type="Label" parent="UI/SubViewport"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.5
+offset_top = -11.5
+offset_right = 22.5
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Hello!"
+label_settings = SubResource("LabelSettings_xnkas")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TestRect" type="TextureRect" parent="UI"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="FileDialog" type="FileDialog" parent="."]
 title = "Open a File"

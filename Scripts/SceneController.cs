@@ -290,6 +290,7 @@ public partial class SceneController : Node3D
 		}
 		else
 		{
+			_spawnDebounce = false;
 			if (@event.IsActionPressed("exit_mode"))
 			{
 				ExitSpawnMode();
@@ -324,9 +325,11 @@ public partial class SceneController : Node3D
 		//_spawnComponent = null;
 	}
 
+	private bool _spawnDebounce;
+	
 	private void SpawnComponent()
 	{
-		if (_spawnComponent == null) return;
+		if (_spawnComponent == null || _spawnDebounce) return;
 
 		var newComp = (VisualComponentBase)_spawnComponent.Duplicate();
 		newComp.Build(_spawnComponent.Parameters);
@@ -340,6 +343,8 @@ public partial class SceneController : Node3D
 
 		_gameObjects.AddChild(newComp);
 		QueueStackingUpdate();
+
+		_spawnDebounce = true;
 	}
 
 	#endregion

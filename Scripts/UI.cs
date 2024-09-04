@@ -175,8 +175,21 @@ public partial class UI : CanvasLayer
 	private void _on_designer_pressed()
 	{
 		SetMasterMode(MasterMode.Designer);
+		TextureTest();
 	}
+
+	private void TextureTest()
+	{
+		var sv = GetNode<SubViewport>("SubViewport");
+		var target = GetNode<TextureRect>("TestRect");
+
+		var t = sv.GetTexture();
+		target.Texture = t;
+	}
+
 	
+	public const int LongClickTime = 1000;
+
 }
 
 public class MasterModeChangeArgs : EventArgs

@@ -24,6 +24,8 @@ public abstract partial class VisualComponentBase : Area3D
 	protected MeshInstance3D _highlightMesh;
 
 	[Export] private float _highlightScale = 1.1f;
+	
+	public const int TooltipTime = 1000;
 	private float _curScale = 1;
 
 	//original creation parameters
@@ -40,8 +42,10 @@ public abstract partial class VisualComponentBase : Area3D
 
 		this.MouseEntered += _on_mouse_entered;
 		this.MouseExited += _on_mouse_exited;
+		
 		base._Ready();
 	}
+	
 
 	public virtual bool Build(Dictionary<string, object> parameters)
 	{
@@ -103,7 +107,7 @@ public abstract partial class VisualComponentBase : Area3D
 			if (_isMouseSelected == value) return;
 
 			_isMouseSelected = value;
-
+			
 			UpdateHighlight();
 		}
 	}
@@ -137,13 +141,19 @@ public abstract partial class VisualComponentBase : Area3D
 	private void _on_mouse_entered()
 	{
 		IsMouseSelected = true;
-		GD.Print($"ZOrder: {ZOrder}");
 	}
 
 	private void _on_mouse_exited()
 	{
-		if (!IsDragging) IsMouseSelected = false;
+		if (!IsDragging)
+		{
+			IsMouseSelected = false;
+		}
 	}
+
+	public event EventHandler<ShowTooltipEventArgs> ShowToolTip;
+
+	public event EventHandler HideToolTip;
 
 	private bool _neverHighlight = false;
 
@@ -229,4 +239,9 @@ public abstract partial class VisualComponentBase : Area3D
 			}
 		}
 	}
+}
+
+public class ShowTooltipEventArgs : EventArgs
+{
+	public VisualComponentBase Component { get; set; }
 }
