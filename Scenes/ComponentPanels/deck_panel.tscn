@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://bifubswbhqkkp"]
+[gd_scene load_steps=4 format=3 uid="uid://bifubswbhqkkp"]
 
 [ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_8qg10"]
-[ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="2_tsawk"]
+[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/DeckPanelDialogResult.cs" id="1_a0rs8"]
+[ext_resource type="PackedScene" uid="uid://b0sibtjhvuhoh" path="res://Scenes/ComponentPanels/CardPreviewPanel.tscn" id="2_a5ead"]
 
 [node name="DeckPanel" type="MarginContainer"]
 offset_right = 40.0
@@ -10,6 +11,7 @@ theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
+script = ExtResource("1_a0rs8")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 2
@@ -103,7 +105,9 @@ text = "Suits"
 [node name="QuickSuitCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+text = "4"
 placeholder_text = "Count"
+alignment = 1
 
 [node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
@@ -305,31 +309,41 @@ size_flags_horizontal = 8
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PanelContainer"]
 layout_mode = 2
 
-[node name="CheckBox" type="CheckBox" parent="HBoxContainer/PanelContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="CheckBox" type="CheckBox" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 button_pressed = true
-text = "Preview Front"
+text = "Front"
 
-[node name="Panel" type="Panel" parent="HBoxContainer/PanelContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 150)
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+
+[node name="Button" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer/MarginContainer"]
+layout_mode = 2
+text = "<"
+
+[node name="Label" type="Label" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Card 1 of 32"
+horizontal_alignment = 1
+
+[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+
+[node name="Button" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer/MarginContainer2"]
+layout_mode = 2
+text = ">"
+
+[node name="Preview" parent="HBoxContainer/PanelContainer/VBoxContainer" instance=ExtResource("2_a5ead")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-
-[node name="SubViewportContainer" type="SubViewportContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/Panel"]
-custom_minimum_size = Vector2(179, 250)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TopPreview" parent="HBoxContainer/PanelContainer/VBoxContainer/Panel/SubViewportContainer" instance=ExtResource("2_tsawk")]
-unique_name_in_owner = true
+_shapes = PackedStringArray("res://Textures/Shapes/square.png", "res://Textures/Shapes/RoundedRectangle.png")
