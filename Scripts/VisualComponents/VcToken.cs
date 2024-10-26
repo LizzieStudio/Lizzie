@@ -37,7 +37,7 @@ public partial class VcToken : VisualComponentBase
 	}
 
 	public override GeometryInstance3D DragMesh => _frontSprite;
-	public override float MaxAxisSize => Math.Max(Height, Width);
+	public override float MaxAxisSize => Math.Max(_height, _width);
 	public override CommandResponse ProcessCommand(SceneController.VisualCommand command)
 	{
 		if (command == SceneController.VisualCommand.Flip)
@@ -124,7 +124,7 @@ public partial class VcToken : VisualComponentBase
 		
 		if (!InitializeParameters(parameters)) return false;
 
-		switch (Mode)
+		switch (_mode)
 		{
 			case 0:
 				BuildQuick();
@@ -140,37 +140,37 @@ public partial class VcToken : VisualComponentBase
 		}
 		
 
-		YHeight = Thickness;
+		YHeight = _thickness;
 		
-		Scale = new Vector3(Width, Thickness, Height);
+		Scale = new Vector3(_width, _thickness, _height);
 
 		//Don't show the sidemesh if the thickness is too small
-		_sideMesh.Visible = (Thickness > 0.1);
+		_sideMesh.Visible = (_thickness > 0.1);
 			
 		//adjust the scales for the sprites based on the textures so they don't double adjust
-		if (Width > 0 && Height > 0)
+		if (_width > 0 && _height > 0)
 		{
-			float scale = Math.Max(Width, Height);
+			float scale = Math.Max(_width, _height);
 
-			var size = new Vector3(scale / Width, 1, scale / Height);
+			var size = new Vector3(scale / _width, 1, scale / _height);
 			_frontSprite.Scale = size;
 			_backSprite.Scale = size;
 			GD.PrintErr(size);
 		}
 
-		var shape = (TokenTextureSubViewport.TokenShape)Shape;
+		var shape = (TokenTextureSubViewport.TokenShape)_shape;
 
 		switch (shape)
 		{
 			case TokenTextureSubViewport.TokenShape.Square:
 				var r = new RectangleShape2D();
-				r.Size = new Vector2(Width, Height);
+				r.Size = new Vector2(_width, _height);
 				ShapeProfiles.Add(r);
 				break;
 			
 			case TokenTextureSubViewport.TokenShape.Circle:
 				var c = new CircleShape2D();
-				c.Radius = Width / 2f;
+				c.Radius = _width / 2f;
 				ShapeProfiles.Add(c);
 				break;
 			
@@ -199,8 +199,8 @@ public partial class VcToken : VisualComponentBase
 	{
 		Vector2[] arr = new Vector2[6];
 
-		var x = (Width/ 4f) * Mathf.Sqrt(3) / 2f;
-		var y = (Height / 4f);
+		var x = (_width/ 4f) * Mathf.Sqrt(3) / 2f;
+		var y = (_height / 4f);
 
 		arr[0] = new Vector2(0, y * 2);
 		arr[1] = new Vector2(-x, y);
@@ -221,8 +221,8 @@ public partial class VcToken : VisualComponentBase
 	{
 		Vector2[] arr = new Vector2[6];
 
-		var x = (Width / 4f);
-		var y = (Height/ 4f) * Mathf.Sqrt(3) / 2f;
+		var x = (_width / 4f);
+		var y = (_height/ 4f) * Mathf.Sqrt(3) / 2f;
 
 		arr[0] = new Vector2(x*2, 0);
 		arr[1] = new Vector2(x, y);
@@ -238,7 +238,7 @@ public partial class VcToken : VisualComponentBase
 		_frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
 		_frontView.Ready += CreateQuickFrontTexture;
 
-		if (DifferentBack)
+		if (_differentBack)
 		{
 			GD.Print("Build Back");
 			_backView = GetNode<TokenTextureSubViewport>("BackViewport");
@@ -251,7 +251,7 @@ public partial class VcToken : VisualComponentBase
 		_frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
 		_frontView.Ready += CreateCustomFrontTexture;
 		
-		if (DifferentBack)
+		if (_differentBack)
 		{
 			_backView = GetNode<TokenTextureSubViewport>("BackViewport");
 			_backView.Ready += CreateCustomBackTexture;
@@ -263,11 +263,11 @@ public partial class VcToken : VisualComponentBase
 
 	private void CreateCustomFrontTexture()
 	{
-		if (!File.Exists(FrontImage)) return;
+		if (!File.Exists(_frontImage)) return;
 		
 		_frontView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
-		_frontView.SetShape((TokenTextureSubViewport.TokenShape) Shape);
-		_frontView.SetTexture(LoadTexture(FrontImage));
+		_frontView.SetShape((TokenTextureSubViewport.TokenShape) _shape);
+		_frontView.SetTexture(LoadTexture(_frontImage));
 
 		var t = _frontView.GetTexture();
 
@@ -277,7 +277,7 @@ public partial class VcToken : VisualComponentBase
 		_frontSprite.Texture = t;
 		
 		
-		if (!DifferentBack)
+		if (!_differentBack)
 		{
 			_backSprite.PixelSize = pixelSize;
 			_backSprite.Texture = t;
@@ -292,15 +292,15 @@ public partial class VcToken : VisualComponentBase
 	
 	private void CreateCustomBackTexture()
 	{
-		if (!File.Exists(BackImage)) return;
+		if (!File.Exists(_backImage)) return;
 		
 		_backView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
-		_backView.SetShape((TokenTextureSubViewport.TokenShape) Shape);
+		_backView.SetShape((TokenTextureSubViewport.TokenShape) _shape);
 		var t = _backView.GetTexture();
 
 		float pixelSize = PixelSize(t.GetSize());
 		_backSprite.PixelSize = pixelSize;
-		_backView.SetTexture(LoadTexture(BackImage));
+		_backView.SetTexture(LoadTexture(_backImage));
 
 		_backSprite.Texture = _backView.GetTexture();
 		
@@ -315,11 +315,11 @@ public partial class VcToken : VisualComponentBase
 	
 	private void CreateQuickFrontTexture()
 	{
-		_frontView.SetBackgroundColor(FrontBgColor);
-		_frontView.SetText(FrontCaption);
-		_frontView.SetTextColor(FrontCaptionColor);
-		_frontView.SetShape((TokenTextureSubViewport.TokenShape) Shape);
-		_frontView.SetSize(Width, Height);
+		_frontView.SetBackgroundColor(_frontBgColor);
+		_frontView.SetText(_frontCaption);
+		_frontView.SetTextColor(_frontCaptionColor);
+		_frontView.SetShape((TokenTextureSubViewport.TokenShape) _shape);
+		_frontView.SetSize(_width, _height);
 		
 		var t = _frontView.GetTexture();
 
@@ -327,7 +327,7 @@ public partial class VcToken : VisualComponentBase
 		_frontSprite.PixelSize = pixelSize;
 		_frontSprite.Texture = t;
 
-		if (!DifferentBack)
+		if (!_differentBack)
 		{
 			_backSprite.PixelSize = pixelSize;
 			_backSprite.Texture = t;
@@ -336,11 +336,11 @@ public partial class VcToken : VisualComponentBase
 	
 	private void CreateQuickBackTexture()
 	{
-		_backView.SetBackgroundColor(BackBgColor);
-		_backView.SetText(BackCaption);
-		_backView.SetTextColor(BackCaptionColor);
-		_backView.SetShape((TokenTextureSubViewport.TokenShape)Shape);
-		_backView.SetSize(Width, Height);
+		_backView.SetBackgroundColor(_backBgColor);
+		_backView.SetText(_backCaption);
+		_backView.SetTextColor(_backCaptionColor);
+		_backView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
+		_backView.SetSize(_width, _height);
 		
 		var t = _backView.GetTexture();
 
@@ -353,40 +353,49 @@ public partial class VcToken : VisualComponentBase
 	{
 		base.Build(parameters, SceneController);
 
-		if (parameters.ContainsKey(nameof(Height)))
+		if (parameters.ContainsKey(nameof(_height)))
 		{
-			if (parameters[nameof(Height)] is float h)
+			if (parameters[nameof(_height)] is float h)
 			{
 				if (h <= 0) return false;
-				Height = h / 10f;
+				_height = h / 10f;
 			}
 
-			if (parameters[nameof(Width)] is float w)
+			if (parameters[nameof(_width)] is float w)
 			{
-				Width = w / 10f;
+				_width = w / 10f;
 			}
 			
-			if (parameters[nameof(Thickness)] is float t)
+			if (parameters[nameof(_thickness)] is float t)
 			{
-				Thickness = t / 10f;
+				_thickness = t / 10f;
 			}
 		}
 
-		FrontImage = parameters["FrontImage"].ToString();
-		BackImage = parameters["BackImage"].ToString();
+		_frontImage = parameters["FrontImage"].ToString();
+		_backImage = parameters["BackImage"].ToString();
 
-		Shape = (int)parameters["Shape"];
-		Mode = (int)parameters["Mode"];
-		FrontBgColor = (Color)parameters["FrontBgColor"];
-		FrontCaption = parameters["FrontCaption"].ToString();
-		FrontCaptionColor = (Color)parameters["FrontCaptionColor"];
+		_shape = (int)parameters["Shape"];
+		_mode = (int)parameters["Mode"];
+		_frontBgColor = (Color)parameters["FrontBgColor"];
+		_frontCaption = parameters["FrontCaption"].ToString();
+		_frontCaptionColor = (Color)parameters["FrontCaptionColor"];
 
-		DifferentBack = (bool)parameters["DifferentBack"];
+		_differentBack = (bool)parameters["DifferentBack"];
 		
-		BackBgColor = (Color)parameters["BackBgColor"];
-		BackCaption = parameters["BackCaption"].ToString();
-		BackCaptionColor = (Color)parameters["BackCaptionColor"];
+		_backBgColor = (Color)parameters["BackBgColor"];
+		_backCaption = parameters["BackCaption"].ToString();
+		_backCaptionColor = (Color)parameters["BackCaptionColor"];
 
+		if (parameters.TryGetValue("Type", out var tokenType))
+		{
+			_tokenType = (TokenType)tokenType;
+		}
+		else
+		{
+			_tokenType = TokenType.Token;	//default
+		}
+		
 		return true;
 	}
 
@@ -405,9 +414,9 @@ public partial class VcToken : VisualComponentBase
 			ret.Add("Instance Name not included");
 		}
 
-		if (parameters.ContainsKey(nameof(Height)))
+		if (parameters.TryGetValue(nameof(_height), out var height))
 		{
-			if (parameters[nameof(Height)] is float h)
+			if (height is float h)
 			{
 				if (h <= 0) ret.Add("Height must be > 0");
 			}
@@ -417,7 +426,7 @@ public partial class VcToken : VisualComponentBase
 			ret.Add("Height not included");
 		}
 
-		if (parameters.TryGetValue(nameof(Width), out var w))
+		if (parameters.TryGetValue(nameof(_width), out var w))
 		{
 			if (w is float d)
 			{
@@ -429,7 +438,7 @@ public partial class VcToken : VisualComponentBase
 			ret.Add("Diameter not included");
 		}
 
-		if (parameters.TryGetValue(nameof(FrontImage), out var parameter))
+		if (parameters.TryGetValue(nameof(_frontImage), out var parameter))
 		{
 			if (string.IsNullOrEmpty(parameter.ToString()))
 			{
@@ -442,19 +451,22 @@ public partial class VcToken : VisualComponentBase
 	
 	
 
-	private float Height;
-	private float Width;
-	private float Thickness;
-	private string FrontImage;
-	private string BackImage;
-	private int Shape;
-	private int Mode;
-	private Color FrontBgColor;
-	private string FrontCaption;
-	private Color FrontCaptionColor;
-	private bool DifferentBack;
-	private Color BackBgColor;
-	private string BackCaption;
-	private Color BackCaptionColor;
+	private float _height;
+	private float _width;
+	private float _thickness;
+	private string _frontImage;
+	private string _backImage;
+	private int _shape;
+	private int _mode;
+	private Color _frontBgColor;
+	private string _frontCaption;
+	private Color _frontCaptionColor;
+	private bool _differentBack;
+	private Color _backBgColor;
+	private string _backCaption;
+	private Color _backCaptionColor;
+	private TokenType _tokenType;
+	
+	public enum TokenType {Card, Token, Board}
 	
 }

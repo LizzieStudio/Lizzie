@@ -78,6 +78,7 @@ public partial class BoardPanelDialogResult : ComponentPanelDialogResult
 		d.Add("Width", ParamToFloat(_widthInput.Text));
 		d.Add("FrontImage", _frontImage.Text);
 		d.Add("BackImage", _backImage.Text);
+		d.Add("Type", VcToken.TokenType.Board);
 		
 		return d;
 	}

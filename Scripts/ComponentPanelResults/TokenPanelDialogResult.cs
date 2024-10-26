@@ -294,7 +294,8 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("FrontBgColor", _quickBackgroundColor.Color);
 		d.Add("FrontCaption", _quickText.Text);
 		d.Add("FrontCaptionColor", _quickTextColor.Color);
-
+		d.Add("Type", VcToken.TokenType.Token);
+		
 		if (_tabs.CurrentTab == 0)
 		{
 			d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
