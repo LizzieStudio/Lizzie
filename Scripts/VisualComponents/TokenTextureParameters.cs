@@ -8,7 +8,7 @@ public class TokenTextureParameters
     public int TextureMaxSize { get; set; } = 128;
     public Color BackgroundColor { get; set; } = Colors.White;
     public string Caption { get; set; }
-    public int FontSize { get; set; }
+    public int FontSize { get; set; } = 24;
     public Color CaptionColor { get; set; }
     public TokenTextureSubViewport.TokenShape Shape { get; set; }
 }

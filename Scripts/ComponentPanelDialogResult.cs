@@ -60,27 +60,5 @@ public abstract partial class ComponentPanelDialogResult : Control
     }
 
 
-    public static string[] ParseValueRanges(string input)
-    {
-        var sInput = input.Replace(" ",string.Empty);
-        
-        var pages = new List<string>();
-        var ranges = sInput.Split(',');
-
-        foreach (var range in ranges)
-        {
-            if (range.Contains('-'))
-            {
-                var bounds = range.Split('-').Select(int.Parse).ToArray();
-                pages.AddRange(Enumerable.Range(bounds[0], bounds[1] - bounds[0] + 1).ToArray().Select(s => s.ToString()));
-            }
-            else
-            {
-                pages.Add(range);
-            }
-        }
-
-        return pages.ToArray();
-    }
-
+  
 }

@@ -1,9 +1,11 @@
-[gd_scene load_steps=25 format=3 uid="uid://caj4d7v430lhp"]
+[gd_scene load_steps=27 format=3 uid="uid://caj4d7v430lhp"]
 
 [ext_resource type="Script" path="res://Scripts/GameController.cs" id="1_hibmt"]
 [ext_resource type="Script" path="res://Scripts/UI.cs" id="2_a0mv7"]
 [ext_resource type="PackedScene" uid="uid://c10pvpfntkay3" path="res://Scenes/3d_scene_no_physics.tscn" id="3_6khan"]
+[ext_resource type="Script" path="res://Scripts/HandManager.cs" id="3_h6pmi"]
 [ext_resource type="Script" path="res://Scripts/ComponentDefinition.cs" id="4_eclwi"]
+[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="4_vbm5h"]
 [ext_resource type="Resource" uid="uid://ceywqk4reme07" path="res://Scenes/ComponentPanels/TokenPanel.tres" id="7_la08l"]
 [ext_resource type="Resource" uid="uid://mljy81wn7au4" path="res://Scenes/ComponentPanels/BoardPanel.tres" id="8_dwpay"]
 [ext_resource type="Resource" uid="uid://cjw75xmuh5hm1" path="res://Scenes/ComponentPanels/SingleCardPanel.tres" id="9_56ys6"]
@@ -36,6 +38,26 @@ script = ExtResource("1_hibmt")
 [node name="UI" type="CanvasLayer" parent="."]
 script = ExtResource("2_a0mv7")
 highlightFontColor = Color(0.54902, 0.694118, 1, 1)
+
+[node name="Hand" type="Panel" parent="UI"]
+custom_minimum_size = Vector2(0, 200)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -200.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("3_h6pmi")
+
+[node name="TextureRect" type="TextureRect" parent="UI/Hand"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 120.0
+offset_bottom = 180.0
+texture = ExtResource("4_vbm5h")
+expand_mode = 5
 
 [node name="Mode" type="HBoxContainer" parent="UI"]
 anchors_preset = 5
@@ -84,6 +106,7 @@ title = "Insert"
 title = "Help"
 
 [node name="ComponentDefinition" type="HBoxContainer" parent="UI"]
+visible = false
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5

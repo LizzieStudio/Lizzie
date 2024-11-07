@@ -1,7 +1,9 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
 using Godot.Collections;
 
@@ -34,7 +36,15 @@ public partial class VcDeck : VisualGroupComponent
 		{
 			ProcessFlip(delta);
 		}
-		base._Process(delta);
+
+		if (_spriteUpdateCountdown > 0)
+		{
+			_spriteUpdateCountdown--;
+			if (_spriteUpdateCountdown == 0) UpdateDeckSprites();
+		}
+
+
+	base._Process(delta);
 	}
 
 	public override GeometryInstance3D DragMesh => _frontSprite;
@@ -150,6 +160,7 @@ public partial class VcDeck : VisualGroupComponent
 	private CommandResponse PerformShuffle()
 	{
 		Shuffle();
+		UpdateDeckSprites();
 		return new CommandResponse(false, null);
 	}
 
@@ -234,9 +245,11 @@ public partial class VcDeck : VisualGroupComponent
 			float deltaX = Width * (1.25f + i);
 			cards[i].Position = basePos + new Vector3(deltaX, 0, 0);
 			cards[i].ZOrder = ZOrder + i + 1;
-			GetParent().AddChild(cards[i]);
+			SceneController.AddComponentToScene(cards[i]);
 			cards[i].Visible = true;
 		}
+
+		UpdateDeckSprites();
 		
 		var c = new Change
 		{
@@ -260,6 +273,9 @@ public partial class VcDeck : VisualGroupComponent
 		_frontSprite = GetNode<Sprite3D>("FrontSprite");
 		_backSprite = GetNode<Sprite3D>("BackSprite");
 
+		_frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
+		_backView = GetNode<TokenTextureSubViewport>("BackViewport");
+		
 		if (!InitializeParameters(parameters)) return false;
 
 		switch (Mode)
@@ -290,7 +306,6 @@ public partial class VcDeck : VisualGroupComponent
 			var size = new Vector3(scale / Width, 1, scale / Height);
 			_frontSprite.Scale = size;
 			_backSprite.Scale = size;
-			GD.PrintErr(size);
 		}
 
 		var shape = (TokenTextureSubViewport.TokenShape)Shape;
@@ -325,11 +340,16 @@ public partial class VcDeck : VisualGroupComponent
 			default:
 				throw new ArgumentOutOfRangeException();
 		}
-		
+
+		_frontView.Ready += RegisterInitializedViews;
+		_backView.Ready += RegisterInitializedViews;
 		
 		
 		return true;
 	}
+	
+
+	
 
 	private Vector2[] CalcHexPointVertices()
 	{
@@ -374,21 +394,8 @@ public partial class VcDeck : VisualGroupComponent
 		CreateQuickCards();
 		Thickness = 0.03f * Children.Count;
 
+	
 
-		_frontSprite.Texture = Utility.Instance.CreateQuickTexture(new TokenTextureParameters
-		{
-			Height = Height,
-			Width = Width,
-			Shape = TokenTextureSubViewport.TokenShape.RoundedRect,
-			BackgroundColor = Colors.White,
-			Caption = "HELLO",
-			CaptionColor = Colors.Black
-		});
-
-		_frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize());
-		
-		_backSprite.Texture = _frontSprite.Texture;
-		_backSprite.PixelSize = PixelSize(_backSprite.Texture.GetSize());
 	}
 
 	private void BuildCustom()
@@ -416,7 +423,7 @@ public partial class VcDeck : VisualGroupComponent
 
 		var t = _frontView.GetTexture();
 
-		float pixelSize = PixelSize(t.GetSize());
+		float pixelSize = Utility.PixelSize(t.GetSize());
 		GD.PrintErr($"Pixel Size: {pixelSize}");
 		_frontSprite.PixelSize = pixelSize;
 		_frontSprite.Texture = t;
@@ -443,7 +450,7 @@ public partial class VcDeck : VisualGroupComponent
 		_backView.SetShape((TokenTextureSubViewport.TokenShape) Shape);
 		var t = _backView.GetTexture();
 
-		float pixelSize = PixelSize(t.GetSize());
+		float pixelSize = Utility.PixelSize(t.GetSize());
 		_backSprite.PixelSize = pixelSize;
 		_backView.SetTexture(LoadTexture(BackImage));
 
@@ -451,47 +458,82 @@ public partial class VcDeck : VisualGroupComponent
 		
 	}
 
-	private float PixelSize(Vector2 size)
-	{
-		if (size.X == 0 || size.Y == 0) return 0;
 
-		return 0.95f / Mathf.Max(size.X, size.Y);
-	}
 	
 	private void CreateQuickFrontTexture()
 	{
-		_frontView.SetBackgroundColor(FrontBgColor);
-		_frontView.SetText(FrontCaption);
-		_frontView.SetTextColor(FrontCaptionColor);
-		_frontView.SetShape((TokenTextureSubViewport.TokenShape) Shape);
-		_frontView.SetSize(Width, Height);
+		/*
+		 *
+		 * 		p.Add("Height", Height * 10);
+		p.Add("Width", Width * 10);
+		p.Add("Thickness", 0.03f);
+		p.Add("ComponentName", string.Empty); //TODO add card name
+		p.Add("FrontImage", string.Empty);
+		p.Add("BackImage", string.Empty);
+		p.Add("Shape",0);
+		p.Add("Mode", 0);
+		p.Add("FrontBgColor", faceColor); 
+		p.Add("FrontCaption", faceCaption);
+		p.Add("FrontCaptionColor", Colors.Black);
+		p.Add("DifferentBack", true);
+		p.Add("BackBgColor", backColor);
+		p.Add("BackCaption", backCaption);
+		p.Add("BackCaptionColor", Colors.Black);
+		p.Add("FrontFontSize", 72);
+		p.Add("BackFontSize", 24);
+		 */
 		
-		var t = _frontView.GetTexture();
+		//the front of the deck is the back of the first child
+		if (Children.Count == 0) return;
 
-		float pixelSize = PixelSize(t.GetSize());
-		_frontSprite.PixelSize = pixelSize;
-		_frontSprite.Texture = t;
-
-		if (!DifferentBack)
-		{
-			_backSprite.PixelSize = pixelSize;
-			_backSprite.Texture = t;
-		}
+		var p = Children.First().Parameters;
+		
+		
+			var textureParameters = new TokenTextureParameters
+			{
+				BackgroundColor = (Color)p["BackBgColor"],
+				Caption = p["BackCaption"].ToString(),
+				CaptionColor =(Color)p["BackCaptionColor"],
+				Shape = (TokenTextureSubViewport.TokenShape)p["Shape"],
+				Height = Height,
+				Width = Width,
+				FontSize = (int)p["BackFontSize"]
+			};
+		
+			var t = _frontView.CreateQuickTexture(textureParameters);
+		
+			float pixelSize = Utility.PixelSize(t.GetSize());
+			_frontSprite.PixelSize = pixelSize;
+			_frontSprite.Texture = t;
+			
 	}
 	
 	private void CreateQuickBackTexture()
 	{
-		_backView.SetBackgroundColor(BackBgColor);
-		_backView.SetText(BackCaption);
-		_backView.SetTextColor(BackCaptionColor);
-		_backView.SetShape((TokenTextureSubViewport.TokenShape)Shape);
-		_backView.SetSize(Width, Height);
-		
-		var t = _backView.GetTexture();
 
-		float pixelSize = PixelSize(t.GetSize());
+		//The back texture is the face of the bottom card
+		
+		if (Children.Count == 0) return;
+
+		var p = Children.Last().Parameters;
+		
+		var textureParameters = new TokenTextureParameters
+		{
+			BackgroundColor = (Color)p["FrontBgColor"],
+			Caption = p["FrontCaption"].ToString(),
+			CaptionColor =(Color)p["FrontCaptionColor"],
+			Shape = (TokenTextureSubViewport.TokenShape)p["Shape"],
+			Height = Height,
+			Width = Width,
+			FontSize = (int)p["FrontFontSize"]
+		};
+		
+		var t = _backView.CreateQuickTexture(textureParameters);
+		
+		float pixelSize = Utility.PixelSize(t.GetSize());
 		_backSprite.PixelSize = pixelSize;
 		_backSprite.Texture = t;
+
 	}
 
 	private bool InitializeParameters(System.Collections.Generic.Dictionary<string, object> parameters)
@@ -513,22 +555,7 @@ public partial class VcDeck : VisualGroupComponent
 			
 		}
 		
-		/*
-		FrontImage = parameters["FrontImage"].ToString();
-		BackImage = parameters["BackImage"].ToString();
-
-		Shape = (int)parameters["Shape"];
-		Mode = (int)parameters["Mode"];
-		FrontBgColor = (Color)parameters["FrontBgColor"];
-		FrontCaption = parameters["FrontCaption"].ToString();
-		FrontCaptionColor = (Color)parameters["FrontCaptionColor"];
-
-		DifferentBack = (bool)parameters["DifferentBack"];
-		
-		BackBgColor = (Color)parameters["BackBgColor"];
-		BackCaption = parameters["BackCaption"].ToString();
-		BackCaptionColor = (Color)parameters["BackCaptionColor"];
-		*/
+		if (parameters.ContainsKey("QuickCardData")) QuickCardList = (List<QuickCardData>)parameters["QuickCardData"];
 		
 		var scene = ResourceLoader.Load<PackedScene>(_templateCardPath).Instantiate();
 
@@ -538,43 +565,53 @@ public partial class VcDeck : VisualGroupComponent
 		//instantiate the cards
 		
 		
+		
 		return true;
 	}
 
 	private void CreateQuickCards()
 	{
 		Clear();
-		Color[] colors = { Colors.Red, Colors.Blue, Colors.Yellow, Colors.Green };
-		foreach (var color in colors)
-			for (int i = 0; i < 6; i++)
+
+		foreach (var q in QuickCardList)
+		{
+			var values = Utility.ParseValueRanges(q.Caption);
+
+			foreach (var v in values)
 			{
-				var c = CreateQuickCard((i + 1).ToString(), color);
+				var c = CreateQuickCard(v, q.BackgroundColor, q.CardBackValue, q.CardBackColor);
 				
 				AddChildComponent(c);
 			}
+		}
 	}
 
-	private VcToken CreateQuickCard(string caption, Color backColor)
+	private VcToken CreateQuickCard(string faceCaption, Color faceColor, string backCaption, Color backColor)
 	{
 		var card = (VcToken)_templateCard.Duplicate();
 		var p = new System.Collections.Generic.Dictionary<string, object>();
 
 		p.Add("Height", Height * 10);
 		p.Add("Width", Width * 10);
-		p.Add("Thickness", 0.03f);
+		p.Add("Thickness", 0.03f * 10);
 		p.Add("ComponentName", string.Empty); //TODO add card name
 		p.Add("FrontImage", string.Empty);
 		p.Add("BackImage", string.Empty);
 		p.Add("Shape",0);
 		p.Add("Mode", 0);
-		p.Add("FrontBgColor", backColor); 
-		p.Add("FrontCaption", caption);
+		p.Add("FrontBgColor", faceColor); 
+		p.Add("FrontCaption", faceCaption);
 		p.Add("FrontCaptionColor", Colors.Black);
 		p.Add("DifferentBack", true);
-		p.Add("BackBgColor", Colors.White);
-		p.Add("BackCaption", "HELLO");
+		p.Add("BackBgColor", backColor);
+		p.Add("BackCaption", backCaption);
 		p.Add("BackCaptionColor", Colors.Black);
+		p.Add("FrontFontSize", 72);
+		p.Add("BackFontSize", 24);
 		card.Build(p, SceneController);
+
+		card.Parent = Reference;
+		
 		return card;
 	}
 
@@ -627,8 +664,31 @@ public partial class VcDeck : VisualGroupComponent
 
 		return ret;
 	}
+
+	private int _spriteUpdateCountdown;
+
+	private int _viewsInitialized = 0;
+
+	private void RegisterInitializedViews()
+	{
+		_viewsInitialized++;
+		
+		if (_viewsInitialized == 2) UpdateDeckSprites();
+	}
 	
-	
+	private void UpdateDeckSprites()
+	{
+		//set the top and bottom sprites. 
+		//TODO Handle if there are no cards in the deck?
+		if (Children.Count > 0)
+		{
+			//TODO these should be replaced by a generalized routine (so not just Quick)
+			CreateQuickFrontTexture();
+			CreateQuickBackTexture();
+			
+			
+		}
+	}
 
 	private float Height;
 	private float Width;
@@ -644,4 +704,5 @@ public partial class VcDeck : VisualGroupComponent
 	private Color BackBgColor;
 	private string BackCaption;
 	private Color BackCaptionColor;
+	private List<QuickCardData> QuickCardList = new();
 }

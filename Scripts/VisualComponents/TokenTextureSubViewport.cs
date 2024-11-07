@@ -64,18 +64,15 @@ public partial class TokenTextureSubViewport : SubViewport
 		return new ImageTexture();
 	}
 
-	public ViewportTexture CreateQuickTexture(TokenTextureParameters parameters)
+	public Texture2D CreateQuickTexture(TokenTextureParameters parameters)
 	{
 		SetSize(parameters.Width, parameters.Height);
 		SetShape(parameters.Shape);
 		SetBackgroundColor(parameters.BackgroundColor);
 		SetText(parameters.Caption);
 		SetTextColor(parameters.CaptionColor);
+		SetFontSize(parameters.FontSize);
 
-		if (parameters.FontSize > 0)
-		{
-			_label.LabelSettings.FontSize = parameters.FontSize;
-		}
 		return GetTexture();
 	}
 		
@@ -141,6 +138,11 @@ public partial class TokenTextureSubViewport : SubViewport
 		_textureRect.Texture = texture;
 	}
 
+	public void SetFontSize(int fontSize)
+	{
+		if (fontSize > 0) _labelSettings.FontSize = fontSize;
+	}
+	
 	public enum ShapeViewportMode {Shape, Texture}
 
 	public void SetViewPortMode(ShapeViewportMode mode)

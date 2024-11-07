@@ -52,7 +52,9 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 	private const int MaxQuickSuitCount = 4;
 	private ColorPickerButton _quickBackColor;
 	private LineEdit _quickBackText;
-	
+
+
+	private OptionButton _cardSizes;
 	
 	private CardPreviewPanel _preview;
 	private OptionButton _previewFrontBack;
@@ -60,6 +62,26 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		InitializeBinding();
+		
+		HeightWidthChange(string.Empty); //just to start
+
+		GenerateCards();
+		ChangePreviewCard(0);
+	}
+
+	private void StandardSizeChanged()
+	{
+		
+	}
+
+	private bool _isBound;
+	private void InitializeBinding()
+	{
+		if (_isBound) return;
+
+		_isBound = true;
+		
 		_nameInput = GetNode<LineEdit>("%ItemName");
 		
 		_heightInput = GetNode<LineEdit>("%Height");
@@ -85,6 +107,10 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 		_curCardPreview = GetNode<Label>("%CurCardLabel");
 		_previewFrontBack = GetNode<OptionButton>("%PreviewFrontBack");
 		_previewFrontBack.ItemSelected += l => ShowPreviewCard(_curCard);
+
+		_tabs = GetNode<TabContainer>("%TabContainer");
+		_cardSizes = GetNode<OptionButton>("%StandardSize");
+		_cardSizes.Pressed += StandardSizeChanged;
 		
 		//Quick suit selections - There's a better way to do this, (instantiating the lines), but for now...
 		for (int i = 0; i < MaxQuickSuitCount; i++)
@@ -104,17 +130,12 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 		
 		_quickBackText = GetNode<LineEdit>("%QuickBackText");
 		_quickBackText.TextChanged += t => GenerateCards();
-		
-		HeightWidthChange(string.Empty); //just to start
 
-		GenerateCards();
-		ChangePreviewCard(0);
 	}
-	
 
 	private int _curCard = 0;
 	private List<QuickCardData> _quickCards = new();
-
+	private List<QuickCardData> _quickSuits = new();
 
 
 
@@ -164,7 +185,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
 		for (int i = 0; i < _suitCount; i++)
 		{
-			var values = ComponentPanelDialogResult.ParseValueRanges(_quickSuitValues[i].Text);
+			var values = Utility.ParseValueRanges(_quickSuitValues[i].Text);
 
 			foreach (var v in values)
 			{
@@ -187,16 +208,46 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 	{
 		return new List<string>();
 	}
-
+	
 	public override Dictionary<string, object> GetParams()
 	{
+		
 		var d = new Dictionary<string, object>();
 		
 		d.Add("ComponentName", _nameInput.Text);
 		d.Add("Height", ParamToFloat(_heightInput.Text));
 		d.Add("Width", ParamToFloat(_widthInput.Text));
-
+		d.Add("Mode", _tabs.CurrentTab);
+		
+		if (_tabs.CurrentTab == 0)
+		{
+			LoadQuickSuits();
+			d.Add("QuickCardData", _quickSuits);
+		}
+		
 		return d;
+	}
+
+	private void LoadQuickSuits()
+	{
+		_quickSuits.Clear();
+		
+		if (!int.TryParse(_quickSuitCount.Text, out _suitCount)) return;
+		
+		for (int i = 0; i < _suitCount; i++)
+		{
+			var suit = new QuickCardData
+			{
+				BackgroundColor = _quickSuitColors[i].Color,
+				Caption = _quickSuitValues[i].Text,
+				CardBackColor = _quickBackColor.Color,
+				CardBackValue =  _quickBackText.Text
+			};
+			
+			_quickSuits.Add(suit);
+			
+		}
+
 	}
 }
 
@@ -208,3 +259,5 @@ public class QuickCardData
 	public Color CardBackColor { get; set; }
 	public string CardBackValue { get; set; }
 }
+
+

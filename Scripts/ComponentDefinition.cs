@@ -43,7 +43,7 @@ public partial class ComponentDefinition : HBoxContainer
 			if (firstButton)
 			{
 				b.ButtonPressed = true;
-				CurName = ci.Name;
+				CurName = c.ComponentName;
 				firstButton = false;
 			}
 		}

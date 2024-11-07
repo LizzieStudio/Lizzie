@@ -295,6 +295,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("FrontCaption", _quickText.Text);
 		d.Add("FrontCaptionColor", _quickTextColor.Color);
 		d.Add("Type", VcToken.TokenType.Token);
+		d.Add("FrontFontSize", 24);
 		
 		if (_tabs.CurrentTab == 0)
 		{
@@ -309,6 +310,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("BackBgColor", _quickBackgroundColor2.Color);
 		d.Add("BackCaption", _quickText2.Text);
 		d.Add("BackCaptionColor", _quickTextColor2.Color);
+		d.Add("BackFontSize", 24);
 
 		return d;
 	}
