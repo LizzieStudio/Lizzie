@@ -13,6 +13,9 @@ public abstract partial class BaseCamera : Node3D, ICamera
     protected float ZoomSpeed = 2;
 
     [Export]
+    protected float ContinuousZoomSpeed = 10;
+
+    [Export]
     protected float PanSpeed = 10;
 
 
@@ -42,8 +45,8 @@ public abstract partial class BaseCamera : Node3D, ICamera
         if (!Current || _gameObjects.CursorMode == CursorMode.DragSelect || _gameObjects.CursorMode == CursorMode.PopupMenu) return;
 
         // Handle Zoom
-        if (Input.IsActionJustReleased("zoom_in")) UpdateZoom(-1);
-        if (Input.IsActionJustReleased("zoom_out")) UpdateZoom(1);
+        if (Input.IsActionPressed("zoom_in")) UpdateZoom((float)-delta * ContinuousZoomSpeed);
+        if (Input.IsActionPressed("zoom_out")) UpdateZoom((float)delta * ContinuousZoomSpeed);
         if (Input.IsActionJustPressed("component_zoom")) ZoomComponent(_gameObjects.GetMouseSelectedObject());
 
         // Handle Pan
@@ -53,6 +56,7 @@ public abstract partial class BaseCamera : Node3D, ICamera
         if (Input.IsActionPressed("reset_view")) Reset();
     }
 
+    // Controls that use the mouse a better handled in the _Input method because of engine quirks (like Mouse wheel not having a pressed event).
     public override void _Input(InputEvent @event)
     {
         base._Input(@event);
@@ -63,11 +67,17 @@ public abstract partial class BaseCamera : Node3D, ICamera
         {
             UpdateRotation(mouseMotion.Relative);
         }
+
+        if (@event is InputEventMouseButton)
+        {
+            if (@event.IsActionPressed("zoom_in")) UpdateZoom(-ZoomSpeed);
+            if (@event.IsActionPressed("zoom_out")) UpdateZoom(ZoomSpeed);
+        }
     }
 
     protected abstract Camera3D GetCameraNode();
 
-    protected abstract void UpdateZoom(float direction);
+    protected abstract void UpdateZoom(float zoomValue);
     protected abstract void UpdateRotation(Vector2 mousePosition);
     protected abstract void ZoomComponent(VisualComponentBase component);
 

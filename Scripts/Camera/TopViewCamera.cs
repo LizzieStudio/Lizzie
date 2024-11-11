@@ -19,9 +19,9 @@ public partial class TopViewCamera : BaseCamera
         RotateY(Mathf.DegToRad(-mousePosition.X * RotationSpeed));
     }
 
-    protected override void UpdateZoom(float direction)
+    protected override void UpdateZoom(float zoomValue)
     {
-        ActualCamera.Size = Mathf.Clamp(ActualCamera.Size + (direction * ZoomSpeed), MinSize, MaxSize);
+        ActualCamera.Size = Mathf.Clamp(ActualCamera.Size + zoomValue, MinSize, MaxSize);
     }
 
     protected override void ZoomComponent(VisualComponentBase component)

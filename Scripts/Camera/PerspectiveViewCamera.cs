@@ -37,9 +37,9 @@ public partial class PerspectiveViewCamera : BaseCamera
         _gimbal.RotateObjectLocal(Vector3.Right, Mathf.DegToRad(-pitch));
     }
 
-    protected override void UpdateZoom(float direction)
+    protected override void UpdateZoom(float zoomValue)
     {
-        ActualCamera.Position = new Vector3(0, 0, Mathf.Clamp(ActualCamera.Position.Z + (direction * ZoomSpeed), MinZoomDistance, MaxZoomDistance));
+        ActualCamera.Position = new Vector3(0, 0, Mathf.Clamp(ActualCamera.Position.Z + zoomValue, MinZoomDistance, MaxZoomDistance));
     }
 
     protected override void ZoomComponent(VisualComponentBase component)

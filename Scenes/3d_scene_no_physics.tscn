@@ -32,6 +32,7 @@ script = ExtResource("3_v37dv")
 script = ExtResource("4_42he8")
 _gameObjects = NodePath("../../GameObjects")
 RotationSpeed = 0.1
+ContinuousZoomSpeed = 30.0
 PanSpeed = 20.0
 
 [node name="Gimbal" type="Node3D" parent="Cameras/PerspectiveViewCamera"]
@@ -45,6 +46,7 @@ fov = 73.6372
 script = ExtResource("5_he01h")
 _gameObjects = NodePath("../../GameObjects")
 RotationSpeed = 0.1
+ContinuousZoomSpeed = 50.0
 PanSpeed = 20.0
 
 [node name="Camera" type="Camera3D" parent="Cameras/TopViewCamera"]
