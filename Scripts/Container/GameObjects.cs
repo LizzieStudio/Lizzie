@@ -457,7 +457,7 @@ public partial class GameObjects : Node
             var delta = newDragPosition - _lastDragPosition;
             _lastDragPosition = newDragPosition;
 
-            foreach (var go in GetSelectedObjects())
+            foreach (var go in GetDraggingObjects())
             {
                 go.Position += delta;
             }
@@ -465,6 +465,17 @@ public partial class GameObjects : Node
         else
         {
             EndDrag();
+        }
+    }
+    
+    private IEnumerable<VisualComponentBase> GetDraggingObjects()
+    {
+        foreach (var n in GetChildren())
+        {
+            if (n is VisualComponentBase { IsDragging: true } p)
+            {
+                yield return p;
+            }
         }
     }
 
