@@ -39,20 +39,11 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 		var d = new Dictionary<string, object>();
 
 		d.Add("ComponentName", _nameInput.Text);
-		GD.Print("Added Name");
 		d.Add("Height", ParamToFloat(_heightInput.Text));
-		GD.Print("Added Height");
 		d.Add("Width", ParamToFloat(_widthInput.Text));
-		GD.Print("Added Width");
 		d.Add("Length", ParamToFloat(_lengthInput.Text));
-		GD.Print("Added Length");
 		d.Add("Color", _colorPicker.Color);
-		GD.Print("Added Color");
-
-		foreach (var p in d)
-		{
-			GD.Print($"{p.Key} {p.Value}");
-		}
+		
 		return d;
 	}
 

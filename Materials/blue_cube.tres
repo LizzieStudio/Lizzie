@@ -5,3 +5,4 @@
 [resource]
 resource_local_to_scene = true
 material = ExtResource("1_3ldk0")
+size = Vector3(0.95, 0.95, 0.95)

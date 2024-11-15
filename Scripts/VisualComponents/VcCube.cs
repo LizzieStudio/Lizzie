@@ -2,20 +2,31 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+
+
 public partial class VcCube : VisualComponentBase
 {
+	
 	public override void _Ready()
 	{
 		base._Ready();
 		Visible = true;
 		ComponentType = VisualComponentType.Cube;
-		StackingCollider = GetNode<Area3D>("Area3D");
+		
+		MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
+		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
+		
 	}
+	
+	
 
 	public override bool Build(Dictionary<string, object> parameters)
 	{
 		
 		base.Build(parameters);
+		
+		MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
+		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 		
 		if (parameters.ContainsKey(nameof(Height)))
 		{
@@ -56,9 +67,15 @@ public partial class VcCube : VisualComponentBase
 		YHeight = Height;
 		
 		SetColor(CubeColor);
+
+		var r = new RectangleShape2D();
+		r.Size = new Vector2(Width, Length);
+		
+		ShapeProfiles.Add(r);
 		
 		return true;
 	}
+	
 
 	public override List<string> ValidateParameters(Dictionary<string, object> parameters)
 	{
@@ -90,6 +107,10 @@ public partial class VcCube : VisualComponentBase
 		return ret;
 	}
 
+	public override GeometryInstance3D DragMesh => MainMesh;
+
+	public override float MaxAxisSize => Math.Max( Math.Max(Height, Width), Length);
+	
 	private float Height;
 	private float Width;
 	private float Length;

@@ -1,231 +1,44 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks.Dataflow;
 
 public partial class SceneController : Node3D
 {
-	private Pseudo2DCamera _2dCamera;
-	private CameraController _3dCamera;
-	private Node _gameObjects;
-	private ICameraBase _currentCamera;
+	[Signal]
+	public delegate void ShowComponentPopupEventHandler(Vector2I position, Godot.Collections.Array<VisualComponentBase> components);
 
-	private bool _isDragging;
-	private int _stackingUpdateRequired;
-	
-	public enum SceneMode {TwoD, ThreeDFixed, ThreeDPhysics, Creator}
+	private CameraManager _cameraManager;
+	private GameObjects _gameObjects;
 
 	public override void _Ready()
 	{
-		_3dCamera = GetNode<CameraController>("CameraBase");
-		_2dCamera = GetNode<Pseudo2DCamera>("Pseudo2DCamera");
-		_gameObjects = GetNode<Node>("GameObjects");
-		_currentCamera = _2dCamera;
+		_cameraManager = GetNode<CameraManager>("Cameras");
+		_gameObjects = GetNode<GameObjects>("GameObjects");
+		_gameObjects.ShowComponentPopup += GameObjectsOnShowComponentPopup;
 	}
 
-	public override void _PhysicsProcess(double delta)
+
+
+	public override void _Process(double delta)
 	{
-		if (_stackingUpdateRequired > 0)
+		base._Process(delta);
+		if (_gameObjects.CursorMode != CursorMode.DragSelect && _gameObjects.CursorMode != CursorMode.PopupMenu)
 		{
-			_stackingUpdateRequired--;
-
-			if (_stackingUpdateRequired <= 0)
-			{
-				UpdateStackingHeights();
-				_stackingUpdateRequired = 0;
-			}
-			
+			CheckForCommands();
+			if (Input.IsActionJustPressed("ui_undo")) UndoService.Instance.Undo();
 		}
 	}
 
-	public override void _UnhandledInput(InputEvent @event)
-	{
-		//if we are spawning a component and there's a left-click, create it
-		if (_spawnMode)
-		{
-			if (Input.IsMouseButtonPressed(MouseButton.Left))
-			{
-				SpawnComponent();
-				QueueStackingUpdate();
-			}
-			else
-			{
-				if (@event.IsActionPressed("exit_mode"))
-				{
-					ExitSpawnMode();
-					QueueStackingUpdate();
-				}
-			}
-		}
-		
-		//otherwise deal with dragging
-		else
-		{
-			//only drag if we are current hovering an object
-			var go = GetSelectedObject();
-
-			if (go != null)
-			{
-				HandleDrag(@event);
-			}
-			
-			//if we are highlighting an object, and are not in spawn mode, pass other commands. 
-			//Currently just flip
-			go?.ProcessCommands();
-		}
-
-		//check for zoom
-		if (@event.IsActionPressed("zoom_in")) _currentCamera.ZoomIn();
-		if (@event.IsActionPressed("zoom_out")) _currentCamera.ZoomOut();
-		
-		//process rotations
-		_currentCamera.ProcessViewEvent(@event);
-		
-		if (@event.IsActionPressed("reset_view")) _currentCamera.ResetView();
-		
-		if (@event.IsActionPressed("move_to_top")) MoveToTop();
-		if (@event.IsActionPressed("move_to_bottom")) MoveToBottom();
-		
-		base._Input(@event);
-	}
-
-	private void MoveToTop()
-	{
-		var go = GetSelectedObject();
-		if (go == null) return;
-
-		var curZ = go.ZOrder;
-		var maxZ = GetMaxComponentZ();
-		
-		//move everything below the selected object one higher
-		foreach (var g in _gameObjects.GetChildren())
-		{
-			if (g is VisualComponentBase vcb && vcb.ZOrder > curZ)
-			{
-				vcb.ZOrder--;
-			}
-			
-		}
-
-		go.ZOrder = maxZ;
-		QueueStackingUpdate();
-	}
-
-	private void MoveToBottom()
-	{
-		var go = GetSelectedObject();
-		if (go == null) return;
-
-		var curZ = go.ZOrder;
-		
-		//move everything below the selected object one higher
-		foreach (var g in _gameObjects.GetChildren())
-		{
-			if (g is VisualComponentBase vcb && vcb.ZOrder < curZ)
-			{
-					vcb.ZOrder++;
-			}
-		}
-
-		go.ZOrder = 1;
-		QueueStackingUpdate();
-	}
-	
-
-
-	private void HandleDrag(InputEvent @event)
-	{
-		var mouseMotion = new Vector2(0, 0);
-		if (@event is InputEventMouseMotion mouse)
-		{
-			mouseMotion = mouse.Relative;
-		}
-
-		if (Input.IsMouseButtonPressed(MouseButton.Left) && !_spawnMode)
-		{
-			if (_isDragging)
-			{
-				_currentCamera.ProcessDrag(mouseMotion);
-			}
-			else
-			{
-				_isDragging = true;
-				_currentCamera.StartDrag();
-			}
-		}
-		else
-		{
-			if (_isDragging)
-			{
-				_isDragging = false;
-				QueueStackingUpdate();
-				_currentCamera.StopDrag();
-			}
-		}
-	}
-
-	private VisualComponentBase GetSelectedObject()
-	{
-		foreach (var n in _gameObjects.GetChildren())
-		{
-			if (n is VisualComponentBase { IsMouseSelected: true } p)
-			{
-				return p;
-			}
-		}
-
-		return null;
-	}
-	
-	private void SpawnComponent()
-	{
-		if (_spawnComponent == null) return;
-
-		var newComp = (VisualComponentBase)_spawnComponent.Duplicate();
-		newComp.Build(_spawnComponent.Parameters);
-		newComp.DimMode(false);
-		newComp.ZOrder = GetMaxComponentZ() + 1;
-		GD.Print($"New Z: {newComp.ZOrder}");
-
-		var spawnPos = _currentCamera.GetSpawnPos();
-		newComp.Position = new Vector3(spawnPos.X, newComp.YHeight/2f, spawnPos.Z);
-		
-		_gameObjects.AddChild(newComp);
-		QueueStackingUpdate();
-	}
-
-	[Export] private int _stackingUpdateFrames = 3;	//Test hack to avoid issue with stacking not seeing colliders
-	private void QueueStackingUpdate()
-	{
-		_stackingUpdateRequired = _stackingUpdateFrames;
-	}
-	
-	private int GetMaxComponentZ()
-	{
-		var max = 0;
-
-		foreach (var c in _gameObjects.GetChildren())
-		{
-			if (c is VisualComponentBase vcb)
-			{
-				max = Math.Max(max, vcb.ZOrder);
-			}
-		}
-
-		return max;
-	}
-	
+	#region Message to/from Game
 	public virtual void SetMode(SceneMode mode)
 	{
 		switch (mode)
 		{
 			case SceneMode.TwoD:
-				_2dCamera.Current = true;
-				_currentCamera = _2dCamera;
+				_cameraManager.SetTopView();
 				break;
 			case SceneMode.ThreeDFixed:
-				_3dCamera.Current = true;
-				_currentCamera = _3dCamera;
+				_cameraManager.SetPerspectiveView();
 				break;
 			case SceneMode.ThreeDPhysics:
 				break;
@@ -236,123 +49,89 @@ public partial class SceneController : Node3D
 		}
 	}
 
-	private bool _spawnMode;
-	private VisualComponentBase _spawnComponent;
-	
-	public void EnterSpawnMode(VisualComponentBase component)
-	{
-		_spawnMode = true;
-		_spawnComponent = component;
-		_spawnComponent.DimMode(true);
-		_currentCamera.EnterSpawnMode(component);
-		_gameObjects.AddChild(component);
-	}
-
-	public void ExitSpawnMode()
-	{
-		GD.Print("Exit Spawn Mode");
-		_currentCamera.ExitSpawnMode();
-
-		_spawnMode = false;
-
-		if (!IsInstanceValid(_spawnComponent)) return;
-		
-		if (_spawnComponent == null) return;
-		
-		if (_spawnComponent.IsQueuedForDeletion()) return;
-		
-		_spawnComponent?.QueueFree();
-		//_spawnComponent = null;
-	}
-
 	public void TestFunction()
 	{
 		//put test function here
 	}
-	
-	public void UpdateStackingHeights()
+
+	public void EnterSpawnMode(VisualComponentBase component)
 	{
-		var children = _gameObjects.GetChildren();
-
-		//this dictionary keeps track of objects that are below a certain object. The key is the object id 
-		//(in the children array), and the list elements are the object ids of the things that are under it.
-		Dictionary<int, List<int>> underneath = new();
-		for (int i = 0; i < children.Count; i++)
-		{
-			var ci = children[i] as VisualComponentBase;
-
-			if (ci.StackingCollider == null)
-			{
-				GD.PrintErr($"Null StackingCollider on {i}");
-				continue;
-			}
-
-			for (int j = 0; j < children.Count; j++)
-			{
-				var cj = children[j] as VisualComponentBase;
-
-				if (cj.StackingCollider != null)
-				{
-
-					if (cj.ZOrder < ci.ZOrder && ci.OverlapsArea(cj)) //lower zOrders are below other items
-					{
-						GD.Print($"Area {i} overlaps Area {j}");
-						//add to dictionary
-						if (underneath.ContainsKey(i))
-						{
-							underneath[i].Add(j);
-						}
-						else
-						{
-							underneath.Add(i, new List<int> { j });
-						}
-					}
-				}
-				else
-				{GD.PrintErr($"Null stacking collider on {j}");}
-			}
-		}
-		
-		GD.Print("Collision check complete");
-
-		//uncomment the below to get a printout of the Underneath dictionary
-		
-		foreach (var r in underneath)
-		{
-			string s = String.Empty;
-			foreach (var q in r.Value)
-			{
-				s += $"{q} ";
-			}
-
-			GD.Print($"{r.Key} is above {s}");
-		}
-		
-		
-		//loop through all the objects and check the dictionary (which is in Z order) and stack
-		//The y coordinate is set to the sum of all of the YHeight values below it.
-		//We loop through all the children (and not just the UNDERNEATH dictionary entries)
-		//in case there's nothing underneath them. The dictionary only contains items with something below
-		//them
-		
-		for (int i = 0; i < children.Count; i++)
-		{
-			var ci = children[i] as VisualComponentBase;
-			if (ci is null) continue;
-			
-			float floor = 0;
-
-			if (underneath.TryGetValue(i, out var elements))
-			{
-				foreach (var o in elements)
-				{
-					if (children[o] is VisualComponentBase co) floor += co.YHeight;
-					GD.PrintErr($"comp: {o}  floor: {floor}");
-				}
-			}
-			GD.Print($"New pos for {i}: {floor + (ci.YHeight/2f)}");
-			ci.Position = new Vector3(ci.Position.X, floor + (ci.YHeight / 2f), ci.Position.Z);
-		}
-		
+		_gameObjects.EnterSpawnMode(component);
 	}
+
+	public void PopupClosed()
+	{
+		_gameObjects.PopupClosed();
+	}
+
+	private void OnShowComponentPopup(Vector2I position, Godot.Collections.Array<VisualComponentBase> components)
+	{
+		//EmitSignal(SignalName.ShowComponentPopup, position, components);
+	}
+	
+	private void GameObjectsOnShowComponentPopup(object sender, ShowComponentPopupEventArgs e)
+	{
+		ShowComponentPopup2?.Invoke(this, e);
+	}
+
+	public event EventHandler<ShowComponentPopupEventArgs> ShowComponentPopup2; 
+	#endregion
+
+	#region Commands
+	public bool SendCommandToSelected(VisualCommand command)
+	{
+		return SendCommandToComponents(command, _gameObjects.GetSelectedObjects());
+	}
+
+	public bool SendCommandToComponents(VisualCommand command, IEnumerable<VisualComponentBase> components)
+	{
+		bool result = false;
+
+		Update update = new();
+
+		foreach (var c in components)
+		{
+			var change = c.ProcessCommand(command);
+			if (!change.Consumed) continue;
+			if (change.UndoAction != null) update.Add(change.UndoAction);
+			result = true;
+		}
+
+		if (update.Count > 0)
+		{
+			UndoService.Instance.Add(update);
+		}
+
+		return result;
+	}
+
+	private void CheckForCommands()
+	{
+		if (Input.IsActionJustPressed("flip")) SendCommandToSelected(VisualCommand.Flip);
+		if (Input.IsActionJustPressed("lock")) SendCommandToSelected(VisualCommand.ToggleLock);
+
+		if (Input.IsActionJustPressed("num_1")) SendCommandToSelected(VisualCommand.Num1);
+		if (Input.IsActionJustPressed("num_2")) SendCommandToSelected(VisualCommand.Num2);
+		if (Input.IsActionJustPressed("num_3")) SendCommandToSelected(VisualCommand.Num3);
+		if (Input.IsActionJustPressed("num_4")) SendCommandToSelected(VisualCommand.Num4);
+		if (Input.IsActionJustPressed("num_5")) SendCommandToSelected(VisualCommand.Num5);
+		if (Input.IsActionJustPressed("num_6")) SendCommandToSelected(VisualCommand.Num6);
+		if (Input.IsActionJustPressed("num_7")) SendCommandToSelected(VisualCommand.Num7);
+		if (Input.IsActionJustPressed("num_8")) SendCommandToSelected(VisualCommand.Num8);
+		if (Input.IsActionJustPressed("num_9")) SendCommandToSelected(VisualCommand.Num9);
+		if (Input.IsActionJustPressed("num_10")) SendCommandToSelected(VisualCommand.Num10);
+		if (Input.IsActionJustPressed("num_11")) SendCommandToSelected(VisualCommand.Num11);
+		if (Input.IsActionJustPressed("num_12")) SendCommandToSelected(VisualCommand.Num12);
+		if (Input.IsActionJustPressed("num_13")) SendCommandToSelected(VisualCommand.Num13);
+		if (Input.IsActionJustPressed("num_14")) SendCommandToSelected(VisualCommand.Num14);
+		if (Input.IsActionJustPressed("num_15")) SendCommandToSelected(VisualCommand.Num15);
+		if (Input.IsActionJustPressed("num_16")) SendCommandToSelected(VisualCommand.Num16);
+		if (Input.IsActionJustPressed("num_17")) SendCommandToSelected(VisualCommand.Num17);
+		if (Input.IsActionJustPressed("num_18")) SendCommandToSelected(VisualCommand.Num18);
+		if (Input.IsActionJustPressed("num_19")) SendCommandToSelected(VisualCommand.Num19);
+		if (Input.IsActionJustPressed("num_20")) SendCommandToSelected(VisualCommand.Num20);
+
+		if (Input.IsActionJustPressed("roll")) SendCommandToSelected(VisualCommand.Roll);
+	}
+	#endregion
 }

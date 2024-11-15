@@ -1,14 +1,17 @@
-[gd_scene load_steps=20 format=3 uid="uid://caj4d7v430lhp"]
+[gd_scene load_steps=27 format=3 uid="uid://caj4d7v430lhp"]
 
 [ext_resource type="Script" path="res://Scripts/GameController.cs" id="1_hibmt"]
 [ext_resource type="Script" path="res://Scripts/UI.cs" id="2_a0mv7"]
 [ext_resource type="PackedScene" uid="uid://c10pvpfntkay3" path="res://Scenes/3d_scene_no_physics.tscn" id="3_6khan"]
+[ext_resource type="Script" path="res://Scripts/HandManager.cs" id="3_h6pmi"]
 [ext_resource type="Script" path="res://Scripts/ComponentDefinition.cs" id="4_eclwi"]
+[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="4_vbm5h"]
 [ext_resource type="Resource" uid="uid://ceywqk4reme07" path="res://Scenes/ComponentPanels/TokenPanel.tres" id="7_la08l"]
 [ext_resource type="Resource" uid="uid://mljy81wn7au4" path="res://Scenes/ComponentPanels/BoardPanel.tres" id="8_dwpay"]
 [ext_resource type="Resource" uid="uid://cjw75xmuh5hm1" path="res://Scenes/ComponentPanels/SingleCardPanel.tres" id="9_56ys6"]
 [ext_resource type="Resource" uid="uid://cvcpmheck0rjq" path="res://Scenes/ComponentPanels/DeckPanel.tres" id="10_711is"]
 [ext_resource type="Resource" uid="uid://bodj2sxcbs4l8" path="res://Scenes/ComponentPanels/DiePanel.tres" id="11_14nhc"]
+[ext_resource type="StyleBox" uid="uid://h7d22x1q85ky" path="res://Themes/GrayStyleBox.tres" id="12_3v46o"]
 [ext_resource type="Resource" uid="uid://cp47ebupgytwa" path="res://Scenes/ComponentPanels/CubePanel.tres" id="12_6reuv"]
 [ext_resource type="Resource" uid="uid://crthu53rha88m" path="res://Scenes/ComponentPanels/MeshPanel.tres" id="12_ccm2a"]
 [ext_resource type="Resource" uid="uid://bctoe33s67u03" path="res://Scenes/ComponentPanels/DiscPanel.tres" id="13_5qcje"]
@@ -18,7 +21,16 @@
 [ext_resource type="PackedScene" uid="uid://chacoe302ooah" path="res://Scenes/ComponentPanels/single_card_panel.tscn" id="16_j3qli"]
 [ext_resource type="PackedScene" uid="uid://bifubswbhqkkp" path="res://Scenes/ComponentPanels/deck_panel.tscn" id="17_mgf4o"]
 [ext_resource type="PackedScene" uid="uid://diovg4u3xl1qn" path="res://Scenes/ComponentPanels/token_panel.tscn" id="18_c5hxe"]
+[ext_resource type="Texture2D" uid="uid://41ftdwu6bvkv" path="res://Textures/UI/lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="19_mftnr"]
 [ext_resource type="PackedScene" uid="uid://div11bya2rlmh" path="res://Scenes/ComponentPanels/mesh_panel.tscn" id="19_xcrb0"]
+[ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
+
+[sub_resource type="Theme" id="Theme_a3w6s"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_xnkas"]
+font_size = 32
+font_color = Color(0, 0, 0, 1)
+outline_size = 1
 
 [node name="PrimaryScene" type="Node3D"]
 script = ExtResource("1_hibmt")
@@ -26,6 +38,26 @@ script = ExtResource("1_hibmt")
 [node name="UI" type="CanvasLayer" parent="."]
 script = ExtResource("2_a0mv7")
 highlightFontColor = Color(0.54902, 0.694118, 1, 1)
+
+[node name="Hand" type="Panel" parent="UI"]
+custom_minimum_size = Vector2(0, 200)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -200.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("3_h6pmi")
+
+[node name="TextureRect" type="TextureRect" parent="UI/Hand"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 120.0
+offset_bottom = 180.0
+texture = ExtResource("4_vbm5h")
+expand_mode = 5
 
 [node name="Mode" type="HBoxContainer" parent="UI"]
 anchors_preset = 5
@@ -86,6 +118,7 @@ offset_right = 20.0
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = SubResource("Theme_a3w6s")
 script = ExtResource("4_eclwi")
 _components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"), ExtResource("7_la08l"), ExtResource("8_dwpay"), ExtResource("9_56ys6"), ExtResource("10_711is"), ExtResource("11_14nhc"), ExtResource("12_ccm2a")])
 
@@ -93,8 +126,9 @@ _components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"),
 layout_mode = 2
 
 [node name="ComponentPanel" type="Panel" parent="UI/ComponentDefinition"]
-custom_minimum_size = Vector2(450, 450)
+custom_minimum_size = Vector2(800, 450)
 layout_mode = 2
+theme_override_styles/panel = ExtResource("12_3v46o")
 
 [node name="DialogButtonMargins" type="MarginContainer" parent="UI/ComponentDefinition/ComponentPanel"]
 layout_mode = 1
@@ -116,11 +150,13 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 
 [node name="CancelButton" type="Button" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins/DialogButtonLayout"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8
 text = "Cancel"
 
 [node name="CreateButton" type="Button" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins/DialogButtonLayout"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8
 text = "Create"
@@ -156,6 +192,7 @@ visible = false
 layout_mode = 2
 
 [node name="Deck" parent="UI/ComponentTabs" instance=ExtResource("17_mgf4o")]
+visible = false
 layout_mode = 2
 
 [node name="Token" parent="UI/ComponentTabs" instance=ExtResource("18_c5hxe")]
@@ -165,6 +202,70 @@ layout_mode = 2
 [node name="Mesh Panel" parent="UI/ComponentTabs" instance=ExtResource("19_xcrb0")]
 visible = false
 layout_mode = 2
+
+[node name="ComponentPopup" type="PopupMenu" parent="UI"]
+size = Vector2i(163, 174)
+item_count = 7
+item_0/text = "Lock"
+item_0/icon = ExtResource("19_mftnr")
+item_0/checkable = 1
+item_0/id = 0
+item_1/text = "Flip"
+item_1/icon = ExtResource("20_7j0c8")
+item_1/id = 1
+item_2/text = ""
+item_2/id = 6
+item_2/separator = true
+item_3/text = "Rotate CW"
+item_3/id = 2
+item_4/text = "Rotate CCW"
+item_4/id = 3
+item_5/text = ""
+item_5/id = 5
+item_5/separator = true
+item_6/text = "Delete"
+item_6/id = 4
+
+[node name="SubViewport" type="SubViewport" parent="UI"]
+size = Vector2i(128, 128)
+
+[node name="ColorRect" type="ColorRect" parent="UI/SubViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0.32549, 1, 1)
+
+[node name="Label" type="Label" parent="UI/SubViewport"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.5
+offset_top = -11.5
+offset_right = 22.5
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Hello!"
+label_settings = SubResource("LabelSettings_xnkas")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TestRect" type="TextureRect" parent="UI"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="FileDialog" type="FileDialog" parent="."]
 title = "Open a File"

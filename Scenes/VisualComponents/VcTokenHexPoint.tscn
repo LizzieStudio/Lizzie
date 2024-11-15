@@ -1,0 +1,48 @@
+[gd_scene load_steps=8 format=3 uid="uid://83aktb88kga8"]
+
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcToken.cs" id="1_d1652"]
+[ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="2_0rbao"]
+[ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="4_8rgo6"]
+[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_tssyp"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
+size = Vector3(1, 0.03, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_lkbsj"]
+top_radius = 0.49
+bottom_radius = 0.49
+height = 0.95
+radial_segments = 6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_6dvf2"]
+material = ExtResource("4_tssyp")
+height = 1.0
+radial_segments = 6
+
+[node name="TokenHexPoint" type="Area3D"]
+script = ExtResource("1_d1652")
+
+[node name="FrontSprite" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.49, 0)
+pixel_size = 0.008
+axis = 1
+double_sided = false
+texture = ExtResource("2_0rbao")
+
+[node name="BackSprite" type="Sprite3D" parent="."]
+transform = Transform3D(-1, 8.74228e-08, 0, -8.74228e-08, -1, 0, 0, 0, 1, 0, -0.49, 0)
+pixel_size = 0.008
+axis = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_bjoi2")
+
+[node name="SideMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("CylinderMesh_lkbsj")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("CylinderMesh_6dvf2")
+
+[node name="FrontViewport" parent="." instance=ExtResource("4_8rgo6")]
+
+[node name="BackViewport" parent="." instance=ExtResource("4_8rgo6")]

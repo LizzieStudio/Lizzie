@@ -1,0 +1,73 @@
+[gd_scene load_steps=11 format=3 uid="uid://b0amv4fbuehiq"]
+
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcDie.cs" id="1_wk1vj"]
+[ext_resource type="Texture2D" uid="uid://hyvb6i0qsssx" path="res://Scenes/VisualComponents/Dice/d8texture.png" id="2_vrb2k"]
+[ext_resource type="ArrayMesh" uid="uid://kiad3pmp20o0" path="res://Scenes/VisualComponents/Dice/d8mesh.tres" id="3_o0qia"]
+[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_pxt6s"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ka1xj"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_pupqg"]
+_surfaces = [{
+"aabb": AABB(-1, -1, -1, 2.00001, 2, 2),
+"format": 34896613377,
+"index_count": 24,
+"index_data": PackedByteArray(4, 0, 2, 0, 0, 0, 4, 0, 1, 0, 2, 0, 4, 0, 3, 0, 1, 0, 4, 0, 0, 0, 3, 0, 5, 0, 0, 0, 2, 0, 5, 0, 2, 0, 1, 0, 5, 0, 1, 0, 3, 0, 5, 0, 3, 0, 0, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray(254, 255, 255, 127, 255, 127, 0, 0, 0, 0, 255, 127, 255, 127, 0, 0, 255, 127, 255, 127, 0, 0, 0, 0, 255, 127, 255, 127, 255, 255, 0, 0, 255, 127, 255, 255, 255, 127, 0, 0, 255, 127, 0, 0, 255, 127, 0, 0)
+}]
+blend_shape_mode = 0
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_4fvsi"]
+resource_name = "d8uv_Solid_001"
+_surfaces = [{
+"aabb": AABB(-1, -1, -1, 2.00001, 2, 2),
+"attribute_data": PackedByteArray(8, 128, 45, 128, 84, 170, 66, 210, 146, 213, 92, 173, 3, 192, 227, 200, 97, 234, 16, 210, 35, 192, 255, 255, 167, 255, 195, 255, 47, 234, 254, 154, 8, 128, 219, 182, 179, 149, 176, 173, 27, 150, 34, 228, 21, 192, 45, 128, 234, 170, 148, 155, 255, 255, 55, 201, 21, 192, 13, 183, 197, 213, 41, 228, 8, 128, 201, 182, 58, 128, 19, 237, 21, 192, 69, 237, 177, 191, 49, 201, 139, 255, 206, 146, 207, 191, 222, 146, 174, 255, 151, 200, 21, 192, 201, 182),
+"format": 34896613399,
+"index_count": 24,
+"index_data": PackedByteArray(17, 0, 8, 0, 1, 0, 19, 0, 5, 0, 10, 0, 18, 0, 14, 0, 4, 0, 16, 0, 0, 0, 12, 0, 21, 0, 3, 0, 9, 0, 23, 0, 11, 0, 7, 0, 22, 0, 6, 0, 15, 0, 20, 0, 13, 0, 2, 0),
+"material": SubResource("StandardMaterial3D_ka1xj"),
+"primitive": 3,
+"uv_scale": Vector4(1.9984, 2.00303, 0, 0),
+"vertex_count": 24,
+"vertex_data": PackedByteArray(254, 255, 255, 127, 255, 127, 170, 227, 254, 255, 255, 127, 255, 127, 128, 225, 254, 255, 255, 127, 255, 127, 7, 246, 254, 255, 255, 127, 255, 127, 168, 241, 0, 0, 255, 127, 255, 127, 154, 246, 0, 0, 255, 127, 255, 127, 45, 220, 0, 0, 255, 127, 255, 127, 186, 227, 0, 0, 255, 127, 255, 127, 185, 232, 255, 127, 255, 127, 0, 0, 128, 225, 255, 127, 255, 127, 0, 0, 168, 241, 255, 127, 255, 127, 0, 0, 45, 220, 255, 127, 255, 127, 0, 0, 185, 232, 255, 127, 255, 127, 255, 255, 170, 227, 255, 127, 255, 127, 255, 255, 7, 246, 255, 127, 255, 127, 255, 255, 154, 246, 255, 127, 255, 127, 255, 255, 186, 227, 255, 127, 255, 255, 255, 127, 170, 227, 255, 127, 255, 255, 255, 127, 128, 225, 255, 127, 255, 255, 255, 127, 154, 246, 255, 127, 255, 255, 255, 127, 45, 220, 255, 127, 0, 0, 255, 127, 7, 246, 255, 127, 0, 0, 255, 127, 168, 241, 255, 127, 0, 0, 255, 127, 186, 227, 255, 127, 0, 0, 255, 127, 185, 232, 72, 166, 207, 143, 46, 216, 27, 116, 75, 151, 50, 97, 142, 27, 218, 189, 123, 104, 148, 158, 236, 160, 106, 206, 189, 89, 40, 112, 207, 172, 122, 245, 46, 216, 27, 116, 142, 27, 218, 189, 236, 160, 106, 206, 207, 172, 122, 245, 72, 166, 207, 143, 75, 151, 50, 97, 123, 104, 148, 158, 189, 89, 40, 112, 72, 166, 207, 143, 46, 216, 27, 116, 123, 104, 148, 158, 236, 160, 106, 206, 75, 151, 50, 97, 142, 27, 218, 189, 189, 89, 40, 112, 207, 172, 122, 245)
+}]
+blend_shape_mode = 0
+shadow_mesh = SubResource("ArrayMesh_pupqg")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pst8c"]
+albedo_texture = ExtResource("2_vrb2k")
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_t6c7b"]
+radius = 0.9
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_8wjkq"]
+size = Vector3(1, 100, 1)
+
+[node name="VcD8" type="Area3D"]
+transform = Transform3D(-0.707107, 0.707107, -6.18172e-08, 0.5, 0.5, 0.707107, 0.5, 0.5, -0.707107, 0, 0, 0)
+script = ExtResource("1_wk1vj")
+_sides = 8
+_sideRotations = PackedVector3Array(-45, 180, 45, 35, 120, 45, 35, 0, -45, 135, 180, -45, 150, 305, 55, -150, 125, 125, 215, 0, 45, 215, 120, -45)
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 0, 0, 0)
+mesh = SubResource("ArrayMesh_4fvsi")
+skeleton = NodePath("")
+surface_material_override/0 = SubResource("StandardMaterial3D_pst8c")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(0.853553, -0.146447, 0.5, 0.5, 0.5, -0.707107, -0.146447, 0.853553, 0.5, 0, 0, 0)
+shape = SubResource("SphereShape3D_t6c7b")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
+mesh = ExtResource("3_o0qia")
+surface_material_override/0 = ExtResource("4_pxt6s")
+
+[node name="Area3D" type="Area3D" parent="."]
+input_ray_pickable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("BoxShape3D_8wjkq")

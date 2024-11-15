@@ -1,22 +1,30 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Runtime.Loader;
+using System.Linq;
 
 public partial class GameController : Node3D
 {
 	private SceneController _mainScene;
 
 	private UI _uiController;
+	
+	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
 		_mainScene = GetNode<SceneController>("3DSceneNoPhysics");
-		_mainScene.SetMode(SceneController.SceneMode.TwoD);
+		_mainScene.SetMode(SceneMode.TwoD);
+		_mainScene.ShowComponentPopup2 += MainSceneOnShowComponentPopup2;
 
 		_uiController = GetNode<UI>("UI");
 		_uiController.MasterModeChange += OnMasterModeChange;
 		_uiController.CreateObject += OnCreateObject;
+	}
+
+	private void MainSceneOnShowComponentPopup2(object sender, ShowComponentPopupEventArgs e)
+	{
+		ShowComponentPopup(e.Position, e.Components);
 	}
 
 	private void OnCreateObject(object sender, CreateObjectEventArgs args)
@@ -44,10 +52,10 @@ public partial class GameController : Node3D
 		switch (e.NewMode)
 		{
 			case UI.MasterMode.TwoD:
-				_mainScene.SetMode(SceneController.SceneMode.TwoD);
+				_mainScene.SetMode(SceneMode.TwoD);
 				break;
 			case UI.MasterMode.ThreeD:
-				_mainScene.SetMode(SceneController.SceneMode.ThreeDFixed);
+				_mainScene.SetMode(SceneMode.ThreeDFixed);
 				break;
 			case UI.MasterMode.Designer:
 				break;
@@ -63,14 +71,38 @@ public partial class GameController : Node3D
 
 	public VisualComponentBase SpawnComponent(string prototype)
 	{
-		GD.Print($"Prototype: {prototype}");
 		var scene = ResourceLoader.Load<PackedScene>(prototype).Instantiate();
 
 		if (scene is VisualComponentBase vcb)
-		{ 
+		{
 			return vcb;
 		}
 		return null;
+	}
+
+	public void ShowComponentPopup(Vector2I position, IEnumerable<VisualComponentBase> selected)
+	{
+		_uiController.BuildPopupMenu(selected.ToList());
+		_uiController.ShowComponentPopup(position);
+	}
+
+	/*
+	public void HideComponentPopup()
+	{
+		_uiController.HideComponentPopup();
+	}
+*/
+	
+	public void ComponentPopupClosed()
+	{
+		_mainScene.PopupClosed();
+	}
+	
+	public bool ProcessPopupCommand(VisualCommand command, List<VisualComponentBase> components)
+	{
+		var result = _mainScene.SendCommandToComponents(command, components);
+		ComponentPopupClosed();
+		return result;
 	}
 	
 	//test function
@@ -78,4 +110,6 @@ public partial class GameController : Node3D
 	{
 		_mainScene.TestFunction();
 	}
+	
+	
 }

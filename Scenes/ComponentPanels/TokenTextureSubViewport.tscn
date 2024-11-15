@@ -1,0 +1,46 @@
+[gd_scene load_steps=4 format=3 uid="uid://b576dfm4886tw"]
+
+[ext_resource type="Script" path="res://Scripts/VisualComponents/TokenTextureSubViewport.cs" id="1_7wv8o"]
+[ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="3_h2ynt"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_qljo4"]
+font_size = 24
+font_color = Color(0, 0, 0, 1)
+
+[node name="SubViewport" type="SubViewport"]
+disable_3d = true
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(128, 128)
+size_2d_override = Vector2i(128, 128)
+render_target_update_mode = 4
+script = ExtResource("1_7wv8o")
+_shapes = PackedStringArray("res://Textures/Shapes/square.png", "res://Textures/Shapes/circle.png", "res://Textures/Shapes/hex.png", "res://Textures/Shapes/hexflat.png", "res://Textures/Shapes/RoundedRectangle.png")
+
+[node name="ClipRect" type="TextureRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_h2ynt")
+
+[node name="TextureRect" type="TextureRect" parent="ClipRect"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+label_settings = SubResource("LabelSettings_qljo4")
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3

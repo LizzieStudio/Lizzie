@@ -1,14 +1,12 @@
-[gd_scene load_steps=7 format=3 uid="uid://8ts0q3rup6h6"]
+[gd_scene load_steps=6 format=3 uid="uid://8ts0q3rup6h6"]
 
 [ext_resource type="Texture2D" uid="uid://cw6pgclsp7ody" path="res://Textures/TableSurface/Fabric034_1K-PNG_Color.png" id="1_dil0j"]
-[ext_resource type="Texture2D" uid="uid://c8e5lykcmhjs8" path="res://Textures/TableSurface/Fabric034_1K-PNG_Roughness.png" id="2_agrw2"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pyyqq"]
 albedo_color = Color(0.042, 0.28, 0.145133, 1)
 albedo_texture = ExtResource("1_dil0j")
-roughness_texture = ExtResource("2_agrw2")
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_dyvi7"]
 material = SubResource("StandardMaterial3D_pyyqq")

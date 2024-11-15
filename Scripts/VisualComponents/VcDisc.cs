@@ -9,13 +9,20 @@ public partial class VcDisc : VisualComponentBase
 		base._Ready();
 		Visible = true;
 		ComponentType = VisualComponentType.Disc;
-		StackingCollider = GetNode<Area3D>("Area3D");
+		
+		MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
+		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
+
 	}
 
 	public override bool Build(Dictionary<string, object> parameters)
 	{
 		
 		base.Build(parameters);
+		
+		MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
+		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
+		
 		
 		if (parameters.ContainsKey(nameof(Height)))
 		{
@@ -44,6 +51,10 @@ public partial class VcDisc : VisualComponentBase
 		
 		YHeight = Height;
 		SetColor(DiscColor);
+
+		var c = new CircleShape2D();
+		c.Radius = Diameter /2f;
+		ShapeProfiles.Add(c);
 		
 		return true;
 	}
@@ -90,6 +101,10 @@ public partial class VcDisc : VisualComponentBase
 		return ret;
 	}
 
+	public override GeometryInstance3D DragMesh => MainMesh;
+
+	public override float MaxAxisSize => Math.Max(Height, Diameter);
+	
 	private float Height;
 	private float Diameter;
 	private Color DiscColor;

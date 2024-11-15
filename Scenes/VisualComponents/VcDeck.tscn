@@ -1,0 +1,46 @@
+[gd_scene load_steps=9 format=3 uid="uid://bsg4olcgf5pnu"]
+
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcDeck.cs" id="1_7r5pi"]
+[ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="2_8xla4"]
+[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="3_5wibl"]
+[ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="4_jl3ru"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0sugy"]
+albedo_color = Color(0.505882, 0.505882, 0.505882, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_dg08o"]
+material = SubResource("StandardMaterial3D_0sugy")
+size = Vector3(0.95, 0.9, 0.95)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ggpqp"]
+material = ExtResource("3_5wibl")
+
+[node name="Deck" type="Area3D"]
+script = ExtResource("1_7r5pi")
+
+[node name="FrontSprite" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.49, 0)
+pixel_size = 0.007
+axis = 1
+double_sided = false
+texture = ExtResource("2_8xla4")
+
+[node name="BackSprite" type="Sprite3D" parent="."]
+transform = Transform3D(-1, 8.74228e-08, 0, -8.74228e-08, -1, 0, 0, 0, 1, 0, -0.49, 0)
+pixel_size = 0.007
+axis = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_bjoi2")
+
+[node name="SideMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_dg08o")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_ggpqp")
+
+[node name="FrontViewport" parent="." instance=ExtResource("4_jl3ru")]
+
+[node name="BackViewport" parent="." instance=ExtResource("4_jl3ru")]

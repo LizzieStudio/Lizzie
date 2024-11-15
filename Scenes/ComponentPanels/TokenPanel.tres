@@ -10,3 +10,4 @@ Icon = ExtResource("1_v2irg")
 DefinitionDialogName = "res://Scenes/ComponentPanels/token_panel.tscn"
 PrototypeName = "res://Scenes/VisualComponents/VcToken.tscn"
 ComponentType = 3
+PrototypeNames = PackedStringArray("res://Scenes/VisualComponents/VcToken.tscn", "res://Scenes/VisualComponents/VcTokenCircle.tscn", "res://Scenes/VisualComponents/VcTokenHexPoint.tscn", "res://Scenes/VisualComponents/VcTokenHexFlat.tscn")

@@ -43,15 +43,15 @@ public partial class ComponentDefinition : HBoxContainer
 			if (firstButton)
 			{
 				b.ButtonPressed = true;
-				CurName = ci.Name;
+				CurName = c.ComponentName;
 				firstButton = false;
 			}
 		}
 
-		_createButton = GetNode<Button>("ComponentPanel/DialogButtonMargins/DialogButtonLayout/CreateButton");
+		_createButton = GetNode<Button>("%CreateButton");
 		_createButton.Pressed += CreateClicked;
 
-		_cancelButton = GetNode<Button>("ComponentPanel/DialogButtonMargins/DialogButtonLayout/CancelButton");
+		_cancelButton = GetNode<Button>("%CancelButton");
 		_cancelButton.Pressed += CancelClicked;
 	}
 	
@@ -62,14 +62,22 @@ public partial class ComponentDefinition : HBoxContainer
 	{
 		if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
 		{
-			GD.Print($"{_panelDictionary[CurName].Name} is CPDR");
 			CreateObjectEventArgs e = new()
 			{
 				ComponentType = NameToType(CurName),
 				Params = r.GetParams(),
 			};
 
-			e.PrototypeName = _components.First(x => x.ComponentName == CurName).PrototypeName;
+			var cd = _components.First(x => x.ComponentName == CurName);
+
+			if (cd.PrototypeNames != null && cd.PrototypeNames.Length > 0 && r.PrototypeIndex < cd.PrototypeNames.Length)
+			{
+				e.PrototypeName = cd.PrototypeNames[r.PrototypeIndex];
+			}
+			else
+			{
+				e.PrototypeName = cd.PrototypeName;
+			}
 					
 			CreateObject?.Invoke(this, e);
 		}
@@ -105,8 +113,6 @@ public partial class ComponentDefinition : HBoxContainer
 	private Button CreateButton(string name, Texture2D icon, ButtonGroup bg)
 	{
 		var scene = ResourceLoader.Load<PackedScene>(_buttonTemplate).Instantiate();
-		
-		GD.Print(scene.Name);
 		
 		if (scene is Button b)
 		{

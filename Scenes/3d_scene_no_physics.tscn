@@ -1,39 +1,66 @@
-[gd_scene load_steps=8 format=3 uid="uid://c10pvpfntkay3"]
+[gd_scene load_steps=12 format=3 uid="uid://c10pvpfntkay3"]
 
 [ext_resource type="Script" path="res://Scripts/SceneController.cs" id="1_4ynb0"]
 [ext_resource type="PackedScene" uid="uid://8ts0q3rup6h6" path="res://Scenes/table.tscn" id="1_7yafe"]
-[ext_resource type="Script" path="res://Scripts/CameraController.cs" id="2_0y0is"]
-[ext_resource type="Script" path="res://Scripts/Pseudo2DCamera.cs" id="10_mgbfc"]
+[ext_resource type="Script" path="res://Scripts/Camera/CameraManager.cs" id="3_v37dv"]
+[ext_resource type="Script" path="res://Scripts/Camera/PerspectiveViewCamera.cs" id="4_42he8"]
+[ext_resource type="Script" path="res://Scripts/DragSelectRectangle.cs" id="5_56t6u"]
+[ext_resource type="Script" path="res://Scripts/Camera/TopViewCamera.cs" id="5_he01h"]
+[ext_resource type="Script" path="res://Scripts/Container/GameObjects.cs" id="6_7g6ti"]
+[ext_resource type="Script" path="res://Scripts/Interactivity/DragPlane.cs" id="7_inwp1"]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_d3epo"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
 
 [sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_at6bq"]
 
-[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_d3epo"]
-
 [node name="3DSceneNoPhysics" type="Node3D"]
 script = ExtResource("1_4ynb0")
 
 [node name="Table" parent="." instance=ExtResource("1_7yafe")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 collision_layer = 1
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.819202, 2.19727e-07, 0.573505, -0.353913, 0.786881, 0.505534, -0.45128, -0.617105, 0.644614, 0, 0, 1.7548)
 
-[node name="CameraBase" type="Node3D" parent="."]
-script = ExtResource("2_0y0is")
-PitchSpeed = 2.0
-YawSpeed = 2.0
-ZoomSpeed = 100.0
-PanSpeed = 0.1
+[node name="Cameras" type="Node3D" parent="."]
+script = ExtResource("3_v37dv")
 
-[node name="Camera3D" type="Camera3D" parent="CameraBase"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+[node name="PerspectiveViewCamera" type="Node3D" parent="Cameras" node_paths=PackedStringArray("_gameObjects")]
+script = ExtResource("4_42he8")
+RotationSpeed = 0.1
+ContinuousZoomSpeed = 30.0
+PanSpeed = 20.0
+_gameObjects = NodePath("../../GameObjects")
+
+[node name="Gimbal" type="Node3D" parent="Cameras/PerspectiveViewCamera"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 0, 0)
+
+[node name="Camera" type="Camera3D" parent="Cameras/PerspectiveViewCamera/Gimbal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 90)
 fov = 73.6372
 
-[node name="GameObjects" type="Node" parent="."]
+[node name="TopViewCamera" type="Node3D" parent="Cameras" node_paths=PackedStringArray("_gameObjects")]
+script = ExtResource("5_he01h")
+RotationSpeed = 0.1
+ContinuousZoomSpeed = 50.0
+PanSpeed = 20.0
+_gameObjects = NodePath("../../GameObjects")
 
-[node name="DragNode" type="Node3D" parent="."]
+[node name="Camera" type="Camera3D" parent="Cameras/TopViewCamera"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 100, 0)
+rotation_order = 0
+attributes = SubResource("CameraAttributesPractical_d3epo")
+projection = 1
+current = true
+size = 110.0
+
+[node name="GameObjects" type="Node" parent="." node_paths=PackedStringArray("_dragPlane", "_selectionRectangle")]
+script = ExtResource("6_7g6ti")
+_dragPlane = NodePath("../DragPlane")
+_selectionRectangle = NodePath("../DragSelectRectangle")
 
 [node name="DragPlane" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -41,17 +68,14 @@ collision_layer = 4
 collision_mask = 4
 input_ray_pickable = false
 physics_material_override = SubResource("PhysicsMaterial_b00ve")
+script = ExtResource("7_inwp1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="DragPlane"]
 shape = SubResource("WorldBoundaryShape3D_at6bq")
 
-[node name="Pseudo2DCamera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 100, 0)
-rotation_order = 0
-attributes = SubResource("CameraAttributesPractical_d3epo")
-projection = 1
-current = true
-size = 110.0
-script = ExtResource("10_mgbfc")
-ZoomSpeed = 100.0
-PanSpeed = 0.25
+[node name="DragSelectRectangle" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("5_56t6u")

@@ -1,58 +1,47 @@
-[gd_scene load_steps=12 format=3 uid="uid://dqdrb4q3jmvp5"]
+[gd_scene load_steps=9 format=3 uid="uid://dqdrb4q3jmvp5"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcToken.cs" id="1_bofsg"]
-[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="2_0b4h7"]
-[ext_resource type="Texture2D" uid="uid://jkpxes8koyxv" path="res://Textures/card_back.jpg" id="3_2nr8p"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q2yne"]
-albedo_texture = ExtResource("2_0b4h7")
-
-[sub_resource type="QuadMesh" id="QuadMesh_xkr24"]
-material = SubResource("StandardMaterial3D_q2yne")
-orientation = 1
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_p26tt"]
-albedo_texture = ExtResource("3_2nr8p")
-
-[sub_resource type="QuadMesh" id="QuadMesh_ybq2j"]
-material = SubResource("StandardMaterial3D_p26tt")
-flip_faces = true
-orientation = 1
+[ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="2_a606j"]
+[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_1unop"]
+[ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="4_qcn46"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
-size = Vector3(1, 0.03, 1)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_mesye"]
-size = Vector3(1, 100, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0sugy"]
-albedo_color = Color(0.505344, 0.505344, 0.505344, 1)
+albedo_color = Color(0.505882, 0.505882, 0.505882, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_dg08o"]
 material = SubResource("StandardMaterial3D_0sugy")
-size = Vector3(1, 0.98, 1)
+size = Vector3(0.95, 0.9, 0.95)
 
-[node name="Board" type="Area3D"]
+[sub_resource type="BoxMesh" id="BoxMesh_ggpqp"]
+material = ExtResource("4_1unop")
+
+[node name="Token" type="Area3D"]
 script = ExtResource("1_bofsg")
 
-[node name="ObjectMesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-mesh = SubResource("QuadMesh_xkr24")
-skeleton = NodePath("")
+[node name="FrontSprite" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.49, 0)
+pixel_size = 0.007
+axis = 1
+double_sided = false
+texture = ExtResource("2_a606j")
 
-[node name="BackMesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, -0.5, 0)
-mesh = SubResource("QuadMesh_ybq2j")
-skeleton = NodePath("")
+[node name="BackSprite" type="Sprite3D" parent="."]
+transform = Transform3D(-1, 8.74228e-08, 0, -8.74228e-08, -1, 0, 0, 0, 1, 0, -0.49, 0)
+pixel_size = 0.007
+axis = 1
+double_sided = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_bjoi2")
 
-[node name="Area3D" type="Area3D" parent="."]
-input_ray_pickable = false
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
-shape = SubResource("BoxShape3D_mesye")
-
 [node name="SideMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_dg08o")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_ggpqp")
+
+[node name="FrontViewport" parent="." instance=ExtResource("4_qcn46")]
+
+[node name="BackViewport" parent="." instance=ExtResource("4_qcn46")]

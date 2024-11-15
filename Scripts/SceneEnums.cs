@@ -1,0 +1,57 @@
+public enum SceneMode
+{
+    TwoD,
+    ThreeDFixed,
+    ThreeDPhysics,
+    Creator
+}
+
+public enum CursorMode
+{
+    Normal,
+    Spawn,
+    Drag,
+    DragSelect,
+    PopupMenu
+}
+
+public enum VisualCommand
+{
+    None,
+    ToggleLock,
+    Flip,
+    ScaleUp,
+    ScaleDown,
+    RotateCw,
+    RotateCcw,
+    Delete,
+    Duplicate,
+    Edit,
+    MoveDown,
+    MoveToBottom,
+    MoveUp,
+    MoveToTop,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
+    Num10,
+    Num11,
+    Num12,
+    Num13,
+    Num14,
+    Num15,
+    Num16,
+    Num17,
+    Num18,
+    Num19,
+    Num20,
+    Roll,
+    Shuffle,
+    MaximumVC
+}

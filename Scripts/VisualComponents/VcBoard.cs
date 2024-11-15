@@ -12,11 +12,13 @@ public partial class VcBoard : VisualComponentBase
 	{
 		base._Ready();
 		Visible = true;
-		ComponentType = VisualComponentType.Card;
+		ComponentType = VisualComponentType.Board;
 		_backSurface = GetNode<MeshInstance3D>("BackMesh");
 		_frontSurface = GetNode<MeshInstance3D>("ObjectMesh");
-		StackingCollider = GetNode<Area3D>("Area3D");
 	
+	
+		MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
+		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 	}
 
 	public override void _Process(double delta)
@@ -28,16 +30,7 @@ public partial class VcBoard : VisualComponentBase
 		base._Process(delta);
 	}
 
-	public override bool ProcessCommands()
-	{
-		if (Input.IsActionJustPressed("flip"))
-		{
-			StartFlip();
-			return true;
-		}
-		
-		return false;
-	}
+
 
 	private float _flipRate = 720;	//degrees per second
 	private bool _showFace = true;
@@ -80,6 +73,7 @@ public partial class VcBoard : VisualComponentBase
 	{
 		_backSurface = GetNode<MeshInstance3D>("BackMesh");
 		_frontSurface = GetNode<MeshInstance3D>("ObjectMesh");
+		MainMesh = _frontSurface;
 	
 		base.Build(parameters);
 
@@ -124,6 +118,11 @@ public partial class VcBoard : VisualComponentBase
 		YHeight = _boardThickness;
 		
 		Scale = new Vector3(Width, _boardThickness, Height);
+		
+		var r = new RectangleShape2D();
+		r.Size = new Vector2(Width, Height);
+		
+		ShapeProfiles.Add(r);
 		
 		return true;
 	}
@@ -177,6 +176,9 @@ public partial class VcBoard : VisualComponentBase
 
 		return ret;
 	}
+
+	public override float MaxAxisSize => Math.Max(Height, Width);
+	public override GeometryInstance3D DragMesh => MainMesh;
 
 	private float Height;
 	private float Width;

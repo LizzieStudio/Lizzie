@@ -2,20 +2,27 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+
+using Image = Godot.Image;
+
 public partial class VcCard : VisualComponentBase
 {
 	private MeshInstance3D _backSurface;
 	private MeshInstance3D _frontSurface;
+	
 
 	public override void _Ready()
 	{
 		base._Ready();
 		Visible = true;
 		ComponentType = VisualComponentType.Card;
-		_backSurface = GetNode<MeshInstance3D>("HighlightMesh");
+		_backSurface = GetNode<MeshInstance3D>("BackMesh");
 		_frontSurface = GetNode<MeshInstance3D>("ObjectMesh");
-		StackingCollider = GetNode<Area3D>("Area3D");
+		
 	
+		MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
+		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
+
 	}
 
 	public override void _Process(double delta)
@@ -26,29 +33,47 @@ public partial class VcCard : VisualComponentBase
 		}
 		base._Process(delta);
 	}
-
-	public override bool ProcessCommands()
+	
+	public override CommandResponse ProcessCommand(VisualCommand command)
 	{
-		if (Input.IsActionJustPressed("flip"))
+		if (command == VisualCommand.Flip)
 		{
-			StartFlip();
-			return true;
+			return StartFlip();
 		}
 		
-		return false;
+		return base.ProcessCommand(command);
 	}
 
+	public override GeometryInstance3D DragMesh => MainMesh;
+
+	public override float MaxAxisSize => Math.Max(Height, Width);
+	
 	private float _flipRate = 720;	//degrees per second
 	private bool _showFace = true;
 	private int _rotMult = 1;
 	private float _targetZ;
 	private bool flipInProcess;
-	private void StartFlip()
+	private CommandResponse StartFlip()
 	{
 		flipInProcess = true;
 		_showFace = !_showFace;
 		_rotMult = _showFace ? -1 : 1;
 		_targetZ = _showFace ? 0 : 180;
+		
+		var c = new Change
+		{
+			Action = Change.ChangeType.Transform,
+			Begin = Transform,
+			Component = this
+		};
+
+		float rot = (float)Math.PI;
+
+		if (_targetZ == 0) rot *= -1;
+		
+		c.End = Transform.RotatedLocal(new Vector3(0, 0, 1), rot);
+
+		return new CommandResponse(true, c);
 	}
 
 	private void ProcessFlip(double delta)
@@ -77,8 +102,9 @@ public partial class VcCard : VisualComponentBase
 
 	public override bool Build(Dictionary<string, object> parameters)
 	{
-		_backSurface = GetNode<MeshInstance3D>("HighlightMesh");
+		_backSurface = GetNode<MeshInstance3D>("BackMesh");
 		_frontSurface = GetNode<MeshInstance3D>("ObjectMesh");
+		MainMesh = _frontSurface;
 	
 		base.Build(parameters);
 
@@ -100,7 +126,9 @@ public partial class VcCard : VisualComponentBase
 		BackImage = parameters["BackImage"].ToString();
 		
 		var tf = LoadTexture(FrontImage);
-		
+
+		Image i = new Image();
+	
 		var mat = new StandardMaterial3D();
 		mat.AlbedoTexture = tf;
 		_frontSurface.MaterialOverride = mat;
@@ -111,12 +139,15 @@ public partial class VcCard : VisualComponentBase
 		mat2.AlbedoTexture = tb;
 		_backSurface.MaterialOverride = mat2;
 
-		YHeight = 0.03f;
+		YHeight = 0.05f;
 		
 		//create card
 		Scale = new Vector3(Width, Scale.Y, Height);
 		
+		var r = new RectangleShape2D();
+		r.Size = new Vector2(Width, Height);
 		
+		ShapeProfiles.Add(r);
 		
 		return true;
 	}

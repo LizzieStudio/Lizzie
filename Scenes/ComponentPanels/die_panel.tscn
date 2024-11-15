@@ -1,4 +1,6 @@
-[gd_scene format=3 uid="uid://bmitdjv4ha061"]
+[gd_scene load_steps=2 format=3 uid="uid://bmitdjv4ha061"]
+
+[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/DiePanelDialogResult.cs" id="1_5kaje"]
 
 [node name="DiePanel" type="MarginContainer"]
 offset_right = 40.0
@@ -7,6 +9,7 @@ theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
+script = ExtResource("1_5kaje")
 
 [node name="GridContainer" type="GridContainer" parent="."]
 layout_mode = 2
@@ -17,7 +20,8 @@ layout_mode = 2
 text = "Name  "
 horizontal_alignment = 2
 
-[node name="LineEdit" type="LineEdit" parent="GridContainer"]
+[node name="ComponentName" type="LineEdit" parent="GridContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 alignment = 2
@@ -38,9 +42,10 @@ horizontal_alignment = 2
 [node name="HBoxContainer4" type="HBoxContainer" parent="GridContainer"]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="GridContainer/HBoxContainer4"]
+[node name="Diameter" type="LineEdit" parent="GridContainer/HBoxContainer4"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "12"
+text = "16"
 alignment = 2
 
 [node name="Label" type="Label" parent="GridContainer/HBoxContainer4"]
@@ -55,9 +60,11 @@ horizontal_alignment = 2
 [node name="HBoxContainer3" type="HBoxContainer" parent="GridContainer"]
 layout_mode = 2
 
-[node name="OptionButton" type="OptionButton" parent="GridContainer/HBoxContainer3"]
+[node name="Sides" type="OptionButton" parent="GridContainer/HBoxContainer3"]
+unique_name_in_owner = true
 layout_mode = 2
 item_count = 6
+selected = 1
 popup/item_0/text = "4"
 popup/item_0/id = 0
 popup/item_1/text = "6"
@@ -77,8 +84,10 @@ layout_mode = 2
 text = "Color  "
 horizontal_alignment = 2
 
-[node name="ColorPickerButton" type="ColorPickerButton" parent="GridContainer"]
+[node name="DieColor" type="ColorPickerButton" parent="GridContainer"]
+unique_name_in_owner = true
 layout_mode = 2
+color = Color(1, 1, 1, 1)
 
 [node name="Label8" type="Label" parent="GridContainer"]
 layout_mode = 2

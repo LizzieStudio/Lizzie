@@ -1,0 +1,21 @@
+[gd_scene load_steps=5 format=3 uid="uid://byfigfc7dvkjd"]
+
+[ext_resource type="Shader" path="res://Shaders/outline2.gdshader" id="1_bvpjk"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yq6p3"]
+render_priority = 0
+shader = ExtResource("1_bvpjk")
+shader_parameter/border_width = 0.1
+shader_parameter/color = Color(1, 1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wtfyn"]
+albedo_color = Color(1, 0.278431, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tfvui"]
+material = SubResource("StandardMaterial3D_wtfyn")
+size = Vector3(10, 10, 10)
+
+[node name="MeshInstance3D" type="MeshInstance3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
+material_overlay = SubResource("ShaderMaterial_yq6p3")
+mesh = SubResource("BoxMesh_tfvui")

@@ -1,0 +1,40 @@
+[gd_scene load_steps=8 format=3 uid="uid://bjtyxixne5228"]
+
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcDie.cs" id="1_sn4gg"]
+[ext_resource type="ArrayMesh" uid="uid://c6h70rm2fhjqg" path="res://Scenes/VisualComponents/Dice/d20mesh.tres" id="2_pf0ul"]
+[ext_resource type="Texture2D" uid="uid://sqj63kppgndf" path="res://Scenes/VisualComponents/Dice/d20numbers.png" id="3_f4qnd"]
+[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_md80e"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1qoub"]
+albedo_texture = ExtResource("3_f4qnd")
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_5tq0o"]
+radius = 1.0
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fu0h2"]
+size = Vector3(1, 100, 1)
+
+[node name="VcD20" type="Area3D"]
+transform = Transform3D(-0.320094, -0.7928, 0.51866, -0.59437, 0.59437, 0.541708, -0.737742, -0.134878, -0.661471, 0, 0, 0)
+script = ExtResource("1_sn4gg")
+_sides = 20
+_sideRotations = PackedVector3Array(247, 63, -90, 0, 150, 68, 180, 150, -68, -26, 60, 0, 147, 145, 48, 215, 156, 48, 290, -116, -94, 0, -30, -68, 215, -37, -47, 25, 160, -45, 68, 80, -68, 206, -120, 0, 37, 158, 135, -33, 142, -45, 0, 152, 245, 26, -120, 0, 30, -35, 48, -30, -20, 48, 116, -120, -90, 158, 60, 0)
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 0, 0, 0)
+mesh = ExtResource("2_pf0ul")
+skeleton = NodePath("")
+surface_material_override/0 = SubResource("StandardMaterial3D_1qoub")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_5tq0o")
+
+[node name="Area3D" type="Area3D" parent="."]
+input_ray_pickable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("BoxShape3D_fu0h2")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
+mesh = ExtResource("2_pf0ul")
+surface_material_override/0 = ExtResource("4_md80e")

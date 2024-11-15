@@ -1,0 +1,33 @@
+[gd_resource type="ArrayMesh" load_steps=3 format=3 uid="uid://c64ygocks2lyt"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inqi0"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_8kt5e"]
+_surfaces = [{
+"aabb": AABB(-0.471405, -0.333333, -0.816497, 1.41421, 1.33334, 1.63299),
+"format": 34896613377,
+"index_count": 12,
+"index_data": PackedByteArray(0, 0, 2, 0, 1, 0, 0, 0, 3, 0, 2, 0, 0, 0, 1, 0, 3, 0, 1, 0, 2, 0, 3, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(85, 85, 254, 255, 255, 127, 0, 0, 255, 255, 0, 0, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0)
+}]
+blend_shape_mode = 0
+
+[resource]
+resource_name = "d4_Solid"
+_surfaces = [{
+"aabb": AABB(-0.471405, -0.333333, -0.816497, 1.41421, 1.33334, 1.63299),
+"attribute_data": PackedByteArray(4, 128, 80, 128, 4, 128, 214, 255, 255, 255, 255, 255, 176, 255, 158, 128, 228, 211, 4, 128, 211, 192, 205, 213, 198, 254, 202, 211, 4, 128, 18, 172, 91, 214, 4, 191, 45, 191, 13, 170, 65, 170, 194, 191, 106, 172, 20, 255),
+"format": 34896613399,
+"index_count": 12,
+"index_data": PackedByteArray(1, 0, 7, 0, 5, 0, 2, 0, 11, 0, 8, 0, 0, 0, 4, 0, 10, 0, 3, 0, 6, 0, 9, 0),
+"material": SubResource("StandardMaterial3D_inqi0"),
+"primitive": 3,
+"uv_scale": Vector4(2.00711, 2.00218, 0, 0),
+"vertex_count": 12,
+"vertex_data": PackedByteArray(85, 85, 254, 255, 255, 127, 231, 173, 85, 85, 254, 255, 255, 127, 159, 237, 85, 85, 254, 255, 255, 127, 21, 218, 255, 255, 0, 0, 255, 127, 64, 202, 255, 255, 0, 0, 255, 127, 231, 173, 255, 255, 0, 0, 255, 127, 159, 237, 0, 0, 0, 0, 0, 0, 64, 202, 0, 0, 0, 0, 0, 0, 159, 237, 0, 0, 0, 0, 0, 0, 21, 218, 0, 0, 0, 0, 255, 255, 64, 202, 0, 0, 0, 0, 255, 255, 231, 173, 0, 0, 0, 0, 255, 255, 21, 218, 166, 168, 14, 107, 7, 217, 146, 108, 196, 234, 101, 197, 132, 68, 189, 93, 166, 168, 14, 107, 7, 217, 146, 108, 132, 68, 189, 93, 7, 217, 146, 108, 196, 234, 101, 197, 132, 68, 189, 93, 166, 168, 14, 107, 196, 234, 101, 197)
+}]
+blend_shape_mode = 0
+shadow_mesh = SubResource("ArrayMesh_8kt5e")

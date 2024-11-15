@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://b4nbukoa2mt3"]
+
+[ext_resource type="PackedScene" uid="uid://xfltw7yxpclb" path="res://Scenes/VisualComponents/Dice/d8.glb" id="1_4nxcj"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d1i52"]
+albedo_color = Color(1, 0.368627, 1, 1)
+
+[node name="d8" instance=ExtResource("1_4nxcj")]
+
+[node name="Solid" parent="." index="0"]
+surface_material_override/0 = SubResource("StandardMaterial3D_d1i52")

@@ -12,6 +12,8 @@ public partial interface ICameraBase
         void ZoomIn();
         void ZoomOut();
 
+        void ZoomComponent(VisualComponentBase component);
+        
         /// <summary>
         /// Returns table position under cursor location
         /// </summary>
@@ -22,4 +24,6 @@ public partial interface ICameraBase
 
         void EnterSpawnMode(VisualComponentBase component);
         void ExitSpawnMode();
+        
+        Camera3D Camera { get; }
 }

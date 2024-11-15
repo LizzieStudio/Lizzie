@@ -1,12 +1,15 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 public abstract partial class ComponentPanelDialogResult : Control
 {
     public abstract List<string> Validity();
     public abstract Dictionary<string, object> GetParams();
+
+    public int PrototypeIndex { get; set; } = 0;
     public virtual VisualComponentBase.VisualComponentType ComponentType { get; set; }
 
     protected float ParamToFloat(string input)
@@ -56,5 +59,6 @@ public abstract partial class ComponentPanelDialogResult : Control
         FileSelected(string.Empty);
     }
 
-    
+
+  
 }

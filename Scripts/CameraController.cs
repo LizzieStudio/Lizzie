@@ -1,6 +1,8 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 public partial class CameraController : Node3D, ICameraBase
 {
@@ -17,14 +19,14 @@ public partial class CameraController : Node3D, ICameraBase
 	private Camera3D _camera;
 	
 	private Transform3D _baseTransform;
-	private Vector3 _baseCamPos;
+	private Transform3D _baseCamTrans;
 
-	private Transform3D _lastTransform;
-
-	private float _totPitch = 0;
-	private float _totYaw = 0;
+	private float _totPitch;
+	private float _totYaw;
 
 	private Node3D _dragNode;
+
+	private Vector2 _mouseStartDragPos;
 	private VisualComponentBase _dragSource;
 	private VisualInstance3D _dragMesh;
 	private StaticBody3D _dragPlane;
@@ -40,10 +42,12 @@ public partial class CameraController : Node3D, ICameraBase
 	{
 		_baseTransform = Transform;
 		_camera = GetNode<Camera3D>("Camera3D");
-		 _baseCamPos = _camera.Position;
+		 _baseCamTrans = _camera.Transform;
 		 _gameObjects = GetParent().GetNode<Node>("GameObjects");
 		 _dragNode = GetParent().GetNode<Node3D>("DragNode");
 		 _dragPlane = GetParent().GetNode<StaticBody3D>("DragPlane");
+		 _totPitch = Rotation.X;
+		 _totYaw = Rotation.Y;
 	}
 
 	public override void _Process(double delta)
@@ -107,12 +111,23 @@ public partial class CameraController : Node3D, ICameraBase
 		
 		return null;
 	}
+	
+	private IEnumerable<VisualComponentBase> SelectedComponents()
+	{
+		foreach (var go in _gameObjects.GetChildren())
+		{
+			if (go is VisualComponentBase vcb && vcb.IsSelected)
+			{
+				yield return vcb;
+			}
+		}
+	}
 
 	private bool _isDragging = false;
 
 	public void StartDrag()
 	{
-		GD.Print("StartDrag");
+		/*
 		_selectedObject = GetSelectedObject();
 		if (_selectedObject == null)
 		{
@@ -139,16 +154,40 @@ public partial class CameraController : Node3D, ICameraBase
 		_dragPlane.Position = new Vector3(0, _dragNode.Position.Y, 0);
 		
 		var n = _selectedObject.DragMesh.Duplicate();
-		if (n is MeshInstance3D mi)
+		if (n is GeometryInstance3D mi)
 		{
 			mi.Transparency = 0.3f;
 			_dragMesh = mi;
 			_dragNode.AddChild(mi);
 		}
+		*/
+		if (!GetSelectedObjects().Any()) return;
+
+		var o = GetMouseSelectedObject();
+		if (o == null) return;
+		
+		foreach (var v in GetSelectedObjects())
+		{
+			v.IsDragging = true;
+		}
+		_isDragging = true;
+		
+		
+		//Get mouse position
+		var rc = ShootRay(GetViewport().GetMousePosition());
+		_mouseStartDragPos = new Vector2(rc.X, rc.Z);
 	}
 
 	public void StopDrag()
 	{
+		foreach(var v in GetSelectedObjects())
+		{
+			v.IsDragging = false;
+		}
+
+		_isDragging = false;
+		
+		/*
 		if (_selectedObject != null)
 		{
 			_selectedObject.IsDragging = false;
@@ -172,13 +211,14 @@ public partial class CameraController : Node3D, ICameraBase
 		}
 
 		_dragSource = null;
+		*/
 	}
 
 	public void ProcessDrag(Vector2 axis)
 	{
+		/*
 		if (_selectedObject == null) return;
-
-		GD.Print("ProcessDrag");
+		
 		var rotAxis = axis.Rotated(-Rotation.Y);
 		
 		var dragSpeed = 0.05f;
@@ -193,8 +233,57 @@ public partial class CameraController : Node3D, ICameraBase
 		//GD.Print(targetPos);
 		
 		_dragNode.Position = targetPos;
+		*/
+		
+		var targetPos = ShootRay(GetViewport().GetMousePosition());
+
+		var deltaPos = new Vector3(targetPos.X - _mouseStartDragPos.X, 0, targetPos.Z - _mouseStartDragPos.Y);
+
+		foreach (var v in GetSelectedObjects())
+		{
+			v.Position += deltaPos;
+		}
+
+		_mouseStartDragPos = new Vector2(targetPos.X, targetPos.Z);	//reset starting point for next move
+	}
+	
+	
+	
+	private VisualComponentBase GetMouseSelectedObject()
+	{
+		foreach (var n in _gameObjects.GetChildren())
+		{
+			if (n is VisualComponentBase { IsMouseSelected: true } p)
+			{
+				return p;
+			}
+		}
+
+		return null;
+	}
+	
+	private IEnumerable<VisualComponentBase> GetSelectedObjects()
+	{
+		foreach (var n in _gameObjects.GetChildren())
+		{
+			if (n is VisualComponentBase { IsSelected: true } p)
+			{
+				yield return p;
+			}
+		}
 	}
 
+	private IEnumerable<VisualComponentBase> GetDraggingObjects()
+	{
+		foreach (var n in _gameObjects.GetChildren())
+		{
+			if (n is VisualComponentBase { IsDragging: true } p)
+			{
+				yield return p;
+			}
+		}
+	}
+	
 	public void ProcessViewEvent(InputEvent @event)
 	{
 		int pitch = 0;
@@ -257,6 +346,13 @@ public partial class CameraController : Node3D, ICameraBase
 		Rotation = new Vector3(_totPitch, _totYaw, 0);
 	}
 
+	public void ZoomComponent(VisualComponentBase component)
+	{
+		GlobalPosition = new Vector3(component.Position.X, 0, component.Position.Z);
+
+		var z = Mathf.Clamp(component.MaxAxisSize * 1.2f, 2, _tableSize * 1.1f);
+		_camera.Position = new Vector3(0, 0, z);
+	}	
 	public void ZoomIn()
 	{
 		UpdateZoom(-1);
@@ -284,11 +380,11 @@ public partial class CameraController : Node3D, ICameraBase
 	{
 		_spawnMode = true;
 		_spawnComponent = component;
+		_spawnComponent.NeverHighlight = true;
 	}
 
 	public void ExitSpawnMode()
 	{
-		GD.Print("Exit Spawn Mode");
 		_spawnMode = false;
 		_spawnComponent = null;
 	}
@@ -296,9 +392,9 @@ public partial class CameraController : Node3D, ICameraBase
 	public void ResetView()
 	{
 		Transform = _baseTransform;
-		_camera.Position = _baseCamPos;
-		_totYaw = 0;
-		_totPitch = -0.08f;
+		_camera.Transform = _baseCamTrans;
+		_totYaw = Rotation.Y;
+		_totPitch = Rotation.X;
 	}
 
 
@@ -315,15 +411,12 @@ public partial class CameraController : Node3D, ICameraBase
 		
 		int i = 0;
 		
-		GD.Print(_gameObjects.GetChildren().Count);
-		
 		
 		foreach (var n in _gameObjects.GetChildren())
 		{
 			i++;
 			if (n is VisualComponentBase p)
 			{
-				GD.Print($"Checking {p.Name}");
 				if (p == pickable) continue;
 				if (p.Aabb.Intersects(targetAabb))
 				{
@@ -370,6 +463,7 @@ public partial class CameraController : Node3D, ICameraBase
 		get => _camera.Current;
 		set => _camera.Current = value;
 	}
-	
+
+	public Camera3D Camera => _camera;
 
 }

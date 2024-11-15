@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://cy5c51ib74lpt"]
+
+[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="1_gaghy"]
+
+[node name="TestSprite" type="Sprite3D"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+texture = ExtResource("1_gaghy")
