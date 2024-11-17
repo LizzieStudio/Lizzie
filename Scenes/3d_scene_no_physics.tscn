@@ -30,10 +30,10 @@ script = ExtResource("3_v37dv")
 
 [node name="PerspectiveViewCamera" type="Node3D" parent="Cameras" node_paths=PackedStringArray("_gameObjects")]
 script = ExtResource("4_42he8")
+_gameObjects = NodePath("../../GameObjects")
 RotationSpeed = 0.1
 ContinuousZoomSpeed = 30.0
 PanSpeed = 20.0
-_gameObjects = NodePath("../../GameObjects")
 
 [node name="Gimbal" type="Node3D" parent="Cameras/PerspectiveViewCamera"]
 transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 0, 0)
@@ -44,10 +44,10 @@ fov = 73.6372
 
 [node name="TopViewCamera" type="Node3D" parent="Cameras" node_paths=PackedStringArray("_gameObjects")]
 script = ExtResource("5_he01h")
+_gameObjects = NodePath("../../GameObjects")
 RotationSpeed = 0.1
 ContinuousZoomSpeed = 50.0
 PanSpeed = 20.0
-_gameObjects = NodePath("../../GameObjects")
 
 [node name="Camera" type="Camera3D" parent="Cameras/TopViewCamera"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 100, 0)

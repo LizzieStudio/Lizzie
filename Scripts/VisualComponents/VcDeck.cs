@@ -376,10 +376,12 @@ public partial class VcDeck : VisualGroupComponent
 		arr[4] = new Vector2(-x, -y);
 		arr[5] = new Vector2(-x, y);
 
+		/*
 		foreach (var p in arr)
 		{
 			GD.Print(p);
 		}
+		*/
 		
 		return arr;
 	}
@@ -435,7 +437,7 @@ public partial class VcDeck : VisualGroupComponent
 		var t = _frontView.GetTexture();
 
 		float pixelSize = Utility.PixelSize(t.GetSize());
-		GD.PrintErr($"Pixel Size: {pixelSize}");
+		//GD.PrintErr($"Pixel Size: {pixelSize}");
 		_frontSprite.PixelSize = pixelSize;
 		_frontSprite.Texture = t;
 		

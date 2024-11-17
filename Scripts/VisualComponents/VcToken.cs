@@ -109,6 +109,8 @@ public partial class VcToken : VisualComponentFlat
 
 		RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
 	}
+
+	private bool _firstBuild = true;
 	
 	public override bool Build(Dictionary<string, object> parameters)
 	{
@@ -149,7 +151,7 @@ public partial class VcToken : VisualComponentFlat
 			var size = new Vector3(scale / _width, 1, scale / _height);
 			FaceSprite.Scale = size;
 			BackSprite.Scale = size;
-			GD.PrintErr(size);
+			//GD.PrintErr(size);
 		}
 
 		var shape = (TokenTextureSubViewport.TokenShape)_shape;
@@ -183,8 +185,9 @@ public partial class VcToken : VisualComponentFlat
 			default:
 				throw new ArgumentOutOfRangeException();
 		}
-		
-		
+
+
+		_firstBuild = false;
 		
 		return true;
 	}
@@ -230,27 +233,57 @@ public partial class VcToken : VisualComponentFlat
 		
 		return arr;
 	}
+	
+	
 	private void BuildQuick()
 	{
 		_frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
-		_frontView.Ready += () => CreateQuickFrontTexture();
+		if (_firstBuild)
+		{
+			_frontView.Ready += CreateQuickFrontTexture;
+		}
+		else
+		{
+			CreateQuickFrontTexture();
+		}
 		
 		if (_differentBack)
 		{
 			_backView = GetNode<TokenTextureSubViewport>("BackViewport");
-			_backView.Ready += () => CreateQuickBackTexture();
+			if (_firstBuild)
+			{
+				_backView.Ready += CreateQuickBackTexture;
+			}
+			else
+			{
+				CreateQuickBackTexture();
+			}
 		}
 	}
 
 	private void BuildCustom()
 	{
 		_frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
-		_frontView.Ready += CreateCustomFrontTexture;
+		if (_firstBuild)
+		{
+			_frontView.Ready += CreateCustomFrontTexture;
+		}
+		else
+		{
+			CreateCustomFrontTexture();
+		}
 		
 		if (_differentBack)
 		{
 			_backView = GetNode<TokenTextureSubViewport>("BackViewport");
-			_backView.Ready += CreateCustomBackTexture;
+			if (_firstBuild)
+			{
+				_backView.Ready += CreateCustomBackTexture;
+			}
+			else
+			{
+				CreateCustomBackTexture();
+			}
 		}
 		
 	}

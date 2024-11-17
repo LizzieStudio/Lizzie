@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using System.Collections.Generic;
 using System.IO;
@@ -40,9 +41,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 	private Label _label;
 
 
-	//private SubViewportContainer _topViewportContainer;
-	private PreviewPanel _topPreview;
-	private PreviewPanel _bottomPreview;
+	private ComponentPreview _preview;
 
 	public override void _Ready()
 	{
@@ -100,76 +99,81 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		_tabs = GetNode<TabContainer>("%Tabs");
 		_tabs.TabSelected += OnTabSelected;
 
-		_topPreview = GetNode<PreviewPanel>("%TopPreview");
-		_bottomPreview = GetNode<PreviewPanel>("%BottomPreview");
-
+		_preview = GetNode<ComponentPreview>("%Preview");
+		
 		OnQuickBackCheckboxChange(); //just to set the initial line visibility in case someone messed with the control.
 		OnCustomBackCheckboxChange();
 
 		OnTabSelected(0);
 
-		ShapePickerOnItemSelected(0);
+		//ShapePickerOnItemSelected(0);
 	}
+	
+	public override void Activate()
+	{
+		var comp = GetPreviewComponent();
+		_preview.SetComponent(comp, new Vector3(Mathf.DegToRad(90),0,0));
+		UpdatePreview();
+	}
+
+	private VcToken GetPreviewComponent()
+	{
+		string shape = "VcToken.tscn";
+
+		/*
+		 * Square = 0, 
+		Circle = 1, 
+		HexPoint = 2, 
+		HexFlat = 3,
+		RoundedRect = 4
+		 */
+		switch (_shapePicker.Selected)
+		{
+			case 1:
+				shape = "VcTokenCircle.tscn";
+				break;
+			
+			case 2:
+				shape = "VcTokenHexPoint.tscn";
+				break;
+			
+			case 3:
+				shape = "VcTokenHexFlat.tscn";
+				break;
+		}
+		
+		var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/{shape}");
+		var vc = scene.Instantiate<VcToken>();
+
+		vc.Ready += UpdatePreview;
+		return vc;
+	}
+
+	public override void Deactivate()
+	{
+		_preview.ClearComponent();
+	}
+	
 	private void HeightWidthTextChanged(string newtext)
 	{
-		if (float.TryParse(_heightInput.Text, out var h) && float.TryParse(_widthInput.Text, out var w))
-		{
-			_topPreview.SetSize(w, h);
-			_bottomPreview.SetSize(w, h);
-		}
+		UpdatePreview();
 	}
 
 	private void OnCustomBackCheckboxChange()
 	{
 		_customBackRow.Visible = _customBackCheckbox.ButtonPressed;
 
-		_bottomPreview.Visible = _customBackCheckbox.ButtonPressed;
 	}
 
 
 	private void OnTabSelected(long tab)
 	{
-		switch (tab)
-		{
-			case 0:
-				_bottomPreview.SetViewPortMode(PreviewPanel.ShapeViewportMode.Shape);
-				_topPreview.SetViewPortMode(PreviewPanel.ShapeViewportMode.Shape);
-				_bottomPreview.Visible = _quickBackCheckbox.ButtonPressed;
-				break;
-
-			case 1:
-				_bottomPreview.SetViewPortMode(PreviewPanel.ShapeViewportMode.Texture);
-				_topPreview.SetViewPortMode(PreviewPanel.ShapeViewportMode.Texture);
-				_bottomPreview.Visible = _customBackCheckbox.ButtonPressed;
-				break;
-		}
+		UpdatePreview();
 	}
 
 	private void ShapePickerOnItemSelected(long index)
 	{
-		TokenTextureSubViewport.TokenShape shape = TokenTextureSubViewport.TokenShape.Square;
-
-		switch (index)
-		{
-			case 0:
-				shape = TokenTextureSubViewport.TokenShape.Square;
-				break;
-
-			case 1:
-				shape = TokenTextureSubViewport.TokenShape.Circle;
-				break;
-			case 2:
-				shape = TokenTextureSubViewport.TokenShape.HexPoint;
-				break;
-			case 3:
-				shape = TokenTextureSubViewport.TokenShape.HexFlat;
-				break;
-		}
-
-		PrototypeIndex = (int)index;
-		_topPreview.SetShape(shape);
-
-		_bottomPreview.SetShape(shape);
+		Activate();
 	}
 
 	private void OnQuickBackCheckboxChange()
@@ -180,38 +184,38 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
 		h4.Visible = _quickBackCheckbox.ButtonPressed;
 		h5.Visible = _quickBackCheckbox.ButtonPressed;
-
-		_bottomPreview.Visible = _quickBackCheckbox.ButtonPressed;
+		
+		UpdatePreview();
 	}
 
 	private void OnPreviewTextColorChange(Color color)
 	{
-		_topPreview.SetTextColor(color);
+		UpdatePreview();
 	}
 
 	private void OnBackgroundColorChanged(Color color)
 	{
-		_topPreview.SetBackgroundColor(color);
+		UpdatePreview();
 	}
 
 	private void OnTextChange(string newtext)
 	{
-		_topPreview.SetText(newtext);
+		UpdatePreview();
 	}
 
 	private void OnPreviewTextColor2Change(Color color)
 	{
-		_bottomPreview.SetTextColor(color);
+		UpdatePreview();
 	}
 
 	private void OnBackgroundColor2Changed(Color color)
 	{
-		_bottomPreview.SetBackgroundColor(color);
+		UpdatePreview();
 	}
 
 	private void OnText2Change(string newtext)
 	{
-		_bottomPreview.SetText(newtext);
+		UpdatePreview();
 	}
 
 	private void GetFrontFile()
@@ -221,14 +225,17 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
 	private void FrontFileSelected(string file)
 	{
+		_frontImage.Text = file;
+		UpdatePreview();
+		return;
+		
 		if (!string.IsNullOrEmpty(file))
 		{
 			_frontImage.Text = file;
 			if (File.Exists(_frontImage.Text))
 			{
 				var t = LoadTexture(_frontImage.Text);
-				_topPreview.SetViewPortMode(PreviewPanel.ShapeViewportMode.Texture);
-				_topPreview.SetTexture(t);
+				UpdatePreview();
 			}
 		}
 	}
@@ -240,14 +247,16 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
 	private void BackFileSelected(string file)
 	{
+		_backImage.Text = file;
+		UpdatePreview();
+		return;
+		
 		if (!string.IsNullOrEmpty(file))
 		{
 			_backImage.Text = file;
 			if (File.Exists(file))
 			{
 				var t = LoadTexture(file);
-				_bottomPreview.SetViewPortMode(PreviewPanel.ShapeViewportMode.Texture);
-				_bottomPreview.SetTexture(t);
 			}
 		}
 	}
@@ -314,4 +323,58 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
 		return d;
 	}
+	
+	private void UpdatePreview()
+	{
+		//normalize the size
+		var h = ParamToFloat(_heightInput.Text);
+		var w = ParamToFloat(_widthInput.Text);
+		var t = ParamToFloat(_thicknessInput.Text);
+		if (h == 0 || w == 0 || t == 0)
+		{
+			_preview.SetComponentVisibility(false);
+			return;
+		}
+
+		_preview.SetComponentVisibility(true);
+		
+		//normalize dimensions to 10x10x10 outer extants
+		var scale = 10f / Math.Max(h, Math.Max(w, t));
+		
+		
+		var d = new Dictionary<string, object>();
+
+		d.Add("ComponentName", _nameInput.Text);
+		d.Add("Height", h * scale);
+		d.Add("Width", w * scale);
+		d.Add("Thickness", t * scale);
+		d.Add("FrontImage", _frontImage.Text);
+		d.Add("BackImage", _backImage.Text);
+		d.Add("Shape", _shapePicker.Selected);
+		d.Add("Mode", _tabs.CurrentTab);
+		d.Add("FrontBgColor", _quickBackgroundColor.Color);
+		d.Add("FrontCaption", _quickText.Text);
+		d.Add("FrontCaptionColor", _quickTextColor.Color);
+		d.Add("Type", VcToken.TokenType.Token);
+		d.Add("FrontFontSize", 24);
+		
+		if (_tabs.CurrentTab == 0)
+		{
+			d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
+		}
+		else
+		{
+			d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
+		}
+
+
+		d.Add("BackBgColor", _quickBackgroundColor2.Color);
+		d.Add("BackCaption", _quickText2.Text);
+		d.Add("BackCaptionColor", _quickTextColor2.Color);
+		d.Add("BackFontSize", 24);
+
+		_preview.Build(d);
+		
+	}
+
 }

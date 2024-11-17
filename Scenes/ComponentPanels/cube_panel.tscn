@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://bmimebxb37rro"]
+[gd_scene load_steps=3 format=3 uid="uid://bmimebxb37rro"]
 
 [ext_resource type="Script" path="res://Scripts/ComponentPanelResults/CubePanelDialogResult.cs" id="1_fg2ce"]
+[ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="2_idyay"]
 
 [node name="Cube Panel" type="MarginContainer"]
 offset_right = 40.0
@@ -11,101 +12,115 @@ theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 script = ExtResource("1_fg2ce")
 
-[node name="GridContainer" type="GridContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="GridContainer" type="GridContainer" parent="HBoxContainer"]
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="GridContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 text = "Name  "
 horizontal_alignment = 2
 
-[node name="ItemName" type="LineEdit" parent="GridContainer"]
+[node name="ItemName" type="LineEdit" parent="HBoxContainer/GridContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 
-[node name="Label6" type="Label" parent="GridContainer"]
+[node name="Label6" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label7" type="Label" parent="GridContainer"]
+[node name="Label7" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label4" type="Label" parent="GridContainer"]
+[node name="Label4" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 text = "Height  "
 horizontal_alignment = 2
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="GridContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 
-[node name="Height" type="LineEdit" parent="GridContainer/HBoxContainer3"]
+[node name="Height" type="LineEdit" parent="HBoxContainer/GridContainer/HBoxContainer3"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "10"
 alignment = 2
 
-[node name="Label" type="Label" parent="GridContainer/HBoxContainer3"]
+[node name="Label" type="Label" parent="HBoxContainer/GridContainer/HBoxContainer3"]
 layout_mode = 2
 text = "mm"
 
-[node name="Label5" type="Label" parent="GridContainer"]
+[node name="Label5" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 text = "Length  "
 horizontal_alignment = 2
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="GridContainer"]
+[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 
-[node name="Length" type="LineEdit" parent="GridContainer/HBoxContainer4"]
+[node name="Length" type="LineEdit" parent="HBoxContainer/GridContainer/HBoxContainer4"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "10"
 alignment = 2
 
-[node name="Label" type="Label" parent="GridContainer/HBoxContainer4"]
+[node name="Label" type="Label" parent="HBoxContainer/GridContainer/HBoxContainer4"]
 layout_mode = 2
 text = "mm"
 
-[node name="Label3" type="Label" parent="GridContainer"]
+[node name="Label3" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 text = "Width  "
 horizontal_alignment = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="GridContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 
-[node name="Width" type="LineEdit" parent="GridContainer/HBoxContainer2"]
+[node name="Width" type="LineEdit" parent="HBoxContainer/GridContainer/HBoxContainer2"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "10"
 alignment = 2
 
-[node name="Label" type="Label" parent="GridContainer/HBoxContainer2"]
+[node name="Label" type="Label" parent="HBoxContainer/GridContainer/HBoxContainer2"]
 layout_mode = 2
 text = "mm"
 
-[node name="Label2" type="Label" parent="GridContainer"]
+[node name="Label2" type="Label" parent="HBoxContainer/GridContainer"]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "Color  "
 horizontal_alignment = 2
 
-[node name="Color" type="ColorPickerButton" parent="GridContainer"]
+[node name="Color" type="ColorPickerButton" parent="HBoxContainer/GridContainer"]
+unique_name_in_owner = true
 layout_mode = 2
+color = Color(1, 0, 0, 1)
 
-[node name="Label8" type="Label" parent="GridContainer"]
-layout_mode = 2
-horizontal_alignment = 2
-
-[node name="Label9" type="Label" parent="GridContainer"]
+[node name="Label8" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label10" type="Label" parent="GridContainer"]
+[node name="Label9" type="Label" parent="HBoxContainer/GridContainer"]
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="Label10" type="Label" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
 text = "Quantity  "
 horizontal_alignment = 2
 
-[node name="Quantity" type="LineEdit" parent="GridContainer"]
+[node name="Quantity" type="LineEdit" parent="HBoxContainer/GridContainer"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 alignment = 2
+
+[node name="Preview" parent="HBoxContainer" instance=ExtResource("2_idyay")]
+unique_name_in_owner = true
+layout_mode = 2

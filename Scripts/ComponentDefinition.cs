@@ -23,6 +23,17 @@ public partial class ComponentDefinition : HBoxContainer
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		}
+
+	private bool _isInitialized;
+	public void Initialize()
+	{
+		Visible = true;
+		
+		if (_isInitialized) return;
+
+		_isInitialized = true;
+		
 		buttonPanel = GetNode<VBoxContainer>("ButtonStrip");
 		_componentPanel = GetNode<Panel>("ComponentPanel");
 		
@@ -53,6 +64,7 @@ public partial class ComponentDefinition : HBoxContainer
 
 		_cancelButton = GetNode<Button>("%CancelButton");
 		_cancelButton.Pressed += CancelClicked;
+
 	}
 	
 
@@ -106,7 +118,22 @@ public partial class ComponentDefinition : HBoxContainer
 	{
 		foreach (var kv in _panelDictionary)
 		{
-			kv.Value.Visible = (kv.Key == name);
+			if (kv.Value is ComponentPanelDialogResult cpdr)
+			{
+				if (kv.Key == name)
+				{
+					kv.Value.Visible = true;
+					cpdr.Activate();
+				}
+				else
+				{
+					kv.Value.Visible = false;
+					cpdr.Deactivate();
+				}
+			}
+			
+			
+			
 		}
 	}
 

@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_qeff1"]
 [ext_resource type="Script" path="res://Scripts/ComponentPanelResults/TokenPanelDialogResult.cs" id="1_ykbf8"]
-[ext_resource type="PackedScene" uid="uid://c0y04vkcn2jbd" path="res://Scenes/ComponentPanels/preview_panel.tscn" id="3_i0743"]
+[ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_aum2n"]
 
 [sub_resource type="Theme" id="Theme_vm378"]
 
@@ -15,7 +15,6 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 script = ExtResource("1_ykbf8")
-_shapes = PackedStringArray("res://Textures/Shapes/square.png", "res://Textures/Shapes/circle.png", "res://Textures/Shapes/hex.png", "res://Textures/Shapes/hexflat.png")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 2
@@ -296,25 +295,6 @@ icon = ExtResource("1_qeff1")
 visible = false
 layout_mode = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer"]
-custom_minimum_size = Vector2(300, 0)
-layout_mode = 2
-size_flags_horizontal = 8
-
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PanelContainer"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="HBoxContainer/PanelContainer/VBoxContainer"]
-layout_mode = 2
-text = "Preview"
-horizontal_alignment = 1
-
-[node name="TopPreview" parent="HBoxContainer/PanelContainer/VBoxContainer" instance=ExtResource("3_i0743")]
+[node name="Preview" parent="HBoxContainer" instance=ExtResource("3_aum2n")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
-
-[node name="BottomPreview" parent="HBoxContainer/PanelContainer/VBoxContainer" instance=ExtResource("3_i0743")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3

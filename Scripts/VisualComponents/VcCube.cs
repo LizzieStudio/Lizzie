@@ -52,8 +52,6 @@ public partial class VcCube : VisualComponentBase
 			} 
 		}
 		
-		GD.Print($"H:{Height} W:{Width} L:{Length}");
-		
 		//create cube
 		if (Width <= 0 || Length <= 0)
 		{

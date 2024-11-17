@@ -9,6 +9,12 @@ public abstract partial class ComponentPanelDialogResult : Control
     public abstract List<string> Validity();
     public abstract Dictionary<string, object> GetParams();
 
+    public virtual void Activate(){}
+
+    public virtual void Deactivate()
+    {
+    }
+
     public int PrototypeIndex { get; set; } = 0;
     public virtual VisualComponentBase.VisualComponentType ComponentType { get; set; }
 

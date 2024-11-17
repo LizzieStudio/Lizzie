@@ -182,7 +182,10 @@ public partial class UI : CanvasLayer
 
 	private void OnInsertMenuSelection(long id)
 	{
-		if (id == 1) _componentDefinition.Visible = true;
+		if (id == 1)
+		{
+			_componentDefinition.Initialize();
+		}
 	}
 
 	private void OnInsertPressed()

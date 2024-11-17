@@ -9,17 +9,46 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 	private LineEdit _diameterInput;
 	
 	private ColorPickerButton _colorPicker;
+	private ComponentPreview _preview;
 	
 	
 	public override void _Ready()
 	{
 		ComponentType = VisualComponentBase.VisualComponentType.Disc;
-		_nameInput = GetNode<LineEdit>("GridContainer/ItemName");
-		_heightInput = GetNode<LineEdit>("GridContainer/HBoxContainer3/Height");
-		_diameterInput = GetNode<LineEdit>("GridContainer/HBoxContainer4/Diameter");
-		_colorPicker = GetNode<ColorPickerButton>("GridContainer/Color");
+		_nameInput = GetNode<LineEdit>("%ItemName");
+		_heightInput = GetNode<LineEdit>("%Height");
+		_heightInput.TextChanged += t => UpdatePreview();
+		
+		_diameterInput = GetNode<LineEdit>("%Diameter");
+		_diameterInput.TextChanged += t => UpdatePreview();
+		
+		_colorPicker = GetNode<ColorPickerButton>("%Color");
+		_colorPicker.ColorChanged += color => UpdatePreview();
+		
+		_preview = GetNode<ComponentPreview>("%Preview");
 	}
 	
+	public override void _Process(double delta)
+	{
+		//_previewDisc.Rotation += new Vector3(0,(float)delta, 0);
+	}
+	
+	public override void Activate()
+	{
+		_preview.SetComponent(GetPreviewComponent(), new Vector3(Mathf.DegToRad(-10),0,0));
+		UpdatePreview();
+	}
+
+	private VcDisc GetPreviewComponent()
+	{
+		var scene = GD.Load<PackedScene>("res://Scenes/VisualComponents/VcDisc.tscn");
+		return scene.Instantiate<VcDisc>();
+	}
+
+	public override void Deactivate()
+	{
+		_preview.ClearComponent();
+	}
 
 	public override List<string> Validity()
 	{
@@ -43,5 +72,32 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 		d.Add("Color", _colorPicker.Color);
 
 		return d;
+	}
+	
+	private void UpdatePreview()
+	{
+		var d = new Dictionary<string, object>();
+
+		var h = ParamToFloat(_heightInput.Text);
+		var dia = ParamToFloat(_diameterInput.Text);
+
+		if (h == 0 || dia == 0)
+		{
+			_preview.SetComponentVisibility(false);
+			return;
+		}
+
+		_preview.SetComponentVisibility(true);
+		
+		//normalize dimensions to 10x10x10 outer extants
+		var scale = 10f / Math.Max(h, dia);
+		
+		d.Add("ComponentName", _nameInput.Text);
+		d.Add("Height", h * scale);
+		d.Add("Diameter", dia * scale);
+		d.Add("Color", _colorPicker.Color);
+		
+		_preview.Build(d);
+		
 	}
 }
