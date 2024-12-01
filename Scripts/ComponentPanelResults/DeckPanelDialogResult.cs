@@ -370,16 +370,41 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 		d.Add("ComponentName", _nameInput.Text);
 		d.Add("Height", ParamToFloat(_heightInput.Text));
 		d.Add("Width", ParamToFloat(_widthInput.Text));
-		d.Add("Mode", _tabs.CurrentTab);
-		
-		if (_tabs.CurrentTab == 0)
+		d.Add("Shape",0);
+
+		switch (_tabs.CurrentTab)
 		{
-			LoadQuickSuits();
-			d.Add("QuickCardData", _quickSuits);
+			case 0:
+				AddQuickParameters(d);
+				break;
+			
+			case 1:	//Grid
+				AddGridParameters(d);
+				break;
 		}
 		
+
 		return d;
 	}
+
+	private void AddQuickParameters(Dictionary<string, object> d)
+	{
+		LoadQuickSuits();
+		d.Add("QuickCardData", _quickSuits);
+		d.Add("Mode", VcToken.TokenBuildMode.Quick);
+	}
+	private void AddGridParameters(Dictionary<string, object> d)
+	{
+		d.Add("FrontMasterSprite", _frontMasterSprite);
+		d.Add("GridRows", _gridRows);
+		d.Add("GridCols", _gridCols);
+		d.Add("GridCount", _gridCols);
+		
+		d.Add("Mode", VcToken.TokenBuildMode.Grid);
+		d.Add("DifferentBack", false);
+	}
+	
+	
 
 	private void QuickSuitCountChanged(long suitCount)
 	{

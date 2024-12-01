@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using Godot.Collections;
 
 public partial class VcDeck : VisualGroupComponent
 {
@@ -49,7 +48,7 @@ public partial class VcDeck : VisualGroupComponent
 
 	public override GeometryInstance3D DragMesh => _frontSprite;
 
-	public override float MaxAxisSize => Math.Max(Height, Width);
+	public override float MaxAxisSize => Math.Max(_height, _width);
 	
 	public override CommandResponse ProcessCommand(VisualCommand command)
 	{
@@ -250,7 +249,7 @@ public partial class VcDeck : VisualGroupComponent
 			cards[i].Position = basePos;
 			cards[i].Visible = false;
 			
-			float deltaX = Width * (1.5f + i);
+			float deltaX = _width * (1.5f + i);
 			
 			cardTween.TweenProperty(cards[i], "visible", true, 0.01);
 			cardTween.TweenProperty(cards[i], "position", new Vector3(deltaX, 0, 0), 0.2f).AsRelative();
@@ -289,50 +288,50 @@ public partial class VcDeck : VisualGroupComponent
 		
 		if (!InitializeParameters(parameters)) return false;
 
-		switch (Mode)
+		switch (_mode)
 		{
-			case 0:
-				BuildQuick();
+			case VcToken.TokenBuildMode.Quick:
+				BuildQuick(parameters);
 				break;
 			
-			case 1:
-				BuildCustom();
+			case VcToken.TokenBuildMode.Template:
+				BuildTemplate(parameters);
 				break;
 			
-			case 2:
-				BuildImport();
+			case VcToken.TokenBuildMode.Grid:
+				BuildGrid(parameters);
 				break;
 		}
 		
-
-		YHeight = Thickness;
+		_thickness = 0.03f * Children.Count;
+		YHeight = _thickness;
 		
-		Scale = new Vector3(Width, Thickness, Height);
+		Scale = new Vector3(_width, _thickness, _height);
 		
 		//adjust the scales for the sprites based on the textures so they don't double adjust
-		if (Width > 0 && Height > 0)
+		if (_width > 0 && _height > 0)
 		{
-			float scale = Math.Max(Width, Height);
+			float scale = Math.Max(_width, _height);
 
-			var size = new Vector3(scale / Width, 1, scale / Height);
+			var size = new Vector3(scale / _width, 1, scale / _height);
 			_frontSprite.Scale = size;
 			_backSprite.Scale = size;
 		}
 
-		var shape = (TokenTextureSubViewport.TokenShape)Shape;
+		var shape = (TokenTextureSubViewport.TokenShape)_shape;
 
 		switch (shape)
 		{
 			case TokenTextureSubViewport.TokenShape.Square:
 			case TokenTextureSubViewport.TokenShape.RoundedRect:
 				var r = new RectangleShape2D();
-				r.Size = new Vector2(Width, Height);
+				r.Size = new Vector2(_width, _height);
 				ShapeProfiles.Add(r);
 				break;
 			
 			case TokenTextureSubViewport.TokenShape.Circle:
 				var c = new CircleShape2D();
-				c.Radius = Width / 2f;
+				c.Radius = _width / 2f;
 				ShapeProfiles.Add(c);
 				break;
 			
@@ -366,8 +365,8 @@ public partial class VcDeck : VisualGroupComponent
 	{
 		Vector2[] arr = new Vector2[6];
 
-		var x = (Width/ 4f) * Mathf.Sqrt(3) / 2f;
-		var y = (Height / 4f);
+		var x = (_width/ 4f) * Mathf.Sqrt(3) / 2f;
+		var y = (_height / 4f);
 
 		arr[0] = new Vector2(0, y * 2);
 		arr[1] = new Vector2(-x, y);
@@ -390,8 +389,8 @@ public partial class VcDeck : VisualGroupComponent
 	{
 		Vector2[] arr = new Vector2[6];
 
-		var x = (Width / 4f);
-		var y = (Height/ 4f) * Mathf.Sqrt(3) / 2f;
+		var x = (_width / 4f);
+		var y = (_height/ 4f) * Mathf.Sqrt(3) / 2f;
 
 		arr[0] = new Vector2(x*2, 0);
 		arr[1] = new Vector2(x, y);
@@ -402,37 +401,27 @@ public partial class VcDeck : VisualGroupComponent
 		
 		return arr;
 	}
-	private void BuildQuick()
+	private void BuildQuick(Dictionary<string, object> parameters)
 	{
+		_quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
+
+		if (_quickCardList == null ) _quickCardList = new();
+		
 		CreateQuickCards();
-		Thickness = 0.03f * Children.Count;
-
-	
-
 	}
 
-	private void BuildCustom()
+	private void BuildTemplate(Dictionary<string, object> parameters)
 	{
-		_frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
-		_frontView.Ready += CreateCustomFrontTexture;
-		
-		if (DifferentBack)
-		{
-			_backView = GetNode<TokenTextureSubViewport>("BackViewport");
-			_backView.Ready += CreateCustomBackTexture;
-		}
-		
 	}
-	
-	private void BuildImport(){}
+
 
 	private void CreateCustomFrontTexture()
 	{
-		if (!File.Exists(FrontImage)) return;
+		if (!File.Exists(_frontImage)) return;
 		
 		_frontView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
-		_frontView.SetShape((TokenTextureSubViewport.TokenShape) Shape);
-		_frontView.SetTexture(LoadTexture(FrontImage));
+		_frontView.SetShape((TokenTextureSubViewport.TokenShape) _shape);
+		_frontView.SetTexture(LoadTexture(_frontImage));
 
 		var t = _frontView.GetTexture();
 
@@ -442,7 +431,7 @@ public partial class VcDeck : VisualGroupComponent
 		_frontSprite.Texture = t;
 		
 		
-		if (!DifferentBack)
+		if (!_differentBack)
 		{
 			_backSprite.PixelSize = pixelSize;
 			_backSprite.Texture = t;
@@ -457,15 +446,15 @@ public partial class VcDeck : VisualGroupComponent
 	
 	private void CreateCustomBackTexture()
 	{
-		if (!File.Exists(BackImage)) return;
+		if (!File.Exists(_backImage)) return;
 		
 		_backView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
-		_backView.SetShape((TokenTextureSubViewport.TokenShape) Shape);
+		_backView.SetShape((TokenTextureSubViewport.TokenShape) _shape);
 		var t = _backView.GetTexture();
 
 		float pixelSize = Utility.PixelSize(t.GetSize());
 		_backSprite.PixelSize = pixelSize;
-		_backView.SetTexture(LoadTexture(BackImage));
+		_backView.SetTexture(LoadTexture(_backImage));
 
 		_backSprite.Texture = _backView.GetTexture();
 		
@@ -475,27 +464,6 @@ public partial class VcDeck : VisualGroupComponent
 	
 	private void CreateQuickFrontTexture()
 	{
-		/*
-		 *
-		 * 		p.Add("Height", Height * 10);
-		p.Add("Width", Width * 10);
-		p.Add("Thickness", 0.03f);
-		p.Add("ComponentName", string.Empty); //TODO add card name
-		p.Add("FrontImage", string.Empty);
-		p.Add("BackImage", string.Empty);
-		p.Add("Shape",0);
-		p.Add("Mode", 0);
-		p.Add("FrontBgColor", faceColor); 
-		p.Add("FrontCaption", faceCaption);
-		p.Add("FrontCaptionColor", Colors.Black);
-		p.Add("DifferentBack", true);
-		p.Add("BackBgColor", backColor);
-		p.Add("BackCaption", backCaption);
-		p.Add("BackCaptionColor", Colors.Black);
-		p.Add("FrontFontSize", 72);
-		p.Add("BackFontSize", 24);
-		 */
-		
 		//the front of the deck is the back of the first child
 		if (Children.Count == 0) return;
 
@@ -508,8 +476,8 @@ public partial class VcDeck : VisualGroupComponent
 				Caption = p["BackCaption"].ToString(),
 				CaptionColor =(Color)p["BackCaptionColor"],
 				Shape = (TokenTextureSubViewport.TokenShape)p["Shape"],
-				Height = Height,
-				Width = Width,
+				Height = _height,
+				Width = _width,
 				FontSize = (int)p["BackFontSize"]
 			};
 		
@@ -536,8 +504,8 @@ public partial class VcDeck : VisualGroupComponent
 			Caption = p["FrontCaption"].ToString(),
 			CaptionColor =(Color)p["FrontCaptionColor"],
 			Shape = (TokenTextureSubViewport.TokenShape)p["Shape"],
-			Height = Height,
-			Width = Width,
+			Height = _height,
+			Width = _width,
 			FontSize = (int)p["FrontFontSize"]
 		};
 		
@@ -551,42 +519,31 @@ public partial class VcDeck : VisualGroupComponent
 
 	private bool InitializeParameters(System.Collections.Generic.Dictionary<string, object> parameters)
 	{
+		var h = Utility.GetParam<float>(parameters, "Height");
+		if (h <= 0) return false;
+		_height = h / 10f;
 
-		if (parameters.ContainsKey(nameof(Height)))
-		{
-			if (parameters[nameof(Height)] is float h)
-			{
-				if (h <= 0) return false;
-				Height = h / 10f;
-			}
 
-			if (parameters[nameof(Width)] is float w)
-			{
-				Width = w / 10f;
-			}
-			
-			
-		}
-		
-		if (parameters.ContainsKey("QuickCardData")) QuickCardList = (List<QuickCardData>)parameters["QuickCardData"];
+		var w = Utility.GetParam<float>(parameters, "Width");
+		_width = w / 10f;
+
+		_mode = Utility.GetParam<VcToken.TokenBuildMode>(parameters, "Mode");
 		
 		var scene = ResourceLoader.Load<PackedScene>(_templateCardPath).Instantiate();
 
 		if (scene is not VcToken token) return false;
 
 		_templateCard = token;
-		//instantiate the cards
-		
-		
-		
+
 		return true;
 	}
 
 	private void CreateQuickCards()
 	{
+		
 		Clear();
 
-		foreach (var q in QuickCardList)
+		foreach (var q in _quickCardList)
 		{
 			var values = Utility.ParseValueRanges(q.Caption);
 
@@ -604,14 +561,14 @@ public partial class VcDeck : VisualGroupComponent
 		var card = (VcToken)_templateCard.Duplicate();
 		var p = new System.Collections.Generic.Dictionary<string, object>();
 
-		p.Add("Height", Height * 10);
-		p.Add("Width", Width * 10);
+		p.Add("Height", _height * 10);
+		p.Add("Width", _width * 10);
 		p.Add("Thickness", 0.03f * 10);
 		p.Add("ComponentName", string.Empty); //TODO add card name
 		p.Add("FrontImage", string.Empty);
 		p.Add("BackImage", string.Empty);
 		p.Add("Shape",0);
-		p.Add("Mode", 0);
+		p.Add("Mode", VcToken.TokenBuildMode.Quick);
 		p.Add("FrontBgColor", faceColor); 
 		p.Add("FrontCaption", faceCaption);
 		p.Add("FrontCaptionColor", Colors.Black);
@@ -627,6 +584,70 @@ public partial class VcDeck : VisualGroupComponent
 		
 		return card;
 	}
+	
+	#region Grid Cards
+	
+	private Texture2D _frontMasterSprite;
+	private Texture2D _backMasterSprite;
+	private int _gridRows;
+	private int _gridCols;
+	private int _gridCount;
+	
+	private void BuildGrid(Dictionary<string, object> parameters)
+	{
+		//Grid Parameters
+		_frontMasterSprite = Utility.GetParam<Texture2D>(parameters, "FrontMasterSprite");
+		_backMasterSprite = Utility.GetParam<Texture2D>(parameters, "BackMasterSprite");
+
+		_gridRows = Utility.GetParam<int>(parameters, "GridRows");
+		_gridCols = Utility.GetParam<int>(parameters, "GridCols");
+		_gridCount = Utility.GetParam<int>(parameters, "GridCount");
+
+		CreateGridCards();
+	}
+
+	private void CreateGridCards()
+	{
+		Clear();
+
+		for (int i = 0; i < _gridCount; i++)
+		{
+			var c = CreateGridCard(i);
+			AddChildComponent(c);
+		}
+	}
+	
+	private VcToken CreateGridCard(int index)
+	{
+		
+		var card = (VcToken)_templateCard.Duplicate();
+		var p = new System.Collections.Generic.Dictionary<string, object>();
+
+		p.Add("Height", _height * 10);
+		p.Add("Width", _width * 10);
+		p.Add("Thickness", 0.03f * 10);
+		p.Add("ComponentName", string.Empty); //TODO add card name
+		
+		p.Add("Shape",0);
+		p.Add("Mode", VcToken.TokenBuildMode.Grid);
+		
+		p.Add("FrontMasterSprite", _frontMasterSprite);
+		p.Add("GridRows", _gridRows);
+		p.Add("GridCols", _gridCols);
+		p.Add("GridIndex", index);
+		
+		p.Add("DifferentBack", false);
+		
+		card.Build(p);
+
+		card.Parent = Reference;
+		
+		return card;
+	}
+	
+	
+	
+	#endregion
 
 	public override List<string> ValidateParameters(System.Collections.Generic.Dictionary<string, object> parameters)
 	{
@@ -643,9 +664,9 @@ public partial class VcDeck : VisualGroupComponent
 			ret.Add("Instance Name not included");
 		}
 
-		if (parameters.ContainsKey(nameof(Height)))
+		if (parameters.ContainsKey(nameof(_height)))
 		{
-			if (parameters[nameof(Height)] is float h)
+			if (parameters[nameof(_height)] is float h)
 			{
 				if (h <= 0) ret.Add("Height must be > 0");
 			}
@@ -655,7 +676,7 @@ public partial class VcDeck : VisualGroupComponent
 			ret.Add("Height not included");
 		}
 
-		if (parameters.TryGetValue(nameof(Width), out var w))
+		if (parameters.TryGetValue(nameof(_width), out var w))
 		{
 			if (w is float d)
 			{
@@ -667,7 +688,7 @@ public partial class VcDeck : VisualGroupComponent
 			ret.Add("Diameter not included");
 		}
 
-		if (parameters.TryGetValue(nameof(FrontImage), out var parameter))
+		if (parameters.TryGetValue(nameof(_frontImage), out var parameter))
 		{
 			if (string.IsNullOrEmpty(parameter.ToString()))
 			{
@@ -695,27 +716,41 @@ public partial class VcDeck : VisualGroupComponent
 		//TODO Handle if there are no cards in the deck?
 		if (Children.Count > 0)
 		{
-			//TODO these should be replaced by a generalized routine (so not just Quick)
-			CreateQuickFrontTexture();
-			CreateQuickBackTexture();
-			
-			
+			switch (_mode)
+			{
+				case VcToken.TokenBuildMode.Quick:
+					CreateQuickFrontTexture();
+					CreateQuickBackTexture();
+					break;
+				case VcToken.TokenBuildMode.Grid:
+					break;
+				case VcToken.TokenBuildMode.Template:
+					break;
+				case VcToken.TokenBuildMode.Nandeck:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
 		}
 	}
 
-	private float Height;
-	private float Width;
-	private float Thickness;
-	private string FrontImage;
-	private string BackImage;
-	private int Shape;
-	private int Mode;
-	private Color FrontBgColor;
-	private string FrontCaption;
-	private Color FrontCaptionColor;
-	private bool DifferentBack;
-	private Color BackBgColor;
-	private string BackCaption;
-	private Color BackCaptionColor;
-	private List<QuickCardData> QuickCardList = new();
+	private float _height;
+	private float _width;
+	private float _thickness;
+	private string _frontImage;
+	private string _backImage;
+	private int _shape;
+	private VcToken.TokenBuildMode _mode;
+	private Color _frontBgColor;
+	private string _frontCaption;
+	private Color _frontCaptionColor;
+	private bool _differentBack;
+	private Color _backBgColor;
+	private string _backCaption;
+	private Color _backCaptionColor;
+	private List<QuickCardData> _quickCardList = new();
+
+	
+	
+
 }
