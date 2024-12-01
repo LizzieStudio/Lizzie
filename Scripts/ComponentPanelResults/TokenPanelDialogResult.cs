@@ -299,7 +299,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("FrontImage", _frontImage.Text);
 		d.Add("BackImage", _backImage.Text);
 		d.Add("Shape", _shapePicker.Selected);
-		d.Add("Mode", _tabs.CurrentTab);
+		d.Add("Mode", TabToBuildMode(_tabs.CurrentTab));
 		d.Add("FrontBgColor", _quickBackgroundColor.Color);
 		d.Add("FrontCaption", _quickText.Text);
 		d.Add("FrontCaptionColor", _quickTextColor.Color);
@@ -322,6 +322,18 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("BackFontSize", 24);
 
 		return d;
+	}
+
+	private VcToken.TokenBuildMode TabToBuildMode(int tab)
+	{
+		switch (tab)
+		{
+			case 0: return VcToken.TokenBuildMode.Quick;
+			case 1: return VcToken.TokenBuildMode.Custom;
+			case 2: return VcToken.TokenBuildMode.Grid;
+		}
+
+		throw new Exception("Unknow Tab Type in TokenPanelDialogResult");
 	}
 	
 	private void UpdatePreview()

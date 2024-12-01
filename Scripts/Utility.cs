@@ -95,4 +95,35 @@ public partial class Utility : Node
 		return 0.95f / Mathf.Max(size.X, size.Y);
 	}
 	
+	public static T GetParam<T>(Dictionary<string, object> parameters, string key)
+	{
+		if (!parameters.TryGetValue(key, out var parameter))
+		{
+			GD.PrintErr($"Parameter not found: {key}");
+			return default;
+		}
+
+		if (parameter is T value) return value;
+
+		if (parameter is null) return default;
+		
+		throw new Exception($"Parameter {key} is not type {typeof(T)}");
+	}
+	
+	public static ImageTexture LoadTexture(string filename)
+	{
+		var image = new Image();
+		var err = image.Load(filename);
+		GD.Print(err);
+
+		if (err == Error.Ok)
+		{
+			var texture = new ImageTexture();
+			texture.SetImage(image);
+			return texture;
+		}
+
+		return new ImageTexture();
+	}
+
 }

@@ -1,8 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://bifubswbhqkkp"]
+[gd_scene load_steps=4 format=3 uid="uid://bifubswbhqkkp"]
 
 [ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_8qg10"]
 [ext_resource type="Script" path="res://Scripts/ComponentPanelResults/DeckPanelDialogResult.cs" id="1_a0rs8"]
-[ext_resource type="PackedScene" uid="uid://b0sibtjhvuhoh" path="res://Scenes/ComponentPanels/CardPreviewPanel.tscn" id="2_a5ead"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_ud6kl"]
 
 [node name="DeckPanel" type="MarginContainer"]
@@ -28,10 +27,21 @@ columns = 2
 
 [node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
 layout_mode = 2
-text = "Name  "
+text = "Deck Name  "
 horizontal_alignment = 2
 
 [node name="ItemName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+alignment = 2
+
+[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+text = "Card Name  "
+horizontal_alignment = 2
+
+[node name="CardName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
@@ -384,6 +394,7 @@ text = "Cols  "
 horizontal_alignment = 2
 
 [node name="GridCols" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer7"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -398,6 +409,7 @@ text = "Rows  "
 horizontal_alignment = 2
 
 [node name="GridRows" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer8"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -412,6 +424,7 @@ text = "# Cards  "
 horizontal_alignment = 2
 
 [node name="GridCardCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer9"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -425,92 +438,3 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-
-[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(300, 350)
-layout_mode = 2
-size_flags_horizontal = 8
-
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PanelContainer"]
-layout_mode = 2
-
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/PanelContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="MarginContainer3" type="MarginContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_right = 0
-
-[node name="FirstCard" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer/MarginContainer3"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "First card"
-text = "<<"
-
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 0
-theme_override_constants/margin_right = 12
-
-[node name="PrevCard" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer/MarginContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Previous card"
-text = "<"
-
-[node name="CurCardLabel" type="Label" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Card 1 of 32"
-horizontal_alignment = 1
-
-[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_right = 0
-
-[node name="NextCard" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer/MarginContainer2"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Next card"
-text = ">"
-
-[node name="MarginContainer4" type="MarginContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 0
-theme_override_constants/margin_right = 12
-
-[node name="LastCard" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer/MarginContainer4"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Last card"
-text = ">>"
-
-[node name="Preview" parent="HBoxContainer/PanelContainer/VBoxContainer" instance=ExtResource("2_a5ead")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-_shapes = PackedStringArray("res://Textures/Shapes/square.png", "res://Textures/Shapes/RoundedRectangle.png")
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/PanelContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-theme_override_constants/margin_top = 2
-theme_override_constants/margin_right = 2
-
-[node name="PreviewFrontBack" type="OptionButton" parent="HBoxContainer/PanelContainer/VBoxContainer/HBoxContainer2/MarginContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Preview card front or back"
-item_count = 2
-selected = 0
-popup/item_0/text = "Front"
-popup/item_0/id = 0
-popup/item_1/text = "Back"
-popup/item_1/id = 1

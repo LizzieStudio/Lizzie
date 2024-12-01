@@ -2,7 +2,9 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text.Json;
+using Vector2 = Godot.Vector2;
 
 public partial class VcToken : VisualComponentFlat
 {
@@ -111,6 +113,8 @@ public partial class VcToken : VisualComponentFlat
 	}
 
 	private bool _firstBuild = true;
+
+	public enum TokenBuildMode {Quick, Custom, Grid, Template, Nandeck}
 	
 	public override bool Build(Dictionary<string, object> parameters)
 	{
@@ -122,16 +126,24 @@ public partial class VcToken : VisualComponentFlat
 
 		switch (_mode)
 		{
-			case 0:
+			case TokenBuildMode.Quick:
 				BuildQuick();
 				break;
 			
-			case 1:
+			case TokenBuildMode.Custom:
 				BuildCustom();
 				break;
 			
-			case 2:
-				BuildImport();
+			case TokenBuildMode.Grid:
+				BuildGrid();
+				break;
+			
+			case TokenBuildMode.Template:
+				BuildTemplate();
+				break;
+			
+			case TokenBuildMode.Nandeck:
+				BuildNanDeck();
 				break;
 		}
 		
@@ -287,7 +299,40 @@ public partial class VcToken : VisualComponentFlat
 		}
 		
 	}
-	
+
+	private void BuildGrid()
+	{
+		if (_frontMasterSprite is null) return;
+
+		if (_gridCols == 0 || _gridRows == 0) return;
+		
+		var ts = _frontMasterSprite.GetSize();
+
+		var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
+		var pixelSize = PixelSize(cv);
+		
+		FaceSprite.PixelSize = pixelSize;
+		
+		if (!_differentBack)
+		{
+			BackSprite.PixelSize = pixelSize;
+			//BackSprite.Texture = t;
+		}
+
+		FaceSprite.Texture = _frontMasterSprite;
+		FaceSprite.Hframes = _gridCols;
+		FaceSprite.Vframes = _gridRows;
+		FaceSprite.Frame = _gridIndex;
+	}
+
+	private void BuildTemplate()
+	{
+	}
+
+	private void BuildNanDeck()
+	{
+	}
+
 	private void BuildImport(){}
 
 	private void CreateCustomFrontTexture()
@@ -392,40 +437,42 @@ public partial class VcToken : VisualComponentFlat
 	{
 		base.Build(parameters);
 
-		if (parameters.ContainsKey("Height"))
-		{
-			if (parameters["Height"] is float h)
-			{
-				if (h <= 0) return false;
-				_height = h / 10f;
-			}
+		var h = Utility.GetParam<float>(parameters, "Height");
+		if (h <= 0) return false;
+		_height = h / 10f;
 
-			if (parameters["Width"] is float w)
-			{
-				_width = w / 10f;
-			}
-			
-			if (parameters["Thickness"] is float t)
-			{
-				_thickness = t / 10f;
-			}
-		}
-
-		_frontImage = parameters["FrontImage"].ToString();
-		_backImage = parameters["BackImage"].ToString();
-
-		_shape = (int)parameters["Shape"];
-		_mode = (int)parameters["Mode"];
-		_frontBgColor = (Color)parameters["FrontBgColor"];
-		_frontCaption = parameters["FrontCaption"].ToString();
-		_frontCaptionColor = (Color)parameters["FrontCaptionColor"];
-		_frontFontSize = (int)parameters["FrontFontSize"];
-		_differentBack = (bool)parameters["DifferentBack"];
+		var w = Utility.GetParam<float>(parameters, "Width");
+		_width = w / 10;
 		
-		_backBgColor = (Color)parameters["BackBgColor"];
-		_backCaption = parameters["BackCaption"].ToString();
-		_backCaptionColor = (Color)parameters["BackCaptionColor"];
-		_backFontSize = (int)parameters["BackFontSize"];
+		var t = Utility.GetParam<float>(parameters, "Thickness");
+		_thickness = t / 10;
+
+		_frontImage = Utility.GetParam<string>(parameters, "FrontImage");
+		_backImage = Utility.GetParam<string>(parameters, "BackImage");
+
+
+		_shape = Utility.GetParam<int>(parameters, "Shape");
+		_mode = Utility.GetParam<TokenBuildMode>(parameters, "Mode");
+		
+		// Quick parameters
+		_frontBgColor = Utility.GetParam<Color>(parameters,  "FrontBgColor");
+		_frontCaption = Utility.GetParam<string>(parameters, "FrontCaption");
+		_frontCaptionColor = Utility.GetParam<Color>(parameters, "FrontCaptionColor");
+		_frontFontSize = Utility.GetParam<int>(parameters, "FrontFontSize");
+		_differentBack = Utility.GetParam<bool>(parameters, "DifferentBack");
+		
+		_backBgColor = Utility.GetParam<Color>(parameters, "BackBgColor");
+		_backCaption = Utility.GetParam<string>(parameters, "BackCaption");
+		_backCaptionColor = Utility.GetParam<Color>(parameters, "BackCaptionColor");
+		_backFontSize = Utility.GetParam<int>(parameters, "BackFontSize");
+		
+		//Grid Parameters
+		_frontMasterSprite = Utility.GetParam<Texture2D>(parameters, "FrontMasterSprite");
+		_backMasterSprite = Utility.GetParam<Texture2D>(parameters, "BackMasterSprite");
+
+		_gridRows = Utility.GetParam<int>(parameters, "GridRows");
+		_gridCols = Utility.GetParam<int>(parameters, "GridCols");
+		_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
 		
 		if (parameters.TryGetValue("Type", out var tokenType))
 		{
@@ -497,7 +544,7 @@ public partial class VcToken : VisualComponentFlat
 	private string _frontImage;
 	private string _backImage;
 	private int _shape;
-	private int _mode;
+	private TokenBuildMode _mode;
 	private Color _frontBgColor;
 	private string _frontCaption;
 	private Color _frontCaptionColor;
@@ -508,6 +555,13 @@ public partial class VcToken : VisualComponentFlat
 	private TokenType _tokenType;
 	private int _frontFontSize;
 	private int _backFontSize;
+	
+	//grid parameters
+	private Texture2D _frontMasterSprite;
+	private Texture2D _backMasterSprite;
+	private int _gridRows;
+	private int _gridCols;
+	private int _gridIndex;
 	
 	public enum TokenType {Card, Token, Board}
 	

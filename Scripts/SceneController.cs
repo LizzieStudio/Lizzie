@@ -15,8 +15,15 @@ public partial class SceneController : Node3D
 		_cameraManager = GetNode<CameraManager>("Cameras");
 		_gameObjects = GetNode<GameObjects>("GameObjects");
 		_gameObjects.ShowComponentPopup += GameObjectsOnShowComponentPopup;
+		_gameObjects.HoveredComponentChange += OnHoveredComponentChange;
 	}
 
+	private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)
+	{
+		HoveredComponentChange?.Invoke(this, e);
+	}
+
+	public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange; 
 
 	public GameObjects GameObjects => _gameObjects;
 

@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Xml;
 
@@ -10,12 +11,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 	private LineEdit _heightInput;
 	private LineEdit _widthInput;
 
-
-	private LineEdit _frontImage;
-	private LineEdit _backImage;
-
-	private Button _frontButton;
-	private Button _backButton;
 
 	private HBoxContainer _customBackRow;
 
@@ -52,8 +47,21 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
 
 	private OptionButton _cardSizes;
-	
 
+	//Grid Tab elements
+	private LineEdit _gridFrontImageFile;
+	private Button _gridFrontImageButton;
+
+	private LineEdit _gridBackImageFile;
+	private Button _gridBackImageButton;
+
+	private LineEdit _gridRowCount;
+	private LineEdit _gridColCount;
+	private LineEdit _gridCardCount;
+
+	private CheckButton _gridSingleBack;
+	
+	
 	private ComponentPreview _componentPreview;
 
 	// Called when the node enters the scene tree for the first time.
@@ -65,7 +73,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 		HeightWidthChange(string.Empty); //just to start
 
 		QuickSuitCountChanged(_quickSuitCount.Selected);
-		GenerateCards();
+		GenerateQuickCards();
 		ChangePreviewCard(0);
 	}
 
@@ -80,29 +88,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 	{
 		string shape = "VcToken.tscn";
 
-		/*
-		 * Square = 0,
-		Circle = 1,
-		HexPoint = 2,
-		HexFlat = 3,
-		RoundedRect = 4
-		 
-		switch (_shapePicker.Selected)
-		{
-			case 1:
-				shape = "VcTokenCircle.tscn";
-				break;
-			
-			case 2:
-				shape = "VcTokenHexPoint.tscn";
-				break;
-			
-			case 3:
-				shape = "VcTokenHexFlat.tscn";
-				break;
-		}
-		*/
-		
 		var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/{shape}");
 		var vc = scene.Instantiate<VcToken>();
 
@@ -167,21 +152,24 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
 		_widthInput = GetNode<LineEdit>("%Width");
 		_widthInput.TextChanged += HeightWidthChange;
-
-		_frontImage = GetNode<LineEdit>("%GridFront");
-		_frontImage.TextChanged += text => UpdatePreview();
 		
-		_backImage = GetNode<LineEdit>("%GridBack");
-		_backImage.TextChanged += text => UpdatePreview();
-	
 		_componentPreview = GetNode<ComponentPreview>("%ComponentPreview");
 		_componentPreview.MultiItemMode = true;
 		_componentPreview.ItemSelected += ComponentPreviewOnItemSelected;
 		
 		_tabs = GetNode<TabContainer>("%TabContainer");
+		_tabs.TabChanged += t => UpdatePreview();
+		
 		_cardSizes = GetNode<OptionButton>("%StandardSize");
 		_cardSizes.ItemSelected += StandardSizeChanged;
 		
+		InitializeQuickBindings();
+
+		InitializeGridBindings();
+	}
+
+	private void InitializeQuickBindings()
+	{
 		//Quick suit selections - There's a better way to do this, (instantiating the lines), but for now...
 		for (int i = 0; i < MaxQuickSuitCount; i++)
 		{
@@ -189,21 +177,102 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 			_quickSuitValues[i] = GetNode<LineEdit>($"%QuickSuit{i + 1}Contents");
 			_quickSuitRows[i] = GetNode<HBoxContainer>($"%QSRow{i + 1}");
 
-			_quickSuitColors[i].ColorChanged += color => GenerateCards();
-			_quickSuitValues[i].TextChanged += t => GenerateCards();
+			_quickSuitColors[i].ColorChanged += color => GenerateQuickCards();
+			_quickSuitValues[i].TextChanged += t => GenerateQuickCards();
 		}
 
 		_quickSuitCount = GetNode<OptionButton>("%QuickSuitCount");
 		_quickSuitCount.ItemSelected += QuickSuitCountChanged;
 		
 		_quickBackColor = GetNode<ColorPickerButton>("%QuickBackColor");
-		_quickBackColor.ColorChanged += c => GenerateCards();
+		_quickBackColor.ColorChanged += c => GenerateQuickCards();
 		
 		_quickBackText = GetNode<LineEdit>("%QuickBackText");
-		_quickBackText.TextChanged += t => GenerateCards();
+		_quickBackText.TextChanged += t => GenerateQuickCards();
 
 	}
 
+	private void InitializeGridBindings()
+	{
+		_gridFrontImageFile = GetNode<LineEdit>("%GridFront");
+		_gridFrontImageFile.TextChanged += LoadFrontGridFile;
+		_gridFrontImageButton = GetNode<Button>("%GridFrontButton");
+		_gridFrontImageButton.Pressed += GetFrontFile;
+
+		_gridBackImageFile = GetNode<LineEdit>("%GridBack");
+		_gridBackImageFile.TextChanged += LoadBackGridFile;
+		
+		_gridBackImageButton = GetNode<Button>("%GridBackButton");
+		_gridBackImageButton.Pressed += GetBackFile;
+
+		_gridRowCount = GetNode<LineEdit>("%GridRows");
+		_gridRowCount.TextChanged += t => GenerateGridCards();
+		_gridColCount = GetNode<LineEdit>("%GridCols");
+		_gridColCount.TextChanged += t => GenerateGridCards();
+		_gridCardCount = GetNode<LineEdit>("%GridCardCount");
+		_gridCardCount.TextChanged += t => GenerateGridCards();
+		
+		_gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
+		_gridSingleBack.Pressed += () => GenerateQuickCards();
+	}
+
+	private void LoadFrontGridFile(string newtext)
+	{
+		//Get the texture
+		if (File.Exists(_gridFrontImageFile.Text))
+		{
+			_frontMasterSprite = Utility.LoadTexture(_gridFrontImageFile.Text);
+		}
+		else
+		{
+			_frontMasterSprite = null;
+		}
+		
+		UpdatePreview();
+	}
+
+	
+	private void LoadBackGridFile(string newtext)
+	{
+		//Get the texture
+		if (File.Exists(_gridBackImageFile.Text))
+		{
+			_backMasterSprite = Utility.LoadTexture(_gridBackImageFile.Text);
+		}
+		else
+		{
+			_backMasterSprite = null;
+		}
+		
+		UpdatePreview();
+	}
+	
+	private void GetFrontFile()
+	{
+		ShowFileDialog("Select Front Image File", FrontFileSelected);
+	}
+
+	private void FrontFileSelected(string file)
+	{
+		_gridFrontImageFile.Text = file;
+
+		_frontMasterSprite = Utility.LoadTexture(file);
+		
+		UpdatePreview();
+		return;
+	}
+
+	private void GetBackFile()
+	{
+		ShowFileDialog("Select Back Image File", BackFileSelected);
+	}
+
+	private void BackFileSelected(string file)
+	{
+		_gridBackImageFile.Text = file;
+		UpdatePreview();
+		return;
+	}
 	private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
 	{
 		_curCard = e.Index;
@@ -219,20 +288,20 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
 	private void ChangePreviewCard(int direction)
 	{
-		if (_quickCards.Count == 0) return;
+		if (_componentPreview.ItemCount == 0) return;
 		
 		_curCard += direction;
-		_curCard = Mathf.Clamp(_curCard, 0, _quickCards.Count - 1);
+		_curCard = Mathf.Clamp(_curCard, 0, _componentPreview.ItemCount - 1);
 		
 		UpdatePreview();
 	}
 	
 	private void ShowPreviewCard(int cardId)
 	{
-		if (_quickCards.Count == 0) return;
+		if (_componentPreview.ItemCount == 0) return;
 		
 		_curCard = cardId;
-		_curCard = Mathf.Clamp(_curCard, 0, _quickCards.Count - 1);
+		_curCard = Mathf.Clamp(_curCard, 0, _componentPreview.ItemCount - 1);
 		
 		UpdatePreview();
 	}
@@ -243,12 +312,24 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 		UpdatePreview();
 	}
 
-	
+
+	private int _gridRows;
+	private int _gridCols;
+	private int _gridCount;
+	private void GenerateGridCards()
+	{
+		int.TryParse(_gridRowCount.Text, out _gridRows);
+		int.TryParse(_gridColCount.Text, out _gridCols);
+		int.TryParse(_gridCardCount.Text, out _gridCount);
+		
+		_componentPreview.ItemCount = _gridCount;
+		
+		ChangePreviewCard(0);
+	}
+
+
 	private int _suitCount;
-
-	
-
-	private void GenerateCards()
+	private void GenerateQuickCards()
 	{
 		_suitCount = _quickSuitCount.Selected + 1;
 
@@ -307,7 +388,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 			_quickSuitRows[i].Visible = (suitCount > i - 1);
 		}
 		
-		GenerateCards();
+		GenerateQuickCards();
 	}
 	
 	private void LoadQuickSuits()
@@ -355,11 +436,44 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 		d.Add("Height", h * scale);
 		d.Add("Width", w * scale);
 		d.Add("Thickness", 0.3f);
-		d.Add("FrontImage", _frontImage.Text);
-		d.Add("BackImage", _backImage.Text);
 		d.Add("Type", VcToken.TokenType.Card);
 		
+		
 		var card = _componentPreview.CurrentItem;
+
+		switch (_tabs.CurrentTab)
+		{
+			case 0:
+				UpdateQuick(d, card);
+				break;
+			case 1:
+				UpdateGrid(d, card);
+				break;
+		}
+		
+		_componentPreview.Build(d);
+		
+	}
+
+	private Texture2D _frontMasterSprite;
+	private Texture2D _backMasterSprite;
+	private void UpdateGrid(Dictionary<string, object> d, int card)
+	{
+		
+		d.Add("FrontMasterSprite", _frontMasterSprite);
+		d.Add("GridRows", _gridRows);
+		d.Add("GridCols", _gridCols);
+		d.Add("GridIndex", card);
+		
+		d.Add("Shape",0);
+		d.Add("Mode", VcToken.TokenBuildMode.Grid);
+		d.Add("DifferentBack", false);
+		
+	}
+
+	private void UpdateQuick(Dictionary<string, object> d, int card)
+	{
+		
 		if (card < 0 || card >= _quickCards.Count)
 		{
 			GD.PrintErr("Invalid card # in deck UpdatePreview");
@@ -372,9 +486,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 		{
 			d.Add(param.Key, param.Value);
 		}
-		
-		_componentPreview.Build(d);
-		
+
 	}
 
 	private Dictionary<string, object> QuickCardParams(QuickCardData cardData)
@@ -383,7 +495,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
 
 		p.Add("Shape",0);
-		p.Add("Mode", 0);
+		p.Add("Mode", VcToken.TokenBuildMode.Quick);
 		p.Add("FrontBgColor", cardData.BackgroundColor); 
 		p.Add("FrontCaption", cardData.Caption);
 		p.Add("FrontCaptionColor", Colors.Black);

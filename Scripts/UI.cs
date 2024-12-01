@@ -20,7 +20,11 @@ public partial class UI : CanvasLayer
 	private PopupMenu _helpMenu;
 
 	private PopupMenu _componentPopup;
+	private Label _componentName;
 
+	private GameController _gameController;
+	private GameObjects _gameObjects;
+	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -46,6 +50,9 @@ public partial class UI : CanvasLayer
 		_componentPopup = GetNode<PopupMenu>("ComponentPopup");
 		_componentPopup.IdPressed += PopupMenuCommandSelected;
 		_componentPopup.CloseRequested += ComponentPopupClosed;
+
+		_componentName = GetNode<Label>("%ComponentName");
+
 	}
 
 	public override void _Process(double delta)
@@ -300,6 +307,15 @@ public partial class UI : CanvasLayer
 		target.Texture = t;
 	}
 
+	public void UpdateHoveredName(VisualComponentBase component)
+	{
+		if (component == null)
+		{
+			_componentName.Text = string.Empty;
+			return;
+		}
+		_componentName.Text = component.ComponentName;
+	}
 
 	public const int LongClickTime = 1000;
 }

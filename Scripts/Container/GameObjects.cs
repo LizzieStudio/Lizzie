@@ -57,8 +57,38 @@ public partial class GameObjects : Node
                 HandleNormalMode();
                 break;
         }
+        
+        UpdateHoveredComponent();        
     }
 
+    private void UpdateHoveredComponent()
+    {
+        foreach (var c in GetChildren())
+        {
+            if (c is VisualComponentBase vcb && vcb.IsHovered)
+            {
+                if (_hoveredComopnent != vcb)
+                {
+                    _hoveredComopnent = vcb;
+                    HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(vcb));
+                    return;
+                }
+
+                return;
+            }
+        }
+
+        if (_hoveredComopnent == null) return;
+
+        _hoveredComopnent = null;
+        HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(null));
+
+    }
+
+    private VisualComponentBase _hoveredComopnent;
+
+    public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange; 
+    
     // Specific function to handle normal mode mouse event only outside of GUI elements
     public override void _UnhandledInput(InputEvent @event)
     {
@@ -603,4 +633,14 @@ public class ShowComponentPopupEventArgs : EventArgs
     }
     public Vector2I Position { get; set; }
     public IEnumerable<VisualComponentBase> Components { get; set; }
+}
+
+public class HoveredComponentChangeEventArgs : EventArgs
+{
+    public HoveredComponentChangeEventArgs(VisualComponentBase component)
+    {
+        Component = component;
+    }
+    
+    public VisualComponentBase Component { get; set; }
 }

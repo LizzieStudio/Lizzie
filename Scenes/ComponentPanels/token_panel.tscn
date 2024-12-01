@@ -291,7 +291,11 @@ unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("1_qeff1")
 
-[node name="Import" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs"]
+[node name="Grid" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs"]
+visible = false
+layout_mode = 2
+
+[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs"]
 visible = false
 layout_mode = 2
 

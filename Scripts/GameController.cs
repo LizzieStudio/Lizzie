@@ -16,7 +16,8 @@ public partial class GameController : Node3D
 		_mainScene = GetNode<SceneController>("3DSceneNoPhysics");
 		_mainScene.SetMode(SceneMode.TwoD);
 		_mainScene.ShowComponentPopup2 += MainSceneOnShowComponentPopup2;
-
+		_mainScene.HoveredComponentChange += MainSceneOnHoveredNameChange;
+		
 		_uiController = GetNode<UI>("UI");
 		_uiController.MasterModeChange += OnMasterModeChange;
 		_uiController.CreateObject += OnCreateObject;
@@ -27,6 +28,11 @@ public partial class GameController : Node3D
 		ShowComponentPopup(e.Position, e.Components);
 	}
 
+	private void MainSceneOnHoveredNameChange(object sender, HoveredComponentChangeEventArgs e)
+	{
+		_uiController.UpdateHoveredName(e.Component);
+	}
+	
 	private void OnCreateObject(object sender, CreateObjectEventArgs args)
 	{
 		VisualComponentBase component = SpawnComponent(args.PrototypeName);
