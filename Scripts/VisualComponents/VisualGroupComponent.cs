@@ -14,6 +14,7 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
         foreach (var c in Children)
         {
             c.QueueFree();
+            OnChildrenChanged();
         }
     }
     
@@ -21,6 +22,7 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
     {
         component.Visible = false;
        Children.Add(component);
+       OnChildrenChanged();
     }   
 
     public virtual void AddChildComponents(IEnumerable<VisualComponentBase> components)
@@ -29,8 +31,16 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
         foreach (var c in compArr) c.Visible = false;
         
         Children.AddRange(compArr);
+        OnChildrenChanged();
     }
 
+    public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
+    {
+        AddChildComponents(dragObjects);
+    }
+
+    protected abstract void OnChildrenChanged();
+    
     /// <summary>
     /// Returns the first item in the group, and removes it.
     /// </summary>
@@ -44,6 +54,7 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
         var res = Children.Take(quantity).ToArray();
         
         Children.RemoveRange(0, quantity);
+        OnChildrenChanged();
         
         return res;
     }
@@ -62,7 +73,8 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
         
         
         Children.RemoveRange(Children.Count - quantity, quantity);
-
+        OnChildrenChanged();
+        
         return res;
     }
 
@@ -78,6 +90,8 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
         c.Visible = true;
         
         Children.RemoveAt(r);
+        OnChildrenChanged();
+        
         return c;
     }
 
@@ -112,6 +126,8 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
             (Children[r], Children[n]) = (Children[n], Children[r]);
             n--;
         }
+        
+        OnChildrenChanged();
     }
 
     /// <summary>
@@ -121,5 +137,6 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
     public virtual void Reverse()
     {
         Children.Reverse();
+        OnChildrenChanged();
     }
 }

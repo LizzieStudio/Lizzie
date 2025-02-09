@@ -253,6 +253,37 @@ public static class TextureBuilder
       
   }
 
+  public static ImageTexture BuildD8Texture(string[] sides)
+  {
+      if (sides.Length != 8)
+      {
+          throw new Exception($"{sides.Length} sides for D6");
+      }
+
+      var data = new List<DieFaceData>();
+      
+      data.Add(new DieFaceData
+          (new Rectangle(10, 30, 50, 50), 90));
+      data.Add(new DieFaceData
+          (new Rectangle(10, 140, 50, 50), 90));
+      data.Add(new DieFaceData
+          (new Rectangle(75, 190, 50, 50), -90));
+      data.Add(new DieFaceData
+          (new Rectangle(75, 62, 50, 50), -90));
+
+      data.Add(new DieFaceData
+          (new Rectangle(135, 30, 50, 50), 90));
+      data.Add(new DieFaceData
+          (new Rectangle(135, 140, 50, 50), 90));
+      data.Add(new DieFaceData
+          (new Rectangle(195, 190, 50, 50), -90));
+      data.Add(new DieFaceData
+          (new Rectangle(195, 62, 50, 50), -90));
+      
+      return CreateDieImage(sides, data);
+      
+      
+  }
   private static ImageTexture CreateDieImage(string[] sides, List<DieFaceData> faceData)
   {
       using Image<Rgba32> image = new Image<Rgba32>(256, 256);
@@ -278,14 +309,15 @@ public static class TextureBuilder
           var textPath = TextBuilder.GenerateGlyphs(sides[i], to);
             
           //TODO Rotate text
+          var t2 = textPath.RotateDegree(opts.Rotation);
           
-          var fontRect = textPath.Bounds;
+          var fontRect = t2.Bounds;
           var wOffset = (opts.Bounds.Width - fontRect.Width) / 2;
           var hOffset = ((opts.Bounds.Height - fontRect.Height) / 2) - fontRect.Y;
 
           var offsetP = new PointF(wOffset + opts.Bounds.X, hOffset + opts.Bounds.Y);
 
-          var finalPath = textPath.Translate(offsetP);
+          var finalPath = t2.Translate(offsetP);
             
           image.Mutate(x => x.Fill(textColor, finalPath));
           

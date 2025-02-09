@@ -27,6 +27,8 @@ public partial class VcDeck : VisualGroupComponent
 		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 		_frontSprite = GetNode<Sprite3D>("FrontSprite");
 		_backSprite = GetNode<Sprite3D>("BackSprite");
+
+		CanAcceptDrop = true;
 	}
 
 	public override void _Process(double delta)
@@ -731,4 +733,8 @@ public partial class VcDeck : VisualGroupComponent
 	private string _backCaption;
 	private Color _backCaptionColor;
 	private List<QuickCardData> _quickCardList = new();
+	protected override void OnChildrenChanged()
+	{
+		UpdateDeckSprites();
+	}
 }

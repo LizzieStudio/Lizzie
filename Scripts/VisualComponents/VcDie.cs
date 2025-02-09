@@ -242,9 +242,23 @@ public partial class VcDie : VisualComponentBase
 
 		var mat = new StandardMaterial3D();
 
+		ImageTexture t = new ImageTexture();
+		
 		if (sides != null && sides.Length > 0)
 		{
-			var t = TextureBuilder.BuildD6Texture(sides);
+			if (sides.Length == 6)
+			{
+				t = TextureBuilder.BuildD6Texture(sides);
+			}
+
+			if (sides.Length == 8)
+			{
+				t = TextureBuilder.BuildD8Texture(sides);
+
+				var d = t.GetImage();
+				d.SavePng(@"c:\winwam5\d8.png");
+			}
+			
 			mat.AlbedoTexture = t;
 		}
 

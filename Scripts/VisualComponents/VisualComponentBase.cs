@@ -235,6 +235,9 @@ public abstract partial class VisualComponentBase : Area3D
 			IsMouseSelected = false;
 			IsHovered = false;
 		}
+		
+		//TODO only call this when necessary
+		SetHighlightColor(Colors.White);	//reset in case we were a drag target
 	}
 
 	//these two events are used when the component itself is creating / removing 
@@ -283,12 +286,48 @@ public abstract partial class VisualComponentBase : Area3D
 		}
 	}
 
+	public virtual bool CanAcceptDrop { get; set; } = false;
+
+	public virtual bool DragOver(IEnumerable<VisualComponentBase> dragObjects)
+	{
+		if (CanObjectsBeDropped(dragObjects))
+		{
+			SetHighlightColor(Colors.Yellow);
+			return true;
+		}
+
+		return false;
+	}
+
+	public void DragOverExit()
+	{
+		SetHighlightColor(Colors.White);
+	}
+
+	public virtual bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
+	{
+		return true;
+	}
+
+	public virtual void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
+	{
+	}
+
 	public virtual void SetColor(Color color)
 	{
 		var objMesh = GetNode<MeshInstance3D>("ObjectMesh");
 		var mat = new StandardMaterial3D();
 		mat.AlbedoColor = color;
 		objMesh.MaterialOverride = mat;
+	}
+
+	public virtual void SetHighlightColor(Color color)
+	{
+		var mat = _highlightMesh.GetActiveMaterial(0);
+		if (mat is ShaderMaterial sm)
+		{
+			sm.SetShaderParameter("outline_color", color);
+		}
 	}
 
 	protected ImageTexture LoadTexture(string filename)

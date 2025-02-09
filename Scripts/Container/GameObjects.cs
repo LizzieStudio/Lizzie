@@ -168,6 +168,15 @@ public partial class GameObjects : Node
     {
         return GetChildren().FirstOrDefault(n => n is VisualComponentBase { IsHovered: true }) as VisualComponentBase;
     }
+
+    public VisualComponentBase GetHoveredDropTarget()
+    {
+        return GetChildren().FirstOrDefault(x => x is VisualComponentBase
+        {
+            IsHovered: true, CanAcceptDrop: true, IsDragging:false
+        }) as VisualComponentBase;
+    }
+    
     #endregion
 
     #region Selection
@@ -528,6 +537,16 @@ public partial class GameObjects : Node
             {
                 go.Position += delta;
             }
+            
+            //check to see if we are over something that can accept the object(s)
+            var hover = GetHoveredDropTarget();
+            if (hover != null)
+            {
+                if (hover.CanAcceptDrop)
+                {
+                    hover.DragOver(GetDraggingObjects());
+                }
+            }
         }
         else
         {
@@ -548,10 +567,18 @@ public partial class GameObjects : Node
 
     private void EndDrag()
     {
+        var hover = GetHoveredDropTarget();
+        if (hover != null && hover.CanAcceptDrop && hover.CanObjectsBeDropped(GetDraggingObjects()))
+        {
+            hover.DropObjects(GetDraggingObjects());   
+        }
+        
+        
         foreach (var gameObject in GetSelectedObjects())
         {
             gameObject.IsDragging = false;
         }
+        
         CursorMode = CursorMode.Normal;
         QueueStackingUpdate();
         EndDragUndo();
