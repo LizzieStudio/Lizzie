@@ -9,6 +9,9 @@ public partial class GameController : Node3D
 
 	private UI _uiController;
 	
+	[Export]
+	private TextureFactory _textureFactory;
+	
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -21,6 +24,9 @@ public partial class GameController : Node3D
 		_uiController = GetNode<UI>("UI");
 		_uiController.MasterModeChange += OnMasterModeChange;
 		_uiController.CreateObject += OnCreateObject;
+
+		var commandDic = new CommandDictionary(_mainScene);
+		
 	}
 
 	private void MainSceneOnShowComponentPopup2(object sender, ShowComponentPopupEventArgs e)
@@ -54,7 +60,7 @@ public partial class GameController : Node3D
 		}
 		
 		
-		if (component.Build(args.Params))
+		if (component.Build(args.Params, _textureFactory))
 		{
 			_mainScene.EnterSpawnMode(component);
 		}

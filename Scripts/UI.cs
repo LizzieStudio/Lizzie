@@ -24,6 +24,8 @@ public partial class UI : CanvasLayer
 
 	private GameController _gameController;
 	private GameObjects _gameObjects;
+
+	private TabContainer _componentTabs;
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -52,7 +54,17 @@ public partial class UI : CanvasLayer
 		_componentPopup.CloseRequested += ComponentPopupClosed;
 
 		_componentName = GetNode<Label>("%ComponentName");
+		
+		_componentTabs = GetNode<TabContainer>("%ComponentTabs");
+		var textureFactory = GetNode<TextureFactory>("%TextureFactory");
 
+		foreach (var c in _componentTabs.GetChildren())
+		{
+			if (c is ComponentPanelDialogResult cpdr)
+			{
+				cpdr.TextureFactory = textureFactory;
+			}
+		}
 	}
 
 	public override void _Process(double delta)

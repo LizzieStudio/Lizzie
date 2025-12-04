@@ -10,7 +10,9 @@ public class Change
         Transform,
         Creation,
         Deletion,
-        LockStatus
+        LockStatus,
+        ZOrder,
+        Layer
     }
     
     public object Begin { get; set; }

@@ -116,13 +116,13 @@ public partial class VcToken : VisualComponentFlat
 
 	public enum TokenBuildMode {Quick, Custom, Grid, Template, Nandeck}
 	
-	public override bool Build(Dictionary<string, object> parameters)
+	public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
 		FaceSprite = GetNode<Sprite3D>("FrontSprite");
 		BackSprite = GetNode<Sprite3D>("BackSprite");
 		_sideMesh = GetNode<MeshInstance3D>("SideMesh");
 		
-		if (!InitializeParameters(parameters)) return false;
+		if (!InitializeParameters(parameters, textureFactory)) return false;
 
 		switch (_mode)
 		{
@@ -405,9 +405,9 @@ public partial class VcToken : VisualComponentFlat
 		BackTexture = t;
 	}
 
-	private bool InitializeParameters(Dictionary<string, object> parameters)
+	private bool InitializeParameters(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
-		base.Build(parameters);
+		base.Build(parameters, textureFactory);
 
 		var h = Utility.GetParam<float>(parameters, "Height");
 		if (h <= 0) return false;

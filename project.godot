@@ -36,6 +36,7 @@ enabled=PackedStringArray("res://addons/label_font_auto_sizer/plugin.cfg")
 [file_customization]
 
 folder_colors={
+"res://Fonts/": "green",
 "res://Scenes/VisualComponents/": "purple",
 "res://Scripts/": "red"
 }

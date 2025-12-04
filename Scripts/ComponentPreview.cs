@@ -88,11 +88,11 @@ public partial class ComponentPreview : Panel
 		_component.Visible = visibility;
 	}
 
-	public void Build(Dictionary<string, object> parameters)
+	public void Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
 		if (_component != null)
 		{
-			_component.Build(parameters);
+			_component.Build(parameters, textureFactory);
 		}
 	}
 	

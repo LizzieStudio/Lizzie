@@ -57,9 +57,17 @@ public abstract partial class VisualComponentBase : Area3D
 		
 		base._Ready();
 	}
-	
 
-	public virtual bool Build(Dictionary<string, object> parameters)
+	
+	public void MoveToTargetY(float y)
+	{
+		var tween = GetTree().CreateTween();
+
+		var newPos = new Vector3(Position.X, y, Position.Z);
+		tween.TweenProperty(this, "position", newPos, 0.2f);
+	}
+
+	public virtual bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
 		Parameters = parameters;
 		if (parameters.ContainsKey(nameof(ComponentName)))
@@ -114,7 +122,23 @@ public abstract partial class VisualComponentBase : Area3D
 	{
 		var l = new List<MenuCommand>();
 		
-		l.Add(new MenuCommand(VisualCommand.ToggleLock, Locked));
+		//l.Add(new MenuCommand(VisualCommand.ToggleLock, Locked));
+		switch (Layer)
+		{
+			case LayerType.Normal:
+				l.Add(new MenuCommand(VisualCommand.Freeze));
+				l.Add(new MenuCommand(VisualCommand.Tuck));
+				break;
+			case LayerType.Frozen:
+				l.Add(new MenuCommand(VisualCommand.Unfreeze));
+				break;
+			case LayerType.Tucked:
+				l.Add(new MenuCommand(VisualCommand.Untuck));
+				break;
+			default:
+				throw new ArgumentOutOfRangeException();
+		}
+		
 		l.Add(new MenuCommand(VisualCommand.Delete));
 
 		return l;
@@ -144,6 +168,11 @@ public abstract partial class VisualComponentBase : Area3D
 		protected set => _yHeight = value;
 	}
 
+	
+	public enum LayerType {Normal, Frozen, Tucked}
+
+	public LayerType Layer { get; set; } = LayerType.Normal;
+	
 	/// <summary>
 	/// Sets the Z-order for stacking. A "0" is the lowest - on the table.
 	/// If two items have the same Z-Order (should never happen), then
@@ -174,7 +203,7 @@ public abstract partial class VisualComponentBase : Area3D
 	protected bool _locked;
 	public virtual bool Locked
 	{
-		get => _locked;
+		get => Layer == LayerType.Frozen;
 		set
 		{
 			if (_locked != value)

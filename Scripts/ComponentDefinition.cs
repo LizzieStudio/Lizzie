@@ -20,6 +20,8 @@ public partial class ComponentDefinition : HBoxContainer
 
 	private Button _cancelButton;
 	
+	[Export] private TextureFactory _textureFactory;
+	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -47,6 +49,12 @@ public partial class ComponentDefinition : HBoxContainer
 			buttonPanel.AddChild(b);
 
 			var ci = CreateComponentPanel(c.DefinitionDialogName);
+
+			if (ci is ComponentPanelDialogResult cpdr)
+			{
+				cpdr.TextureFactory = _textureFactory;
+			}
+			
 			_componentPanel.AddChild(ci);
 
 			_panelDictionary.Add(c.ComponentName, ci);

@@ -39,8 +39,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 	private TextureRect _clipRect;
 	private TextureRect _textureRect;
 	private Label _label;
-
-
+	
 	private ComponentPreview _preview;
 
 	public override void _Ready()
@@ -94,8 +93,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
 		_shapePicker = GetNode<OptionButton>("%ShapePicker");
 		_shapePicker.ItemSelected += ShapePickerOnItemSelected;
-
-
+		
 		_tabs = GetNode<TabContainer>("%Tabs");
 		_tabs.TabSelected += OnTabSelected;
 
@@ -388,7 +386,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("BackCaptionColor", _quickTextColor2.Color);
 		d.Add("BackFontSize", 24);
 
-		_preview.Build(d);
+		_preview.Build(d, TextureFactory);
 		
 	}
 

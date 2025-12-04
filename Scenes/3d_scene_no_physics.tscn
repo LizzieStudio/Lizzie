@@ -22,8 +22,11 @@ script = ExtResource("1_4ynb0")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 collision_layer = 1
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="AngleLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.819202, 2.19727e-07, 0.573505, -0.353913, 0.786881, 0.505534, -0.45128, -0.617105, 0.644614, 0, 0, 1.7548)
+
+[node name="ShadowLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 3.93871, 1.7548)
 shadow_enabled = true
 
 [node name="Cameras" type="Node3D" parent="."]

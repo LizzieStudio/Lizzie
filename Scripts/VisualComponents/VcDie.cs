@@ -206,9 +206,9 @@ public partial class VcDie : VisualComponentBase
 		return new CommandResponse(true, c);
 	}
 
-	public override bool Build(Dictionary<string, object> parameters)
+	public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
-		base.Build(parameters);
+		base.Build(parameters, textureFactory);
 
 		_mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
@@ -248,15 +248,17 @@ public partial class VcDie : VisualComponentBase
 		{
 			if (sides.Length == 6)
 			{
-				t = TextureBuilder.BuildD6Texture(sides);
+				var tx = D6TextureDefinition(sides);
+				
+				textureFactory.GenerateTexture(tx, TextureDone);
+				return true;
 			}
 
 			if (sides.Length == 8)
 			{
-				t = TextureBuilder.BuildD8Texture(sides);
-
-				var d = t.GetImage();
-				d.SavePng(@"c:\winwam5\d8.png");
+				var tx = D8TextureDefinition(sides);
+				textureFactory.GenerateTexture(tx, TextureDone);
+				return true;
 			}
 			
 			mat.AlbedoTexture = t;
@@ -266,10 +268,183 @@ public partial class VcDie : VisualComponentBase
 		
 		return true;
 	}
-	
-	
+
+	private void TextureDone(ImageTexture texture)
+	{
+		var mat = new StandardMaterial3D();
+		mat.AlbedoTexture = texture;
+		_mainMesh.MaterialOverride = mat;
+		
+		var d = texture.GetImage();
+		d.SavePng(@"c:\winwam5\d8.png");
+	}
+
+
 	public override List<string> ValidateParameters(Dictionary<string, object> parameters)
 	{
 		return new List<string>();
+	}
+
+	private TextureFactory.TextureDefinition D6TextureDefinition(string[] sides)
+	{
+		var font = new SystemFont();
+
+		var tx = new TextureFactory.TextureDefinition
+		{
+			BackgroundColor = Colors.Yellow,
+			Height = 256,
+			Width = 256,
+			Shape = TextureFactory.TextureShape.Square
+		};
+				
+		tx.Objects.Add(new TextureFactory.TextureObject
+		{
+			CenterX = 128,
+			CenterY=128,
+			Font = font,
+			Height = 128,
+			Width = 128,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 0,
+			Text = "ABCDEFG",
+			TextColor = Colors.Black
+		});
+		
+		tx.Objects.Add(new TextureFactory.TextureObject
+		{
+			CenterX = 128,
+			CenterY=128,
+			Font = font,
+			Height = 128,
+			Width = 128,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 45,
+			Text = "ABCDEFG",
+			TextColor = Colors.Black
+		});
+		
+		tx.Objects.Add(new TextureFactory.TextureObject
+		{
+			CenterX = 128,
+			CenterY=128,
+			Font = font,
+			Height = 128,
+			Width = 128,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 90,
+			Text = "ABCDEFG",
+			TextColor = Colors.Black
+		});
+		
+		tx.Objects.Add(new TextureFactory.TextureObject
+		{
+			CenterX = 128,
+			CenterY=128,
+			Font = font,
+			Height = 128,
+			Width = 128,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 135,
+			Text = "ABCDEFG",
+			TextColor = Colors.Black
+		});
+		
+		/*
+		tx.Objects.Add(new TextureFactory.TextureObject
+		{
+			CenterX = 42,
+			CenterY=42,
+			Font = font,
+			Height = 85,
+			Width = 85,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 0,
+			Text = sides[0],
+			TextColor = Colors.Black
+		});
+				
+		tx.Objects.Add(new TextureFactory.TextureObject
+		{
+			CenterX = 42+85,
+			CenterY=42,
+			Font = font,
+			Height = 85,
+			Width = 85,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 0,
+			Text = sides[1],
+			TextColor = Colors.Black
+		});
+		*/
+		
+		return tx;
+	}
+	
+	private TextureFactory.TextureDefinition D8TextureDefinition(string[] sides)
+	{
+		var font = new SystemFont();
+
+		var tx = new TextureFactory.TextureDefinition
+		{
+			BackgroundColor = Colors.Yellow,
+			Height = 256,
+			Width = 256,
+			Shape = TextureFactory.TextureShape.Square
+		};
+
+		var t0 = new TextureFactory.TextureObject
+		{
+			CenterX = 0,
+			CenterY = 55,
+			Font = font,
+			Height = 110,
+			Width = 110,
+			Type = TextureFactory.TextureObjectType.TriangleText,
+			RotationDegrees = 90,
+			Text = sides[0],
+			TextColor = Colors.Black
+		};
+
+		tx.Objects.Add(t0);
+		tx.Objects.Add(DuplicateFace(t0, 0, 165, 90, sides[1]));
+		tx.Objects.Add(DuplicateFace(t0, 127, 201, -90, sides[2]));
+		tx.Objects.Add(DuplicateFace(t0, 127, 92, -90, sides[3]));
+		tx.Objects.Add(DuplicateFace(t0, 127, 55, 90, sides[4]));
+		tx.Objects.Add(DuplicateFace(t0, 127, 165, 90, sides[5]));
+		tx.Objects.Add(DuplicateFace(t0, 255, 201, -90, sides[6]));
+		tx.Objects.Add(DuplicateFace(t0, 255, 92, -90, sides[7]));
+
+		
+/*		
+		data.Add(new DieFaceData( 0, 55, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+		data.Add(new DieFaceData(0, 165, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+		data.Add(new DieFaceData(127, 201, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+		data.Add(new DieFaceData(127, 92, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+		data.Add(new DieFaceData(127, 55, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+		data.Add(new DieFaceData(127, 165, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+		data.Add(new DieFaceData(255, 201, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+		data.Add(new DieFaceData(255, 92, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
+*/
+
+		return tx;
+	}
+
+	private TextureFactory.TextureObject DuplicateFace(TextureFactory.TextureObject obj, int centerX, int centerY, int rotation,
+		string text)
+	{
+		TextureFactory.TextureObject tx = new()
+		{
+			CenterX = centerX,
+			CenterY = centerY,
+			Font = obj.Font,
+			Height = obj.Height,
+			Width = obj.Width,
+			Type = obj.Type,
+			RotationDegrees = rotation,
+			Text = text,
+			TextColor = obj.TextColor
+		};
+
+		return tx;
 	}
 }

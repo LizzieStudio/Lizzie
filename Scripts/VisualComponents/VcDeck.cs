@@ -297,9 +297,9 @@ public partial class VcDeck : VisualGroupComponent
 		return new CommandResponse(true, c);
 	}
 
-	public override bool Build(System.Collections.Generic.Dictionary<string, object> parameters)
+	public override bool Build(System.Collections.Generic.Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
-		base.Build(parameters);
+		base.Build(parameters, textureFactory);
 
 		_frontSprite = GetNode<Sprite3D>("FrontSprite");
 		_backSprite = GetNode<Sprite3D>("BackSprite");
@@ -312,7 +312,7 @@ public partial class VcDeck : VisualGroupComponent
 		switch (_mode)
 		{
 			case VcToken.TokenBuildMode.Quick:
-				BuildQuick(parameters);
+				BuildQuick(parameters, textureFactory);
 				break;
 
 			case VcToken.TokenBuildMode.Template:
@@ -320,7 +320,7 @@ public partial class VcDeck : VisualGroupComponent
 				break;
 
 			case VcToken.TokenBuildMode.Grid:
-				BuildGrid(parameters);
+				BuildGrid(parameters, textureFactory);
 				break;
 		}
 
@@ -428,13 +428,13 @@ public partial class VcDeck : VisualGroupComponent
 		return arr;
 	}
 
-	private void BuildQuick(Dictionary<string, object> parameters)
+	private void BuildQuick(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
 		_quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
 
 		if (_quickCardList == null) _quickCardList = new();
 
-		CreateQuickCards();
+		CreateQuickCards(textureFactory);
 	}
 
 	private void BuildTemplate(Dictionary<string, object> parameters)
@@ -507,7 +507,7 @@ public partial class VcDeck : VisualGroupComponent
 		return true;
 	}
 
-	private void CreateQuickCards()
+	private void CreateQuickCards(TextureFactory textureFactory)
 	{
 		Clear();
 
@@ -517,14 +517,14 @@ public partial class VcDeck : VisualGroupComponent
 
 			foreach (var v in values)
 			{
-				var c = CreateQuickCard(v, q.BackgroundColor, q.CardBackValue, q.CardBackColor);
+				var c = CreateQuickCard(v, q.BackgroundColor, q.CardBackValue, q.CardBackColor, textureFactory);
 
 				AddChildComponent(c);
 			}
 		}
 	}
 
-	private VcToken CreateQuickCard(string faceCaption, Color faceColor, string backCaption, Color backColor)
+	private VcToken CreateQuickCard(string faceCaption, Color faceColor, string backCaption, Color backColor, TextureFactory textureFactory)
 	{
 		var card = (VcToken)_templateCard.Duplicate();
 		var p = new System.Collections.Generic.Dictionary<string, object>();
@@ -546,7 +546,7 @@ public partial class VcDeck : VisualGroupComponent
 		p.Add("BackCaptionColor", Colors.Black);
 		p.Add("FrontFontSize", 72);
 		p.Add("BackFontSize", 24);
-		card.Build(p);
+		card.Build(p, textureFactory);
 
 		card.Parent = Reference;
 
@@ -561,7 +561,7 @@ public partial class VcDeck : VisualGroupComponent
 	private int _gridCols;
 	private int _gridCount;
 
-	private void BuildGrid(Dictionary<string, object> parameters)
+	private void BuildGrid(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
 		//Grid Parameters
 		_frontMasterSprite = Utility.GetParam<Texture2D>(parameters, "FrontMasterSprite");
@@ -571,21 +571,21 @@ public partial class VcDeck : VisualGroupComponent
 		_gridCols = Utility.GetParam<int>(parameters, "GridCols");
 		_gridCount = Utility.GetParam<int>(parameters, "GridCount");
 
-		CreateGridCards();
+		CreateGridCards(textureFactory);
 	}
 
-	private void CreateGridCards()
+	private void CreateGridCards(TextureFactory textureFactory)
 	{
 		Clear();
 
 		for (int i = 0; i < _gridCount; i++)
 		{
-			var c = CreateGridCard(i);
+			var c = CreateGridCard(i, textureFactory);
 			AddChildComponent(c);
 		}
 	}
 
-	private VcToken CreateGridCard(int index)
+	private VcToken CreateGridCard(int index, TextureFactory textureFactory)
 	{
 		var card = (VcToken)_templateCard.Duplicate();
 		var p = new System.Collections.Generic.Dictionary<string, object>();
@@ -605,7 +605,7 @@ public partial class VcDeck : VisualGroupComponent
 
 		p.Add("DifferentBack", false);
 
-		card.Build(p);
+		card.Build(p, textureFactory);
 
 		card.Parent = Reference;
 

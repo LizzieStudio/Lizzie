@@ -7,8 +7,11 @@ public partial class SceneController : Node3D
 	[Signal]
 	public delegate void ShowComponentPopupEventHandler(Vector2I position, Godot.Collections.Array<VisualComponentBase> components);
 
+	[Export] TextureFactory _textureFactory;
+	
 	private CameraManager _cameraManager;
 	private GameObjects _gameObjects;
+	
 
 	public override void _Ready()
 	{
@@ -16,6 +19,8 @@ public partial class SceneController : Node3D
 		_gameObjects = GetNode<GameObjects>("GameObjects");
 		_gameObjects.ShowComponentPopup += GameObjectsOnShowComponentPopup;
 		_gameObjects.HoveredComponentChange += OnHoveredComponentChange;
+		
+		
 	}
 
 	private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)
@@ -36,6 +41,8 @@ public partial class SceneController : Node3D
 			if (Input.IsActionJustPressed("ui_undo")) UndoService.Instance.Undo();
 		}
 	}
+	
+	public TextureFactory TextureFactory => _textureFactory;
 
 	#region Message to/from Game
 	public virtual void SetMode(SceneMode mode)
@@ -59,7 +66,13 @@ public partial class SceneController : Node3D
 
 	public void TestFunction()
 	{
-		//put test function here
+		
+	}
+
+	private void TextureDone(ImageTexture obj)
+	{
+		var d = obj.GetImage();
+		d.SavePng(@"c:\winwam5\tfTest.png");
 	}
 
 	public void EnterSpawnMode(VisualComponentBase component)

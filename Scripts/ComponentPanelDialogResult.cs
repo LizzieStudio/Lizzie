@@ -65,6 +65,10 @@ public abstract partial class ComponentPanelDialogResult : Control
         FileSelected(string.Empty);
     }
 
-
-  
+    public TextureFactory TextureFactory
+    {
+        get; 
+        set;
+    }
+    
 }

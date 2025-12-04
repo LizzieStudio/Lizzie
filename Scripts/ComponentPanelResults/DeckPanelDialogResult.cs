@@ -61,7 +61,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
 	private CheckButton _gridSingleBack;
 	
-	
 	private ComponentPreview _componentPreview;
 
 	// Called when the node enters the scene tree for the first time.
@@ -476,7 +475,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 				break;
 		}
 		
-		_componentPreview.Build(d);
+		_componentPreview.Build(d, TextureFactory);
 		
 	}
 

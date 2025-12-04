@@ -12,6 +12,7 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 	private ComponentPreview _preview;
 	
 	
+	
 	public override void _Ready()
 	{
 		ComponentType = VisualComponentBase.VisualComponentType.Disc;
@@ -26,6 +27,7 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 		_colorPicker.ColorChanged += color => UpdatePreview();
 		
 		_preview = GetNode<ComponentPreview>("%Preview");
+		
 	}
 	
 	public override void _Process(double delta)
@@ -97,7 +99,7 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 		d.Add("Diameter", dia * scale);
 		d.Add("Color", _colorPicker.Color);
 		
-		_preview.Build(d);
+		_preview.Build(d, TextureFactory);
 		
 	}
 }

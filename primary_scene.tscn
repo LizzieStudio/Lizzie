@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://caj4d7v430lhp"]
+[gd_scene load_steps=28 format=3 uid="uid://caj4d7v430lhp"]
 
 [ext_resource type="Script" path="res://Scripts/GameController.cs" id="1_hibmt"]
 [ext_resource type="Script" path="res://Scripts/UI.cs" id="2_a0mv7"]
@@ -24,6 +24,7 @@
 [ext_resource type="Texture2D" uid="uid://41ftdwu6bvkv" path="res://Textures/UI/lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="19_mftnr"]
 [ext_resource type="PackedScene" uid="uid://div11bya2rlmh" path="res://Scenes/ComponentPanels/mesh_panel.tscn" id="19_xcrb0"]
 [ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
+[ext_resource type="Script" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
 
 [sub_resource type="Theme" id="Theme_a3w6s"]
 
@@ -32,8 +33,9 @@ font_size = 32
 font_color = Color(0, 0, 0, 1)
 outline_size = 1
 
-[node name="PrimaryScene" type="Node3D"]
+[node name="PrimaryScene" type="Node3D" node_paths=PackedStringArray("_textureFactory")]
 script = ExtResource("1_hibmt")
+_textureFactory = NodePath("SubViewportContainer/TextureFactory")
 
 [node name="UI" type="CanvasLayer" parent="."]
 script = ExtResource("2_a0mv7")
@@ -105,7 +107,7 @@ title = "Insert"
 [node name="Help" type="PopupMenu" parent="UI/MenuBar"]
 title = "Help"
 
-[node name="ComponentDefinition" type="HBoxContainer" parent="UI"]
+[node name="ComponentDefinition" type="HBoxContainer" parent="UI" node_paths=PackedStringArray("_textureFactory")]
 visible = false
 anchors_preset = 8
 anchor_left = 0.5
@@ -121,6 +123,7 @@ grow_vertical = 2
 theme = SubResource("Theme_a3w6s")
 script = ExtResource("4_eclwi")
 _components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"), ExtResource("7_la08l"), ExtResource("8_dwpay"), ExtResource("9_56ys6"), ExtResource("10_711is"), ExtResource("11_14nhc"), ExtResource("12_ccm2a")])
+_textureFactory = NodePath("../../SubViewportContainer/TextureFactory")
 
 [node name="ButtonStrip" type="VBoxContainer" parent="UI/ComponentDefinition"]
 layout_mode = 2
@@ -162,6 +165,7 @@ size_flags_horizontal = 8
 text = "Create"
 
 [node name="ComponentTabs" type="TabContainer" parent="UI"]
+unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(450, 450)
 anchors_preset = 8
@@ -288,6 +292,16 @@ file_mode = 0
 access = 2
 
 [node name="3DSceneNoPhysics" parent="." instance=ExtResource("3_6khan")]
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+offset_left = -512.0
+offset_bottom = 512.0
+
+[node name="TextureFactory" type="SubViewport" parent="SubViewportContainer"]
+unique_name_in_owner = true
+handle_input_locally = false
+render_target_update_mode = 4
+script = ExtResource("25_461bj")
 
 [connection signal="pressed" from="UI/Mode/Play2D" to="UI" method="_on_play_2d_pressed"]
 [connection signal="pressed" from="UI/Mode/Play3D" to="UI" method="_on_play_3d_pressed"]

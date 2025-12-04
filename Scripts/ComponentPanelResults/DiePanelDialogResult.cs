@@ -14,6 +14,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
 	[Export] private LineEdit[] _quickSideValues;
 	[Export] private Label[] _quickSideLabels;
+
 	public override void _Ready()
 	{
 		ComponentType = VisualComponentBase.VisualComponentType.Cube;
@@ -31,6 +32,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
 		_tabContainer = GetNode<TabContainer>("%TabContainer");
 		_tabContainer.CurrentTab = 0;
+		
 
 		foreach (var l in _quickSideValues)
 		{
@@ -167,6 +169,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 		d.Add("Color", _dieColor.Color);
 		d.Add("Sides", PackageSides());
 		
-		_preview.Build(d);
+		_preview.Build(d, TextureFactory);
 	}
 }

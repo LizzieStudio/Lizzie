@@ -11,6 +11,7 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 	private ColorPickerButton _colorPicker;
 	private ComponentPreview _preview;	
 	
+	
 	public override void _Ready()
 	{
 		ComponentType = VisualComponentBase.VisualComponentType.Cube;
@@ -27,6 +28,7 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 		_colorPicker = GetNode<ColorPickerButton>("%Color");
 		_colorPicker.ColorChanged += ColorPickerOnColorChanged;
 		_preview = GetNode<ComponentPreview>("%Preview");
+		
 	}
 
 	private void ColorPickerOnColorChanged(Color color)
@@ -106,7 +108,7 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 		d.Add("Length", l * scale );
 		d.Add("Color", _colorPicker.Color);
 		
-		_preview.Build(d);
+		_preview.Build(d, TextureFactory);
 		
 	}
 

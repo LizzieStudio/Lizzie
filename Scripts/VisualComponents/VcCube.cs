@@ -20,10 +20,10 @@ public partial class VcCube : VisualComponentBase
 	
 	
 
-	public override bool Build(Dictionary<string, object> parameters)
+	public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
 		
-		base.Build(parameters);
+		base.Build(parameters, textureFactory);
 		
 		MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
 		HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");

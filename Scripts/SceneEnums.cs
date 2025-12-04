@@ -11,6 +11,7 @@ public enum CursorMode
     Normal,
     Spawn,
     Drag,
+    CanDrop,
     DragSelect,
     PopupMenu
 }
@@ -31,6 +32,10 @@ public enum VisualCommand
     MoveToBottom,
     MoveUp,
     MoveToTop,
+    Tuck,
+    Untuck,
+    Freeze,
+    Unfreeze,
     Num1,
     Num2,
     Num3,

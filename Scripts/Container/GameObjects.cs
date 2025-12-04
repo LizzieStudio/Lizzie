@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 
 public partial class GameObjects : Node
 {
@@ -16,6 +17,8 @@ public partial class GameObjects : Node
     
     [Signal]
     public delegate void CameraActivationEventHandler(bool cameraActivated);
+    
+    [Export] TextureFactory _textureFactory;
 
     private int _stackingUpdateRequired;
 
@@ -232,15 +235,20 @@ public partial class GameObjects : Node
     #endregion
 
     #region Stacking
+
     private void MoveToTop()
     {
         var go = GetSelectedObject();
         if (go == null) return;
-
+        MoveToTop(go);
+    }
+    
+    private void MoveToTop(VisualComponentBase go)
+    {
         var curZ = go.ZOrder;
         var maxZ = GetMaxComponentZ();
 
-        //move everything below the selected object one higher
+        //move everything above the selected object one lower
         foreach (var g in GetChildren())
         {
             if (g is VisualComponentBase vcb && vcb.ZOrder > curZ)
@@ -258,6 +266,12 @@ public partial class GameObjects : Node
         var go = GetSelectedObject();
         if (go == null) return;
 
+        MoveToBottom(go);
+    }
+
+    private void MoveToBottom(VisualComponentBase go)
+    {
+
         var curZ = go.ZOrder;
 
         //move everything below the selected object one higher
@@ -273,14 +287,50 @@ public partial class GameObjects : Node
         QueueStackingUpdate();
     }
 
-    private void UpdateStackingHeights()
+    /// <summary>
+    /// Determines the maximum y-stacking height for the dragged objects.
+    /// </summary>
+    /// <returns></returns>
+    private float GetDragHeight()
     {
+        var _dragObjects = GetDraggingObjects().ToList();
+        if (!_dragObjects.Any()) return 0;
+
+
         var children = GetChildren();
 
+        //make a list of all the objects that are 'in line' with the shapes of the moving objects
+        float maxFloor = 0;
+
+        foreach (var d in _dragObjects)
+        {
+            foreach (var c in children)
+            {
+                if (c is VisualComponentBase vcb)
+                {
+                    if (_dragObjects.Contains(vcb)) continue;
+
+                    if (CheckOverlap(d, vcb))
+                    {
+                        maxFloor = Mathf.Max(maxFloor, vcb.Position.Y + vcb.YHeight / 2);
+                    }
+                }
+            }
+        }
+
+        return maxFloor;
+    }
+    
+    
+    private void UpdateStackingHeights()
+    {
+        //var children = GetChildren();
+        var children = GetNotDraggingObjects().ToArray();
+        
         //this dictionary keeps track of objects that are below a certain object. The key is the object id 
         //(in the children array), and the list elements are the object ids of the things that are under it.
         Dictionary<int, List<int>> underneath = new();
-        for (int i = 0; i < children.Count; i++)
+        for (int i = 0; i < children.Length; i++)
         {
             var ci = children[i] as VisualComponentBase;
 
@@ -292,7 +342,7 @@ public partial class GameObjects : Node
 
             if (ci.ShapeProfiles.Count == 0) continue;
 
-            for (int j = 0; j < children.Count; j++)
+            for (int j = 0; j < children.Length; j++)
             {
                 var cj = children[j] as VisualComponentBase;
 
@@ -342,7 +392,7 @@ public partial class GameObjects : Node
         //in case there's nothing underneath them. The dictionary only contains items with something below
         //them
 
-        for (int i = 0; i < children.Count; i++)
+        for (int i = 0; i < children.Length; i++)
         {
             var ci = children[i] as VisualComponentBase;
             if (ci is null) continue;
@@ -358,7 +408,9 @@ public partial class GameObjects : Node
             }
 
             //GD.Print($"New pos for {i}: {floor + (ci.YHeight / 2f)}");
-            ci.Position = new Vector3(ci.Position.X, floor + (ci.YHeight / 2f), ci.Position.Z);
+            
+            ci.MoveToTargetY(floor + (ci.YHeight / 2f));
+            //ci.Position = new Vector3(ci.Position.X, floor + (ci.YHeight / 2f), ci.Position.Z);
         }
     }
 
@@ -381,6 +433,14 @@ public partial class GameObjects : Node
     #region Normal Interaction
     private void HandleNormalMode()
     {
+        if (GetHoveredObject() == null)
+        {
+            Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
+        }
+        else
+        {
+            Input.SetDefaultCursorShape(Input.CursorShape.PointingHand);
+        }
         if (Input.IsActionJustPressed("move_to_top")) MoveToTop();
         if (Input.IsActionJustPressed("move_to_bottom")) MoveToBottom();
         if (Input.IsActionJustPressed("component_delete")) DeleteComponents();
@@ -451,17 +511,21 @@ public partial class GameObjects : Node
             QueueStackingUpdate();
         }
     }
+    
+    public TextureFactory TextureFactory { get; set; }
 
     private void SpawnComponent()
     {
         var newComp = (VisualComponentBase)_spawnComponent.Duplicate();
-        newComp.Build(_spawnComponent.Parameters);
+        var spawnPosition = _dragPlane.GetCursorProjection();
+        
+        newComp.Build(_spawnComponent.Parameters, TextureFactory);
+        newComp.Position = new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z);
+
         newComp.DimMode(false);
         newComp.NeverHighlight = false;
 
-        var spawnPosition = _dragPlane.GetCursorProjection();
-        newComp.Position = new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z);
-
+        
         AddComponentToScene(newComp);
     }
 
@@ -523,6 +587,8 @@ public partial class GameObjects : Node
         {
             gameObject.IsDragging = true;
         }
+        
+        QueueStackingUpdate();
     }
 
     private void HandleDrag()
@@ -533,19 +599,27 @@ public partial class GameObjects : Node
             var delta = newDragPosition - _lastDragPosition;
             _lastDragPosition = newDragPosition;
 
+            var _dragHeight = GetDragHeight();
+            
             foreach (var go in GetDraggingObjects())
             {
-                go.Position += delta;
+                var p = go.Position + delta;
+                
+                //go.MoveToTargetY(_dragHeight+ go.YHeight);
+                go.Position = new Vector3(p.X, _dragHeight + go.YHeight, p.Z);
             }
             
             //check to see if we are over something that can accept the object(s)
             var hover = GetHoveredDropTarget();
-            if (hover != null)
+            if (hover != null && hover.CanAcceptDrop && hover.DragOver(GetDraggingObjects()))
             {
-                if (hover.CanAcceptDrop)
-                {
-                    hover.DragOver(GetDraggingObjects());
-                }
+                //do something with the cursor
+                Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
+            }
+            else
+            {
+                Input.SetDefaultCursorShape(Input.CursorShape.Drag);
+                //reset the cursor
             }
         }
         else
@@ -564,6 +638,18 @@ public partial class GameObjects : Node
             }
         }
     }
+    
+    private IEnumerable<VisualComponentBase> GetNotDraggingObjects()
+    {
+        foreach (var n in GetChildren())
+        {
+            if (n is VisualComponentBase { IsDragging: false } p)
+            {
+                yield return p;
+            }
+        }
+    }
+
 
     private void EndDrag()
     {
@@ -574,12 +660,19 @@ public partial class GameObjects : Node
         }
         
         
-        foreach (var gameObject in GetSelectedObjects())
+        //move all the dragged items to the top of the stack
+        
+        
+        foreach (var gameObject in GetDraggingObjects().OrderBy(x => x.ZOrder))
         {
+            MoveToTop(gameObject);
             gameObject.IsDragging = false;
         }
         
+        Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
+        
         CursorMode = CursorMode.Normal;
+        
         QueueStackingUpdate();
         EndDragUndo();
     }
