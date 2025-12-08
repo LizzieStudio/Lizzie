@@ -20,6 +20,7 @@ public partial class GameController : Node3D
 		_mainScene.SetMode(SceneMode.TwoD);
 		_mainScene.ShowComponentPopup2 += MainSceneOnShowComponentPopup2;
 		_mainScene.HoveredComponentChange += MainSceneOnHoveredNameChange;
+		_mainScene.GameObjects.TextureFactory = _textureFactory;
 		
 		_uiController = GetNode<UI>("UI");
 		_uiController.MasterModeChange += OnMasterModeChange;

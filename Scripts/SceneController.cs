@@ -19,8 +19,8 @@ public partial class SceneController : Node3D
 		_gameObjects = GetNode<GameObjects>("GameObjects");
 		_gameObjects.ShowComponentPopup += GameObjectsOnShowComponentPopup;
 		_gameObjects.HoveredComponentChange += OnHoveredComponentChange;
-		
-		
+		_gameObjects.TextureFactory = _textureFactory;
+
 	}
 
 	private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)

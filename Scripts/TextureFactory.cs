@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Metadata;
 
 public partial class TextureFactory : SubViewport
@@ -21,7 +22,19 @@ public partial class TextureFactory : SubViewport
         if (_viewportUpdating > 0)
         {
             _viewportUpdating--;
-            if (_viewportUpdating == 0) AfterRender();
+            if (_viewportUpdating == 0)
+            {
+                //We have to do this in waves because there is a weird bug in Godot (at least in 4.2)
+                //where if too many labels are rendered at once the later ones get skipped
+                if (_skip * Take >= _textureDefinition.Objects.Count)
+                {
+                    AfterRender();
+                }
+                else
+                {
+                    GenerateSecondaryTexture();
+                }
+            }
         }
     }
 
@@ -35,6 +48,9 @@ public partial class TextureFactory : SubViewport
     SubViewport _viewport;
     private int _viewportUpdating;
     private Action<ImageTexture> _onReady;
+    private TextureDefinition _textureDefinition;
+    private int _skip;
+    private const int Take = 10;
     
     /// <summary>
     /// Generate a texture
@@ -44,6 +60,7 @@ public partial class TextureFactory : SubViewport
         Action<ImageTexture> textureReadyCallback)
     {
         _onReady = textureReadyCallback;
+        _textureDefinition = definition;
         
         // For drawing, we need to render to a texture using a viewport
         // Create a SubViewport for rendering
@@ -58,7 +75,9 @@ public partial class TextureFactory : SubViewport
         bgRect.Size = new Vector2(definition.Width, definition.Height);
         _viewport.AddChild(bgRect);
 
-        foreach (var obj in definition.Objects)
+        
+        
+        foreach (var obj in definition.Objects.Take(Take))
         {
             switch (obj.Type)
             {
@@ -83,6 +102,53 @@ public partial class TextureFactory : SubViewport
         _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
         
         _viewportUpdating = 2;
+        _skip = 1;
+    }
+
+    private void GenerateSecondaryTexture()
+    {
+        //cleanup
+        foreach(var c in _viewport.GetChildren()) c.QueueFree();
+        
+        // Create a ColorRect for the background
+        var bgRect = new ColorRect();
+        bgRect.Color = _textureDefinition.BackgroundColor;
+        bgRect.Size = new Vector2(_textureDefinition.Width, _textureDefinition.Height);
+        //_viewport.AddChild(bgRect);
+        
+        var tr = new TextureRect();
+        var texture = _viewport.GetTexture();
+        var image = texture.GetImage();
+        tr.Size = new Vector2(_textureDefinition.Width, _textureDefinition.Height);
+        tr.Texture = ImageTexture.CreateFromImage(image);
+        _viewport.AddChild(tr);
+
+        foreach (var obj in _textureDefinition.Objects.Skip(_skip * Take).Take(Take))
+        {
+            switch (obj.Type)
+            {
+                case TextureObjectType.RectangleText:
+                    RenderRectangleText(obj);
+                    break;
+                case TextureObjectType.TriangleText:
+                    RenderTriangleText(obj);
+                    break;
+                case TextureObjectType.RectangleShape:
+                    break;
+                case TextureObjectType.CircleShape:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+            
+        }
+        
+        
+        // Get the rendered texture
+        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        
+        _viewportUpdating = 2;
+        _skip++;
     }
 
     private void RenderRectangleText(TextureObject obj)

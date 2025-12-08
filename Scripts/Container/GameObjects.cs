@@ -18,9 +18,7 @@ public partial class GameObjects : Node
     [Signal]
     public delegate void CameraActivationEventHandler(bool cameraActivated);
     
-    [Export] TextureFactory _textureFactory;
-
-    private int _stackingUpdateRequired;
+   private int _stackingUpdateRequired;
 
     public CursorMode CursorMode { get; private set; }
 
@@ -512,7 +510,9 @@ public partial class GameObjects : Node
         }
     }
     
-    public TextureFactory TextureFactory { get; set; }
+    public TextureFactory TextureFactory { 
+        get; 
+        set; }
 
     private void SpawnComponent()
     {

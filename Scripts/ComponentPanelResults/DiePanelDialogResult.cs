@@ -85,7 +85,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 		
 		var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/Dice/{shape}");
 		var vc = scene.Instantiate<VcDie>();
-
+		
 		vc.Ready += UpdatePreview;
 		return vc;
 	}
@@ -159,6 +159,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 			_preview.SetComponentVisibility(false);
 			return;
 		}
+
+		dia = 16;
 
 		_preview.SetComponentVisibility(true);
 

@@ -212,6 +212,12 @@ public partial class VcDie : VisualComponentBase
 
 		_mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
+		var dieColor = Colors.White;
+		if (parameters["Color"] is Color color)
+		{
+			dieColor = color;
+		}
+		
 		float size = 0;
 
 		if (parameters.ContainsKey("Size"))
@@ -225,13 +231,10 @@ public partial class VcDie : VisualComponentBase
 
 		if (parameters.ContainsKey("Color"))
 		{
-			if (parameters["Color"] is Color color)
-			{
 				if (_mainMesh.GetSurfaceOverrideMaterial(0) is StandardMaterial3D material)
 				{
-					material.AlbedoColor = color;
+					material.AlbedoColor = dieColor;
 				}
-			}
 		}
 
 		var sides = Utility.GetParam<string[]>(parameters, "Sides");
@@ -248,7 +251,7 @@ public partial class VcDie : VisualComponentBase
 		{
 			if (sides.Length == 6)
 			{
-				var tx = D6TextureDefinition(sides);
+				var tx = D6TextureDefinition(sides, dieColor);
 				
 				textureFactory.GenerateTexture(tx, TextureDone);
 				return true;
@@ -256,7 +259,28 @@ public partial class VcDie : VisualComponentBase
 
 			if (sides.Length == 8)
 			{
-				var tx = D8TextureDefinition(sides);
+				var tx = D8TextureDefinition(sides, dieColor);
+				textureFactory.GenerateTexture(tx, TextureDone);
+				return true;
+			}
+			
+			if (sides.Length == 10)
+			{
+				var tx = D10TextureDefinition(sides, dieColor);
+				textureFactory.GenerateTexture(tx, TextureDone);
+				return true;
+			}
+			
+			if (sides.Length == 12)
+			{
+				var tx = D12TextureDefinition(sides, dieColor);
+				textureFactory.GenerateTexture(tx, TextureDone);
+				return true;
+			}
+			
+			if (sides.Length == 20)
+			{
+				var tx = D20TextureDefinition(sides, dieColor);
 				textureFactory.GenerateTexture(tx, TextureDone);
 				return true;
 			}
@@ -285,75 +309,23 @@ public partial class VcDie : VisualComponentBase
 		return new List<string>();
 	}
 
-	private TextureFactory.TextureDefinition D6TextureDefinition(string[] sides)
+	private TextureFactory.TextureDefinition D6TextureDefinition(string[] sides, Color color)
 	{
 		var font = new SystemFont();
 
 		var tx = new TextureFactory.TextureDefinition
 		{
-			BackgroundColor = Colors.Yellow,
+			BackgroundColor = color,
 			Height = 256,
 			Width = 256,
 			Shape = TextureFactory.TextureShape.Square
 		};
-				
-		tx.Objects.Add(new TextureFactory.TextureObject
-		{
-			CenterX = 128,
-			CenterY=128,
-			Font = font,
-			Height = 128,
-			Width = 128,
-			Type= TextureFactory.TextureObjectType.RectangleText,
-			RotationDegrees = 0,
-			Text = "ABCDEFG",
-			TextColor = Colors.Black
-		});
 		
-		tx.Objects.Add(new TextureFactory.TextureObject
-		{
-			CenterX = 128,
-			CenterY=128,
-			Font = font,
-			Height = 128,
-			Width = 128,
-			Type= TextureFactory.TextureObjectType.RectangleText,
-			RotationDegrees = 45,
-			Text = "ABCDEFG",
-			TextColor = Colors.Black
-		});
 		
-		tx.Objects.Add(new TextureFactory.TextureObject
-		{
-			CenterX = 128,
-			CenterY=128,
-			Font = font,
-			Height = 128,
-			Width = 128,
-			Type= TextureFactory.TextureObjectType.RectangleText,
-			RotationDegrees = 90,
-			Text = "ABCDEFG",
-			TextColor = Colors.Black
-		});
-		
-		tx.Objects.Add(new TextureFactory.TextureObject
-		{
-			CenterX = 128,
-			CenterY=128,
-			Font = font,
-			Height = 128,
-			Width = 128,
-			Type= TextureFactory.TextureObjectType.RectangleText,
-			RotationDegrees = 135,
-			Text = "ABCDEFG",
-			TextColor = Colors.Black
-		});
-		
-		/*
-		tx.Objects.Add(new TextureFactory.TextureObject
+		var to = new TextureFactory.TextureObject
 		{
 			CenterX = 42,
-			CenterY=42,
+			CenterY=64,
 			Font = font,
 			Height = 85,
 			Width = 85,
@@ -361,32 +333,25 @@ public partial class VcDie : VisualComponentBase
 			RotationDegrees = 0,
 			Text = sides[0],
 			TextColor = Colors.Black
-		});
-				
-		tx.Objects.Add(new TextureFactory.TextureObject
-		{
-			CenterX = 42+85,
-			CenterY=42,
-			Font = font,
-			Height = 85,
-			Width = 85,
-			Type= TextureFactory.TextureObjectType.RectangleText,
-			RotationDegrees = 0,
-			Text = sides[1],
-			TextColor = Colors.Black
-		});
-		*/
+		};
+		tx.Objects.Add(to);
+		
+		tx.Objects.Add(DuplicateFace(to, 127, 64, 0, sides[1]));
+		tx.Objects.Add(DuplicateFace(to, 212, 64, 0, sides[2]));
+		tx.Objects.Add(DuplicateFace(to, 42, 194, 0, sides[3]));
+		tx.Objects.Add(DuplicateFace(to, 127, 194, 0, sides[4]));
+		tx.Objects.Add(DuplicateFace(to, 212, 194, 0, sides[5]));
 		
 		return tx;
 	}
 	
-	private TextureFactory.TextureDefinition D8TextureDefinition(string[] sides)
+	private TextureFactory.TextureDefinition D8TextureDefinition(string[] sides, Color color)
 	{
 		var font = new SystemFont();
 
 		var tx = new TextureFactory.TextureDefinition
 		{
-			BackgroundColor = Colors.Yellow,
+			BackgroundColor = color,
 			Height = 256,
 			Width = 256,
 			Shape = TextureFactory.TextureShape.Square
@@ -414,21 +379,148 @@ public partial class VcDie : VisualComponentBase
 		tx.Objects.Add(DuplicateFace(t0, 255, 201, -90, sides[6]));
 		tx.Objects.Add(DuplicateFace(t0, 255, 92, -90, sides[7]));
 
-		
-/*		
-		data.Add(new DieFaceData( 0, 55, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-		data.Add(new DieFaceData(0, 165, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-		data.Add(new DieFaceData(127, 201, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-		data.Add(new DieFaceData(127, 92, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-		data.Add(new DieFaceData(127, 55, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-		data.Add(new DieFaceData(127, 165, 110, 90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-		data.Add(new DieFaceData(255, 201, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-		data.Add(new DieFaceData(255, 92, 110, -90, TextureBuilderOptions.FaceShape.EquilateralTriangle));
-*/
+		return tx;
+	}
+	
+	private TextureFactory.TextureDefinition D10TextureDefinition(string[] sides, Color color)
+	{
+		var font = new SystemFont();
 
+		var tx = new TextureFactory.TextureDefinition
+		{
+			BackgroundColor = color,
+			Height = 256,
+			Width = 256,
+			Shape = TextureFactory.TextureShape.Square
+		};
+		
+		
+		var to = new TextureFactory.TextureObject
+		{
+			CenterX = 48,
+			CenterY=50,
+			Font = font,
+			Height = 71,
+			Width = 49,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 0,
+			Text = sides[0],
+			TextColor = Colors.Black
+		};
+		tx.Objects.Add(to);
+		
+		tx.Objects.Add(DuplicateFace(to, 128, 50, 0, sides[1]));
+		tx.Objects.Add(DuplicateFace(to, 212, 50, 0, sides[2]));
+		tx.Objects.Add(DuplicateFace(to, 169, 90, 180, sides[3]));
+		tx.Objects.Add(DuplicateFace(to, 88, 90, 180, sides[4]));
+		tx.Objects.Add(DuplicateFace(to, 48, 169, 0, sides[5]));
+		tx.Objects.Add(DuplicateFace(to, 128, 169, 0, sides[6]));
+		tx.Objects.Add(DuplicateFace(to, 212, 169, 0, sides[7]));
+		tx.Objects.Add(DuplicateFace(to, 169, 266, 180, sides[8]));
+		tx.Objects.Add(DuplicateFace(to, 88, 266, 180, sides[9]));
+		
+		return tx;
+	}
+	
+	private TextureFactory.TextureDefinition D12TextureDefinition(string[] sides, Color color)
+	{
+		var font = new SystemFont();
+
+		var tx = new TextureFactory.TextureDefinition
+		{
+			BackgroundColor = color,
+			Height = 256,
+			Width = 256,
+			Shape = TextureFactory.TextureShape.Square
+		};
+		
+		
+		var to = new TextureFactory.TextureObject
+		{
+			CenterX = 29,
+			CenterY=89,
+			Font = font,
+			Height = 53,
+			Width = 47,
+			Type= TextureFactory.TextureObjectType.RectangleText,
+			RotationDegrees = 90,
+			Text = sides[0],
+			TextColor = Colors.Black
+		};
+		tx.Objects.Add(to);
+		
+		tx.Objects.Add(DuplicateFace(to, 29, 156, 90, sides[1]));
+		tx.Objects.Add(DuplicateFace(to, 29, 223, 90, sides[2]));
+		tx.Objects.Add(DuplicateFace(to, 93, 89, 90, sides[3]));
+		tx.Objects.Add(DuplicateFace(to, 93, 156, 90, sides[4]));
+		tx.Objects.Add(DuplicateFace(to, 93, 223, 90, sides[5]));
+		tx.Objects.Add(DuplicateFace(to, 157, 89, 90, sides[6]));
+		tx.Objects.Add(DuplicateFace(to, 157, 156, 90, sides[7]));
+		tx.Objects.Add(DuplicateFace(to, 157, 223, 90, sides[8]));
+		tx.Objects.Add(DuplicateFace(to, 221, 89, 90, sides[9]));
+		tx.Objects.Add(DuplicateFace(to, 221, 156, 90, sides[10]));
+		tx.Objects.Add(DuplicateFace(to, 221, 223, 90, sides[11]));
+		
 		return tx;
 	}
 
+	private TextureFactory.TextureDefinition D20TextureDefinition(string[] sides, Color color)
+	{
+		var font = new SystemFont();
+
+		var tx = new TextureFactory.TextureDefinition
+		{
+			BackgroundColor = color,
+			Height = 256,
+			Width = 256,
+			Shape = TextureFactory.TextureShape.Square
+		};
+		
+		
+		var to = new TextureFactory.TextureObject
+		{
+			CenterX = 0,
+			CenterY=41,
+			Font = font,
+			Height = 82,
+			Width = 82,
+			Type= TextureFactory.TextureObjectType.TriangleText,
+			RotationDegrees = 90,
+			Text = sides[0],
+			TextColor = Colors.Black
+		};
+		tx.Objects.Add(to);
+		
+		tx.Objects.Add(DuplicateFace(to, 64, 41, 90, sides[1]));
+		tx.Objects.Add(DuplicateFace(to, 128, 41, 90, sides[2]));
+		tx.Objects.Add(DuplicateFace(to, 192, 41, 90, sides[3]));
+		tx.Objects.Add(DuplicateFace(to, 64, 82, -90, sides[4]));
+		tx.Objects.Add(DuplicateFace(to, 128, 82, -90, sides[5]));
+		tx.Objects.Add(DuplicateFace(to, 192, 82, -90, sides[6]));
+		tx.Objects.Add(DuplicateFace(to, 255, 82, -90, sides[7]));
+		tx.Objects.Add(DuplicateFace(to, 0, 123, 90, sides[8]));
+		tx.Objects.Add(DuplicateFace(to, 64, 123, 90, sides[9]));
+		tx.Objects.Add(DuplicateFace(to, 128, 123, 90, sides[10]));
+		tx.Objects.Add(DuplicateFace(to, 192, 123, 90, sides[11]));
+
+		
+		
+		tx.Objects.Add(DuplicateFace(to, 64, 164, -90, sides[12]));
+		tx.Objects.Add(DuplicateFace(to, 128, 164, -90, sides[13]));
+		
+		tx.Objects.Add(DuplicateFace(to, 192, 164, -90, sides[14]));
+		tx.Objects.Add(DuplicateFace(to, 255, 164, -90, sides[15]));
+
+		
+		tx.Objects.Add(DuplicateFace(to, 0, 205, 90, sides[16]));
+
+		tx.Objects.Add(DuplicateFace(to, 64, 205, 90, sides[17]));
+		tx.Objects.Add(DuplicateFace(to, 128, 205, 90, sides[18]));
+		tx.Objects.Add(DuplicateFace(to, 192, 205, 90, sides[19]));
+		
+		return tx;
+	}
+	
 	private TextureFactory.TextureObject DuplicateFace(TextureFactory.TextureObject obj, int centerX, int centerY, int rotation,
 		string text)
 	{
