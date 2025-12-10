@@ -6,11 +6,22 @@ using System.Reflection.Metadata;
 
 public partial class TextureFactory : SubViewport
 {
+    private Texture2D _circleShape;
+    private Texture2D _rectShape;
+    private Texture2D _hexPointShape;
+    private Texture2D _hexFlatShape;
+    private Texture2D _roundedRectShape;
     
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         _viewport = this;
+        
+        _circleShape = ResourceLoader.Load("res://Textures/Shapes/circle.png") as Texture2D;
+        _rectShape = ResourceLoader.Load("res://Textures/Shapes/square.png") as Texture2D;
+        _hexPointShape = ResourceLoader.Load("res://Textures/Shapes/hex.png") as Texture2D;
+        _hexFlatShape = ResourceLoader.Load("res://Textures/Shapes/hexflat.png") as Texture2D;
+        _roundedRectShape = ResourceLoader.Load("res://Textures/Shapes/RoundedRectangle.png") as Texture2D;
     }
 
     private int _frameCount;
@@ -26,31 +37,32 @@ public partial class TextureFactory : SubViewport
             {
                 //We have to do this in waves because there is a weird bug in Godot (at least in 4.2)
                 //where if too many labels are rendered at once the later ones get skipped
-                if (_skip * Take >= _textureDefinition.Objects.Count)
+                if (_skip * Take >= _activeQueueEntry.TextureDefinition.Objects.Count)
                 {
                     AfterRender();
                 }
                 else
                 {
-                    GenerateSecondaryTexture();
+                    GenerateSecondaryTexture(_activeQueueEntry.TextureDefinition);
                 }
             }
         }
-    }
 
-    private void TextureDone(ImageTexture obj)
-    {
-        var d = obj.GetImage();
-        d.SavePng(@"c:\winwam5\tfTest.png");
+        if (_activeQueueEntry == null & _textureGenerationQueue.Count > 0)
+        {
+            _activeQueueEntry = _textureGenerationQueue.Dequeue();
+            InitiateTextureGeneration(_activeQueueEntry.TextureDefinition);
+        }
     }
-    
     
     SubViewport _viewport;
     private int _viewportUpdating;
-    private Action<ImageTexture> _onReady;
-    private TextureDefinition _textureDefinition;
+    private TextureQueueEntry _activeQueueEntry;
     private int _skip;
     private const int Take = 10;
+
+    
+    private Queue<TextureQueueEntry> _textureGenerationQueue = new();
     
     /// <summary>
     /// Generate a texture
@@ -59,23 +71,62 @@ public partial class TextureFactory : SubViewport
         TextureDefinition definition,
         Action<ImageTexture> textureReadyCallback)
     {
-        _onReady = textureReadyCallback;
-        _textureDefinition = definition;
-        
-        // For drawing, we need to render to a texture using a viewport
+        var tqe = new TextureQueueEntry
+        {
+            TextureDefinition = definition,
+            TextureReadyCallback = textureReadyCallback
+        };
+
+        _textureGenerationQueue.Enqueue(tqe);
+    }
+
+    private void InitiateTextureGeneration(TextureDefinition definition)
+    {
+                // For drawing, we need to render to a texture using a viewport
         // Create a SubViewport for rendering
         _viewport.Size = new Vector2I(definition.Width, definition.Height);
         _viewport.RenderTargetClearMode = SubViewport.ClearMode.Always;
         _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
         _viewport.TransparentBg = true;
-      
-        // Create a ColorRect for the background
+        
+        var tr = new TextureRect();
+
+        Texture2D texture;
+
+        switch (definition.Shape)
+        {
+            case TextureShape.Square:
+                texture = _rectShape;
+                break;
+            case TextureShape.Circle:
+                texture = _circleShape;
+                break;
+            case TextureShape.HexPoint:
+                texture = _hexPointShape;
+                break;
+            case TextureShape.HexFlat:
+                texture = _hexFlatShape;
+                break;
+            case TextureShape.RoundedRect:
+                texture = _roundedRectShape;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        
+        
+        var image = texture.GetImage();
+        tr.Size = new Vector2(_activeQueueEntry.TextureDefinition.Width, _activeQueueEntry.TextureDefinition.Height);
+        tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
+        tr.Texture = ImageTexture.CreateFromImage(image);
+        
         var bgRect = new ColorRect();
         bgRect.Color = definition.BackgroundColor;
         bgRect.Size = new Vector2(definition.Width, definition.Height);
-        _viewport.AddChild(bgRect);
-
+        tr.AddChild(bgRect);
         
+        _viewport.AddChild(tr);
+
         
         foreach (var obj in definition.Objects.Take(Take))
         {
@@ -103,27 +154,28 @@ public partial class TextureFactory : SubViewport
         
         _viewportUpdating = 2;
         _skip = 1;
-    }
 
-    private void GenerateSecondaryTexture()
+    }
+    
+    private void GenerateSecondaryTexture(TextureDefinition definition)
     {
         //cleanup
         foreach(var c in _viewport.GetChildren()) c.QueueFree();
         
         // Create a ColorRect for the background
         var bgRect = new ColorRect();
-        bgRect.Color = _textureDefinition.BackgroundColor;
-        bgRect.Size = new Vector2(_textureDefinition.Width, _textureDefinition.Height);
+        bgRect.Color = definition.BackgroundColor;
+        bgRect.Size = new Vector2(definition.Width, definition.Height);
         //_viewport.AddChild(bgRect);
         
         var tr = new TextureRect();
         var texture = _viewport.GetTexture();
         var image = texture.GetImage();
-        tr.Size = new Vector2(_textureDefinition.Width, _textureDefinition.Height);
+        tr.Size = new Vector2(_activeQueueEntry.TextureDefinition.Width, _activeQueueEntry.TextureDefinition.Height);
         tr.Texture = ImageTexture.CreateFromImage(image);
         _viewport.AddChild(tr);
 
-        foreach (var obj in _textureDefinition.Objects.Skip(_skip * Take).Take(Take))
+        foreach (var obj in definition.Objects.Skip(_skip * Take).Take(Take))
         {
             switch (obj.Type)
             {
@@ -178,6 +230,7 @@ public partial class TextureFactory : SubViewport
 
     }
 
+    
     private void RenderTriangleText(TextureObject obj)
     {
         Vector2 textSize = obj.Font.GetStringSize(obj.Text, fontSize: 12);
@@ -226,17 +279,17 @@ public partial class TextureFactory : SubViewport
     
     private void AfterRender()
     {
-        // Wait for rendering (in actual use, you'd need to await a frame)
         var texture = _viewport.GetTexture();
         var image = texture.GetImage();
         
         // Create ImageTexture from the rendered image
         var imageTexture = ImageTexture.CreateFromImage(image);
 
-        _onReady?.Invoke(imageTexture);
+        _activeQueueEntry.TextureReadyCallback?.Invoke(imageTexture);
         
         //cleanup
         foreach(var c in _viewport.GetChildren()) c.QueueFree();
+        _activeQueueEntry = null;
     }
 
     private static int AutosizeFont(string caption, Font font, int height, int width,
@@ -301,5 +354,11 @@ public partial class TextureFactory : SubViewport
         public int RotationDegrees { get; set; } 
         public bool Multiline { get; set; }
     }
-    
+
+    public class TextureQueueEntry
+    {
+        public TextureDefinition TextureDefinition { get; set; }
+        public bool InProcess { get; set; }
+        public Action<ImageTexture> TextureReadyCallback { get; set; }
+    }
 }

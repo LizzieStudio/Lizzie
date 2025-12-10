@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text.Json;
+using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using Vector2 = Godot.Vector2;
 
 public partial class VcToken : VisualComponentFlat
@@ -127,7 +128,7 @@ public partial class VcToken : VisualComponentFlat
 		switch (_mode)
 		{
 			case TokenBuildMode.Quick:
-				BuildQuick();
+				BuildQuick(textureFactory);
 				break;
 			
 			case TokenBuildMode.Custom:
@@ -247,10 +248,10 @@ public partial class VcToken : VisualComponentFlat
 	}
 	
 	
-	private void BuildQuick()
+	private void BuildQuick(TextureFactory textureFactory)
 	{
-		CreateQuickFrontTexture();
-		if (_differentBack) CreateQuickBackTexture();
+		CreateQuickFrontTexture(textureFactory);
+		if (_differentBack) CreateQuickBackTexture(textureFactory);
 	}
 
 	private void BuildCustom()
@@ -366,18 +367,82 @@ public partial class VcToken : VisualComponentFlat
 		return 0.95f / Mathf.Max(size.X, size.Y);
 	}
 	
-	private void CreateQuickFrontTexture()
+	private void CreateQuickFrontTexture(TextureFactory textureFactory)
 	{
-		var textureParameters = new TextureBuilderOptions()
+		var td = CreateQuickTextureDefinition(_frontBgColor, _frontCaption, _frontCaptionColor);
+
+		textureFactory.GenerateTexture(td, FinalizeFrontQuickTexture);
+		
+	}
+
+	private TextureFactory.TextureDefinition CreateQuickTextureDefinition(Color bgColor, string caption, Color captionColor)
+	{
+		int sH = 256;
+		int sW = 256;
+		
+		if (_height <= 0 || _width <= 0) return new TextureFactory.TextureDefinition();
+		if (_height > _width)
 		{
-			BackgroundColor = _frontBgColor,
-			Caption = _frontCaption,
-			TextColor = _frontCaptionColor,
-			FontStyle = TextureBuilderOptions.FontStyleEnum.Black
+			sW = (int)(_width * 256 / _height);
+		}
+		else
+		{
+			sH = (int)(_height * 256 / _width);
+		}
+		
+		
+		var td = new TextureFactory.TextureDefinition
+		{
+			BackgroundColor = bgColor,
+			Height = sH,
+			Width = sW
 		};
 
-		var t = TextureBuilder.Build(_height, _width, textureParameters);
+		/*
+		 Square = 0,
+		Circle = 1,
+		HexPoint = 2,
+		HexFlat = 3,
+		RoundedRect = 4
+		 */
 		
+		switch (_shape)
+		{
+			case 0:
+				td.Shape = TextureFactory.TextureShape.Square;
+				break;
+			
+			case 1:
+				td.Shape = TextureFactory.TextureShape.Circle;
+				break;
+			
+			case 2:
+				td.Shape = TextureFactory.TextureShape.HexPoint;
+				break;
+			
+			case 3:
+				td.Shape = TextureFactory.TextureShape.HexFlat;
+				break;
+		}
+		
+		td.Objects.Add(new TextureFactory.TextureObject
+		{
+			Width = sW,
+			Height = sH,
+			CenterX = sW / 2,
+			CenterY = sH / 2,
+			Multiline = true,
+			Text= caption,
+			TextColor = captionColor,
+			Font= new SystemFont(),
+			Type = TextureFactory.TextureObjectType.RectangleText
+		});
+
+		return td;
+	}
+
+	private void FinalizeFrontQuickTexture(ImageTexture t)
+	{
 		float pixelSize = PixelSize(t.GetSize());
 		FaceSprite.PixelSize = pixelSize;
 		FaceTexture = t;
@@ -387,20 +452,22 @@ public partial class VcToken : VisualComponentFlat
 			BackSprite.PixelSize = pixelSize;
 			BackTexture = t;
 		}
-	}
-	
-	private void CreateQuickBackTexture()
-	{
-		var textureParameters = new TextureBuilderOptions()
-		{
-			BackgroundColor = _backBgColor,
-			Caption = _backCaption,
-			TextColor = _backCaptionColor,
-		};
-
-		var t = TextureBuilder.Build(_height, _width, textureParameters);
 		
-		var pixelSize = PixelSize(t.GetSize());
+		var d = t.GetImage();
+		d.SavePng(@"c:\winwam5\token.png");
+	}
+
+
+	private void CreateQuickBackTexture(TextureFactory textureFactory)
+	{
+		var td = CreateQuickTextureDefinition(_backBgColor, _backCaption, _backCaptionColor);
+
+		textureFactory.GenerateTexture(td, FinalizeBackQuickTexture);
+	}
+
+	private void FinalizeBackQuickTexture(ImageTexture t)
+	{
+		float pixelSize = PixelSize(t.GetSize());
 		BackSprite.PixelSize = pixelSize;
 		BackTexture = t;
 	}
