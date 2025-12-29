@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://bqjj4fvs81gaw"]
 
-[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/QuickTextureEntry.cs" id="1_5t444"]
+[ext_resource type="Script" uid="uid://seairumlt073" path="res://Scripts/ComponentPanelResults/QuickTextureEntry.cs" id="1_5t444"]
 
 [node name="QuickTextureEntry" type="HBoxContainer"]
 size_flags_vertical = 6
@@ -18,23 +18,15 @@ text = "Front:"
 [node name="OptionButton" type="OptionButton" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 8
+item_count = 4
 popup/item_0/text = "Text"
 popup/item_0/id = 0
-popup/item_1/text = "Square"
+popup/item_1/text = "Core Shape"
 popup/item_1/id = 1
-popup/item_2/text = "Circle"
+popup/item_2/text = "Extended"
 popup/item_2/id = 2
-popup/item_3/text = "Hex Flat"
+popup/item_3/text = "User Icon"
 popup/item_3/id = 3
-popup/item_4/text = "Hex Point"
-popup/item_4/id = 4
-popup/item_5/text = "Triangle"
-popup/item_5/id = 5
-popup/item_6/text = "Star"
-popup/item_6/id = 6
-popup/item_7/text = "Pentagon"
-popup/item_7/id = 7
 
 [node name="TopTextColor" type="ColorPickerButton" parent="."]
 unique_name_in_owner = true
@@ -47,3 +39,15 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 placeholder_text = "TEXT"
+
+[node name="ShapeList" type="OptionButton" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="IconList" type="OptionButton" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="UserIconList" type="OptionButton" parent="."]
+unique_name_in_owner = true
+layout_mode = 2

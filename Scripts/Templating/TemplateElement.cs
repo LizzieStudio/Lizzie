@@ -5,38 +5,105 @@ using Godot;
 
 namespace TTSS.Scripts.Templating;
 
-public partial class TemplateElement : HBoxContainer, ITemplateElement
+public class TemplateElement : ITemplateElement
 {
     private List<TemplateParameter> _parameters;
     
     
     // Called when the node enters the scene tree for the first time.
-    public override void _Ready()
+    protected TemplateElement()
     {
         _parameters = new List<TemplateParameter>();
         
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "X", Value = "0"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Y", Value = "0"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Width", Value = "0"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Height", Value = "0"});
+        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "X", Value = "{HalfWidth}"});
+        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Y", Value = "{HalfHeight}"});
+        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Anchor, Name = "Anchor", Value = "MC"});
+        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Width", Value = "{Width}"});
+        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Height", Value = "{Height}"});
         Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Rotation", Value = "0"});
     }
 
+    public int Id { get; set; }
    
-    
     public ITemplateElement.TemplateElementType ElementType { get; protected set; }
     public string ElemeentName { get; set; }
     public IList<TemplateParameter> Parameters => _parameters;
-    public virtual IList<TextureFactory.TextureObject> ElementData { get; }
-    public TemplateElementPosition Position { get; set; }
 
-    public event EventHandler<TemplateElementUpdateEventArgs> ElementUpdated;
+    public virtual IList<TextureFactory.TextureObject> GetElementData(TextureContext context)
+    {
+        return new List<TextureFactory.TextureObject>();
+    }
+
+    protected void UpdateCoreParameterData(TextureFactory.TextureObject to, TextureContext context)
+    {
+        to.CenterX = EvaluateNumberParameter(_parameters, "X", context);
+        to.CenterY = EvaluateNumberParameter(_parameters, "Y", context);
+        to.Anchor = EvaluateAnchorParameter(_parameters, "Anchor", context);
+        to.Height = EvaluateNumberParameter(_parameters, "Height", context);
+        to.Width = EvaluateNumberParameter(_parameters, "Width", context);
+        to.RotationDegrees = EvaluateNumberParameter(_parameters, "Rotation", context);
+    }
+
+    public TemplateElementPosition Position { get; set; }
+    
+    public event EventHandler<EventArgs> ElementUpdated;
 
     protected virtual void OnElementUpdated() =>
-        ElementUpdated?.Invoke(this, new TemplateElementUpdateEventArgs(ElementData));
+        ElementUpdated?.Invoke(this, EventArgs.Empty);
     
+    #region Parameter Processing
+        
+    public string EvaluateTextParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+    {
+        var p = parameters.FirstOrDefault(x => x.Name == key);
+        if (p == null) return string.Empty;
+        
+        return ProcessKeywords(p.Value, context);
+    }
     
+    public int EvaluateNumberParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+    {
+        var p = parameters.FirstOrDefault(x => x.Name == key);
+        if (p == null) return 0;
+        
+        var o = ProcessKeywords(p.Value, context);
+        
+        _ = int.TryParse(o, out var result) ? result : 0;
+        return result;
+    }
     
+    public Color EvaluateColorParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+    {
+        var p = parameters.FirstOrDefault(x => x.Name == key);
+        if (p == null) return Colors.Black;
+        
+        return new Color(ProcessKeywords(p.Value, context));
+    }
+    
+    public TextureFactory.TextureObject.AnchorPoint EvaluateAnchorParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+    {
+        var p = parameters.FirstOrDefault(x => x.Name == key);
+        if (p == null) return TextureFactory.TextureObject.AnchorPoint.TopLeft;
+        
+        
+        return TextureFactory.TextureObject.AnchorStringToEnum(ProcessKeywords(p.Value, context));
+    }
+    
+    private string ProcessKeywords(string parameterVal, TextureContext context)
+    {
+        var s = parameterVal.Replace("{Width}", context.ParentSize.X.ToString(),
+            StringComparison.InvariantCultureIgnoreCase);
+        
+        s = s.Replace("{Height}", context.ParentSize.Y.ToString(), StringComparison.InvariantCultureIgnoreCase);
+        
+        s = s.Replace("{HalfWidth}", ((int)(context.ParentSize.X/2)).ToString(), StringComparison.InvariantCultureIgnoreCase);
+        
+        s = s.Replace("{HalfHeight}", ((int)(context.ParentSize.Y/2)).ToString(), StringComparison.InvariantCultureIgnoreCase);
+        
+        return s;
+    }
+    
+    #endregion
 }
 
 
@@ -62,7 +129,11 @@ public interface ITemplateElement
 
     IList<TemplateParameter> Parameters { get; }
 
-    IList<TextureFactory.TextureObject> ElementData { get; }
+    IList<TextureFactory.TextureObject> GetElementData(TextureContext context);
+    
+    int Id { get; set; }
+
+
 }
 
 public class TemplateParameter 
@@ -72,40 +143,12 @@ public class TemplateParameter
         Text,
         Number,
         Color,
-        List
+        Anchor,
     }
 
     public TemplateParameterType Type { get; set; }
-    public string Name { get; set; }
-    public string Value { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+
 }
 
-public class TemplateElementUpdateEventArgs(IList<TextureFactory.TextureObject> data) : EventArgs
-{
-    public IList<TextureFactory.TextureObject> ElementData { get; private set; } = data;
-}
-
-public static class Extensions
-{
-    public static string EvaluateTextParameter(this IList<TemplateParameter> parameters, string key)
-    {
-        var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return string.Empty;
-        return p.Value;
-    }
-    
-    public static int EvaluateNumberParameter(this IList<TemplateParameter> parameters, string key)
-    {
-        var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return 0;
-        var i = int.TryParse(p.Value, out var result) ? result : 0;
-        return result;
-    }
-    
-    public static Color EvaluateColorParameter(this IList<TemplateParameter> parameters, string key)
-    {
-        var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return Colors.Black;
-        return new Color(p.Value);
-    }
-}

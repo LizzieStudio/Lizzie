@@ -7,6 +7,9 @@ public partial class QuickTextureEntry : BoxContainer
 	private LineEdit _text;
 	private ColorPickerButton _colorPicker;
 	private OptionButton _optionTypes;
+	private OptionButton _coreIcons;
+	private OptionButton _extendedIcons;
+	private OptionButton _userIcons;
 
 	private bool _initializing;
 	// Called when the node enters the scene tree for the first time.
@@ -20,6 +23,15 @@ public partial class QuickTextureEntry : BoxContainer
 		_optionTypes = GetNode<OptionButton>("%OptionButton");
 		_optionTypes.Selected = 0;
 		_optionTypes.ItemSelected += TypeChanged;
+		
+		_coreIcons = GetNode<OptionButton>("%ShapeList");
+		_coreIcons.ItemSelected += _ => RaiseFieldChanged();
+		
+		_extendedIcons = GetNode<OptionButton>("%IconList");
+		_extendedIcons.ItemSelected += _ => RaiseFieldChanged();
+		
+		_userIcons = GetNode<OptionButton>("%UserIconList");
+		_userIcons.ItemSelected += _ => RaiseFieldChanged();
 
 		_colorPicker = GetNode<ColorPickerButton>("%TopTextColor");
 		_colorPicker.Color = Colors.Black;
@@ -28,14 +40,32 @@ public partial class QuickTextureEntry : BoxContainer
 		_text = GetNode<LineEdit>("%TopCaption");
 		_text.TextChanged += _ => RaiseFieldChanged();
 		
+		UpdateVisibility(0);
+		
 		_initializing = false;
 	}
 
+	private IconLibrary _icons;
+
+	public void SetIcons(IconLibrary icons)
+	{
+		_icons = icons;
+		_icons.LoadOptionButtonCore(_coreIcons);
+		_icons.LoadOptionButtonExtended(_extendedIcons);
+	}
+	
 	private void TypeChanged(long index)
 	{
-		_text.Visible = (index == 0);
-		
+		UpdateVisibility(index);
 		RaiseFieldChanged();
+	}
+
+	private void UpdateVisibility(long index)
+	{
+		_text.Visible = (index == 0);
+		_coreIcons.Visible = (index == 1);
+		_extendedIcons.Visible = (index == 2);
+		_userIcons.Visible = (index == 3);
 	}
 
 	private string _fieldName;
@@ -58,10 +88,6 @@ public partial class QuickTextureEntry : BoxContainer
 		set => _text.Text = value;
 	}
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
-	}
 
 	private void RaiseFieldChanged()
 	{
@@ -78,7 +104,7 @@ public partial class QuickTextureEntry : BoxContainer
 	{
 		var qt = new QuickTextureField
 		{
-			Caption = _text.Text,
+			
 			ForegroundColor = _colorPicker.Color,
 		};
 
@@ -86,35 +112,25 @@ public partial class QuickTextureEntry : BoxContainer
 		{
 			case 0:
 				qt.FaceType = TextureFactory.TextureObjectType.Text;
+				qt.Caption = _text.Text;
 				break;
 			
 			case 1:
-				qt.FaceType = TextureFactory.TextureObjectType.RectangleShape;
+				qt.FaceType = TextureFactory.TextureObjectType.CoreShape;
+				qt.Caption = _coreIcons.GetItemText((int)_coreIcons.Selected);
 				break;
 			
 			case 2:
-				qt.FaceType = TextureFactory.TextureObjectType.CircleShape;
+				qt.FaceType = TextureFactory.TextureObjectType.ExtendedShape;
+				qt.Caption = _extendedIcons.GetItemText((int)_extendedIcons.Selected);
 				break;
 			
 			case 3:
-				qt.FaceType = TextureFactory.TextureObjectType.HexFlatUpShape;
+				qt.FaceType = TextureFactory.TextureObjectType.UserShape;
+				qt.Caption = _userIcons.GetItemText((int)_userIcons.Selected);
 				break;
 			
-			case 4:
-				qt.FaceType = TextureFactory.TextureObjectType.HexPointUpShape;
-				break;
 			
-			case 5:
-				qt.FaceType = TextureFactory.TextureObjectType.TriangleShape;
-				break;
-			
-			case 6:
-				qt.FaceType = TextureFactory.TextureObjectType.StarShape;
-				break;
-			
-			case 7:
-				qt.FaceType = TextureFactory.TextureObjectType.PentagonShape;
-				break;
 		}
 
 		return qt;

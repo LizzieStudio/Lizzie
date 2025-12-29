@@ -216,4 +216,12 @@ public partial class BoundsRect : MarginContainer
         var or = GetThemeConstant("margin_right");
         AddThemeConstantOverride("margin_right", or - (int)mouseDelta.X);
     }
+
+    public void SetBounds(Rect2I rect, TextureContext context)
+    {
+        AddThemeConstantOverride("margin_left", rect.Position.X);
+        AddThemeConstantOverride("margin_top", rect.Position.Y);
+        AddThemeConstantOverride("margin_right", (int)context.ParentSize.X - rect.Position.X - rect.Size.X);
+        AddThemeConstantOverride("margin_bottom", (int)context.ParentSize.Y - rect.Position.Y - rect.Size.Y);
+    }
 }

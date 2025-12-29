@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using TTSS.Scripts.Templating;
 
-public partial class GroupElement : TemplateElement
+public partial class GroupElement : Node
 {
 	
 
@@ -16,48 +16,6 @@ public partial class GroupElement : TemplateElement
 		
 	}
 
-	private void AddPressed()
-	{
-		var p = GD.Load <PackedScene>("res://Scenes/Templating/TextElement.tscn");
-		var e = p.Instantiate<TextElement>();
-		AddElement(e);
-	}
 
-	private List<TemplateElement> _elements = [];
-
-	private void AddElement(TemplateElement element)
-	{
-		element.ElementUpdated += ElementOnElementUpdated;
-		_elements.Add(element);
-		_groupElements.AddChild(element);
-	}
-
-	private void RemoveElement(TemplateElement element)
-	{
-		element.ElementUpdated -= ElementOnElementUpdated;
-		_elements.Remove(element);
-		_groupElements.RemoveChild(element);
-		element.QueueFree();
-	}
-	
-	private void ElementOnElementUpdated(object sender, TemplateElementUpdateEventArgs e)
-	{
-		OnElementUpdated();
-	}
-
-	public override List<TextureFactory.TextureObject> ElementData
-	{
-		get
-		{
-			var l = new List<TextureFactory.TextureObject>();
-
-			foreach (var e in _elements)
-			{
-				l.AddRange(e.ElementData);
-			}
-
-			return l;
-		}
-	}
 
 }

@@ -409,19 +409,19 @@ public partial class VcToken : VisualComponentFlat
 		switch (_shape)
 		{
 			case 0:
-				td.Shape = TextureFactory.TextureShape.Square;
+				td.Shape = TextureFactory.TokenShape.Square;
 				break;
 			
 			case 1:
-				td.Shape = TextureFactory.TextureShape.Circle;
+				td.Shape = TextureFactory.TokenShape.Circle;
 				break;
 			
 			case 2:
-				td.Shape = TextureFactory.TextureShape.HexPoint;
+				td.Shape = TextureFactory.TokenShape.HexPoint;
 				break;
 			
 			case 3:
-				td.Shape = TextureFactory.TextureShape.HexFlat;
+				td.Shape = TextureFactory.TokenShape.HexFlat;
 				break;
 		}
 		

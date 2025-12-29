@@ -19,6 +19,8 @@ public partial class ColorParamControl : HBoxContainer, IParamControl
 		_value = GetNode<LineEdit>("LineEdit");
 		_script = GetNode<Button>("Formula");
 		_colorPicker = GetNode<ColorPickerButton>("ColorPickerButton");
+		_colorPicker.ColorChanged += OnColorChanged;
+		
 		
 		if (_parameter != null)
 		{
@@ -30,10 +32,18 @@ public partial class ColorParamControl : HBoxContainer, IParamControl
 		_readyComplete = true;
 	}
 
+	private void OnColorChanged(Color color)
+	{
+		_parameter.Value = color.ToHtml();
+		_value.Text = _parameter.Value;
+		RaiseParameterUpdated(_parameter.Value);
+	}
+
 	private void MapParam()
 	{
 		_label.Text = _parameter.Name;
 		_value.Text = _parameter.Value.ToString();
+		_colorPicker.Color = new Color(_parameter.Value);
 	}
 
 	public void SetParameter(TemplateParameter parameter)
@@ -55,6 +65,7 @@ public partial class ColorParamControl : HBoxContainer, IParamControl
 
 	private void RaiseParameterUpdated(string value)
 	{
+		_parameter.Value = value;
 		ParameterUpdated?.Invoke(this, new TemplateParamUpdateEventArgs { Parameter = _parameter });
 	}
 }

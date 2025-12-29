@@ -14,6 +14,7 @@ public partial class TextureFactory : SubViewport
     private Texture2D _triangleShape;
     private Texture2D _starShape;
     private Texture2D _pentagonShape;
+    private IconLibrary _iconLibrary = new();
     
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -101,19 +102,19 @@ public partial class TextureFactory : SubViewport
 
         switch (definition.Shape)
         {
-            case TextureShape.Square:
+            case TokenShape.Square:
                 texture = _rectShape;
                 break;
-            case TextureShape.Circle:
+            case TokenShape.Circle:
                 texture = _circleShape;
                 break;
-            case TextureShape.HexPoint:
+            case TokenShape.HexPoint:
                 texture = _hexPointShape;
                 break;
-            case TextureShape.HexFlat:
+            case TokenShape.HexFlat:
                 texture = _hexFlatShape;
                 break;
-            case TextureShape.RoundedRect:
+            case TokenShape.RoundedRect:
                 texture = _roundedRectShape;
                 break;
             default:
@@ -213,9 +214,50 @@ public partial class TextureFactory : SubViewport
         label.AddThemeFontOverride("font", obj.Font);
         label.AddThemeFontSizeOverride("font_size", fontSize);
 
-        // Position at center
-        label.Position = new Vector2(obj.CenterX - halfWidth, obj.CenterY - halfHeight);
-        label.PivotOffset = new Vector2(halfWidth, halfHeight);
+        float xOffset = 0;
+        float yOffset = 0;
+        // Position at based on anchor
+        switch (obj.Anchor)
+        {
+            case TextureObject.AnchorPoint.TopLeft:
+                break;
+            case TextureObject.AnchorPoint.TopCenter:
+                xOffset = halfWidth;
+                break;
+            case TextureObject.AnchorPoint.TopRight:
+                xOffset = textSize.X;
+                break;
+            case TextureObject.AnchorPoint.MiddleLeft:
+                yOffset = halfHeight;
+                break;
+            case TextureObject.AnchorPoint.MiddleCenter:
+                xOffset = halfWidth;
+                yOffset = halfHeight;
+                break;
+            case TextureObject.AnchorPoint.MiddleRight:
+                xOffset = textSize.X;
+                yOffset = halfHeight;
+                break;
+            case TextureObject.AnchorPoint.BottomLeft:
+                yOffset = textSize.Y;
+                break;
+            case TextureObject.AnchorPoint.BottomCenter:
+                xOffset = halfWidth;
+                yOffset = textSize.Y;
+                break;
+            case TextureObject.AnchorPoint.BottomRight:
+                xOffset = textSize.X;
+                yOffset = textSize.Y;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        
+        
+        label.Position = new Vector2(obj.CenterX - xOffset, obj.CenterY - yOffset);
+        
+        label.PivotOffset = new Vector2(halfWidth, halfHeight); //always pivot at the center
+        
         label.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(label);
@@ -316,35 +358,8 @@ public partial class TextureFactory : SubViewport
         var tr = new TextureRect();
         Texture2D texture;
         
-        switch (obj.Type)  
-        {
-            case TextureObjectType.RectangleShape:
-                texture = _rectShape;
-                break;
-            case TextureObjectType.CircleShape:
-                texture = _circleShape;
-                break;
-            case TextureObjectType.HexFlatUpShape:
-                texture = _hexFlatShape;
-                break;
-            case TextureObjectType.HexPointUpShape:
-                texture = _hexPointShape;
-                break;
-            case TextureObjectType.TriangleShape:
-                texture = _triangleShape;   //TODO Change to TriangleShape
-                break;
-            
-            case TextureObjectType.StarShape:
-                texture = _starShape;   //TODO Change to TriangleShape
-                break;
-            
-            case TextureObjectType.PentagonShape:
-                texture = _pentagonShape;   //TODO Change to TriangleShape
-                break;
-
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        //caption has the key to the icon
+        texture = _iconLibrary.TextureFromKey(obj.Text);
 
         float scale = 0.8f;
         
@@ -420,6 +435,10 @@ public partial class TextureFactory : SubViewport
     public enum TextureObjectType
     {
         Text,
+        CoreShape,
+        ExtendedShape,
+        UserShape,
+        /*
         RectangleShape,
         CircleShape,
         HexFlatUpShape,
@@ -427,9 +446,10 @@ public partial class TextureFactory : SubViewport
         TriangleShape,
         StarShape,
         PentagonShape
+        */
     }
 
-    public enum TextureShape
+    public enum TokenShape
     {
         Square = 0, 
         Circle = 1, 
@@ -442,13 +462,22 @@ public partial class TextureFactory : SubViewport
     {
         public int Width { get; set; } = 256;
         public int Height { get; set; } = 256;
-        public TextureShape Shape { get; set; } = TextureShape.Square;
+        public TokenShape Shape { get; set; } = TokenShape.Square;
         public Color BackgroundColor { get; set; } = Colors.White;
         public List<TextureObject> Objects { get; set; } = new List<TextureObject>();
     }
 
     public class TextureObject
     {
+        public enum AnchorPoint {TopLeft, TopCenter, TopRight, MiddleLeft, MiddleCenter, MiddleRight, BottomLeft, BottomCenter, BottomRight};
+        
+        public TextureObject()
+        {
+            CenterX = Width / 2;
+            CenterY = Height / 2;
+            Anchor = AnchorPoint.MiddleCenter;
+        }
+        
         public TextureObjectType Type { get; set; }
         
         public bool TriangleFace { get; set; }
@@ -459,9 +488,78 @@ public partial class TextureFactory : SubViewport
         public int Width { get; set; }
         public int CenterX { get; set; }
         public int CenterY { get; set; }
+        
+        public AnchorPoint Anchor { get; set; }
         public int RotationDegrees { get; set; } 
         public bool Multiline { get; set; }
+
+
+        public static AnchorPoint AnchorStringToEnum(string anchor)
+        {
+            switch (anchor.ToLower())
+            {
+                case "tl":
+                    return AnchorPoint.TopLeft;
+                case "tc":
+                    return AnchorPoint.TopCenter;
+                case "tr":
+                    return AnchorPoint.TopRight;
+                case "ml":
+                    return AnchorPoint.MiddleLeft;
+                case "mc":
+                    return AnchorPoint.MiddleCenter;
+                case "mr":
+                    return AnchorPoint.MiddleRight;
+                case "bl":
+                    return AnchorPoint.BottomLeft;
+                case "bc":
+                    return AnchorPoint.BottomCenter;
+                case "br":
+                    return AnchorPoint.BottomRight;
+                
+                default:
+                    return AnchorPoint.TopLeft;
+            }
+        } 
+        
+        public static string AnchorEnumToString(AnchorPoint anchorEnum)
+        {
+            switch (anchorEnum)
+            {
+                case AnchorPoint.TopLeft:
+                    return "TL";
+                    
+                case AnchorPoint.TopCenter:
+                    return "TC";
+                    
+                case AnchorPoint.TopRight:
+                    return "TR";
+                    
+                case AnchorPoint.MiddleLeft:
+                    return "ML";
+                    
+                case AnchorPoint.MiddleCenter:
+                    return "MC";
+                    
+                case AnchorPoint.MiddleRight:
+                    return "MR";
+                    
+                case AnchorPoint.BottomLeft:
+                    return "BL";
+                    
+                case AnchorPoint.BottomCenter:
+                    return "BC";
+                    
+                case AnchorPoint.BottomRight:
+                    return "BR";
+                    
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(anchorEnum), anchorEnum, null);
+            }
+        }
     }
+    
+    
 
     public class TextureQueueEntry
     {

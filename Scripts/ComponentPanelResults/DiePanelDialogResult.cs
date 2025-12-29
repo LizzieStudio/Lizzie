@@ -13,7 +13,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 	private ComponentPreview _preview;
 
 	[Export] private QuickTextureEntry[] _quickSideEntries;
-	
+
+	private IconLibrary _iconLibrary = new();
 
 	public override void _Ready()
 	{
@@ -39,6 +40,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 		{
 			l.TextValue = (i + 1).ToString();
 			l.FieldChanged += (sender, args) => UpdatePreview();
+			l.SetIcons(_iconLibrary);
 			i++;
 		}
 		

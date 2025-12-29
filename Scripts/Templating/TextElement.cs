@@ -7,47 +7,39 @@ namespace TTSS.Scripts.Templating;
 
 
 
-public partial class TextElement : TemplateElement
+public class TextElement : TemplateElement
 {
-	[Export] private LineEdit _caption;
-	[Export] private ColorPickerButton _foregroundColor;
+
 
 	
 	
 	
 	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
+	public TextElement(): base()
 	{
-		base._Ready();
-		
 		ElementType = ITemplateElement.TemplateElementType.Text;
 
-		Parameters.Add(new TemplateParameter{ Name = "Text" });
-		Parameters.Add(new TemplateParameter{ Name = "ForegroundColor", Value = (Colors.Black).ToString()});
-		
+		Parameters.Add(new TemplateParameter{ Name = "Text", Value=string.Empty });
+		Parameters.Add(new TemplateParameter
+		{ 
+			Name = "ForegroundColor", 
+			Value = (Colors.Black).ToHtml(), 
+			Type=TemplateParameter.TemplateParameterType.Color
+		});
 	}
 
-	public override List<TextureFactory.TextureObject> ElementData
-	{
-		get
-		{
+	public override List<TextureFactory.TextureObject> GetElementData(TextureContext context){
+	
 			var l = new List<TextureFactory.TextureObject>();
 
-			var t = new TextureFactory.TextureObject
-			{
-				CenterX = Parameters.EvaluateNumberParameter("X"),
-				CenterY = Parameters.EvaluateNumberParameter("Y"),
-				Height = Parameters.EvaluateNumberParameter("Height"),
-				Width = Parameters.EvaluateNumberParameter("Width"),
-				RotationDegrees = Parameters.EvaluateNumberParameter("Rotation"),
-				Text = Parameters.EvaluateTextParameter( "Text"),
-				ForegroundColor = Parameters.EvaluateColorParameter("ForegroundColor"),
-			};
+			var t = new TextureFactory.TextureObject();
+			
+			UpdateCoreParameterData(t, context);
+			t.Text = EvaluateTextParameter(Parameters, "Text", context);
+			t.ForegroundColor = EvaluateColorParameter(Parameters, "ForegroundColor", context);
 			
 			l.Add(t);
 			return l;
-		}
-		
 	}
 
 	private static int ForceParse(string s)
@@ -55,11 +47,7 @@ public partial class TextElement : TemplateElement
 		if (int.TryParse(s, out var i)) return i;
 		return 0;
 	}
-
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
-	}
+	
 }
 
 public class TextElementData

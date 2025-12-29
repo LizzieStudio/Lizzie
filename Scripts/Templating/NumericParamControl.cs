@@ -53,6 +53,7 @@ public partial class NumericParamControl : HBoxContainer, IParamControl
 
 	private void RaiseParameterUpdated(string value)
 	{
+		_parameter.Value = value;
 		ParameterUpdated?.Invoke(this, new TemplateParamUpdateEventArgs {Parameter = _parameter});
 	}
 	

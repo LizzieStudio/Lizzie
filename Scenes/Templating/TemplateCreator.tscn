@@ -1,9 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://0wsvxlpthnkp"]
+[gd_scene load_steps=4 format=3 uid="uid://0wsvxlpthnkp"]
 
 [ext_resource type="Script" uid="uid://blvugxyae05ee" path="res://Scripts/Templating/TemplateCreator.cs" id="1_wn7e0"]
 [ext_resource type="Texture2D" uid="uid://73pb5eqwq0y4" path="res://Textures/Shapes/square.png" id="2_cvjoa"]
-[ext_resource type="PackedScene" uid="uid://bu73q18jh72yk" path="res://Scenes/Templating/NumericParam.tscn" id="2_hnkns"]
-[ext_resource type="PackedScene" uid="uid://ctjcejwbo05qm" path="res://Scenes/Templating/ColorParam.tscn" id="3_4cjo0"]
 [ext_resource type="Script" uid="uid://bl1v61t413ui2" path="res://Scripts/Templating/BoundsRect.cs" id="5_4cjo0"]
 
 [node name="TemplateCreator" type="MarginContainer" node_paths=PackedStringArray("_preview")]
@@ -60,25 +58,12 @@ size_flags_vertical = 3
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="TemplateElements" type="VBoxContainer" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/ScrollContainer"]
+[node name="TemplateTree" type="Tree" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-
-[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/ScrollContainer/TemplateElements"]
-layout_mode = 2
-text = "Element 1"
-
-[node name="Label2" type="Label" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/ScrollContainer/TemplateElements"]
-layout_mode = 2
-text = "Element 1"
-
-[node name="Label3" type="Label" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/ScrollContainer/TemplateElements"]
-layout_mode = 2
-text = "Element 1"
+size_flags_vertical = 3
+hide_root = true
+drop_mode_flags = 2
 
 [node name="ScrollContainer2" type="ScrollContainer" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer"]
 layout_mode = 2
@@ -88,12 +73,6 @@ size_flags_vertical = 3
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="NumericParam" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/ScrollContainer2/TemplateParams" instance=ExtResource("2_hnkns")]
-layout_mode = 2
-
-[node name="ColorParam" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/ScrollContainer2/TemplateParams" instance=ExtResource("3_4cjo0")]
-layout_mode = 2
 
 [node name="Panel" type="Panel" parent="Panel/VBoxContainer/HBoxContainer"]
 layout_mode = 2
@@ -116,6 +95,7 @@ grow_vertical = 2
 texture = ExtResource("2_cvjoa")
 
 [node name="BoundsRect" type="MarginContainer" parent="Panel/VBoxContainer/HBoxContainer/Panel/TextureRect"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

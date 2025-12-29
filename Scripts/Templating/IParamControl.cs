@@ -6,4 +6,6 @@ public interface IParamControl
 {
     void SetParameter(TemplateParameter parameter);
     TemplateParameter GetParameter();
+    
+    event EventHandler<TemplateParamUpdateEventArgs> ParameterUpdated;
 }

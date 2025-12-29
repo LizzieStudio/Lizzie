@@ -44,6 +44,8 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 	private QuickTextureEntry _frontField;
 	private QuickTextureEntry _backField;
 
+	private IconLibrary _iconLibrary = new();
+
 	public override void _Ready()
 	{
 		ComponentType = VisualComponentBase.VisualComponentType.Token;
@@ -82,6 +84,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		//_quickTextColor.ColorChanged += OnPreviewTextColorChange;
 		_frontField = GetNode<QuickTextureEntry>("%FrontField");
 		_frontField.FieldChanged += (sender, args) => UpdatePreview();
+		_frontField.SetIcons(_iconLibrary);
 		
 		_quickBackgroundColor.ColorChanged += OnBackgroundColorChanged;
 		_quickBackCheckbox.Pressed += OnQuickBackCheckboxChange;
@@ -91,6 +94,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
 		_backField = GetNode<QuickTextureEntry>("%BackField");
 		_backField.FieldChanged += (sender, args) => UpdatePreview();
+		_backField.SetIcons(_iconLibrary);
 		
 		_shapePicker = GetNode<OptionButton>("%ShapePicker");
 		_shapePicker.ItemSelected += ShapePickerOnItemSelected;
