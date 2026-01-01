@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection.Metadata;
 
@@ -15,12 +16,12 @@ public partial class TextureFactory : SubViewport
     private Texture2D _starShape;
     private Texture2D _pentagonShape;
     private IconLibrary _iconLibrary = new();
-    
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         _viewport = this;
-        
+
         _circleShape = ResourceLoader.Load("res://Textures/Shapes/circle.png") as Texture2D;
         _rectShape = ResourceLoader.Load("res://Textures/Shapes/square.png") as Texture2D;
         _hexPointShape = ResourceLoader.Load("res://Textures/Shapes/hex.png") as Texture2D;
@@ -61,16 +62,16 @@ public partial class TextureFactory : SubViewport
             InitiateTextureGeneration(_activeQueueEntry.TextureDefinition);
         }
     }
-    
+
     SubViewport _viewport;
     private int _viewportUpdating;
     private TextureQueueEntry _activeQueueEntry;
     private int _skip;
     private const int Take = 10;
 
-    
+
     private Queue<TextureQueueEntry> _textureGenerationQueue = new();
-    
+
     /// <summary>
     /// Generate a texture
     /// </summary>
@@ -79,7 +80,7 @@ public partial class TextureFactory : SubViewport
         Action<ImageTexture> textureReadyCallback)
     {
         ExpandMultipleShapes(definition);
-        
+
         var tqe = new TextureQueueEntry
         {
             TextureDefinition = definition,
@@ -91,13 +92,13 @@ public partial class TextureFactory : SubViewport
 
     private void InitiateTextureGeneration(TextureDefinition definition)
     {
-                // For drawing, we need to render to a texture using a viewport
+        // For drawing, we need to render to a texture using a viewport
         // Create a SubViewport for rendering
         _viewport.Size = new Vector2I(definition.Width, definition.Height);
         _viewport.RenderTargetClearMode = SubViewport.ClearMode.Always;
         _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
         _viewport.TransparentBg = true;
-        
+
         var tr = new TextureRect();
 
         Texture2D texture;
@@ -122,38 +123,37 @@ public partial class TextureFactory : SubViewport
             default:
                 throw new ArgumentOutOfRangeException();
         }
-        
-        
+
+
         var image = texture.GetImage();
         tr.Size = new Vector2(_activeQueueEntry.TextureDefinition.Width, _activeQueueEntry.TextureDefinition.Height);
         tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
         tr.Texture = ImageTexture.CreateFromImage(image);
-        
+
         var bgRect = new ColorRect();
         bgRect.Color = definition.BackgroundColor;
         bgRect.Size = new Vector2(definition.Width, definition.Height);
         tr.AddChild(bgRect);
-        
+
         _viewport.AddChild(tr);
 
         _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
-        
+
         _viewportUpdating = 2;
         _skip = 0;
-
     }
-    
+
     private void GenerateSecondaryTexture(TextureDefinition definition)
     {
         //cleanup
-        foreach(var c in _viewport.GetChildren()) c.QueueFree();
-        
+        foreach (var c in _viewport.GetChildren()) c.QueueFree();
+
         // Create a ColorRect for the background
         var bgRect = new ColorRect();
         bgRect.Color = definition.BackgroundColor;
         bgRect.Size = new Vector2(definition.Width, definition.Height);
         //_viewport.AddChild(bgRect);
-        
+
         var tr = new TextureRect();
         var texture = _viewport.GetTexture();
         var image = texture.GetImage();
@@ -162,10 +162,10 @@ public partial class TextureFactory : SubViewport
         _viewport.AddChild(tr);
 
         RenderObjects(definition);
-        
+
         // Get the rendered texture
         _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
-        
+
         _viewportUpdating = 2;
         _skip++;
     }
@@ -182,10 +182,9 @@ public partial class TextureFactory : SubViewport
             {
                 RenderShape(obj);
             }
-
         }
     }
-    
+
     private void RenderText(TextureObject obj)
     {
         if (obj.TriangleFace)
@@ -201,14 +200,14 @@ public partial class TextureFactory : SubViewport
     private void RenderRectangleText(TextureObject obj)
     {
         // Get text size for centering
-        
+
         int fontSize = AutosizeFont(obj.Text, obj.Font, obj.Height, obj.Width, 6, 72);
         Vector2 textSize = obj.Font.GetStringSize(obj.Text, fontSize: fontSize);
 
         // Calculate the position to center the text
         float halfWidth = textSize.X / 2f;
         float halfHeight = textSize.Y / 2f;
-        
+
         // Create a Label for the text
         var label = new Label();
         label.Text = obj.Text;
@@ -254,22 +253,21 @@ public partial class TextureFactory : SubViewport
             default:
                 throw new ArgumentOutOfRangeException();
         }
-        
-        
+
+
         label.Position = new Vector2(obj.CenterX - xOffset, obj.CenterY - yOffset);
-        
+
         label.PivotOffset = new Vector2(halfWidth, halfHeight); //always pivot at the center
-        
+
         label.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(label);
-
     }
 
     private void ExpandMultipleShapes(TextureDefinition definition)
     {
         var l = new List<TextureObject>();
-        
+
         foreach (var obj in definition.Objects)
         {
             if (obj.Quantity > 1)
@@ -277,17 +275,17 @@ public partial class TextureFactory : SubViewport
                 l.AddRange(BuildMultiShape(obj));
             }
         }
-        
+
         definition.Objects.RemoveAll(x => x.Quantity > 1);
-        
+
         definition.Objects.AddRange(l);
     }
 
     private List<TextureObject> BuildMultiShape(TextureObject obj)
     {
-        if (obj.Quantity == 1) return new List<TextureObject> {obj};
+        if (obj.Quantity == 1) return new List<TextureObject> { obj };
 
-        return BuildMultiShapeRectangle(obj);
+        return obj.TriangleFace ? BuildMultiShapeTriangle(obj) : BuildMultiShapeRectangle(obj);
     }
 
     private List<TextureObject> BuildMultiShapeRectangle(TextureObject obj)
@@ -307,15 +305,15 @@ public partial class TextureFactory : SubViewport
         var w34 = w2 * 1.5f;
         var h56 = h6 * 5;
         var w56 = w6 * 5;
-        
-        
+
+
         switch (obj.Quantity)
         {
             case 2:
                 nr[0] = new Rect2(w4, h4, w2, h2);
                 nr[1] = new Rect2(w34, h34, w2, h2);
                 break;
-            
+
             case 3:
 
                 if (h2 > w2)
@@ -332,14 +330,14 @@ public partial class TextureFactory : SubViewport
                 }
 
                 break;
-            
+
             case 4:
                 nr[0] = new Rect2(w4, h4, w2, h2);
                 nr[1] = new Rect2(w34, h4, w2, h2);
                 nr[2] = new Rect2(w4, h34, w2, h2);
                 nr[3] = new Rect2(w34, h34, w2, h2);
                 break;
-            
+
             case 5:
                 nr[0] = new Rect2(w6, h6, w3, h3);
                 nr[1] = new Rect2(w56, h6, w3, h3);
@@ -347,7 +345,7 @@ public partial class TextureFactory : SubViewport
                 nr[3] = new Rect2(w6, h56, w3, h3);
                 nr[4] = new Rect2(w56, h56, w3, h3);
                 break;
-            
+
             case 6:
                 if (w2 > h2)
                 {
@@ -367,8 +365,9 @@ public partial class TextureFactory : SubViewport
                     nr[4] = new Rect2(w56, h2, w3, h3);
                     nr[5] = new Rect2(w56, h56, w3, h3);
                 }
+
                 break;
-            
+
             case 7:
                 if (w2 > h2)
                 {
@@ -390,8 +389,9 @@ public partial class TextureFactory : SubViewport
                     nr[5] = new Rect2(w56, h56, w3, h3);
                     nr[6] = new Rect2(w2, h2, w3, h3);
                 }
+
                 break;
-            
+
             case 8:
                 nr[0] = new Rect2(w6, h6, w3, h3);
                 nr[1] = new Rect2(w2, h6, w3, h3);
@@ -402,7 +402,7 @@ public partial class TextureFactory : SubViewport
                 nr[6] = new Rect2(w6, h2, w3, h3);
                 nr[7] = new Rect2(w56, h2, w3, h3);
                 break;
-            
+
             case 9:
                 nr[0] = new Rect2(w6, h6, w3, h3);
                 nr[1] = new Rect2(w2, h6, w3, h3);
@@ -416,9 +416,9 @@ public partial class TextureFactory : SubViewport
                 break;
 
             default:
-                nr[0] = new Rect2(w2/2, h2/2, w2, h2);
-                nr[1] = new Rect2(w2 * 1.5f, h2/2, w2, h2);
-                nr[2] = new Rect2(w2/2, h2 * 1.5f, w2, h2);
+                nr[0] = new Rect2(w2 / 2, h2 / 2, w2, h2);
+                nr[1] = new Rect2(w2 * 1.5f, h2 / 2, w2, h2);
+                nr[2] = new Rect2(w2 / 2, h2 * 1.5f, w2, h2);
                 nr[3] = new Rect2(w2 * 1.5f, h2 * 1.5f, w2, h2);
                 break;
         }
@@ -434,22 +434,154 @@ public partial class TextureFactory : SubViewport
             to.RotationDegrees = obj.RotationDegrees;
             shapes.Add(to);
         }
-        
+
         return shapes;
     }
-    
+
+    private List<TextureObject> BuildMultiShapeTriangle(TextureObject obj)
+    {
+        var shapes = new List<TextureObject>();
+
+        var tris = new Vector3[9];     //x, y = origin. z = rotation degrees
+        var nt = new Vector3[obj.Quantity];
+
+        var x = obj.CenterX;
+        var y = obj.CenterY;
+        var rr = Mathf.DegToRad(obj.RotationDegrees);
+        int h2;
+        int b6;
+
+        if (obj.Quantity < 5)
+        {
+            //triangles for 2-4
+            int b4 = obj.Width / 4;
+            h2 = (int)(Math.Sqrt(3) * obj.Width / 4);
+
+            tris[0] = new Vector3(0, h2, 0);
+            tris[1] = new Vector3(-b4, 0, 0);
+            tris[2] = new Vector3(0, h2 * 3 / 4, 180);
+            tris[3] = new Vector3(b4, 0, 0);
+        }
+        else
+        {
+            //triangles for 5-9
+            float s1 = 0.8f;
+            float x1 = 1.1f;
+            float s2 = 0.7f;
+            float x2 = 0.1f;
+            h2 = (int)(Math.Sqrt(3) * obj.Width / 6);
+            b6 = obj.Width / 6;
+            tris[0] = new Vector3(0, 2 * h2, 0);
+            tris[1] = new Vector3(-b6, h2 * x1, 0);
+            tris[2] = new Vector3(0, h2 * 2 * s1, 180);
+            tris[3] = new Vector3(b6, h2 * x1, 0);
+            tris[4] = new Vector3(-2 * b6, h2 * x2, 0);
+            tris[5] = new Vector3(-b6, h2 * s2, 180);
+            tris[6] = new Vector3(0, h2*x2, 0);
+            tris[7] = new Vector3(b6, h2 * s2, 180);
+            tris[8] = new Vector3(2 * b6,h2*x2, 0);
+        }
+
+        switch (obj.Quantity)
+        {
+            case 2:
+                nt[0] = tris[0];
+                nt[1] = tris[2];
+                break;
+
+            case 3:
+                nt[0] = tris[0];
+                nt[1] = tris[1];
+                nt[2] = tris[3];
+                break;
+
+            case 4:
+                nt[0] = tris[0];
+                nt[1] = tris[1];
+                nt[2] = tris[2];
+                nt[3] = tris[3];
+                break;
+
+            case 5:
+                nt[0] = tris[0];
+                nt[1] = tris[1];
+                nt[2] = tris[3];
+                nt[3] = tris[5];
+                nt[4] = tris[7];
+                break;
+
+            case 6:
+                nt[0] = tris[0];
+                nt[1] = tris[1];
+                nt[2] = tris[3];
+                nt[3] = tris[4];
+                nt[4] = tris[6];
+                nt[5] = tris[8];
+                break;
+
+            case 7:
+                nt[0] = tris[0];
+                nt[1] = tris[1];
+                nt[2] = tris[2];
+                nt[3] = tris[3];
+                nt[4] = tris[4];
+                nt[5] = tris[6];
+                nt[6] = tris[8];
+                break;
+
+            case 8:
+                nt[0] = tris[0];
+                nt[1] = tris[1];
+                nt[2] = tris[2];
+                nt[3] = tris[3];
+                nt[4] = tris[4];
+                nt[5] = tris[5];
+                nt[6] = tris[7];
+                nt[7] = tris[8];
+                break;
+
+            case 9:
+                nt[0] = tris[0];
+                nt[1] = tris[1];
+                nt[2] = tris[2];
+                nt[3] = tris[3];
+                nt[4] = tris[4];
+                nt[5] = tris[5];
+                nt[6] = tris[6];
+                nt[7] = tris[7];
+                nt[8] = tris[8];
+                break;
+        }
+
+        foreach (var t in nt)
+        {
+            var to = new TextureObject(obj);
+
+            to.CenterX = (int)(obj.CenterX + t.X * Mathf.Cos(rr) + t.Y * Mathf.Sin(rr));
+            to.CenterY = (int)(obj.CenterY + t.Y * Mathf.Cos(rr) + t.X * Mathf.Sin(rr));
+
+            to.Height = h2;
+            to.Width = h2;
+            to.Quantity = 1;
+            to.RotationDegrees = obj.RotationDegrees + (int)t.Z;
+            shapes.Add(to);
+        }
+
+        return shapes;
+    }
+
     private void RenderTriangleText(TextureObject obj)
     {
         Vector2 textSize = obj.Font.GetStringSize(obj.Text, fontSize: 12);
         if (textSize.Y == 0) return;
-        
+
         var ratio = textSize.X / textSize.Y;
-        
+
         var bounds = ScaleRectangleInTriangle(obj.Width, ratio);
 
         var hh = bounds.Y / 2;
         var rotRad = Mathf.DegToRad(obj.RotationDegrees);
-        
+
         var newX = obj.CenterX + hh * Mathf.Sin(rotRad);
         var newY = obj.CenterY + hh * Mathf.Cos(rotRad);
 
@@ -467,7 +599,7 @@ public partial class TextureFactory : SubViewport
             TriangleFace = false,
             Type = TextureObjectType.Text
         };
-        
+
         RenderRectangleText(o);
     }
 
@@ -499,13 +631,13 @@ public partial class TextureFactory : SubViewport
 
     private void RenderShapeInTriangle(TextureObject obj)
     {
-        var ratio = 1;  //shapes are always bounded by a square
-        
+        var ratio = 1; //shapes are always bounded by a square
+
         var bounds = ScaleRectangleInTriangle(obj.Width, ratio);
 
         var hh = bounds.Y / 2;
         var rotRad = Mathf.DegToRad(obj.RotationDegrees);
-        
+
         var newX = obj.CenterX + hh * Mathf.Sin(rotRad);
         var newY = obj.CenterY + hh * Mathf.Cos(rotRad);
 
@@ -520,43 +652,43 @@ public partial class TextureFactory : SubViewport
             RotationDegrees = obj.RotationDegrees,
             ForegroundColor = obj.ForegroundColor,
             TriangleFace = false,
-            Type = obj.Type
+            Type = obj.Type,
+            Text = obj.Text
         };
-        
+
         RenderShapeInRectangle(o);
     }
-    
+
     private void RenderShapeInRectangle(TextureObject obj)
     {
         var tr = new TextureRect();
         Texture2D texture;
-        
+
         //caption has the key to the icon
         texture = _iconLibrary.TextureFromKey(obj.Text);
 
         float scale = 0.8f;
-        
+
         var scaleWidth = obj.Width * scale;
         var scaleHeight = obj.Height * scale;
-        
+
         var image = texture.GetImage();
         //image.Resize((int)scaleWidth, (int)scaleHeight);
-        
+
         tr.Size = new Vector2(scaleWidth, scaleHeight);
         tr.CustomMinimumSize = new Vector2(scaleWidth, scaleHeight);
         tr.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-        
+
         tr.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
         tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
         tr.Texture = ImageTexture.CreateFromImage(image);
 
-        
-        
+
         var bgRect = new ColorRect();
         bgRect.Color = obj.ForegroundColor;
-        bgRect.Size = new Vector2(scaleWidth, scaleHeight) ;
+        bgRect.Size = new Vector2(scaleWidth, scaleHeight);
         tr.AddChild(bgRect);
-        
+
         var halfWidth = scaleWidth / 2;
         var halfHeight = scaleHeight / 2;
         tr.Position = new Vector2(obj.CenterX - halfWidth, obj.CenterY - halfHeight);
@@ -564,22 +696,21 @@ public partial class TextureFactory : SubViewport
         tr.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(tr);
-    }   
-    
+    }
+
     private void AfterRender()
     {
         var texture = _viewport.GetTexture();
         var image = texture.GetImage();
-        
+
         // Create ImageTexture from the rendered image
         var imageTexture = ImageTexture.CreateFromImage(image);
 
-        
-        
+
         _activeQueueEntry.TextureReadyCallback?.Invoke(imageTexture);
-        
+
         //cleanup
-        foreach(var c in _viewport.GetChildren()) c.QueueFree();
+        foreach (var c in _viewport.GetChildren()) c.QueueFree();
         _activeQueueEntry = null;
     }
 
@@ -625,9 +756,9 @@ public partial class TextureFactory : SubViewport
 
     public enum TokenShape
     {
-        Square = 0, 
-        Circle = 1, 
-        HexPoint = 2, 
+        Square = 0,
+        Circle = 1,
+        HexPoint = 2,
         HexFlat = 3,
         RoundedRect = 4
     }
@@ -643,8 +774,19 @@ public partial class TextureFactory : SubViewport
 
     public class TextureObject
     {
-        public enum AnchorPoint {TopLeft, TopCenter, TopRight, MiddleLeft, MiddleCenter, MiddleRight, BottomLeft, BottomCenter, BottomRight};
-        
+        public enum AnchorPoint
+        {
+            TopLeft,
+            TopCenter,
+            TopRight,
+            MiddleLeft,
+            MiddleCenter,
+            MiddleRight,
+            BottomLeft,
+            BottomCenter,
+            BottomRight
+        };
+
         public TextureObject()
         {
             CenterX = Width / 2;
@@ -668,9 +810,9 @@ public partial class TextureFactory : SubViewport
             Quantity = obj.Quantity;
             Multiline = obj.Multiline;
         }
-        
+
         public TextureObjectType Type { get; set; }
-        
+
         public bool TriangleFace { get; set; }
         public string Text { get; set; }
         public Color ForegroundColor { get; set; } = Colors.Black;
@@ -679,14 +821,14 @@ public partial class TextureFactory : SubViewport
         public int Width { get; set; }
         public int CenterX { get; set; }
         public int CenterY { get; set; }
-        
+
         public AnchorPoint Anchor { get; set; }
-        public int RotationDegrees { get; set; } 
+        public int RotationDegrees { get; set; }
         public bool Multiline { get; set; }
-        
+
         public int Quantity { get; set; }
-        
-       
+
+
         public static AnchorPoint AnchorStringToEnum(string anchor)
         {
             switch (anchor.ToLower())
@@ -709,50 +851,49 @@ public partial class TextureFactory : SubViewport
                     return AnchorPoint.BottomCenter;
                 case "br":
                     return AnchorPoint.BottomRight;
-                
+
                 default:
                     return AnchorPoint.TopLeft;
             }
-        } 
-        
+        }
+
         public static string AnchorEnumToString(AnchorPoint anchorEnum)
         {
             switch (anchorEnum)
             {
                 case AnchorPoint.TopLeft:
                     return "TL";
-                    
+
                 case AnchorPoint.TopCenter:
                     return "TC";
-                    
+
                 case AnchorPoint.TopRight:
                     return "TR";
-                    
+
                 case AnchorPoint.MiddleLeft:
                     return "ML";
-                    
+
                 case AnchorPoint.MiddleCenter:
                     return "MC";
-                    
+
                 case AnchorPoint.MiddleRight:
                     return "MR";
-                    
+
                 case AnchorPoint.BottomLeft:
                     return "BL";
-                    
+
                 case AnchorPoint.BottomCenter:
                     return "BC";
-                    
+
                 case AnchorPoint.BottomRight:
                     return "BR";
-                    
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(anchorEnum), anchorEnum, null);
             }
         }
     }
-    
-    
+
 
     public class TextureQueueEntry
     {
