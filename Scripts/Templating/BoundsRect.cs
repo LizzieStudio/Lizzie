@@ -228,6 +228,9 @@ public partial class BoundsRect : MarginContainer
 
     public void SetBounds(Rect2I rect, TextureContext context)
     {
+        //change from center origin to top left origin
+        rect.Position = new(rect.Position.X - rect.Size.X / 2, rect.Position.Y - rect.Size.Y / 2);
+        
         AddThemeConstantOverride("margin_left", rect.Position.X);
         AddThemeConstantOverride("margin_top", rect.Position.Y);
         AddThemeConstantOverride("margin_right", (int)context.ParentSize.X - rect.Position.X - rect.Size.X);

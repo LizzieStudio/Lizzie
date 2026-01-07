@@ -15,7 +15,9 @@ public partial class TemplateCreator : MarginContainer
     private Tree _elementTree;
     private VBoxContainer _paramContainer;
 
-    private Button _testButton;
+    private Button _textButton;
+    private Button _closeButton;
+    private Button _imageButton;
     
     private BoundsRect _boundsRect;
 
@@ -23,6 +25,9 @@ public partial class TemplateCreator : MarginContainer
     private PackedScene _numberParam;
     private PackedScene _colorParam;
     private PackedScene _anchorParam;
+    private PackedScene _boolParam;
+    private PackedScene _horJustifyParam;
+    private PackedScene _verJustifyParam;
 
     private ITemplateElement _selectedElement;
     private TreeItem _rootItem;
@@ -38,9 +43,15 @@ public partial class TemplateCreator : MarginContainer
     {
         _elementTree = GetNode<Tree>("%TemplateTree");
         _paramContainer = GetNode<VBoxContainer>("%TemplateParams");
-        _testButton = GetNode<Button>("%TestButton");
-        _testButton.Pressed += TestFunction;
+        _textButton = GetNode<Button>("%TextButton");
+        _textButton.Pressed += AddText;
+        
+        _imageButton = GetNode<Button>("%ImageButton");
+        _imageButton.Pressed += AddImage;
 
+        _closeButton = GetNode<Button>("%CloseButton");
+        _closeButton.Pressed += Hide;
+        
         _boundsRect = GetNode<BoundsRect>("%BoundsRect");
         _boundsRect.Hide();
         _boundsRect.BoundsChanged += BoundsChanged;
@@ -49,6 +60,9 @@ public partial class TemplateCreator : MarginContainer
         _numberParam = GD.Load<PackedScene>("res://Scenes/Templating/NumericParam.tscn");
         _colorParam = GD.Load<PackedScene>("res://Scenes/Templating/ColorParam.tscn");
         _anchorParam = GD.Load<PackedScene>("res://Scenes/Templating/AnchorParam.tscn");
+        _boolParam = GD.Load<PackedScene>("res://Scenes/Templating/BooleanParam.tscn");
+        _horJustifyParam = GD.Load<PackedScene>("res://Scenes/Templating/HorJustifyParam.tscn");
+        _verJustifyParam = GD.Load<PackedScene>("res://Scenes/Templating/VerJustifyParam.tscn");
         
         _rootItem = _elementTree.CreateItem(); //create root item
         _elementTree.ItemSelected += TreeItemSelected;
@@ -74,11 +88,14 @@ public partial class TemplateCreator : MarginContainer
         if (_selectedElement == null) return;
     
         var m = _boundsRect.GetBounds();
+
+        int w = (int)_textureContext.ParentSize.X - m.l - m.r;
+        int h = (int)_textureContext.ParentSize.Y - m.t - m.b;
             
-        UpdateParamControl("X", m.l.ToString());
-        UpdateParamControl("Y", m.t.ToString());
-        UpdateParamControl("Width", (_textureContext.ParentSize.X - m.l - m.r).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Height", (_textureContext.ParentSize.Y - m.t - m.b).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("X", (m.l + w/2).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("Y", (m.t+ h/2).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("Width", w.ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("Height", h.ToString(CultureInfo.InvariantCulture));
 
         _updateRequired = true;
     }
@@ -122,13 +139,26 @@ public partial class TemplateCreator : MarginContainer
 
     private void AddTextureElement(ITemplateElement.TemplateElementType type)
     {
-        var t = new TextElement();
-
         var max = GetMaxId(_rootItem) + 1;
 
+        TemplateElement t;
+        string prefix;
+
+        if (type == ITemplateElement.TemplateElementType.Image)
+        {
+            t = new ImageElement();
+            prefix = "Image";
+        }
+        else
+        {
+            t = new TextElement();
+            prefix = "Text";
+        }
+        
+        
         var ni = _elementTree.CreateItem(_rootItem);
         ni.SetMetadata(0, max);
-        ni.SetText(0, $"Text {max}");
+        ni.SetText(0, $"{prefix} {max}");
 
         t.Id = max;
 
@@ -185,6 +215,18 @@ public partial class TemplateCreator : MarginContainer
                 case TemplateParameter.TemplateParameterType.Anchor:
                     t = _anchorParam.Instantiate<ListParamControl>();
                     break;
+                case TemplateParameter.TemplateParameterType.Boolean:
+                    t = _boolParam.Instantiate<BooleanParamControl>();
+                    break;
+                
+                case TemplateParameter.TemplateParameterType.HorizontalAlignment:
+                    t = _horJustifyParam.Instantiate<ListParamControl>();
+                    break;
+                
+                case TemplateParameter.TemplateParameterType.VerticalAlignment:
+                    t = _verJustifyParam.Instantiate<ListParamControl>();
+                    break;
+                
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -222,8 +264,8 @@ public partial class TemplateCreator : MarginContainer
             {
                 td.Objects.Add(new TextureFactory.TextureObject
                 {
-                    Width = td.Width,
-                    Height = td.Height,
+                    Width = l.Width,
+                    Height = l.Height,
                     CenterX = l.CenterX,
                     CenterY = l.CenterY,
                     Anchor = l.Anchor,
@@ -231,7 +273,11 @@ public partial class TemplateCreator : MarginContainer
                     Text = l.Text,
                     ForegroundColor = l.ForegroundColor,
                     Font = new SystemFont(),
-                    Type = TextureFactory.TextureObjectType.Text
+                    FontSize = l.FontSize,
+                    Autosize = l.Autosize,
+                    HorizontalAlignment = l.HorizontalAlignment,
+                    VerticalAlignment = l.VerticalAlignment,
+                    Type = l.Type
                 });
             }
         }
@@ -272,51 +318,25 @@ public partial class TemplateCreator : MarginContainer
         int hh = (int)te.Height / 2;
         int hw = (int)te.Width / 2;
         
-        Vector2I offset = new Vector2I(te.CenterX, te.CenterY);
+     
         
-        switch (te.Anchor)
-        {
-            case TextureFactory.TextureObject.AnchorPoint.TopLeft:
-                offset = Vector2I.Zero;
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.TopCenter:
-                offset = new Vector2I(hw, 0);
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.TopRight:
-                offset = new Vector2I(w, 0);
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.MiddleLeft:
-                offset = new Vector2I(0, hh);
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.MiddleCenter:
-                offset = new Vector2I(hw, hh);
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.MiddleRight:
-                offset = new Vector2I(w, hh);
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.BottomLeft:
-                offset = new Vector2I(0, h);
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.BottomCenter:
-                offset = new Vector2I(hw, h);
-                break;
-            case TextureFactory.TextureObject.AnchorPoint.BottomRight:
-                offset = new Vector2I(w, h);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-        
-        Vector2I p = new Vector2I(te.CenterX, te.CenterY) - offset;
+        Vector2I p = new Vector2I(te.CenterX, te.CenterY);
         
         var br = new Rect2I(p, te.Width, te.Height);
         _boundsRect.SetBounds(br, _textureContext);
     }
 
 
-    private void TestFunction()
+    private void AddText()
     {
         AddTextureElement(ITemplateElement.TemplateElementType.Text);
+        UpdateTexture(true);
+    }
+
+    private void AddImage()
+    {
+        AddTextureElement(ITemplateElement.TemplateElementType.Image);
+        UpdateTexture(true);
     }
 
     private void UpdatePreview(ImageTexture texture)

@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3 uid="uid://dcby0dsxedt5y"]
+
+[ext_resource type="Script" uid="uid://c3uyonib24r8s" path="res://Scripts/Templating/ListParamControl.cs" id="1_yrkjt"]
+[ext_resource type="Texture2D" uid="uid://dwo7yx4b16u42" path="res://Textures/UI/top.png" id="2_yrkjt"]
+[ext_resource type="Texture2D" uid="uid://bchencl2flpr" path="res://Textures/UI/middle.png" id="3_eico3"]
+[ext_resource type="Texture2D" uid="uid://b0rfd7n0nm6f" path="res://Textures/UI/bottom.png" id="4_m1ous"]
+[ext_resource type="Texture2D" uid="uid://cip23cunm7y51" path="res://Textures/UI/menu16.png" id="5_ee0og"]
+
+[node name="VerJustifyParam" type="HBoxContainer"]
+script = ExtResource("1_yrkjt")
+
+[node name="Caption" type="Label" parent="."]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Foreground"
+
+[node name="LineEdit" type="LineEdit" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="OptionButton" type="OptionButton" parent="."]
+layout_mode = 2
+size_flags_horizontal = 8
+item_count = 3
+popup/item_0/text = "Top"
+popup/item_0/icon = ExtResource("2_yrkjt")
+popup/item_0/id = 0
+popup/item_1/text = "Middle"
+popup/item_1/icon = ExtResource("3_eico3")
+popup/item_1/id = 1
+popup/item_2/text = "Bottom"
+popup/item_2/icon = ExtResource("4_m1ous")
+popup/item_2/id = 2
+
+[node name="Formula" type="Button" parent="."]
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+icon = ExtResource("5_ee0og")

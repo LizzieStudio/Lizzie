@@ -26,7 +26,7 @@ public class IconLibrary : Dictionary<string, IconEntry >
         Addl("Airplane", "airplane.png");
         Addl("Rifle", "rifle.png");
         Addl("Bow", "archery.png");
-        Addl("Book", "book.png");
+        Addl("Book-Closed", "book.png");
         Addl("Boots", "boots.png");
         Addl("Bullets", "bullet.png");
         Addl("Checkmark", "check.png");
@@ -63,6 +63,15 @@ public class IconLibrary : Dictionary<string, IconEntry >
         Addl("Pickaxe", "pickaxe.png");
         Addl("Ore", "ore.png");
         Addl("Gold Bars", "gold.png");
+        Addl("DNA", "dna.png");
+        Addl("Book-Open", "open-book.png");
+        Addl("Magic", "sparkler.png");
+        Addl("Laser", "laser.png");
+        Addl("Diamond", "diamond.png");
+        Addl("Barrel", "barrel.png");
+        Addl("Oil Drum", "oil-barrel.png");
+        Addl("Exclamation Mark", "exclamation.png");
+        Addl("Question Mark", "question.png");
     }
 
     private void Addl(string key, string value, bool isCore = false)
@@ -82,7 +91,10 @@ public class IconLibrary : Dictionary<string, IconEntry >
 
     public Texture2D TextureFromKey(string key)
     {
-        if (!ContainsKey(key)) return new Texture2D();
+        if (!ContainsKey(key))
+        {
+            return ResourceLoader.Load(BaseFolder + "notfound.png") as Texture2D;
+        }
         
         return ResourceLoader.Load(BaseFolder + this[key].FileName) as Texture2D;
     }

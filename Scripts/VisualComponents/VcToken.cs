@@ -436,6 +436,7 @@ public partial class VcToken : VisualComponentFlat
 			ForegroundColor = qtf.ForegroundColor,
 			Font= new SystemFont(),
 			Type = qtf.FaceType,
+			Autosize = true,
 			Quantity = qtf.Quantity
 		});
 		

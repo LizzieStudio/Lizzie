@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Runtime.InteropServices.ObjectiveC;
 
 public partial class TextureFactory : SubViewport
 {
@@ -197,13 +198,28 @@ public partial class TextureFactory : SubViewport
         }
     }
 
+    public static Vector2 GetTextBounds(Font font, int fontSize, string text)
+    {
+        return font.GetStringSize(text, fontSize:fontSize);
+    }
+
     private void RenderRectangleText(TextureObject obj)
     {
         // Get text size for centering
 
-        int fontSize = AutosizeFont(obj.Text, obj.Font, obj.Height, obj.Width, 6, 72);
-        Vector2 textSize = obj.Font.GetStringSize(obj.Text, fontSize: fontSize);
+        int fontSize = obj.FontSize;
+        if (obj.Autosize)
+        {
+            fontSize = AutosizeFont(obj.Text, obj.Font, obj.Height, obj.Width, 6, 72);
+        }
 
+        if (fontSize == 0) return;
+        
+        Vector2 textSize = GetTextBounds(obj.Font, fontSize, obj.Text);
+
+        if (textSize.X == 0 || textSize.Y == 0) return;
+        
+        
         // Calculate the position to center the text
         float halfWidth = textSize.X / 2f;
         float halfHeight = textSize.Y / 2f;
@@ -215,47 +231,8 @@ public partial class TextureFactory : SubViewport
         label.AddThemeFontOverride("font", obj.Font);
         label.AddThemeFontSizeOverride("font_size", fontSize);
 
-        float xOffset = 0;
-        float yOffset = 0;
-        // Position at based on anchor
-        switch (obj.Anchor)
-        {
-            case TextureObject.AnchorPoint.TopLeft:
-                break;
-            case TextureObject.AnchorPoint.TopCenter:
-                xOffset = halfWidth;
-                break;
-            case TextureObject.AnchorPoint.TopRight:
-                xOffset = textSize.X;
-                break;
-            case TextureObject.AnchorPoint.MiddleLeft:
-                yOffset = halfHeight;
-                break;
-            case TextureObject.AnchorPoint.MiddleCenter:
-                xOffset = halfWidth;
-                yOffset = halfHeight;
-                break;
-            case TextureObject.AnchorPoint.MiddleRight:
-                xOffset = textSize.X;
-                yOffset = halfHeight;
-                break;
-            case TextureObject.AnchorPoint.BottomLeft:
-                yOffset = textSize.Y;
-                break;
-            case TextureObject.AnchorPoint.BottomCenter:
-                xOffset = halfWidth;
-                yOffset = textSize.Y;
-                break;
-            case TextureObject.AnchorPoint.BottomRight:
-                xOffset = textSize.X;
-                yOffset = textSize.Y;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-
-        label.Position = new Vector2(obj.CenterX - xOffset, obj.CenterY - yOffset);
+        
+        label.Position = MoveOriginForAlignment(obj, textSize);
 
         label.PivotOffset = new Vector2(halfWidth, halfHeight); //always pivot at the center
 
@@ -264,6 +241,48 @@ public partial class TextureFactory : SubViewport
         _viewport.AddChild(label);
     }
 
+    private Vector2 MoveOriginForAlignment(TextureObject obj, Vector2 size)
+    {
+        //NOTE: Origin also shifts from center to top left
+        
+        float finalX = obj.CenterX;
+        float finalY = obj.CenterY;
+
+        switch (obj.HorizontalAlignment)
+        {
+            case HorizontalAlignment.Left:
+                finalX -= obj.Width / 2;
+                break;
+            case HorizontalAlignment.Center:
+                finalX -= size.X / 2;
+                break;
+            case HorizontalAlignment.Right:
+                finalX += obj.Width / 2 - size.X;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        
+        switch (obj.VerticalAlignment)
+        {
+            case VerticalAlignment.Top:
+                finalY -= obj.Height / 2;
+                break;
+            case VerticalAlignment.Center:
+                finalY -= size.Y / 2;
+                break;
+            case VerticalAlignment.Bottom:
+                finalY += obj.Height / 2 - size.Y;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        
+        
+        
+        return new Vector2(finalX, finalY);
+    }
+    
     private void ExpandMultipleShapes(TextureDefinition definition)
     {
         var l = new List<TextureObject>();
@@ -786,6 +805,8 @@ public partial class TextureFactory : SubViewport
             BottomCenter,
             BottomRight
         };
+        
+      
 
         public TextureObject()
         {
@@ -809,6 +830,7 @@ public partial class TextureFactory : SubViewport
             RotationDegrees = obj.RotationDegrees;
             Quantity = obj.Quantity;
             Multiline = obj.Multiline;
+            Stretch = obj.Stretch;
         }
 
         public TextureObjectType Type { get; set; }
@@ -817,6 +839,10 @@ public partial class TextureFactory : SubViewport
         public string Text { get; set; }
         public Color ForegroundColor { get; set; } = Colors.Black;
         public Font Font { get; set; }
+
+        public int FontSize { get; set; } = 12;
+        
+        public bool Autosize { get; set; } = true;
         public int Height { get; set; }
         public int Width { get; set; }
         public int CenterX { get; set; }
@@ -828,6 +854,11 @@ public partial class TextureFactory : SubViewport
 
         public int Quantity { get; set; }
 
+        public HorizontalAlignment HorizontalAlignment { get; set; } = HorizontalAlignment.Left;
+        public VerticalAlignment VerticalAlignment { get; set; } = VerticalAlignment.Top;
+
+        public bool Stretch { get; set; } = false;
+        
 
         public static AnchorPoint AnchorStringToEnum(string anchor)
         {

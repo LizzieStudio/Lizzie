@@ -1,8 +1,20 @@
-[gd_scene load_steps=4 format=3 uid="uid://0wsvxlpthnkp"]
+[gd_scene load_steps=5 format=3 uid="uid://0wsvxlpthnkp"]
 
 [ext_resource type="Script" uid="uid://blvugxyae05ee" path="res://Scripts/Templating/TemplateCreator.cs" id="1_wn7e0"]
 [ext_resource type="Texture2D" uid="uid://73pb5eqwq0y4" path="res://Textures/Shapes/square.png" id="2_cvjoa"]
 [ext_resource type="Script" uid="uid://bl1v61t413ui2" path="res://Scripts/Templating/BoundsRect.cs" id="5_4cjo0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wn7e0"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.48178947, 0.48178947, 0.48178947, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
 
 [node name="TemplateCreator" type="MarginContainer" node_paths=PackedStringArray("_preview")]
 anchors_preset = 15
@@ -19,6 +31,7 @@ _preview = NodePath("Panel/VBoxContainer/HBoxContainer/Panel/TextureRect")
 
 [node name="Panel" type="Panel" parent="."]
 layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_wn7e0")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
 layout_mode = 0
@@ -45,10 +58,15 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Close"
 
-[node name="TestButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
+[node name="TextButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Test"
+text = "Text"
+
+[node name="ImageButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Image"
 
 [node name="HBoxContainer" type="HSplitContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -219,4 +237,4 @@ action_mode = 0
 keep_pressed_outside = true
 
 [node name="Timer" type="Timer" parent="."]
-wait_time = 0.5
+wait_time = 0.1

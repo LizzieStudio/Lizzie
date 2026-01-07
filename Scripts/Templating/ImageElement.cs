@@ -4,32 +4,31 @@ using Godot;
 
 namespace TTSS.Scripts.Templating;
 
-public class TextElement : TemplateElement
+public class ImageElement : TemplateElement
 {
     // Called when the node enters the scene tree for the first time.
-    public TextElement() : base()
+    public ImageElement() : base()
     {
         ElementType = ITemplateElement.TemplateElementType.Text;
 
-        Parameters.Add(new TemplateParameter { Name = "Text", Value = "Lipsum Orem" });
+        Parameters.Add(new TemplateParameter { Name = "Name", Value = "Circle" });
         Parameters.Add(new TemplateParameter
         {
             Name = "Foreground",
             Value = (Colors.Black).ToHtml(),
             Type = TemplateParameter.TemplateParameterType.Color
         });
+
         Parameters.Add(new TemplateParameter
-            { Name = "Font Size", Value = "12", Type = TemplateParameter.TemplateParameterType.Number });
-        Parameters.Add(new TemplateParameter
-            { Name = "Autosize", Value = "False", Type = TemplateParameter.TemplateParameterType.Boolean });
+            { Name = "Stretch", Value = "False", Type = TemplateParameter.TemplateParameterType.Boolean });
         UpdateBounds();
     }
 
     private void UpdateBounds()
     {
         var textSize = TextureFactory.GetTextBounds(new SystemFont(), 12, "Lipsum Orem");
-        SetParameterValue("Width", textSize.X.ToString(CultureInfo.InvariantCulture));
-        SetParameterValue("Height", textSize.Y.ToString(CultureInfo.InvariantCulture));
+        SetParameterValue("Width", "100");
+        SetParameterValue("Height", "100");
         SetParameterValue("X", "70");
         SetParameterValue("Y", "70");
     }
@@ -41,13 +40,18 @@ public class TextElement : TemplateElement
         var t = new TextureFactory.TextureObject();
 
         UpdateCoreParameterData(t, context);
-        t.Text = EvaluateTextParameter(Parameters, "Text", context);
+        t.Type = TextureFactory.TextureObjectType.CoreShape;
+        t.Text = EvaluateTextParameter(Parameters, "Name", context);
         t.ForegroundColor = EvaluateColorParameter(Parameters, "Foreground", context);
-        t.FontSize = EvaluateNumberParameter(Parameters, "Font Size", context);
-        t.Autosize = EvaluateBooleanParameter(Parameters, "Autosize", context);
+        t.Stretch = EvaluateBooleanParameter(Parameters, "Stretch", context);
         l.Add(t);
         return l;
     }
 
-
+    private static int ForceParse(string s)
+    {
+        if (int.TryParse(s, out var i)) return i;
+        return 0;
+    }
 }
+

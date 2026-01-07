@@ -15,7 +15,9 @@ public partial class UI : CanvasLayer
 	public event EventHandler<MasterModeChangeArgs> MasterModeChange;
 
 	private ComponentDefinition _componentDefinition;
-
+	private TemplateCreator _templateCreator;
+	
+	private PopupMenu _editMenu;
 	private PopupMenu _insertMenu;
 	private PopupMenu _helpMenu;
 
@@ -40,6 +42,10 @@ public partial class UI : CanvasLayer
 		_componentDefinition.CreateObject += OnCreateObject;
 		_componentDefinition.CancelDialog += OnCancelCreate;
 
+		_editMenu = GetNode<PopupMenu>("MenuBar/Edit");
+		_editMenu.AddItem("Templates", 1);
+		_editMenu.IdPressed += OnEditMenuSelection;
+		
 		_insertMenu = GetNode<PopupMenu>("MenuBar/Insert");
 		_insertMenu.AddItem("Component", 1);
 		_insertMenu.AddItem("Zone", 2);
@@ -56,8 +62,10 @@ public partial class UI : CanvasLayer
 		_componentName = GetNode<Label>("%ComponentName");
 		
 		_componentTabs = GetNode<TabContainer>("%ComponentTabs");
+		_templateCreator = GetNode<TemplateCreator>("%TemplateCreator");
+		
 		var textureFactory = GetNode<TextureFactory>("%TextureFactory");
-
+		
 		foreach (var c in _componentTabs.GetChildren())
 		{
 			if (c is ComponentPanelDialogResult cpdr)
@@ -206,6 +214,14 @@ public partial class UI : CanvasLayer
 		if (id == 1)
 		{
 			_componentDefinition.Initialize();
+		}
+	}
+
+	private void OnEditMenuSelection(long id)
+	{
+		if (id == 1)
+		{
+			_templateCreator.Visible = true;
 		}
 	}
 
