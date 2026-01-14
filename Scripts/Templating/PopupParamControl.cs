@@ -1,0 +1,86 @@
+using Godot;
+using System;
+using System.ComponentModel.Design.Serialization;
+using TTSS.Scripts.Templating;
+
+public partial class PopupParamControl :  HBoxContainer, IParamControl
+{
+	// Called when the node enters the scene tree for the first time.
+	private Label _label;
+	private LineEdit _value;
+	private Button _script;
+	private MenuButton _listPicker;
+	private PopupMenu _popup;
+	private TemplateParameter _parameter;
+	private bool _readyComplete;
+
+// Called when the node enters the scene tree for the first time.
+	public override void _Ready()
+	{
+		_label = GetNode<Label>("Caption");
+		_value = GetNode<LineEdit>("LineEdit");
+		_script = GetNode<Button>("Formula");
+		_listPicker = GetNode<MenuButton>("Panel/MenuButton");
+		_popup = _listPicker.GetPopup();
+		_popup.IndexPressed += OnOptionSelected;
+		
+		
+		if (_parameter != null)
+		{
+			MapParam();
+		}
+
+		_value.TextChanged += RaiseParameterUpdated;
+
+		_readyComplete = true;
+	}
+
+	private void OnOptionSelected(long index)
+	{
+		_parameter.Value = _popup.GetItemText((int)index);
+		_value.Text = _parameter.Value;
+		_listPicker.Text = string.Empty;
+		RaiseParameterUpdated(_parameter.Value);
+	}
+
+	private bool _initializing;
+	private void MapParam()
+	{
+		_initializing = true;
+		
+		_label.Text = _parameter.Name;
+		_value.Text = _parameter.Value.ToString();
+
+				_initializing = false;
+	}
+
+	public void SetParameter(TemplateParameter parameter)
+	{
+		_parameter = parameter;
+		if (_readyComplete)
+		{
+			MapParam();
+		}
+	}
+	
+	public void UpdateParameter(string newValue)
+	{
+		_parameter.Value = newValue;
+		_value.Text = _parameter.Value;
+	}
+
+	public TemplateParameter GetParameter()
+	{
+		_parameter.Value = _value.Text;
+		return _parameter;
+	}
+
+	public event EventHandler<TemplateParamUpdateEventArgs> ParameterUpdated;
+
+	private void RaiseParameterUpdated(string value)
+	{
+		if (_initializing) return;
+		_parameter.Value = value;
+		ParameterUpdated?.Invoke(this, new TemplateParamUpdateEventArgs { Parameter = _parameter });
+	}
+}

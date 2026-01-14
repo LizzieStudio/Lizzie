@@ -1,0 +1,107 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqbaakftpue7u"]
+
+[ext_resource type="Script" uid="uid://bg3sdxxjlsnvw" path="res://Scripts/Project/ProjectManager.cs" id="1_81lru"]
+
+[node name="ProjectManager" type="Panel"]
+custom_minimum_size = Vector2(400, 300)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -150.0
+offset_right = 200.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_81lru")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer"]
+layout_mode = 2
+bbcode_enabled = true
+text = "  [color=Sky_Blue]Manage Projects[/color]"
+fit_content = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="OpenButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Open"
+
+[node name="CreateButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Create"
+
+[node name="CloneButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Clone"
+
+[node name="DeleteButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Delete"
+
+[node name="Panel" type="MarginContainer" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close"
+
+[node name="CreateProject" type="HBoxContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/CreateProject"]
+layout_mode = 2
+text = "Name: "
+
+[node name="LineEdit" type="LineEdit" parent="VBoxContainer/CreateProject"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CreateProjectButton" type="Button" parent="VBoxContainer/CreateProject"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Create"
+
+[node name="CancelCreateButton" type="Button" parent="VBoxContainer/CreateProject"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"
+
+[node name="RichTextLabel2" type="RichTextLabel" parent="VBoxContainer"]
+layout_mode = 2
+bbcode_enabled = true
+text = "[color=light_yellow][i]Existing Projects[/i][/color]"
+fit_content = true
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
+layout_mode = 2
+
+[node name="ItemList" type="ItemList" parent="VBoxContainer/MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+item_count = 1
+item_0/text = "Test Project"

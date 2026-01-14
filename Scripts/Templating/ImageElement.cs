@@ -11,7 +11,7 @@ public class ImageElement : TemplateElement
     {
         ElementType = ITemplateElement.TemplateElementType.Text;
 
-        Parameters.Add(new TemplateParameter { Name = "Name", Value = "Circle" });
+        Parameters.Add(new TemplateParameter { Name = "Name", Value = "Circle", Type = TemplateParameter.TemplateParameterType.Image });
         Parameters.Add(new TemplateParameter
         {
             Name = "Foreground",

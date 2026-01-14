@@ -427,6 +427,7 @@ public partial class VcToken : VisualComponentFlat
 		
 		td.Objects.Add(new TextureFactory.TextureObject
 		{
+			Scale = 0.8f,
 			Width = sW,
 			Height = sH,
 			CenterX = sW / 2,
@@ -437,7 +438,9 @@ public partial class VcToken : VisualComponentFlat
 			Font= new SystemFont(),
 			Type = qtf.FaceType,
 			Autosize = true,
-			Quantity = qtf.Quantity
+			Quantity = qtf.Quantity,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center
 		});
 		
 		

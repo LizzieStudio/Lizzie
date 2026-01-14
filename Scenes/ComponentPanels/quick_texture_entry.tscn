@@ -18,15 +18,11 @@ text = "Front:"
 [node name="OptionButton" type="OptionButton" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 4
+item_count = 2
 popup/item_0/text = "Text"
 popup/item_0/id = 0
-popup/item_1/text = "Core Shape"
+popup/item_1/text = "Icon"
 popup/item_1/id = 1
-popup/item_2/text = "Extended"
-popup/item_2/id = 2
-popup/item_3/text = "User Icon"
-popup/item_3/id = 3
 
 [node name="TopTextColor" type="ColorPickerButton" parent="."]
 unique_name_in_owner = true
@@ -65,13 +61,5 @@ layout_mode = 2
 placeholder_text = "TEXT"
 
 [node name="ShapeList" type="OptionButton" parent="."]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="IconList" type="OptionButton" parent="."]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="UserIconList" type="OptionButton" parent="."]
 unique_name_in_owner = true
 layout_mode = 2

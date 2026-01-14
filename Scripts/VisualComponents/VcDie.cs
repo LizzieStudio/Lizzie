@@ -323,6 +323,7 @@ public partial class VcDie : VisualComponentBase
 		
 		var to = new TextureFactory.TextureObject
 		{
+			Scale = 0.8f,
 			CenterX = 42,
 			CenterY=42,
 			Font = font,
@@ -332,7 +333,9 @@ public partial class VcDie : VisualComponentBase
 			RotationDegrees = 0,
 			Text = sides[0].Caption,
 			TriangleFace = false,
-			ForegroundColor = sides[0].ForegroundColor,
+			ForegroundColor = sides[0].ForegroundColor,		
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
 			Quantity = sides[0].Quantity
 		};
 		tx.Objects.Add(to);
@@ -362,6 +365,7 @@ public partial class VcDie : VisualComponentBase
 		{
 			CenterX = 0,
 			CenterY = 55,
+			Scale = 0.8f,
 			Font = font,
 			Height = 110,
 			Width = 110,
@@ -370,6 +374,8 @@ public partial class VcDie : VisualComponentBase
 			RotationDegrees = 90,
 			Text = sides[0].Caption,
 			ForegroundColor = sides[0].ForegroundColor,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
 			Quantity = sides[0].Quantity
 		};
 
@@ -402,6 +408,7 @@ public partial class VcDie : VisualComponentBase
 		{
 			CenterX = 48,
 			CenterY=50,
+			Scale = 0.8f,
 			Font = font,
 			Height = 71,
 			Width = 49,
@@ -410,6 +417,8 @@ public partial class VcDie : VisualComponentBase
 			RotationDegrees = 0,
 			Text = sides[0].Caption,
 			ForegroundColor = sides[0].ForegroundColor,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
 			Quantity = sides[0].Quantity
 		};
 		tx.Objects.Add(to);
@@ -444,6 +453,7 @@ public partial class VcDie : VisualComponentBase
 		{
 			CenterX = 29,
 			CenterY=89,
+			Scale = 0.8f,
 			Font = font,
 			Height = 53,
 			Width = 47,
@@ -452,6 +462,8 @@ public partial class VcDie : VisualComponentBase
 			RotationDegrees = 90,
 			Text = sides[0].Caption,
 			ForegroundColor = sides[0].ForegroundColor,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
 			Quantity = sides[0].Quantity
 		};
 		tx.Objects.Add(to);
@@ -488,6 +500,7 @@ public partial class VcDie : VisualComponentBase
 		{
 			CenterX = 0,
 			CenterY=41,
+			Scale = 0.8f,
 			Font = font,
 			Height = 82,
 			Width = 82,
@@ -496,6 +509,8 @@ public partial class VcDie : VisualComponentBase
 			RotationDegrees = 90,
 			Text = sides[0].Caption,
 			ForegroundColor = sides[0].ForegroundColor,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
 			Quantity = sides[0].Quantity
 		};
 		tx.Objects.Add(to);
@@ -537,6 +552,7 @@ public partial class VcDie : VisualComponentBase
 		{
 			CenterX = centerX,
 			CenterY = centerY,
+			Scale = obj.Scale,
 			Font = obj.Font,
 			Height = obj.Height,
 			Width = obj.Width,
@@ -545,7 +561,9 @@ public partial class VcDie : VisualComponentBase
 			Text = qtf.Caption,
 			TriangleFace = obj.TriangleFace,
 			ForegroundColor = qtf.ForegroundColor,
-			Quantity = qtf.Quantity
+			Quantity = qtf.Quantity,
+			HorizontalAlignment = obj.HorizontalAlignment,
+			VerticalAlignment = obj.VerticalAlignment
 		};
 
 		return tx;

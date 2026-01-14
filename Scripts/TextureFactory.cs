@@ -449,6 +449,7 @@ public partial class TextureFactory : SubViewport
             to.CenterY = (int)(r.Position.Y + obj.CenterY - h2);
             to.Height = (int)r.Size.Y;
             to.Width = (int)r.Size.X;
+            to.Scale = 0.9f;
             to.Quantity = 1;
             to.RotationDegrees = obj.RotationDegrees;
             shapes.Add(to);
@@ -686,16 +687,34 @@ public partial class TextureFactory : SubViewport
         //caption has the key to the icon
         texture = _iconLibrary.TextureFromKey(obj.Text);
 
-        float scale = 0.8f;
-
-        var scaleWidth = obj.Width * scale;
-        var scaleHeight = obj.Height * scale;
+        var scaleWidth = obj.Width * obj.Scale;
+        var scaleHeight = obj.Height * obj.Scale;
 
         var image = texture.GetImage();
         //image.Resize((int)scaleWidth, (int)scaleHeight);
 
-        tr.Size = new Vector2(scaleWidth, scaleHeight);
-        tr.CustomMinimumSize = new Vector2(scaleWidth, scaleHeight);
+        //resize texture to fit in box for alignment
+        Vector2 imgSize = image.GetSize();
+        if (imgSize.X > imgSize.Y)
+        {
+            imgSize *= (scaleWidth / imgSize.X);
+            if (imgSize.Y > scaleHeight)
+            {
+                imgSize *= (scaleHeight / imgSize.Y);
+            }
+        }
+        else
+        { 
+            imgSize *= (scaleHeight / imgSize.Y);
+            if (imgSize.X > scaleWidth)
+            {
+                imgSize *= (scaleWidth / imgSize.X);
+            }
+        }
+
+        
+        tr.Size = imgSize;
+        tr.CustomMinimumSize = imgSize;
         tr.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
 
         tr.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
@@ -710,7 +729,7 @@ public partial class TextureFactory : SubViewport
 
         var halfWidth = scaleWidth / 2;
         var halfHeight = scaleHeight / 2;
-        tr.Position = new Vector2(obj.CenterX - halfWidth, obj.CenterY - halfHeight);
+        tr.Position = MoveOriginForAlignment(obj, imgSize);
         tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
@@ -847,6 +866,8 @@ public partial class TextureFactory : SubViewport
         public int Width { get; set; }
         public int CenterX { get; set; }
         public int CenterY { get; set; }
+        
+        public float Scale { get; set; } = 1f;
 
         public AnchorPoint Anchor { get; set; }
         public int RotationDegrees { get; set; }

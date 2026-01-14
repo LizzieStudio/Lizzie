@@ -1,20 +1,13 @@
-[gd_scene load_steps=5 format=3 uid="uid://0wsvxlpthnkp"]
+[gd_scene load_steps=7 format=3 uid="uid://0wsvxlpthnkp"]
 
+[ext_resource type="Theme" uid="uid://cgw83xinre6u" path="res://Themes/bluetheme.tres" id="1_hnkns"]
 [ext_resource type="Script" uid="uid://blvugxyae05ee" path="res://Scripts/Templating/TemplateCreator.cs" id="1_wn7e0"]
 [ext_resource type="Texture2D" uid="uid://73pb5eqwq0y4" path="res://Textures/Shapes/square.png" id="2_cvjoa"]
+[ext_resource type="Texture2D" uid="uid://y2nvpeccqyo8" path="res://Textures/UI/add16.png" id="3_4cjo0"]
 [ext_resource type="Script" uid="uid://bl1v61t413ui2" path="res://Scripts/Templating/BoundsRect.cs" id="5_4cjo0"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wn7e0"]
-content_margin_left = 0.0
-content_margin_top = 0.0
-content_margin_right = 0.0
-content_margin_bottom = 0.0
-bg_color = Color(0.48178947, 0.48178947, 0.48178947, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-corner_detail = 5
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hnkns"]
+bg_color = Color(0.99736375, 0.793054, 0.8017672, 1)
 
 [node name="TemplateCreator" type="MarginContainer" node_paths=PackedStringArray("_preview")]
 anchors_preset = 15
@@ -22,6 +15,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("1_hnkns")
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
@@ -31,7 +25,6 @@ _preview = NodePath("Panel/VBoxContainer/HBoxContainer/Panel/TextureRect")
 
 [node name="Panel" type="Panel" parent="."]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_wn7e0")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
 layout_mode = 0
@@ -43,30 +36,100 @@ grow_vertical = 2
 [node name="Toolbar" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
+[node name="NewButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New"
+
 [node name="SaveButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Save"
 
-[node name="SaveAsButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
+[node name="DuplicateButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Save As"
+text = "Duplicate"
+
+[node name="Panel" type="Panel" parent="Panel/VBoxContainer/Toolbar"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="CloseButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Close"
 
-[node name="TextButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
-unique_name_in_owner = true
+[node name="InfoBar" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
-text = "Text"
 
-[node name="ImageButton" type="Button" parent="Panel/VBoxContainer/Toolbar"]
+[node name="MarginContainer" type="MarginContainer" parent="Panel/VBoxContainer/InfoBar"]
+custom_minimum_size = Vector2(300, 1)
+layout_mode = 2
+theme_override_constants/margin_left = 12
+
+[node name="TemplateName" type="OptionButton" parent="Panel/VBoxContainer/InfoBar/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 1, 0, 1)
+clip_text = true
+selected = 0
+item_count = 5
+popup/item_0/text = "Attack Card Face"
+popup/item_0/id = 0
+popup/item_1/text = "Attack Card Back"
+popup/item_1/id = 1
+popup/item_2/text = "Issue Card Face"
+popup/item_2/id = 2
+popup/item_3/text = "Issue Card Back"
+popup/item_3/id = 3
+popup/item_4/text = "Player Mat"
+popup/item_4/id = 4
+
+[node name="MarginContainer2" type="MarginContainer" parent="Panel/VBoxContainer/InfoBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 12
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer/InfoBar/MarginContainer2"]
+layout_mode = 2
+
+[node name="StandardSize" type="OptionButton" parent="Panel/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Image"
+size_flags_horizontal = 0
+selected = 0
+item_count = 5
+popup/item_0/text = "Poker"
+popup/item_0/id = 0
+popup/item_1/text = "Bridge"
+popup/item_1/id = 1
+popup/item_2/text = "Mini Euro"
+popup/item_2/id = 2
+popup/item_3/text = "Tarot"
+popup/item_3/id = 3
+popup/item_4/text = "Custom"
+popup/item_4/id = 4
+
+[node name="Width" type="LineEdit" parent="Panel/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Width"
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer"]
+layout_mode = 2
+text = "x"
+
+[node name="Height" type="LineEdit" parent="Panel/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Height"
 
 [node name="HBoxContainer" type="HSplitContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -76,16 +139,35 @@ size_flags_vertical = 3
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 
-[node name="TemplateTree" type="Tree" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TextButton" type="Button" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Text"
+icon = ExtResource("3_4cjo0")
+
+[node name="ImageButton" type="Button" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Image"
+icon = ExtResource("3_4cjo0")
+
+[node name="TemplateTree" type="Tree" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 hide_root = true
-drop_mode_flags = 2
 
 [node name="ScrollContainer2" type="ScrollContainer" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+size_flags_stretch_ratio = 2.0
 
 [node name="TemplateParams" type="VBoxContainer" parent="Panel/VBoxContainer/HBoxContainer/VSplitContainer/ScrollContainer2"]
 unique_name_in_owner = true
@@ -95,6 +177,7 @@ size_flags_horizontal = 3
 [node name="Panel" type="Panel" parent="Panel/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_hnkns")
 
 [node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer/Panel"]
 custom_minimum_size = Vector2(250, 350)
@@ -114,6 +197,7 @@ texture = ExtResource("2_cvjoa")
 
 [node name="BoundsRect" type="MarginContainer" parent="Panel/VBoxContainer/HBoxContainer/Panel/TextureRect"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -235,6 +319,105 @@ grow_vertical = 0
 mouse_default_cursor_shape = 12
 action_mode = 0
 keep_pressed_outside = true
+
+[node name="NewTemplateDialog" type="MarginContainer" parent="Panel"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -208.0
+offset_top = -152.0
+offset_right = 208.0
+offset_bottom = 52.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="Panel/NewTemplateDialog"]
+custom_minimum_size = Vector2(400, 200)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/NewTemplateDialog/Panel"]
+layout_mode = 0
+offset_right = 399.0
+offset_bottom = 199.0
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/NewTemplateDialog/Panel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.45882353, 1)
+text = "New Template"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+text = "Template Name:"
+
+[node name="NTName" type="LineEdit" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="NTSize" type="OptionButton" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+selected = 0
+item_count = 5
+popup/item_0/text = "Poker"
+popup/item_0/id = 0
+popup/item_1/text = "Bridge"
+popup/item_1/id = 1
+popup/item_2/text = "Mini Euro"
+popup/item_2/id = 2
+popup/item_3/text = "Tarot"
+popup/item_3/id = 3
+popup/item_4/text = "Custom"
+popup/item_4/id = 4
+
+[node name="NTWidth" type="LineEdit" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Width"
+
+[node name="Label" type="Label" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "x"
+
+[node name="NTHeight" type="LineEdit" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Height"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 10
+
+[node name="NTOK" type="Button" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer3"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OK"
+
+[node name="NTCancel" type="Button" parent="Panel/NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer3"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"
 
 [node name="Timer" type="Timer" parent="."]
 wait_time = 0.1

@@ -72,6 +72,12 @@ public class IconLibrary : Dictionary<string, IconEntry >
         Addl("Oil Drum", "oil-barrel.png");
         Addl("Exclamation Mark", "exclamation.png");
         Addl("Question Mark", "question.png");
+        Addl("Draw Card", "draw.png");
+        Addl("Discard Card", "discard.png");
+        Addl("Trash", "trash.png");
+        Addl("Eye", "eye.png");
+        Addl("Hide", "hidden.png");
+        Addl("Cube", "cube.png");
     }
 
     private void Addl(string key, string value, bool isCore = false)
@@ -99,12 +105,46 @@ public class IconLibrary : Dictionary<string, IconEntry >
         return ResourceLoader.Load(BaseFolder + this[key].FileName) as Texture2D;
     }
 
-    public void LoadOptionButtonCore(OptionButton button)
+    public void LoadOptionButton(OptionButton button)
     {
+        int id = 0;
+        
         foreach (var icon in GetCoreIconList())
         {
-            button.AddItem(icon);
+            button.AddItem(icon, id);
+            id++;
         }
+        
+        button.AddSeparator();
+
+        id++;
+        foreach (var icon in GetExtendedIconList())
+        {
+            button.AddItem(icon, id);
+            id++;
+        }
+    }
+
+    public void LoadPopupMenu(PopupMenu menu)
+    {
+
+            int id = 0;
+        
+            foreach (var icon in GetCoreIconList())
+            {
+                menu.AddItem(icon, id);
+                id++;
+            }
+        
+            menu.AddSeparator();
+
+            id++;
+            foreach (var icon in GetExtendedIconList())
+            {
+                menu.AddItem(icon, id);
+                id++;
+            }
+
     }
 
     public void LoadOptionButtonExtended(OptionButton button)

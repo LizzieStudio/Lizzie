@@ -1,0 +1,51 @@
+[gd_scene load_steps=5 format=3 uid="uid://ddn8gia40h3pp"]
+
+[ext_resource type="Script" uid="uid://c2n3htpqblgap" path="res://Scripts/Templating/ImageParamControl.cs" id="1_160ym"]
+[ext_resource type="Texture2D" uid="uid://cip23cunm7y51" path="res://Textures/UI/menu16.png" id="2_3sx5f"]
+[ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="2_sm2v8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jthq6"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.6, 0.6, 0.6, 0.5686275)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[node name="ImageParam" type="HBoxContainer"]
+script = ExtResource("1_160ym")
+
+[node name="Caption" type="Label" parent="."]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Foreground"
+
+[node name="LineEdit" type="LineEdit" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Panel" type="Panel" parent="."]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+
+[node name="ShapeList" type="MenuButton" parent="Panel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_jthq6")
+icon = ExtResource("2_sm2v8")
+icon_alignment = 1
+
+[node name="Formula" type="Button" parent="."]
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+icon = ExtResource("2_3sx5f")

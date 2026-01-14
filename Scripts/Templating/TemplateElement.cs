@@ -17,7 +17,6 @@ public class TemplateElement : ITemplateElement
         
         Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "X", Value = "{HalfWidth}"});
         Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Y", Value = "{HalfHeight}"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Anchor, Name = "Anchor", Value = "TL"});
         Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.HorizontalAlignment, Name = "Hor Align", Value = "Center"});
         Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.VerticalAlignment, Name = "Ver Align", Value = "Middle"});
         Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Width", Value = "{Width}"});
@@ -33,7 +32,7 @@ public class TemplateElement : ITemplateElement
     }
 
     public ITemplateElement.TemplateElementType ElementType { get; protected set; }
-    public string ElemeentName { get; set; }
+    public string ElementName { get; set; }
     public IList<TemplateParameter> Parameters => _parameters;
 
     public virtual IList<TextureFactory.TextureObject> GetElementData(TextureContext context)
@@ -183,7 +182,7 @@ public interface ITemplateElement
 
     TemplateElementType ElementType { get; }
 
-    string ElemeentName { get; set; }
+    string ElementName { get; set; }
 
     IList<TemplateParameter> Parameters { get; }
 
@@ -204,7 +203,8 @@ public class TemplateParameter
         Anchor,
         Boolean,
         HorizontalAlignment,
-        VerticalAlignment
+        VerticalAlignment,
+        Image
     }
 
     public TemplateParameterType Type { get; set; }

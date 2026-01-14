@@ -7,9 +7,7 @@ public partial class QuickTextureEntry : BoxContainer
 	private LineEdit _text;
 	private ColorPickerButton _colorPicker;
 	private OptionButton _optionTypes;
-	private OptionButton _coreIcons;
-	private OptionButton _extendedIcons;
-	private OptionButton _userIcons;
+	private OptionButton _iconList;
 	private OptionButton _qtyPicker;
 
 	private bool _initializing;
@@ -25,15 +23,9 @@ public partial class QuickTextureEntry : BoxContainer
 		_optionTypes.Selected = 0;
 		_optionTypes.ItemSelected += TypeChanged;
 		
-		_coreIcons = GetNode<OptionButton>("%ShapeList");
-		_coreIcons.ItemSelected += _ => RaiseFieldChanged();
+		_iconList = GetNode<OptionButton>("%ShapeList");
+		_iconList.ItemSelected += IconSelected;
 		
-		_extendedIcons = GetNode<OptionButton>("%IconList");
-		_extendedIcons.ItemSelected += _ => RaiseFieldChanged();
-		
-		_userIcons = GetNode<OptionButton>("%UserIconList");
-		_userIcons.ItemSelected += _ => RaiseFieldChanged();
-
 		_colorPicker = GetNode<ColorPickerButton>("%TopTextColor");
 		_colorPicker.Color = Colors.Black;
 		_colorPicker.ColorChanged += _ => RaiseFieldChanged();
@@ -49,13 +41,21 @@ public partial class QuickTextureEntry : BoxContainer
 		_initializing = false;
 	}
 
+	private void IconSelected(long index)
+	{
+		_selectedIcon = _iconList.GetItemText((int)index);
+		_iconList.Text = _selectedIcon;
+		RaiseFieldChanged();
+	}
+
+	private string _selectedIcon = "Circle";
+
 	private IconLibrary _icons;
 
 	public void SetIcons(IconLibrary icons)
 	{
 		_icons = icons;
-		_icons.LoadOptionButtonCore(_coreIcons);
-		_icons.LoadOptionButtonExtended(_extendedIcons);
+		_icons.LoadOptionButton(_iconList);
 	}
 	
 	private void TypeChanged(long index)
@@ -68,9 +68,7 @@ public partial class QuickTextureEntry : BoxContainer
 	{
 		_text.Visible = (index == 0);
 		_qtyPicker.Visible = (index > 0);
-		_coreIcons.Visible = (index == 1);
-		_extendedIcons.Visible = (index == 2);
-		_userIcons.Visible = (index == 3);
+		_iconList.Visible = (index == 1);
 	}
 
 	private string _fieldName;
@@ -122,18 +120,9 @@ public partial class QuickTextureEntry : BoxContainer
 			
 			case 1:
 				qt.FaceType = TextureFactory.TextureObjectType.CoreShape;
-				qt.Caption = _coreIcons.GetItemText((int)_coreIcons.Selected);
+				qt.Caption = _selectedIcon;
 				break;
 			
-			case 2:
-				qt.FaceType = TextureFactory.TextureObjectType.ExtendedShape;
-				qt.Caption = _extendedIcons.GetItemText((int)_extendedIcons.Selected);
-				break;
-			
-			case 3:
-				qt.FaceType = TextureFactory.TextureObjectType.UserShape;
-				qt.Caption = _userIcons.GetItemText((int)_userIcons.Selected);
-				break;
 			
 			
 		}

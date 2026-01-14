@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3 uid="uid://caj4d7v430lhp"]
+[gd_scene load_steps=30 format=3 uid="uid://caj4d7v430lhp"]
 
 [ext_resource type="Script" uid="uid://cb04ev3xy2y8r" path="res://Scripts/GameController.cs" id="1_hibmt"]
 [ext_resource type="Script" uid="uid://caw45erf0ap1j" path="res://Scripts/UI.cs" id="2_a0mv7"]
@@ -26,6 +26,7 @@
 [ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
 [ext_resource type="PackedScene" uid="uid://0wsvxlpthnkp" path="res://Scenes/Templating/TemplateCreator.tscn" id="24_f3vmv"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
+[ext_resource type="PackedScene" uid="uid://bqbaakftpue7u" path="res://Scenes/project_manager.tscn" id="25_urt8w"]
 
 [sub_resource type="Theme" id="Theme_a3w6s"]
 
@@ -93,7 +94,7 @@ offset_bottom = 31.0
 [node name="File" type="PopupMenu" parent="UI/MenuBar"]
 title = "File"
 item_count = 3
-item_0/text = "New Project"
+item_0/text = "Project Manager"
 item_0/id = 0
 item_1/text = "Open Project"
 item_1/id = 1
@@ -219,6 +220,7 @@ layout_mode = 2
 metadata/_tab_index = 6
 
 [node name="ComponentPopup" type="PopupMenu" parent="UI"]
+oversampling_override = 1.0
 size = Vector2i(163, 174)
 item_count = 7
 item_0/text = "Lock"
@@ -291,6 +293,10 @@ grow_horizontal = 0
 horizontal_alignment = 2
 
 [node name="TemplateCreator" parent="UI" instance=ExtResource("24_f3vmv")]
+unique_name_in_owner = true
+visible = false
+
+[node name="ProjectManager" parent="UI" instance=ExtResource("25_urt8w")]
 unique_name_in_owner = true
 visible = false
 
