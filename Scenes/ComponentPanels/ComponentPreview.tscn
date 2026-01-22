@@ -1,11 +1,15 @@
-[gd_scene load_steps=3 format=3 uid="uid://ojs61k8nlddj"]
+[gd_scene load_steps=4 format=3 uid="uid://ojs61k8nlddj"]
 
 [ext_resource type="Script" uid="uid://0bd6nlas58lp" path="res://Scripts/ComponentPreview.cs" id="1_5fnph"]
 [ext_resource type="Texture2D" uid="uid://dtc70uy7e7n8" path="res://Textures/UI/rotate-right.png" id="2_3qart"]
+[ext_resource type="PackedScene" uid="uid://c1a1y6r1hea4l" path="res://Scenes/Controls/page_control.tscn" id="2_bcj4e"]
 
 [node name="ComponentPreview" type="Panel"]
 custom_minimum_size = Vector2(200, 0)
 script = ExtResource("1_5fnph")
+
+[node name="PageControl" parent="." instance=ExtResource("2_bcj4e")]
+layout_mode = 0
 
 [node name="PreviewLabel" type="Label" parent="."]
 custom_minimum_size = Vector2(200, 0)
@@ -16,62 +20,6 @@ offset_bottom = 23.0
 size_flags_vertical = 1
 text = "Preview"
 horizontal_alignment = 1
-
-[node name="Multipreview" type="HBoxContainer" parent="."]
-layout_mode = 0
-offset_right = 246.0
-offset_bottom = 31.0
-
-[node name="MarginContainer3" type="MarginContainer" parent="Multipreview"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_right = 0
-
-[node name="FirstItem" type="Button" parent="Multipreview/MarginContainer3"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "First card"
-text = "<<"
-
-[node name="MarginContainer" type="MarginContainer" parent="Multipreview"]
-layout_mode = 2
-theme_override_constants/margin_left = 0
-theme_override_constants/margin_right = 12
-
-[node name="PrevItem" type="Button" parent="Multipreview/MarginContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Previous card"
-text = "<"
-
-[node name="CurItemLabel" type="Label" parent="Multipreview"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Card 1 of 32"
-horizontal_alignment = 1
-
-[node name="MarginContainer2" type="MarginContainer" parent="Multipreview"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_right = 0
-
-[node name="NextItem" type="Button" parent="Multipreview/MarginContainer2"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Next card"
-text = ">"
-
-[node name="MarginContainer4" type="MarginContainer" parent="Multipreview"]
-layout_mode = 2
-theme_override_constants/margin_left = 0
-theme_override_constants/margin_right = 12
-
-[node name="LastItem" type="Button" parent="Multipreview/MarginContainer4"]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Last card"
-text = ">>"
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="."]
 layout_mode = 0

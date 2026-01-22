@@ -689,35 +689,49 @@ public partial class TextureFactory : SubViewport
 
         var scaleWidth = obj.Width * obj.Scale;
         var scaleHeight = obj.Height * obj.Scale;
-
+        var halfWidth = scaleWidth / 2;
+        var halfHeight = scaleHeight / 2;
+        
         var image = texture.GetImage();
-        //image.Resize((int)scaleWidth, (int)scaleHeight);
 
-        //resize texture to fit in box for alignment
-        Vector2 imgSize = image.GetSize();
-        if (imgSize.X > imgSize.Y)
+        if (obj.Stretch)
         {
-            imgSize *= (scaleWidth / imgSize.X);
-            if (imgSize.Y > scaleHeight)
-            {
-                imgSize *= (scaleHeight / imgSize.Y);
-            }
+            tr.Size = new Vector2(scaleWidth, scaleHeight);
+            tr.StretchMode = TextureRect.StretchModeEnum.Scale;
+            tr.Position = new Vector2(obj.CenterX - scaleWidth / 2, obj.CenterY - scaleHeight / 2);
         }
         else
-        { 
-            imgSize *= (scaleHeight / imgSize.Y);
-            if (imgSize.X > scaleWidth)
+        {
+            //resize texture to fit in box for alignment
+            Vector2 imgSize = image.GetSize();
+            if (imgSize.X > imgSize.Y)
             {
                 imgSize *= (scaleWidth / imgSize.X);
+                if (imgSize.Y > scaleHeight)
+                {
+                    imgSize *= (scaleHeight / imgSize.Y);
+                }
             }
+            else
+            { 
+                imgSize *= (scaleHeight / imgSize.Y);
+                if (imgSize.X > scaleWidth)
+                {
+                    imgSize *= (scaleWidth / imgSize.X);
+                }
+            }
+            
+            tr.Size = imgSize;
+            tr.CustomMinimumSize = imgSize;
+            tr.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+            tr.Position = MoveOriginForAlignment(obj, imgSize);
         }
+        
+        //image.Resize((int)scaleWidth, (int)scaleHeight);
 
         
-        tr.Size = imgSize;
-        tr.CustomMinimumSize = imgSize;
         tr.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-
-        tr.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        
         tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
         tr.Texture = ImageTexture.CreateFromImage(image);
 
@@ -726,10 +740,7 @@ public partial class TextureFactory : SubViewport
         bgRect.Color = obj.ForegroundColor;
         bgRect.Size = new Vector2(scaleWidth, scaleHeight);
         tr.AddChild(bgRect);
-
-        var halfWidth = scaleWidth / 2;
-        var halfHeight = scaleHeight / 2;
-        tr.Position = MoveOriginForAlignment(obj, imgSize);
+       
         tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 

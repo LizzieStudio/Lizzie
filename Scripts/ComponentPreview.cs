@@ -6,37 +6,23 @@ public partial class ComponentPreview : Panel
 {
 	private Node3D _parentNode;
 	private Label _previewLabel;
-	private HBoxContainer _multiPreview;
-	private Button _firstButton;
-	private Button _prevButton;
-	private Button _nextButton;
-	private Button _lastButton;
-	private Label _curItemLabel;
+	
 
 	private Button _spinButton;
 	private Button _frontView;
 	private Button _backView;
 	
+	private PageControl _pageControl;
+	
 	public override void _Ready()
 	{
 		_parentNode = GetNode<Node3D>("SubViewportContainer/SubViewport/Node3D");
 		_previewLabel = GetNode<Label>("PreviewLabel");
-		_multiPreview = GetNode<HBoxContainer>("Multipreview");
-
-		_firstButton = GetNode<Button>("%FirstItem");
-		_firstButton.Pressed += () => SetPreviewItem(0);
+		_pageControl = GetNode<PageControl>("PageControl");
+		_pageControl.ItemSelected += ChangePage;
+		_pageControl.Visible = false;
+		_pageControl.SetItemCount(ItemCount);
 		
-		_prevButton = GetNode<Button>("%PrevItem");
-		_prevButton.Pressed += () => ChangePreviewItem(-1);
-		
-		_nextButton = GetNode<Button>("%NextItem");
-		_nextButton.Pressed += () => ChangePreviewItem(1);
-		
-		_lastButton = GetNode<Button>("%LastItem");
-		_lastButton.Pressed += () => SetPreviewItem(ItemCount-1);
-
-		_curItemLabel = GetNode<Label>("%CurItemLabel");
-
 		_spinButton = GetNode<Button>("%SpinButton");
 		
 		_frontView = GetNode<Button>("%FrontView");
@@ -45,7 +31,7 @@ public partial class ComponentPreview : Panel
 		_backView = GetNode<Button>("%BackView");
 		_backView.Pressed += () => ShowView(180);
 		
-		UpdateMultiLabel();
+		
 
 	}
 
@@ -56,7 +42,7 @@ public partial class ComponentPreview : Panel
 			_component.Rotation += new Vector3(0,(float)delta, 0);
 		}
 	}
-
+	
 	private VisualComponentBase _component;
 
 	private bool _componentActive;
@@ -107,29 +93,16 @@ public partial class ComponentPreview : Panel
 		{
 			_multiItemMode = value;
 			_previewLabel.Visible = !value;
-			_multiPreview.Visible = value;
+			_pageControl.Visible = value;
 		}
 	}
 
-	private void ChangePreviewItem(int delta)
+	private void ChangePage(object sender, ItemSelectedEventArgs e)
 	{
-		CurrentItem += delta;
-		CurrentItem = Math.Clamp(CurrentItem, 0, ItemCount - 1);
-		UpdateMultiLabel();
+		CurrentItem = _pageControl.GetCurrentItem();
 		ItemSelected?.Invoke(this, new ItemSelectedEventArgs(ItemCount) );
 	}
-
-	private void UpdateMultiLabel()
-	{
-		_curItemLabel.Text = $"{CurrentItem + 1} of {ItemCount}";
-	}
-
-	private void SetPreviewItem(int item)
-	{
-		CurrentItem = Math.Clamp(item, 0, ItemCount - 1);
-		UpdateMultiLabel();
-		ItemSelected?.Invoke(this, new ItemSelectedEventArgs(ItemCount) );
-	}
+	
 
 	private int _itemCount = 1;
 
@@ -146,7 +119,7 @@ public partial class ComponentPreview : Panel
 			{
 				_itemCount = value;
 			}
-			UpdateMultiLabel();
+			_pageControl.SetItemCount(_itemCount);
 		}
 	} 
 	

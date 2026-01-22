@@ -31,7 +31,8 @@ public partial class GameController : Node3D
 		_uiController.CreateObject += OnCreateObject;
 		
 		_projectManager = GetNode<ProjectManager>("%ProjectManager");
-		_projectManager.CurrentProject = _projectManager.CreateTestProject();
+		//_projectManager.CurrentProject = _projectManager.CreateTestProject();
+		_projectManager.CurrentProject = _projectManager.LoadProject("TestProject");
 		_templateCreator.SetProjectManager( _projectManager);
 
 		var commandDic = new CommandDictionary(_mainScene);

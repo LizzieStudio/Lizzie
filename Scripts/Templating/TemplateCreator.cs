@@ -87,6 +87,7 @@ public partial class TemplateCreator : MarginContainer
         _newButton.Pressed += () => _newTemplateDialog.Show();
         
         _saveButton = GetNode<Button>("%SaveButton");
+        _saveButton.Pressed += SaveTemplate;
         
         _duplicateButton = GetNode<Button>("%DuplicateButton");
         
@@ -139,16 +140,24 @@ public partial class TemplateCreator : MarginContainer
 
         ClearParameterBox();
 
+        int id = 0;
         foreach (var t in CurrentTemplate.Elements)
         {
             var te = BuildTemplateElement(t);
             
             var ni = _elementTree.CreateItem(_rootItem);
+
+            if (te.Id == 0) te.Id = id;
             ni.SetMetadata(0, te.Id);
+            id++;
             ni.SetText(0, te.ElementName);
             
             _templateElements.Add(te);
         }
+        
+        //dataset
+        
+        
         
         //update preview
         _updateRequired = true;
@@ -163,6 +172,11 @@ public partial class TemplateCreator : MarginContainer
         {
             CurrentTemplate = Templates[name];
         }
+    }
+
+    private void SaveTemplate()
+    {
+        _projectManager.SaveProject(_projectManager.CurrentProject, "TestProject");
     }
 
     private ScrollBar _previewHScroll;
@@ -224,7 +238,7 @@ public partial class TemplateCreator : MarginContainer
         _duplicateElementButton = GetNode<Button>("%DuplicateElement");
         _duplicateElementButton.Pressed += DuplicateCurrentElement;
         
-        EnableTreeDragAndDrop();
+        //EnableTreeDragAndDrop();
     }
 
     private void InitParamTypes()
@@ -493,7 +507,8 @@ public partial class TemplateCreator : MarginContainer
                     Autosize = l.Autosize,
                     HorizontalAlignment = l.HorizontalAlignment,
                     VerticalAlignment = l.VerticalAlignment,
-                    Type = l.Type
+                    Type = l.Type,
+                    Stretch = l.Stretch
                 });
             }
         }
