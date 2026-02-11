@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://b5ul3mii2rd40"]
+
+[ext_resource type="Script" uid="uid://cboc6i7fc04my" path="res://Scripts/VisualComponents/VcMeeple.cs" id="1_xsjmf"]
+[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="3_y7dxy"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
+resource_local_to_scene = true
+
+[sub_resource type="BoxMesh" id="BoxMesh_jaa1f"]
+material = ExtResource("3_y7dxy")
+
+[sub_resource type="PlaceholderMesh" id="PlaceholderMesh_xsjmf"]
+
+[node name="Meeple" type="Area3D" unique_id=1886844817]
+script = ExtResource("1_xsjmf")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1903593335]
+shape = SubResource("BoxShape3D_mvaa4")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="." unique_id=42563686]
+mesh = SubResource("BoxMesh_jaa1f")
+
+[node name="MeshAnchor" type="MeshInstance3D" parent="." unique_id=185201056]
+mesh = SubResource("PlaceholderMesh_xsjmf")

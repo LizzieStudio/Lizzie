@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://bg7ps5kfql3ip"]
 
-[ext_resource type="Texture2D" uid="uid://cl232ymcr4r2w" path="res://Textures/UI/circle_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_wck64"]
+[ext_resource type="Texture2D" uid="uid://d3k7urs1lkuqw" path="res://Textures/UI/meepleo24.png" id="1_wck64"]
 [ext_resource type="Script" uid="uid://cbj45v7spbeg0" path="res://Scripts/ComponentTemplate.cs" id="2_hv28x"]
 
 [resource]
@@ -8,5 +8,5 @@ script = ExtResource("2_hv28x")
 ComponentName = "Meeple"
 Icon = ExtResource("1_wck64")
 DefinitionDialogName = "res://Scenes/ComponentPanels/MeeplePanel.tscn"
-PrototypeName = "res://Scenes/VisualComponents/VcDisc.tscn"
+PrototypeName = "res://Scenes/VisualComponents/VcMeeple.tscn"
 ComponentType = 9

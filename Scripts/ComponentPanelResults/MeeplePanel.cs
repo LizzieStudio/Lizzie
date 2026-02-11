@@ -4,12 +4,13 @@ using System.Collections.Generic;
 
 public partial class MeeplePanel : ComponentPanelDialogResult
 {
-	private const int GridSize = 16;
-	private const float CellSize = 30f;
+	private const int GridSize = 8;
+	private const float CellSize = 15f;
 	
 	private bool[,] _gridState;
 	private Panel[,] _gridCells;
 	private GridContainer _gridContainer;
+    private MarginContainer _matrixContainer;
 	
 	private bool _isMouseDown = false;
 	private bool _isRightMouseDown = false;
@@ -17,20 +18,57 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 	private Color _onColor = new Color(0.2f, 0.6f, 1.0f); // Blue
 	private Color _offColor = new Color(0.15f, 0.15f, 0.15f); // Dark gray
 	private Color _hoverColor = new Color(0.3f, 0.3f, 0.3f); // Light gray
-	
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
+
+
+    private LineEdit _nameInput;
+    private LineEdit _heightInput;
+    private LineEdit _thicknessInput;
+    private ColorPickerButton _colorPicker;
+    private ComponentPreview _preview;
+
+
+    // Called when the node enters the scene tree for the first time.
+    public override void _Ready()
 	{
-		InitializeGrid();
+        ComponentType = VisualComponentBase.VisualComponentType.Cube;
+        _nameInput = GetNode<LineEdit>("%ItemName");
+        _heightInput = GetNode<LineEdit>("%Height");
+        _heightInput.TextChanged += t => UpdatePreview();
+
+        _thicknessInput = GetNode<LineEdit>("%Width");
+        _thicknessInput.TextChanged += t => UpdatePreview();
+
+        _colorPicker = GetNode<ColorPickerButton>("%Color");
+        _colorPicker.ColorChanged += ColorPickerOnColorChanged;
+        _preview = GetNode<ComponentPreview>("%Preview");
+
+        InitializeGrid();
 		CreateGridUI();
 	}
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
-	}
-	
-	public override void _Input(InputEvent @event)
+    private void ColorPickerOnColorChanged(Color color)
+    {
+        UpdatePreview();
+    }
+
+    public override void Activate()
+    {
+        _preview.SetComponent(GetPreviewComponent(), new Vector3(Mathf.DegToRad(-10), 0, 0));
+        UpdatePreview();
+    }
+
+    private VcMeeple GetPreviewComponent()
+    {
+        var scene = GD.Load<PackedScene>("res://Scenes/VisualComponents/VcMeeple.tscn");
+        return scene.Instantiate<VcMeeple>();
+    }
+
+    public override void Deactivate()
+    {
+        _preview.ClearComponent();
+    }
+
+    public override void _Input(InputEvent @event)
 	{
 		if (@event is InputEventMouseButton mouseButton)
 		{
@@ -61,18 +99,20 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 	}
 	
 	private void CreateGridUI()
-	{
+    {
+        _matrixContainer = GetNode<MarginContainer>("%MatrixContainer");
+
 		// Create a centered container
-		var centerContainer = new CenterContainer();
-		centerContainer.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(centerContainer);
+		//var centerContainer = new CenterContainer();
+		//centerContainer.SetAnchorsPreset(LayoutPreset.FullRect);
+		//matrixContainer.AddChild(centerContainer);
 		
 		// Create the grid container
 		_gridContainer = new GridContainer();
 		_gridContainer.Columns = GridSize;
 		_gridContainer.AddThemeConstantOverride("h_separation", 2);
 		_gridContainer.AddThemeConstantOverride("v_separation", 2);
-		centerContainer.AddChild(_gridContainer);
+        _matrixContainer.AddChild(_gridContainer);
 		
 		// Create grid cells
 		for (int row = 0; row < GridSize; row++)
@@ -130,7 +170,8 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 		{
 			_gridState[row, col] = true;
 			UpdateCellVisual(row, col);
-		}
+            UpdatePreview();
+        }
 	}
 	
 	private void SetCellOff(int row, int col)
@@ -139,7 +180,8 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 		{
 			_gridState[row, col] = false;
 			UpdateCellVisual(row, col);
-		}
+            UpdatePreview();
+        }
 	}
 	
 	private void UpdateCellVisual(int row, int col)
@@ -169,7 +211,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 		var styleBox = panel.GetThemeStylebox("panel") as StyleBoxFlat;
 		if (styleBox != null && !_gridState[row, col])
 		{
-			styleBox.BorderColor = new Color(0.8f, 0.8f, 0.8f);
+			//styleBox.BorderColor = new Color(0.8f, 0.8f, 0.8f);
 			styleBox.SetBorderWidthAll(2);
 		}
 	}
@@ -281,6 +323,43 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     public override Dictionary<string, object> GetParams()
     {
-        return new();
+        var d = new Dictionary<string, object>();
+
+        d.Add("ComponentName", _nameInput.Text);
+        d.Add("Height", ParamToFloat(_heightInput.Text));
+        d.Add("Thickness", ParamToFloat(_thicknessInput.Text));
+        d.Add("Color", _colorPicker.Color);
+		d.Add("Grid", _gridState);
+
+        return d;
+    }
+
+    private void UpdatePreview()
+    {
+        var d = new Dictionary<string, object>();
+
+        //normalize the size
+        var h = ParamToFloat(_heightInput.Text);
+        var w = ParamToFloat(_thicknessInput.Text);
+        
+        if (h == 0 || w == 0 )
+        {
+            _preview.SetComponentVisibility(false);
+            return;
+        }
+
+        _preview.SetComponentVisibility(true);
+
+        //normalize dimensions to 10x10x10 outer extants
+        var scale = 10f / h;
+
+        d.Add("ComponentName", _nameInput.Text);
+        d.Add("Height", 10f);
+        d.Add("Width", w * scale);
+        d.Add("Color", _colorPicker.Color);
+        d.Add("Grid", _gridState);
+
+        _preview.Build(d, TextureFactory);
+
     }
 }

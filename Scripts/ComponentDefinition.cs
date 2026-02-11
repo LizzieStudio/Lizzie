@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public partial class ComponentDefinition : HBoxContainer
+public partial class ComponentDefinition : VBoxContainer
 {
 	// Called when the node enters the scene tree for the first time.
 	[Export] private ComponentTemplate[] _components;
@@ -38,8 +38,8 @@ public partial class ComponentDefinition : HBoxContainer
 
 		_isInitialized = true;
 		
-		buttonPanel = GetNode<VBoxContainer>("ButtonStrip");
-		_componentPanel = GetNode<Panel>("ComponentPanel");
+		buttonPanel = GetNode<VBoxContainer>("%CompButtonStrip");
+		_componentPanel = GetNode<Panel>("%ComponentPanel");
 		
 		var bg = new ButtonGroup();
 

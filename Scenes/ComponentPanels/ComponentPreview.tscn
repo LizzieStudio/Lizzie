@@ -1,17 +1,17 @@
-[gd_scene load_steps=4 format=3 uid="uid://ojs61k8nlddj"]
+[gd_scene format=3 uid="uid://ojs61k8nlddj"]
 
 [ext_resource type="Script" uid="uid://0bd6nlas58lp" path="res://Scripts/ComponentPreview.cs" id="1_5fnph"]
 [ext_resource type="Texture2D" uid="uid://dtc70uy7e7n8" path="res://Textures/UI/rotate-right.png" id="2_3qart"]
 [ext_resource type="PackedScene" uid="uid://c1a1y6r1hea4l" path="res://Scenes/Controls/page_control.tscn" id="2_bcj4e"]
 
-[node name="ComponentPreview" type="Panel"]
+[node name="ComponentPreview" type="Panel" unique_id=146194529]
 custom_minimum_size = Vector2(200, 0)
 script = ExtResource("1_5fnph")
 
-[node name="PageControl" parent="." instance=ExtResource("2_bcj4e")]
+[node name="PageControl" parent="." unique_id=14444399 instance=ExtResource("2_bcj4e")]
 layout_mode = 0
 
-[node name="PreviewLabel" type="Label" parent="."]
+[node name="PreviewLabel" type="Label" parent="." unique_id=1700853928]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 0
 offset_left = 4.0
@@ -21,27 +21,27 @@ size_flags_vertical = 1
 text = "Preview"
 horizontal_alignment = 1
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+[node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=539205292]
 layout_mode = 0
 offset_top = 36.0
 offset_right = 200.0
 offset_bottom = 236.0
 
-[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=395371349]
 transparent_bg = true
 handle_input_locally = false
 size = Vector2i(200, 200)
 render_target_update_mode = 4
 
-[node name="Node3D" type="Node3D" parent="SubViewportContainer/SubViewport"]
+[node name="Node3D" type="Node3D" parent="SubViewportContainer/SubViewport" unique_id=1358402325]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3000, 0)
 
-[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport/Node3D"]
+[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport/Node3D" unique_id=1965615795]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
 projection = 1
 size = 2.0
 
-[node name="SpinButton" type="Button" parent="."]
+[node name="SpinButton" type="Button" parent="." unique_id=695925748]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 5.0
@@ -53,7 +53,7 @@ toggle_mode = true
 button_pressed = true
 icon = ExtResource("2_3qart")
 
-[node name="FrontView" type="Button" parent="."]
+[node name="FrontView" type="Button" parent="." unique_id=1918290833]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 5.0
@@ -63,7 +63,7 @@ offset_bottom = 106.0
 tooltip_text = "View front"
 text = "F"
 
-[node name="BackView" type="Button" parent="."]
+[node name="BackView" type="Button" parent="." unique_id=534187452]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 5.0

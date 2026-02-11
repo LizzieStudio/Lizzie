@@ -30,12 +30,12 @@
 [ext_resource type="PackedScene" uid="uid://bqbaakftpue7u" path="res://Scenes/project_manager.tscn" id="25_urt8w"]
 [ext_resource type="PackedScene" uid="uid://dbskxotmh6h06" path="res://Scenes/DataSet/DatasetEditor.tscn" id="26_kgdam"]
 
-[sub_resource type="Theme" id="Theme_a3w6s"]
-
 [sub_resource type="LabelSettings" id="LabelSettings_xnkas"]
 font_size = 32
 font_color = Color(0, 0, 0, 1)
 outline_size = 1
+
+[sub_resource type="Theme" id="Theme_a3w6s"]
 
 [node name="PrimaryScene" type="Node3D" unique_id=410470090 node_paths=PackedStringArray("_textureFactory", "_templateCreator")]
 script = ExtResource("1_hibmt")
@@ -111,63 +111,6 @@ title = "Insert"
 
 [node name="Help" type="PopupMenu" parent="UI/MenuBar" unique_id=1339962661]
 title = "Help"
-
-[node name="ComponentDefinition" type="HBoxContainer" parent="UI" unique_id=294287419 node_paths=PackedStringArray("_textureFactory")]
-visible = false
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -20.0
-offset_top = -20.0
-offset_right = 20.0
-offset_bottom = 20.0
-grow_horizontal = 2
-grow_vertical = 2
-theme = SubResource("Theme_a3w6s")
-script = ExtResource("4_eclwi")
-_components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"), ExtResource("7_la08l"), ExtResource("8_dwpay"), ExtResource("9_56ys6"), ExtResource("10_711is"), ExtResource("11_14nhc"), ExtResource("12_ccm2a"), ExtResource("14_jck65")])
-_textureFactory = NodePath("../../SubViewportContainer/TextureFactory")
-
-[node name="ButtonStrip" type="VBoxContainer" parent="UI/ComponentDefinition" unique_id=1002884338]
-layout_mode = 2
-
-[node name="ComponentPanel" type="Panel" parent="UI/ComponentDefinition" unique_id=1190035524]
-custom_minimum_size = Vector2(800, 450)
-layout_mode = 2
-theme_override_styles/panel = ExtResource("12_3v46o")
-
-[node name="DialogButtonMargins" type="MarginContainer" parent="UI/ComponentDefinition/ComponentPanel" unique_id=1307991246]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -124.0
-offset_top = -40.0
-grow_horizontal = 0
-grow_vertical = 0
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="DialogButtonLayout" type="HBoxContainer" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins" unique_id=1759523305]
-layout_mode = 2
-
-[node name="CancelButton" type="Button" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins/DialogButtonLayout" unique_id=1011401775]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 8
-text = "Cancel"
-
-[node name="CreateButton" type="Button" parent="UI/ComponentDefinition/ComponentPanel/DialogButtonMargins/DialogButtonLayout" unique_id=1775715509]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 8
-text = "Create"
 
 [node name="ComponentTabs" type="TabContainer" parent="UI" unique_id=36789732]
 unique_name_in_owner = true
@@ -305,6 +248,61 @@ visible = false
 [node name="DatasetEditor" parent="UI" unique_id=1239742681 instance=ExtResource("26_kgdam")]
 unique_name_in_owner = true
 visible = false
+
+[node name="ComponentDefinition" type="VBoxContainer" parent="UI" unique_id=4146276 node_paths=PackedStringArray("_textureFactory")]
+unique_name_in_owner = true
+visible = false
+offset_left = 176.0
+offset_top = 69.5
+offset_right = 980.0
+offset_bottom = 519.5
+theme = SubResource("Theme_a3w6s")
+script = ExtResource("4_eclwi")
+_components = Array[Resource]([ExtResource("12_6reuv"), ExtResource("13_5qcje"), ExtResource("7_la08l"), ExtResource("8_dwpay"), ExtResource("9_56ys6"), ExtResource("10_711is"), ExtResource("11_14nhc"), ExtResource("12_ccm2a"), ExtResource("14_jck65")])
+_textureFactory = NodePath("../../SubViewportContainer/TextureFactory")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/ComponentDefinition" unique_id=104912025]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/ComponentDefinition/HBoxContainer" unique_id=1145920080]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="CompButtonStrip" type="VBoxContainer" parent="UI/ComponentDefinition/HBoxContainer/MarginContainer" unique_id=1002884338]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ComponentPanel" type="Panel" parent="UI/ComponentDefinition/HBoxContainer" unique_id=1190035524]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(800, 450)
+layout_mode = 2
+theme_override_styles/panel = ExtResource("12_3v46o")
+
+[node name="DialogButtonMargins" type="MarginContainer" parent="UI/ComponentDefinition" unique_id=1307991246]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="DialogButtonLayout" type="HBoxContainer" parent="UI/ComponentDefinition/DialogButtonMargins" unique_id=1759523305]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="CancelButton" type="Button" parent="UI/ComponentDefinition/DialogButtonMargins/DialogButtonLayout" unique_id=1011401775]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+text = "Cancel"
+
+[node name="CreateButton" type="Button" parent="UI/ComponentDefinition/DialogButtonMargins/DialogButtonLayout" unique_id=1775715509]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+text = "Create"
 
 [node name="FileDialog" type="FileDialog" parent="." unique_id=350939739]
 oversampling_override = 1.0

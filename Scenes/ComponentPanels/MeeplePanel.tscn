@@ -12,115 +12,104 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_ln7b8")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=598315876]
-layout_mode = 0
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=714681883]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=598315876]
+layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="GridContainer" type="GridContainer" parent="HBoxContainer" unique_id=583756111]
+[node name="GridContainer" type="GridContainer" parent="VBoxContainer/HBoxContainer" unique_id=583756111]
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/GridContainer" unique_id=855375728]
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=855375728]
 layout_mode = 2
 text = "Name  "
 horizontal_alignment = 2
 
-[node name="ItemName" type="LineEdit" parent="HBoxContainer/GridContainer" unique_id=1886740193]
+[node name="ItemName" type="LineEdit" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=1886740193]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 
-[node name="Label6" type="Label" parent="HBoxContainer/GridContainer" unique_id=175968119]
+[node name="Label6" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=175968119]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label7" type="Label" parent="HBoxContainer/GridContainer" unique_id=1742094593]
+[node name="Label7" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=1742094593]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label4" type="Label" parent="HBoxContainer/GridContainer" unique_id=2078778059]
+[node name="Label4" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=2078778059]
 layout_mode = 2
 text = "Height  "
 horizontal_alignment = 2
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/GridContainer" unique_id=2065559272]
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=2065559272]
 layout_mode = 2
 
-[node name="Height" type="LineEdit" parent="HBoxContainer/GridContainer/HBoxContainer3" unique_id=25484787]
+[node name="Height" type="LineEdit" parent="VBoxContainer/HBoxContainer/GridContainer/HBoxContainer3" unique_id=25484787]
 unique_name_in_owner = true
 layout_mode = 2
 text = "10"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/GridContainer/HBoxContainer3" unique_id=1823752618]
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer/HBoxContainer3" unique_id=1823752618]
 layout_mode = 2
 text = "mm"
 
-[node name="Label5" type="Label" parent="HBoxContainer/GridContainer" unique_id=594464497]
+[node name="Label3" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=789720288]
 layout_mode = 2
-text = "Length  "
+text = "Thickness"
 horizontal_alignment = 2
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/GridContainer" unique_id=184858042]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=2037345478]
 layout_mode = 2
 
-[node name="Length" type="LineEdit" parent="HBoxContainer/GridContainer/HBoxContainer4" unique_id=1669340801]
+[node name="Width" type="LineEdit" parent="VBoxContainer/HBoxContainer/GridContainer/HBoxContainer2" unique_id=470523121]
 unique_name_in_owner = true
 layout_mode = 2
 text = "10"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/GridContainer/HBoxContainer4" unique_id=2016894897]
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer/HBoxContainer2" unique_id=181233208]
 layout_mode = 2
 text = "mm"
 
-[node name="Label3" type="Label" parent="HBoxContainer/GridContainer" unique_id=789720288]
-layout_mode = 2
-text = "Width  "
-horizontal_alignment = 2
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/GridContainer" unique_id=2037345478]
-layout_mode = 2
-
-[node name="Width" type="LineEdit" parent="HBoxContainer/GridContainer/HBoxContainer2" unique_id=470523121]
-unique_name_in_owner = true
-layout_mode = 2
-text = "10"
-alignment = 2
-
-[node name="Label" type="Label" parent="HBoxContainer/GridContainer/HBoxContainer2" unique_id=181233208]
-layout_mode = 2
-text = "mm"
-
-[node name="Label2" type="Label" parent="HBoxContainer/GridContainer" unique_id=1411965590]
+[node name="Label2" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=1411965590]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "Color  "
 horizontal_alignment = 2
 
-[node name="Color" type="ColorPickerButton" parent="HBoxContainer/GridContainer" unique_id=803636872]
+[node name="Color" type="ColorPickerButton" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=803636872]
 unique_name_in_owner = true
 layout_mode = 2
 color = Color(1, 0, 0, 1)
 
-[node name="Label8" type="Label" parent="HBoxContainer/GridContainer" unique_id=1175590525]
+[node name="Label8" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=1175590525]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label9" type="Label" parent="HBoxContainer/GridContainer" unique_id=1654458955]
+[node name="Label9" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer" unique_id=1654458955]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label10" type="Label" parent="HBoxContainer/GridContainer" unique_id=929040008]
-layout_mode = 2
-text = "Quantity  "
-horizontal_alignment = 2
-
-[node name="Quantity" type="LineEdit" parent="HBoxContainer/GridContainer" unique_id=2073865896]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-alignment = 2
-
-[node name="Preview" parent="HBoxContainer" unique_id=766529351 instance=ExtResource("2_u2l1c")]
+[node name="Preview" parent="VBoxContainer/HBoxContainer" unique_id=766529351 instance=ExtResource("2_u2l1c")]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="MatrixContainer" type="MarginContainer" parent="VBoxContainer" unique_id=815014810]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
