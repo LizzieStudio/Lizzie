@@ -174,6 +174,8 @@ public abstract partial class VisualComponentBase : Area3D
 
 	public virtual string ComponentName { get; set; }
 
+	public virtual Guid PrototypeRef { get; set; }
+
 	public virtual Guid Reference { get; set; } = new Guid();
 	
 	/// <summary>

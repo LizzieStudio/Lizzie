@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 public partial class PrototypeManifest : Control
@@ -30,20 +31,21 @@ public partial class PrototypeManifest : Control
         _preview = GetNode<ComponentPreview>("%ComponentPreview");
         _preview.SetComponentX(-200);
         InitializePrototypeGrid();
-        LoadPrototypes();
     }
 
     private void InitializePrototypeGrid()
     {
         _prototypeTree = new Tree();
-        _prototypeTree.Columns = 2;
+        _prototypeTree.Columns = 3;
         _prototypeTree.HideRoot = true;
         _prototypeTree.SelectMode = Tree.SelectModeEnum.Row;
         _prototypeTree.SizeFlagsVertical = SizeFlags.ExpandFill;
         _prototypeTree.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 
+        _prototypeTree.ColumnTitlesVisible = true;
         _prototypeTree.SetColumnTitle(0, "Name");
         _prototypeTree.SetColumnTitle(1, "Type");
+        _prototypeTree.SetColumnTitle(2, "Qty");
         _prototypeTree.SetColumnExpand(0, true);
         _prototypeTree.SetColumnExpand(1, true);
         _prototypeTree.SetColumnExpandRatio(0, 2);
@@ -67,16 +69,21 @@ public partial class PrototypeManifest : Control
     }
 
 
-    public void Refresh()
+    public void Refresh(Dictionary<Guid, int> prototypeCounts)
     {
         _preview.ClearComponent();
         _preview.SetComponentVisibility(false);
-        LoadPrototypes();
+        LoadPrototypes(prototypeCounts);
     }
-    private void LoadPrototypes()
+
+    private Dictionary<Guid, int> _prototypeCounts;
+
+    private void LoadPrototypes(Dictionary<Guid, int> prototypeCounts)
     {
         if (ProjectService.Instance?.CurrentProject == null)
             return;
+
+        _prototypeCounts = prototypeCounts;
 
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
@@ -101,6 +108,16 @@ public partial class PrototypeManifest : Control
             var item = _prototypeTree.CreateItem(_root);
             item.SetText(0, prototype.Name ?? "");
             item.SetText(1, prototype.Type.ToString());
+
+            if (prototypeCounts != null && prototypeCounts.TryGetValue(prototype.PrototypeRef, out var count))
+            {
+                item.SetText(2, count.ToString());
+            }
+            else
+            {
+                item.SetText(2, "0");
+            }
+
             item.SetMetadata(0, prototype.PrototypeRef.ToString());
         }
     }
@@ -120,7 +137,7 @@ public partial class PrototypeManifest : Control
             _sortAscending = true;
         }
 
-        LoadPrototypes();
+        LoadPrototypes(_prototypeCounts);
     }
 
     private void OnTreeItemSelected()
@@ -146,8 +163,4 @@ public partial class PrototypeManifest : Control
 
     public TextureFactory TextureFactory { get; set; }
 
-    public void RefreshGrid()
-    {
-        LoadPrototypes();
-    }
 }

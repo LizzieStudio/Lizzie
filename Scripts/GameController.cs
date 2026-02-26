@@ -29,8 +29,9 @@ public partial class GameController : Node3D
 		_uiController = GetNode<UI>("UI");
 		_uiController.MasterModeChange += OnMasterModeChange;
 		_uiController.CreateObject += OnCreateObject;
-		
-		_projectManager = GetNode<ProjectManager>("%ProjectManager");
+		_uiController.SetGameController(this);
+
+        _projectManager = GetNode<ProjectManager>("%ProjectManager");
 		//_projectManager.CurrentProject = _projectManager.CreateTestProject();
 		ProjectService.Instance.CurrentProject = ProjectService.Instance.LoadProject("TestProject");
 		_templateCreator.SetProjectManager( _projectManager);
@@ -60,8 +61,10 @@ public partial class GameController : Node3D
 			return;
 		}
 
-		//if the name is blank in the parameters, set it
-		if (args.Params.ContainsKey("ComponentName") && args.Params.ContainsKey("BaseName"))
+		component.PrototypeRef = args.PrototypeRef;
+
+        //if the name is blank in the parameters, set it
+        if (args.Params.ContainsKey("ComponentName") && args.Params.ContainsKey("BaseName"))
 		{
 			if (string.IsNullOrWhiteSpace(args.Params["ComponentName"].ToString()))
 			{
@@ -132,7 +135,9 @@ public partial class GameController : Node3D
 	{
 	}
 
-	public VisualComponentBase SpawnComponent(string prototype)
+	public SceneController MainScene => _mainScene;
+
+    public VisualComponentBase SpawnComponent(string prototype)
 	{
 		var scene = ResourceLoader.Load<PackedScene>(prototype).Instantiate();
 

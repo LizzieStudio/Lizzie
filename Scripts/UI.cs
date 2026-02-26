@@ -91,6 +91,12 @@ public partial class UI : CanvasLayer
 
     }
 
+
+    public void SetGameController(GameController gameController)
+    {
+        _gameController = gameController;
+    }
+
     private void OnDatasetRefresh(object sender,string name)
     {
         DatasetChanged?.Invoke(this, name);
@@ -290,7 +296,7 @@ public partial class UI : CanvasLayer
 
         if (id == 3)
         {
-            _prototypeManifest.Refresh();
+            _prototypeManifest.Refresh(_gameController.MainScene.GameObjects.PrototypeCounts());
             _prototypeManifest.Visible = true;
         }
     }

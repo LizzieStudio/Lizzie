@@ -174,6 +174,27 @@ public partial class GameObjects : Node
         }
         QueueStackingUpdate();
     }
+
+    public Dictionary<Guid, int> PrototypeCounts()
+    {
+        Dictionary<Guid, int> counts = new();
+        foreach (var c in GetChildren())
+        {
+            if (c is VisualComponentBase vcb && vcb.PrototypeRef != null)
+            {
+                if (counts.ContainsKey(vcb.PrototypeRef))
+                {
+                    counts[vcb.PrototypeRef]++;
+                }
+                else
+                {
+                    counts.Add(vcb.PrototypeRef, 1);
+                }
+            }
+        }
+        return counts;
+    }
+
     #endregion
 
     #region Hover
@@ -534,6 +555,8 @@ public partial class GameObjects : Node
     private void SpawnComponent()
     {
         var newComp = (VisualComponentBase)_spawnComponent.Duplicate();
+        newComp.PrototypeRef = _spawnComponent.PrototypeRef;
+
         var spawnPosition = _dragPlane.GetCursorProjection();
         
         newComp.Build(_spawnComponent.Parameters, TextureFactory);
