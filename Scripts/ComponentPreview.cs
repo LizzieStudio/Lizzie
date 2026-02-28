@@ -12,34 +12,82 @@ public partial class ComponentPreview : Panel
 	private Button _frontView;
 	private Button _backView;
 
-	private SubViewportContainer _subViewportContainer;
+    private Button _zoomIn;
+	private Button _zoomOut;
+    private Button _zoomToFit;
+    
+    private SubViewportContainer _subViewportContainer;
 	private SubViewport _subViewport;
 
     private PageControl _pageControl;
-	
+	private Camera3D _camera;
+
 	public override void _Ready()
 	{
-		_parentNode = GetNode<Node3D>("SubViewportContainer/SubViewport/Node3D");
-		_previewLabel = GetNode<Label>("PreviewLabel");
-		_pageControl = GetNode<PageControl>("PageControl");
+		_parentNode = GetNode<Node3D>("%Node3D");
+		_previewLabel = GetNode<Label>("%PreviewLabel");
+		_pageControl = GetNode<PageControl>("%PageControl");
 		_pageControl.ItemSelected += ChangePage;
 		_pageControl.Visible = false;
 		_pageControl.SetItemCount(ItemCount);
-		
+
 		_spinButton = GetNode<Button>("%SpinButton");
-		
+
 		_frontView = GetNode<Button>("%FrontView");
 		_frontView.Pressed += () => ShowView(0);
-		
+
 		_backView = GetNode<Button>("%BackView");
 		_backView.Pressed += () => ShowView(180);
 
-        _subViewportContainer = GetNode<SubViewportContainer>("%SubViewportContainer");
+		_subViewportContainer = GetNode<SubViewportContainer>("%SubViewportContainer");
+        _subViewportContainer.MouseTarget = true;
+		_subViewportContainer.MouseFilter = Control.MouseFilterEnum.Pass;
+
         _subViewport = GetNode<SubViewport>("%SubViewport");
-        _subViewport.Size = new Vector2I((int)Size.X, (int)_subViewportContainer.Size.Y);
+		//_subViewport.Size = new Vector2I((int)Size.X, (int)_subViewportContainer.Size.Y);
+
+		_zoomIn = GetNode<Button>("%ZoomIn");
+        _zoomIn.Pressed += ZoomIn;
+
+		_zoomOut = GetNode<Button>("%ZoomOut");
+		_zoomOut.Pressed += ZoomOut;
+
+		_zoomToFit = GetNode<Button>("%ZoomFit");
+		_zoomToFit.Pressed += () => AutoZoomComponent(_component);
+
+		_camera = _subViewport.GetCamera3D();
+	}
+
+	public override void _Input(InputEvent @event)
+    {
+        if (!Visible) return;
+
+		if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
+		{
+			if (mouseEvent.ButtonIndex == MouseButton.WheelUp)
+			{
+				ZoomIn();
+                GetViewport().SetInputAsHandled();
+			}
+			else if (mouseEvent.ButtonIndex == MouseButton.WheelDown)
+			{
+				ZoomOut();
+				GetViewport().SetInputAsHandled();
+			}
+		}
+	}
+
+    private void ZoomIn()
+    {
+        _camera.Size *= 0.8f;
     }
 
-	public override void _Process(double delta)
+    private void ZoomOut()
+    {
+        _camera.Size *= 1.25f;
+    }
+
+public override void _Process(double delta)
 	{
 		if (_component != null && _spinButton.ButtonPressed)
 		{
@@ -51,7 +99,11 @@ public partial class ComponentPreview : Panel
 			Build(_component.Parameters, _textureFactory);
 			_buildNeeded = false;
 		}
-	}
+
+    }
+
+    private bool _zoomInNeeded;
+    private bool _zoomOutNeeded;
 
 	private TextureFactory _textureFactory;
 	
@@ -73,7 +125,8 @@ public partial class ComponentPreview : Panel
 		_componentActive = true;
 		_component.Rotation = rotation;
 		_parentNode.AddChild(_component);
-	}
+        AutoZoomComponent(_component);
+}
 
 	public void ClearComponent()
 	{
@@ -97,9 +150,46 @@ public partial class ComponentPreview : Panel
         if (a == null) return;	
 		
 		a.Position = new Vector3(x, a.Position.Y, a.Position.Z);
+
     }
 
-	public void Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
+	protected void AutoZoomComponent(VisualComponentBase component)
+	{
+		if (component == null) return;
+
+		var aabb = new Aabb();
+		bool hasAabb = false;
+
+		foreach (var child in component.GetChildren())
+		{
+			if (child is VisualInstance3D visualInstance)
+			{
+				var childAabb = visualInstance.GetAabb();
+				if (!hasAabb)
+				{
+					aabb = childAabb;
+					hasAabb = true;
+				}
+				else
+				{
+					aabb = aabb.Merge(childAabb);
+				}
+			}
+		}
+
+		if (hasAabb)
+		{
+			var size = aabb.Size;
+			var maxSize =  size.Length();
+			_camera.Size = maxSize * 1.2f;
+		}
+		else
+		{
+			_camera.Size = 5.0f;
+		}
+	}
+
+    public void Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
 	{
 		if (_component != null)
 		{
@@ -210,7 +300,9 @@ public partial class ComponentPreview : Panel
 		var r = new Vector3(_component.Rotation.X, Mathf.DegToRad(angle), _component.Rotation.Z);
 		_component.Rotation = r;
 	}
-	
+
+
+
 	
 	#endregion
 	

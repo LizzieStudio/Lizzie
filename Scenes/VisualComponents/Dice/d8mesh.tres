@@ -1,4 +1,4 @@
-[gd_resource type="ArrayMesh" load_steps=3 format=3 uid="uid://kiad3pmp20o0"]
+[gd_resource type="ArrayMesh" format=4 uid="uid://kiad3pmp20o0"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ka1xj"]
 
@@ -7,11 +7,11 @@ _surfaces = [{
 "aabb": AABB(-1, -1, -1, 2.00001, 2, 2),
 "format": 34896613377,
 "index_count": 24,
-"index_data": PackedByteArray(4, 0, 2, 0, 0, 0, 4, 0, 1, 0, 2, 0, 4, 0, 3, 0, 1, 0, 4, 0, 0, 0, 3, 0, 5, 0, 0, 0, 2, 0, 5, 0, 2, 0, 1, 0, 5, 0, 1, 0, 3, 0, 5, 0, 3, 0, 0, 0),
+"index_data": PackedByteArray("BAACAAAABAABAAIABAADAAEABAAAAAMABQAAAAIABQACAAEABQABAAMABQADAAAA"),
 "primitive": 3,
 "uv_scale": Vector4(0, 0, 0, 0),
 "vertex_count": 6,
-"vertex_data": PackedByteArray(254, 255, 255, 127, 255, 127, 0, 0, 0, 0, 255, 127, 255, 127, 0, 0, 255, 127, 255, 127, 0, 0, 0, 0, 255, 127, 255, 127, 255, 255, 0, 0, 255, 127, 255, 255, 255, 127, 0, 0, 255, 127, 0, 0, 255, 127, 0, 0)
+"vertex_data": PackedByteArray("/v//f/9/AAAAAP9//38AAP9//38AAAAA/3//f///AAD/f////38AAP9/AAD/fwAA")
 }]
 blend_shape_mode = 0
 
@@ -19,15 +19,15 @@ blend_shape_mode = 0
 resource_name = "d8uv_Solid_001"
 _surfaces = [{
 "aabb": AABB(-1, -1, -1, 2.00001, 2, 2),
-"attribute_data": PackedByteArray(8, 128, 45, 128, 84, 170, 66, 210, 146, 213, 92, 173, 3, 192, 227, 200, 97, 234, 16, 210, 35, 192, 255, 255, 167, 255, 195, 255, 47, 234, 254, 154, 8, 128, 219, 182, 179, 149, 176, 173, 27, 150, 34, 228, 21, 192, 45, 128, 234, 170, 148, 155, 255, 255, 55, 201, 21, 192, 13, 183, 197, 213, 41, 228, 8, 128, 201, 182, 58, 128, 19, 237, 21, 192, 69, 237, 177, 191, 49, 201, 139, 255, 206, 146, 207, 191, 222, 146, 174, 255, 151, 200, 21, 192, 201, 182),
+"attribute_data": PackedByteArray("CIAtgFSqQtKS1VytA8DjyGHqENIjwP//p//D/y/q/poIgNu2s5WwrRuWIuQVwC2A6qqUm///N8kVwA23xdUp5AiAybY6gBPtFcBF7bG/McmL/86Sz7/ekq7/l8gVwMm2"),
 "format": 34896613399,
 "index_count": 24,
-"index_data": PackedByteArray(17, 0, 8, 0, 1, 0, 19, 0, 5, 0, 10, 0, 18, 0, 14, 0, 4, 0, 16, 0, 0, 0, 12, 0, 21, 0, 3, 0, 9, 0, 23, 0, 11, 0, 7, 0, 22, 0, 6, 0, 15, 0, 20, 0, 13, 0, 2, 0),
+"index_data": PackedByteArray("EQAIAAEAEwAFAAoAEgAOAAQAEAAAAAwAFQADAAkAFwALAAcAFgAGAA8AFAANAAIA"),
 "material": SubResource("StandardMaterial3D_ka1xj"),
 "primitive": 3,
 "uv_scale": Vector4(1.9984, 2.00303, 0, 0),
 "vertex_count": 24,
-"vertex_data": PackedByteArray(254, 255, 255, 127, 255, 127, 170, 227, 254, 255, 255, 127, 255, 127, 128, 225, 254, 255, 255, 127, 255, 127, 7, 246, 254, 255, 255, 127, 255, 127, 168, 241, 0, 0, 255, 127, 255, 127, 154, 246, 0, 0, 255, 127, 255, 127, 45, 220, 0, 0, 255, 127, 255, 127, 186, 227, 0, 0, 255, 127, 255, 127, 185, 232, 255, 127, 255, 127, 0, 0, 128, 225, 255, 127, 255, 127, 0, 0, 168, 241, 255, 127, 255, 127, 0, 0, 45, 220, 255, 127, 255, 127, 0, 0, 185, 232, 255, 127, 255, 127, 255, 255, 170, 227, 255, 127, 255, 127, 255, 255, 7, 246, 255, 127, 255, 127, 255, 255, 154, 246, 255, 127, 255, 127, 255, 255, 186, 227, 255, 127, 255, 255, 255, 127, 170, 227, 255, 127, 255, 255, 255, 127, 128, 225, 255, 127, 255, 255, 255, 127, 154, 246, 255, 127, 255, 255, 255, 127, 45, 220, 255, 127, 0, 0, 255, 127, 7, 246, 255, 127, 0, 0, 255, 127, 168, 241, 255, 127, 0, 0, 255, 127, 186, 227, 255, 127, 0, 0, 255, 127, 185, 232, 72, 166, 207, 143, 46, 216, 27, 116, 75, 151, 50, 97, 142, 27, 218, 189, 123, 104, 148, 158, 236, 160, 106, 206, 189, 89, 40, 112, 207, 172, 122, 245, 46, 216, 27, 116, 142, 27, 218, 189, 236, 160, 106, 206, 207, 172, 122, 245, 72, 166, 207, 143, 75, 151, 50, 97, 123, 104, 148, 158, 189, 89, 40, 112, 72, 166, 207, 143, 46, 216, 27, 116, 123, 104, 148, 158, 236, 160, 106, 206, 75, 151, 50, 97, 142, 27, 218, 189, 189, 89, 40, 112, 207, 172, 122, 245)
+"vertex_data": PackedByteArray("/v//f/9/quP+//9//3+A4f7//3//fwf2/v//f/9/qPEAAP9//3+a9gAA/3//fy3cAAD/f/9/uuMAAP9//3+56P9//38AAIDh/3//fwAAqPH/f/9/AAAt3P9//38AALno/3//f///quP/f/9///8H9v9//3///5r2/3//f///uuP/f////3+q4/9/////f4Dh/3////9/mvb/f////38t3P9/AAD/fwf2/38AAP9/qPH/fwAA/3+64/9/AAD/f7noSKbPjy7YG3RLlzJhjhvavXtolJ7soGrOvVkocM+sevUu2Bt0jhvaveygas7PrHr1SKbPj0uXMmF7aJSevVkocEimz48u2Bt0e2iUnuygas5LlzJhjhvavb1ZKHDPrHr1")
 }]
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_pupqg")

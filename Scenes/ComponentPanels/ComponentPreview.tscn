@@ -3,6 +3,11 @@
 [ext_resource type="Script" uid="uid://0bd6nlas58lp" path="res://Scripts/ComponentPreview.cs" id="1_5fnph"]
 [ext_resource type="Texture2D" uid="uid://dtc70uy7e7n8" path="res://Textures/UI/rotate-right.png" id="2_3qart"]
 [ext_resource type="PackedScene" uid="uid://c1a1y6r1hea4l" path="res://Scenes/Controls/page_control.tscn" id="2_bcj4e"]
+[ext_resource type="Texture2D" uid="uid://r5utxt0rsj3j" path="res://Textures/UI/front_surface16.png" id="4_fmb4o"]
+[ext_resource type="Texture2D" uid="uid://c2xtoa1ewjtfd" path="res://Textures/UI/zoom-in.png" id="4_vyuqk"]
+[ext_resource type="Texture2D" uid="uid://0yeu0bawiage" path="res://Textures/UI/back_surface16.png" id="5_e4sbw"]
+[ext_resource type="Texture2D" uid="uid://b2dp0funivpga" path="res://Textures/UI/zoom-out.png" id="5_rlrbs"]
+[ext_resource type="Texture2D" uid="uid://b0qbv1mmnp4c4" path="res://Textures/UI/fullscreen.png" id="5_w56gn"]
 
 [node name="ComponentPreview" type="Panel" unique_id=146194529]
 custom_minimum_size = Vector2(200, 0)
@@ -10,69 +15,94 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_5fnph")
 
-[node name="PageControl" parent="." unique_id=14444399 instance=ExtResource("2_bcj4e")]
-layout_mode = 0
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=435566134]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="PreviewLabel" type="Label" parent="." unique_id=1700853928]
+[node name="PageControl" parent="VBoxContainer" unique_id=14444399 instance=ExtResource("2_bcj4e")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PreviewLabel" type="Label" parent="VBoxContainer" unique_id=1700853928]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
-layout_mode = 0
-offset_left = 4.0
-offset_right = 204.0
-offset_bottom = 23.0
+layout_mode = 2
 size_flags_vertical = 1
 text = "Preview"
 horizontal_alignment = 1
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=539205292]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1173542196]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer" unique_id=586972672]
+layout_mode = 2
+
+[node name="SpinButton" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=695925748]
 unique_name_in_owner = true
-layout_mode = 0
-offset_top = 36.0
-offset_right = 200.0
-offset_bottom = 236.0
-
-[node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=395371349]
-unique_name_in_owner = true
-transparent_bg = true
-handle_input_locally = false
-size = Vector2i(200, 200)
-render_target_update_mode = 4
-
-[node name="Node3D" type="Node3D" parent="SubViewportContainer/SubViewport" unique_id=1358402325]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3000, 0)
-
-[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport/Node3D" unique_id=1965615795]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
-projection = 1
-size = 2.0
-
-[node name="SpinButton" type="Button" parent="." unique_id=695925748]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 5.0
-offset_top = 40.0
-offset_right = 29.0
-offset_bottom = 71.0
+layout_mode = 2
 tooltip_text = "Start / Stop Rotation"
 toggle_mode = true
 button_pressed = true
 icon = ExtResource("2_3qart")
 
-[node name="FrontView" type="Button" parent="." unique_id=1918290833]
+[node name="FrontView" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1918290833]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 5.0
-offset_top = 75.0
-offset_right = 29.0
-offset_bottom = 106.0
+layout_mode = 2
 tooltip_text = "View front"
-text = "F"
+icon = ExtResource("4_fmb4o")
 
-[node name="BackView" type="Button" parent="." unique_id=534187452]
+[node name="BackView" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=534187452]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 5.0
-offset_top = 110.0
-offset_right = 29.0
-offset_bottom = 141.0
+layout_mode = 2
 tooltip_text = "View back"
-text = "B"
+icon = ExtResource("5_e4sbw")
+
+[node name="Panel" type="Panel" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1259862182]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="ZoomIn" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=456137335]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Zoom In"
+icon = ExtResource("4_vyuqk")
+
+[node name="ZoomFit" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=2090211669]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Fit"
+icon = ExtResource("5_w56gn")
+
+[node name="ZoomOut" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=157528523]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Zoom out"
+icon = ExtResource("5_rlrbs")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="VBoxContainer/HBoxContainer" unique_id=539205292]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="VBoxContainer/HBoxContainer/SubViewportContainer" unique_id=395371349]
+unique_name_in_owner = true
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(218, 188)
+render_target_update_mode = 4
+
+[node name="Node3D" type="Node3D" parent="VBoxContainer/HBoxContainer/SubViewportContainer/SubViewport" unique_id=1358402325]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3000, 0)
+
+[node name="Camera3D" type="Camera3D" parent="VBoxContainer/HBoxContainer/SubViewportContainer/SubViewport/Node3D" unique_id=1965615795]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+projection = 1
+size = 2.0

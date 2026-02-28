@@ -9,6 +9,8 @@ public partial class PrototypeManifest : Control
     private Tree _prototypeTree;
     private TreeItem _root;
 
+    private Button _close;
+
     private ComponentPreview _preview;
 
     private Prototype _selectedPrototype;
@@ -30,6 +32,9 @@ public partial class PrototypeManifest : Control
         _mainContainer = GetNode<SplitContainer>("%MainContainer");
         _preview = GetNode<ComponentPreview>("%ComponentPreview");
         _preview.SetComponentX(-200);
+
+        _close  = GetNode<Button>("%Close");
+        _close.Pressed += Hide;
         InitializePrototypeGrid();
     }
 
@@ -44,8 +49,11 @@ public partial class PrototypeManifest : Control
 
         _prototypeTree.ColumnTitlesVisible = true;
         _prototypeTree.SetColumnTitle(0, "Name");
+        _prototypeTree.SetColumnTitleAlignment(0, HorizontalAlignment.Left);
         _prototypeTree.SetColumnTitle(1, "Type");
+        _prototypeTree.SetColumnTitleAlignment(1, HorizontalAlignment.Left);
         _prototypeTree.SetColumnTitle(2, "Qty");
+        _prototypeTree.SetColumnTitleAlignment(2, HorizontalAlignment.Center);
         _prototypeTree.SetColumnExpand(0, true);
         _prototypeTree.SetColumnExpand(1, true);
         _prototypeTree.SetColumnExpandRatio(0, 2);
@@ -117,6 +125,7 @@ public partial class PrototypeManifest : Control
             {
                 item.SetText(2, "0");
             }
+            item.SetTextAlignment(2, HorizontalAlignment.Center);
 
             item.SetMetadata(0, prototype.PrototypeRef.ToString());
         }
