@@ -199,26 +199,26 @@ public override void _Process(double delta)
 
     public void Build(Prototype prototype, TextureFactory textureFactory)
     {
-        Build(prototype.Type, prototype.Parameters, textureFactory);
-    }
-
-	public void Build(VisualComponentBase.VisualComponentType componentType, Dictionary<string, object> parameters, TextureFactory textureFactory)
-	{
-		var c= SpawnComponent(componentType, parameters);
+        var c = SpawnComponent(prototype);
         _buildNeeded = true;
 
-        SetComponent(c, GetRotationVector(componentType));
-		_textureFactory = textureFactory;
+        SetComponent(c, GetRotationVector(prototype.Type));
+        _textureFactory = textureFactory;
     }
 
-	private VisualComponentBase SpawnComponent(VisualComponentBase.VisualComponentType componentType, Dictionary<string, object> parameters)
+
+
+	private VisualComponentBase SpawnComponent(Prototype prototype)
 	{
-		var s = Utility.ComponentTypeToScenePath(componentType, parameters);
+        var s = Utility.ComponentTypeToScenePath(prototype.Type, prototype.Parameters);
         var scene = GD.Load<PackedScene>(s);
         var c = scene.Instantiate<VisualComponentBase>();
-		c.Parameters = parameters;
-		return c;
-    }
+		c.PrototypeRef = prototype.PrototypeRef;
+        return c;
+}
+
+
+
 
     private Vector3 GetRotationVector(VisualComponentBase.VisualComponentType componentType)
     {
