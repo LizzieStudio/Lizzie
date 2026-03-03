@@ -724,6 +724,111 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 			_datasetPicker.AddItem(d.Key);
 		}
 	}
+
+	public override void DisplayPrototype(Guid prototypeId)
+	{
+		var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+		DisplayPrototype(prototype);
+	}
+
+	public override void DisplayPrototype(Prototype prototype)
+	{
+		_nameInput.Text = prototype.Name;
+		_heightInput.Text = prototype.Parameters["Height"].ToString();
+		_widthInput.Text = prototype.Parameters["Width"].ToString();
+
+		if (prototype.Parameters.ContainsKey("Mode") && prototype.Parameters["Mode"] is VcToken.TokenBuildMode mode)
+		{
+			_tabs.CurrentTab = mode switch
+			{
+				VcToken.TokenBuildMode.Quick => 0,
+				VcToken.TokenBuildMode.Grid => 1,
+				VcToken.TokenBuildMode.Template => 2,
+				_ => 0
+			};
+		}
+
+		// Handle Quick mode parameters
+		if (_tabs.CurrentTab == 0 && prototype.Parameters.ContainsKey("QuickCardData"))
+		{
+			if (prototype.Parameters["QuickCardData"] is List<QuickCardData> quickData)
+			{
+				_quickSuitCount.Select(quickData.Count - 1);
+				for (int i = 0; i < quickData.Count && i < MaxQuickSuitCount; i++)
+				{
+					_quickSuitColors[i].Color = quickData[i].BackgroundColor;
+					_quickSuitValues[i].Text = quickData[i].Caption;
+				}
+				if (quickData.Count > 0)
+				{
+					_quickBackColor.Color = quickData[0].CardBackColor;
+					_quickBackText.Text = quickData[0].CardBackValue;
+				}
+			}
+		}
+
+		// Handle Grid mode parameters
+		if (_tabs.CurrentTab == 1)
+		{
+			if (prototype.Parameters.ContainsKey("GridRows"))
+			{
+				_gridRowCount.Text = prototype.Parameters["GridRows"].ToString();
+			}
+			if (prototype.Parameters.ContainsKey("GridCols"))
+			{
+				_gridColCount.Text = prototype.Parameters["GridCols"].ToString();
+			}
+			if (prototype.Parameters.ContainsKey("GridCount"))
+			{
+				_gridCardCount.Text = prototype.Parameters["GridCount"].ToString();
+			}
+		}
+
+		// Handle Template mode parameters
+		if (_tabs.CurrentTab == 2)
+		{
+			if (prototype.Parameters.ContainsKey("FrontTemplate"))
+			{
+				string frontTemplateName = prototype.Parameters["FrontTemplate"].ToString();
+				for (int i = 0; i < _frontTemplatePicker.ItemCount; i++)
+				{
+					if (_frontTemplatePicker.GetItemText(i) == frontTemplateName)
+					{
+						_frontTemplatePicker.Select(i);
+						break;
+					}
+				}
+			}
+
+			if (prototype.Parameters.ContainsKey("BackTemplate"))
+			{
+				string backTemplateName = prototype.Parameters["BackTemplate"].ToString();
+				for (int i = 0; i < _backTemplatePicker.ItemCount; i++)
+				{
+					if (_backTemplatePicker.GetItemText(i) == backTemplateName)
+					{
+						_backTemplatePicker.Select(i);
+						break;
+					}
+				}
+			}
+
+			if (prototype.Parameters.ContainsKey("Dataset"))
+			{
+				string datasetName = prototype.Parameters["Dataset"].ToString();
+				for (int i = 0; i < _datasetPicker.ItemCount; i++)
+				{
+					if (_datasetPicker.GetItemText(i) == datasetName)
+					{
+						_datasetPicker.Select(i);
+						break;
+					}
+				}
+			}
+		}
+
+		UpdatePreview();
+	}
 }
 
 

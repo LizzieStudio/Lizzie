@@ -79,7 +79,22 @@ public partial class BoardPanelDialogResult : ComponentPanelDialogResult
 		d.Add("FrontImage", _frontImage.Text);
 		d.Add("BackImage", _backImage.Text);
 		d.Add("Type", VcToken.TokenType.Board);
-		
+
 		return d;
+	}
+
+	public override void DisplayPrototype(Guid prototypeId)
+	{
+		var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+		DisplayPrototype(prototype);
+	}
+
+	public override void DisplayPrototype(Prototype prototype)
+	{
+		_nameInput.Text = prototype.Name;
+		_heightInput.Text = prototype.Parameters["Height"].ToString();
+		_widthInput.Text = prototype.Parameters["Width"].ToString();
+		_frontImage.Text = prototype.Parameters["FrontImage"].ToString();
+		_backImage.Text = prototype.Parameters["BackImage"].ToString();
 	}
 }

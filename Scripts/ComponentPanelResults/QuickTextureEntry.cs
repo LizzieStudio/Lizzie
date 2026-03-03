@@ -107,7 +107,7 @@ public partial class QuickTextureEntry : BoxContainer
 	{
 		var qt = new QuickTextureField
 		{
-			
+
 			ForegroundColor = _colorPicker.Color,
 		};
 
@@ -117,19 +117,61 @@ public partial class QuickTextureEntry : BoxContainer
 				qt.FaceType = TextureFactory.TextureObjectType.Text;
 				qt.Caption = _text.Text;
 				break;
-			
+
 			case 1:
 				qt.FaceType = TextureFactory.TextureObjectType.CoreShape;
 				qt.Caption = _selectedIcon;
 				break;
-			
-			
-			
+
+
+
 		}
 
 		qt.Quantity = _qtyPicker.Selected + 1;
 
 		return qt;
+	}
+
+	public void SetQuickTextureField(QuickTextureField field)
+	{
+		if (field == null) return;
+
+		_initializing = true;
+
+		_colorPicker.Color = field.ForegroundColor;
+
+		switch (field.FaceType)
+		{
+			case TextureFactory.TextureObjectType.Text:
+				_optionTypes.Select(0);
+				_text.Text = field.Caption ?? "";
+				break;
+
+			case TextureFactory.TextureObjectType.CoreShape:
+				_optionTypes.Select(1);
+				_selectedIcon = field.Caption ?? "Circle";
+				if (_iconList != null)
+				{
+					for (int i = 0; i < _iconList.ItemCount; i++)
+					{
+						if (_iconList.GetItemText(i) == _selectedIcon)
+						{
+							_iconList.Select(i);
+							break;
+						}
+					}
+				}
+				break;
+		}
+
+		if (_qtyPicker != null && field.Quantity > 0)
+		{
+			_qtyPicker.Select(field.Quantity - 1);
+		}
+
+		UpdateVisibility(_optionTypes.Selected);
+
+		_initializing = false;
 	}
 }
 

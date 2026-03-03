@@ -174,7 +174,43 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 		d.Add("Size", dia / 2);
 		d.Add("Color", _dieColor.Color);
 		d.Add("Sides", PackageSides());
-		
+
 		_preview.Build(d, TextureFactory);
+	}
+
+	public override void DisplayPrototype(Guid prototypeId)
+	{
+		var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+		DisplayPrototype(prototype);
+	}
+
+	public override void DisplayPrototype(Prototype prototype)
+	{
+		_nameInput.Text = prototype.Name;
+		_diameterInput.Text = prototype.Parameters["Size"].ToString();
+		_dieColor.Color = (Color)prototype.Parameters["Color"];
+
+		if (prototype.Parameters.ContainsKey("Sides") && prototype.Parameters["Sides"] is QuickTextureField[] sides)
+		{
+			for (int i = 0; i < sides.Length && i < _quickSideEntries.Length; i++)
+			{
+				_quickSideEntries[i].SetQuickTextureField(sides[i]);
+			}
+
+			// Set the sides dropdown based on array length
+			int sideIndex = sides.Length switch
+			{
+				4 => 0,
+				6 => 1,
+				8 => 2,
+				10 => 3,
+				12 => 4,
+				20 => 5,
+				_ => 1
+			};
+			_sidesInput.Select(sideIndex);
+		}
+
+		UpdatePreview();
 	}
 }

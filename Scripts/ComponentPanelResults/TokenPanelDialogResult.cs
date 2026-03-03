@@ -354,11 +354,11 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		}
 
 		_preview.SetComponentVisibility(true);
-		
+
 		//normalize dimensions to 10x10x10 outer extants
 		var scale = 10f / Math.Max(h, Math.Max(w, t));
-		
-		
+
+
 		var d = new Dictionary<string, object>();
 
 		d.Add("ComponentName", _nameInput.Text);
@@ -370,16 +370,16 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("Shape", _shapePicker.Selected);
 		d.Add("Mode", TabToBuildMode(_tabs.CurrentTab));
 		d.Add("FrontBgColor", _quickBackgroundColor.Color);
-		
+
 		//TODO fix for panel
 		//d.Add("FrontCaption", "");
 		//d.Add("FrontCaptionColor", Colors.Black);
 		d.Add("QuickFront", _frontField.GetQuickTextureField());
 		d.Add("QuickBack", _backField.GetQuickTextureField());
-		
+
 		d.Add("Type", VcToken.TokenType.Token);
 		d.Add("FrontFontSize", 24);
-		
+
 		if (_tabs.CurrentTab == 0)
 		{
 			d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
@@ -394,7 +394,57 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 		d.Add("BackFontSize", 24);
 
 		_preview.Build(d, TextureFactory);
-		
+
+	}
+
+	public override void DisplayPrototype(Guid prototypeId)
+	{
+		var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+		DisplayPrototype(prototype);
+	}
+
+	public override void DisplayPrototype(Prototype prototype)
+	{
+		_nameInput.Text = prototype.Name;
+		_heightInput.Text = prototype.Parameters["Height"].ToString();
+		_widthInput.Text = prototype.Parameters["Width"].ToString();
+		_thicknessInput.Text = prototype.Parameters["Thickness"].ToString();
+		_frontImage.Text = prototype.Parameters["FrontImage"].ToString();
+		_backImage.Text = prototype.Parameters["BackImage"].ToString();
+		_shapePicker.Select((int)prototype.Parameters["Shape"]);
+		_quickBackgroundColor.Color = (Color)prototype.Parameters["FrontBgColor"];
+		_quickBackgroundColor2.Color = (Color)prototype.Parameters["BackBgColor"];
+
+		if (prototype.Parameters.ContainsKey("QuickFront"))
+		{
+			_frontField.SetQuickTextureField((QuickTextureField)prototype.Parameters["QuickFront"]);
+		}
+
+		if (prototype.Parameters.ContainsKey("QuickBack"))
+		{
+			_backField.SetQuickTextureField((QuickTextureField)prototype.Parameters["QuickBack"]);
+		}
+
+		if (prototype.Parameters.ContainsKey("DifferentBack"))
+		{
+			bool differentBack = (bool)prototype.Parameters["DifferentBack"];
+			_quickBackCheckbox.ButtonPressed = differentBack;
+			_customBackCheckbox.ButtonPressed = differentBack;
+		}
+
+		if (prototype.Parameters.ContainsKey("Mode"))
+		{
+			var mode = (VcToken.TokenBuildMode)prototype.Parameters["Mode"];
+			_tabs.CurrentTab = mode switch
+			{
+				VcToken.TokenBuildMode.Quick => 0,
+				VcToken.TokenBuildMode.Custom => 1,
+				VcToken.TokenBuildMode.Grid => 2,
+				_ => 0
+			};
+		}
+
+		UpdatePreview();
 	}
 
 }

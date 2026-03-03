@@ -368,32 +368,53 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         return d;
     }
 
-    private void UpdatePreview()
-    {
-        var d = new Dictionary<string, object>();
+	private void UpdatePreview()
+	{
+		var d = new Dictionary<string, object>();
 
-        //normalize the size
-        var h = ParamToFloat(_heightInput.Text);
-        var t = ParamToFloat(_thicknessInput.Text);
-        
-        if (h == 0 || t == 0 )
-        {
-            _preview.SetComponentVisibility(false);
-            return;
-        }
+		//normalize the size
+		var h = ParamToFloat(_heightInput.Text);
+		var t = ParamToFloat(_thicknessInput.Text);
 
-        _preview.SetComponentVisibility(true);
+		if (h == 0 || t == 0 )
+		{
+			_preview.SetComponentVisibility(false);
+			return;
+		}
 
-        //normalize dimensions to 10x10x10 outer extants
-        var scale = 10f / h;
+		_preview.SetComponentVisibility(true);
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", 10f);
-        d.Add("Thickness", t * scale);
-        d.Add("Color", _colorPicker.Color);
-        d.Add("Grid", _gridState);
+		//normalize dimensions to 10x10x10 outer extants
+		var scale = 10f / h;
 
-        _preview.Build(d, TextureFactory);
+		d.Add("ComponentName", _nameInput.Text);
+		d.Add("Height", 10f);
+		d.Add("Thickness", t * scale);
+		d.Add("Color", _colorPicker.Color);
+		d.Add("Grid", _gridState);
 
-    }
+		_preview.Build(d, TextureFactory);
+
+	}
+
+	public override void DisplayPrototype(Guid prototypeId)
+	{
+		var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+		DisplayPrototype(prototype);
+	}
+
+	public override void DisplayPrototype(Prototype prototype)
+	{
+		_nameInput.Text = prototype.Name;
+		_heightInput.Text = prototype.Parameters["Height"].ToString();
+		_thicknessInput.Text = prototype.Parameters["Thickness"].ToString();
+		_colorPicker.Color = (Color)prototype.Parameters["Color"];
+
+		if (prototype.Parameters.ContainsKey("Grid") && prototype.Parameters["Grid"] is bool[,] grid)
+		{
+			SetGridState(grid);
+		}
+
+		UpdatePreview();
+	}
 }

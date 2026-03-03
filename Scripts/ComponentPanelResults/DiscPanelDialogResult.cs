@@ -90,16 +90,32 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 		}
 
 		_preview.SetComponentVisibility(true);
-		
+
 		//normalize dimensions to 10x10x10 outer extants
 		var scale = 10f / Math.Max(h, dia);
-		
+
 		d.Add("ComponentName", _nameInput.Text);
 		d.Add("Height", h * scale);
 		d.Add("Diameter", dia * scale);
 		d.Add("Color", _colorPicker.Color);
-		
+
 		_preview.Build(d, TextureFactory);
-		
+
+	}
+
+	public override void DisplayPrototype(Guid prototypeId)
+	{
+		var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+		DisplayPrototype(prototype);
+	}
+
+	public override void DisplayPrototype(Prototype prototype)
+	{
+		_nameInput.Text = prototype.Name;
+		_heightInput.Text = prototype.Parameters["Height"].ToString();
+		_diameterInput.Text = prototype.Parameters["Diameter"].ToString();
+		_colorPicker.Color = (Color)prototype.Parameters["Color"];
+
+		UpdatePreview();
 	}
 }
