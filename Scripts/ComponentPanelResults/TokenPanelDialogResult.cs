@@ -184,13 +184,18 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
 	private void OnQuickBackCheckboxChange()
 	{
-		var h4 = GetNode<HBoxContainer>("%BottomBgContainer");
-
-		h4.Visible = _quickBackCheckbox.ButtonPressed;
-		_backField.Visible = _quickBackCheckbox.ButtonPressed;
+		ShowQuickBack();
 		
 		UpdatePreview();
 	}
+
+    private void ShowQuickBack()
+    {
+        var h4 = GetNode<HBoxContainer>("%BottomBgContainer");
+
+        h4.Visible = _quickBackCheckbox.ButtonPressed;
+        _backField.Visible = _quickBackCheckbox.ButtonPressed;
+    }
 
 	private void OnPreviewTextColorChange(Color color)
 	{
@@ -430,7 +435,10 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 			bool differentBack = (bool)prototype.Parameters["DifferentBack"];
 			_quickBackCheckbox.ButtonPressed = differentBack;
 			_customBackCheckbox.ButtonPressed = differentBack;
-		}
+
+            ShowQuickBack();
+
+        }
 
 		if (prototype.Parameters.ContainsKey("Mode"))
 		{
@@ -444,7 +452,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 			};
 		}
 
-		UpdatePreview();
+		Activate();
 	}
 
 }

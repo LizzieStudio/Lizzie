@@ -99,10 +99,17 @@ public partial class ComponentDefinition : Control
 				firstButton = false;
 			}
 
-			if (_editMode) UpdatePanelVisibility(CurName);
+            if (_editMode)
+            {
+                UpdatePanelVisibility(CurName);
+            }
         }
 
-	}
+        if (_editMode && _mapPrototype != null)
+        {
+            MapPrototypeToPanel(_mapPrototype);
+        }
+    }
 	
 
 	private string _curItem;
@@ -187,7 +194,7 @@ public partial class ComponentDefinition : Control
 				if (kv.Key == name)
 				{
 					kv.Value.Visible = true;
-					cpdr.Activate();
+					if (!_editMode) cpdr.Activate();
 				}
 				else
 				{
@@ -195,11 +202,6 @@ public partial class ComponentDefinition : Control
 					cpdr.Deactivate();
 				}
 			}
-		}
-
-		if (_editMode && _mapPrototype != null) 
-        {
-			MapPrototypeToPanel(_mapPrototype);
 		}
 	}
 

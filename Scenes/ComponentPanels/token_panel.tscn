@@ -1,13 +1,13 @@
-[gd_scene load_steps=6 format=3 uid="uid://diovg4u3xl1qn"]
+[gd_scene format=3 uid="uid://diovg4u3xl1qn"]
 
 [ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_qeff1"]
-[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/TokenPanelDialogResult.cs" id="1_ykbf8"]
+[ext_resource type="Script" uid="uid://7nxy4f23of3v" path="res://Scripts/ComponentPanelResults/TokenPanelDialogResult.cs" id="1_ykbf8"]
 [ext_resource type="PackedScene" uid="uid://bqjj4fvs81gaw" path="res://Scenes/ComponentPanels/quick_texture_entry.tscn" id="2_25k1d"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_aum2n"]
 
 [sub_resource type="Theme" id="Theme_vm378"]
 
-[node name="TokenPanel" type="MarginContainer"]
+[node name="TokenPanel" type="MarginContainer" unique_id=1127930468]
 offset_right = 40.0
 offset_bottom = 40.0
 theme = SubResource("Theme_vm378")
@@ -17,39 +17,38 @@ theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 script = ExtResource("1_ykbf8")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1269825971]
 layout_mode = 2
 alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer" unique_id=1860243025]
 custom_minimum_size = Vector2(450, 0)
 layout_mode = 2
 size_flags_horizontal = 2
 
-[node name="GridContainer" type="GridContainer" parent="HBoxContainer/VBoxContainer"]
+[node name="GridContainer" type="GridContainer" parent="HBoxContainer/VBoxContainer" unique_id=738774959]
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=895177348]
 layout_mode = 2
 text = "Name  "
 horizontal_alignment = 2
 
-[node name="ItemName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="ItemName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=196439806]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-alignment = 2
 
-[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=981779475]
 layout_mode = 2
 text = "Shape:"
 
-[node name="ShapePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="ShapePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1816476011]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 4
 selected = 0
+item_count = 4
 popup/item_0/text = "Square"
 popup/item_0/id = 0
 popup/item_1/text = "Circle"
@@ -59,214 +58,219 @@ popup/item_2/id = 2
 popup/item_3/text = "Hex Flat Up"
 popup/item_3/id = 3
 
-[node name="Label5" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label5" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1731445939]
 layout_mode = 2
 text = "Width"
 horizontal_alignment = 2
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=319433435]
 layout_mode = 2
 
-[node name="Width" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4"]
+[node name="Width" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4" unique_id=991591035]
 unique_name_in_owner = true
 layout_mode = 2
 text = "25"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4" unique_id=144760602]
 layout_mode = 2
 text = "mm"
 
-[node name="Label4" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label4" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1815128949]
 layout_mode = 2
 text = "Height"
 horizontal_alignment = 2
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=21825889]
 layout_mode = 2
 
-[node name="Height" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3"]
+[node name="Height" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=709309258]
 unique_name_in_owner = true
 layout_mode = 2
 text = "25"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=745669444]
 layout_mode = 2
 text = "mm"
 
-[node name="Label11" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label11" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1085386115]
 layout_mode = 2
 text = "Thickness"
 horizontal_alignment = 2
 
-[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=404480909]
 layout_mode = 2
 
-[node name="Thickness" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7"]
+[node name="Thickness" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7" unique_id=676056749]
 unique_name_in_owner = true
 layout_mode = 2
 text = "2"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7" unique_id=2141174891]
 layout_mode = 2
 text = "mm"
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer" unique_id=178445283]
 layout_mode = 2
 theme_override_constants/margin_left = 3
 theme_override_constants/margin_top = 3
 theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
-[node name="Tabs" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer"]
+[node name="Tabs" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1800227696]
 unique_name_in_owner = true
 layout_mode = 2
+current_tab = 0
 
-[node name="Quick" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs"]
+[node name="Quick" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=147592434]
 layout_mode = 2
+metadata/_tab_index = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick" unique_id=893903103]
 layout_mode = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer" unique_id=471795062]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 alignment = 1
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=1760347777]
 layout_mode = 2
 size_flags_vertical = 6
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=1262023080]
 layout_mode = 2
 size_flags_vertical = 6
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=933372617]
 layout_mode = 2
 text = "Background:"
 
-[node name="TopBgColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TopBgColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=82616634]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 color = Color(1, 1, 1, 1)
 edit_alpha = false
 
-[node name="FrontField" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" instance=ExtResource("2_25k1d")]
+[node name="FrontField" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=839081491 instance=ExtResource("2_25k1d")]
 unique_name_in_owner = true
 layout_mode = 2
 FieldCaption = "Front:"
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=84555581]
 layout_mode = 2
 size_flags_vertical = 6
 
-[node name="ToggleBack" type="CheckBox" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="ToggleBack" type="CheckBox" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=1888562399]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Different Back"
 
-[node name="BottomBgContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer"]
+[node name="BottomBgContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=1738045303]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 6
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/BottomBgContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/BottomBgContainer" unique_id=457019958]
 layout_mode = 2
 text = "Background:"
 
-[node name="BottomBgColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/BottomBgContainer"]
+[node name="BottomBgColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/BottomBgContainer" unique_id=788045866]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 color = Color(1, 1, 1, 1)
 edit_alpha = false
 
-[node name="BackField" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" instance=ExtResource("2_25k1d")]
+[node name="BackField" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=16886751 instance=ExtResource("2_25k1d")]
 unique_name_in_owner = true
 layout_mode = 2
 FieldCaption = "Back:"
 
-[node name="Custom" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs"]
+[node name="Custom" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=1889754922]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 1
 
-[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom"]
+[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom" unique_id=397574428]
 layout_mode = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2" unique_id=162530993]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer" unique_id=1884341708]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer"]
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer" unique_id=2076521332]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "Front  "
 horizontal_alignment = 2
 
-[node name="FrontFile" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer"]
+[node name="FrontFile" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer" unique_id=608441887]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 placeholder_text = "(file)"
 alignment = 2
 
-[node name="FrontFileButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer"]
+[node name="FrontFileButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer" unique_id=915219464]
 unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("1_qeff1")
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer" unique_id=2100709252]
 layout_mode = 2
 theme_override_constants/margin_left = 50
 
-[node name="CustomDifferentBack" type="CheckBox" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/MarginContainer"]
+[node name="CustomDifferentBack" type="CheckBox" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/MarginContainer" unique_id=1395967311]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Different Back"
 
-[node name="CustomBackFileRow" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer"]
+[node name="CustomBackFileRow" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer" unique_id=2032670322]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow"]
+[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow" unique_id=1126452826]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "Back  "
 horizontal_alignment = 2
 
-[node name="BackFile" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow"]
+[node name="BackFile" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow" unique_id=1813323061]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 placeholder_text = "(file)"
 alignment = 2
 
-[node name="BackFileButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow"]
+[node name="BackFileButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow" unique_id=1394277807]
 unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("1_qeff1")
 
-[node name="Grid" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs"]
+[node name="Grid" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=1464329553]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 2
 
-[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs"]
+[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=805627747]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 3
 
-[node name="Preview" parent="HBoxContainer" instance=ExtResource("3_aum2n")]
+[node name="Preview" parent="HBoxContainer" unique_id=725754392 instance=ExtResource("3_aum2n")]
 unique_name_in_owner = true
 layout_mode = 2

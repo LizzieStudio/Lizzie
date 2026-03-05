@@ -12,7 +12,7 @@ public partial class GameController : Node3D
 	[Export]
 	private TextureFactory _textureFactory;
 	
-	private ProjectManager _projectManager;
+	
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -28,8 +28,6 @@ public partial class GameController : Node3D
 		_uiController.CreateObject += OnCreateObject;
 		_uiController.SetGameController(this);
 
-        _projectManager = GetNode<ProjectManager>("%ProjectManager");
-		//_projectManager.CurrentProject = _projectManager.CreateTestProject();
 		ProjectService.Instance.CurrentProject = ProjectService.Instance.LoadProject("TestProject");
 		
 		var commandDic = new CommandDictionary(_mainScene);

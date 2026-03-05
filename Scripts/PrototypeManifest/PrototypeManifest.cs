@@ -63,11 +63,11 @@ public partial class PrototypeManifest : Control
 
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
         _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _editPanel.SetEditMode(); 
-        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
+        _editPanel.SetEditMode();
         _editPanel.SetTextureFactory(TextureFactory);
         _editPanel.DisplayPrototype(SelectedPrototype);
-
+        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
+        
         _editPanel.CancelDialog += ComponentEditDialogClose;
         AddChild(_editPanel);
     }

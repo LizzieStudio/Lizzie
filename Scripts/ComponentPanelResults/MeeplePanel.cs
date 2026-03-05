@@ -72,7 +72,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
 		InitializeGrid();
 		CreateGridUI();
-         UpdatePreview();
+        UpdatePreview();
     }
 
     private void ColorPickerOnColorChanged(Color color)
@@ -415,6 +415,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 			SetGridState(grid);
 		}
 
-		UpdatePreview();
+		Activate();
 	}
 }
