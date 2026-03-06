@@ -14,16 +14,7 @@ public partial interface ICameraBase
 
         void ZoomComponent(VisualComponentBase component);
         
-        /// <summary>
-        /// Returns table position under cursor location
-        /// </summary>
-        /// <param name="component"></param>
-        Vector3 GetSpawnPos();
-
         void ResetView();
 
-        void EnterSpawnMode(VisualComponentBase component);
-        void ExitSpawnMode();
-        
         Camera3D Camera { get; }
 }
