@@ -1,80 +1,82 @@
-[gd_scene load_steps=4 format=3 uid="uid://bmitdjv4ha061"]
+[gd_scene format=3 uid="uid://bmitdjv4ha061"]
 
-[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/DiePanelDialogResult.cs" id="1_5kaje"]
+[ext_resource type="Script" uid="uid://c4j00mcp5m0od" path="res://Scripts/ComponentPanelResults/DiePanelDialogResult.cs" id="1_5kaje"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="2_6el8t"]
 [ext_resource type="PackedScene" uid="uid://bqjj4fvs81gaw" path="res://Scenes/ComponentPanels/quick_texture_entry.tscn" id="3_ap6wc"]
 
-[node name="DiePanel" type="MarginContainer" node_paths=PackedStringArray("_quickSideEntries")]
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="DiePanel" type="MarginContainer" unique_id=1725091934 node_paths=PackedStringArray("_quickSideEntries")]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 script = ExtResource("1_5kaje")
-_quickSideEntries = [NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry2"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry3"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry4"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry5"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry6"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry7"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry8"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry9"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry10"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry11"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry12"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry13"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry14"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry15"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry16"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry17"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry18"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry19"), NodePath("VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry20")]
+_quickSideEntries = [NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry2"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry3"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry4"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry5"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry6"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry7"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry8"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry9"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry10"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry11"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry12"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry13"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry14"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry15"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry16"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry17"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry18"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry19"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry20")]
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=361911315]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer" unique_id=1023073047]
 layout_mode = 2
-theme_override_constants/separation = 20
 
-[node name="GridContainer" type="GridContainer" parent="VBoxContainer/HBoxContainer"]
+[node name="GridContainer" type="GridContainer" parent="HBoxContainer/VBoxContainer" unique_id=1001404252]
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=88793385]
 layout_mode = 2
 text = "Name  "
 horizontal_alignment = 2
 
-[node name="ComponentName" type="LineEdit" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="ComponentName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=183211901]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 alignment = 2
 
-[node name="Label6" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label6" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1894163179]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label7" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label7" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=851268332]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label5" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label5" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1977455384]
 layout_mode = 2
 text = "Diameter"
 horizontal_alignment = 2
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1583249491]
 layout_mode = 2
 
-[node name="Diameter" type="LineEdit" parent="VBoxContainer/HBoxContainer/GridContainer/HBoxContainer4"]
+[node name="Diameter" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4" unique_id=1376898345]
 unique_name_in_owner = true
 layout_mode = 2
 text = "16"
 alignment = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer/HBoxContainer4"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4" unique_id=2129400568]
 layout_mode = 2
 text = "mm"
 
-[node name="Label4" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label4" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=950573878]
 layout_mode = 2
 text = "Sides "
 horizontal_alignment = 2
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=278019633]
 layout_mode = 2
 
-[node name="Sides" type="OptionButton" parent="VBoxContainer/HBoxContainer/GridContainer/HBoxContainer3"]
+[node name="Sides" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=595810219]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 6
 selected = 1
+item_count = 6
 popup/item_0/text = "4"
 popup/item_0/id = 0
 popup/item_1/text = "6"
@@ -88,143 +90,147 @@ popup/item_4/id = 4
 popup/item_5/text = "20"
 popup/item_5/id = 5
 
-[node name="Label2" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=493772543]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "Color  "
 horizontal_alignment = 2
 
-[node name="DieColor" type="ColorPickerButton" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="DieColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=836891573]
 unique_name_in_owner = true
 layout_mode = 2
 color = Color(1, 1, 1, 1)
 
-[node name="Label8" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label8" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1653409709]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label9" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label9" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1632286105]
 layout_mode = 2
 horizontal_alignment = 2
 
-[node name="Label10" type="Label" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1667802254]
 layout_mode = 2
 text = "Quantity  "
 horizontal_alignment = 2
 
-[node name="LineEdit2" type="LineEdit" parent="VBoxContainer/HBoxContainer/GridContainer"]
+[node name="LineEdit2" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=255316156]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 alignment = 2
 
-[node name="Preview" parent="VBoxContainer/HBoxContainer" instance=ExtResource("2_6el8t")]
-unique_name_in_owner = true
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer" unique_id=2033572149]
 layout_mode = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
-layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="TabContainer" type="TabContainer" parent="VBoxContainer/MarginContainer"]
+[node name="TabContainer" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1431477564]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
+current_tab = 0
 
-[node name="Quick Sides" type="ScrollContainer" parent="VBoxContainer/MarginContainer/TabContainer"]
+[node name="Quick Sides" type="ScrollContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=11125790]
 layout_mode = 2
 horizontal_scroll_mode = 0
+metadata/_tab_index = 0
 
-[node name="Quick Sides2" type="GridContainer" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides"]
+[node name="Quick Sides2" type="GridContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides" unique_id=1672260361]
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 
-[node name="QuickTextureEntry" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1035217495 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 1"
 
-[node name="QuickTextureEntry2" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry2" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=762155132 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 2"
 
-[node name="QuickTextureEntry3" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry3" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1045927218 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 3"
 
-[node name="QuickTextureEntry4" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry4" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1977593481 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 4"
 
-[node name="QuickTextureEntry5" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry5" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=465954499 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 5"
 
-[node name="QuickTextureEntry6" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry6" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=951985329 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 6"
 
-[node name="QuickTextureEntry7" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry7" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=2025367394 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 7"
 
-[node name="QuickTextureEntry8" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry8" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1256737540 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 8"
 
-[node name="QuickTextureEntry9" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry9" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=856757649 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 9"
 
-[node name="QuickTextureEntry10" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry10" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1666495654 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 10"
 
-[node name="QuickTextureEntry11" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry11" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1213120595 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 11"
 
-[node name="QuickTextureEntry12" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry12" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=830872677 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 12"
 
-[node name="QuickTextureEntry13" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry13" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1334058858 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 13"
 
-[node name="QuickTextureEntry14" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry14" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=2098169205 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 14"
 
-[node name="QuickTextureEntry15" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry15" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1443179091 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 15"
 
-[node name="QuickTextureEntry16" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry16" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1862353721 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 16"
 
-[node name="QuickTextureEntry17" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry17" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=258054692 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 17"
 
-[node name="QuickTextureEntry18" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry18" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1077392024 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 18"
 
-[node name="QuickTextureEntry19" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry19" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=639395864 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 19"
 
-[node name="QuickTextureEntry20" parent="VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" instance=ExtResource("3_ap6wc")]
+[node name="QuickTextureEntry20" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=360437325 instance=ExtResource("3_ap6wc")]
 layout_mode = 2
 FieldCaption = "Side 20"
 
-[node name="Image" type="VBoxContainer" parent="VBoxContainer/MarginContainer/TabContainer"]
+[node name="Image" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=488316813]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 1
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/TabContainer/Image"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Image" unique_id=1023684477]
 layout_mode = 2
 text = "Side 1"
+
+[node name="Preview" parent="HBoxContainer" unique_id=1142160244 instance=ExtResource("2_6el8t")]
+unique_name_in_owner = true
+layout_mode = 2

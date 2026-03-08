@@ -1,58 +1,61 @@
-[gd_scene load_steps=5 format=3 uid="uid://bifubswbhqkkp"]
+[gd_scene format=3 uid="uid://bifubswbhqkkp"]
 
 [ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_8qg10"]
 [ext_resource type="Script" uid="uid://bidlim05r6ggr" path="res://Scripts/ComponentPanelResults/DeckPanelDialogResult.cs" id="1_a0rs8"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="3_0meyn"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_ud6kl"]
 
-[node name="DeckPanel" type="MarginContainer"]
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="DeckPanel" type="MarginContainer" unique_id=1898663872]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 script = ExtResource("1_a0rs8")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=333851695]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer" unique_id=1515338731]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 
-[node name="GridContainer" type="GridContainer" parent="HBoxContainer/VBoxContainer"]
+[node name="GridContainer" type="GridContainer" parent="HBoxContainer/VBoxContainer" unique_id=707709142]
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1541368363]
 layout_mode = 2
 text = "Deck Name  "
 horizontal_alignment = 2
 
-[node name="ItemName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="ItemName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=968980263]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 alignment = 2
 
-[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=30891622]
 layout_mode = 2
 text = "Card Name  "
 horizontal_alignment = 2
 
-[node name="CardName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="CardName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1790319890]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 alignment = 2
 
-[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=909389396]
 layout_mode = 2
 text = "Standard Size"
 
-[node name="StandardSize" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="StandardSize" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=83784818]
 unique_name_in_owner = true
 layout_mode = 2
 selected = 0
@@ -68,76 +71,76 @@ popup/item_3/id = 3
 popup/item_4/text = "Custom"
 popup/item_4/id = 4
 
-[node name="Label5" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label5" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=367968948]
 layout_mode = 2
 text = "Width"
 horizontal_alignment = 2
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=575199946]
 layout_mode = 2
 
-[node name="Width" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4"]
+[node name="Width" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4" unique_id=475102671]
 unique_name_in_owner = true
 layout_mode = 2
 text = "64"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer4" unique_id=1764336885]
 layout_mode = 2
 text = "mm"
 
-[node name="Label4" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="Label4" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=113206331]
 layout_mode = 2
 text = "Height"
 horizontal_alignment = 2
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=690985236]
 layout_mode = 2
 
-[node name="Height" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3"]
+[node name="Height" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=341286975]
 unique_name_in_owner = true
 layout_mode = 2
 text = "89"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=318660569]
 layout_mode = 2
 text = "mm"
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer" unique_id=56061597]
 layout_mode = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="TabContainer" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer"]
+[node name="TabContainer" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1050980002]
 unique_name_in_owner = true
 layout_mode = 2
 current_tab = 0
 
-[node name="Quick" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer"]
+[node name="Quick" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=2108398528]
 layout_mode = 2
 metadata/_tab_index = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick" unique_id=326114228]
 layout_mode = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer" unique_id=348531001]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1759930954]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1075693595]
 layout_mode = 2
 text = "Suits"
 
-[node name="QuickSuitCount" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="QuickSuitCount" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1208390104]
 unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
@@ -160,305 +163,305 @@ popup/item_6/id = 6
 popup/item_7/text = "8"
 popup/item_7/id = 7
 
-[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=506625337]
 layout_mode = 2
 text = "    Back  "
 
-[node name="QuickBackColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="QuickBackColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1601632030]
 unique_name_in_owner = true
 layout_mode = 2
 text = "BGC"
 color = Color(1, 1, 1, 1)
 
-[node name="QuickBackText" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="QuickBackText" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=215036890]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Card Back Text"
 
-[node name="QSRow1" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow1" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1858709802]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit1Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow1"]
+[node name="QuickSuit1Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow1" unique_id=1330650507]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(1, 0, 0, 1)
 
-[node name="QuickSuit1Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow1"]
+[node name="QuickSuit1Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow1" unique_id=706674662]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="QSRow2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1068409746]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit2Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow2"]
+[node name="QuickSuit2Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow2" unique_id=1024454820]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(0, 1, 0, 1)
 
-[node name="QuickSuit2Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow2"]
+[node name="QuickSuit2Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow2" unique_id=1266577679]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="QSRow3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1654960562]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit3Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow3"]
+[node name="QuickSuit3Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow3" unique_id=1183186832]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(0, 0, 1, 1)
 
-[node name="QuickSuit3Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow3"]
+[node name="QuickSuit3Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow3" unique_id=1560478222]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="QSRow4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1826361242]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit4Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow4"]
+[node name="QuickSuit4Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow4" unique_id=1370572954]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(0.87451, 1, 0, 1)
 
-[node name="QuickSuit4Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow4"]
+[node name="QuickSuit4Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow4" unique_id=1642233257]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="QSRow5" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow5" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1465471226]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit5Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow5"]
+[node name="QuickSuit5Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow5" unique_id=1783716164]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(0.87451, 0.545098, 0, 1)
 
-[node name="QuickSuit5Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow5"]
+[node name="QuickSuit5Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow5" unique_id=1867489023]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="QSRow6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=761714938]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit6Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow6"]
+[node name="QuickSuit6Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow6" unique_id=1340070471]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(0.717647, 0, 1, 1)
 
-[node name="QuickSuit6Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow6"]
+[node name="QuickSuit6Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow6" unique_id=353371145]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="QSRow7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1682035101]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit7Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow7"]
+[node name="QuickSuit7Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow7" unique_id=129483420]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(0.654902, 0.670588, 1, 1)
 
-[node name="QuickSuit7Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow7"]
+[node name="QuickSuit7Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow7" unique_id=1311521023]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="QSRow8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer"]
+[node name="QSRow8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer" unique_id=1306437640]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="QuickSuit8Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow8"]
+[node name="QuickSuit8Color" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow8" unique_id=1028061448]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Color"
 color = Color(0, 0.367699, 0.0745337, 1)
 
-[node name="QuickSuit8Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow8"]
+[node name="QuickSuit8Contents" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick/MarginContainer/VBoxContainer/QSRow8" unique_id=1450041932]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
-[node name="Grid Image" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer"]
+[node name="Grid Image" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1791511184]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 metadata/_tab_index = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image" unique_id=500526234]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer" unique_id=2113425167]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.0
 
-[node name="HBoxContainer5" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer5" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=112747053]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5"]
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=1035263143]
 layout_mode = 2
 size_flags_horizontal = 0
 text = "Front  "
 horizontal_alignment = 2
 
-[node name="GridFront" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5"]
+[node name="GridFront" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=243905940]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "(file)"
 alignment = 2
 
-[node name="GridFrontButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5"]
+[node name="GridFrontButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=145671109]
 unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("1_8qg10")
 
-[node name="HBoxContainer6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=234277260]
 layout_mode = 2
 
-[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6"]
+[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=1599952921]
 layout_mode = 2
 size_flags_horizontal = 0
 text = "Back  "
 horizontal_alignment = 2
 
-[node name="GridBack" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6"]
+[node name="GridBack" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=582668875]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "(file)"
 alignment = 2
 
-[node name="GridBackButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6"]
+[node name="GridBackButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=961532060]
 unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("1_8qg10")
 
-[node name="GridSingleBack" type="CheckButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer"]
+[node name="GridSingleBack" type="CheckButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=1798620749]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 text = "Single Back"
 
-[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image"]
+[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image" unique_id=113476529]
 layout_mode = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2" unique_id=70213115]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2"]
+[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2" unique_id=1749619235]
 layout_mode = 2
 
-[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer7"]
+[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer7" unique_id=1385307147]
 layout_mode = 2
 text = "Cols  "
 horizontal_alignment = 2
 
-[node name="GridCols" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer7"]
+[node name="GridCols" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer7" unique_id=354922630]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="HBoxContainer8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2"]
+[node name="HBoxContainer8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2" unique_id=1991433002]
 layout_mode = 2
 
-[node name="Label12" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer8"]
+[node name="Label12" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer8" unique_id=1337010761]
 layout_mode = 2
 text = "Rows  "
 horizontal_alignment = 2
 
-[node name="GridRows" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer8"]
+[node name="GridRows" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer8" unique_id=1443952497]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="HBoxContainer9" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2"]
+[node name="HBoxContainer9" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2" unique_id=443313381]
 layout_mode = 2
 
-[node name="Label13" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer9"]
+[node name="Label13" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer9" unique_id=437932328]
 layout_mode = 2
 text = "# Cards  "
 horizontal_alignment = 2
 
-[node name="GridCardCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer9"]
+[node name="GridCardCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer9" unique_id=884984682]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer"]
+[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1656811611]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template" unique_id=1066818064]
 layout_mode = 2
 theme_override_constants/margin_left = 24
 theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 24
 theme_override_constants/margin_bottom = 24
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer" unique_id=1881456502]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer" unique_id=512180538]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=726647480]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Front:"
 
-[node name="FrontTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="FrontTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=132184707]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
@@ -469,21 +472,21 @@ popup/item_0/id = 0
 popup/item_1/text = "Goodbye"
 popup/item_1/id = 1
 
-[node name="EditFrontTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="EditFrontTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=2119348755]
 unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Template Editor"
 icon = ExtResource("3_0meyn")
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer" unique_id=1733443041]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=799045724]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Back:"
 
-[node name="BackTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="BackTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=45115935]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
@@ -494,21 +497,21 @@ popup/item_0/id = 0
 popup/item_1/text = "Goodbye"
 popup/item_1/id = 1
 
-[node name="EditBackTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="EditBackTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=714644272]
 unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Template Editor"
 icon = ExtResource("3_0meyn")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer" unique_id=1866161152]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=129196285]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "DataSet:"
 
-[node name="DatasetList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="DatasetList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=586209526]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
@@ -516,13 +519,13 @@ item_count = 1
 popup/item_0/text = "(none)"
 popup/item_0/id = 0
 
-[node name="EditDatasetButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="EditDatasetButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1251375508]
 unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "DataSet Editor"
 icon = ExtResource("3_0meyn")
 
-[node name="ComponentPreview" parent="HBoxContainer" instance=ExtResource("3_ud6kl")]
+[node name="ComponentPreview" parent="HBoxContainer" unique_id=246736222 instance=ExtResource("3_ud6kl")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2

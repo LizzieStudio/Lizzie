@@ -11,8 +11,7 @@ public partial class PrototypeManifest : Control
     private TreeItem _root;
 
     private Button _close;
-    private Button _editPrototype;
-
+ 
     private ComponentPreview _preview;
 
     private Prototype _selectedPrototype;
@@ -37,8 +36,7 @@ public partial class PrototypeManifest : Control
 
         _close  = GetNode<Button>("%Close");
         _close.Pressed += OnClose;
-        _editPrototype = GetNode<Button>("%EditPrototype");
-        _editPrototype.Pressed += OnEditPrototypePressed;
+        
         InitializePrototypeGrid();
 
         if (_refreshRequired)
@@ -57,20 +55,6 @@ public partial class PrototypeManifest : Control
 
     private ComponentDefinition _editPanel;
 
-    private void OnEditPrototypePressed()
-    {
-        if (SelectedPrototype == null) return;
-
-        var s = "res://Scenes/ComponentPanels/component_definition.tscn";
-        _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _editPanel.SetEditMode();
-        _editPanel.SetTextureFactory(TextureFactory);
-        _editPanel.DisplayPrototype(SelectedPrototype);
-        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
-        
-        _editPanel.CancelDialog += ComponentEditDialogClose;
-        AddChild(_editPanel);
-    }
 
     private void ComponentEditDialogClose(object sender, EventArgs e)
     {
@@ -110,6 +94,7 @@ public partial class PrototypeManifest : Control
         _prototypeTree.SelectMode = Tree.SelectModeEnum.Row;
         _prototypeTree.SizeFlagsVertical = SizeFlags.ExpandFill;
         _prototypeTree.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _prototypeTree.ButtonClicked += PrototypeEditClicked;
 
         _prototypeTree.ColumnTitlesVisible = true;
         _prototypeTree.SetColumnTitle(0, "Name");
@@ -140,6 +125,27 @@ public partial class PrototypeManifest : Control
         _root = _prototypeTree.CreateItem();
     }
 
+    private void PrototypeEditClicked(TreeItem item, long column, long id, long mouseButtonIndex)
+    {
+
+        var prototypeRef = Guid.Parse(item.GetMetadata(0).AsString());
+
+        if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(prototypeRef, out var p))
+        {
+            return;
+        }
+
+        var s = "res://Scenes/ComponentPanels/component_definition.tscn";
+        _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
+        _editPanel.SetEditMode();
+        _editPanel.SetTextureFactory(TextureFactory);
+        _editPanel.DisplayPrototype(p);
+        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
+
+        _editPanel.CancelDialog += ComponentEditDialogClose;
+        AddChild(_editPanel);
+    }
+
 
     private bool _refreshRequired;
 
@@ -165,6 +171,7 @@ public partial class PrototypeManifest : Control
         if (ProjectService.Instance?.CurrentProject == null)
             return;
 
+        Texture2D pencil = ResourceLoader.Load<Texture2D>("res://Textures/UI/pencil.png");
 
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
@@ -201,6 +208,7 @@ public partial class PrototypeManifest : Control
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
             item.SetMetadata(0, prototype.PrototypeRef.ToString());
+            item.AddButton(2, pencil);
         }
     }
 
