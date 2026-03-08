@@ -34,9 +34,6 @@ public partial class CameraController : Node3D, ICameraBase
 
 	private float _dragHeight;		//the distance from the center of the object to the bottom edge
 	
-	private bool _spawnMode;
-	private VisualComponentBase _spawnComponent;
-	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -52,11 +49,7 @@ public partial class CameraController : Node3D, ICameraBase
 
 	public override void _Process(double delta)
 	{
-		if (_spawnMode)
-		{
-			_spawnComponent.Visible = true;
-			_spawnComponent.Position = ShootRay(GetViewport().GetMousePosition());
-		}
+
 	}
 
 	public override void _Input(InputEvent @event)
@@ -371,22 +364,6 @@ public partial class CameraController : Node3D, ICameraBase
 		z += zoom * delta * ZoomSpeed;
 		z = Mathf.Clamp(z, 2, _tableSize * 1.1f);
 		_camera.Position = new Vector3(0, 0, z);
-	}
-
-	public Vector3 GetSpawnPos() => ShootRay(GetViewport().GetMousePosition());
-
-	
-	public void EnterSpawnMode(VisualComponentBase component)
-	{
-		_spawnMode = true;
-		_spawnComponent = component;
-		_spawnComponent.NeverHighlight = true;
-	}
-
-	public void ExitSpawnMode()
-	{
-		_spawnMode = false;
-		_spawnComponent = null;
 	}
 
 	public void ResetView()

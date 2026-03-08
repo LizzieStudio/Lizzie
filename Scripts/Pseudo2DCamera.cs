@@ -17,9 +17,6 @@ public partial class Pseudo2DCamera : Camera3D, ICameraBase
 	
 	private float _tableSize = 100;
 
-	private bool _spawnMode;
-	private VisualComponentBase _spawnComponent;
-
 	
 	
 	[Export] private float ZoomSpeed { get; set; } = 2f;
@@ -40,11 +37,7 @@ public partial class Pseudo2DCamera : Camera3D, ICameraBase
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
-		if (_spawnMode)
-		{
-			_spawnComponent.Visible = true;
-			_spawnComponent.Position = ShootRay(GetViewport().GetMousePosition());
-		}
+
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -159,8 +152,6 @@ public partial class Pseudo2DCamera : Camera3D, ICameraBase
 		Size = z;
 	}
 
-	public Vector3 GetSpawnPos() => ShootRay(GetViewport().GetMousePosition());
-
 	public void ResetView()
 	{
 		Transform = _baseTransform;
@@ -256,20 +247,6 @@ public partial class Pseudo2DCamera : Camera3D, ICameraBase
 				yield return p;
 			}
 		}
-	}
-
-	public void EnterSpawnMode(VisualComponentBase component)
-	{
-		_spawnMode = true;
-		_spawnComponent = component;
-		_spawnComponent.NeverHighlight = true;
-	}
-
-	public void ExitSpawnMode()
-	{
-		GD.Print("Exit Spawn Mode");
-		_spawnMode = false;
-		_spawnComponent = null;
 	}
 
 	public Camera3D Camera => this;
