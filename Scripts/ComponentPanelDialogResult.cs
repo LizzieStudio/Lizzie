@@ -38,25 +38,27 @@ public abstract partial class ComponentPanelDialogResult : Control
             Access = FileDialog.AccessEnum.Filesystem,
             UseNativeDialog = true,
             FileMode = FileDialog.FileModeEnum.OpenFile,
-            Title = title
+            Title = title,
+            CurrentDir = UserPrefs.Instance.LastContentPath,
         };
 
         _callback = callback;
 
         _fd.FileSelected += FileSelected;
         _fd.Canceled += FileCanceled;
-        
+
         GetParent().AddChild(_fd);
         _fd.Visible = true;
 
         return string.Empty;
     }
-    
+
     private void FileSelected(string file)
     {
         _callback(file);
         _fd.FileSelected -= FileSelected;
         _fd.Canceled -= FileCanceled;
+        UserPrefs.Instance.LastContentPath =_fd.CurrentDir;
         _fd = null;
     }
 
@@ -65,12 +67,13 @@ public abstract partial class ComponentPanelDialogResult : Control
         FileSelected(string.Empty);
     }
 
+
     public TextureFactory TextureFactory
     {
-        get; 
+        get;
         set;
     }
-    
+
     public virtual Project CurrentProject { get; set; }
 
     public virtual void DisplayPrototype(Guid prototypeId)
