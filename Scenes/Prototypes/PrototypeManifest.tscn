@@ -4,7 +4,14 @@
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="2_msrx6"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_i7yhx"]
 
-[node name="PrototypeManifest" type="MarginContainer" unique_id=1239742681]
+[node name="PrototypeManifest" type="Window" unique_id=1414249263]
+oversampling_override = 1.0
+title = "Prototype Manifest"
+initial_position = 1
+size = Vector2i(600, 400)
+script = ExtResource("1_i7yhx")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=1239742681]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -14,13 +21,12 @@ theme_override_constants/margin_left = 24
 theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 24
 theme_override_constants/margin_bottom = 24
-script = ExtResource("1_i7yhx")
 
-[node name="Panel" type="Panel" parent="." unique_id=175242177]
+[node name="Panel" type="Panel" parent="Margin" unique_id=175242177]
 layout_mode = 2
 theme_override_styles/panel = ExtResource("2_msrx6")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=1832742373]
+[node name="VBoxContainer" type="VBoxContainer" parent="Margin/Panel" unique_id=1832742373]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,7 +34,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="GridMargin" type="MarginContainer" parent="Panel/VBoxContainer" unique_id=227603288]
+[node name="GridMargin" type="MarginContainer" parent="Margin/Panel/VBoxContainer" unique_id=227603288]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/margin_left = 12
@@ -36,30 +42,23 @@ theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="MainContainer" type="HSplitContainer" parent="Panel/VBoxContainer/GridMargin" unique_id=1168681572]
+[node name="MainContainer" type="HSplitContainer" parent="Margin/Panel/VBoxContainer/GridMargin" unique_id=1168681572]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/GridMargin/MainContainer" unique_id=730201436]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel/VBoxContainer/GridMargin/MainContainer/ScrollContainer" unique_id=2119957979]
-layout_mode = 2
-
-[node name="ComponentPreview" parent="Panel/VBoxContainer/GridMargin/MainContainer" unique_id=146194529 instance=ExtResource("3_i7yhx")]
+[node name="ComponentPreview" parent="Margin/Panel/VBoxContainer/GridMargin/MainContainer" unique_id=146194529 instance=ExtResource("3_i7yhx")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Toolbar" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=1866594890]
+[node name="Toolbar" type="HBoxContainer" parent="Margin/Panel/VBoxContainer" unique_id=1866594890]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 
-[node name="Panel" type="Panel" parent="Panel/VBoxContainer/Toolbar" unique_id=1148527077]
+[node name="Panel" type="Panel" parent="Margin/Panel/VBoxContainer/Toolbar" unique_id=1148527077]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Close" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=679910917]
+[node name="Close" type="Button" parent="Margin/Panel/VBoxContainer/Toolbar" unique_id=679910917]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Close"

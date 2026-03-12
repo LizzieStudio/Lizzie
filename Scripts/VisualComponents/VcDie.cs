@@ -296,7 +296,8 @@ public partial class VcDie : VisualComponentBase
 
 	private void TextureDone(ImageTexture texture)
 	{
-		var mat = new StandardMaterial3D();
+        if (!IsInstanceValid(_mainMesh) || _mainMesh == null) return;
+var mat = new StandardMaterial3D();
 		mat.AlbedoTexture = texture;
 		_mainMesh.MaterialOverride = mat;
 		

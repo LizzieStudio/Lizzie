@@ -60,6 +60,9 @@ public abstract partial class VisualComponentBase : Area3D
                 
         }
     }
+	
+	//temporary store for parameters when we are starting up
+    protected Dictionary<string, object> TempParams;
 
     public override void _Ready()
 	{

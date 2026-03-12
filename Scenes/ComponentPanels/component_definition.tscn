@@ -14,31 +14,26 @@
 
 [sub_resource type="Theme" id="Theme_a3w6s"]
 
-[node name="ComponentDefintion" type="MarginContainer" unique_id=1662168599]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_vertical = 3
-theme_override_constants/margin_left = 36
-theme_override_constants/margin_top = 36
-theme_override_constants/margin_right = 36
-theme_override_constants/margin_bottom = 36
+[node name="ComponentDefintion" type="Window" unique_id=1114688310]
+oversampling_override = 1.0
+title = "Component Creation"
+initial_position = 1
+size = Vector2i(850, 550)
 script = ExtResource("1_07jbk")
 _components = Array[Resource]([ExtResource("2_iaba6"), ExtResource("3_fr6ym"), ExtResource("4_m15dm"), ExtResource("8_y2q7k"), ExtResource("6_07jbk"), ExtResource("10_1hq20"), ExtResource("5_8eegm"), ExtResource("9_u0tcw")])
 
 [node name="Panel" type="Panel" parent="." unique_id=1842311903]
-layout_mode = 2
-theme_override_styles/panel = ExtResource("9_w3b7a")
-
-[node name="VBox" type="VBoxContainer" parent="Panel" unique_id=852297741]
-layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = ExtResource("9_w3b7a")
+
+[node name="VBox" type="VBoxContainer" parent="Panel" unique_id=852297741]
+layout_mode = 1
+offset_right = 728.0
+offset_bottom = 553.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme = SubResource("Theme_a3w6s")
@@ -61,22 +56,24 @@ layout_mode = 2
 [node name="MarginContainer2" type="MarginContainer" parent="Panel/VBox/HBoxContainer" unique_id=659774039]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="ComponentPanel" type="Panel" parent="Panel/VBox/HBoxContainer/MarginContainer2" unique_id=90345725]
 unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(700, 500)
 layout_mode = 2
 theme_override_styles/panel = ExtResource("11_wm4jy")
 
 [node name="DialogButtonMargins" type="MarginContainer" parent="Panel/VBox" unique_id=3104720]
 layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
 
 [node name="DialogButtonLayout" type="HBoxContainer" parent="Panel/VBox/DialogButtonMargins" unique_id=454908906]
 layout_mode = 2

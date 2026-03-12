@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
 
-public partial class PrototypeManifest : Control
+public partial class PrototypeManifest : Window
 {
     private SplitContainer _mainContainer;
     private Tree _prototypeTree;
@@ -92,8 +92,8 @@ public partial class PrototypeManifest : Control
         _prototypeTree.Columns = 3;
         _prototypeTree.HideRoot = true;
         _prototypeTree.SelectMode = Tree.SelectModeEnum.Row;
-        _prototypeTree.SizeFlagsVertical = SizeFlags.ExpandFill;
-        _prototypeTree.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _prototypeTree.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        _prototypeTree.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _prototypeTree.ButtonClicked += PrototypeEditClicked;
 
         _prototypeTree.ColumnTitlesVisible = true;

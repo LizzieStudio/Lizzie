@@ -125,8 +125,8 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 		_widthInput.Text = prototype.Parameters["Width"].ToString();
 		_lengthInput.Text = prototype.Parameters["Length"].ToString();
 		_colorPicker.Color = (Color)prototype.Parameters["Color"];
-		
-		UpdatePreview();
+
+        Activate(); ;
     }
 
 

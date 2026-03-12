@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public partial class ComponentDefinition : Control
+public partial class ComponentDefinition : Window
 {
 	// Called when the node enters the scene tree for the first time.
 	[Export] private ComponentTemplate[] _components;
@@ -288,6 +288,7 @@ public partial class ComponentDefinition : Control
         {
 			MapPrototypeToPanel(prototype);
         }
+       
     }
 
     private void MapPrototypeToPanel(Prototype prototype)

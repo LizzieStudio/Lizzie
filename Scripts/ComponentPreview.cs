@@ -297,6 +297,7 @@ public override void _Process(double delta)
 	{
 		_spinButton.ButtonPressed = false;	//stop spinning
 
+		if (_component == null) return;
 		var r = new Vector3(_component.Rotation.X, Mathf.DegToRad(angle), _component.Rotation.Z);
 		_component.Rotation = r;
 	}
