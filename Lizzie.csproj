@@ -4,4 +4,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>TTSS</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="Scripts\AssetManagement\README.md" />
+  </ItemGroup>
 </Project>
