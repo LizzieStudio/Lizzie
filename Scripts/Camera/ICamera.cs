@@ -1,4 +1,4 @@
 public interface ICamera
 {
-	public bool Current { get; set; }
+    public bool Current { get; set; }
 }

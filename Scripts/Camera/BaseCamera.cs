@@ -1,5 +1,5 @@
-using Godot;
 using System.ComponentModel;
+using Godot;
 
 public abstract partial class BaseCamera : Node3D, ICamera
 {
@@ -17,7 +17,6 @@ public abstract partial class BaseCamera : Node3D, ICamera
 
     [Export]
     protected float PanSpeed = 10;
-
 
     private Transform3D _initialTransform;
     private Transform3D _initialCameraTransform;
@@ -42,18 +41,27 @@ public abstract partial class BaseCamera : Node3D, ICamera
     {
         base._Process(delta);
 
-        if (!Current || _gameObjects.CursorMode == CursorMode.DragSelect || _gameObjects.CursorMode == CursorMode.PopupMenu) return;
+        if (
+            !Current
+            || _gameObjects.CursorMode == CursorMode.DragSelect
+            || _gameObjects.CursorMode == CursorMode.PopupMenu
+        )
+            return;
 
         // Handle Zoom
-        if (Input.IsActionPressed("zoom_in")) UpdateZoom((float)-delta * ContinuousZoomSpeed);
-        if (Input.IsActionPressed("zoom_out")) UpdateZoom((float)delta * ContinuousZoomSpeed);
-        if (Input.IsActionJustPressed("component_zoom")) ZoomComponent(_gameObjects.GetMouseSelectedObject());
+        if (Input.IsActionPressed("zoom_in"))
+            UpdateZoom((float)-delta * ContinuousZoomSpeed);
+        if (Input.IsActionPressed("zoom_out"))
+            UpdateZoom((float)delta * ContinuousZoomSpeed);
+        if (Input.IsActionJustPressed("component_zoom"))
+            ZoomComponent(_gameObjects.GetMouseSelectedObject());
 
         // Handle Pan
         UpdatePan(Input.GetVector("pan_left", "pan_right", "pan_up", "pan_down") * (float)delta);
 
         // Reset
-        if (Input.IsActionPressed("reset_view")) Reset();
+        if (Input.IsActionPressed("reset_view"))
+            Reset();
     }
 
     // Controls that use the mouse a better handled in the _Input method because of engine quirks (like Mouse wheel not having a pressed event).
@@ -61,7 +69,12 @@ public abstract partial class BaseCamera : Node3D, ICamera
     {
         base._Input(@event);
 
-        if (!Current || _gameObjects.CursorMode == CursorMode.DragSelect || _gameObjects.CursorMode == CursorMode.PopupMenu) return;
+        if (
+            !Current
+            || _gameObjects.CursorMode == CursorMode.DragSelect
+            || _gameObjects.CursorMode == CursorMode.PopupMenu
+        )
+            return;
 
         if (Input.IsActionPressed("rotate") && @event is InputEventMouseMotion mouseMotion)
         {
@@ -70,8 +83,10 @@ public abstract partial class BaseCamera : Node3D, ICamera
 
         if (@event is InputEventMouseButton)
         {
-            if (@event.IsActionPressed("zoom_in")) UpdateZoom(-ZoomSpeed);
-            if (@event.IsActionPressed("zoom_out")) UpdateZoom(ZoomSpeed);
+            if (@event.IsActionPressed("zoom_in"))
+                UpdateZoom(-ZoomSpeed);
+            if (@event.IsActionPressed("zoom_out"))
+                UpdateZoom(ZoomSpeed);
         }
     }
 

@@ -13,6 +13,14 @@ Download Godot and open the project using the Godot application.
 * No physics engine (other than moving and placing objects with collisions).
 * Built in component creation tools.
 
+## Formatting
+
+The code uses [CSharpier][CSharpier] for formatting. To format the code,
+run `dotnet tool restore` and `dotnet csharpier format .` in the project
+directory.
+
 ## License
 
 [MIT](https://opensource.org/licenses/MIT).
+
+[CSharpier]: https://csharpier.com/docs/About

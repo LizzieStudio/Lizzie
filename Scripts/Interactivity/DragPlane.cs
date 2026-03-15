@@ -1,5 +1,5 @@
-using Godot;
 using System.Collections.Generic;
+using Godot;
 
 public partial class DragPlane : StaticBody3D
 {
@@ -14,7 +14,7 @@ public partial class DragPlane : StaticBody3D
         {
             From = from,
             To = to,
-            CollisionMask = 4
+            CollisionMask = 4,
         };
         var res = GetWorld3D().DirectSpaceState.IntersectRay(ray);
         InputRayPickable = false;

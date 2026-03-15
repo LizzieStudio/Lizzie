@@ -39,14 +39,23 @@ public partial class PerspectiveViewCamera : BaseCamera
 
     protected override void UpdateZoom(float zoomValue)
     {
-        ActualCamera.Position = new Vector3(0, 0, Mathf.Clamp(ActualCamera.Position.Z + zoomValue, MinZoomDistance, MaxZoomDistance));
+        ActualCamera.Position = new Vector3(
+            0,
+            0,
+            Mathf.Clamp(ActualCamera.Position.Z + zoomValue, MinZoomDistance, MaxZoomDistance)
+        );
     }
 
     protected override void ZoomComponent(VisualComponentBase component)
     {
-        if (component == null) return;
+        if (component == null)
+            return;
         GlobalPosition = new Vector3(component.Position.X, 0, component.Position.Z);
-        ActualCamera.Position = new Vector3(0, 0, Mathf.Clamp(component.MaxAxisSize * 1.2f, MinZoomDistance, MaxZoomDistance));
+        ActualCamera.Position = new Vector3(
+            0,
+            0,
+            Mathf.Clamp(component.MaxAxisSize * 1.2f, MinZoomDistance, MaxZoomDistance)
+        );
     }
 
     protected override void Reset()

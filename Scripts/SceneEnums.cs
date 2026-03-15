@@ -3,7 +3,7 @@ public enum SceneMode
     TwoD,
     ThreeDFixed,
     ThreeDPhysics,
-    Creator
+    Creator,
 }
 
 public enum CursorMode
@@ -13,7 +13,7 @@ public enum CursorMode
     Drag,
     CanDrop,
     DragSelect,
-    PopupMenu
+    PopupMenu,
 }
 
 public enum VisualCommand
@@ -59,5 +59,5 @@ public enum VisualCommand
     Roll,
     Shuffle,
     Refresh,
-    MaximumVC
+    MaximumVC,
 }

@@ -1,5 +1,5 @@
-using Godot;
 using System;
+using Godot;
 
 public abstract partial class VisualComponentFlat : VisualComponentBase
 {
@@ -29,7 +29,7 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
             BackSprite.Texture = value;
         }
     }
-    
+
     public virtual bool ShowFace { get; protected set; }
 
     public void ForceFace()
@@ -41,6 +41,6 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
     {
         RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, 180);
     }
-    
+
     public override GeometryInstance3D DragMesh => ShowFace ? FaceSprite : BackSprite;
 }

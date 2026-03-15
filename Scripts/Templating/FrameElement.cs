@@ -1,31 +1,42 @@
-using Godot;
-using Lizzie.Scripts.Templating;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Godot;
+using Lizzie.Scripts.Templating;
 
 public class FrameElement : TemplateElement
 {
     // Called when the node enters the scene tree for the first time.
-    public FrameElement() : base()
+    public FrameElement()
+        : base()
     {
         ElementType = ITemplateElement.TemplateElementType.Frame;
-        
-        Parameters.Add(new TemplateParameter
-        {
-            Name = "Stroke Color",
-            Value = (Colors.Black).ToHtml(),
-            Type = TemplateParameter.TemplateParameterType.Color
-        });
-        Parameters.Add(new TemplateParameter
-        { Name = "Stroke Width", Value = "2", Type = TemplateParameter.TemplateParameterType.Number });
 
-        Parameters.Add(new TemplateParameter
-        {
-            Name = "Background Color",
-            Value = (Colors.Transparent).ToHtml(),
-            Type = TemplateParameter.TemplateParameterType.Color
-        });
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Stroke Color",
+                Value = (Colors.Black).ToHtml(),
+                Type = TemplateParameter.TemplateParameterType.Color,
+            }
+        );
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Stroke Width",
+                Value = "2",
+                Type = TemplateParameter.TemplateParameterType.Number,
+            }
+        );
+
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Background Color",
+                Value = (Colors.Transparent).ToHtml(),
+                Type = TemplateParameter.TemplateParameterType.Color,
+            }
+        );
 
         UpdateBounds();
     }
@@ -52,6 +63,4 @@ public class FrameElement : TemplateElement
         l.Add(t);
         return l;
     }
-
- 
 }

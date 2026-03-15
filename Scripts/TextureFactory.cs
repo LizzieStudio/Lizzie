@@ -1,10 +1,10 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices.ObjectiveC;
+using Godot;
 
 public partial class TextureFactory : SubViewport
 {
@@ -27,7 +27,8 @@ public partial class TextureFactory : SubViewport
         _rectShape = ResourceLoader.Load("res://Textures/Shapes/square.png") as Texture2D;
         _hexPointShape = ResourceLoader.Load("res://Textures/Shapes/hex.png") as Texture2D;
         _hexFlatShape = ResourceLoader.Load("res://Textures/Shapes/hexflat.png") as Texture2D;
-        _roundedRectShape = ResourceLoader.Load("res://Textures/Shapes/RoundedRectangle.png") as Texture2D;
+        _roundedRectShape =
+            ResourceLoader.Load("res://Textures/Shapes/RoundedRectangle.png") as Texture2D;
         _triangleShape = ResourceLoader.Load("res://Textures/Shapes/triangle.png") as Texture2D;
         _starShape = ResourceLoader.Load("res://Textures/Shapes/star.png") as Texture2D;
         _pentagonShape = ResourceLoader.Load("res://Textures/Shapes/pentagon.png") as Texture2D;
@@ -70,7 +71,6 @@ public partial class TextureFactory : SubViewport
     private int _skip;
     private const int Take = 10;
 
-
     private Queue<TextureQueueEntry> _textureGenerationQueue = new();
 
     /// <summary>
@@ -78,14 +78,15 @@ public partial class TextureFactory : SubViewport
     /// </summary>
     public void GenerateTexture(
         TextureDefinition definition,
-        Action<ImageTexture> textureReadyCallback)
+        Action<ImageTexture> textureReadyCallback
+    )
     {
         ExpandMultipleShapes(definition);
 
         var tqe = new TextureQueueEntry
         {
             TextureDefinition = definition,
-            TextureReadyCallback = textureReadyCallback
+            TextureReadyCallback = textureReadyCallback,
         };
 
         _textureGenerationQueue.Enqueue(tqe);
@@ -125,9 +126,11 @@ public partial class TextureFactory : SubViewport
                 throw new ArgumentOutOfRangeException();
         }
 
-
         var image = texture.GetImage();
-        tr.Size = new Vector2(_activeQueueEntry.TextureDefinition.Width, _activeQueueEntry.TextureDefinition.Height);
+        tr.Size = new Vector2(
+            _activeQueueEntry.TextureDefinition.Width,
+            _activeQueueEntry.TextureDefinition.Height
+        );
         tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
         tr.Texture = ImageTexture.CreateFromImage(image);
 
@@ -147,7 +150,8 @@ public partial class TextureFactory : SubViewport
     private void GenerateSecondaryTexture(TextureDefinition definition)
     {
         //cleanup
-        foreach (var c in _viewport.GetChildren()) c.QueueFree();
+        foreach (var c in _viewport.GetChildren())
+            c.QueueFree();
 
         // Create a ColorRect for the background
         var bgRect = new ColorRect();
@@ -158,7 +162,10 @@ public partial class TextureFactory : SubViewport
         var tr = new TextureRect();
         var texture = _viewport.GetTexture();
         var image = texture.GetImage();
-        tr.Size = new Vector2(_activeQueueEntry.TextureDefinition.Width, _activeQueueEntry.TextureDefinition.Height);
+        tr.Size = new Vector2(
+            _activeQueueEntry.TextureDefinition.Width,
+            _activeQueueEntry.TextureDefinition.Height
+        );
         tr.Texture = ImageTexture.CreateFromImage(image);
         _viewport.AddChild(tr);
 
@@ -210,12 +217,11 @@ public partial class TextureFactory : SubViewport
         tr.EditorOnly = false;
         tr.BorderWidth = obj.FontSize;
         tr.BorderColor = obj.ForegroundColor;
-        
-        
+
         tr.Size = new Vector2(scaleWidth, scaleHeight);
         tr.Position = new Vector2(pW, pH);
 
-        tr.PivotOffset = new Vector2(scaleWidth /2, scaleHeight/2);
+        tr.PivotOffset = new Vector2(scaleWidth / 2, scaleHeight / 2);
         tr.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(tr);
@@ -235,7 +241,7 @@ public partial class TextureFactory : SubViewport
 
     public static Vector2 GetTextBounds(Font font, int fontSize, string text)
     {
-        return font.GetStringSize(text, fontSize:fontSize);
+        return font.GetStringSize(text, fontSize: fontSize);
     }
 
     private void RenderRectangleText(TextureObject obj)
@@ -248,13 +254,14 @@ public partial class TextureFactory : SubViewport
             fontSize = AutosizeFont(obj.Text, obj.Font, obj.Height, obj.Width, 6, 72);
         }
 
-        if (fontSize == 0) return;
-        
+        if (fontSize == 0)
+            return;
+
         Vector2 textSize = GetTextBounds(obj.Font, fontSize, obj.Text);
 
-        if (textSize.X == 0 || textSize.Y == 0) return;
-        
-        
+        if (textSize.X == 0 || textSize.Y == 0)
+            return;
+
         // Calculate the position to center the text
         float halfWidth = textSize.X / 2f;
         float halfHeight = textSize.Y / 2f;
@@ -266,7 +273,6 @@ public partial class TextureFactory : SubViewport
         label.AddThemeFontOverride("font", obj.Font);
         label.AddThemeFontSizeOverride("font_size", fontSize);
 
-        
         label.Position = MoveOriginForAlignment(obj, textSize);
 
         label.PivotOffset = new Vector2(halfWidth, halfHeight); //always pivot at the center
@@ -279,7 +285,7 @@ public partial class TextureFactory : SubViewport
     private Vector2 MoveOriginForAlignment(TextureObject obj, Vector2 size)
     {
         //NOTE: Origin also shifts from center to top left
-        
+
         float finalX = obj.CenterX;
         float finalY = obj.CenterY;
 
@@ -297,7 +303,7 @@ public partial class TextureFactory : SubViewport
             default:
                 throw new ArgumentOutOfRangeException();
         }
-        
+
         switch (obj.VerticalAlignment)
         {
             case VerticalAlignment.Top:
@@ -312,12 +318,10 @@ public partial class TextureFactory : SubViewport
             default:
                 throw new ArgumentOutOfRangeException();
         }
-        
-        
-        
+
         return new Vector2(finalX, finalY);
     }
-    
+
     private void ExpandMultipleShapes(TextureDefinition definition)
     {
         var l = new List<TextureObject>();
@@ -337,7 +341,8 @@ public partial class TextureFactory : SubViewport
 
     private List<TextureObject> BuildMultiShape(TextureObject obj)
     {
-        if (obj.Quantity == 1) return new List<TextureObject> { obj };
+        if (obj.Quantity == 1)
+            return new List<TextureObject> { obj };
 
         return obj.TriangleFace ? BuildMultiShapeTriangle(obj) : BuildMultiShapeRectangle(obj);
     }
@@ -359,7 +364,6 @@ public partial class TextureFactory : SubViewport
         var w34 = w2 * 1.5f;
         var h56 = h6 * 5;
         var w56 = w6 * 5;
-
 
         switch (obj.Quantity)
         {
@@ -497,7 +501,7 @@ public partial class TextureFactory : SubViewport
     {
         var shapes = new List<TextureObject>();
 
-        var tris = new Vector3[9];     //x, y = origin. z = rotation degrees
+        var tris = new Vector3[9]; //x, y = origin. z = rotation degrees
         var nt = new Vector3[obj.Quantity];
 
         var x = obj.CenterX;
@@ -532,9 +536,9 @@ public partial class TextureFactory : SubViewport
             tris[3] = new Vector3(b6, h2 * x1, 0);
             tris[4] = new Vector3(-2 * b6, h2 * x2, 0);
             tris[5] = new Vector3(-b6, h2 * s2, 180);
-            tris[6] = new Vector3(0, h2*x2, 0);
+            tris[6] = new Vector3(0, h2 * x2, 0);
             tris[7] = new Vector3(b6, h2 * s2, 180);
-            tris[8] = new Vector3(2 * b6,h2*x2, 0);
+            tris[8] = new Vector3(2 * b6, h2 * x2, 0);
         }
 
         switch (obj.Quantity)
@@ -628,7 +632,8 @@ public partial class TextureFactory : SubViewport
     private void RenderTriangleText(TextureObject obj)
     {
         Vector2 textSize = obj.Font.GetStringSize(obj.Text, fontSize: 12);
-        if (textSize.Y == 0) return;
+        if (textSize.Y == 0)
+            return;
 
         var ratio = textSize.X / textSize.Y;
 
@@ -652,7 +657,7 @@ public partial class TextureFactory : SubViewport
             Text = obj.Text,
             ForegroundColor = obj.ForegroundColor,
             TriangleFace = false,
-            Type = TextureObjectType.Text
+            Type = TextureObjectType.Text,
         };
 
         RenderRectangleText(o);
@@ -708,7 +713,7 @@ public partial class TextureFactory : SubViewport
             ForegroundColor = obj.ForegroundColor,
             TriangleFace = false,
             Type = obj.Type,
-            Text = obj.Text
+            Text = obj.Text,
         };
 
         RenderShapeInRectangle(o);
@@ -726,7 +731,7 @@ public partial class TextureFactory : SubViewport
         var scaleHeight = obj.Height * obj.Scale;
         var halfWidth = scaleWidth / 2;
         var halfHeight = scaleHeight / 2;
-        
+
         var image = texture.GetImage();
 
         if (obj.Stretch)
@@ -748,34 +753,32 @@ public partial class TextureFactory : SubViewport
                 }
             }
             else
-            { 
+            {
                 imgSize *= (scaleHeight / imgSize.Y);
                 if (imgSize.X > scaleWidth)
                 {
                     imgSize *= (scaleWidth / imgSize.X);
                 }
             }
-            
+
             tr.Size = imgSize;
             tr.CustomMinimumSize = imgSize;
             tr.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
             tr.Position = MoveOriginForAlignment(obj, imgSize);
         }
-        
+
         //image.Resize((int)scaleWidth, (int)scaleHeight);
 
-        
         tr.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-        
+
         tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
         tr.Texture = ImageTexture.CreateFromImage(image);
-
 
         var bgRect = new ColorRect();
         bgRect.Color = obj.ForegroundColor;
         bgRect.Size = new Vector2(scaleWidth, scaleHeight);
         tr.AddChild(bgRect);
-       
+
         tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
@@ -790,16 +793,22 @@ public partial class TextureFactory : SubViewport
         // Create ImageTexture from the rendered image
         var imageTexture = ImageTexture.CreateFromImage(image);
 
-
         _activeQueueEntry.TextureReadyCallback?.Invoke(imageTexture);
 
         //cleanup
-        foreach (var c in _viewport.GetChildren()) c.QueueFree();
+        foreach (var c in _viewport.GetChildren())
+            c.QueueFree();
         _activeQueueEntry = null;
     }
 
-    private static int AutosizeFont(string caption, Font font, int height, int width,
-        int minSize, int maxSize)
+    private static int AutosizeFont(
+        string caption,
+        Font font,
+        int height,
+        int width,
+        int minSize,
+        int maxSize
+    )
     {
         var size = minSize;
 
@@ -817,7 +826,8 @@ public partial class TextureFactory : SubViewport
 
             size++;
 
-            if (size > maxSize) return maxSize;
+            if (size > maxSize)
+                return maxSize;
         }
     }
 
@@ -827,7 +837,7 @@ public partial class TextureFactory : SubViewport
         CoreShape,
         ExtendedShape,
         UserShape,
-        RectangleFrame
+        RectangleFrame,
         /*
         RectangleShape,
         CircleShape,
@@ -845,7 +855,7 @@ public partial class TextureFactory : SubViewport
         Circle = 1,
         HexPoint = 2,
         HexFlat = 3,
-        RoundedRect = 4
+        RoundedRect = 4,
     }
 
     public class TextureDefinition
@@ -869,10 +879,8 @@ public partial class TextureFactory : SubViewport
             MiddleRight,
             BottomLeft,
             BottomCenter,
-            BottomRight
+            BottomRight,
         };
-        
-      
 
         public TextureObject()
         {
@@ -909,13 +917,13 @@ public partial class TextureFactory : SubViewport
         public Font Font { get; set; }
 
         public int FontSize { get; set; } = 12;
-        
+
         public bool Autosize { get; set; } = true;
         public int Height { get; set; }
         public int Width { get; set; }
         public int CenterX { get; set; }
         public int CenterY { get; set; }
-        
+
         public float Scale { get; set; } = 1f;
 
         public AnchorPoint Anchor { get; set; }
@@ -928,7 +936,6 @@ public partial class TextureFactory : SubViewport
         public VerticalAlignment VerticalAlignment { get; set; } = VerticalAlignment.Top;
 
         public bool Stretch { get; set; } = false;
-        
 
         public static AnchorPoint AnchorStringToEnum(string anchor)
         {
@@ -1004,11 +1011,10 @@ public partial class TextureFactory : SubViewport
                 'V' => TrackElement.TrackTypeEnum.Vertical,
                 'P' => TrackElement.TrackTypeEnum.Perimeter,
                 'G' => TrackElement.TrackTypeEnum.Grid,
-                _ => TrackElement.TrackTypeEnum.Horizontal
+                _ => TrackElement.TrackTypeEnum.Horizontal,
             };
         }
     }
-
 
     public class TextureQueueEntry
     {

@@ -1,7 +1,6 @@
-using Godot;
 using System;
+using Godot;
 using Lizzie.Scripts.Templating;
-
 
 public interface IParamControl
 {
@@ -9,6 +8,6 @@ public interface IParamControl
 
     void UpdateParameter(string newValue);
     TemplateParameter GetParameter();
-    
+
     event EventHandler<TemplateParamUpdateEventArgs> ParameterUpdated;
 }

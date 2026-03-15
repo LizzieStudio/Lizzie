@@ -1,19 +1,17 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Godot;
 
 public abstract partial class ComponentPanelDialogResult : Control
 {
     public abstract List<string> Validity();
     public abstract Dictionary<string, object> GetParams();
 
-    public virtual void Activate(){}
+    public virtual void Activate() { }
 
-    public virtual void Deactivate()
-    {
-    }
+    public virtual void Deactivate() { }
 
     public int PrototypeIndex { get; set; } = 0;
     public virtual VisualComponentBase.VisualComponentType ComponentType { get; set; }
@@ -31,6 +29,7 @@ public abstract partial class ComponentPanelDialogResult : Control
 
     private FileDialog _fd;
     private Action<string> _callback;
+
     protected string ShowFileDialog(string title, Action<string> callback)
     {
         _fd = new FileDialog()
@@ -58,7 +57,7 @@ public abstract partial class ComponentPanelDialogResult : Control
         _callback(file);
         _fd.FileSelected -= FileSelected;
         _fd.Canceled -= FileCanceled;
-        UserPrefs.Instance.LastContentPath =_fd.CurrentDir;
+        UserPrefs.Instance.LastContentPath = _fd.CurrentDir;
         _fd = null;
     }
 
@@ -67,22 +66,11 @@ public abstract partial class ComponentPanelDialogResult : Control
         FileSelected(string.Empty);
     }
 
-
-    public TextureFactory TextureFactory
-    {
-        get;
-        set;
-    }
+    public TextureFactory TextureFactory { get; set; }
 
     public virtual Project CurrentProject { get; set; }
 
-    public virtual void DisplayPrototype(Guid prototypeId)
-    {
-    }
+    public virtual void DisplayPrototype(Guid prototypeId) { }
 
-    public virtual void DisplayPrototype(Prototype prototype)
-    {
-    }
-
-
+    public virtual void DisplayPrototype(Prototype prototype) { }
 }

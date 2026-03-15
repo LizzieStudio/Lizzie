@@ -1,10 +1,10 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using Godot;
 using TTSS.Scripts.Templating;
 using FileAccess = Godot.FileAccess;
 
@@ -31,7 +31,6 @@ public partial class ProjectManager : Panel
         _createButton = GetNode<Button>("%CreateButton");
         _createButton.Pressed += () => _createPanel.Show();
 
-
         _closeButton = GetNode<Button>("%CloseButton");
         _closeButton.Pressed += OnClose;
         _openButton = GetNode<Button>("%OpenButton");
@@ -53,10 +52,7 @@ public partial class ProjectManager : Panel
 
     public Project CreateTestProject()
     {
-        var p = new Project
-        {
-            Name = "Test Project"
-        };
+        var p = new Project { Name = "Test Project" };
 
         var t = new Template
         {
@@ -64,7 +60,7 @@ public partial class ProjectManager : Panel
             Description = "A face with an issue",
             Height = 350,
             Width = 250,
-            SizeTemplate = "Poker"
+            SizeTemplate = "Poker",
         };
 
         var d1 = new Dictionary<string, string>
@@ -76,7 +72,7 @@ public partial class ProjectManager : Panel
             { "Y", "20" },
             { "Width", "100" },
             { "Height", "50" },
-            { "Text", "Issue" }
+            { "Text", "Issue" },
         };
 
         var d2 = new Dictionary<string, string>
@@ -88,7 +84,7 @@ public partial class ProjectManager : Panel
             { "Y", "20" },
             { "Width", "100" },
             { "Height", "50" },
-            { "Text", "Heart" }
+            { "Text", "Heart" },
         };
 
         t.Elements.Add(d1);

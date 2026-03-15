@@ -1,10 +1,9 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 public partial class VcMeeple : VisualComponentBase
 {
-
     public override void _Ready()
     {
         base._Ready();
@@ -13,16 +12,10 @@ public partial class VcMeeple : VisualComponentBase
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
-
     }
-
-
-
-
 
     public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
-
         base.Build(parameters, textureFactory);
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
@@ -34,7 +27,6 @@ public partial class VcMeeple : VisualComponentBase
 
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
-        
         var h = Utility.GetParam<float>(parameters, "Height") / 10;
         var t = Utility.GetParam<float>(parameters, "Thickness") / 10;
         var c = Utility.GetParam<Color>(parameters, "Color");
@@ -42,27 +34,31 @@ public partial class VcMeeple : VisualComponentBase
 
         Height = h;
 
-
-        float midx = g.GetLength(0)/2;
+        float midx = g.GetLength(0) / 2;
         float midz = g.GetLength(1) / 2;
 
         var cubeHeight = h / g.GetLength(0);
-        
+
         for (int i = 0; i < g.GetLength(0); i++)
         {
             for (int j = 0; j < g.GetLength(1); j++)
             {
                 if (g[i, j])
-                { 
-                    MainMesh.AddChild(CreateCubeMesh(cubeHeight,t, c,  (i-midx) * cubeHeight, (j-midz) * cubeHeight));
+                {
+                    MainMesh.AddChild(
+                        CreateCubeMesh(
+                            cubeHeight,
+                            t,
+                            c,
+                            (i - midx) * cubeHeight,
+                            (j - midz) * cubeHeight
+                        )
+                    );
                 }
             }
         }
 
-
         HighlightMesh.Scale = new Vector3(h, h, t);
-
-
 
         YHeight = Height;
 
@@ -90,7 +86,6 @@ public partial class VcMeeple : VisualComponentBase
         }
     }
 
-
     public override List<string> ValidateParameters(Dictionary<string, object> parameters)
     {
         var ret = new List<string>();
@@ -110,7 +105,8 @@ public partial class VcMeeple : VisualComponentBase
         {
             if (parameters[nameof(Height)] is int h)
             {
-                if (h <= 0) ret.Add("Height must be > 0");
+                if (h <= 0)
+                    ret.Add("Height must be > 0");
             }
         }
         else
@@ -142,18 +138,18 @@ public partial class VcMeeple : VisualComponentBase
     {
         // Create a new MeshInstance3D
         var meshInstance = new MeshInstance3D();
-        
+
         // Create a BoxMesh (cube)
         var boxMesh = new BoxMesh();
         boxMesh.Size = new Vector3(s, s, t);
-        
+
         // Assign the mesh to the instance
         meshInstance.Mesh = boxMesh;
-        
+
         // Create a StandardMaterial3D for the color
         var material = new StandardMaterial3D();
         material.AlbedoColor = c;
-        
+
         // Apply the material to the mesh
         meshInstance.SetSurfaceOverrideMaterial(0, material);
 
@@ -163,6 +159,4 @@ public partial class VcMeeple : VisualComponentBase
 
         return meshInstance;
     }
-    
-
 }
