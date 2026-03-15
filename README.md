@@ -22,3 +22,5 @@ directory.
 ## License
 
 [MIT](https://opensource.org/licenses/MIT).
+
+[CSharpier]: https://csharpier.com/docs/About
