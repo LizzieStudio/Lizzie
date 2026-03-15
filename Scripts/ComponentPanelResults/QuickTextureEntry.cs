@@ -1,194 +1,191 @@
-using Godot;
 using System;
+using Godot;
 
 public partial class QuickTextureEntry : BoxContainer
 {
-	private Label _fieldCaption;
-	private LineEdit _text;
-	private ColorPickerButton _colorPicker;
-	private OptionButton _optionTypes;
-	private OptionButton _iconList;
-	private OptionButton _qtyPicker;
+    private Label _fieldCaption;
+    private LineEdit _text;
+    private ColorPickerButton _colorPicker;
+    private OptionButton _optionTypes;
+    private OptionButton _iconList;
+    private OptionButton _qtyPicker;
 
-	private bool _initializing;
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-		_initializing = true;
-		
-		_fieldCaption = GetNode<Label>("%Label");
-		_fieldCaption.Text = _fieldName;
-		
-		_optionTypes = GetNode<OptionButton>("%OptionButton");
-		_optionTypes.Selected = 0;
-		_optionTypes.ItemSelected += TypeChanged;
-		
-		_iconList = GetNode<OptionButton>("%ShapeList");
-		_iconList.ItemSelected += IconSelected;
-		
-		_colorPicker = GetNode<ColorPickerButton>("%TopTextColor");
-		_colorPicker.Color = Colors.Black;
-		_colorPicker.ColorChanged += _ => RaiseFieldChanged();
-		
-		_text = GetNode<LineEdit>("%TopCaption");
-		_text.TextChanged += _ => RaiseFieldChanged();
-		
-		_qtyPicker = GetNode<OptionButton>("%Qty");
-		_qtyPicker.ItemSelected += _ => RaiseFieldChanged();
-		_qtyPicker.Hide();
-		UpdateVisibility(0);
-		
-		_initializing = false;
-	}
+    private bool _initializing;
 
-	private void IconSelected(long index)
-	{
-		_selectedIcon = _iconList.GetItemText((int)index);
-		_iconList.Text = _selectedIcon;
-		RaiseFieldChanged();
-	}
+    // Called when the node enters the scene tree for the first time.
+    public override void _Ready()
+    {
+        _initializing = true;
 
-	private string _selectedIcon = "Circle";
+        _fieldCaption = GetNode<Label>("%Label");
+        _fieldCaption.Text = _fieldName;
 
-	private IconLibrary _icons;
+        _optionTypes = GetNode<OptionButton>("%OptionButton");
+        _optionTypes.Selected = 0;
+        _optionTypes.ItemSelected += TypeChanged;
 
-	public void SetIcons(IconLibrary icons)
-	{
-		_icons = icons;
-		_icons.LoadOptionButton(_iconList);
-	}
-	
-	private void TypeChanged(long index)
-	{
-		UpdateVisibility(index);
-		RaiseFieldChanged();
-	}
+        _iconList = GetNode<OptionButton>("%ShapeList");
+        _iconList.ItemSelected += IconSelected;
 
-	private void UpdateVisibility(long index)
-	{
-		_text.Visible = (index == 0);
-		_qtyPicker.Visible = (index > 0);
-		_iconList.Visible = (index == 1);
-	}
+        _colorPicker = GetNode<ColorPickerButton>("%TopTextColor");
+        _colorPicker.Color = Colors.Black;
+        _colorPicker.ColorChanged += _ => RaiseFieldChanged();
 
-	private string _fieldName;
-	
-	[Export]
-	public string FieldCaption
-	{
-		get => _fieldName;
-		set 
-		{
-			_fieldName = value;
-			if (_fieldCaption == null) return;
-			_fieldCaption.Text = value; 
-		}
-	}
+        _text = GetNode<LineEdit>("%TopCaption");
+        _text.TextChanged += _ => RaiseFieldChanged();
 
-	public string TextValue
-	{
-		get => _text.Text;
-		set => _text.Text = value;
-	}
+        _qtyPicker = GetNode<OptionButton>("%Qty");
+        _qtyPicker.ItemSelected += _ => RaiseFieldChanged();
+        _qtyPicker.Hide();
+        UpdateVisibility(0);
 
+        _initializing = false;
+    }
 
-	private void RaiseFieldChanged()
-	{
-		if (_initializing) return;
-		
-		var qt = GetQuickTextureField();
-		
-		FieldChanged?.Invoke(this, new QuickTextureFieldEventArgs(qt));
-	}
-	
-	public event EventHandler<QuickTextureFieldEventArgs> FieldChanged;
+    private void IconSelected(long index)
+    {
+        _selectedIcon = _iconList.GetItemText((int)index);
+        _iconList.Text = _selectedIcon;
+        RaiseFieldChanged();
+    }
 
-	public QuickTextureField GetQuickTextureField()
-	{
-		var qt = new QuickTextureField
-		{
+    private string _selectedIcon = "Circle";
 
-			ForegroundColor = _colorPicker.Color,
-		};
+    private IconLibrary _icons;
 
-		switch (_optionTypes.Selected)
-		{
-			case 0:
-				qt.FaceType = TextureFactory.TextureObjectType.Text;
-				qt.Caption = _text.Text;
-				break;
+    public void SetIcons(IconLibrary icons)
+    {
+        _icons = icons;
+        _icons.LoadOptionButton(_iconList);
+    }
 
-			case 1:
-				qt.FaceType = TextureFactory.TextureObjectType.CoreShape;
-				qt.Caption = _selectedIcon;
-				break;
+    private void TypeChanged(long index)
+    {
+        UpdateVisibility(index);
+        RaiseFieldChanged();
+    }
 
+    private void UpdateVisibility(long index)
+    {
+        _text.Visible = (index == 0);
+        _qtyPicker.Visible = (index > 0);
+        _iconList.Visible = (index == 1);
+    }
 
+    private string _fieldName;
 
-		}
+    [Export]
+    public string FieldCaption
+    {
+        get => _fieldName;
+        set
+        {
+            _fieldName = value;
+            if (_fieldCaption == null)
+                return;
+            _fieldCaption.Text = value;
+        }
+    }
 
-		qt.Quantity = _qtyPicker.Selected + 1;
+    public string TextValue
+    {
+        get => _text.Text;
+        set => _text.Text = value;
+    }
 
-		return qt;
-	}
+    private void RaiseFieldChanged()
+    {
+        if (_initializing)
+            return;
 
-	public void SetQuickTextureField(QuickTextureField field)
-	{
-		if (field == null) return;
+        var qt = GetQuickTextureField();
 
-		_initializing = true;
+        FieldChanged?.Invoke(this, new QuickTextureFieldEventArgs(qt));
+    }
 
-		_colorPicker.Color = field.ForegroundColor;
+    public event EventHandler<QuickTextureFieldEventArgs> FieldChanged;
 
-		switch (field.FaceType)
-		{
-			case TextureFactory.TextureObjectType.Text:
-				_optionTypes.Select(0);
-				_text.Text = field.Caption ?? "";
-				break;
+    public QuickTextureField GetQuickTextureField()
+    {
+        var qt = new QuickTextureField { ForegroundColor = _colorPicker.Color };
 
-			case TextureFactory.TextureObjectType.CoreShape:
-				_optionTypes.Select(1);
-				_selectedIcon = field.Caption ?? "Circle";
-				if (_iconList != null)
-				{
-					for (int i = 0; i < _iconList.ItemCount; i++)
-					{
-						if (_iconList.GetItemText(i) == _selectedIcon)
-						{
-							_iconList.Select(i);
-							break;
-						}
-					}
-				}
-				break;
-		}
+        switch (_optionTypes.Selected)
+        {
+            case 0:
+                qt.FaceType = TextureFactory.TextureObjectType.Text;
+                qt.Caption = _text.Text;
+                break;
 
-		if (_qtyPicker != null && field.Quantity > 0)
-		{
-			_qtyPicker.Select(field.Quantity - 1);
-		}
+            case 1:
+                qt.FaceType = TextureFactory.TextureObjectType.CoreShape;
+                qt.Caption = _selectedIcon;
+                break;
+        }
 
-		UpdateVisibility(_optionTypes.Selected);
+        qt.Quantity = _qtyPicker.Selected + 1;
 
-		_initializing = false;
-	}
+        return qt;
+    }
+
+    public void SetQuickTextureField(QuickTextureField field)
+    {
+        if (field == null)
+            return;
+
+        _initializing = true;
+
+        _colorPicker.Color = field.ForegroundColor;
+
+        switch (field.FaceType)
+        {
+            case TextureFactory.TextureObjectType.Text:
+                _optionTypes.Select(0);
+                _text.Text = field.Caption ?? "";
+                break;
+
+            case TextureFactory.TextureObjectType.CoreShape:
+                _optionTypes.Select(1);
+                _selectedIcon = field.Caption ?? "Circle";
+                if (_iconList != null)
+                {
+                    for (int i = 0; i < _iconList.ItemCount; i++)
+                    {
+                        if (_iconList.GetItemText(i) == _selectedIcon)
+                        {
+                            _iconList.Select(i);
+                            break;
+                        }
+                    }
+                }
+                break;
+        }
+
+        if (_qtyPicker != null && field.Quantity > 0)
+        {
+            _qtyPicker.Select(field.Quantity - 1);
+        }
+
+        UpdateVisibility(_optionTypes.Selected);
+
+        _initializing = false;
+    }
 }
 
 public class QuickTextureFieldEventArgs : EventArgs
 {
-	public QuickTextureFieldEventArgs(QuickTextureField field)
-	{
-		QuickTextureField = field;
-	}
-	public QuickTextureField QuickTextureField { get; set; }
+    public QuickTextureFieldEventArgs(QuickTextureField field)
+    {
+        QuickTextureField = field;
+    }
+
+    public QuickTextureField QuickTextureField { get; set; }
 }
 
 public class QuickTextureField
 {
-	public TextureFactory.TextureObjectType FaceType { get; set; }
-	public Color ForegroundColor { get; set; }
-	public string Caption { get; set; }
+    public TextureFactory.TextureObjectType FaceType { get; set; }
+    public Color ForegroundColor { get; set; }
+    public string Caption { get; set; }
 
-	public int Quantity { get; set; } = 1;
+    public int Quantity { get; set; } = 1;
 }

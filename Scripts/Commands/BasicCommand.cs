@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 public abstract class BasicCommand : CommandBase
 {
@@ -11,8 +11,10 @@ public abstract class BasicCommand : CommandBase
         foreach (var c in components)
         {
             var change = c.ProcessCommand(Command);
-            if (!change.Consumed) continue;
-            if (change.UndoAction != null) update.Add(change.UndoAction);
+            if (!change.Consumed)
+                continue;
+            if (change.UndoAction != null)
+                update.Add(change.UndoAction);
         }
 
         return update;

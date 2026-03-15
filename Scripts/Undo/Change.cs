@@ -1,5 +1,5 @@
-using Godot;
 using System;
+using Godot;
 
 public class Change
 {
@@ -12,9 +12,9 @@ public class Change
         Deletion,
         LockStatus,
         ZOrder,
-        Layer
+        Layer,
     }
-    
+
     public object Begin { get; set; }
     public object End { get; set; }
     public ChangeType Action { get; set; }

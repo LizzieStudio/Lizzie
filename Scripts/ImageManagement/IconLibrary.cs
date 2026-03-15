@@ -1,9 +1,9 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Godot;
 
-public class IconLibrary : Dictionary<string, IconEntry >
+public class IconLibrary : Dictionary<string, IconEntry>
 {
     private const string BaseFolder = "res://Textures/Shapes/";
 
@@ -122,7 +122,7 @@ public class IconLibrary : Dictionary<string, IconEntry >
     {
         return this.Where(x => x.Value.IsCore).Select(x => x.Key).OrderBy(key => key).ToList();
     }
-    
+
     public List<string> GetExtendedIconList()
     {
         return this.Where(x => !x.Value.IsCore).Select(x => x.Key).OrderBy(key => key).ToList();
@@ -134,20 +134,20 @@ public class IconLibrary : Dictionary<string, IconEntry >
         {
             return ResourceLoader.Load(BaseFolder + "notfound.png") as Texture2D;
         }
-        
+
         return ResourceLoader.Load(BaseFolder + this[key].FileName) as Texture2D;
     }
 
     public void LoadOptionButton(OptionButton button)
     {
         int id = 0;
-        
+
         foreach (var icon in GetCoreIconList())
         {
             button.AddItem(icon, id);
             id++;
         }
-        
+
         button.AddSeparator();
 
         id++;
@@ -160,24 +160,22 @@ public class IconLibrary : Dictionary<string, IconEntry >
 
     public void LoadPopupMenu(PopupMenu menu)
     {
+        int id = 0;
 
-            int id = 0;
-        
-            foreach (var icon in GetCoreIconList())
-            {
-                menu.AddItem(icon, id);
-                id++;
-            }
-        
-            menu.AddSeparator();
-
+        foreach (var icon in GetCoreIconList())
+        {
+            menu.AddItem(icon, id);
             id++;
-            foreach (var icon in GetExtendedIconList())
-            {
-                menu.AddItem(icon, id);
-                id++;
-            }
+        }
 
+        menu.AddSeparator();
+
+        id++;
+        foreach (var icon in GetExtendedIconList())
+        {
+            menu.AddItem(icon, id);
+            id++;
+        }
     }
 
     public void LoadOptionButtonExtended(OptionButton button)
@@ -187,7 +185,6 @@ public class IconLibrary : Dictionary<string, IconEntry >
             button.AddItem(icon);
         }
     }
-    
 }
 
 public struct IconEntry

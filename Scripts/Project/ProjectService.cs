@@ -1,10 +1,16 @@
-using Godot;
 using System;
 using System.Text.Json;
+using Godot;
 
 public partial class ProjectService : Node
 {
-    public enum ProjectElement {Dataset, Template, Component, Image}
+    public enum ProjectElement
+    {
+        Dataset,
+        Template,
+        Component,
+        Image,
+    }
 
     private static ProjectService _instance;
 
@@ -14,7 +20,9 @@ public partial class ProjectService : Node
         {
             if (_instance == null)
             {
-                GD.PrintErr("ProjectService instance not initialized. Make sure ProjectService is added as an AutoLoad.");
+                GD.PrintErr(
+                    "ProjectService instance not initialized. Make sure ProjectService is added as an AutoLoad."
+                );
             }
             return _instance;
         }
@@ -34,7 +42,7 @@ public partial class ProjectService : Node
         set
         {
             _currentProject = value;
-            EventBus.Instance.Publish<ProjectChangedEvent>();   //no params means everything has changed
+            EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
         }
     }
 

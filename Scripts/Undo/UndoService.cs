@@ -1,18 +1,17 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
-public partial class UndoService: Node
+public partial class UndoService : Node
 {
     // Singleton Pattern
     private static UndoService _instance;
     public static UndoService Instance => _instance;
 
-
     private Stack<Update> _undoStack = new();
 
     private Stack<Update> _redoStack = new();
-    
+
     private int _maxStackSize = 100;
     private int _minStackSize = 50;
 
@@ -22,14 +21,12 @@ public partial class UndoService: Node
         _instance = this;
     }
 
-    public void ClearStack()
-    {
-        
-    }
+    public void ClearStack() { }
 
     public void Add(Update update)
     {
-        if (_undoStack.Count > _maxStackSize) TrimStack(_undoStack, _minStackSize);
+        if (_undoStack.Count > _maxStackSize)
+            TrimStack(_undoStack, _minStackSize);
         _undoStack.Push(update);
     }
 
@@ -42,8 +39,9 @@ public partial class UndoService: Node
 
     private void TrimStack(Stack<Update> stack, int size)
     {
-        if (size >= stack.Count) return;
-        
+        if (size >= stack.Count)
+            return;
+
         var arr = stack.ToArray();
 
         stack.Clear();
@@ -52,11 +50,11 @@ public partial class UndoService: Node
         {
             if (i < size)
             {
-                stack.Push(arr[i-1]);
+                stack.Push(arr[i - 1]);
             }
             else
             {
-                Finalize(arr[i-1]); //mainly permanently deleting objects
+                Finalize(arr[i - 1]); //mainly permanently deleting objects
             }
         }
     }
@@ -69,25 +67,30 @@ public partial class UndoService: Node
             {
                 c.Component.QueueFree();
             }
-        }        
+        }
     }
 
-    public void Add(VisualComponentBase component, Change.ChangeType changeType, object beginState,
-        object endState)
+    public void Add(
+        VisualComponentBase component,
+        Change.ChangeType changeType,
+        object beginState,
+        object endState
+    )
     {
         var change = new Change
         {
             Action = changeType,
             Component = component,
             Begin = beginState,
-            End = endState
+            End = endState,
         };
         Add(change);
     }
 
     public void Undo()
     {
-        if (!_undoStack.TryPop(out var update)) return;
+        if (!_undoStack.TryPop(out var update))
+            return;
 
         foreach (var c in update)
         {
@@ -97,11 +100,11 @@ public partial class UndoService: Node
                     ExecuteTransform(c);
                     break;
                 case Change.ChangeType.Creation:
-                    c.Component.Visible = false;    //hide, don't delete for now. In case we have a 'redo' function
+                    c.Component.Visible = false; //hide, don't delete for now. In case we have a 'redo' function
                     break;
                 case Change.ChangeType.Deletion:
-                    c.Component.Visible = true;     //do we also want to move this out of GameObjects and into a different list?
-                                                    //and do we have to adjust z-order?
+                    c.Component.Visible = true; //do we also want to move this out of GameObjects and into a different list?
+                    //and do we have to adjust z-order?
                     break;
                 case Change.ChangeType.LockStatus:
                     break;
@@ -119,11 +122,7 @@ public partial class UndoService: Node
         }
     }
 
-    public void BeginUpdate()
-    {
-    }
+    public void BeginUpdate() { }
 
-    public void CommitUpdate()
-    {
-    }
+    public void CommitUpdate() { }
 }

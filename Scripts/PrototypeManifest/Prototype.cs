@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 public class Prototype
 {
@@ -14,6 +14,7 @@ public class Prototype
     public VisualComponentBase.VisualComponentType Type { get; set; }
 
     public bool IsDirty { get; set; }
+
     public void Clean()
     {
         IsDirty = false;

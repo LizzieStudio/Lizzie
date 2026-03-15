@@ -1,99 +1,99 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 public partial class CardPanelDialogResult : ComponentPanelDialogResult
 {
-	private LineEdit _nameInput;
-	private LineEdit _heightInput;
-	private LineEdit _widthInput;
-	
-	private LineEdit _frontImage;
-	private LineEdit _backImage;
+    private LineEdit _nameInput;
+    private LineEdit _heightInput;
+    private LineEdit _widthInput;
 
-	private Button _frontButton;
-	private Button _backButton;
-	
-	public override void _Ready()
-	{
-		ComponentType = VisualComponentBase.VisualComponentType.Card;
-		
-		
-		_nameInput = GetNode<LineEdit>("GridContainer/ItemName");
-		_heightInput = GetNode<LineEdit>("GridContainer/HBoxContainer3/Height");
-		_widthInput = GetNode<LineEdit>("GridContainer/HBoxContainer4/Width");
+    private LineEdit _frontImage;
+    private LineEdit _backImage;
 
-		_frontImage = GetNode<LineEdit>("GridContainer/HBoxContainer5/FrontFile");
-		_backImage = GetNode<LineEdit>("GridContainer/HBoxContainer6/BackFile");
-		
-		_frontButton = GetNode<Button>("GridContainer/HBoxContainer5/Button");
-		_frontButton.Pressed += GetFrontFile;
-		_backButton = GetNode<Button>("GridContainer/HBoxContainer6/Button");
-		_backButton.Pressed += GetBackFile;
-	}
+    private Button _frontButton;
+    private Button _backButton;
 
-	private void GetFrontFile()
-	{
-		ShowFileDialog("Select Front Image File", FrontFileSelected);
-	}
-	
-	private void FrontFileSelected(string file)
-	{
-		if (!string.IsNullOrEmpty(file))
-		{
-			_frontImage.Text = file;
-		}
-	}
+    public override void _Ready()
+    {
+        ComponentType = VisualComponentBase.VisualComponentType.Card;
 
-	private void GetBackFile()
-	{
-		ShowFileDialog("Select Back Image File", BackFileSelected);
-	}
-	private void BackFileSelected(string file)
-	{
-		if (!string.IsNullOrEmpty(file))
-		{
-			_backImage.Text = file;
-		}
-	}
+        _nameInput = GetNode<LineEdit>("GridContainer/ItemName");
+        _heightInput = GetNode<LineEdit>("GridContainer/HBoxContainer3/Height");
+        _widthInput = GetNode<LineEdit>("GridContainer/HBoxContainer4/Width");
 
-	public override List<string> Validity()
-	{
-		var ret = new List<string>();
-		
-		if (string.IsNullOrEmpty(_nameInput.Text.Trim()))
-		{
-			ret.Add("Component Name required");
-		}
+        _frontImage = GetNode<LineEdit>("GridContainer/HBoxContainer5/FrontFile");
+        _backImage = GetNode<LineEdit>("GridContainer/HBoxContainer6/BackFile");
 
-		return ret;
-	}
+        _frontButton = GetNode<Button>("GridContainer/HBoxContainer5/Button");
+        _frontButton.Pressed += GetFrontFile;
+        _backButton = GetNode<Button>("GridContainer/HBoxContainer6/Button");
+        _backButton.Pressed += GetBackFile;
+    }
 
-	public override Dictionary<string, object> GetParams()
-	{
-		var d = new Dictionary<string, object>();
+    private void GetFrontFile()
+    {
+        ShowFileDialog("Select Front Image File", FrontFileSelected);
+    }
 
-		d.Add("ComponentName", _nameInput.Text);
-		d.Add("Height", ParamToFloat(_heightInput.Text));
-		d.Add("Width", ParamToFloat(_widthInput.Text));
-		d.Add("FrontImage", _frontImage.Text);
-		d.Add("BackImage", _backImage.Text);
-		d.Add("Type", VcToken.TokenType.Card);
-		return d;
-	}
+    private void FrontFileSelected(string file)
+    {
+        if (!string.IsNullOrEmpty(file))
+        {
+            _frontImage.Text = file;
+        }
+    }
 
-	public override void DisplayPrototype(Guid prototypeId)
-	{
-		var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
-		DisplayPrototype(prototype);
-	}
+    private void GetBackFile()
+    {
+        ShowFileDialog("Select Back Image File", BackFileSelected);
+    }
 
-	public override void DisplayPrototype(Prototype prototype)
-	{
-		_nameInput.Text = prototype.Name;
-		_heightInput.Text = prototype.Parameters["Height"].ToString();
-		_widthInput.Text = prototype.Parameters["Width"].ToString();
-		_frontImage.Text = prototype.Parameters["FrontImage"].ToString();
-		_backImage.Text = prototype.Parameters["BackImage"].ToString();
-	}
+    private void BackFileSelected(string file)
+    {
+        if (!string.IsNullOrEmpty(file))
+        {
+            _backImage.Text = file;
+        }
+    }
+
+    public override List<string> Validity()
+    {
+        var ret = new List<string>();
+
+        if (string.IsNullOrEmpty(_nameInput.Text.Trim()))
+        {
+            ret.Add("Component Name required");
+        }
+
+        return ret;
+    }
+
+    public override Dictionary<string, object> GetParams()
+    {
+        var d = new Dictionary<string, object>();
+
+        d.Add("ComponentName", _nameInput.Text);
+        d.Add("Height", ParamToFloat(_heightInput.Text));
+        d.Add("Width", ParamToFloat(_widthInput.Text));
+        d.Add("FrontImage", _frontImage.Text);
+        d.Add("BackImage", _backImage.Text);
+        d.Add("Type", VcToken.TokenType.Card);
+        return d;
+    }
+
+    public override void DisplayPrototype(Guid prototypeId)
+    {
+        var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+        DisplayPrototype(prototype);
+    }
+
+    public override void DisplayPrototype(Prototype prototype)
+    {
+        _nameInput.Text = prototype.Name;
+        _heightInput.Text = prototype.Parameters["Height"].ToString();
+        _widthInput.Text = prototype.Parameters["Width"].ToString();
+        _frontImage.Text = prototype.Parameters["FrontImage"].ToString();
+        _backImage.Text = prototype.Parameters["BackImage"].ToString();
+    }
 }

@@ -8,7 +8,6 @@ public partial class TopViewCamera : BaseCamera
     [Export]
     private float MaxSize = 110;
 
-
     protected override Camera3D GetCameraNode()
     {
         return GetNode<Camera3D>("Camera");
@@ -26,7 +25,8 @@ public partial class TopViewCamera : BaseCamera
 
     protected override void ZoomComponent(VisualComponentBase component)
     {
-        if (component == null) return;
+        if (component == null)
+            return;
         Position = new Vector3(component.Position.X, Position.Y, component.Position.Z);
         ActualCamera.Size = Mathf.Clamp(component.MaxAxisSize * 1.2f, MinSize, MaxSize);
     }

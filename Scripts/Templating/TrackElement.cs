@@ -1,53 +1,85 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 using Lizzie.Scripts.Templating;
 
 public class TrackElement : TemplateElement
 {
-    public enum TrackTypeEnum {Horizontal, Vertical, Perimeter, Grid}
+    public enum TrackTypeEnum
+    {
+        Horizontal,
+        Vertical,
+        Perimeter,
+        Grid,
+    }
 
     // Called when the node enters the scene tree for the first time.
-    public TrackElement() : base()
+    public TrackElement()
+        : base()
     {
         ElementType = ITemplateElement.TemplateElementType.Track;
 
-        Parameters.Add(new TemplateParameter
-        {
-            Name = "Track Type",
-            Value = nameof(TrackTypeEnum.Vertical),
-            Type = TemplateParameter.TemplateParameterType.TrackType
-        });
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Track Type",
+                Value = nameof(TrackTypeEnum.Vertical),
+                Type = TemplateParameter.TemplateParameterType.TrackType,
+            }
+        );
 
-        Parameters.Add(new TemplateParameter
-        {
-            Name = "Stroke Color",
-            Value = (Colors.Black).ToHtml(),
-            Type = TemplateParameter.TemplateParameterType.Color
-        });
-        Parameters.Add(new TemplateParameter
-            { Name = "Stroke Width", Value = "2", Type = TemplateParameter.TemplateParameterType.Number });
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Stroke Color",
+                Value = (Colors.Black).ToHtml(),
+                Type = TemplateParameter.TemplateParameterType.Color,
+            }
+        );
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Stroke Width",
+                Value = "2",
+                Type = TemplateParameter.TemplateParameterType.Number,
+            }
+        );
 
-        Parameters.Add(new TemplateParameter
-        {
-            Name = "Background Color",
-            Value = (Colors.Transparent).ToHtml(),
-            Type = TemplateParameter.TemplateParameterType.Color
-        });
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Background Color",
+                Value = (Colors.Transparent).ToHtml(),
+                Type = TemplateParameter.TemplateParameterType.Color,
+            }
+        );
 
-        Parameters.Add(new TemplateParameter
-            { Name = "# of Boxes", Value = "4", Type = TemplateParameter.TemplateParameterType.Number });
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "# of Boxes",
+                Value = "4",
+                Type = TemplateParameter.TemplateParameterType.Number,
+            }
+        );
 
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Box Text",
+                Value = string.Empty,
+                Type = TemplateParameter.TemplateParameterType.Text,
+            }
+        );
 
-        Parameters.Add(new TemplateParameter
-            { Name = "Box Text", Value = string.Empty, Type = TemplateParameter.TemplateParameterType.Text });
-
-        Parameters.Add(new TemplateParameter
-        {
-            Name = "Text Color",
-            Value = (Colors.Black).ToHtml(),
-            Type = TemplateParameter.TemplateParameterType.Color
-        });
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Text Color",
+                Value = (Colors.Black).ToHtml(),
+                Type = TemplateParameter.TemplateParameterType.Color,
+            }
+        );
 
         UpdateBounds();
     }
@@ -64,16 +96,13 @@ public class TrackElement : TemplateElement
     {
         var l = new List<TextureFactory.TextureObject>();
 
-        
-
-        var boxValues = Utility.ParseValueRanges( EvaluateTextParameter(Parameters, "Box Text", context));
+        var boxValues = Utility.ParseValueRanges(
+            EvaluateTextParameter(Parameters, "Box Text", context)
+        );
         var spaceValue = EvaluateNumberParameter(Parameters, "# of Boxes", context);
-        
+
         //the number of spaces on the track is the greater of the defined contents or just the number entered by the user
         var spaceCount = Math.Max(boxValues.Length, spaceValue);
-
-        
-        
 
         var foregroundColor = EvaluateColorParameter(Parameters, "Stroke Color", context);
         var fontColor = EvaluateColorParameter(Parameters, "Text Color", context);
@@ -95,7 +124,8 @@ public class TrackElement : TemplateElement
         if (tt == TrackTypeEnum.Perimeter)
         {
             spaceCount = Math.Max(8, spaceCount); //for a perimeter track the minimum number of spaces is eight.
-            if (spaceCount % 2 == 1) spaceCount++;  //if it's an odd number go up by one
+            if (spaceCount % 2 == 1)
+                spaceCount++; //if it's an odd number go up by one
         }
         else
         {
@@ -107,7 +137,6 @@ public class TrackElement : TemplateElement
         var sH = height / spaceCount;
         var sW = width / spaceCount;
 
-
         if (tt == TrackTypeEnum.Vertical)
         {
             for (var cnt = 0; cnt < spaceCount; cnt++)
@@ -117,7 +146,7 @@ public class TrackElement : TemplateElement
                     CenterX = centerX,
                     CenterY = centerY + (sH * (spaceCount - 1) / 2) - (sH * cnt),
                     Width = width,
-                    Height = sH
+                    Height = sH,
                 };
                 if (boxValues.Length > cnt)
                 {
@@ -127,17 +156,16 @@ public class TrackElement : TemplateElement
                 spaces.Add(sd);
             }
         }
-
         else if (tt == TrackTypeEnum.Horizontal)
         {
             for (var cnt = 0; cnt < spaceCount; cnt++)
             {
                 var sd = new SpaceDef
                 {
-                    CenterX = centerX - (sW * (spaceCount -1) / 2) + (sW * cnt),
+                    CenterX = centerX - (sW * (spaceCount - 1) / 2) + (sW * cnt),
                     CenterY = centerY,
                     Width = sW,
-                    Height = height
+                    Height = height,
                 };
                 if (boxValues.Length > cnt)
                 {
@@ -147,7 +175,6 @@ public class TrackElement : TemplateElement
                 spaces.Add(sd);
             }
         }
-
         else if (tt == TrackTypeEnum.Grid)
         {
             //get factors
@@ -155,7 +182,6 @@ public class TrackElement : TemplateElement
 
             if (factors.Length > 0)
             {
-
                 bool wide = true;
                 float ratio = (float)height / width;
 
@@ -213,7 +239,7 @@ public class TrackElement : TemplateElement
                             CenterX = centerX - (width / 2) + (sW / 2) + (sW * i),
                             CenterY = centerY + (height / 2) - (sH / 2) - (sH * j),
                             Width = sW,
-                            Height = sH
+                            Height = sH,
                         };
                         int cnt = j * w + i;
                         if (boxValues.Length > cnt)
@@ -225,9 +251,7 @@ public class TrackElement : TemplateElement
                     }
                 }
             }
-
         }
-
         else
         {
             //perimeter track
@@ -238,7 +262,7 @@ public class TrackElement : TemplateElement
             var cellSize = (halfSize) / (spaceCount + 2);
 
             //distribute cells per side
-            var wCount = (int)Math.Round( (double)((spaceCount + 1) * width) / halfSize / 2f);
+            var wCount = (int)Math.Round((double)((spaceCount + 1) * width) / halfSize / 2f);
             var hCount = (int)Math.Round((double)((spaceCount + 1) * height) / halfSize / 2f);
 
             //make sure the count is right
@@ -267,8 +291,8 @@ public class TrackElement : TemplateElement
             }
 
             //now calculate the final cell widths and heights
-            int cw = width / (wCount+1);
-            int ch = height / (hCount+1);
+            int cw = width / (wCount + 1);
+            int ch = height / (hCount + 1);
 
             //do it in four stripes, starting with the upper left (0,0)
             var cx = cw / 2;
@@ -282,7 +306,7 @@ public class TrackElement : TemplateElement
                     CenterX = cx,
                     CenterY = cy,
                     Width = cw,
-                    Height = ch
+                    Height = ch,
                 };
                 if (boxValues.Length > cnt)
                 {
@@ -302,7 +326,7 @@ public class TrackElement : TemplateElement
                     CenterX = cx,
                     CenterY = cy,
                     Width = cw,
-                    Height = ch
+                    Height = ch,
                 };
                 if (boxValues.Length > cnt)
                 {
@@ -322,7 +346,7 @@ public class TrackElement : TemplateElement
                     CenterX = cx,
                     CenterY = cy,
                     Width = cw,
-                    Height = ch
+                    Height = ch,
                 };
                 if (boxValues.Length > cnt)
                 {
@@ -342,7 +366,7 @@ public class TrackElement : TemplateElement
                     CenterX = cx,
                     CenterY = cy,
                     Width = cw,
-                    Height = ch
+                    Height = ch,
                 };
                 if (boxValues.Length > cnt)
                 {
@@ -382,7 +406,8 @@ public class TrackElement : TemplateElement
 
             l.Add(tFrame);
 
-            if (string.IsNullOrWhiteSpace(s.Contents)) continue;
+            if (string.IsNullOrWhiteSpace(s.Contents))
+                continue;
 
             var tText = new TextureFactory.TextureObject();
             tText.Type = TextureFactory.TextureObjectType.Text;
@@ -398,11 +423,9 @@ public class TrackElement : TemplateElement
 
             l.Add(tText);
         }
-        
+
         return l;
     }
-
-    
 
     private struct SpaceDef
     {

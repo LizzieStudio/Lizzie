@@ -1,8 +1,8 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
+using Godot;
 
 public partial class PrototypeManifest : Control
 {
@@ -11,7 +11,7 @@ public partial class PrototypeManifest : Control
     private TreeItem _root;
 
     private Button _close;
- 
+
     private ComponentPreview _preview;
 
     private Prototype _selectedPrototype;
@@ -34,9 +34,9 @@ public partial class PrototypeManifest : Control
         _preview = GetNode<ComponentPreview>("%ComponentPreview");
         _preview.SetComponentX(-200);
 
-        _close  = GetNode<Button>("%Close");
+        _close = GetNode<Button>("%Close");
         _close.Pressed += OnClose;
-        
+
         InitializePrototypeGrid();
 
         if (_refreshRequired)
@@ -45,8 +45,8 @@ public partial class PrototypeManifest : Control
         }
     }
 
-
     public event EventHandler Closed;
+
     private void OnClose()
     {
         Hide();
@@ -54,7 +54,6 @@ public partial class PrototypeManifest : Control
     }
 
     private ComponentDefinition _editPanel;
-
 
     private void ComponentEditDialogClose(object sender, EventArgs e)
     {
@@ -65,10 +64,15 @@ public partial class PrototypeManifest : Control
 
     private void RefreshSelectedPrototype()
     {
-        if (SelectedPrototype == null) return;
+        if (SelectedPrototype == null)
+            return;
 
-
-        if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(SelectedPrototype.PrototypeRef, out var p))
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                SelectedPrototype.PrototypeRef,
+                out var p
+            )
+        )
             return;
 
         SelectedPrototype = p;
@@ -83,8 +87,6 @@ public partial class PrototypeManifest : Control
             selectedItem.SetText(0, p.Name);
         }
     }
-
-
 
     private void InitializePrototypeGrid()
     {
@@ -127,7 +129,6 @@ public partial class PrototypeManifest : Control
 
     private void PrototypeEditClicked(TreeItem item, long column, long id, long mouseButtonIndex)
     {
-
         var prototypeRef = Guid.Parse(item.GetMetadata(0).AsString());
 
         if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(prototypeRef, out var p))
@@ -145,7 +146,6 @@ public partial class PrototypeManifest : Control
         _editPanel.CancelDialog += ComponentEditDialogClose;
         AddChild(_editPanel);
     }
-
 
     private bool _refreshRequired;
 
@@ -197,7 +197,10 @@ public partial class PrototypeManifest : Control
             item.SetText(0, prototype.Name ?? "");
             item.SetText(1, prototype.Type.ToString());
 
-            if (prototypeCounts != null && prototypeCounts.TryGetValue(prototype.PrototypeRef, out var count))
+            if (
+                prototypeCounts != null
+                && prototypeCounts.TryGetValue(prototype.PrototypeRef, out var count)
+            )
             {
                 item.SetText(2, count.ToString());
             }
@@ -238,7 +241,12 @@ public partial class PrototypeManifest : Control
 
         var prototypeRef = Guid.Parse(selectedItem.GetMetadata(0).AsString());
 
-        if (ProjectService.Instance?.CurrentProject?.Prototypes.TryGetValue(prototypeRef, out var prototype) == true)
+        if (
+            ProjectService.Instance?.CurrentProject?.Prototypes.TryGetValue(
+                prototypeRef,
+                out var prototype
+            ) == true
+        )
         {
             SelectedPrototype = prototype;
         }
@@ -252,5 +260,4 @@ public partial class PrototypeManifest : Control
     }
 
     public TextureFactory TextureFactory { get; set; }
-
 }
