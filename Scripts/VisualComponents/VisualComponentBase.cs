@@ -151,9 +151,26 @@ public abstract partial class VisualComponentBase : Area3D
             Refresh(Parameters, _textureFactory);
 			return new CommandResponse(true, null);
         }
-		
-		
-		return new CommandResponse(false, null);
+
+		if (command == VisualCommand.Duplicate)
+		{
+			var newComponent = (VisualComponentBase) this.Duplicate();
+			OnComponentAdded(newComponent);
+			return new CommandResponse(true, null);
+		}
+
+		if (command == VisualCommand.Edit)
+        {
+			EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = PrototypeRef });
+        }
+
+        if (command == VisualCommand.MakeUnique)
+        {
+            EventBus.Instance.Publish(new MakePrototypeUniqueEvent { PrototypeId = PrototypeRef });
+        }
+
+
+return new CommandResponse(false, null);
 	}
 
 
@@ -184,6 +201,8 @@ public abstract partial class VisualComponentBase : Area3D
 		l.Add(new MenuCommand(VisualCommand.Delete));
 		l.Add(new MenuCommand(VisualCommand.Refresh));
 		l.Add(new MenuCommand(VisualCommand.Duplicate));
+        l.Add(new MenuCommand(VisualCommand.Edit, singleOnly:true));
+		l.Add(new MenuCommand(VisualCommand.MakeUnique, singleOnly:true));
 		return l;
 	}
 

@@ -253,5 +253,15 @@ public class PrototypeChangedEvent : IEvent
 	public Guid PrototypeId { get; set; }
 }
 
+public class EditPrototypeEvent :IEvent
+{
+	public Guid PrototypeId { get; set; }
+}
+
+public class MakePrototypeUniqueEvent : IEvent
+{
+    public Guid PrototypeId { get; set; }
+}
+
 
 #endregion

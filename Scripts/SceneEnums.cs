@@ -59,5 +59,6 @@ public enum VisualCommand
     Roll,
     Shuffle,
     Refresh,
+    MakeUnique,
     MaximumVC
 }

@@ -167,7 +167,7 @@ public partial class ComponentDefinition : Window
 
         EventBus.Instance.Publish(new PrototypeChangedEvent{PrototypeId = prototype.PrototypeRef});
 
-		CancelClicked();
+		CloseDialog?.Invoke(this, EventArgs.Empty);
     }
 
 	private void CancelClicked()
@@ -257,7 +257,8 @@ public partial class ComponentDefinition : Window
 	}
 	
 	public event EventHandler<CreateObjectEventArgs> CreateObject;
-	public event EventHandler<EventArgs> CancelDialog; 
+	public event EventHandler<EventArgs> CancelDialog;
+    public event EventHandler<EventArgs> CloseDialog;
 
 	public VisualComponentBase.VisualComponentType NameToType(string name)
 	{

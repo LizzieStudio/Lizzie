@@ -36,6 +36,7 @@ public partial class UI : CanvasLayer
     
     private DatasetEditor _datasetEditor;
     private PrototypeManifest _prototypeManifest;
+    private MultiplayerDialog _multiplayerDialog;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -47,6 +48,8 @@ public partial class UI : CanvasLayer
         SetMasterMode(MasterMode.TwoD);
 
         _fileMenu = GetNode<PopupMenu>("MenuBar/File");
+        _fileMenu.AddSeparator();
+        _fileMenu.AddItem("Multiplayer...", 10);
         _fileMenu.IdPressed += FileMenuOnIdPressed;
         //_componentDefinition = GetNode<ComponentDefinition>("ComponentDefinition");
         //_componentDefinition.CreateObject += OnCreateObject;
@@ -76,6 +79,7 @@ public partial class UI : CanvasLayer
       _textureFactory = GetNode<TextureFactory>("%TextureFactory"); 
         
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
+        EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
 
     }
 
@@ -173,6 +177,10 @@ public partial class UI : CanvasLayer
                 var op = _projectManager.CreateTestProject();
                 ProjectService.Instance.SaveProject(op, "TestProj");
                 break;
+
+            case 10:
+                ShowMultiplayerDialog();
+                break;
         }
     }
 
@@ -188,6 +196,72 @@ public partial class UI : CanvasLayer
     {
         _projectManager.Closed -= ProjectManagerClosed;
         _projectManager.QueueFree();
+    }
+
+    private void ShowMultiplayerDialog()
+    {
+        if (_multiplayerDialog != null && _multiplayerDialog.Visible)
+        {
+            // Dialog already open, just bring it to front
+            _multiplayerDialog.MoveToForeground();
+            return;
+        }
+
+        _multiplayerDialog = new MultiplayerDialog();
+        _multiplayerDialog.CloseRequested += MultiplayerDialogClosed;
+        AddChild(_multiplayerDialog);
+        _multiplayerDialog.PopupCentered();
+    }
+
+    private void MultiplayerDialogClosed()
+    {
+        if (_multiplayerDialog != null)
+        {
+            _multiplayerDialog.CloseRequested -= MultiplayerDialogClosed;
+            _multiplayerDialog.QueueFree();
+            _multiplayerDialog = null;
+        }
+    }
+
+    private ComponentDefinition _editPanel;
+    private Guid _editingPrototypeId;
+
+    private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
+    {
+        if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(editEvent.PrototypeId, out var p))
+        {
+            return;
+        }
+        _editingPrototypeId = editEvent.PrototypeId;
+
+        var s = "res://Scenes/ComponentPanels/component_definition.tscn";
+        _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
+        _editPanel.SetEditMode();
+        _editPanel.SetTextureFactory(_textureFactory);
+        _editPanel.DisplayPrototype(p);
+        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
+
+        _editPanel.CancelDialog += ComponentEditDialogCancel;
+        _editPanel.CloseDialog += ComponentEditDialogClose;
+        AddChild(_editPanel);
+    }
+
+    private void ComponentEditDialogCancel(object sender, EventArgs e)
+    {
+        CloseComponentEditDialog();
+    }
+
+    private void ComponentEditDialogClose(object sender, EventArgs e)
+    {
+        EventBus.Instance.Publish(new PrototypeChangedEvent { PrototypeId = _editingPrototypeId });
+        CloseComponentEditDialog();
+    }
+
+    private void CloseComponentEditDialog()
+    {
+        _editPanel.Hide();
+        _editPanel.QueueFree();
+        _editingPrototypeId = Guid.Empty;
     }
 
 
@@ -256,6 +330,7 @@ public partial class UI : CanvasLayer
 
         _popupComponents = components;
 
+        bool excludeSingle = components.Count > 1;
         var comDic = new Dictionary<VisualCommand, int>();
 
         var fullCommands = new List<MenuCommand>();
@@ -265,6 +340,8 @@ public partial class UI : CanvasLayer
             var cList = c.GetMenuCommands();
             foreach (var m in cList)
             {
+                if (m.SingleOnly && excludeSingle) continue;    //skip commands that are single only if we have more than one comp selected
+
                 fullCommands.Add(m);
                 if (comDic.ContainsKey(m.Command))
                 {
@@ -277,6 +354,7 @@ public partial class UI : CanvasLayer
             }
         }
 
+        
         //only include menu commands that are valid for all selected items
         var commands = comDic.Where(x => x.Value == components.Count)
             .Select(y => y.Key);
@@ -303,6 +381,12 @@ public partial class UI : CanvasLayer
 
         if (commands.Any(x => x == VisualCommand.Shuffle))
             AddItemToPopupMenu(_componentPopup, VisualCommand.Shuffle, "Shuffle", string.Empty);
+
+        if (commands.Any(x => x == VisualCommand.Edit))
+            AddItemToPopupMenu(_componentPopup, VisualCommand.Edit, "Edit", string.Empty);
+
+        if (commands.Any(x => x == VisualCommand.MakeUnique))
+            AddItemToPopupMenu(_componentPopup, VisualCommand.MakeUnique, "Make Unique", string.Empty);
     }
 
     private void PopupMenuCommandSelected(long id)

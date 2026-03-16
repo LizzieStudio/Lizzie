@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="Scripts\AssetManagement\README.md" />
+    <None Include="Scripts\Container\ParametersSerializationGuide.md" />
     <None Include="Scripts\Multiplayer\README.md" />
   </ItemGroup>
 </Project>

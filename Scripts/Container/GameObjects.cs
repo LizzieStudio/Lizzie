@@ -1,8 +1,10 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
+using System.Text.Json;
 
 public partial class GameObjects : Node
 {
@@ -168,7 +170,7 @@ public partial class GameObjects : Node
 	}
 	*/
 	
-	public void AddComponentToScene(VisualComponentBase component)
+	public void AddComponentToScene(VisualComponentBase component, bool syncCreation = true)
 	{
 		component.ZOrder = GetMaxComponentZ() + 1;
 		AddChild(component);
@@ -182,9 +184,9 @@ public partial class GameObjects : Node
 			component.AddChild(networkedObject);
 
 			// Server syncs object creation to all clients
-			if (MultiplayerManager.Instance.IsServer)
+			if (MultiplayerManager.Instance.IsServer && syncCreation)
 			{
-				networkedObject.SyncCreation();
+				SyncCreation(component);
 			}
 		}
 
@@ -568,7 +570,7 @@ public partial class GameObjects : Node
 		_spawnComponent = component;
 		_spawnComponent.DimMode(true);
 		_spawnComponent.NeverHighlight = true;
-		AddComponentToScene(_spawnComponent);
+		AddComponentToScene(_spawnComponent, false);
 	}
 	
 	
@@ -854,6 +856,179 @@ public partial class GameObjects : Node
 
 		return false;
 	}
+
+	#region Multiplayer
+
+	/// <summary>
+	/// Serialize Parameters dictionary to JSON string
+	/// </summary>
+	private static string SerializeParameters(Dictionary<string, object> parameters)
+	{
+		if (parameters == null) return "{}";
+
+		var options = new JsonSerializerOptions
+		{
+			WriteIndented = false,
+			PropertyNameCaseInsensitive = true
+		};
+
+		return JsonSerializer.Serialize(parameters, options);
+	}
+
+	/// <summary>
+	/// Deserialize JSON string to Parameters dictionary with proper type conversion
+	/// </summary>
+	private static Dictionary<string, object> DeserializeParameters(string json)
+	{
+		if (string.IsNullOrEmpty(json)) return new Dictionary<string, object>();
+
+		var options = new JsonSerializerOptions
+		{
+			PropertyNameCaseInsensitive = true
+		};
+
+		var rawDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, options);
+		if (rawDict == null) return new Dictionary<string, object>();
+
+		var result = new Dictionary<string, object>();
+
+		foreach (var kvp in rawDict)
+		{
+			result[kvp.Key] = ConvertJsonElement(kvp.Value);
+		}
+
+		return result;
+	}
+
+	/// <summary>
+	/// Convert JsonElement to appropriate .NET type
+	/// </summary>
+	private static object ConvertJsonElement(JsonElement element)
+	{
+		return element.ValueKind switch
+		{
+			JsonValueKind.String => element.GetString(),
+			JsonValueKind.Number => element.TryGetSingle(out float floatValue) 
+				? floatValue 
+                : element.GetDouble(),
+			JsonValueKind.True => true,
+			JsonValueKind.False => false,
+			JsonValueKind.Null => null,
+			JsonValueKind.Array => ConvertJsonArray(element),
+			JsonValueKind.Object => ConvertJsonObject(element),
+			_ => element.ToString()
+		};
+	}
+
+	/// <summary>
+	/// Convert JsonElement array to List
+	/// </summary>
+	private static object ConvertJsonArray(JsonElement element)
+	{
+		var list = new List<object>();
+		foreach (var item in element.EnumerateArray())
+		{
+			list.Add(ConvertJsonElement(item));
+		}
+		return list;
+	}
+
+	/// <summary>
+	/// Convert JsonElement object to Dictionary
+	/// </summary>
+	private static object ConvertJsonObject(JsonElement element)
+	{
+		var dict = new Dictionary<string, object>();
+		foreach (var property in element.EnumerateObject())
+		{
+			dict[property.Name] = ConvertJsonElement(property.Value);
+		}
+		return dict;
+	}
+
+	/// <summary>
+	/// Sync object creation across network
+	/// </summary>
+	public void SyncCreation(VisualComponentBase component)
+	{
+		if (!MultiplayerManager.Instance?.IsMultiplayerActive == true) return;
+		if (!MultiplayerManager.Instance.IsServer) return;
+		if (component == null) return;
+
+
+		var parametersJson = SerializeParameters(component.Parameters);
+
+		var jout = JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson);
+        var prototypeRef = component.PrototypeRef.ToString();
+
+		Rpc(nameof(ClientSpawnObject),
+			component.GetPath(),
+			(int)component.ComponentType,
+			parametersJson,
+			prototypeRef,
+			component.Position,
+			component.Rotation,
+			component.ZOrder);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void ClientSpawnObject(
+		NodePath componentPath,
+		int componentType,
+		string parametersJson,
+		string prototypeRefStr,
+		Vector3 position,
+		Vector3 rotation,
+		int zOrder)
+	{
+		// Client receives notification to spawn object
+		// This would be handled by GameObjects
+		GD.Print($"Received spawn for: {componentPath}");
+
+		var param = JsonUtilities.ParseJsonToDictionary((VisualComponentBase.VisualComponentType)componentType, JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson));
+
+		//get the model ref
+		var path = Utility.ComponentTypeToScenePath((VisualComponentBase.VisualComponentType)componentType, param );
+
+		var scene = GD.Load<PackedScene>(path).Instantiate();
+
+		if (scene is not VisualComponentBase vcb) return;	//should probably throw an error - something is wrong
+
+		vcb.Build(param, TextureFactory);
+		vcb.PrototypeRef = Guid.Parse(prototypeRefStr);
+		vcb.ZOrder = zOrder;
+
+		vcb.Position = position;
+		vcb.Rotation = rotation;
+
+		AddComponentToScene(vcb, false); // Don't sync creation on clients
+	}
+
+    /// <summary>
+    /// Sync object deletion across network
+    /// </summary>
+    public void SyncDeletion(VisualComponentBase component)
+    {
+        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true) return;
+        if (!MultiplayerManager.Instance.IsServer) return;
+
+        Rpc(nameof(ClientDeleteObject), component.GetPath());
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void ClientDeleteObject(NodePath componentPath)
+    {
+        GD.Print($"Received delete for: {componentPath}");
+
+        var node = GetNode(componentPath);
+        if (node != null)
+        {
+            node.QueueFree();
+        }
+    }
+
+
+    #endregion
 }
 
 public class ShowComponentPopupEventArgs : EventArgs
