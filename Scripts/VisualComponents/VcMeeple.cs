@@ -73,9 +73,9 @@ public partial class VcMeeple : VisualComponentBase
             }
         }
 
-        HighlightMesh.Scale = new Vector3(h, h, t);
+        HighlightMesh.Scale = new Vector3(h, t, h);
 
-        YHeight = Height;
+        YHeight = t;
 
         SetColor(c);
 
