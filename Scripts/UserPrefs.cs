@@ -7,15 +7,13 @@ public class UserPrefs
     private string _lastContentPath = "";
     public string LastContentPath
     {
-        get {
-            return _lastContentPath;
-        }
+        get { return _lastContentPath; }
         set
         {
             if (value != _lastContentPath)
             {
                 _lastContentPath = value;
-                config.SetValue( Section_Files, Key_LastContentPath, _lastContentPath);
+                config.SetValue(Section_Files, Key_LastContentPath, _lastContentPath);
                 config.Save(SettingsPath);
             }
         }
@@ -27,12 +25,11 @@ public class UserPrefs
     private const string Section_Files = "Files";
     private ConfigFile config = new ConfigFile();
 
-
     // Singleton, created on demand
     private static readonly Lazy<UserPrefs> instance = new Lazy<UserPrefs>(() => new UserPrefs());
     public static UserPrefs Instance => instance.Value;
 
-     // Private constructor to prevent instantiation from outside the class.
+    // Private constructor to prevent instantiation from outside the class.
     private UserPrefs()
     {
         config = new ConfigFile();
@@ -41,11 +38,13 @@ public class UserPrefs
         {
             // Set defaults
             _lastContentPath = OS.GetSystemDir(OS.SystemDir.Documents);
-            config.SetValue( Section_Files, Key_LastContentPath, _lastContentPath);
+            config.SetValue(Section_Files, Key_LastContentPath, _lastContentPath);
             config.Save(SettingsPath);
-        } else {
+        }
+        else
+        {
             // Initialize with values from config
-            _lastContentPath = (string)config.GetValue( Section_Files, Key_LastContentPath );
+            _lastContentPath = (string)config.GetValue(Section_Files, Key_LastContentPath);
         }
     }
 }

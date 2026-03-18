@@ -1,17 +1,20 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Godot;
 
 public static class JsonUtilities
 {
-    public static Dictionary<string, object> ParseJsonToDictionary(VisualComponentBase.VisualComponentType vcType, Dictionary<string, object> d)
+    public static Dictionary<string, object> ParseJsonToDictionary(
+        VisualComponentBase.VisualComponentType vcType,
+        Dictionary<string, object> d
+    )
     {
         switch (vcType)
         {
             case VisualComponentBase.VisualComponentType.Cube:
                 return ParseCube(d);
-               
+
             case VisualComponentBase.VisualComponentType.Disc:
                 return ParseDisc(d);
 
@@ -28,19 +31,18 @@ public static class JsonUtilities
                 break;
             case VisualComponentBase.VisualComponentType.Die:
                 return ParseDie(d);
-                
+
             case VisualComponentBase.VisualComponentType.Mesh:
                 break;
             case VisualComponentBase.VisualComponentType.Meeple:
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(vcType), vcType, null);
-
         }
 
-        return d;       //for now
+        return d; //for now
     }
-    
+
     private static Dictionary<string, object> ParseCube(Dictionary<string, object> d)
     {
         var p = new Dictionary<string, object>();
@@ -70,7 +72,6 @@ public static class JsonUtilities
 
     private static Dictionary<string, object> ParseToken(Dictionary<string, object> d)
     {
-
         var p = new Dictionary<string, object>();
 
         p.Add("ComponentName", TryGetString(d, "ComponentName"));
@@ -90,34 +91,28 @@ public static class JsonUtilities
 
         p.Add("QuickFront", TryGetQTF(d, "QuickFront"));
         p.Add("QuickBack", TryGetQTF(d, "QuickBack"));
-        
+
         p.Add("Type", TryGetInt(d, "Type"));
         p.Add("FrontFontSize", TryGetInt(d, "FrontFontSize"));
         p.Add("BackFontSize", TryGetInt(d, "BackFontSize"));
 
         p.Add("DifferentBack", TryGetBool(d, "DifferentBack"));
         return p;
-
     }
-
 
     private static Dictionary<string, object> ParseDie(Dictionary<string, object> d)
     {
-
         var p = new Dictionary<string, object>();
 
         p.Add("ComponentName", TryGetString(d, "ComponentName"));
         p.Add("BaseName", TryGetString(d, "BaseName"));
         p.Add("Size", TryGetFloat(d, "Size"));
         p.Add("Color", TryGetColor(d, "Color"));
-        
+
         p.Add("Sides", TryGetQTFArray(d, "Sides"));
 
-
         return p;
-
     }
-
 
     private static string TryGetString(Dictionary<string, object> d, string key)
     {
@@ -132,11 +127,16 @@ public static class JsonUtilities
     {
         if (d.TryGetValue(key, out var value))
         {
-            if (value is float f) return f;
-            if (value is double db) return (float)db;
-            if (value is int i) return i;
-            if (value is long l) return l;
-            if (float.TryParse(value.ToString(), out var parsed)) return parsed;
+            if (value is float f)
+                return f;
+            if (value is double db)
+                return (float)db;
+            if (value is int i)
+                return i;
+            if (value is long l)
+                return l;
+            if (float.TryParse(value.ToString(), out var parsed))
+                return parsed;
         }
         return 0;
     }
@@ -145,7 +145,8 @@ public static class JsonUtilities
     {
         if (d.TryGetValue(key, out var value))
         {
-            if (int.TryParse(value.ToString(), out var parsed)) return parsed;
+            if (int.TryParse(value.ToString(), out var parsed))
+                return parsed;
         }
         return 0;
     }
@@ -154,7 +155,8 @@ public static class JsonUtilities
     {
         if (d.TryGetValue(key, out var value))
         {
-            if (bool.TryParse(value.ToString(), out var parsed)) return parsed;
+            if (bool.TryParse(value.ToString(), out var parsed))
+                return parsed;
         }
         return false;
     }
@@ -165,7 +167,7 @@ public static class JsonUtilities
         {
             return JsonSerializer.Deserialize<Color>(value.ToString());
         }
-        
+
         return Colors.Black; // Default color if not found or deserialization fails
     }
 
@@ -198,8 +200,4 @@ public static class JsonUtilities
         }
         return []; // Default if not found or deserialization fails
     }
-
-
-
-
 }

@@ -1,11 +1,13 @@
-using Godot;
 using System.Collections.Generic;
+using Godot;
 using Lizzie.Scripts.Templating;
 
 public static class TemplateEngine
 {
-    public static List<TextureFactory.TextureDefinition> GenerateTextureDefinitions(Template template,
-        TextureContext _textureContext)
+    public static List<TextureFactory.TextureDefinition> GenerateTextureDefinitions(
+        Template template,
+        TextureContext _textureContext
+    )
     {
         var l = new List<TextureFactory.TextureDefinition>();
 
@@ -15,40 +17,42 @@ public static class TemplateEngine
             ParentSize = _textureContext.ParentSize,
         };
 
-        if (t.DataSet == null)  //no dataset, so just return a single base texture
+        if (t.DataSet == null) //no dataset, so just return a single base texture
         {
             l.Add(GenerateTextureDefinition(template, t));
             return l;
         }
-        
+
         foreach (var r in _textureContext.DataSet.Rows)
         {
             t.CurrentRowName = r.Key;
             l.Add(GenerateTextureDefinition(template, t));
         }
-        
+
         return l; //new List<TextureFactory.TextureDefinition>()
     }
-    
-    
-    public static TextureFactory.TextureDefinition GenerateTextureDefinition(Template template,
-        TextureContext _textureContext)
+
+    public static TextureFactory.TextureDefinition GenerateTextureDefinition(
+        Template template,
+        TextureContext _textureContext
+    )
     {
         return GenerateTextureDefinition(BuildTemplateElements(template), _textureContext);
     }
 
-    public static TextureFactory.TextureDefinition GenerateTextureDefinition(List<ITemplateElement> templateElements,
-        TextureContext _textureContext)
+    public static TextureFactory.TextureDefinition GenerateTextureDefinition(
+        List<ITemplateElement> templateElements,
+        TextureContext _textureContext
+    )
     {
         var td = new TextureFactory.TextureDefinition
         {
             BackgroundColor = Colors.White,
             Height = (int)_textureContext.ParentSize.Y,
             Width = (int)_textureContext.ParentSize.X,
-            Shape = TextureFactory.TokenShape.Square
+            Shape = TextureFactory.TokenShape.Square,
         };
 
-        
         foreach (var element in templateElements)
         {
             MapElementToObject(td, element, _textureContext);
@@ -57,29 +61,35 @@ public static class TemplateEngine
         return td;
     }
 
-    private static void MapElementToObject(TextureFactory.TextureDefinition td, ITemplateElement element, TextureContext _textureContext)
+    private static void MapElementToObject(
+        TextureFactory.TextureDefinition td,
+        ITemplateElement element,
+        TextureContext _textureContext
+    )
     {
         foreach (var l in element.GetElementData(_textureContext))
         {
-            td.Objects.Add(new TextureFactory.TextureObject
-            {
-                Width = l.Width,
-                Height = l.Height,
-                CenterX = l.CenterX,
-                CenterY = l.CenterY,
-                Anchor = l.Anchor,
-                Multiline = true,
-                Text = l.Text,
-                ForegroundColor = l.ForegroundColor,
-                Font = new SystemFont(),
-                FontSize = l.FontSize,
-                Autosize = l.Autosize,
-                HorizontalAlignment = l.HorizontalAlignment,
-                VerticalAlignment = l.VerticalAlignment,
-                Type = l.Type,
-                Stretch = l.Stretch,
-                BackgroundColor = l.BackgroundColor
-            });
+            td.Objects.Add(
+                new TextureFactory.TextureObject
+                {
+                    Width = l.Width,
+                    Height = l.Height,
+                    CenterX = l.CenterX,
+                    CenterY = l.CenterY,
+                    Anchor = l.Anchor,
+                    Multiline = true,
+                    Text = l.Text,
+                    ForegroundColor = l.ForegroundColor,
+                    Font = new SystemFont(),
+                    FontSize = l.FontSize,
+                    Autosize = l.Autosize,
+                    HorizontalAlignment = l.HorizontalAlignment,
+                    VerticalAlignment = l.VerticalAlignment,
+                    Type = l.Type,
+                    Stretch = l.Stretch,
+                    BackgroundColor = l.BackgroundColor,
+                }
+            );
 
             foreach (var c in element.Children)
             {
@@ -92,7 +102,8 @@ public static class TemplateEngine
     {
         TemplateElement te;
 
-        if (!parameters.TryGetValue("Type", out var type)) return null;
+        if (!parameters.TryGetValue("Type", out var type))
+            return null;
 
         switch (type)
         {
@@ -109,7 +120,6 @@ public static class TemplateEngine
 
         te.ElementName = parameters.TryGetValue("Name", out var name) ? name : string.Empty;
         te.Id = parameters.TryGetValue("Id", out var id) ? int.Parse(id) : 0;
-
 
         foreach (var kv in parameters)
         {

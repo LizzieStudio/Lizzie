@@ -1,20 +1,20 @@
-using Godot;
 using System;
+using Godot;
 
 public partial interface ICameraBase
 {
-        void StartDrag();
-        void StopDrag();
-        void ProcessDrag(Vector2 axis);
+    void StartDrag();
+    void StopDrag();
+    void ProcessDrag(Vector2 axis);
 
-        void ProcessViewEvent(InputEvent @event);
+    void ProcessViewEvent(InputEvent @event);
 
-        void ZoomIn();
-        void ZoomOut();
+    void ZoomIn();
+    void ZoomOut();
 
-        void ZoomComponent(VisualComponentBase component);
-        
-        void ResetView();
+    void ZoomComponent(VisualComponentBase component);
 
-        Camera3D Camera { get; }
+    void ResetView();
+
+    Camera3D Camera { get; }
 }

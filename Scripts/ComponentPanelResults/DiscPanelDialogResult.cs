@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 {
@@ -10,7 +10,6 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 
     private ColorPickerButton _colorPicker;
     private ComponentPreview _preview;
-
 
     public override void _Ready()
     {

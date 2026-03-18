@@ -1,10 +1,16 @@
-using Godot;
 using System;
 using System.Text.Json;
+using Godot;
 
 public partial class ProjectService : Node
 {
-    public enum ProjectElement {Dataset, Template, Component, Image}
+    public enum ProjectElement
+    {
+        Dataset,
+        Template,
+        Component,
+        Image,
+    }
 
     private static ProjectService _instance;
 
@@ -14,7 +20,9 @@ public partial class ProjectService : Node
         {
             if (_instance == null)
             {
-                GD.PrintErr("ProjectService instance not initialized. Make sure ProjectService is added as an AutoLoad.");
+                GD.PrintErr(
+                    "ProjectService instance not initialized. Make sure ProjectService is added as an AutoLoad."
+                );
             }
             return _instance;
         }
@@ -37,7 +45,7 @@ public partial class ProjectService : Node
             _currentProject = value;
             if (!_suppressProjectChangeEvent)
             {
-                EventBus.Instance.Publish<ProjectChangedEvent>();   //no params means everything has changed
+                EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
             }
         }
     }
@@ -98,7 +106,8 @@ public partial class ProjectService : Node
     /// </summary>
     public string SerializeProject(Project project)
     {
-        if (project == null) return "{}";
+        if (project == null)
+            return "{}";
         return JsonSerializer.Serialize(project);
     }
 
@@ -107,7 +116,8 @@ public partial class ProjectService : Node
     /// </summary>
     public Project DeserializeProject(string json)
     {
-        if (string.IsNullOrEmpty(json)) return null;
+        if (string.IsNullOrEmpty(json))
+            return null;
         var project = JsonSerializer.Deserialize<Project>(json);
         project?.FixDatasetName();
         return project;

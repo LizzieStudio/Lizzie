@@ -1,13 +1,14 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Godot;
 using Lizzie.Scripts.Templating;
 
 public partial class TemplateCreator : MarginContainer
 {
-    [Export] private TextureRect _preview;
+    [Export]
+    private TextureRect _preview;
 
     //private VBoxContainer _elementContainer;
 
@@ -20,7 +21,7 @@ public partial class TemplateCreator : MarginContainer
 
     private MenuButton _otherElementButton;
     private PopupMenu _otherElementPopup;
-    
+
     private Button _deleteElementButton;
     private Button _renameElementButton;
     private Button _duplicateElementButton;
@@ -86,7 +87,6 @@ public partial class TemplateCreator : MarginContainer
         UpdateProject();
     }
 
-
     private void InitToolbar()
     {
         _templateNameSelector = GetNode<OptionButton>("%TemplateName");
@@ -100,7 +100,6 @@ public partial class TemplateCreator : MarginContainer
         _saveButton.Pressed += SaveTemplate;
 
         _duplicateButton = GetNode<Button>("%DuplicateButton");
-
 
         _closeButton = GetNode<Button>("%CloseButton");
         _closeButton.Pressed += OnClose;
@@ -163,7 +162,6 @@ public partial class TemplateCreator : MarginContainer
     private void MapTemplate()
     {
         //change sizes
-        
 
         //set up element tree
         _elementTree.Clear();
@@ -180,15 +178,14 @@ public partial class TemplateCreator : MarginContainer
 
             var ni = _elementTree.CreateItem(_rootItem);
 
-            if (te.Id == 0) te.Id = id;
+            if (te.Id == 0)
+                te.Id = id;
             ni.SetMetadata(0, te.Id);
             id++;
             ni.SetText(0, te.ElementName);
 
             _templateElements.Add(te);
         }
-
-        
 
         //dataset
         MapDataset();
@@ -243,15 +240,19 @@ public partial class TemplateCreator : MarginContainer
     private void SaveTemplate()
     {
         ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject, "TestProject");
-        EventBus.Instance.Publish(new TemplateChangedEvent
-            { TemplateName = _currentTemplate.Name, Template = _currentTemplate });
+        EventBus.Instance.Publish(
+            new TemplateChangedEvent
+            {
+                TemplateName = _currentTemplate.Name,
+                Template = _currentTemplate,
+            }
+        );
         EventBus.Instance.Publish<ProjectChangedEvent>();
     }
 
     private ScrollBar _previewHScroll;
 
     private ScrollBar _previewVScroll;
-
 
     private void InitPreview()
     {
@@ -282,7 +283,6 @@ public partial class TemplateCreator : MarginContainer
         UpdateScrollBarVisibility();
     }
 
-
     private void InitElementTree()
     {
         _elementTree = GetNode<Tree>("%TemplateTree");
@@ -310,8 +310,6 @@ public partial class TemplateCreator : MarginContainer
 
         EnableTreeDragAndDrop();
     }
-
-
 
     private void InitParamTypes()
     {
@@ -345,7 +343,8 @@ public partial class TemplateCreator : MarginContainer
 
     private void BoundsChanged(object sender, EventArgs e)
     {
-        if (_selectedElement == null) return;
+        if (_selectedElement == null)
+            return;
 
         var m = _boundsRect.GetBounds();
 
@@ -363,7 +362,8 @@ public partial class TemplateCreator : MarginContainer
     private void UpdateParamControl(string name, string value)
     {
         var p = GetParamControl(name);
-        if (p != null) p.UpdateParameter(value);
+        if (p != null)
+            p.UpdateParameter(value);
     }
 
     private IParamControl GetParamControl(string name)
@@ -378,7 +378,6 @@ public partial class TemplateCreator : MarginContainer
 
         return null;
     }
-
 
     private void TreeItemSelected()
     {
@@ -405,17 +404,18 @@ public partial class TemplateCreator : MarginContainer
 
     private void DeleteCurrentElementQuery()
     {
-        if (_selectedElement == null) return;
+        if (_selectedElement == null)
+            return;
         var ti = _elementTree.GetSelected();
 
-        if (ti.GetMetadata(0).AsInt32() != _selectedElement.Id) return;
+        if (ti.GetMetadata(0).AsInt32() != _selectedElement.Id)
+            return;
 
-        _acceptDialog.DialogText = $"Are you sure you want to delete element {_selectedElement.ElementName}?";
+        _acceptDialog.DialogText =
+            $"Are you sure you want to delete element {_selectedElement.ElementName}?";
         _acceptDialog.Confirmed += DeleteCurrentElement;
         _acceptDialog.Show();
     }
-
-    
 
     private void DeleteCurrentElement()
     {
@@ -436,18 +436,20 @@ public partial class TemplateCreator : MarginContainer
 
     private void RenameCurrentElement()
     {
-        if (_selectedElement == null) return;
+        if (_selectedElement == null)
+            return;
         var ti = _elementTree.GetSelected();
         ti.SetEditable(0, true);
     }
 
     private void DuplicateCurrentElement()
     {
-        if (_selectedElement == null) return;
+        if (_selectedElement == null)
+            return;
 
         var max = GetMaxId(_rootItem) + 1;
 
-        TemplateElement t = new TextElement();  //for now - delete once all switch elements are populated
+        TemplateElement t = new TextElement(); //for now - delete once all switch elements are populated
 
         switch (_selectedElement.ElementType)
         {
@@ -477,7 +479,7 @@ public partial class TemplateCreator : MarginContainer
 
         var elementName = $"{_selectedElement.ElementName}{max}";
 
-        var ni = _elementTree.CreateItem(_rootItem);    //update so that it places item as sibling to selected
+        var ni = _elementTree.CreateItem(_rootItem); //update so that it places item as sibling to selected
         ni.SetMetadata(0, max);
         ni.SetText(0, elementName);
 
@@ -488,10 +490,18 @@ public partial class TemplateCreator : MarginContainer
 
         foreach (var e in _selectedElement.Parameters)
         {
-            t.Parameters.Add(new TemplateParameter{Name = e.Name, Value = e.Value, Type = e.Type});
+            t.Parameters.Add(
+                new TemplateParameter
+                {
+                    Name = e.Name,
+                    Value = e.Value,
+                    Type = e.Type,
+                }
+            );
         }
 
-        _templateElements.Add(t);{}
+        _templateElements.Add(t);
+        { }
 
         _elementTree.SetSelected(ni, 0);
 
@@ -504,7 +514,8 @@ public partial class TemplateCreator : MarginContainer
     {
         foreach (var p in _paramContainer.GetChildren())
         {
-            if (p is IParamControl pc) pc.ParameterUpdated -= OnTextureUpdate;
+            if (p is IParamControl pc)
+                pc.ParameterUpdated -= OnTextureUpdate;
             p.QueueFree();
         }
 
@@ -567,7 +578,6 @@ public partial class TemplateCreator : MarginContainer
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
 
-        
         var elementName = $"{prefix}{max}";
 
         var ni = _elementTree.CreateItem(_rootItem);
@@ -609,7 +619,8 @@ public partial class TemplateCreator : MarginContainer
 
     private void RemapParameters()
     {
-        if (_selectedElement == null) return;
+        if (_selectedElement == null)
+            return;
 
         ClearParameters();
 
@@ -645,7 +656,8 @@ public partial class TemplateCreator : MarginContainer
 
                 case TemplateParameter.TemplateParameterType.Image:
                     t = _imageParam.Instantiate<ImageParamControl>();
-                    if (t is ImageParamControl ip) ip.IconLibrary = IconLibrary;
+                    if (t is ImageParamControl ip)
+                        ip.IconLibrary = IconLibrary;
                     break;
 
                 case TemplateParameter.TemplateParameterType.TrackType:
@@ -673,20 +685,23 @@ public partial class TemplateCreator : MarginContainer
 
     private void UpdateTexture(bool updateBounds, bool updateTree)
     {
-        if (updateTree) MapTreeToElements();
+        if (updateTree)
+            MapTreeToElements();
 
         var td = TemplateEngine.GenerateTextureDefinition(_hierarchicalElements, _textureContext);
 
         TextureFactory.GenerateTexture(td, UpdatePreview);
 
-        if (updateBounds) UpdateBoundsRect();
+        if (updateBounds)
+            UpdateBoundsRect();
     }
 
     private void ClearParameters()
     {
         foreach (var p in _paramContainer.GetChildren())
         {
-            if (p is IParamControl pc) pc.ParameterUpdated -= OnTextureUpdate;
+            if (p is IParamControl pc)
+                pc.ParameterUpdated -= OnTextureUpdate;
             p.QueueFree();
         }
     }
@@ -703,7 +718,8 @@ public partial class TemplateCreator : MarginContainer
 
         var d = _selectedElement.GetElementData(_textureContext);
 
-        if (!d.Any()) return;
+        if (!d.Any())
+            return;
 
         //var te = d[0];
 
@@ -730,8 +746,10 @@ public partial class TemplateCreator : MarginContainer
     {
         bool first = true;
 
-        float minX = 0, minY = 0;
-        float maxX = 0, maxY = 0;
+        float minX = 0,
+            minY = 0;
+        float maxX = 0,
+            maxY = 0;
 
         foreach (var r in rects)
         {
@@ -765,11 +783,7 @@ public partial class TemplateCreator : MarginContainer
         Vector2I center = new Vector2I((int)(minX + size.X * 0.5f), (int)(minY + size.Y * 0.5f));
 
         return new Rect2I(center, size);
-
-
-
     }
-
 
     private void AddText()
     {
@@ -787,7 +801,6 @@ public partial class TemplateCreator : MarginContainer
     {
         _preview.Texture = texture;
     }
-
 
     public TextureFactory TextureFactory { get; set; }
 
@@ -819,12 +832,14 @@ public partial class TemplateCreator : MarginContainer
     {
         _curSizeType = _cardSizes.Text;
 
-        if (!_standardSizes.TryGetValue(_curSizeType, out var size)) return;
+        if (!_standardSizes.TryGetValue(_curSizeType, out var size))
+            return;
 
         _curWidth = size.Item1;
         _curHeight = size.Item2;
 
-        if (_curWidth == 0 || _curHeight == 0) return;
+        if (_curWidth == 0 || _curHeight == 0)
+            return;
 
         float conversion = 25.4f;
 
@@ -896,10 +911,11 @@ public partial class TemplateCreator : MarginContainer
         float.TryParse(_newTemplateWidth.Text, out var w);
         float.TryParse(_newTemplateHeight.Text, out var h);
 
-        _newTemplateOk.Disabled = string.IsNullOrWhiteSpace(_newTemplateName.Text) ||
-                                  Templates.ContainsKey(_newTemplateName.Text) ||
-                                  h <= 0 ||
-                                  w <= 0;
+        _newTemplateOk.Disabled =
+            string.IsNullOrWhiteSpace(_newTemplateName.Text)
+            || Templates.ContainsKey(_newTemplateName.Text)
+            || h <= 0
+            || w <= 0;
     }
 
     private void OnNewTemplateOkPressed()
@@ -907,11 +923,7 @@ public partial class TemplateCreator : MarginContainer
         //save current template
         UpdateTemplate(CurrentTemplate);
 
-        var t = new Template
-        {
-            Name = _newTemplateName.Text,
-            SizeTemplate = _newTemplateSize.Text,
-        };
+        var t = new Template { Name = _newTemplateName.Text, SizeTemplate = _newTemplateSize.Text };
 
         float.TryParse(_newTemplateWidth.Text, out var w);
         float.TryParse(_newTemplateHeight.Text, out var h);
@@ -941,14 +953,16 @@ public partial class TemplateCreator : MarginContainer
         get
         {
             var p = ProjectService.Instance.CurrentProject;
-            if (p == null) return new();
+            if (p == null)
+                return new();
             return p.Templates;
         }
     }
 
     private void LoadTemplateNameSelector()
     {
-        if (_templateNameSelector == null) return;
+        if (_templateNameSelector == null)
+            return;
 
         _templateNameSelector.Clear();
 
@@ -962,12 +976,14 @@ public partial class TemplateCreator : MarginContainer
     {
         var cardType = _newTemplateSize.Text;
 
-        if (!_standardSizes.TryGetValue(cardType, out var size)) return;
+        if (!_standardSizes.TryGetValue(cardType, out var size))
+            return;
 
         var w = size.Item1;
         var h = size.Item2;
 
-        if (w == 0 || h == 0) return;
+        if (w == 0 || h == 0)
+            return;
 
         float conversion = 25.4f;
 
@@ -1022,7 +1038,8 @@ public partial class TemplateCreator : MarginContainer
         }
 
         var tp = "Text";
-        if (te is ImageElement) tp = "Image";
+        if (te is ImageElement)
+            tp = "Image";
 
         parameters.Add("Type", tp);
 
@@ -1042,8 +1059,6 @@ public partial class TemplateCreator : MarginContainer
         }
     }
 
-
-
     private void UpdateProject()
     {
         _templateNameSelector.Clear();
@@ -1053,7 +1068,9 @@ public partial class TemplateCreator : MarginContainer
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = ProjectService.Instance.CurrentProject.Templates[_templateNameSelector.GetItemText(0)];
+        CurrentTemplate = ProjectService.Instance.CurrentProject.Templates[
+            _templateNameSelector.GetItemText(0)
+        ];
 
         InitializeDataSets();
         MapDataset();
@@ -1086,7 +1103,7 @@ public partial class TemplateCreator : MarginContainer
         {
             { "type", "tree_item" },
             { "item_id", selectedItem.GetMetadata(0) },
-            { "item_text", selectedItem.GetText(0) }
+            { "item_text", selectedItem.GetText(0) },
         };
 
         _elementTree.DropModeFlags = (int)Tree.DropModeFlagsEnum.Inbetween;
@@ -1175,9 +1192,7 @@ public partial class TemplateCreator : MarginContainer
 
         var oldParent = draggedItem.GetParent();
 
-        var newItem =
-            _elementTree.CreateItem(newParent,
-                GetChildIndex(newParent, insertBefore)); //newParent.GetChildIndex(insertBefore));
+        var newItem = _elementTree.CreateItem(newParent, GetChildIndex(newParent, insertBefore)); //newParent.GetChildIndex(insertBefore));
         newItem.SetMetadata(0, draggedElement.Id);
         newItem.SetText(0, draggedElement.ElementName);
 
@@ -1205,13 +1220,15 @@ public partial class TemplateCreator : MarginContainer
 
     private int GetChildIndex(TreeItem parent, TreeItem child)
     {
-        if (parent == null || child == null) return -1;
+        if (parent == null || child == null)
+            return -1;
 
         var index = 0;
         var current = parent.GetFirstChild();
         while (current != null)
         {
-            if (current == child) return index;
+            if (current == child)
+                return index;
             index++;
             current = current.GetNext();
         }
@@ -1291,7 +1308,8 @@ public partial class TemplateCreator : MarginContainer
 
     private void Zoom(float newScale)
     {
-        if (newScale < 1f) newScale = 1;
+        if (newScale < 1f)
+            newScale = 1;
 
         _curZoomScale = newScale;
 
@@ -1324,9 +1342,11 @@ public partial class TemplateCreator : MarginContainer
 
     private void UpdateScrollBarVisibility()
     {
-        _previewHScroll.Visible = _preview.Position.X + (_preview.Size.X * _preview.Scale.X) > _previewWindow.Size.X;
+        _previewHScroll.Visible =
+            _preview.Position.X + (_preview.Size.X * _preview.Scale.X) > _previewWindow.Size.X;
 
-        _previewVScroll.Visible = _preview.Position.Y + (_preview.Size.Y * _preview.Scale.Y) > _previewWindow.Size.Y;
+        _previewVScroll.Visible =
+            _preview.Position.Y + (_preview.Size.Y * _preview.Scale.Y) > _previewWindow.Size.Y;
 
         //_previewHScroll.Page = 100 * _previewWindow.Size.X / (_preview.Size.X * _preview.Scale.X + _preview.Position.X);
         //_previewVScroll.Page = 100 * _previewWindow.Size.Y / (_preview.Size.Y * _preview.Scale.Y + _preview.Position.Y);
@@ -1340,7 +1360,6 @@ public partial class TemplateCreator : MarginContainer
         var px = _preview.Size.X * _preview.Scale.X;
 
         var _windowSize = _previewWindow.Size;
-
 
         float vv = (float)(_previewVScroll.Value / (100 - _previewVScroll.Page));
 
@@ -1373,7 +1392,8 @@ public partial class TemplateCreator : MarginContainer
         float.TryParse(_widthInput.Text, out var w);
         float.TryParse(_heightInput.Text, out var h);
 
-        if (w <= 0 || h <= 0) return;
+        if (w <= 0 || h <= 0)
+            return;
 
         _textureContext.ParentSize = _preview.Size;
         _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
@@ -1442,11 +1462,9 @@ public partial class TemplateCreator : MarginContainer
         }
     }
 
-
     private void MapDataset()
     {
         int index = 0;
-
 
         for (var i = 0; i < _dataSetSelector.GetItemCount(); i++)
         {
@@ -1469,7 +1487,6 @@ public partial class TemplateCreator : MarginContainer
 
     #endregion
 }
-
 
 public class TextureContext()
 {

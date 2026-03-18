@@ -31,7 +31,7 @@ public partial class AssetManagerExample : Node
 
             // Credentials should be securely stored/retrieved
             var credentials = "{\"AccessToken\":\"your-dropbox-access-token\"}";
-            
+
             await _assetService.InitializeAsync(
                 CloudProviderType.Dropbox,
                 "/MyGameProject/Assets",
@@ -59,10 +59,10 @@ public partial class AssetManagerExample : Node
             _assetService = new CloudAssetService();
 
             var credentials = "{\"AccessToken\":\"your-google-drive-token\"}";
-            
+
             await _assetService.InitializeAsync(
                 CloudProviderType.GoogleDrive,
-                "1A2B3C4D5E6F7G8H9I0J1K2L3M4N5O",  // Google Drive folder ID
+                "1A2B3C4D5E6F7G8H9I0J1K2L3M4N5O", // Google Drive folder ID
                 credentials
             );
 
@@ -84,7 +84,7 @@ public partial class AssetManagerExample : Node
             _assetService = new CloudAssetService();
 
             var credentials = "{\"AccessToken\":\"your-onedrive-token\"}";
-            
+
             await _assetService.InitializeAsync(
                 CloudProviderType.OneDrive,
                 "Documents/MyGameProject/Assets",
@@ -110,7 +110,7 @@ public partial class AssetManagerExample : Node
         try
         {
             var asset = await _assetService.UploadAssetAsync(localPath, assetName);
-            
+
             // Save to project
             if (ProjectService.Instance?.CurrentProject != null)
             {
@@ -151,7 +151,7 @@ public partial class AssetManagerExample : Node
         try
         {
             await _assetService.DeleteAssetAsync(assetId);
-            
+
             // Update project
             if (ProjectService.Instance?.CurrentProject != null)
             {
@@ -172,11 +172,13 @@ public partial class AssetManagerExample : Node
     public void ListAssetsExample()
     {
         var assets = _assetService.GetAllAssets();
-        
+
         GD.Print("=== All Assets ===");
         foreach (var asset in assets)
         {
-            GD.Print($"- {asset.Name} ({asset.OriginalFilename}) - {FormatFileSize(asset.FileSize)}");
+            GD.Print(
+                $"- {asset.Name} ({asset.OriginalFilename}) - {FormatFileSize(asset.FileSize)}"
+            );
             GD.Print($"  ID: {asset.AssetId}");
             GD.Print($"  Provider: {asset.ProviderType}");
             GD.Print($"  Uploaded: {asset.UploadedDate}");

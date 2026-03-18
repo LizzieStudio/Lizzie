@@ -31,7 +31,11 @@ namespace Lizzie.AssetManagement
         /// <param name="filename">Name for the file in cloud storage</param>
         /// <param name="destinationPath">Destination path in cloud storage</param>
         /// <returns>Cloud file identifier and metadata</returns>
-        Task<CloudFileInfo> UploadStreamAsync(Stream stream, string filename, string destinationPath);
+        Task<CloudFileInfo> UploadStreamAsync(
+            Stream stream,
+            string filename,
+            string destinationPath
+        );
 
         /// <summary>
         /// Download a file from cloud storage

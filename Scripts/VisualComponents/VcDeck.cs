@@ -1,4 +1,3 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -6,12 +5,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using Godot;
 
 public partial class VcDeck : VisualGroupComponent
 {
     private Sprite3D _frontSprite;
     private Sprite3D _backSprite;
-
 
     private TokenTextureSubViewport _frontView;
     private TokenTextureSubViewport _backView;
@@ -34,7 +33,8 @@ public partial class VcDeck : VisualGroupComponent
 
     public override void _Process(double delta)
     {
-        if (!TextureReady) UpdateDeckSprites();
+        if (!TextureReady)
+            UpdateDeckSprites();
 
         if (_flipInProcess)
         {
@@ -44,9 +44,9 @@ public partial class VcDeck : VisualGroupComponent
         if (_spriteUpdateCountdown > 0)
         {
             _spriteUpdateCountdown--;
-            if (_spriteUpdateCountdown == 0) UpdateDeckSprites();
+            if (_spriteUpdateCountdown == 0)
+                UpdateDeckSprites();
         }
-
 
         base._Process(delta);
     }
@@ -153,7 +153,6 @@ public partial class VcDeck : VisualGroupComponent
             case VisualCommand.Shuffle:
                 cr = PerformShuffle();
                 break;
-
         }
 
         return cr.Consumed == false ? base.ProcessCommand(command) : cr;
@@ -197,12 +196,13 @@ public partial class VcDeck : VisualGroupComponent
         {
             Action = Change.ChangeType.Transform,
             Begin = Transform,
-            Component = this
+            Component = this,
         };
 
         float rot = (float)Math.PI;
 
-        if (_targetZ == 0) rot *= -1;
+        if (_targetZ == 0)
+            rot *= -1;
 
         c.End = Transform.RotatedLocal(new Vector3(0, 0, 1), rot);
 
@@ -249,10 +249,8 @@ public partial class VcDeck : VisualGroupComponent
             cards = cards.Reverse().ToArray();
         }
 
-
         //tween to handle movement
         var cardTween = GetTree().CreateTween();
-
 
         //splay
         var basePos = Position;
@@ -277,8 +275,12 @@ public partial class VcDeck : VisualGroupComponent
             float deltaX = Position.X + (_width * (2.5f + i));
 
             cardTween.TweenProperty(cards[i], "visible", true, 0.01);
-            cardTween.TweenProperty(cards[i], "position", new Vector3(deltaX, Position.Y, Position.Z), 0.2f);
-
+            cardTween.TweenProperty(
+                cards[i],
+                "position",
+                new Vector3(deltaX, Position.Y, Position.Z),
+                0.2f
+            );
 
             cards[i].ZOrder = ZOrder + i + 1;
 
@@ -290,7 +292,7 @@ public partial class VcDeck : VisualGroupComponent
             Action = Change.ChangeType.Transform,
             Begin = Transform,
             End = Transform,
-            Component = this
+            Component = this,
         };
 
         UpdateDeckSprites();
@@ -298,8 +300,10 @@ public partial class VcDeck : VisualGroupComponent
         return new CommandResponse(true, c);
     }
 
-    public override bool Build(System.Collections.Generic.Dictionary<string, object> parameters,
-        TextureFactory textureFactory)
+    public override bool Build(
+        System.Collections.Generic.Dictionary<string, object> parameters,
+        TextureFactory textureFactory
+    )
     {
         base.Build(parameters, textureFactory);
 
@@ -309,7 +313,8 @@ public partial class VcDeck : VisualGroupComponent
         _frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
         _backView = GetNode<TokenTextureSubViewport>("BackViewport");
 
-        if (!InitializeParameters(parameters)) return false;
+        if (!InitializeParameters(parameters))
+            return false;
 
         switch (_mode)
         {
@@ -386,7 +391,10 @@ public partial class VcDeck : VisualGroupComponent
         return true;
     }
 
-    public override bool Refresh(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    public override bool Refresh(
+        Dictionary<string, object> parameters,
+        TextureFactory textureFactory
+    )
     {
         var fTemplateParam = Utility.GetParam<string>(parameters, "FrontTemplate");
         var bTemplateParam = Utility.GetParam<string>(parameters, "BackTemplate");
@@ -394,13 +402,18 @@ public partial class VcDeck : VisualGroupComponent
         var datasetParam = Utility.GetParam<string>(parameters, "Dataset");
         var dataset = ProjectService.Instance.CurrentProject.Datasets[datasetParam];
 
-        RefreshTemplateCards(fTemplateParam, bTemplateParam, datasetParam, dataset.Rows.Count, textureFactory);
+        RefreshTemplateCards(
+            fTemplateParam,
+            bTemplateParam,
+            datasetParam,
+            dataset.Rows.Count,
+            textureFactory
+        );
 
         return true;
     }
 
     private ImageTexture _fs;
-
 
     private Vector2[] CalcHexPointVertices()
     {
@@ -447,7 +460,8 @@ public partial class VcDeck : VisualGroupComponent
     {
         _quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
 
-        if (_quickCardList == null) _quickCardList = new();
+        if (_quickCardList == null)
+            _quickCardList = new();
 
         CreateQuickCards(textureFactory);
     }
@@ -457,46 +471,67 @@ public partial class VcDeck : VisualGroupComponent
         var fTemplateParam = Utility.GetParam<string>(parameters, "FrontTemplate");
         var bTemplateParam = Utility.GetParam<string>(parameters, "BackTemplate");
         var datasetParam = Utility.GetParam<string>(parameters, "Dataset");
-        
+
         var dataset = ProjectService.Instance.CurrentProject.Datasets[datasetParam];
 
-        CreateTemplateCards(fTemplateParam, bTemplateParam,dataset, textureFactory);
+        CreateTemplateCards(fTemplateParam, bTemplateParam, dataset, textureFactory);
     }
 
-    private void CreateTemplateCards(string frontTemplate,
-        string backTemplate, DataSet dataset, TextureFactory textureFactory)
+    private void CreateTemplateCards(
+        string frontTemplate,
+        string backTemplate,
+        DataSet dataset,
+        TextureFactory textureFactory
+    )
     {
         Clear();
 
-
-
-        foreach(var kv in dataset.Rows)
+        foreach (var kv in dataset.Rows)
         {
             var card = (VcToken)_templateCard.Duplicate();
 
-            CreateTemplateCard(frontTemplate, backTemplate, dataset.Name, card, kv.Key, textureFactory);
-            
+            CreateTemplateCard(
+                frontTemplate,
+                backTemplate,
+                dataset.Name,
+                card,
+                kv.Key,
+                textureFactory
+            );
+
             AddChildComponent(card);
         }
     }
 
-    private void RefreshTemplateCards(string frontTemplate,
-        string backTemplate, string dataset, int cardCount, TextureFactory textureFactory)
+    private void RefreshTemplateCards(
+        string frontTemplate,
+        string backTemplate,
+        string dataset,
+        int cardCount,
+        TextureFactory textureFactory
+    )
     {
         for (int i = 0; i < Children.Count; i++)
         {
             var c = Children.ElementAt(i);
             if (c is VcToken card)
             {
-                CreateTemplateCard(frontTemplate, backTemplate, dataset, card, i.ToString(), textureFactory);
+                CreateTemplateCard(
+                    frontTemplate,
+                    backTemplate,
+                    dataset,
+                    card,
+                    i.ToString(),
+                    textureFactory
+                );
             }
         }
     }
 
-
     private void CreateCustomFrontTexture()
     {
-        if (!File.Exists(_frontImage)) return;
+        if (!File.Exists(_frontImage))
+            return;
 
         _frontView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
         _frontView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
@@ -508,7 +543,6 @@ public partial class VcDeck : VisualGroupComponent
         //GD.PrintErr($"Pixel Size: {pixelSize}");
         _frontSprite.PixelSize = pixelSize;
         _frontSprite.Texture = t;
-
 
         if (!_differentBack)
         {
@@ -524,7 +558,8 @@ public partial class VcDeck : VisualGroupComponent
 
     private void CreateCustomBackTexture()
     {
-        if (!File.Exists(_backImage)) return;
+        if (!File.Exists(_backImage))
+            return;
 
         _backView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
         _backView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
@@ -537,13 +572,14 @@ public partial class VcDeck : VisualGroupComponent
         _backSprite.Texture = _backView.GetTexture();
     }
 
-
-    private bool InitializeParameters(System.Collections.Generic.Dictionary<string, object> parameters)
+    private bool InitializeParameters(
+        System.Collections.Generic.Dictionary<string, object> parameters
+    )
     {
         var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0) return false;
+        if (h <= 0)
+            return false;
         _height = h / 10f;
-
 
         var w = Utility.GetParam<float>(parameters, "Width");
         _width = w / 10f;
@@ -552,7 +588,8 @@ public partial class VcDeck : VisualGroupComponent
 
         var scene = ResourceLoader.Load<PackedScene>(_templateCardPath).Instantiate();
 
-        if (scene is not VcToken token) return false;
+        if (scene is not VcToken token)
+            return false;
 
         _templateCard = token;
 
@@ -569,15 +606,26 @@ public partial class VcDeck : VisualGroupComponent
 
             foreach (var v in values)
             {
-                var c = CreateQuickCard(v, q.BackgroundColor, q.CardBackValue, q.CardBackColor, textureFactory);
+                var c = CreateQuickCard(
+                    v,
+                    q.BackgroundColor,
+                    q.CardBackValue,
+                    q.CardBackColor,
+                    textureFactory
+                );
 
                 AddChildComponent(c);
             }
         }
     }
 
-    private VcToken CreateQuickCard(string faceCaption, Color faceColor, string backCaption, Color backColor,
-        TextureFactory textureFactory)
+    private VcToken CreateQuickCard(
+        string faceCaption,
+        Color faceColor,
+        string backCaption,
+        Color backColor,
+        TextureFactory textureFactory
+    )
     {
         var card = (VcToken)_templateCard.Duplicate();
         var p = new System.Collections.Generic.Dictionary<string, object>();
@@ -606,8 +654,14 @@ public partial class VcDeck : VisualGroupComponent
         return card;
     }
 
-    private void CreateTemplateCard(string frontTemplate, string backTemplate, string dataset,
-        VcToken card, string cardRef, TextureFactory textureFactory)
+    private void CreateTemplateCard(
+        string frontTemplate,
+        string backTemplate,
+        string dataset,
+        VcToken card,
+        string cardRef,
+        TextureFactory textureFactory
+    )
     {
         var p = new System.Collections.Generic.Dictionary<string, object>();
         p.Add("Height", _height * 10);
@@ -687,7 +741,9 @@ public partial class VcDeck : VisualGroupComponent
 
     #endregion
 
-    public override List<string> ValidateParameters(System.Collections.Generic.Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(
+        System.Collections.Generic.Dictionary<string, object> parameters
+    )
     {
         var ret = new List<string>();
 
@@ -706,7 +762,8 @@ public partial class VcDeck : VisualGroupComponent
         {
             if (parameters[nameof(_height)] is float h)
             {
-                if (h <= 0) ret.Add("Height must be > 0");
+                if (h <= 0)
+                    ret.Add("Height must be > 0");
             }
         }
         else
@@ -718,7 +775,8 @@ public partial class VcDeck : VisualGroupComponent
         {
             if (w is float d)
             {
-                if (d <= 0) ret.Add("Diameter must be > 0");
+                if (d <= 0)
+                    ret.Add("Diameter must be > 0");
             }
         }
         else
@@ -745,7 +803,8 @@ public partial class VcDeck : VisualGroupComponent
     {
         _viewsInitialized++;
 
-        if (_viewsInitialized == 2) UpdateDeckSprites();
+        if (_viewsInitialized == 2)
+            UpdateDeckSprites();
     }
 
     private bool _frontTextureReady;
@@ -756,9 +815,9 @@ public partial class VcDeck : VisualGroupComponent
         _frontTextureReady = false;
         _backTextureReady = false;
 
-        //set the top and bottom sprites. 
+        //set the top and bottom sprites.
 
-        //The top of the deck displays the back of the first card. 
+        //The top of the deck displays the back of the first card.
         //The bottom of the deck displays the face of the last card.
 
         //TODO Handle if there are no cards in the deck?

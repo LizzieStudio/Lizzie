@@ -44,8 +44,10 @@ namespace Lizzie.AssetManagement
                 _baseFolderId = ExtractFolderId(baseFolderUrl);
 
                 _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new AuthenticationHeaderValue("Bearer", _accessToken);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                    "Bearer",
+                    _accessToken
+                );
 
                 IsInitialized = true;
                 GD.Print($"Google Drive provider initialized with base folder ID: {_baseFolderId}");
@@ -59,9 +61,13 @@ namespace Lizzie.AssetManagement
             }
         }
 
-        public async Task<CloudFileInfo> UploadFileAsync(string localFilePath, string destinationPath)
+        public async Task<CloudFileInfo> UploadFileAsync(
+            string localFilePath,
+            string destinationPath
+        )
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -76,18 +82,19 @@ namespace Lizzie.AssetManagement
             }
         }
 
-        public async Task<CloudFileInfo> UploadStreamAsync(Stream stream, string filename, string destinationPath)
+        public async Task<CloudFileInfo> UploadStreamAsync(
+            Stream stream,
+            string filename,
+            string destinationPath
+        )
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
                 // First, create file metadata
-                var metadata = new
-                {
-                    name = filename,
-                    parents = new[] { _baseFolderId }
-                };
+                var metadata = new { name = filename, parents = new[] { _baseFolderId } };
 
                 var metadataJson = JsonSerializer.Serialize(metadata);
 
@@ -108,15 +115,23 @@ namespace Lizzie.AssetManagement
 
                 var url = $"{UploadBaseUrl}/files?uploadType=multipart";
                 var request = new HttpRequestMessage(HttpMethod.Post, url);
-                
+
                 var content = new MultipartContent("related", boundary);
                 content.Headers.ContentType.Parameters.Clear();
                 content.Headers.ContentType = new MediaTypeHeaderValue("multipart/related");
-                content.Headers.ContentType.Parameters.Add(new NameValueHeaderValue("boundary", boundary));
+                content.Headers.ContentType.Parameters.Add(
+                    new NameValueHeaderValue("boundary", boundary)
+                );
 
-                var jsonContent = new StringContent(metadataJson, Encoding.UTF8, "application/json");
+                var jsonContent = new StringContent(
+                    metadataJson,
+                    Encoding.UTF8,
+                    "application/json"
+                );
                 var streamContent = new StreamContent(stream);
-                streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(
+                    "application/octet-stream"
+                );
 
                 content.Add(jsonContent);
                 content.Add(streamContent);
@@ -127,7 +142,9 @@ namespace Lizzie.AssetManagement
                 response.EnsureSuccessStatusCode();
 
                 var responseContent = await response.Content.ReadAsStringAsync();
-                var fileMetadata = JsonSerializer.Deserialize<GoogleDriveFileMetadata>(responseContent);
+                var fileMetadata = JsonSerializer.Deserialize<GoogleDriveFileMetadata>(
+                    responseContent
+                );
 
                 return new CloudFileInfo
                 {
@@ -138,7 +155,7 @@ namespace Lizzie.AssetManagement
                     CreatedDate = DateTime.Parse(fileMetadata.createdTime),
                     ModifiedDate = DateTime.Parse(fileMetadata.modifiedTime),
                     MimeType = fileMetadata.mimeType,
-                    Metadata = responseContent
+                    Metadata = responseContent,
                 };
             }
             catch (Exception ex)
@@ -150,7 +167,8 @@ namespace Lizzie.AssetManagement
 
         public async Task DownloadFileAsync(string cloudFileId, string localFilePath)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -167,7 +185,8 @@ namespace Lizzie.AssetManagement
 
         public async Task<Stream> DownloadStreamAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -189,7 +208,8 @@ namespace Lizzie.AssetManagement
 
         public async Task DeleteFileAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -208,11 +228,13 @@ namespace Lizzie.AssetManagement
 
         public async Task<CloudFileInfo> GetFileInfoAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
-                var url = $"{ApiBaseUrl}/files/{cloudFileId}?fields=id,name,size,mimeType,createdTime,modifiedTime";
+                var url =
+                    $"{ApiBaseUrl}/files/{cloudFileId}?fields=id,name,size,mimeType,createdTime,modifiedTime";
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
@@ -227,7 +249,7 @@ namespace Lizzie.AssetManagement
                     MimeType = metadata.mimeType,
                     CreatedDate = DateTime.Parse(metadata.createdTime),
                     ModifiedDate = DateTime.Parse(metadata.modifiedTime),
-                    Metadata = responseContent
+                    Metadata = responseContent,
                 };
             }
             catch (Exception ex)
@@ -264,7 +286,10 @@ namespace Lizzie.AssetManagement
                 var response = await client.GetAsync(downloadUrl);
 
                 // Handle redirect for large files (Google Drive virus scan warning)
-                if (!response.IsSuccessStatusCode && response.StatusCode == System.Net.HttpStatusCode.Found)
+                if (
+                    !response.IsSuccessStatusCode
+                    && response.StatusCode == System.Net.HttpStatusCode.Found
+                )
                 {
                     var redirectUrl = response.Headers.Location?.ToString();
                     if (!string.IsNullOrEmpty(redirectUrl))
@@ -330,7 +355,8 @@ namespace Lizzie.AssetManagement
 
         private string ExtractFolderId(string folderUrl)
         {
-            if (string.IsNullOrEmpty(folderUrl)) return "root";
+            if (string.IsNullOrEmpty(folderUrl))
+                return "root";
 
             // If it's already just an ID, return it
             if (!folderUrl.Contains("/") && !folderUrl.Contains("drive.google.com"))

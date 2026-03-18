@@ -42,8 +42,10 @@ namespace Lizzie.AssetManagement
                 _baseFolderPath = NormalizePath(baseFolderUrl);
 
                 _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new AuthenticationHeaderValue("Bearer", _accessToken);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                    "Bearer",
+                    _accessToken
+                );
 
                 IsInitialized = true;
                 GD.Print($"OneDrive provider initialized with base folder: {_baseFolderPath}");
@@ -57,9 +59,13 @@ namespace Lizzie.AssetManagement
             }
         }
 
-        public async Task<CloudFileInfo> UploadFileAsync(string localFilePath, string destinationPath)
+        public async Task<CloudFileInfo> UploadFileAsync(
+            string localFilePath,
+            string destinationPath
+        )
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -74,27 +80,36 @@ namespace Lizzie.AssetManagement
             }
         }
 
-        public async Task<CloudFileInfo> UploadStreamAsync(Stream stream, string filename, string destinationPath)
+        public async Task<CloudFileInfo> UploadStreamAsync(
+            Stream stream,
+            string filename,
+            string destinationPath
+        )
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
                 var fullPath = CombinePath(_baseFolderPath, destinationPath, filename);
-                
+
                 // For small files (< 4MB), use simple upload
                 if (stream.Length < 4 * 1024 * 1024)
                 {
                     var url = $"{GraphApiBaseUrl}/me/drive/root:{fullPath}:/content";
-                    
+
                     var content = new StreamContent(stream);
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                    content.Headers.ContentType = new MediaTypeHeaderValue(
+                        "application/octet-stream"
+                    );
 
                     var response = await _httpClient.PutAsync(url, content);
                     response.EnsureSuccessStatusCode();
 
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    var metadata = JsonSerializer.Deserialize<OneDriveFileMetadata>(responseContent);
+                    var metadata = JsonSerializer.Deserialize<OneDriveFileMetadata>(
+                        responseContent
+                    );
 
                     return new CloudFileInfo
                     {
@@ -105,12 +120,14 @@ namespace Lizzie.AssetManagement
                         CreatedDate = DateTime.Parse(metadata.createdDateTime),
                         ModifiedDate = DateTime.Parse(metadata.lastModifiedDateTime),
                         MimeType = metadata.file?.mimeType,
-                        Metadata = responseContent
+                        Metadata = responseContent,
                     };
                 }
                 else
                 {
-                    throw new NotImplementedException("Large file upload (>4MB) requires upload session API");
+                    throw new NotImplementedException(
+                        "Large file upload (>4MB) requires upload session API"
+                    );
                 }
             }
             catch (Exception ex)
@@ -122,7 +139,8 @@ namespace Lizzie.AssetManagement
 
         public async Task DownloadFileAsync(string cloudFileId, string localFilePath)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -139,7 +157,8 @@ namespace Lizzie.AssetManagement
 
         public async Task<Stream> DownloadStreamAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -161,7 +180,8 @@ namespace Lizzie.AssetManagement
 
         public async Task DeleteFileAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -180,7 +200,8 @@ namespace Lizzie.AssetManagement
 
         public async Task<CloudFileInfo> GetFileInfoAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -199,7 +220,7 @@ namespace Lizzie.AssetManagement
                     MimeType = metadata.file?.mimeType,
                     CreatedDate = DateTime.Parse(metadata.createdDateTime),
                     ModifiedDate = DateTime.Parse(metadata.lastModifiedDateTime),
-                    Metadata = responseContent
+                    Metadata = responseContent,
                 };
             }
             catch (Exception ex)
@@ -275,7 +296,8 @@ namespace Lizzie.AssetManagement
 
         private string ExtractFolderId(string folderUrl)
         {
-            if (string.IsNullOrEmpty(folderUrl)) return "root";
+            if (string.IsNullOrEmpty(folderUrl))
+                return "root";
 
             // If it's already just an ID, return it
             if (!folderUrl.Contains("/") && !folderUrl.Contains("onedrive.live.com"))
@@ -290,14 +312,16 @@ namespace Lizzie.AssetManagement
 
         private string NormalizePath(string path)
         {
-            if (string.IsNullOrEmpty(path)) return "";
+            if (string.IsNullOrEmpty(path))
+                return "";
             return path.Replace("\\", "/").Trim('/');
         }
 
         private string CombinePath(params string[] parts)
         {
             var combined = string.Join("/", parts).Replace("\\", "/");
-            while (combined.Contains("//")) combined = combined.Replace("//", "/");
+            while (combined.Contains("//"))
+                combined = combined.Replace("//", "/");
             return combined.Trim('/');
         }
 

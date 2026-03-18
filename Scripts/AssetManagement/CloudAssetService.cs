@@ -27,7 +27,11 @@ namespace Lizzie.AssetManagement
         /// <param name="providerType">Type of cloud provider</param>
         /// <param name="baseFolderUrl">Base folder URL in the cloud</param>
         /// <param name="credentials">Provider-specific credentials (JSON format)</param>
-        public async Task InitializeAsync(CloudProviderType providerType, string baseFolderUrl, string credentials)
+        public async Task InitializeAsync(
+            CloudProviderType providerType,
+            string baseFolderUrl,
+            string credentials
+        )
         {
             _providerType = providerType;
 
@@ -36,7 +40,7 @@ namespace Lizzie.AssetManagement
                 CloudProviderType.Dropbox => new DropboxProvider(),
                 CloudProviderType.GoogleDrive => new GoogleDriveProvider(),
                 CloudProviderType.OneDrive => new OneDriveProvider(),
-                _ => throw new ArgumentException($"Unsupported provider type: {providerType}")
+                _ => throw new ArgumentException($"Unsupported provider type: {providerType}"),
             };
 
             await _provider.InitializeAsync(baseFolderUrl, credentials);
@@ -50,7 +54,11 @@ namespace Lizzie.AssetManagement
         /// <param name="assetName">User-defined name for the asset</param>
         /// <param name="destinationPath">Optional destination path in cloud (subfolder)</param>
         /// <returns>The created asset</returns>
-        public async Task<Asset> UploadAssetAsync(string localFilePath, string assetName, string destinationPath = "")
+        public async Task<Asset> UploadAssetAsync(
+            string localFilePath,
+            string assetName,
+            string destinationPath = ""
+        )
         {
             if (_provider == null || !_provider.IsInitialized)
             {
@@ -79,7 +87,7 @@ namespace Lizzie.AssetManagement
                     MimeType = cloudFileInfo.MimeType ?? GetMimeType(localFilePath),
                     UploadedDate = DateTime.UtcNow,
                     LastModifiedDate = cloudFileInfo.ModifiedDate,
-                    ProviderMetadata = cloudFileInfo.Metadata
+                    ProviderMetadata = cloudFileInfo.Metadata,
                 };
 
                 _assets[asset.AssetId] = asset;
@@ -102,7 +110,12 @@ namespace Lizzie.AssetManagement
         /// <param name="assetName">User-defined name for the asset</param>
         /// <param name="destinationPath">Optional destination path in cloud</param>
         /// <returns>The created asset</returns>
-        public async Task<Asset> UploadAssetStreamAsync(Stream stream, string filename, string assetName, string destinationPath = "")
+        public async Task<Asset> UploadAssetStreamAsync(
+            Stream stream,
+            string filename,
+            string assetName,
+            string destinationPath = ""
+        )
         {
             if (_provider == null || !_provider.IsInitialized)
             {
@@ -111,7 +124,11 @@ namespace Lizzie.AssetManagement
 
             try
             {
-                var cloudFileInfo = await _provider.UploadStreamAsync(stream, filename, destinationPath);
+                var cloudFileInfo = await _provider.UploadStreamAsync(
+                    stream,
+                    filename,
+                    destinationPath
+                );
 
                 var asset = new Asset
                 {
@@ -125,7 +142,7 @@ namespace Lizzie.AssetManagement
                     MimeType = cloudFileInfo.MimeType ?? GetMimeType(filename),
                     UploadedDate = DateTime.UtcNow,
                     LastModifiedDate = cloudFileInfo.ModifiedDate,
-                    ProviderMetadata = cloudFileInfo.Metadata
+                    ProviderMetadata = cloudFileInfo.Metadata,
                 };
 
                 _assets[asset.AssetId] = asset;
@@ -249,9 +266,10 @@ namespace Lizzie.AssetManagement
         /// </summary>
         public IEnumerable<Asset> SearchAssetsByName(string searchTerm)
         {
-            return _assets.Values.Where(a => 
-                a.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                a.OriginalFilename.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            return _assets.Values.Where(a =>
+                a.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                || a.OriginalFilename.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            );
         }
 
         /// <summary>
@@ -259,7 +277,8 @@ namespace Lizzie.AssetManagement
         /// </summary>
         public void AddAsset(Asset asset)
         {
-            if (asset == null) throw new ArgumentNullException(nameof(asset));
+            if (asset == null)
+                throw new ArgumentNullException(nameof(asset));
             _assets[asset.AssetId] = asset;
         }
 
@@ -296,7 +315,9 @@ namespace Lizzie.AssetManagement
         {
             if (_provider == null)
             {
-                throw new InvalidOperationException("Provider not initialized. Call InitializeAsync first.");
+                throw new InvalidOperationException(
+                    "Provider not initialized. Call InitializeAsync first."
+                );
             }
 
             try
@@ -320,7 +341,9 @@ namespace Lizzie.AssetManagement
         {
             if (_provider == null)
             {
-                throw new InvalidOperationException("Provider not initialized. Call InitializeAsync first.");
+                throw new InvalidOperationException(
+                    "Provider not initialized. Call InitializeAsync first."
+                );
             }
 
             try
@@ -343,11 +366,17 @@ namespace Lizzie.AssetManagement
         /// <param name="assetName">User-defined name for the asset</param>
         /// <param name="tempDownloadPath">Optional temporary path for download (if null, uses temp folder)</param>
         /// <returns>The created asset with local file information</returns>
-        public async Task<Asset> ImportPublicFileAsAssetAsync(string publicUrl, string assetName, string tempDownloadPath = null)
+        public async Task<Asset> ImportPublicFileAsAssetAsync(
+            string publicUrl,
+            string assetName,
+            string tempDownloadPath = null
+        )
         {
             if (_provider == null)
             {
-                throw new InvalidOperationException("Provider not initialized. Call InitializeAsync first.");
+                throw new InvalidOperationException(
+                    "Provider not initialized. Call InitializeAsync first."
+                );
             }
 
             try
@@ -355,7 +384,8 @@ namespace Lizzie.AssetManagement
                 // Use temp path if not provided
                 if (string.IsNullOrEmpty(tempDownloadPath))
                 {
-                    var filename = Path.GetFileName(publicUrl.Split('?')[0]) ?? $"asset_{Guid.NewGuid()}.tmp";
+                    var filename =
+                        Path.GetFileName(publicUrl.Split('?')[0]) ?? $"asset_{Guid.NewGuid()}.tmp";
                     tempDownloadPath = Path.Combine(Path.GetTempPath(), filename);
                 }
 
@@ -376,7 +406,8 @@ namespace Lizzie.AssetManagement
                     MimeType = GetMimeType(tempDownloadPath),
                     UploadedDate = DateTime.UtcNow,
                     LastModifiedDate = fileInfo.LastWriteTimeUtc,
-                    ProviderMetadata = $"{{\"PublicUrl\":\"{publicUrl}\",\"ImportedFrom\":\"PublicFile\"}}"
+                    ProviderMetadata =
+                        $"{{\"PublicUrl\":\"{publicUrl}\",\"ImportedFrom\":\"PublicFile\"}}",
                 };
 
                 _assets[asset.AssetId] = asset;
@@ -396,7 +427,8 @@ namespace Lizzie.AssetManagement
         /// </summary>
         public void UpdateAsset(Asset asset)
         {
-            if (asset == null) throw new ArgumentNullException(nameof(asset));
+            if (asset == null)
+                throw new ArgumentNullException(nameof(asset));
             if (!_assets.ContainsKey(asset.AssetId))
             {
                 throw new KeyNotFoundException($"Asset not found: {asset.AssetId}");
@@ -414,7 +446,8 @@ namespace Lizzie.AssetManagement
         /// <summary>
         /// Get the current provider type
         /// </summary>
-        public CloudProviderType? ProviderType => _provider?.IsInitialized == true ? _providerType : null;
+        public CloudProviderType? ProviderType =>
+            _provider?.IsInitialized == true ? _providerType : null;
 
         private string GetMimeType(string filename)
         {
@@ -431,7 +464,7 @@ namespace Lizzie.AssetManagement
                 ".json" => "application/json",
                 ".xml" => "application/xml",
                 ".zip" => "application/zip",
-                _ => "application/octet-stream"
+                _ => "application/octet-stream",
             };
         }
     }
