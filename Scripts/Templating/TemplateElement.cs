@@ -9,18 +9,52 @@ namespace Lizzie.Scripts.Templating;
 public class TemplateElement : ITemplateElement
 {
     private List<TemplateParameter> _parameters;
-    
-    
+
     // Called when the node enters the scene tree for the first time.
     protected TemplateElement()
     {
         _parameters = new List<TemplateParameter>();
-        
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "X", Value = "{HalfWidth}"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Y", Value = "{HalfHeight}"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Width", Value = "{Width}"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Height", Value = "{Height}"});
-        Parameters.Add(new TemplateParameter(){Type = TemplateParameter.TemplateParameterType.Number, Name = "Rotation", Value = "0"});
+
+        Parameters.Add(
+            new TemplateParameter()
+            {
+                Type = TemplateParameter.TemplateParameterType.Number,
+                Name = "X",
+                Value = "{HalfWidth}",
+            }
+        );
+        Parameters.Add(
+            new TemplateParameter()
+            {
+                Type = TemplateParameter.TemplateParameterType.Number,
+                Name = "Y",
+                Value = "{HalfHeight}",
+            }
+        );
+        Parameters.Add(
+            new TemplateParameter()
+            {
+                Type = TemplateParameter.TemplateParameterType.Number,
+                Name = "Width",
+                Value = "{Width}",
+            }
+        );
+        Parameters.Add(
+            new TemplateParameter()
+            {
+                Type = TemplateParameter.TemplateParameterType.Number,
+                Name = "Height",
+                Value = "{Height}",
+            }
+        );
+        Parameters.Add(
+            new TemplateParameter()
+            {
+                Type = TemplateParameter.TemplateParameterType.Number,
+                Name = "Rotation",
+                Value = "0",
+            }
+        );
     }
 
     public int Id { get; set; }
@@ -29,7 +63,8 @@ public class TemplateElement : ITemplateElement
     public void SetParameterValue(string name, string value)
     {
         var p = GetParameterByName(name);
-        if (p != null) p.Value = value;
+        if (p != null)
+            p.Value = value;
     }
 
     public ITemplateElement.TemplateElementType ElementType { get; protected set; }
@@ -40,11 +75,9 @@ public class TemplateElement : ITemplateElement
     {
         return new List<TextureFactory.TextureObject>();
     }
-    
+
     public List<ITemplateElement> Children { get; } = new();
 
-    
-    
     protected void UpdateCoreParameterData(TextureFactory.TextureObject to, TextureContext context)
     {
         to.CenterX = EvaluateNumberParameter(_parameters, "X", context);
@@ -54,131 +87,194 @@ public class TemplateElement : ITemplateElement
         to.Width = EvaluateNumberParameter(_parameters, "Width", context);
         to.RotationDegrees = EvaluateNumberParameter(_parameters, "Rotation", context);
     }
-    
-    
-    
+
     public event EventHandler<EventArgs> ElementUpdated;
 
-    protected virtual void OnElementUpdated() =>
-        ElementUpdated?.Invoke(this, EventArgs.Empty);
-    
+    protected virtual void OnElementUpdated() => ElementUpdated?.Invoke(this, EventArgs.Empty);
+
     #region Parameter Processing
-    
-    public TemplateParameter GetParameterByName(string name) => _parameters.FirstOrDefault(x => x.Name == name);
-    
-    
-    public string EvaluateTextParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+
+    public TemplateParameter GetParameterByName(string name) =>
+        _parameters.FirstOrDefault(x => x.Name == name);
+
+    public string EvaluateTextParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return string.Empty;
-        
+        if (p == null)
+            return string.Empty;
+
         return ProcessKeywords(p.Value, context);
     }
-    
-    public int EvaluateNumberParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+
+    public int EvaluateNumberParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return 0;
-        
+        if (p == null)
+            return 0;
+
         var o = ProcessKeywords(p.Value, context);
-        
+
         _ = int.TryParse(o, out var result) ? result : 0;
         return result;
     }
 
-    public HorizontalAlignment EvaluateHorizontalAlignmentParameter(IList<TemplateParameter> parameters, string key,
-        TextureContext context)
+    public HorizontalAlignment EvaluateHorizontalAlignmentParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return HorizontalAlignment.Left;
-        
+        if (p == null)
+            return HorizontalAlignment.Left;
+
         var o = ProcessKeywords(p.Value, context);
 
         switch (o)
         {
-            case "Left": return HorizontalAlignment.Left;
-            case "Center": return HorizontalAlignment.Center;
-            case "Right": return HorizontalAlignment.Right; 
-            default: return HorizontalAlignment.Left;
+            case "Left":
+                return HorizontalAlignment.Left;
+            case "Center":
+                return HorizontalAlignment.Center;
+            case "Right":
+                return HorizontalAlignment.Right;
+            default:
+                return HorizontalAlignment.Left;
         }
     }
-    
-    public VerticalAlignment EvaluateHorizontaVerticalAlignment(IList<TemplateParameter> parameters, string key,
-        TextureContext context)
+
+    public VerticalAlignment EvaluateHorizontaVerticalAlignment(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return VerticalAlignment.Top;
-        
+        if (p == null)
+            return VerticalAlignment.Top;
+
         var o = ProcessKeywords(p.Value, context);
 
         switch (o)
         {
-            case "Top": return VerticalAlignment.Top;
-            case "Middle": return VerticalAlignment.Center;
-            case "Bottom": return VerticalAlignment.Bottom; 
-            default: return VerticalAlignment.Top;
+            case "Top":
+                return VerticalAlignment.Top;
+            case "Middle":
+                return VerticalAlignment.Center;
+            case "Bottom":
+                return VerticalAlignment.Bottom;
+            default:
+                return VerticalAlignment.Top;
         }
     }
-    
-    public Color EvaluateColorParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+
+    public Color EvaluateColorParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return Colors.Black;
+        if (p == null)
+            return Colors.Black;
 
         var s = ProcessKeywords(p.Value, context);
-        
+
         return Color.FromString(s, Colors.Black);
     }
-    
-    public bool EvaluateBooleanParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+
+    public bool EvaluateBooleanParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return false;
-        
+        if (p == null)
+            return false;
+
         var o = ProcessKeywords(p.Value, context);
-        
-        if  (string.IsNullOrWhiteSpace(o)) return false;
+
+        if (string.IsNullOrWhiteSpace(o))
+            return false;
 
         var c = o.ToUpper()[0];
 
         return (c == 'T' || c == 'Y' || c == '1');
-        
     }
-    
-    public TextureFactory.TextureObject.AnchorPoint EvaluateAnchorParameter(IList<TemplateParameter> parameters, string key, TextureContext context)
+
+    public TextureFactory.TextureObject.AnchorPoint EvaluateAnchorParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return TextureFactory.TextureObject.AnchorPoint.TopLeft;
-        
-        
+        if (p == null)
+            return TextureFactory.TextureObject.AnchorPoint.TopLeft;
+
         return TextureFactory.TextureObject.AnchorStringToEnum(ProcessKeywords(p.Value, context));
     }
 
-    public TrackElement.TrackTypeEnum EvaluateTrackParameter(IList<TemplateParameter> parameters, string key,
-        TextureContext context)
+    public TrackElement.TrackTypeEnum EvaluateTrackParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    )
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null) return TrackElement.TrackTypeEnum.Horizontal;
-
+        if (p == null)
+            return TrackElement.TrackTypeEnum.Horizontal;
 
         return TextureFactory.TextureObject.TrackStringToEnum(ProcessKeywords(p.Value, context));
     }
 
     private string ProcessKeywords(string parameterVal, TextureContext context)
     {
-        var s = parameterVal.Replace("{Width}", context.ParentSize.X.ToString(),
-            StringComparison.InvariantCultureIgnoreCase);
-        
-        s = s.Replace("{Height}", context.ParentSize.Y.ToString(), StringComparison.InvariantCultureIgnoreCase);
-        
-        s = s.Replace("{HalfWidth}", ((int)(context.ParentSize.X/2)).ToString(), StringComparison.InvariantCultureIgnoreCase);
-        
-        s = s.Replace("{HalfHeight}", ((int)(context.ParentSize.Y/2)).ToString(), StringComparison.InvariantCultureIgnoreCase);
-        
+        var s = parameterVal.Replace(
+            "{Width}",
+            context.ParentSize.X.ToString(),
+            StringComparison.InvariantCultureIgnoreCase
+        );
+
+        s = s.Replace(
+            "{Height}",
+            context.ParentSize.Y.ToString(),
+            StringComparison.InvariantCultureIgnoreCase
+        );
+
+        s = s.Replace(
+            "{HalfWidth}",
+            ((int)(context.ParentSize.X / 2)).ToString(),
+            StringComparison.InvariantCultureIgnoreCase
+        );
+
+        s = s.Replace(
+            "{HalfHeight}",
+            ((int)(context.ParentSize.Y / 2)).ToString(),
+            StringComparison.InvariantCultureIgnoreCase
+        );
+
         //check dataset to column match
-        if (context.DataSet != null && !string.IsNullOrEmpty(context.CurrentRowName) && context.DataSet.Rows.ContainsKey(context.CurrentRowName))
+        if (
+            context.DataSet != null
+            && !string.IsNullOrEmpty(context.CurrentRowName)
+            && context.DataSet.Rows.ContainsKey(context.CurrentRowName)
+        )
         {
-            s = s.Replace("{Name}", context.CurrentRowName, StringComparison.InvariantCultureIgnoreCase);
+            s = s.Replace(
+                "{Name}",
+                context.CurrentRowName,
+                StringComparison.InvariantCultureIgnoreCase
+            );
 
             for (int i = 0; i < context.DataSet.Columns.Count; i++)
             {
@@ -186,10 +282,10 @@ public class TemplateElement : ITemplateElement
                 s = s.Replace(r, context.DataSet.Rows[context.CurrentRowName].Data[i]);
             }
         }
-        
+
         return s;
     }
-    
+
     /// <summary>
     /// Retrieves all public static Color fields from the Godot.Colors class.
     /// </summary>
@@ -203,11 +299,9 @@ public class TemplateElement : ITemplateElement
             .Select(f => (f.Name, (Color)f.GetValue(null)!))
             .ToList();
     }
-    
+
     #endregion
 }
-
-
 
 public interface ITemplateElement
 {
@@ -223,26 +317,26 @@ public interface ITemplateElement
         Line,
         Container,
         Frame,
-        Track
+        Track,
     }
 
     TemplateElementType ElementType { get; }
 
     string ElementName { get; set; }
-    
+
     IList<TemplateParameter> Parameters { get; }
 
     IList<TextureFactory.TextureObject> GetElementData(TextureContext context);
-    
+
     int Id { get; set; }
     int Parent { get; set; }
 
-    List<ITemplateElement> Children { get; } 
+    List<ITemplateElement> Children { get; }
 
     void SetParameterValue(string name, string value);
 }
 
-public class TemplateParameter 
+public class TemplateParameter
 {
     public enum TemplateParameterType
     {
@@ -254,12 +348,10 @@ public class TemplateParameter
         HorizontalAlignment,
         VerticalAlignment,
         Image,
-        TrackType
+        TrackType,
     }
 
     public TemplateParameterType Type { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
-
 }
-

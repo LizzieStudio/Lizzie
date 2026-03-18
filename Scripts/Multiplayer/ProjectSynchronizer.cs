@@ -1,7 +1,7 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Godot;
 
 /// <summary>
 /// Synchronizes project data across multiplayer sessions
@@ -37,25 +37,30 @@ public partial class ProjectSynchronizer : Node
 
     private void OnProjectChanged(ProjectChangedEvent evt)
     {
-        if (!ShouldSync()) return;
-        
+        if (!ShouldSync())
+            return;
+
         // Serialize and sync entire project
-        var projectJson = ProjectService.Instance.SerializeProject(ProjectService.Instance.CurrentProject);
+        var projectJson = ProjectService.Instance.SerializeProject(
+            ProjectService.Instance.CurrentProject
+        );
         RpcId(1, nameof(SyncProject), projectJson);
     }
 
     private void OnDataSetChanged(DataSetChangedEvent evt)
     {
-        if (!ShouldSync()) return;
-        
+        if (!ShouldSync())
+            return;
+
         GD.Print($"Dataset changed: {evt.DataSetName}");
         RpcId(1, nameof(SyncDataSet), evt.DataSetName);
     }
 
     private void OnPrototypeChanged(PrototypeChangedEvent evt)
     {
-        if (!ShouldSync()) return;
-        
+        if (!ShouldSync())
+            return;
+
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[evt.PrototypeId];
         var prototypeJson = JsonSerializer.Serialize(prototype);
 
@@ -64,8 +69,9 @@ public partial class ProjectSynchronizer : Node
 
     private void OnTemplateChanged(TemplateChangedEvent evt)
     {
-        if (!ShouldSync()) return;
-        
+        if (!ShouldSync())
+            return;
+
         var templateJson = JsonSerializer.Serialize(evt.Template);
         RpcId(1, nameof(SyncTemplate), evt.TemplateName, templateJson);
     }
@@ -75,16 +81,25 @@ public partial class ProjectSynchronizer : Node
         return MultiplayerManager.Instance?.IsMultiplayerActive == true;
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void SyncProject(string projectJson)
     {
-        if (MultiplayerManager.Instance?.IsServer != true) return;
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
 
         // Server received project update, broadcast to all clients
         Rpc(nameof(ReceiveProject), projectJson);
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ReceiveProject(string projectJson)
     {
         GD.Print("Receiving project sync");
@@ -103,39 +118,57 @@ public partial class ProjectSynchronizer : Node
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void SyncDataSet(string dataSetName)
     {
-        if (MultiplayerManager.Instance?.IsServer != true) return;
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
 
         // Broadcast to all clients
         Rpc(nameof(ReceiveDataSetChange), dataSetName);
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ReceiveDataSetChange(string dataSetName)
     {
         GD.Print($"Receiving dataset change: {dataSetName}");
         EventBus.Instance.Publish(new DataSetChangedEvent { DataSetName = dataSetName });
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void SyncPrototype(string prototypeIdStr, string prototypeJson)
     {
-        if (MultiplayerManager.Instance?.IsServer != true) return;
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
 
         // Broadcast to all clients
         Rpc(nameof(ReceivePrototype), prototypeIdStr, prototypeJson);
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ReceivePrototype(string prototypeIdStr, string prototypeJson)
     {
         try
         {
             var prototypeId = Guid.Parse(prototypeIdStr);
             var prototype = JsonSerializer.Deserialize<Prototype>(prototypeJson);
-            
+
             if (ProjectService.Instance.CurrentProject.Prototypes.ContainsKey(prototypeId))
             {
                 ProjectService.Instance.CurrentProject.Prototypes[prototypeId] = prototype;
@@ -148,30 +181,37 @@ public partial class ProjectSynchronizer : Node
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void SyncTemplate(string templateName, string templateJson)
     {
-        if (MultiplayerManager.Instance?.IsServer != true) return;
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
 
         // Broadcast to all clients
         Rpc(nameof(ReceiveTemplate), templateName, templateJson);
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ReceiveTemplate(string templateName, string templateJson)
     {
         try
         {
             var template = JsonSerializer.Deserialize<Template>(templateJson);
-            
+
             if (ProjectService.Instance.CurrentProject.Templates.ContainsKey(templateName))
             {
                 ProjectService.Instance.CurrentProject.Templates[templateName] = template;
-                EventBus.Instance.Publish(new TemplateChangedEvent 
-                { 
-                    TemplateName = templateName, 
-                    Template = template 
-                });
+                EventBus.Instance.Publish(
+                    new TemplateChangedEvent { TemplateName = templateName, Template = template }
+                );
             }
         }
         catch (Exception ex)
@@ -185,19 +225,28 @@ public partial class ProjectSynchronizer : Node
     /// </summary>
     public void RequestProjectSync()
     {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true) return;
-        if (MultiplayerManager.Instance.IsServer) return;
+        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
+            return;
+        if (MultiplayerManager.Instance.IsServer)
+            return;
 
         RpcId(1, nameof(RequestFullSync));
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void RequestFullSync()
     {
-        if (!MultiplayerManager.Instance?.IsServer == true) return;
+        if (!MultiplayerManager.Instance?.IsServer == true)
+            return;
 
         var senderId = Multiplayer.GetRemoteSenderId();
-        var projectJson = ProjectService.Instance.SerializeProject(ProjectService.Instance.CurrentProject);
+        var projectJson = ProjectService.Instance.SerializeProject(
+            ProjectService.Instance.CurrentProject
+        );
 
         RpcId(senderId, nameof(ReceiveProject), projectJson);
     }

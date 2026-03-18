@@ -1,7 +1,7 @@
-using Godot;
 using System;
+using Godot;
 
-public class TokenTextureParameters 
+public class TokenTextureParameters
 {
     public float Height { get; set; }
     public float Width { get; set; }

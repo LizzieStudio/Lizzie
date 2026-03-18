@@ -1,253 +1,260 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Godot;
 
 public partial class Pseudo2DCamera : Camera3D, ICameraBase
 {
-	private Transform3D _baseTransform;
-	private Vector3 _baseCamPos;
-	private float _baseSize;
-	
-	private float _totYaw = 0;
-	private StaticBody3D _dragPlane;
-	private Node _gameObjects;
+    private Transform3D _baseTransform;
+    private Vector3 _baseCamPos;
+    private float _baseSize;
 
-	private Vector2 _mouseStartDragPos;
-	
-	private float _tableSize = 100;
+    private float _totYaw = 0;
+    private StaticBody3D _dragPlane;
+    private Node _gameObjects;
 
-	
-	
-	[Export] private float ZoomSpeed { get; set; } = 2f;
-	[Export] private float YawSpeed { get; set; } = 1;
-	[Export] private float PanSpeed { get; set; } = 10;
-	
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-		_baseCamPos = Position;
-		_baseSize = Size;
-		_dragPlane = GetParent().GetNode<StaticBody3D>("DragPlane");
-		_baseTransform = Transform;
-		_gameObjects = GetParent().GetNode<Node>("GameObjects");
-		_dragPlane = GetParent().GetNode<StaticBody3D>("DragPlane");
-	}
+    private Vector2 _mouseStartDragPos;
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
+    private float _tableSize = 100;
 
-	}
+    [Export]
+    private float ZoomSpeed { get; set; } = 2f;
 
-	public override void _UnhandledInput(InputEvent @event)
-	{
-		if (!Current) return;
-	}
+    [Export]
+    private float YawSpeed { get; set; } = 1;
 
+    [Export]
+    private float PanSpeed { get; set; } = 10;
 
-	
+    // Called when the node enters the scene tree for the first time.
+    public override void _Ready()
+    {
+        _baseCamPos = Position;
+        _baseSize = Size;
+        _dragPlane = GetParent().GetNode<StaticBody3D>("DragPlane");
+        _baseTransform = Transform;
+        _gameObjects = GetParent().GetNode<Node>("GameObjects");
+        _dragPlane = GetParent().GetNode<StaticBody3D>("DragPlane");
+    }
 
-	private bool _isDragging = false;
-	public void StartDrag()
-	{
-		if (!GetSelectedObjects().Any()) return;
+    // Called every frame. 'delta' is the elapsed time since the previous frame.
+    public override void _Process(double delta) { }
 
-		var o = GetMouseSelectedObject();
-		if (o == null) return;
-		
-		foreach (var v in GetSelectedObjects())
-		{
-			v.IsDragging = true;
-		}
-		_isDragging = true;
-		
-		
-		//Get mouse position
-		var rc = ShootRay(GetViewport().GetMousePosition());
-		_mouseStartDragPos = new Vector2(rc.X, rc.Z);
-	}
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (!Current)
+            return;
+    }
 
-	
-	public void ProcessViewEvent(InputEvent @event)
-	{
-		int pitch = 0;
-		int yaw = 0;
-		
-		int rayLength = 1000;
+    private bool _isDragging = false;
 
-		Vector2 mouseMotion = new Vector2(0, 0);
-		Vector2 mousePos = new Vector2(0, 0);
+    public void StartDrag()
+    {
+        if (!GetSelectedObjects().Any())
+            return;
 
-		if (@event is InputEventMouseMotion mouse)
-		{
-			mouseMotion = mouse.Relative;
-			
-			
-			if (Input.IsMouseButtonPressed(MouseButton.Right))
-			{
-				//use the bigger component for rotation
-				if (Math.Abs(mouse.Relative.X) > Math.Abs(mouse.Relative.Y))
-				{
-					_totYaw += (-0.2f * (mouse.Relative.X ) / 100);
-				}
-				else
-				{
-					_totYaw += (-0.2f * (mouse.Relative.Y ) / 100);
-				}
-			}
-			
-			if (Input.IsMouseButtonPressed(MouseButton.Middle))
-			{
-				var curGP = Position;
-				var pan = new Vector3(-mouse.Relative.X * PanSpeed, 0, -mouse.Relative.Y * PanSpeed);
-				Position = curGP + pan * Size / 12;	//slow down the pan when we are zoomed in
-			}
-			
-		}
-		
-		if (@event is InputEventKey ke)
-		{
-			if (ke.Keycode == Key.W) pitch++;
-			if (ke.Keycode == Key.S) pitch--;
+        var o = GetMouseSelectedObject();
+        if (o == null)
+            return;
 
-			if (ke.Keycode == Key.D) yaw++;
-			if (ke.Keycode == Key.A) yaw--;
-		}
-		
-		var delta = (float)GetProcessDeltaTime();
-		
-		_totYaw += (YawSpeed * delta * yaw);
-		
-		var transform = Transform;
-		transform.Basis = Basis.Identity;
-		Transform = transform;
+        foreach (var v in GetSelectedObjects())
+        {
+            v.IsDragging = true;
+        }
+        _isDragging = true;
 
-		Rotation = new Vector3(-3.14159f/2f, 0, _totYaw);
-	}
+        //Get mouse position
+        var rc = ShootRay(GetViewport().GetMousePosition());
+        _mouseStartDragPos = new Vector2(rc.X, rc.Z);
+    }
 
-	public void ZoomIn()
-	{
-		UpdateZoom(-1);
-	}
+    public void ProcessViewEvent(InputEvent @event)
+    {
+        int pitch = 0;
+        int yaw = 0;
 
-	public void ZoomOut()
-	{
-		UpdateZoom(1);
-	}
+        int rayLength = 1000;
 
-	public void ZoomComponent(VisualComponentBase component)
-	{
-		Position = new Vector3(component.Position.X, Position.Y, component.Position.Z);
+        Vector2 mouseMotion = new Vector2(0, 0);
+        Vector2 mousePos = new Vector2(0, 0);
 
-		Size = Mathf.Clamp(component.MaxAxisSize * 1.2f, 2, _tableSize * 1.1f);
-	}
- 
-	private void UpdateZoom(float zoom)
-	{
-		var delta = (float)GetProcessDeltaTime();
-		float z = Size;
-		z += zoom * delta * ZoomSpeed;
-		z = Mathf.Clamp(z, 2, _tableSize * 1.1f);
-		Size = z;
-	}
+        if (@event is InputEventMouseMotion mouse)
+        {
+            mouseMotion = mouse.Relative;
 
-	public void ResetView()
-	{
-		Transform = _baseTransform;
-		Position = _baseCamPos;
-		Size = _baseSize;
-		_totYaw = 0;
-	}
+            if (Input.IsMouseButtonPressed(MouseButton.Right))
+            {
+                //use the bigger component for rotation
+                if (Math.Abs(mouse.Relative.X) > Math.Abs(mouse.Relative.Y))
+                {
+                    _totYaw += (-0.2f * (mouse.Relative.X) / 100);
+                }
+                else
+                {
+                    _totYaw += (-0.2f * (mouse.Relative.Y) / 100);
+                }
+            }
 
+            if (Input.IsMouseButtonPressed(MouseButton.Middle))
+            {
+                var curGP = Position;
+                var pan = new Vector3(
+                    -mouse.Relative.X * PanSpeed,
+                    0,
+                    -mouse.Relative.Y * PanSpeed
+                );
+                Position = curGP + pan * Size / 12; //slow down the pan when we are zoomed in
+            }
+        }
 
-	public void StopDrag()
-	{
-		
-		foreach(var v in GetSelectedObjects())
-		{
-			v.IsDragging = false;
-		}
+        if (@event is InputEventKey ke)
+        {
+            if (ke.Keycode == Key.W)
+                pitch++;
+            if (ke.Keycode == Key.S)
+                pitch--;
 
-		_isDragging = false;
-	}
+            if (ke.Keycode == Key.D)
+                yaw++;
+            if (ke.Keycode == Key.A)
+                yaw--;
+        }
 
-	public void ProcessDrag(Vector2 axis)
-	{
-		var targetPos = ShootRay(GetViewport().GetMousePosition());
+        var delta = (float)GetProcessDeltaTime();
 
-		var deltaPos = new Vector3(targetPos.X - _mouseStartDragPos.X, 0, targetPos.Z - _mouseStartDragPos.Y);
+        _totYaw += (YawSpeed * delta * yaw);
 
-		foreach (var v in GetDraggingObjects())
-		{
-			v.Position += deltaPos;
-		}
+        var transform = Transform;
+        transform.Basis = Basis.Identity;
+        Transform = transform;
 
-		_mouseStartDragPos = new Vector2(targetPos.X, targetPos.Z);	//reset starting point for next move
-	}
-	
-	private IEnumerable<VisualComponentBase> GetDraggingObjects()
-	{
-		foreach (var n in _gameObjects.GetChildren())
-		{
-			if (n is VisualComponentBase { IsDragging: true } p)
-			{
-				yield return p;
-			}
-		}
-	}
+        Rotation = new Vector3(-3.14159f / 2f, 0, _totYaw);
+    }
 
-	private Vector3 ShootRay(Vector2 position)
-	{
-		_dragPlane.InputRayPickable = true;
-		var from = ProjectRayOrigin(position);
-		var to = from + ProjectRayNormal(position) * 500;
-		var ray = new PhysicsRayQueryParameters3D();
-		ray.From = from;
-		ray.To = to;
-		ray.CollisionMask = 4;
+    public void ZoomIn()
+    {
+        UpdateZoom(-1);
+    }
 
-		var spaceState = GetWorld3D().DirectSpaceState;
-		var res = spaceState.IntersectRay(ray);
+    public void ZoomOut()
+    {
+        UpdateZoom(1);
+    }
 
-		_dragPlane.InputRayPickable = false;
+    public void ZoomComponent(VisualComponentBase component)
+    {
+        Position = new Vector3(component.Position.X, Position.Y, component.Position.Z);
 
-		Vector3 o = new Vector3(-99, -99, -99);
+        Size = Mathf.Clamp(component.MaxAxisSize * 1.2f, 2, _tableSize * 1.1f);
+    }
 
-		if (res.ContainsKey("position"))
-		{
-			o = (Vector3)res["position"];
-		}
+    private void UpdateZoom(float zoom)
+    {
+        var delta = (float)GetProcessDeltaTime();
+        float z = Size;
+        z += zoom * delta * ZoomSpeed;
+        z = Mathf.Clamp(z, 2, _tableSize * 1.1f);
+        Size = z;
+    }
 
-		//GD.Print(o);
-		return o;
-	}
+    public void ResetView()
+    {
+        Transform = _baseTransform;
+        Position = _baseCamPos;
+        Size = _baseSize;
+        _totYaw = 0;
+    }
 
-	//private VisualComponentBase _selectedObject;
+    public void StopDrag()
+    {
+        foreach (var v in GetSelectedObjects())
+        {
+            v.IsDragging = false;
+        }
 
-	private VisualComponentBase GetMouseSelectedObject()
-	{
-		foreach (var n in _gameObjects.GetChildren())
-		{
-			if (n is VisualComponentBase { IsMouseSelected: true } p)
-			{
-				return p;
-			}
-		}
+        _isDragging = false;
+    }
 
-		return null;
-	}
+    public void ProcessDrag(Vector2 axis)
+    {
+        var targetPos = ShootRay(GetViewport().GetMousePosition());
 
-	private IEnumerable<VisualComponentBase> GetSelectedObjects()
-	{
-		foreach (var n in _gameObjects.GetChildren())
-		{
-			if (n is VisualComponentBase { IsSelected: true } p)
-			{
-				yield return p;
-			}
-		}
-	}
+        var deltaPos = new Vector3(
+            targetPos.X - _mouseStartDragPos.X,
+            0,
+            targetPos.Z - _mouseStartDragPos.Y
+        );
 
-	public Camera3D Camera => this;
+        foreach (var v in GetDraggingObjects())
+        {
+            v.Position += deltaPos;
+        }
+
+        _mouseStartDragPos = new Vector2(targetPos.X, targetPos.Z); //reset starting point for next move
+    }
+
+    private IEnumerable<VisualComponentBase> GetDraggingObjects()
+    {
+        foreach (var n in _gameObjects.GetChildren())
+        {
+            if (n is VisualComponentBase { IsDragging: true } p)
+            {
+                yield return p;
+            }
+        }
+    }
+
+    private Vector3 ShootRay(Vector2 position)
+    {
+        _dragPlane.InputRayPickable = true;
+        var from = ProjectRayOrigin(position);
+        var to = from + ProjectRayNormal(position) * 500;
+        var ray = new PhysicsRayQueryParameters3D();
+        ray.From = from;
+        ray.To = to;
+        ray.CollisionMask = 4;
+
+        var spaceState = GetWorld3D().DirectSpaceState;
+        var res = spaceState.IntersectRay(ray);
+
+        _dragPlane.InputRayPickable = false;
+
+        Vector3 o = new Vector3(-99, -99, -99);
+
+        if (res.ContainsKey("position"))
+        {
+            o = (Vector3)res["position"];
+        }
+
+        //GD.Print(o);
+        return o;
+    }
+
+    //private VisualComponentBase _selectedObject;
+
+    private VisualComponentBase GetMouseSelectedObject()
+    {
+        foreach (var n in _gameObjects.GetChildren())
+        {
+            if (n is VisualComponentBase { IsMouseSelected: true } p)
+            {
+                return p;
+            }
+        }
+
+        return null;
+    }
+
+    private IEnumerable<VisualComponentBase> GetSelectedObjects()
+    {
+        foreach (var n in _gameObjects.GetChildren())
+        {
+            if (n is VisualComponentBase { IsSelected: true } p)
+            {
+                yield return p;
+            }
+        }
+    }
+
+    public Camera3D Camera => this;
 }

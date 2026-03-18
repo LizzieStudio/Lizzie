@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Diagnostics;
+using Godot;
 
 public partial class BoundsRect : MarginContainer
 {
@@ -16,7 +16,6 @@ public partial class BoundsRect : MarginContainer
 
     private float _timeElapsed = 0.0f;
     private bool _isFadingToTransparent = true;
-
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -166,8 +165,7 @@ public partial class BoundsRect : MarginContainer
     private int _startMarginLeft;
     private int _startMarginRight;
 
-    private bool
-        _dragOutside; //the user started dragging outside the marquee, so don't do anything even if the mouse moves inside
+    private bool _dragOutside; //the user started dragging outside the marquee, so don't do anything even if the mouse moves inside
 
     private void ProcessDrag()
     {
@@ -184,13 +182,17 @@ public partial class BoundsRect : MarginContainer
             //process the drag
             var mouseDelta = GetViewport().GetMousePosition() - _dragLast;
 
-            if (_dragTop) DragTop(mouseDelta);
-            if (_dragBottom) DragBottom(mouseDelta);
-            if (_dragLeft) DragLeft(mouseDelta);
-            if (_dragRight) DragRight(mouseDelta);
+            if (_dragTop)
+                DragTop(mouseDelta);
+            if (_dragBottom)
+                DragBottom(mouseDelta);
+            if (_dragLeft)
+                DragLeft(mouseDelta);
+            if (_dragRight)
+                DragRight(mouseDelta);
 
             _dragLast = GetViewport().GetMousePosition();
-            
+
             RaiseBoundsChanged();
         }
     }
@@ -218,7 +220,7 @@ public partial class BoundsRect : MarginContainer
         var or = GetThemeConstant("margin_right");
         AddThemeConstantOverride("margin_right", or - (int)mouseDelta.X);
     }
-    
+
     public event EventHandler BoundsChanged;
 
     private void RaiseBoundsChanged()
@@ -230,19 +232,26 @@ public partial class BoundsRect : MarginContainer
     {
         //change from center origin to top left origin
         rect.Position = new(rect.Position.X - rect.Size.X / 2, rect.Position.Y - rect.Size.Y / 2);
-        
+
         AddThemeConstantOverride("margin_left", rect.Position.X);
         AddThemeConstantOverride("margin_top", rect.Position.Y);
-        AddThemeConstantOverride("margin_right", (int)context.ParentSize.X - rect.Position.X - rect.Size.X);
-        AddThemeConstantOverride("margin_bottom", (int)context.ParentSize.Y - rect.Position.Y - rect.Size.Y);
+        AddThemeConstantOverride(
+            "margin_right",
+            (int)context.ParentSize.X - rect.Position.X - rect.Size.X
+        );
+        AddThemeConstantOverride(
+            "margin_bottom",
+            (int)context.ParentSize.Y - rect.Position.Y - rect.Size.Y
+        );
     }
 
     public (int l, int t, int r, int b) GetBounds()
     {
         return (
-            GetThemeConstant("margin_left"), 
-            GetThemeConstant("margin_top"), 
+            GetThemeConstant("margin_left"),
+            GetThemeConstant("margin_top"),
             GetThemeConstant("margin_right"),
-            GetThemeConstant("margin_bottom"));
+            GetThemeConstant("margin_bottom")
+        );
     }
 }

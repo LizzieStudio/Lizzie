@@ -1,5 +1,5 @@
-using Godot;
 using System;
+using Godot;
 
 /// <summary>
 /// UI dialog for hosting or joining multiplayer sessions
@@ -24,9 +24,9 @@ public partial class MultiplayerDialog : Window
         Title = "Multiplayer";
         Size = new Vector2I(500, 400);
         Exclusive = false;
-        
+
         BuildUI();
-        
+
         // Subscribe to multiplayer events
         if (MultiplayerManager.Instance != null)
         {
@@ -35,7 +35,7 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.PlayerDisconnected += OnPlayerDisconnected;
             MultiplayerManager.Instance.ConnectionFailed += OnConnectionFailed;
         }
-        
+
         UpdateUI();
 
         OnDisconnectPressed(); // Ensure we start in a disconnected state
@@ -64,26 +64,22 @@ public partial class MultiplayerDialog : Window
         _joinButton = GetNode<Button>("%JoinButton");
         _playerList = GetNode<ItemList>("%PlayerList");
         _disconnectButton = GetNode<Button>("%DisconnectButton");
-        
-        
+
         //_portInput.Text = DefaultPort.ToString();
-        
+
         _maxPlayersInput.Value = DefaultMaxPlayers;
-        
+
         _hostButton.Pressed += OnHostPressed;
-        
+
         _addressInput.Text = "127.0.0.1";
-        
+
         _portInput.Text = DefaultPort.ToString();
         _clientPortInput.Text = DefaultPort.ToString();
-        
+
         _joinButton.Pressed += OnJoinPressed;
-        
-        
-        
+
         // Disconnect button at bottom
         _disconnectButton.Pressed += OnDisconnectPressed;
-       
     }
 
     private void UpdateUI()
@@ -172,7 +168,7 @@ public partial class MultiplayerDialog : Window
         else
         {
             _statusLabel.Text = "Connecting...";
-            
+
             // Request project sync after connection
             CallDeferred(nameof(RequestProjectSyncDeferred));
         }

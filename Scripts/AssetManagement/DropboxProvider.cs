@@ -55,9 +55,13 @@ namespace Lizzie.AssetManagement
             }
         }
 
-        public async Task<CloudFileInfo> UploadFileAsync(string localFilePath, string destinationPath)
+        public async Task<CloudFileInfo> UploadFileAsync(
+            string localFilePath,
+            string destinationPath
+        )
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -72,9 +76,14 @@ namespace Lizzie.AssetManagement
             }
         }
 
-        public async Task<CloudFileInfo> UploadStreamAsync(Stream stream, string filename, string destinationPath)
+        public async Task<CloudFileInfo> UploadStreamAsync(
+            Stream stream,
+            string filename,
+            string destinationPath
+        )
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -86,7 +95,7 @@ namespace Lizzie.AssetManagement
                     path = fullPath,
                     mode = "add",
                     autorename = true,
-                    mute = false
+                    mute = false,
                 };
 
                 var request = new HttpRequestMessage(HttpMethod.Post, url);
@@ -108,7 +117,7 @@ namespace Lizzie.AssetManagement
                     FileSize = metadata.size,
                     CreatedDate = DateTime.UtcNow,
                     ModifiedDate = DateTime.Parse(metadata.server_modified),
-                    Metadata = responseContent
+                    Metadata = responseContent,
                 };
             }
             catch (Exception ex)
@@ -120,7 +129,8 @@ namespace Lizzie.AssetManagement
 
         public async Task DownloadFileAsync(string cloudFileId, string localFilePath)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -137,7 +147,8 @@ namespace Lizzie.AssetManagement
 
         public async Task<Stream> DownloadStreamAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -164,7 +175,8 @@ namespace Lizzie.AssetManagement
 
         public async Task DeleteFileAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -174,7 +186,8 @@ namespace Lizzie.AssetManagement
                 var content = new StringContent(
                     JsonSerializer.Serialize(deleteArg),
                     Encoding.UTF8,
-                    "application/json");
+                    "application/json"
+                );
 
                 var response = await _httpClient.PostAsync(url, content);
                 response.EnsureSuccessStatusCode();
@@ -190,7 +203,8 @@ namespace Lizzie.AssetManagement
 
         public async Task<CloudFileInfo> GetFileInfoAsync(string cloudFileId)
         {
-            if (!IsInitialized) throw new InvalidOperationException("Provider not initialized");
+            if (!IsInitialized)
+                throw new InvalidOperationException("Provider not initialized");
 
             try
             {
@@ -200,7 +214,8 @@ namespace Lizzie.AssetManagement
                 var content = new StringContent(
                     JsonSerializer.Serialize(metadataArg),
                     Encoding.UTF8,
-                    "application/json");
+                    "application/json"
+                );
 
                 var response = await _httpClient.PostAsync(url, content);
                 response.EnsureSuccessStatusCode();
@@ -215,7 +230,7 @@ namespace Lizzie.AssetManagement
                     Path = metadata.path_display,
                     FileSize = metadata.size,
                     ModifiedDate = DateTime.Parse(metadata.server_modified),
-                    Metadata = responseContent
+                    Metadata = responseContent,
                 };
             }
             catch (Exception ex)
@@ -284,17 +299,21 @@ namespace Lizzie.AssetManagement
 
         private string NormalizePath(string path)
         {
-            if (string.IsNullOrEmpty(path)) return "";
+            if (string.IsNullOrEmpty(path))
+                return "";
             path = path.Replace("\\", "/");
-            if (!path.StartsWith("/")) path = "/" + path;
+            if (!path.StartsWith("/"))
+                path = "/" + path;
             return path.TrimEnd('/');
         }
 
         private string CombinePath(params string[] parts)
         {
             var combined = string.Join("/", parts).Replace("\\", "/");
-            while (combined.Contains("//")) combined = combined.Replace("//", "/");
-            if (!combined.StartsWith("/")) combined = "/" + combined;
+            while (combined.Contains("//"))
+                combined = combined.Replace("//", "/");
+            if (!combined.StartsWith("/"))
+                combined = "/" + combined;
             return combined;
         }
 

@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Text.Json;
+using Godot;
 
 /// <summary>
 /// Makes a VisualComponentBase network-synchronized
@@ -16,8 +16,8 @@ public partial class NetworkedObject : Node
     private int _syncFrameCounter = 0;
     private const int SyncInterval = 3; // Sync every N frames when dragging
 
-    public bool IsLockedByAnotherPlayer => _lockedByPlayer > 0 && 
-                                           _lockedByPlayer != MultiplayerManager.Instance?.LocalPlayerId;
+    public bool IsLockedByAnotherPlayer =>
+        _lockedByPlayer > 0 && _lockedByPlayer != MultiplayerManager.Instance?.LocalPlayerId;
 
     public int LockedByPlayer => _lockedByPlayer;
 
@@ -43,8 +43,10 @@ public partial class NetworkedObject : Node
 
     public override void _Process(double delta)
     {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true) return;
-        if (Component == null) return;
+        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
+            return;
+        if (Component == null)
+            return;
 
         // If this object is being dragged by local player, sync periodically
         if (Component.IsDragging) //&& _lockedByPlayer == MultiplayerManager.Instance.LocalPlayerId)
@@ -52,8 +54,10 @@ public partial class NetworkedObject : Node
             _syncFrameCounter++;
             if (_syncFrameCounter >= SyncInterval)
             {
-                if (Component.Position.DistanceTo(_lastSyncedPosition) > 0.01f ||
-                    Component.Rotation.DistanceTo(_lastSyncedRotation) > 0.01f)
+                if (
+                    Component.Position.DistanceTo(_lastSyncedPosition) > 0.01f
+                    || Component.Rotation.DistanceTo(_lastSyncedRotation) > 0.01f
+                )
                 {
                     _lastSyncedPosition = Component.Position;
                     _lastSyncedRotation = Component.Rotation;
@@ -61,7 +65,6 @@ public partial class NetworkedObject : Node
                 }
 
                 _syncFrameCounter = 0;
-                
             }
         }
     }
@@ -71,7 +74,7 @@ public partial class NetworkedObject : Node
     /// </summary>
     public bool TryLock()
     {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true) 
+        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
             return true; // Allow in single player
 
         if (_lockedByPlayer == MultiplayerManager.Instance.LocalPlayerId)
@@ -90,7 +93,8 @@ public partial class NetworkedObject : Node
     /// </summary>
     public void Unlock()
     {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true) return;
+        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
+            return;
 
         if (_lockedByPlayer == MultiplayerManager.Instance.LocalPlayerId)
         {
@@ -109,10 +113,15 @@ public partial class NetworkedObject : Node
         _lockedByPlayer = 0;
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ServerRequestLock(int playerId)
     {
-        if (!MultiplayerManager.Instance?.IsServer == true) return;
+        if (!MultiplayerManager.Instance?.IsServer == true)
+            return;
 
         if (_lockedByPlayer == 0 || _lockedByPlayer == playerId)
         {
@@ -127,10 +136,15 @@ public partial class NetworkedObject : Node
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ServerRequestUnlock(int playerId)
     {
-        if (!MultiplayerManager.Instance?.IsServer == true) return;
+        if (!MultiplayerManager.Instance?.IsServer == true)
+            return;
 
         if (_lockedByPlayer == playerId)
         {
@@ -140,11 +154,15 @@ public partial class NetworkedObject : Node
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = true,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ClientReceiveLock(int playerId)
     {
         _lockedByPlayer = playerId;
-        
+
         if (playerId == MultiplayerManager.Instance?.LocalPlayerId)
         {
             // Lock granted for us
@@ -161,24 +179,28 @@ public partial class NetworkedObject : Node
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ClientReceiveUnlock()
     {
         _lockedByPlayer = 0;
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void ClientLockDenied()
     {
         GD.Print($"Lock denied for object: {Component?.ComponentName}");
-        
+
         if (Component != null)
         {
             Component.IsDragging = false;
         }
     }
-
-  
-
-   
 }

@@ -7,6 +7,6 @@ namespace Lizzie.AssetManagement
     {
         Dropbox,
         GoogleDrive,
-        OneDrive
+        OneDrive,
     }
 }

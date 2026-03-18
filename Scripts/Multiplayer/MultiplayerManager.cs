@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 /// <summary>
 /// Manages multiplayer connections, hosting, and player state
@@ -17,13 +17,13 @@ public partial class MultiplayerManager : Node
 
     [Signal]
     public delegate void PlayerConnectedEventHandler(int playerId);
-    
+
     [Signal]
     public delegate void PlayerDisconnectedEventHandler(int playerId);
-    
+
     [Signal]
     public delegate void ConnectionFailedEventHandler();
-    
+
     [Signal]
     public delegate void ServerStartedEventHandler();
 
@@ -63,7 +63,7 @@ public partial class MultiplayerManager : Node
     {
         _peer = new ENetMultiplayerPeer();
         var error = _peer.CreateServer(port, maxPlayers);
-        
+
         if (error != Error.Ok)
         {
             GD.PrintErr($"Failed to create server: {error}");
@@ -79,12 +79,12 @@ public partial class MultiplayerManager : Node
         {
             PlayerId = _localPlayerId,
             PlayerName = "Host",
-            IsLocal = true
+            IsLocal = true,
         };
 
         GD.Print($"Server started on port {port}. Server ID: {_localPlayerId}");
         EmitSignal("ServerStarted");
-        
+
         return Error.Ok;
     }
 
@@ -95,7 +95,7 @@ public partial class MultiplayerManager : Node
     {
         _peer = new ENetMultiplayerPeer();
         var error = _peer.CreateClient(address, port);
-        
+
         if (error != Error.Ok)
         {
             GD.PrintErr($"Failed to connect to server: {error}");
@@ -106,7 +106,7 @@ public partial class MultiplayerManager : Node
         _isServer = false;
 
         GD.Print($"Connecting to server at {address}:{port}");
-        
+
         return Error.Ok;
     }
 
@@ -132,13 +132,13 @@ public partial class MultiplayerManager : Node
     private void OnPeerConnected(long id)
     {
         GD.Print($"Peer connected: {id}");
-        
+
         var playerId = (int)id;
         _players[playerId] = new PlayerInfo
         {
             PlayerId = playerId,
             PlayerName = $"Player {playerId}",
-            IsLocal = false
+            IsLocal = false,
         };
 
         EmitSignal("PlayerConnected", playerId);
@@ -147,7 +147,7 @@ public partial class MultiplayerManager : Node
     private void OnPeerDisconnected(long id)
     {
         GD.Print($"Peer disconnected: {id}");
-        
+
         var playerId = (int)id;
         _players.Remove(playerId);
 
@@ -163,7 +163,7 @@ public partial class MultiplayerManager : Node
         {
             PlayerId = _localPlayerId,
             PlayerName = "You",
-            IsLocal = true
+            IsLocal = true,
         };
 
         // Register with server
@@ -183,13 +183,18 @@ public partial class MultiplayerManager : Node
         Disconnect();
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void RegisterPlayer(int playerId, string playerName)
     {
-        if (!IsServer) return;
+        if (!IsServer)
+            return;
 
         GD.Print($"Player registered: {playerId} - {playerName}");
-        
+
         if (_players.TryGetValue(playerId, out var player))
         {
             player.PlayerName = playerName;
@@ -199,7 +204,11 @@ public partial class MultiplayerManager : Node
         Rpc(nameof(UpdatePlayerList), playerId, playerName);
     }
 
-    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = true,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
     private void UpdatePlayerList(int playerId, string playerName)
     {
         if (!_players.ContainsKey(playerId))
@@ -208,7 +217,7 @@ public partial class MultiplayerManager : Node
             {
                 PlayerId = playerId,
                 PlayerName = playerName,
-                IsLocal = playerId == _localPlayerId
+                IsLocal = playerId == _localPlayerId,
             };
         }
         else

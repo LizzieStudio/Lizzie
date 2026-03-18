@@ -1,7 +1,7 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Godot;
 
 public abstract partial class VisualGroupComponent : VisualComponentBase
 {
@@ -17,19 +17,20 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
             OnChildrenChanged();
         }
     }
-    
+
     public virtual void AddChildComponent(VisualComponentBase component)
     {
         component.Visible = false;
-       Children.Add(component);
-       OnChildrenChanged();
-    }   
+        Children.Add(component);
+        OnChildrenChanged();
+    }
 
     public virtual void AddChildComponents(IEnumerable<VisualComponentBase> components)
     {
         var compArr = components as VisualComponentBase[] ?? components.ToArray(); //avoid multiple iterations
-        foreach (var c in compArr) c.Visible = false;
-        
+        foreach (var c in compArr)
+            c.Visible = false;
+
         Children.AddRange(compArr);
         OnChildrenChanged();
     }
@@ -40,7 +41,7 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
     }
 
     protected abstract void OnChildrenChanged();
-    
+
     /// <summary>
     /// Returns the first item in the group, and removes it.
     /// </summary>
@@ -49,13 +50,14 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
     public virtual VisualComponentBase[] DrawFromTop(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
-        if (quantity == 0) return Array.Empty<VisualComponentBase>();
+        if (quantity == 0)
+            return Array.Empty<VisualComponentBase>();
 
         var res = Children.Take(quantity).ToArray();
-        
+
         Children.RemoveRange(0, quantity);
         OnChildrenChanged();
-        
+
         return res;
     }
 
@@ -67,14 +69,14 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
     public virtual VisualComponentBase[] DrawFromBottom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
-        if (quantity == 0) return Array.Empty<VisualComponentBase>();
+        if (quantity == 0)
+            return Array.Empty<VisualComponentBase>();
 
         var res = Children.TakeLast(quantity).ToArray();
-        
-        
+
         Children.RemoveRange(Children.Count - quantity, quantity);
         OnChildrenChanged();
-        
+
         return res;
     }
 
@@ -88,10 +90,10 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
         var c = Children[r];
 
         c.Visible = true;
-        
+
         Children.RemoveAt(r);
         OnChildrenChanged();
-        
+
         return c;
     }
 
@@ -104,7 +106,8 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
     public virtual IEnumerable<VisualComponentBase> DrawRandom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
-        if (quantity == 0) yield return null;
+        if (quantity == 0)
+            yield return null;
 
         for (int i = 0; i < quantity; i++)
         {
@@ -119,14 +122,14 @@ public abstract partial class VisualGroupComponent : VisualComponentBase
     {
         int n = Children.Count - 1;
 
-        while (n > 0) 
+        while (n > 0)
         {
             var r = Rnd.RandiRange(0, n);
-            
+
             (Children[r], Children[n]) = (Children[n], Children[r]);
             n--;
         }
-        
+
         OnChildrenChanged();
     }
 

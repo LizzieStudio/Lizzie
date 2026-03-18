@@ -1,14 +1,16 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using Godot;
 
 public partial class UI : CanvasLayer
 {
-    [Export] private Color highlightFontColor;
+    [Export]
+    private Color highlightFontColor;
 
-    [Export] private Color baseFontColor;
+    [Export]
+    private Color baseFontColor;
 
     private HBoxContainer modeButtons;
 
@@ -33,7 +35,7 @@ public partial class UI : CanvasLayer
     private ProjectManager _projectManager;
 
     private TextureFactory _textureFactory;
-    
+
     private DatasetEditor _datasetEditor;
     private PrototypeManifest _prototypeManifest;
     private MultiplayerDialog _multiplayerDialog;
@@ -76,11 +78,10 @@ public partial class UI : CanvasLayer
 
         _componentName = GetNode<Label>("%ComponentName");
 
-      _textureFactory = GetNode<TextureFactory>("%TextureFactory"); 
-        
+        _textureFactory = GetNode<TextureFactory>("%TextureFactory");
+
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
-
     }
 
     private void ProjectChanged(ProjectChangedEvent obj)
@@ -97,7 +98,7 @@ public partial class UI : CanvasLayer
 
         _componentDefinition.CreateObject += OnCreateObject;
         _componentDefinition.CancelDialog += OnCancelCreate;
-        
+
         AddChild(_componentDefinition);
     }
 
@@ -108,7 +109,7 @@ public partial class UI : CanvasLayer
         _prototypeManifest.TextureFactory = _textureFactory;
         _prototypeManifest.Refresh(_gameController.MainScene.GameObjects.PrototypeCounts());
         _prototypeManifest.Closed += PrototypeManifestOnClosed;
-        
+
         AddChild(_prototypeManifest);
     }
 
@@ -125,7 +126,7 @@ public partial class UI : CanvasLayer
         _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
         _templateCreator.TextureFactory = _textureFactory;
         _templateCreator.Closed += TemplateCreatorOnClosed;
-        
+
         AddChild(_templateCreator);
     }
 
@@ -136,13 +137,12 @@ public partial class UI : CanvasLayer
         _templateCreator.QueueFree();
     }
 
-
     private void ShowDatasetEditor()
     {
         string s = "res://Scenes/DataSet/DatasetEditor.tscn";
         _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
         _datasetEditor.Closed += DatasetEditorOnClosed;
-        
+
         AddChild(_datasetEditor);
     }
 
@@ -158,8 +158,6 @@ public partial class UI : CanvasLayer
         _gameController = gameController;
     }
 
-
-
     private void FileMenuOnIdPressed(long id)
     {
         switch (id)
@@ -167,12 +165,12 @@ public partial class UI : CanvasLayer
             case 0:
                 ShowProjectManager();
                 break;
-            
+
             case 1:
                 var p = ProjectService.Instance.LoadProject("TestProj");
                 ProjectService.Instance.CurrentProject = p;
                 break;
-            
+
             case 2:
                 var op = _projectManager.CreateTestProject();
                 ProjectService.Instance.SaveProject(op, "TestProj");
@@ -229,7 +227,12 @@ public partial class UI : CanvasLayer
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
-        if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(editEvent.PrototypeId, out var p))
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                editEvent.PrototypeId,
+                out var p
+            )
+        )
         {
             return;
         }
@@ -265,7 +268,6 @@ public partial class UI : CanvasLayer
         _editingPrototypeId = Guid.Empty;
     }
 
-
     public override void _Process(double delta)
     {
         //Below is a hack to work around the CloseRequested signal not getting fired properly
@@ -282,9 +284,15 @@ public partial class UI : CanvasLayer
         GetParent<GameController>().ComponentPopupClosed();
     }
 
-
-    private void AddItemToPopupMenu(PopupMenu popup, VisualCommand command, string caption, string icon,
-        bool enabled = true, bool checkable = false, bool isChecked = false)
+    private void AddItemToPopupMenu(
+        PopupMenu popup,
+        VisualCommand command,
+        string caption,
+        string icon,
+        bool enabled = true,
+        bool checkable = false,
+        bool isChecked = false
+    )
     {
         int index = -1;
         int id = (int)command;
@@ -327,7 +335,8 @@ public partial class UI : CanvasLayer
 
     public void BuildPopupMenu(List<VisualComponentBase> components)
     {
-        if (components.Count == 0) return; //TODO Right click menu for table surface?
+        if (components.Count == 0)
+            return; //TODO Right click menu for table surface?
 
         _popupComponents = components;
 
@@ -341,7 +350,8 @@ public partial class UI : CanvasLayer
             var cList = c.GetMenuCommands();
             foreach (var m in cList)
             {
-                if (m.SingleOnly && excludeSingle) continue;    //skip commands that are single only if we have more than one comp selected
+                if (m.SingleOnly && excludeSingle)
+                    continue; //skip commands that are single only if we have more than one comp selected
 
                 fullCommands.Add(m);
                 if (comDic.ContainsKey(m.Command))
@@ -355,20 +365,25 @@ public partial class UI : CanvasLayer
             }
         }
 
-        
         //only include menu commands that are valid for all selected items
-        var commands = comDic.Where(x => x.Value == components.Count)
-            .Select(y => y.Key);
+        var commands = comDic.Where(x => x.Value == components.Count).Select(y => y.Key);
 
         _componentPopup.Clear();
 
-
         if (commands.Any(x => x == VisualCommand.ToggleLock))
         {
-            var isChecked = fullCommands.Where(x => x.Command == VisualCommand.ToggleLock)
+            var isChecked = fullCommands
+                .Where(x => x.Command == VisualCommand.ToggleLock)
                 .All(y => y.IsChecked);
-            AddItemToPopupMenu(_componentPopup, VisualCommand.ToggleLock, "Frozen", string.Empty, true,
-                true, isChecked);
+            AddItemToPopupMenu(
+                _componentPopup,
+                VisualCommand.ToggleLock,
+                "Frozen",
+                string.Empty,
+                true,
+                true,
+                isChecked
+            );
         }
 
         if (commands.Any(x => x == VisualCommand.Roll))
@@ -387,12 +402,18 @@ public partial class UI : CanvasLayer
             AddItemToPopupMenu(_componentPopup, VisualCommand.Edit, "Edit", string.Empty);
 
         if (commands.Any(x => x == VisualCommand.MakeUnique))
-            AddItemToPopupMenu(_componentPopup, VisualCommand.MakeUnique, "Make Unique", string.Empty);
+            AddItemToPopupMenu(
+                _componentPopup,
+                VisualCommand.MakeUnique,
+                "Make Unique",
+                string.Empty
+            );
     }
 
     private void PopupMenuCommandSelected(long id)
     {
-        if (id >= (int)VisualCommand.MaximumVC) return;
+        if (id >= (int)VisualCommand.MaximumVC)
+            return;
 
         VisualCommand vc = (VisualCommand)id;
         if (GetParent() is GameController gc)
@@ -401,13 +422,11 @@ public partial class UI : CanvasLayer
         }
     }
 
-
     private void OnHelpMenuSelection(long id)
     {
         var p = GetParent<GameController>();
         p.TestFunction();
     }
-
 
     private void OnInsertMenuSelection(long id)
     {
@@ -431,7 +450,7 @@ public partial class UI : CanvasLayer
 
         if (id == 3)
         {
-               ShowPrototypeManifest();
+            ShowPrototypeManifest();
         }
     }
 
@@ -455,7 +474,6 @@ public partial class UI : CanvasLayer
         _componentDefinition.QueueFree();
     }
 
-
     private bool _popupShown;
 
     public void ShowComponentPopup(Vector2I position)
@@ -474,7 +492,7 @@ public partial class UI : CanvasLayer
     {
         TwoD,
         ThreeD,
-        Designer
+        Designer,
     };
 
     public MasterMode CurMasterMode { get; set; }
@@ -519,18 +537,15 @@ public partial class UI : CanvasLayer
         MasterModeChange?.Invoke(this, new MasterModeChangeArgs { NewMode = mode });
     }
 
-
     private void _on_play_2d_pressed()
     {
         SetMasterMode(MasterMode.TwoD);
     }
 
-
     private void _on_play_3d_pressed()
     {
         SetMasterMode(MasterMode.ThreeD);
     }
-
 
     private void _on_designer_pressed()
     {

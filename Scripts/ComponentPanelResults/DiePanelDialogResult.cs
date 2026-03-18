@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 public partial class DiePanelDialogResult : ComponentPanelDialogResult
 {
@@ -12,7 +12,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private TabContainer _tabContainer;
     private ComponentPreview _preview;
 
-    [Export] private QuickTextureEntry[] _quickSideEntries;
+    [Export]
+    private QuickTextureEntry[] _quickSideEntries;
 
     private IconLibrary _iconLibrary = new();
 
@@ -34,7 +35,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _tabContainer = GetNode<TabContainer>("%TabContainer");
         _tabContainer.CurrentTab = 0;
 
-
         int i = 0;
         foreach (var l in _quickSideEntries)
         {
@@ -47,7 +47,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         PrototypeIndex = 1;
         UpdateQuickSidesVisibility();
     }
-
 
     public override void Activate()
     {
@@ -82,7 +81,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 shape = "VcD12.tscn";
                 break;
 
-
             case 5:
                 shape = "VcD20.tscn";
                 break;
@@ -100,7 +98,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-
     private void SidesInputOnItemSelected(long index)
     {
         UpdateQuickSidesVisibility();
@@ -110,7 +107,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private void UpdateQuickSidesVisibility()
     {
-        if (_quickSideEntries.Length < 20) return;
+        if (_quickSideEntries.Length < 20)
+            return;
 
         if (int.TryParse(_sidesInput.Text, out var target))
         {
@@ -120,7 +118,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             }
         }
     }
-
 
     public override List<string> Validity()
     {
@@ -140,7 +137,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private QuickTextureField[] PackageSides()
     {
-        if (!int.TryParse(_sidesInput.Text, out var sides)) return Array.Empty<QuickTextureField>();
+        if (!int.TryParse(_sidesInput.Text, out var sides))
+            return Array.Empty<QuickTextureField>();
 
         var s = new QuickTextureField[sides];
 
@@ -188,7 +186,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _diameterInput.Text = prototype.Parameters["Size"].ToString();
         _dieColor.Color = (Color)prototype.Parameters["Color"];
 
-        if (prototype.Parameters.ContainsKey("Sides") && prototype.Parameters["Sides"] is QuickTextureField[] sides)
+        if (
+            prototype.Parameters.ContainsKey("Sides")
+            && prototype.Parameters["Sides"] is QuickTextureField[] sides
+        )
         {
             for (int i = 0; i < sides.Length && i < _quickSideEntries.Length; i++)
             {
@@ -204,7 +205,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 10 => 3,
                 12 => 4,
                 20 => 5,
-                _ => 1
+                _ => 1,
             };
             _sidesInput.Select(sideIndex);
             SidesInputOnItemSelected(sideIndex);
