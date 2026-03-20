@@ -20,21 +20,20 @@
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hnkns"]
 bg_color = Color(0.99736375, 0.793054, 0.8017672, 1)
 
-[node name="TemplateCreator" type="MarginContainer" unique_id=1230360177 node_paths=PackedStringArray("_preview")]
+[node name="TemplateCreator" type="Window" unique_id=461849172 node_paths=PackedStringArray("_preview")]
+oversampling_override = 1.0
+title = "Template Editor"
+position = Vector2i(0, 36)
+size = Vector2i(1100, 600)
+script = ExtResource("1_wn7e0")
+_preview = NodePath("Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow/TemplatePreview")
+
+[node name="Panel" type="Panel" parent="." unique_id=2088514366]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
-script = ExtResource("1_wn7e0")
-_preview = NodePath("Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow/TemplatePreview")
-
-[node name="Panel" type="Panel" parent="." unique_id=2088514366]
-layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Panel" unique_id=1747040156]
 layout_mode = 1
@@ -455,7 +454,6 @@ wait_time = 0.1
 [node name="NewTemplateDialog" type="MarginContainer" parent="." unique_id=1866524226]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
 
 [node name="Panel" type="Panel" parent="NewTemplateDialog" unique_id=886510993]
 custom_minimum_size = Vector2(400, 200)

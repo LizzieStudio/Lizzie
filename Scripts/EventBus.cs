@@ -274,5 +274,20 @@ public class SyncTransformEvent : IEvent
     public VisualComponentBase Component { get; set; }
 }
 
+/// <summary>
+/// When a dialog is opened, this event is published to disable inputs 
+/// </summary>
+public class ModalDialogOpenedEvent : IEvent
+{
+}
+
+
+/// <summary>
+/// When a dialog is closed, this event is published to re-enable inputs
+/// </summary>
+public class ModalDialogClosedEvent : IEvent
+{
+}
+
 
 #endregion

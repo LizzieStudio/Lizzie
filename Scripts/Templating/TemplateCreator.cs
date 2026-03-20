@@ -5,7 +5,7 @@ using System.Linq;
 using Godot;
 using Lizzie.Scripts.Templating;
 
-public partial class TemplateCreator : MarginContainer
+public partial class TemplateCreator : Window
 {
     [Export]
     private TextureRect _preview;
@@ -85,6 +85,11 @@ public partial class TemplateCreator : MarginContainer
         this.VisibilityChanged += UpdateScrollBarVisibility;
 
         UpdateProject();
+
+        if (!string.IsNullOrWhiteSpace(_tempTemplateName))
+        {
+            SetTemplateByName(_tempTemplateName);
+        }
     }
 
     private void InitToolbar()
@@ -143,8 +148,18 @@ public partial class TemplateCreator : MarginContainer
         }
     }
 
+
+    private string _tempTemplateName = string.Empty;
     public void SetTemplateByName(string name)
     {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        if (!IsNodeReady())
+        {
+            _tempTemplateName = name;
+            return;
+        }
+
         if (Templates.TryGetValue(name, out var template))
         {
             for (int i = 0; i < _templateNameSelector.ItemCount; i++)

@@ -27,6 +27,10 @@ UndoService="*res://Scripts/Undo/UndoService.cs"
 EventBus="*uid://dg3sv0bbkjbc2"
 MultiplayerManager="*uid://bdusjpa55red6"
 
+[display]
+
+window/size/extend_to_title=true
+
 [dotnet]
 
 project/assembly_name="Lizzie"

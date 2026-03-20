@@ -126,10 +126,12 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _frontTemplatePicker = GetNode<OptionButton>("%FrontTemplateList");
         _frontTemplatePicker.ItemSelected += OnFrontTemplateChanged;
         _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
+        _editFrontTemplateButton.Pressed += EditFrontTemplate;
 
         _backTemplatePicker = GetNode<OptionButton>("%BackTemplateList");
         _backTemplatePicker.ItemSelected += OnBackTemplateChanged;
         _editBackTemplateButton = GetNode<Button>("%EditBackTemplateButton");
+        _editBackTemplateButton.Pressed += EditBackTemplate;
 
         _datasetPicker = GetNode<OptionButton>("%DatasetList");
         _datasetPicker.ItemSelected += OnDatasetChanged;
@@ -137,6 +139,16 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
 
         UpdateTemplateTab();
+    }
+
+    private void EditFrontTemplate()
+    {
+        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _frontTemplate?.Name });
+    }
+
+    private void EditBackTemplate()
+    {
+        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _backTemplate?.Name });
     }
 
     private void StandardSizeChanged(long index)

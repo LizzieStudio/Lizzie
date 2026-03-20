@@ -40,6 +40,8 @@ public partial class UI : CanvasLayer
     private PrototypeManifest _prototypeManifest;
     private MultiplayerDialog _multiplayerDialog;
 
+    private Node _modalDialogs;
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -80,9 +82,13 @@ public partial class UI : CanvasLayer
 
         _textureFactory = GetNode<TextureFactory>("%TextureFactory");
 
+        _modalDialogs = GetNode("%ModalDialogs");
+
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
+        EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
     }
+
 
     private void ProjectChanged(ProjectChangedEvent obj)
     {
@@ -99,7 +105,7 @@ public partial class UI : CanvasLayer
         _componentDefinition.CreateObject += OnCreateObject;
         _componentDefinition.CancelDialog += OnCancelCreate;
 
-        AddChild(_componentDefinition);
+        _modalDialogs.AddChild(_componentDefinition);
     }
 
     private void ShowPrototypeManifest()
@@ -110,7 +116,7 @@ public partial class UI : CanvasLayer
         _prototypeManifest.Refresh(_gameController.MainScene.GameObjects.PrototypeCounts());
         _prototypeManifest.Closed += PrototypeManifestOnClosed;
 
-        AddChild(_prototypeManifest);
+        _modalDialogs.AddChild(_prototypeManifest);
     }
 
     private void PrototypeManifestOnClosed(object sender, EventArgs e)
@@ -120,14 +126,19 @@ public partial class UI : CanvasLayer
         _prototypeManifest.QueueFree();
     }
 
-    private void ShowTemplateCreator()
+    private void ShowTemplateEditor()
+    {
+        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateName = null });
+    }
+
+    private void ShowTemplateEditorFromEvent(ShowTemplateEditor e)
     {
         string s = "res://Scenes/Templating/TemplateCreator.tscn";
         _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
         _templateCreator.TextureFactory = _textureFactory;
         _templateCreator.Closed += TemplateCreatorOnClosed;
-
-        AddChild(_templateCreator);
+        _templateCreator.SetTemplateByName(e.TemplateName);
+        _modalDialogs.AddChild(_templateCreator);
     }
 
     private void TemplateCreatorOnClosed(object sender, EventArgs e)
@@ -143,7 +154,7 @@ public partial class UI : CanvasLayer
         _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
         _datasetEditor.Closed += DatasetEditorOnClosed;
 
-        AddChild(_datasetEditor);
+        _modalDialogs.AddChild(_datasetEditor);
     }
 
     private void DatasetEditorOnClosed(object sender, EventArgs e)
@@ -187,7 +198,7 @@ public partial class UI : CanvasLayer
         var s = "res://Scenes/project_manager.tscn";
         _projectManager = GD.Load<PackedScene>(s).Instantiate<ProjectManager>();
         _projectManager.Closed += ProjectManagerClosed;
-        AddChild(_projectManager);
+        _modalDialogs.AddChild(_projectManager);
     }
 
     private void ProjectManagerClosed(object sender, EventArgs e)
@@ -208,7 +219,7 @@ public partial class UI : CanvasLayer
         var d = GD.Load<PackedScene>("res://Scenes/Controls/multiplayer_connect.tscn");
         _multiplayerDialog = d.Instantiate<MultiplayerDialog>();
         _multiplayerDialog.CloseRequested += MultiplayerDialogClosed;
-        AddChild(_multiplayerDialog);
+        _modalDialogs.AddChild(_multiplayerDialog);
         _multiplayerDialog.PopupCentered();
     }
 
@@ -247,7 +258,7 @@ public partial class UI : CanvasLayer
 
         _editPanel.CancelDialog += ComponentEditDialogCancel;
         _editPanel.CloseDialog += ComponentEditDialogClose;
-        AddChild(_editPanel);
+        _modalDialogs.AddChild(_editPanel);
     }
 
     private void ComponentEditDialogCancel(object sender, EventArgs e)
@@ -268,6 +279,9 @@ public partial class UI : CanvasLayer
         _editingPrototypeId = Guid.Empty;
     }
 
+
+
+
     public override void _Process(double delta)
     {
         //Below is a hack to work around the CloseRequested signal not getting fired properly
@@ -276,6 +290,36 @@ public partial class UI : CanvasLayer
         {
             _popupShown = false;
             ComponentPopupClosed();
+        }
+
+        ModalDialogShown = _modalDialogs.GetChildCount() > 0;
+    }
+
+    
+
+    /// <summary>
+    /// Check to see if there are any modal dialogs open, and see if the flag needs to be flipped.
+    /// If so, send the appropriate event signal.
+    /// NOTE: All modal dialogs should be added as children to the ModalDialogs node for this to work properly. This is a bit hacky but it works for now and saves us from having to add event hooks for every single dialog we create.
+    /// </summary>
+    private bool _modalDialogShown;
+
+    public bool ModalDialogShown
+    {
+        get => _modalDialogShown;
+        set
+        {
+            if (value == _modalDialogShown) return;
+            _modalDialogShown = value;
+
+            if (value)
+            {
+                EventBus.Instance.Publish(new ModalDialogOpenedEvent());
+            }
+            else
+            {
+                EventBus.Instance.Publish(new ModalDialogClosedEvent());
+            }
         }
     }
 
@@ -440,7 +484,7 @@ public partial class UI : CanvasLayer
     {
         if (id == 1)
         {
-            ShowTemplateCreator();
+            ShowTemplateEditor();
         }
 
         if (id == 2)
