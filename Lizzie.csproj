@@ -7,6 +7,7 @@
   <ItemGroup>
     <None Include="Scripts\AssetManagement\README.md" />
     <None Include="Scripts\Container\ParametersSerializationGuide.md" />
+    <None Include="Scripts\JsonUtilities\ParseDeckGuide.md" />
     <None Include="Scripts\Multiplayer\README.md" />
     <None Include="Scripts\VisualComponents\JaggedArrayConversionGuide.md" />
   </ItemGroup>

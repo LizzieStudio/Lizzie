@@ -29,7 +29,7 @@ public static class JsonUtilities
             case VisualComponentBase.VisualComponentType.Card:
                 break;
             case VisualComponentBase.VisualComponentType.Deck:
-                break;
+                return ParseDeck(d);
             case VisualComponentBase.VisualComponentType.Die:
                 return ParseDie(d);
 
@@ -99,6 +99,12 @@ public static class JsonUtilities
         p.Add("BackFontSize", TryGetInt(d, "BackFontSize"));
 
         p.Add("DifferentBack", TryGetBool(d, "DifferentBack"));
+
+        p.Add("FrontTemplate", TryGetString(d, "FrontTemplate"));
+        p.Add("BackTemplate", TryGetString(d, "BackTemplate"));
+        p.Add("Dataset", TryGetString(d, "Dataset"));
+        p.Add("CardReference", TryGetString(d, "CardReference"));
+
         return p;
     }
 
@@ -112,6 +118,46 @@ public static class JsonUtilities
         p.Add("Color", TryGetColor(d, "Color"));
 
         p.Add("Sides", TryGetQTFArray(d, "Sides"));
+
+        return p;
+    }
+
+    private static Dictionary<string, object> ParseDeck(Dictionary<string, object> d)
+    {
+        var p = new Dictionary<string, object>();
+
+        // Common parameters
+        p.Add("ComponentName", TryGetString(d, "ComponentName"));
+        p.Add("BaseName", TryGetString(d, "BaseName"));
+        p.Add("Height", TryGetFloat(d, "Height"));
+        p.Add("Width", TryGetFloat(d, "Width"));
+        p.Add("Shape", TryGetInt(d, "Shape"));
+        p.Add("Mode", (VcToken.TokenBuildMode)TryGetInt(d, "Mode"));
+
+        // Mode-specific parameters
+        var mode = (VcToken.TokenBuildMode)TryGetInt(d, "Mode");
+
+        switch (mode)
+        {
+            case VcToken.TokenBuildMode.Quick:
+                p.Add("QuickCardData", TryGetQuickCardDataList(d, "QuickCardData"));
+                break;
+
+            case VcToken.TokenBuildMode.Grid:
+                p.Add("FrontMasterSprite", TryGetTexture2D(d, "FrontMasterSprite"));
+                p.Add("BackMasterSprite", TryGetTexture2D(d, "BackMasterSprite"));
+                p.Add("GridRows", TryGetInt(d, "GridRows"));
+                p.Add("GridCols", TryGetInt(d, "GridCols"));
+                p.Add("GridCount", TryGetInt(d, "GridCount"));
+                p.Add("DifferentBack", TryGetBool(d, "DifferentBack"));
+                break;
+
+            case VcToken.TokenBuildMode.Template:
+                p.Add("FrontTemplate", TryGetString(d, "FrontTemplate"));
+                p.Add("BackTemplate", TryGetString(d, "BackTemplate"));
+                p.Add("Dataset", TryGetString(d, "Dataset"));
+                break;
+        }
 
         return p;
     }
@@ -262,6 +308,142 @@ public static class JsonUtilities
         }
 
         return new bool[0][]; // Default empty jagged array if not found or deserialization fails
+    }
+
+    private static List<QuickCardData> TryGetQuickCardDataList(Dictionary<string, object> d, string key)
+    {
+        if (d.TryGetValue(key, out var value) && value != null)
+        {
+            // If it's already a List<QuickCardData>, return it
+            if (value is List<QuickCardData> list)
+            {
+                return list;
+            }
+
+            // Try to deserialize from JSON
+            try
+            {
+                var json = value.ToString();
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    var result = new List<QuickCardData>();
+
+                    foreach (var item in root.EnumerateArray())
+                    {
+                        if (item.ValueKind == JsonValueKind.Object)
+                        {
+                            var cardData = new QuickCardData();
+
+                            if (item.TryGetProperty("BackgroundColor", out var bgColor))
+                            {
+                                cardData.BackgroundColor = ParseColorFromJson(bgColor);
+                            }
+
+                            if (item.TryGetProperty("Caption", out var caption))
+                            {
+                                cardData.Caption = caption.GetString();
+                            }
+
+                            if (item.TryGetProperty("CardBackColor", out var backColor))
+                            {
+                                cardData.CardBackColor = ParseColorFromJson(backColor);
+                            }
+
+                            if (item.TryGetProperty("CardBackValue", out var backValue))
+                            {
+                                cardData.CardBackValue = backValue.GetString();
+                            }
+
+                            result.Add(cardData);
+                        }
+                    }
+
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                GD.PrintErr($"Error deserializing QuickCardData list: {ex.Message}");
+            }
+        }
+
+        return new List<QuickCardData>(); // Default empty list
+    }
+
+    private static Color ParseColorFromJson(JsonElement element)
+    {
+        // Color is serialized as an object with R, G, B, A properties (or similar)
+        try
+        {
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                // If it's a string, try to deserialize as JSON
+                return JsonSerializer.Deserialize<Color>(element.GetString());
+            }
+            else if (element.ValueKind == JsonValueKind.Object)
+            {
+                // Parse color object directly
+                float r = 0, g = 0, b = 0, a = 1;
+
+                if (element.TryGetProperty("R", out var rProp))
+                    r = (float)rProp.GetDouble();
+                else if (element.TryGetProperty("r", out var rProp2))
+                    r = (float)rProp2.GetDouble();
+
+                if (element.TryGetProperty("G", out var gProp))
+                    g = (float)gProp.GetDouble();
+                else if (element.TryGetProperty("g", out var gProp2))
+                    g = (float)gProp2.GetDouble();
+
+                if (element.TryGetProperty("B", out var bProp))
+                    b = (float)bProp.GetDouble();
+                else if (element.TryGetProperty("b", out var bProp2))
+                    b = (float)bProp2.GetDouble();
+
+                if (element.TryGetProperty("A", out var aProp))
+                    a = (float)aProp.GetDouble();
+                else if (element.TryGetProperty("a", out var aProp2))
+                    a = (float)aProp2.GetDouble();
+
+                return new Color(r, g, b, a);
+            }
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"Error parsing color: {ex.Message}");
+        }
+
+        return Colors.Black; // Default color
+    }
+
+    private static Texture2D TryGetTexture2D(Dictionary<string, object> d, string key)
+    {
+        if (d.TryGetValue(key, out var value) && value != null)
+        {
+            // If it's already a Texture2D, return it
+            if (value is Texture2D texture)
+            {
+                return texture;
+            }
+
+            // Try to load from file path
+            if (value is string path && !string.IsNullOrEmpty(path))
+            {
+                try
+                {
+                    return Utility.LoadTexture(path);
+                }
+                catch (Exception ex)
+                {
+                    GD.PrintErr($"Error loading texture from path {path}: {ex.Message}");
+                }
+            }
+        }
+
+        return null; // Default null if not found
     }
 
 }
