@@ -29,6 +29,19 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
         EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
         EventBus.Instance.Subscribe<SyncTransformEvent>(SyncTransform);
+        EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
+        EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
+    }
+
+    private void OnModalClosed()
+    {
+        _modalOpen = false;
+    }
+
+    private bool _modalOpen;
+    private void OnModalOpened()
+    {
+        _modalOpen = true;
     }
 
     private void OnDataSetChanged(DataSetChangedEvent obj)
@@ -79,6 +92,14 @@ public partial class GameObjects : Node
     public override void _Process(double delta)
     {
         base._Process(delta);
+
+        /*
+        if (_modalOpen) return;
+        {
+            return; //don't do anything if a modal dialog is open
+        }
+        */
+
         switch (CursorMode)
         {
             case CursorMode.Spawn:

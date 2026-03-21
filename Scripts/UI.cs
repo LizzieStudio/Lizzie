@@ -321,11 +321,11 @@ public partial class UI : CanvasLayer
 
             if (value)
             {
-                EventBus.Instance.Publish(new ModalDialogOpenedEvent());
+                EventBus.Instance.Publish<ModalDialogOpenedEvent>();
             }
             else
             {
-                EventBus.Instance.Publish(new ModalDialogClosedEvent());
+                EventBus.Instance.Publish<ModalDialogClosedEvent>();
             }
         }
     }
