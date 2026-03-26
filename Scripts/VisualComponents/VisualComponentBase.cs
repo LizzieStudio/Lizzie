@@ -21,6 +21,7 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     public bool TextureReady { get; set; }
+    public bool TextureChanged { get; set; }
 
     public virtual VisualComponentType ComponentType { get; set; }
     protected GeometryInstance3D MainMesh;

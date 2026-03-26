@@ -36,6 +36,8 @@ public partial class VcDeck : VisualGroupComponent
         if (!TextureReady)
             UpdateDeckSprites();
 
+        CheckForSpriteUpdate();
+
         if (_flipInProcess)
         {
             ProcessFlip(delta);
@@ -387,6 +389,9 @@ public partial class VcDeck : VisualGroupComponent
         int h = (int)Math.Floor(_height * 20);
         int w = (int)Math.Floor(_width * 20);
 
+        _frontTextureReady = false;
+        _backTextureReady = false;
+
         UpdateDeckSprites();
         return true;
     }
@@ -663,18 +668,20 @@ public partial class VcDeck : VisualGroupComponent
         TextureFactory textureFactory
     )
     {
-        var p = new System.Collections.Generic.Dictionary<string, object>();
-        p.Add("Height", _height * 10);
-        p.Add("Width", _width * 10);
-        p.Add("Thickness", 0.1f * 10);
-        p.Add("ComponentName", string.Empty); //TODO add card name
-        p.Add("Shape", 0);
-        p.Add("Mode", VcToken.TokenBuildMode.Template);
-        p.Add("DifferentBack", true);
-        p.Add("FrontTemplate", frontTemplate);
-        p.Add("BackTemplate", backTemplate);
-        p.Add("Dataset", dataset);
-        p.Add("CardReference", cardRef);
+        var p = new Dictionary<string, object>
+        {
+            { "Height", _height * 10 },
+            { "Width", _width * 10 },
+            { "Thickness", 0.1f * 10 },
+            { "ComponentName", string.Empty }, //TODO add card name
+            { "Shape", 0 },
+            { "Mode", VcToken.TokenBuildMode.Template },
+            { "DifferentBack", true },
+            { "FrontTemplate", frontTemplate },
+            { "BackTemplate", backTemplate },
+            { "Dataset", dataset },
+            { "CardReference", cardRef }
+        };
         card.Build(p, textureFactory);
 
         card.Parent = Reference;
@@ -810,12 +817,49 @@ public partial class VcDeck : VisualGroupComponent
     private bool _frontTextureReady;
     private bool _backTextureReady;
 
+
+    private void CheckForSpriteUpdate()
+    {
+        if (Children.Count > 0)
+        {
+            if (Children.First() is VisualComponentFlat vcf)
+            {
+                if (vcf.TextureChanged)
+                {
+                    _frontSprite.Texture = vcf.BackTexture;
+                    _frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize()); ;
+                    _frontTextureReady = true;
+                    vcf.TextureChanged = false;
+                }
+            }
+
+            if (Children.Last() is VisualComponentFlat vcb)
+            {
+                if (vcb.TextureChanged)
+                {
+                    _backSprite.Texture = vcb.FaceTexture;
+                    _backSprite.PixelSize = PixelSize(_backSprite.Texture.GetSize());
+                    _backTextureReady = true;
+                    vcb.TextureChanged = false;
+                }
+            }
+
+            TextureReady = _frontTextureReady && _backTextureReady;
+
+        }
+    }
+
+    private float PixelSize(Vector2 size)
+    {
+        if (size.X == 0 || size.Y == 0)
+            return 0;
+
+        return 0.95f / Mathf.Max(size.X, size.Y);
+    }
+
     private void UpdateDeckSprites()
     {
-        _frontTextureReady = false;
-        _backTextureReady = false;
-
-        //set the top and bottom sprites.
+       //set the top and bottom sprites.
 
         //The top of the deck displays the back of the first card.
         //The bottom of the deck displays the face of the last card.

@@ -122,4 +122,19 @@ public partial class ProjectService : Node
         project?.FixDatasetName();
         return project;
     }
+
+    public string SerializeDataSet(DataSet dataset)
+    {
+        if (dataset == null)
+            return "{}";
+        return JsonSerializer.Serialize(dataset);
+    }
+
+    public DataSet DeserializeDataSet(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return null;
+            var dataset = JsonSerializer.Deserialize<DataSet>(json);
+            return dataset;
+    }
 }

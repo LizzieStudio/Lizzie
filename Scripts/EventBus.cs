@@ -114,6 +114,15 @@ public partial class EventBus : Node
     #region Publish
 
     /// <summary>
+    /// Returns false if the delegate target is a freed Godot object.
+    /// Non-Godot targets (plain C# classes) are always considered valid.
+    /// </summary>
+    private static bool IsTargetValid(Delegate d)
+    {
+        return d.Target is not GodotObject obj || GodotObject.IsInstanceValid(obj);
+    }
+
+    /// <summary>
     /// Publish an event without parameters
     /// </summary>
     public void Publish<TEvent>()
@@ -121,18 +130,34 @@ public partial class EventBus : Node
     {
         var eventType = typeof(TEvent);
 
-        if (_eventDelegates.TryGetValue(eventType, out var eventDelegate))
+        if (!_eventDelegates.TryGetValue(eventType, out var eventDelegate))
+            return;
+
+        var instance = new TEvent();
+        Delegate survivors = null;
+
+        foreach (var d in eventDelegate.GetInvocationList())
         {
-            // Handle both Action and Action<TEvent> callbacks
-            if (eventDelegate is Action action)
+            if (!IsTargetValid(d))
+                continue;
+
+            survivors = Delegate.Combine(survivors, d);
+
+            switch (d)
             {
-                action?.Invoke();
-            }
-            else if (eventDelegate is Action<TEvent> actionWithParam)
-            {
-                actionWithParam?.Invoke(new TEvent());
+                case Action action:
+                    action();
+                    break;
+                case Action<TEvent> typed:
+                    typed(instance);
+                    break;
             }
         }
+
+        if (survivors == null)
+            _eventDelegates.Remove(eventType);
+        else
+            _eventDelegates[eventType] = survivors;
     }
 
     /// <summary>
@@ -143,13 +168,26 @@ public partial class EventBus : Node
     {
         var eventType = typeof(TEvent);
 
-        if (_eventDelegates.TryGetValue(eventType, out var eventDelegate))
+        if (!_eventDelegates.TryGetValue(eventType, out var eventDelegate))
+            return;
+
+        Delegate survivors = null;
+
+        foreach (var d in eventDelegate.GetInvocationList())
         {
-            if (eventDelegate is Action<TEvent> action)
-            {
-                action?.Invoke(eventData);
-            }
+            if (!IsTargetValid(d))
+                continue;
+
+            survivors = Delegate.Combine(survivors, d);
+
+            if (d is Action<TEvent> typed)
+                typed(eventData);
         }
+
+        if (survivors == null)
+            _eventDelegates.Remove(eventType);
+        else
+            _eventDelegates[eventType] = survivors;
     }
 
     #endregion

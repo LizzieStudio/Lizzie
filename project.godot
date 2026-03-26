@@ -26,6 +26,7 @@ Utility="*res://Scenes/Utility.tscn"
 UndoService="*res://Scripts/Undo/UndoService.cs"
 EventBus="*uid://dg3sv0bbkjbc2"
 MultiplayerManager="*uid://bdusjpa55red6"
+ProjectSynchronizer="*uid://dq4a0psx0dnvq"
 
 [display]
 

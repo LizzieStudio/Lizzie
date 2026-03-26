@@ -12,6 +12,7 @@ public partial class MultiplayerManager : Node
 
     private ENetMultiplayerPeer _peer;
     private bool _isServer;
+    private bool _isActive;
     private int _localPlayerId;
     private Dictionary<int, PlayerInfo> _players = new();
 
@@ -27,7 +28,7 @@ public partial class MultiplayerManager : Node
     [Signal]
     public delegate void ServerStartedEventHandler();
 
-    public bool IsMultiplayerActive => Multiplayer.HasMultiplayerPeer();
+    public bool IsMultiplayerActive => _isActive;
     public bool IsServer => _isServer;
     public int LocalPlayerId => _localPlayerId;
     public IReadOnlyDictionary<int, PlayerInfo> Players => _players;
@@ -72,6 +73,7 @@ public partial class MultiplayerManager : Node
 
         Multiplayer.MultiplayerPeer = _peer;
         _isServer = true;
+        _isActive = true;
         _localPlayerId = Multiplayer.GetUniqueId();
 
         // Add server as first player
@@ -104,6 +106,7 @@ public partial class MultiplayerManager : Node
 
         Multiplayer.MultiplayerPeer = _peer;
         _isServer = false;
+        _isActive = true;
 
         GD.Print($"Connecting to server at {address}:{port}");
 
@@ -123,6 +126,7 @@ public partial class MultiplayerManager : Node
 
         Multiplayer.MultiplayerPeer = null;
         _isServer = false;
+        _isActive = false;
         _players.Clear();
         _localPlayerId = 0;
 

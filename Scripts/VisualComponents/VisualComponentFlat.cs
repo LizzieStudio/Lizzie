@@ -3,10 +3,10 @@ using Godot;
 
 public abstract partial class VisualComponentFlat : VisualComponentBase
 {
-    public Sprite3D FaceSprite { get; protected set; } = new();
-    public Sprite3D BackSprite { get; protected set; } = new();
+    public Sprite3D FaceSprite { get; protected set; }
+    public Sprite3D BackSprite { get; protected set; }
 
-    private Texture2D _faceTexture;
+    private Texture2D _faceTexture = new ImageTexture();
 
     public Texture2D FaceTexture
     {
@@ -14,11 +14,11 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
         set
         {
             _faceTexture = value;
-            FaceSprite.Texture = value;
+            if (FaceSprite != null && FaceSprite.IsNodeReady()) FaceSprite.Texture = value;
         }
     }
 
-    private Texture2D _backTexture;
+    private Texture2D _backTexture = new ImageTexture();
 
     public Texture2D BackTexture
     {
@@ -26,9 +26,10 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
         set
         {
             _backTexture = value;
-            BackSprite.Texture = value;
+            if (BackSprite != null && BackSprite.IsNodeReady()) BackSprite.Texture = value;
         }
     }
+
 
     public virtual bool ShowFace { get; protected set; }
 

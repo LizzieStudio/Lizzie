@@ -312,6 +312,22 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         d.Add("Type", VcToken.TokenType.Token);
         d.Add("FrontFontSize", 24);
 
+
+        switch (_tabs.CurrentTab)
+        {
+            case 0:
+                d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
+                break;
+
+            case 1:
+                d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
+                break;
+
+            case 2:
+                d.Add("DifferentBack", false);
+                break;
+        }
+
         if (_tabs.CurrentTab == 0)
         {
             d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
