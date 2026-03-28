@@ -1029,6 +1029,7 @@ public partial class GameObjects : Node
             prototypeRef,
             componentRef,
             parentRef,
+            component.DataSetRow,
             component.Position,
             component.Rotation,
             component.ZOrder
@@ -1047,6 +1048,7 @@ public partial class GameObjects : Node
         string prototypeRefStr,
         string componentRefStr,
         string parentRefStr,
+        string dataSetRow,
         Vector3 position,
         Vector3 rotation,
         int zOrder
@@ -1072,13 +1074,14 @@ public partial class GameObjects : Node
         if (scene is not VisualComponentBase vcb)
             return; //should probably throw an error - something is wrong
 
-        vcb.Build(param, TextureFactory);
-
         vcb.Reference = Guid.Parse(componentRefStr);
         vcb.PrototypeRef = Guid.Parse(prototypeRefStr);
         vcb.Parent = Guid.Parse(parentRefStr);
+        vcb.DataSetRow = dataSetRow;
 
-        vcb.ZOrder = zOrder;
+        vcb.Build(param, TextureFactory);
+
+       vcb.ZOrder = zOrder;
 
         vcb.Position = position;
         vcb.Rotation = rotation;

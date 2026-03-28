@@ -18,6 +18,7 @@ script = ExtResource("2_a0mv7")
 highlightFontColor = Color(0.54902, 0.694118, 1, 1)
 
 [node name="Hand" type="Panel" parent="UI" unique_id=1988859394]
+visible = false
 custom_minimum_size = Vector2(0, 200)
 anchors_preset = 12
 anchor_top = 1.0

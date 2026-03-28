@@ -22,7 +22,7 @@ public partial class VcDeck : VisualGroupComponent
     {
         base._Ready();
         Visible = true;
-        ComponentType = VisualComponentType.Token;
+        ComponentType = VisualComponentType.Deck;
 
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _frontSprite = GetNode<Sprite3D>("FrontSprite");
@@ -251,9 +251,6 @@ public partial class VcDeck : VisualGroupComponent
             cards = cards.Reverse().ToArray();
         }
 
-        //tween to handle movement
-        var cardTween = GetTree().CreateTween();
-
         //splay
         var basePos = Position;
 
@@ -271,11 +268,14 @@ public partial class VcDeck : VisualGroupComponent
                 }
             }
 
-            cards[i].Position = basePos;
+            //tween to handle movement
+            //var cardTween = GetTree().CreateTween();
+
             cards[i].Visible = false;
 
-            float deltaX = Position.X + (_width * (2.5f + i));
+            float deltaX = Position.X + (_width * (1.5f + i));
 
+            /*
             cardTween.TweenProperty(cards[i], "visible", true, 0.01);
             cardTween.TweenProperty(
                 cards[i],
@@ -283,6 +283,10 @@ public partial class VcDeck : VisualGroupComponent
                 new Vector3(deltaX, Position.Y, Position.Z),
                 0.2f
             );
+            */
+            cards[i].Position = new Vector3(deltaX, Position.Y, Position.Z);
+
+
 
             cards[i].ZOrder = ZOrder + i + 1;
 
@@ -397,10 +401,10 @@ public partial class VcDeck : VisualGroupComponent
     }
 
     public override bool Refresh(
-        Dictionary<string, object> parameters,
         TextureFactory textureFactory
     )
     {
+        /*
         var fTemplateParam = Utility.GetParam<string>(parameters, "FrontTemplate");
         var bTemplateParam = Utility.GetParam<string>(parameters, "BackTemplate");
 
@@ -414,6 +418,12 @@ public partial class VcDeck : VisualGroupComponent
             dataset.Rows.Count,
             textureFactory
         );
+        */
+
+        foreach (var c in Children)
+        {
+            if (c is VcToken card ) card.Refresh(textureFactory);
+        }
 
         return true;
     }
@@ -526,7 +536,7 @@ public partial class VcDeck : VisualGroupComponent
                     backTemplate,
                     dataset,
                     card,
-                    i.ToString(),
+                    c.DataSetRow,
                     textureFactory
                 );
             }
@@ -668,6 +678,7 @@ public partial class VcDeck : VisualGroupComponent
         TextureFactory textureFactory
     )
     {
+        
         var p = new Dictionary<string, object>
         {
             { "Height", _height * 10 },
@@ -682,9 +693,15 @@ public partial class VcDeck : VisualGroupComponent
             { "Dataset", dataset },
             { "CardReference", cardRef }
         };
+
+
+        card.PrototypeRef = PrototypeRef;
+        card.DataSetRow = cardRef;
+        card.Parent = Reference;
+
         card.Build(p, textureFactory);
 
-        card.Parent = Reference;
+
     }
 
     #region Grid Cards

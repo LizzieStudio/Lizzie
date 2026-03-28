@@ -680,7 +680,7 @@ public partial class VcToken : VisualComponentFlat
         _width = w / 10;
 
         var t = Utility.GetParam<float>(parameters, "Thickness");
-        _thickness = t / 10;
+        _thickness = Math.Max(t / 10f, 0.03f);
 
         _frontImage = Utility.GetParam<string>(parameters, "FrontImage");
         _backImage = Utility.GetParam<string>(parameters, "BackImage");
@@ -722,7 +722,7 @@ public partial class VcToken : VisualComponentFlat
         _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
         _backTemplateName = Utility.GetParam<string>(parameters, "BackTemplate");
         _datasetName = Utility.GetParam<string>(parameters, "Dataset");
-        DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
+        if (string.IsNullOrWhiteSpace(DataSetRow)) DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
 
         return true;
     }

@@ -105,7 +105,7 @@ public abstract partial class VisualComponentBase : Area3D
             ComponentName = parameters[nameof(ComponentName)].ToString();
         }
 
-        DataSetRow = dataSetRow;
+        if (!string.IsNullOrEmpty(dataSetRow)) DataSetRow = dataSetRow;
 
         return true;
     }
@@ -135,7 +135,7 @@ public abstract partial class VisualComponentBase : Area3D
         Build(proto.Parameters, textureFactory);
 
         PrototypeRef = prototypeRef;
-        DataSetRow = dataSetRow;
+        if (!string.IsNullOrEmpty(dataSetRow)) DataSetRow = dataSetRow;
 
         return true;
     }
@@ -146,13 +146,11 @@ public abstract partial class VisualComponentBase : Area3D
     /// <param name="parameters"></param>
     /// <param name="textureFactory"></param>
     /// <returns></returns>
-    public virtual bool Refresh(
-        Dictionary<string, object> parameters,
-        TextureFactory textureFactory
-    )
+    public virtual bool Refresh(TextureFactory textureFactory)
     {
-        return Build(parameters, textureFactory);
+        return Build(PrototypeRef, DataSetRow, textureFactory);
     }
+
 
     /// <summary>
     /// Checks the parameter dictionary to make sure that everything required for this
@@ -192,7 +190,7 @@ public abstract partial class VisualComponentBase : Area3D
 
         if (command == VisualCommand.Refresh)
         {
-            Refresh(Parameters, TextureFactory);
+            Refresh(TextureFactory);
             return new CommandResponse(true, null);
         }
 
@@ -417,6 +415,7 @@ public abstract partial class VisualComponentBase : Area3D
         get => _isDragging;
         set
         {
+            if (!CanDrag) return;
             if (_isDragging == value)
                 return;
             _isDragging = value;
@@ -426,6 +425,8 @@ public abstract partial class VisualComponentBase : Area3D
             }
         }
     }
+
+    public bool CanDrag { get; set; } = true;
 
     public virtual bool CanAcceptDrop { get; set; } = false;
 
