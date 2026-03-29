@@ -494,6 +494,8 @@ public abstract partial class VisualComponentBase : Area3D
     /// <param name="enableDim"></param>
     public virtual void DimMode(bool enableDim)
     {
+        if (DragMesh == null) return;
+
         if (enableDim)
         {
             DragMesh.Transparency = 0.5f;

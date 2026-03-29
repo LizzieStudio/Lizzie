@@ -328,14 +328,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
                 break;
         }
 
-        if (_tabs.CurrentTab == 0)
-        {
-            d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
-        }
-        else
-        {
-            d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
-        }
 
         d.Add("BackBgColor", _quickBackgroundColor2.Color);
         d.Add("BackFontSize", 24);

@@ -76,12 +76,15 @@ public partial class ProjectSynchronizer : Node
             return;
 
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[evt.PrototypeId];
-        var prototypeJson = JsonSerializer.Serialize(prototype);
+
+        var pDto = new PrototypeDto(prototype);
+
+        var prototypeJson = JsonSerializer.Serialize(pDto);
 
         if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ReceivePrototype), evt.PrototypeId.ToString(), prototypeJson);
+            Rpc(nameof(ReceivePrototype), prototypeJson);
         else
-            RpcId(1, nameof(SyncPrototype), evt.PrototypeId.ToString(), prototypeJson);
+            RpcId(1, nameof(SyncPrototype), prototypeJson);
     }
 
     private void OnTemplateChanged(TemplateChangedEvent evt)
@@ -168,7 +171,7 @@ public partial class ProjectSynchronizer : Node
         _isSyncing = true;
 
         //If the dataset exists, replace it. Otherwise add it.
-        ProjectService.Instance.CurrentProject.Datasets[dataSet.Name] = dataSet;
+        ProjectService.Instance.UpdateDataSet(dataSet);
 
         try
         {
@@ -185,13 +188,13 @@ public partial class ProjectSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void SyncPrototype(string prototypeIdStr, string prototypeJson)
+    private void SyncPrototype(string prototypeJson)
     {
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
         // Broadcast to all clients
-        Rpc(nameof(ReceivePrototype), prototypeIdStr, prototypeJson);
+        Rpc(nameof(ReceivePrototype), prototypeJson);
     }
 
     [Rpc(
@@ -199,19 +202,16 @@ public partial class ProjectSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void ReceivePrototype(string prototypeIdStr, string prototypeJson)
+    private void ReceivePrototype(string prototypeJson)
     {
         _isSyncing = true;
         try
         {
-            var prototypeId = Guid.Parse(prototypeIdStr);
-            var prototype = JsonSerializer.Deserialize<Prototype>(prototypeJson);
+            var prototypeDto = JsonSerializer.Deserialize<PrototypeDto>(prototypeJson);
 
-            if (ProjectService.Instance.CurrentProject.Prototypes.ContainsKey(prototypeId))
-            {
-                ProjectService.Instance.CurrentProject.Prototypes[prototypeId] = prototype;
-                EventBus.Instance.Publish(new PrototypeChangedEvent { PrototypeId = prototypeId });
-            }
+            var prototype = new Prototype(prototypeDto);
+
+            ProjectService.Instance.UpdatePrototype(prototype);
         }
         catch (Exception ex)
         {

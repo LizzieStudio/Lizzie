@@ -147,7 +147,7 @@ public partial class ProjectService : Node
         EventBus.Instance.Publish(new DataSetChangedEvent{DataSet = dataset, DataSetName = dataset.Name});
     }
 
-    private void UpdateTemplate(Template template)
+    public void UpdateTemplate(Template template)
     {
         if (CurrentProject == null || template == null)
             return;
@@ -156,7 +156,7 @@ public partial class ProjectService : Node
         EventBus.Instance.Publish(new TemplateChangedEvent{Template = template, TemplateName = template.Name});
     }
 
-    private void UpdatePrototype(Prototype prototype)
+    public void UpdatePrototype(Prototype prototype)
     {
         if (CurrentProject == null || prototype == null)
             return;
@@ -164,4 +164,32 @@ public partial class ProjectService : Node
         CurrentProject.Prototypes[prototype.PrototypeRef] = prototype;
         EventBus.Instance.Publish(new PrototypeChangedEvent{PrototypeId = prototype.PrototypeRef});
     }
+
+    public void AddPrototypeToManifest(CreateObjectEventArgs args)
+    {
+        if (CurrentProject == null)
+            return;
+
+        if (!CurrentProject.Prototypes.ContainsKey(args.PrototypeRef))
+        {
+            var newProto = new Prototype
+            {
+                PrototypeRef = args.PrototypeRef,
+                Type = args.ComponentType,
+                Parameters = args.Params,
+            };
+
+            if (args.Params.ContainsKey("ComponentName"))
+            {
+                newProto.Name = args.Params["ComponentName"].ToString();
+            }
+            else
+            {
+                newProto.Name = $"Unnamed {args.ComponentType}";
+            }
+
+            UpdatePrototype(newProto);
+        }
+    }
+
 }

@@ -65,7 +65,7 @@ public partial class GameController : Node3D
         }
 
         //Add to Prototype Manifest if it's not already there
-        AddPrototypeToManifest(args);
+        ProjectService.Instance.AddPrototypeToManifest(args);
 
         if (component.Build(args.PrototypeRef, _textureFactory))
         {
@@ -74,34 +74,6 @@ public partial class GameController : Node3D
         else
         {
             GD.PrintErr("Error building component");
-        }
-    }
-
-    private void AddPrototypeToManifest(CreateObjectEventArgs args)
-    {
-        var p = ProjectService.Instance.CurrentProject;
-        if (p == null)
-            return;
-
-        if (!p.Prototypes.ContainsKey(args.PrototypeRef))
-        {
-            var newProto = new Prototype
-            {
-                PrototypeRef = args.PrototypeRef,
-                Type = args.ComponentType,
-                Parameters = args.Params,
-            };
-
-            if (args.Params.ContainsKey("ComponentName"))
-            {
-                newProto.Name = args.Params["ComponentName"].ToString();
-            }
-            else
-            {
-                newProto.Name = $"Unnamed {args.ComponentType}";
-            }
-
-            p.Prototypes.Add(args.PrototypeRef, newProto);
         }
     }
 
