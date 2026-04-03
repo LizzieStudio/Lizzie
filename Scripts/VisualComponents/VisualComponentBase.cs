@@ -564,7 +564,7 @@ public abstract partial class VisualComponentBase : Area3D
             if (_location == value) return;
             SyncRequired = true;
             _location = value;
-            Visible = (value == ComponentLocation.Board);
+            SetVisibility(value == ComponentLocation.Board);
         }
     }
 
@@ -578,18 +578,52 @@ public abstract partial class VisualComponentBase : Area3D
 
     public void SetPosition(Vector3 position)
     {
+        if (position == Position) return;
         Position = position;
         SyncRequired = true;
     }
 
     public void SetRotation(Vector3 rotation)
     {
+        if (RotationDegrees == rotation) return;
         RotationDegrees = rotation;
         SyncRequired = true;
     }
 
+    public void SetRotationDegrees(Vector3 rotationDegrees)
+    {
+        if (RotationDegrees == rotationDegrees) return;
+        RotationDegrees = rotationDegrees;
+        SyncRequired = true;
+    }
 
-    public bool SyncRequired { get; set; }
+
+    public void SetVisibility(bool visible)
+    {
+        if (visible == Visible) return;
+        Visible = visible;
+        SyncRequired = true;
+    }
+
+
+
+
+
+
+    public bool SuppressSync { get; set; }
+
+    private bool _syncRequired;
+
+    public bool SyncRequired
+    {
+        get => _syncRequired;
+        set
+        {
+            _syncRequired = value;
+            if (value && !SuppressSync && !ExcludeFromSync)
+                EventBus.Instance.Publish(new ComponentPropertyChangedEvent(this));
+        }
+    }
 
     /// <summary>
     /// If true, this component will not be synced to other nodes

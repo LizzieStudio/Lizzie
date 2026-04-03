@@ -287,13 +287,9 @@ public partial class VcDeck : VisualComponentGroup
                 0.2f
             );
             */
-            comp.Position = new Vector3(deltaX, Position.Y, Position.Z);
-
-
+            comp.SetPosition(new Vector3(deltaX, Position.Y, Position.Z));
 
             comp.ZOrder = ZOrder + i + 1;
-
-            OnComponentAdded(comp);
         }
 
         var c = new Change
@@ -328,7 +324,7 @@ public partial class VcDeck : VisualComponentGroup
     }
 
     public override bool Build(
-        System.Collections.Generic.Dictionary<string, object> parameters,
+        Dictionary<string, object> parameters,
         TextureFactory textureFactory
     )
     {
@@ -350,19 +346,22 @@ public partial class VcDeck : VisualComponentGroup
         if (!InitializeParameters(parameters))
             return false;
 
-        switch (_mode)
+        if (spawnCards)
         {
-            case VcToken.TokenBuildMode.Quick:
-                BuildQuick(parameters, textureFactory);
-                break;
+            switch (_mode)
+            {
+                case VcToken.TokenBuildMode.Quick:
+                    BuildQuick(parameters, textureFactory);
+                    break;
 
-            case VcToken.TokenBuildMode.Template:
-                BuildTemplate(parameters, textureFactory);
-                break;
+                case VcToken.TokenBuildMode.Template:
+                    BuildTemplate(parameters, textureFactory);
+                    break;
 
-            case VcToken.TokenBuildMode.Grid:
-                BuildGrid(parameters, textureFactory);
-                break;
+                case VcToken.TokenBuildMode.Grid:
+                    BuildGrid(parameters, textureFactory);
+                    break;
+            }
         }
 
         _thickness = 0.03f * Children.Count;
@@ -451,7 +450,7 @@ public partial class VcDeck : VisualComponentGroup
         foreach (var c in Children)
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(c);
-            if (comp is VcToken card ) card.Refresh(textureFactory);
+            if (comp is VcToken card) card.Refresh(textureFactory);
         }
 
         return true;
@@ -709,7 +708,6 @@ public partial class VcDeck : VisualComponentGroup
         TextureFactory textureFactory
     )
     {
-        
         var p = new Dictionary<string, object>
         {
             { "Height", _height * 10 },
@@ -731,8 +729,6 @@ public partial class VcDeck : VisualComponentGroup
         card.Parent = Reference;
 
         card.Build(p, textureFactory);
-
-
     }
 
     #region Grid Cards
@@ -876,7 +872,8 @@ public partial class VcDeck : VisualComponentGroup
                 if (vcf.TextureChanged)
                 {
                     _frontSprite.Texture = vcf.BackTexture;
-                    _frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize()); ;
+                    _frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize());
+                    ;
                     _frontTextureReady = true;
                     vcf.TextureChanged = false;
                 }
@@ -895,7 +892,6 @@ public partial class VcDeck : VisualComponentGroup
             }
 
             TextureReady = _frontTextureReady && _backTextureReady;
-
         }
     }
 
@@ -917,7 +913,7 @@ public partial class VcDeck : VisualComponentGroup
 
     private void UpdateDeckSprites()
     {
-       //set the top and bottom sprites.
+        //set the top and bottom sprites.
 
         //The top of the deck displays the back of the first card.
         //The bottom of the deck displays the face of the last card.

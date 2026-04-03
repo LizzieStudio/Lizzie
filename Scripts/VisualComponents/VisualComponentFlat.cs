@@ -35,12 +35,12 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
 
     public void ForceFace()
     {
-        RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, 0);
+        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, 0));
     }
 
     public void ForceBack()
     {
-        RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, 180);
+        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, 180));
     }
 
     public override GeometryInstance3D DragMesh => ShowFace ? FaceSprite : BackSprite;

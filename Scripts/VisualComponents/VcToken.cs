@@ -137,7 +137,7 @@ public partial class VcToken : VisualComponentFlat
             }
         }
 
-        RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
+        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
     }
 
     private bool _firstBuild = true;

@@ -333,11 +333,24 @@ public class AddComponentToSceneEvent : IEvent
     public AddComponentToSceneEvent(VisualComponentBase component)
     {
         Component = component;
-        
+
     }
-    
+
     public VisualComponentBase Component { get; set; }
 }
 
+/// <summary>
+/// Published by a VisualComponentBase when one of its synced properties changes
+/// and the change needs to be broadcast to other multiplayer clients.
+/// </summary>
+public class ComponentPropertyChangedEvent : IEvent
+{
+    public ComponentPropertyChangedEvent(VisualComponentBase component)
+    {
+        Component = component;
+    }
+
+    public VisualComponentBase Component { get; set; }
+}
 
 #endregion

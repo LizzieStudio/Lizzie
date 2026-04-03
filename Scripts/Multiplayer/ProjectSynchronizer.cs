@@ -81,6 +81,8 @@ public partial class ProjectSynchronizer : Node
 
         var prototypeJson = JsonSerializer.Serialize(pDto);
 
+        GD.Print($"Prototype change sync: {evt.PrototypeId}");
+
         if (MultiplayerManager.Instance.IsServer)
             Rpc(nameof(ReceivePrototype), prototypeJson);
         else

@@ -186,7 +186,7 @@ public partial class Utility : Node
 
     public static string ComponentTypeToScenePath(
         VisualComponentBase.VisualComponentType componentType,
-        Dictionary<string, object> parameters
+        Dictionary<string, object> parameters, string dataSetRow = ""
     )
     {
         switch (componentType)
@@ -210,7 +210,10 @@ public partial class Utility : Node
                 return TokenScene(parameters);
 
             case VisualComponentBase.VisualComponentType.Deck:
-                return "res://Scenes/VisualComponents/VcDeck.tscn";
+            {
+                if (string.IsNullOrEmpty(dataSetRow)) return "res://Scenes/VisualComponents/VcDeck.tscn";
+                return TokenScene(parameters);
+                }
 
             case VisualComponentBase.VisualComponentType.Die:
                 return DieScene(parameters);

@@ -17,7 +17,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         foreach (var c in Children)
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(c);
-            comp.QueueFree();
+            comp?.QueueFree();
         }
         Children.Clear();
         OnChildrenChanged();
