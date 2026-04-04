@@ -27,6 +27,7 @@ public partial class GameController : Node3D
         _uiController.SetGameController(this);
 
         ProjectService.Instance.CurrentProject = ProjectService.Instance.LoadProject("TestProject");
+        ProjectService.Instance.GameObjects = _mainScene.GameObjects;
 
         var commandDic = new CommandDictionary(_mainScene);
     }
@@ -52,6 +53,7 @@ public partial class GameController : Node3D
         }
 
         component.PrototypeRef = args.PrototypeRef;
+        component.ExcludeFromSync = true;
 
         //if the name is blank in the parameters, set it
         if (args.Params.ContainsKey("ComponentName") && args.Params.ContainsKey("BaseName"))
@@ -65,43 +67,15 @@ public partial class GameController : Node3D
         }
 
         //Add to Prototype Manifest if it's not already there
-        AddPrototypeToManifest(args);
+        ProjectService.Instance.AddPrototypeToManifest(args);
 
-        if (component.Build(args.Params, _textureFactory))
+        if (component.Build(args.PrototypeRef, _textureFactory))
         {
             _mainScene.EnterSpawnMode(component);
         }
         else
         {
             GD.PrintErr("Error building component");
-        }
-    }
-
-    private void AddPrototypeToManifest(CreateObjectEventArgs args)
-    {
-        var p = ProjectService.Instance.CurrentProject;
-        if (p == null)
-            return;
-
-        if (!p.Prototypes.ContainsKey(args.PrototypeRef))
-        {
-            var newProto = new Prototype
-            {
-                PrototypeRef = args.PrototypeRef,
-                Type = args.ComponentType,
-                Parameters = args.Params,
-            };
-
-            if (args.Params.ContainsKey("ComponentName"))
-            {
-                newProto.Name = args.Params["ComponentName"].ToString();
-            }
-            else
-            {
-                newProto.Name = $"Unnamed {args.ComponentType}";
-            }
-
-            p.Prototypes.Add(args.PrototypeRef, newProto);
         }
     }
 

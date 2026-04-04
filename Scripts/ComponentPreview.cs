@@ -125,6 +125,11 @@ public partial class ComponentPreview : Panel
         AutoZoomComponent(_component);
     }
 
+    public VisualComponentBase GetComponent()
+    {
+        return _component;
+    }
+
     public void ClearComponent()
     {
         if (_component == null)

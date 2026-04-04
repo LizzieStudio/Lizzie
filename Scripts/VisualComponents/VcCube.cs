@@ -7,7 +7,6 @@ public partial class VcCube : VisualComponentBase
     public override void _Ready()
     {
         base._Ready();
-        Visible = true;
         ComponentType = VisualComponentType.Cube;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");

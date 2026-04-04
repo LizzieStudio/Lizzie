@@ -11,7 +11,6 @@ public partial class VcCard : VisualComponentBase
     public override void _Ready()
     {
         base._Ready();
-        Visible = true;
         ComponentType = VisualComponentType.Card;
         _backSurface = GetNode<MeshInstance3D>("BackMesh");
         _frontSurface = GetNode<MeshInstance3D>("ObjectMesh");

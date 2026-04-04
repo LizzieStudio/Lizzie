@@ -11,6 +11,9 @@ public partial class ProjectSynchronizer : Node
     private static ProjectSynchronizer _instance;
     public static ProjectSynchronizer Instance => _instance;
 
+    // Prevents EventBus re-triggering a sync when we are applying an incoming network update
+    private bool _isSyncing = false;
+
     public override void _Ready()
     {
         if (_instance != null && _instance != this)
@@ -40,11 +43,14 @@ public partial class ProjectSynchronizer : Node
         if (!ShouldSync())
             return;
 
-        // Serialize and sync entire project
         var projectJson = ProjectService.Instance.SerializeProject(
             ProjectService.Instance.CurrentProject
         );
-        RpcId(1, nameof(SyncProject), projectJson);
+
+        if (MultiplayerManager.Instance.IsServer)
+            Rpc(nameof(ReceiveProject), projectJson);
+        else
+            RpcId(1, nameof(SyncProject), projectJson);
     }
 
     private void OnDataSetChanged(DataSetChangedEvent evt)
@@ -53,7 +59,15 @@ public partial class ProjectSynchronizer : Node
             return;
 
         GD.Print($"Dataset changed: {evt.DataSetName}");
-        RpcId(1, nameof(SyncDataSet), evt.DataSetName);
+
+        var json = ProjectService.Instance.SerializeDataSet(
+            ProjectService.Instance.CurrentProject.Datasets[evt.DataSetName]
+        );
+
+        if (MultiplayerManager.Instance.IsServer)
+            Rpc(nameof(ReceiveDataSetChange), json);
+        else
+            RpcId(1, nameof(SyncDataSet), json);
     }
 
     private void OnPrototypeChanged(PrototypeChangedEvent evt)
@@ -62,9 +76,17 @@ public partial class ProjectSynchronizer : Node
             return;
 
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[evt.PrototypeId];
-        var prototypeJson = JsonSerializer.Serialize(prototype);
 
-        RpcId(1, nameof(SyncPrototype), evt.PrototypeId.ToString(), prototypeJson);
+        var pDto = new PrototypeDto(prototype);
+
+        var prototypeJson = JsonSerializer.Serialize(pDto);
+
+        GD.Print($"Prototype change sync: {evt.PrototypeId}");
+
+        if (MultiplayerManager.Instance.IsServer)
+            Rpc(nameof(ReceivePrototype), prototypeJson);
+        else
+            RpcId(1, nameof(SyncPrototype), prototypeJson);
     }
 
     private void OnTemplateChanged(TemplateChangedEvent evt)
@@ -73,12 +95,16 @@ public partial class ProjectSynchronizer : Node
             return;
 
         var templateJson = JsonSerializer.Serialize(evt.Template);
-        RpcId(1, nameof(SyncTemplate), evt.TemplateName, templateJson);
+
+        if (MultiplayerManager.Instance.IsServer)
+            Rpc(nameof(ReceiveTemplate), evt.TemplateName, templateJson);
+        else
+            RpcId(1, nameof(SyncTemplate), evt.TemplateName, templateJson);
     }
 
     private bool ShouldSync()
     {
-        return MultiplayerManager.Instance?.IsMultiplayerActive == true;
+        return MultiplayerManager.Instance?.IsMultiplayerActive == true && !_isSyncing;
     }
 
     [Rpc(
@@ -103,19 +129,21 @@ public partial class ProjectSynchronizer : Node
     private void ReceiveProject(string projectJson)
     {
         GD.Print("Receiving project sync");
-
+        _isSyncing = true;
         try
         {
             var project = ProjectService.Instance.DeserializeProject(projectJson);
             ProjectService.Instance.SetProjectSilent(project);
-
-            // Publish event to refresh GameObjects
             EventBus.Instance.Publish<ProjectChangedEvent>();
         }
         catch (Exception ex)
         {
             GD.PrintErr($"Failed to deserialize project: {ex.Message}");
         }
+        finally
+        {
+            _isSyncing = false;
+        }
     }
 
     [Rpc(
@@ -123,13 +151,13 @@ public partial class ProjectSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void SyncDataSet(string dataSetName)
+    private void SyncDataSet(string dataSetJson)
     {
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
         // Broadcast to all clients
-        Rpc(nameof(ReceiveDataSetChange), dataSetName);
+        Rpc(nameof(ReceiveDataSetChange), dataSetJson);
     }
 
     [Rpc(
@@ -137,47 +165,63 @@ public partial class ProjectSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void ReceiveDataSetChange(string dataSetName)
+    private void ReceiveDataSetChange(string dataSetJson)
     {
-        GD.Print($"Receiving dataset change: {dataSetName}");
-        EventBus.Instance.Publish(new DataSetChangedEvent { DataSetName = dataSetName });
-    }
+        var dataSet = ProjectService.Instance.DeserializeDataSet(dataSetJson);
 
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void SyncPrototype(string prototypeIdStr, string prototypeJson)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
+        GD.Print($"Receiving dataset change: {dataSet.Name}");
+        _isSyncing = true;
 
-        // Broadcast to all clients
-        Rpc(nameof(ReceivePrototype), prototypeIdStr, prototypeJson);
-    }
+        //If the dataset exists, replace it. Otherwise add it.
+        ProjectService.Instance.UpdateDataSet(dataSet);
 
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ReceivePrototype(string prototypeIdStr, string prototypeJson)
-    {
         try
         {
-            var prototypeId = Guid.Parse(prototypeIdStr);
-            var prototype = JsonSerializer.Deserialize<Prototype>(prototypeJson);
+            EventBus.Instance.Publish(new DataSetChangedEvent { DataSetName = dataSet.Name });
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
+    }
 
-            if (ProjectService.Instance.CurrentProject.Prototypes.ContainsKey(prototypeId))
-            {
-                ProjectService.Instance.CurrentProject.Prototypes[prototypeId] = prototype;
-                EventBus.Instance.Publish(new PrototypeChangedEvent { PrototypeId = prototypeId });
-            }
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void SyncPrototype(string prototypeJson)
+    {
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
+
+        // Broadcast to all clients
+        Rpc(nameof(ReceivePrototype), prototypeJson);
+    }
+
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ReceivePrototype(string prototypeJson)
+    {
+        _isSyncing = true;
+        try
+        {
+            var prototypeDto = JsonSerializer.Deserialize<PrototypeDto>(prototypeJson);
+
+            var prototype = new Prototype(prototypeDto);
+
+            ProjectService.Instance.UpdatePrototype(prototype);
         }
         catch (Exception ex)
         {
             GD.PrintErr($"Failed to sync prototype: {ex.Message}");
+        }
+        finally
+        {
+            _isSyncing = false;
         }
     }
 
@@ -202,6 +246,7 @@ public partial class ProjectSynchronizer : Node
     )]
     private void ReceiveTemplate(string templateName, string templateJson)
     {
+        _isSyncing = true;
         try
         {
             var template = JsonSerializer.Deserialize<Template>(templateJson);
@@ -217,6 +262,10 @@ public partial class ProjectSynchronizer : Node
         catch (Exception ex)
         {
             GD.PrintErr($"Failed to sync template: {ex.Message}");
+        }
+        finally
+        {
+            _isSyncing = false;
         }
     }
 

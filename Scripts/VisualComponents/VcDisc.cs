@@ -7,7 +7,6 @@ public partial class VcDisc : VisualComponentBase
     public override void _Ready()
     {
         base._Ready();
-        Visible = true;
         ComponentType = VisualComponentType.Disc;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");

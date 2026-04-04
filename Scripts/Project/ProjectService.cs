@@ -122,4 +122,76 @@ public partial class ProjectService : Node
         project?.FixDatasetName();
         return project;
     }
+
+    public string SerializeDataSet(DataSet dataset)
+    {
+        if (dataset == null)
+            return "{}";
+        return JsonSerializer.Serialize(dataset);
+    }
+
+    public DataSet DeserializeDataSet(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return null;
+            var dataset = JsonSerializer.Deserialize<DataSet>(json);
+            return dataset;
+    }
+
+    public void UpdateDataSet(DataSet dataset)
+    {
+        if (CurrentProject == null || dataset == null)
+            return;
+        CurrentProject.Datasets.TryAdd(dataset.Name, dataset);
+        CurrentProject.Datasets[dataset.Name] = dataset;
+        EventBus.Instance.Publish(new DataSetChangedEvent{DataSet = dataset, DataSetName = dataset.Name});
+    }
+
+    public void UpdateTemplate(Template template)
+    {
+        if (CurrentProject == null || template == null)
+            return;
+        CurrentProject.Templates.TryAdd(template.Name, template);
+        CurrentProject.Templates[template.Name] = template;
+        EventBus.Instance.Publish(new TemplateChangedEvent{Template = template, TemplateName = template.Name});
+    }
+
+    public void UpdatePrototype(Prototype prototype)
+    {
+        if (CurrentProject == null || prototype == null)
+            return;
+        CurrentProject.Prototypes.TryAdd(prototype.PrototypeRef, prototype);
+        CurrentProject.Prototypes[prototype.PrototypeRef] = prototype;
+        EventBus.Instance.Publish(new PrototypeChangedEvent{PrototypeId = prototype.PrototypeRef});
+    }
+
+    public void AddPrototypeToManifest(CreateObjectEventArgs args)
+    {
+        if (CurrentProject == null)
+            return;
+
+        if (!CurrentProject.Prototypes.ContainsKey(args.PrototypeRef))
+        {
+            var newProto = new Prototype
+            {
+                PrototypeRef = args.PrototypeRef,
+                Type = args.ComponentType,
+                Parameters = args.Params,
+            };
+
+            if (args.Params.ContainsKey("ComponentName"))
+            {
+                newProto.Name = args.Params["ComponentName"].ToString();
+            }
+            else
+            {
+                newProto.Name = $"Unnamed {args.ComponentType}";
+            }
+
+            UpdatePrototype(newProto);
+        }
+    }
+
+    public GameObjects GameObjects { get; set; }
+
 }

@@ -652,6 +652,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         d.Add("Dataset", _textureContext.DataSet?.Name);
         d.Add("CardReference", _textureContext.CurrentRowName);
+        var c = _componentPreview.GetComponent();
+        if (c != null) c.DataSetRow = _textureContext.CurrentRowName;
     }
 
     private void UpdateQuick(Dictionary<string, object> d, int card)

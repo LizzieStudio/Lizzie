@@ -15,13 +15,14 @@ public partial class VcToken : VisualComponentFlat
     public override void _Ready()
     {
         base._Ready();
-        Visible = true;
         ComponentType = VisualComponentType.Token;
 
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
-        FaceSprite = GetNode<Sprite3D>("FrontSprite");
-        BackSprite = GetNode<Sprite3D>("BackSprite");
-        _sideMesh = GetNode<MeshInstance3D>("SideMesh");
+        //FaceSprite = GetNode<Sprite3D>("FrontSprite");
+        //BackSprite = GetNode<Sprite3D>("BackSprite");
+        //_sideMesh = GetNode<MeshInstance3D>("SideMesh");
+
+
     }
 
     public override void _Process(double delta)
@@ -33,12 +34,31 @@ public partial class VcToken : VisualComponentFlat
 
         if (_buildRequired)
         {
-            Build(TempParams, _textureFactory);
+            BuildToken();
             _buildRequired = false;
+        }
+
+
+        if (_mapFrontTextureRequired)
+        {
+            MapFrontTexture();
+        }
+
+        if (_mapBackTextureRequired)
+        {
+            MapBackTexture();
+        }
+
+        if (!TextureReady)
+        {
+            TextureReady = _frontTextureGenerated && _backTextureGenerated;
         }
 
         base._Process(delta);
     }
+
+   
+
 
     public override GeometryInstance3D DragMesh => FaceSprite;
     public override float MaxAxisSize => Math.Max(_height, _width);
@@ -117,7 +137,7 @@ public partial class VcToken : VisualComponentFlat
             }
         }
 
-        RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
+        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
     }
 
     private bool _firstBuild = true;
@@ -135,18 +155,8 @@ public partial class VcToken : VisualComponentFlat
 
     public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
-        _textureFactory = textureFactory;
+        TextureFactory = textureFactory;
         TempParams = parameters;
-
-        if (!IsNodeReady())
-        {
-            _buildRequired = true;
-            return true;
-        }
-
-        FaceSprite = GetNode<Sprite3D>("FrontSprite");
-        BackSprite = GetNode<Sprite3D>("BackSprite");
-        _sideMesh = GetNode<MeshInstance3D>("SideMesh");
 
         if (!InitializeParameters(parameters, textureFactory))
             return false;
@@ -174,6 +184,25 @@ public partial class VcToken : VisualComponentFlat
                 break;
         }
 
+
+        BuildToken();
+
+        return true;
+    }
+
+    private void BuildToken()
+    {
+        if (!IsNodeReady())
+        {
+            _buildRequired = true;
+            return;
+        }
+
+        FaceSprite = GetNode<Sprite3D>("FrontSprite");
+        BackSprite = GetNode<Sprite3D>("BackSprite");
+        _sideMesh = GetNode<MeshInstance3D>("SideMesh");
+
+      
         YHeight = _thickness;
 
         Scale = new Vector3(_width, _thickness, _height);
@@ -227,8 +256,6 @@ public partial class VcToken : VisualComponentFlat
         }
 
         _firstBuild = false;
-
-        return true;
     }
 
     private Vector2[] CalcHexPointVertices()
@@ -320,10 +347,12 @@ public partial class VcToken : VisualComponentFlat
         var pixelSize = PixelSize(cv);
 
         FaceSprite.PixelSize = pixelSize;
+        _frontTextureGenerated = true;
 
         if (!_differentBack)
         {
             BackSprite.PixelSize = pixelSize;
+            _backTextureGenerated = true;
             //BackSprite.Texture = t;
         }
 
@@ -336,10 +365,12 @@ public partial class VcToken : VisualComponentFlat
     private string _frontTemplateName;
     private string _backTemplateName;
     private string _datasetName;
-    private string _cardReference;
+    
 
     private void BuildTemplate(TextureFactory textureFactory)
     {
+        _differentBack = true;
+
         int sH = 256;
         int sW = 256;
 
@@ -369,11 +400,12 @@ public partial class VcToken : VisualComponentFlat
             DataSet = ds,
             Dpi = 100,
             ParentSize = new Vector2(250, 350),
-            CurrentRowName = _cardReference,
+            CurrentRowName = DataSetRow,
         };
 
         _frontTextureGenerated = true;
         _backTextureGenerated = true;
+
 
         if (ft is not null)
         {
@@ -406,6 +438,8 @@ public partial class VcToken : VisualComponentFlat
         _frontView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
         _frontView.SetTexture(LoadTexture(_frontImage));
 
+        _frontTextureGenerated = true;
+
         var t = _frontView.GetTexture();
 
         float pixelSize = PixelSize(t.GetSize());
@@ -416,6 +450,7 @@ public partial class VcToken : VisualComponentFlat
         {
             BackSprite.PixelSize = pixelSize;
             BackSprite.Texture = t;
+            _backTextureGenerated = true;
         }
     }
 
@@ -438,6 +473,8 @@ public partial class VcToken : VisualComponentFlat
         _backView.SetTexture(LoadTexture(_backImage));
 
         BackSprite.Texture = _backView.GetTexture();
+
+        _backTextureGenerated = true;
     }
 
     private float PixelSize(Vector2 size)
@@ -544,25 +581,66 @@ public partial class VcToken : VisualComponentFlat
 
     private void FinalizeFrontTexture(ImageTexture t)
     {
-        if (!IsInstanceValid(FaceSprite) || FaceSprite == null)
-            return;
-
-        _frontTextureGenerated = true;
-        float pixelSize = PixelSize(t.GetSize());
-        FaceSprite.PixelSize = pixelSize;
         FaceTexture = t;
 
         if (!_differentBack)
         {
             _backTextureGenerated = true;
-            BackSprite.PixelSize = pixelSize;
+           
             BackTexture = t;
         }
 
+        TextureReady = _frontTextureGenerated && _backTextureGenerated;
+
+        TextureChanged = true;
+
+        MapFrontTexture();
+
         //var d = t.GetImage();
         //d.SavePng(@"c:\winwam5\token.png");
+    }
 
-        TextureReady = _frontTextureGenerated && _backTextureGenerated;
+    private bool _mapFrontTextureRequired;
+
+    private void MapFrontTexture()
+    {
+
+        if (FaceSprite == null || !FaceSprite.IsNodeReady())
+        {
+            _mapFrontTextureRequired = true;
+            return;
+        }
+
+        _mapFrontTextureRequired = false;
+        
+        _frontTextureGenerated = true;
+        
+        FaceSprite.Texture = FaceTexture;
+        float pixelSize = PixelSize(FaceTexture.GetSize());
+        FaceSprite.PixelSize = pixelSize;
+
+        if (!_differentBack)
+        {
+            BackSprite.PixelSize = pixelSize;
+            BackTexture = FaceTexture;
+        }
+    }
+
+    private bool _mapBackTextureRequired;
+
+    private void MapBackTexture()
+    {
+
+        if (BackSprite == null || !IsInstanceValid(BackSprite))
+        {
+            _mapBackTextureRequired = true;
+            return;
+        }
+
+        _mapBackTextureRequired = false;
+        
+        BackSprite.PixelSize = PixelSize(BackTexture.GetSize()); ;
+        BackSprite.Texture = BackTexture;
     }
 
     private void CreateQuickBackTexture(TextureFactory textureFactory)
@@ -574,16 +652,15 @@ public partial class VcToken : VisualComponentFlat
 
     private void FinalizeBackTexture(ImageTexture t)
     {
-        if (!IsInstanceValid(BackSprite) || BackSprite == null)
-            return;
 
         _backTextureGenerated = true;
 
-        float pixelSize = PixelSize(t.GetSize());
-        BackSprite.PixelSize = pixelSize;
         BackTexture = t;
 
         TextureReady = _frontTextureGenerated && _backTextureGenerated;
+        TextureChanged = true;
+
+        MapBackTexture();
     }
 
     private bool InitializeParameters(
@@ -602,7 +679,7 @@ public partial class VcToken : VisualComponentFlat
         _width = w / 10;
 
         var t = Utility.GetParam<float>(parameters, "Thickness");
-        _thickness = t / 10;
+        _thickness = Math.Max(t / 10f, 0.03f);
 
         _frontImage = Utility.GetParam<string>(parameters, "FrontImage");
         _backImage = Utility.GetParam<string>(parameters, "BackImage");
@@ -644,7 +721,7 @@ public partial class VcToken : VisualComponentFlat
         _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
         _backTemplateName = Utility.GetParam<string>(parameters, "BackTemplate");
         _datasetName = Utility.GetParam<string>(parameters, "Dataset");
-        _cardReference = Utility.GetParam<string>(parameters, "CardReference");
+        if (string.IsNullOrWhiteSpace(DataSetRow)) DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
 
         return true;
     }

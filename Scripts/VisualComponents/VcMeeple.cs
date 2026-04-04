@@ -7,7 +7,6 @@ public partial class VcMeeple : VisualComponentBase
     public override void _Ready()
     {
         base._Ready();
-        Visible = true;
         ComponentType = VisualComponentType.Meeple;
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
