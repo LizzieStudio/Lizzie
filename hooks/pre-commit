@@ -1,0 +1,7 @@
+#!/bin/sh
+dotnet tool restore
+dotnet csharpier check .
+if [ $? -ne 0 ]; then
+    echo "CSharpier check failed. Run 'dotnet csharpier format .' to fix formatting."
+    exit 1
+fi
