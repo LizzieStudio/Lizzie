@@ -39,15 +39,17 @@ texture = ExtResource("4_vbm5h")
 expand_mode = 5
 
 [node name="Mode" type="HBoxContainer" parent="UI" unique_id=1351550218]
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -576.0
-offset_right = 576.0
-offset_bottom = 31.0
-grow_horizontal = 2
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -1152.0
+offset_top = -31.0
+grow_horizontal = 0
+grow_vertical = 0
 size_flags_horizontal = 4
-alignment = 1
+alignment = 2
 
 [node name="Play2D" type="Button" parent="UI/Mode" unique_id=1870421792]
 layout_mode = 2
@@ -57,16 +59,14 @@ text = "Play 2D"
 layout_mode = 2
 text = "Play 3D"
 
-[node name="Designer" type="Button" parent="UI/Mode" unique_id=1292178749]
-layout_mode = 2
-text = "Designer"
-
 [node name="MenuBar" type="MenuBar" parent="UI" unique_id=672250976]
 offset_right = 183.0
 offset_bottom = 31.0
 
 [node name="File" type="PopupMenu" parent="UI/MenuBar" unique_id=709451553]
+oversampling_override = 1.0
 title = "File"
+size = Vector2i(168, 100)
 item_count = 3
 item_0/text = "Project Manager"
 item_0/id = 0
@@ -138,5 +138,4 @@ access = 2
 
 [connection signal="pressed" from="UI/Mode/Play2D" to="UI" method="_on_play_2d_pressed"]
 [connection signal="pressed" from="UI/Mode/Play3D" to="UI" method="_on_play_3d_pressed"]
-[connection signal="pressed" from="UI/Mode/Designer" to="UI" method="_on_designer_pressed"]
 [connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]

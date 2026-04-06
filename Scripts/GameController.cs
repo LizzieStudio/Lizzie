@@ -16,13 +16,12 @@ public partial class GameController : Node3D
     public override void _Ready()
     {
         _mainScene = GetNode<SceneController>("3DSceneNoPhysics");
-        _mainScene.SetMode(SceneMode.TwoD);
         _mainScene.ShowComponentPopup2 += MainSceneOnShowComponentPopup2;
         _mainScene.HoveredComponentChange += MainSceneOnHoveredNameChange;
         _mainScene.GameObjects.TextureFactory = _textureFactory;
 
         _uiController = GetNode<UI>("UI");
-        _uiController.MasterModeChange += OnMasterModeChange;
+        _uiController.SceneModeChange += OnSceneModeChange;
         _uiController.CreateObject += OnCreateObject;
         _uiController.SetGameController(this);
 
@@ -81,21 +80,20 @@ public partial class GameController : Node3D
         }
     }
 
-    private void OnMasterModeChange(object sender, MasterModeChangeArgs e)
+    private void OnSceneModeChange(object sender, SceneModeChangeArgs e)
     {
         switch (e.NewMode)
         {
-            case UI.MasterMode.TwoD:
+            case SceneMode.TwoD:
                 _mainScene.SetMode(SceneMode.TwoD);
                 break;
-            case UI.MasterMode.ThreeD:
+            case SceneMode.ThreeDFixed:
                 _mainScene.SetMode(SceneMode.ThreeDFixed);
-                break;
-            case UI.MasterMode.Designer:
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
+        Config.Registry.Set("SceneMode", e.NewMode);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.

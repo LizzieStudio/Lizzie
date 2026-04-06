@@ -27,6 +27,7 @@ public partial class SceneController : Node3D
     {
         _cameraManager = GetNode<CameraManager>("Cameras");
         _gameObjects = GetNode<GameObjects>("GameObjects");
+        SetMode(Config.Registry.Get<SceneMode>("SceneMode"));
         _gameObjects.ShowComponentPopup += GameObjectsOnShowComponentPopup;
         _gameObjects.HoveredComponentChange += OnHoveredComponentChange;
         _gameObjects.TextureFactory = _textureFactory;
