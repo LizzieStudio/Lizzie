@@ -93,7 +93,6 @@ public partial class UI : CanvasLayer
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
     }
 
-
     private void ProjectChanged(ProjectChangedEvent obj)
     {
         return;
@@ -152,7 +151,6 @@ public partial class UI : CanvasLayer
         _templateCreator.QueueFree();
     }
 
-
     private void ShowDatasetEditor()
     {
         ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetName = null });
@@ -174,7 +172,6 @@ public partial class UI : CanvasLayer
         _datasetEditor.QueueFree();
     }
 
-
     private void ShowImageManager()
     {
         ShowImageManagerFromEvent(new ShowImageManagerEvent { ImageReference = Guid.Empty });
@@ -187,7 +184,6 @@ public partial class UI : CanvasLayer
         _imageManager.Closed += ImageManagerOnClosed;
         _modalDialogs.AddChild(_imageManager);
     }
-
 
     private void ImageManagerOnClosed(object sender, EventArgs e)
     {
@@ -311,9 +307,6 @@ public partial class UI : CanvasLayer
         _editingPrototypeId = Guid.Empty;
     }
 
-
-
-
     public override void _Process(double delta)
     {
         //Below is a hack to work around the CloseRequested signal not getting fired properly
@@ -327,8 +320,6 @@ public partial class UI : CanvasLayer
         ModalDialogShown = _modalDialogs.GetChildCount() > 0;
     }
 
-    
-
     /// <summary>
     /// Check to see if there are any modal dialogs open, and see if the flag needs to be flipped.
     /// If so, send the appropriate event signal.
@@ -341,7 +332,8 @@ public partial class UI : CanvasLayer
         get => _modalDialogShown;
         set
         {
-            if (value == _modalDialogShown) return;
+            if (value == _modalDialogShown)
+                return;
             _modalDialogShown = value;
 
             if (value)

@@ -1,19 +1,18 @@
-using Godot;
 using System;
+using Godot;
 using Lizzie.AssetManagement;
 
 public partial class ImageTile : MarginContainer
 {
-
     private Label _imageName;
     private TextureRect _thumbnail;
 
     private bool _refreshRequired;
 
     // Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-		_imageName = GetNode<Label>("%ImageName");
+    public override void _Ready()
+    {
+        _imageName = GetNode<Label>("%ImageName");
         _thumbnail = GetNode<TextureRect>("%Thumbnail");
         EventBus.Instance.Subscribe<AssetChangedEvent>(OnAssetChanged);
         if (_refreshRequired)
@@ -25,11 +24,12 @@ public partial class ImageTile : MarginContainer
 
     private void OnAssetChanged(AssetChangedEvent obj)
     {
-        if (obj == null || obj.Asset == null || _asset == null) return;
-        
+        if (obj == null || obj.Asset == null || _asset == null)
+            return;
+
         if (obj.Asset.AssetId == _asset.AssetId)
         {
-           Refresh();
+            Refresh();
         }
     }
 
@@ -37,7 +37,7 @@ public partial class ImageTile : MarginContainer
 
     public void SetAsset(Asset asset)
     {
-		_asset = asset;
+        _asset = asset;
 
         if (IsNodeReady())
         {
@@ -58,7 +58,11 @@ public partial class ImageTile : MarginContainer
             try
             {
                 var service = new CloudAssetService();
-                await service.InitializeAsync(CloudProviderType.GoogleDrive, string.Empty, string.Empty);
+                await service.InitializeAsync(
+                    CloudProviderType.GoogleDrive,
+                    string.Empty,
+                    string.Empty
+                );
 
                 var r = await service.DownloadImageAsync(_asset.CloudPath);
 

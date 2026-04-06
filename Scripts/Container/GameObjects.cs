@@ -43,14 +43,13 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
     }
 
-
-
     private void OnModalClosed()
     {
         _modalOpen = false;
     }
 
     private bool _modalOpen;
+
     private void OnModalOpened()
     {
         _modalOpen = true;
@@ -250,12 +249,10 @@ public partial class GameObjects : Node
         AddComponentToScene(e.Component, true);
     }
 
-
     public void AddComponentToScene(VisualComponentBase component, bool syncCreation = true)
     {
         component.ZOrder = GetMaxComponentZ() + 1;
         var vv = component.Position;
-        
 
         AddChild(component);
         component.AddComponentToObjects += ComponentOnAddComponentToObjects;
@@ -826,7 +823,13 @@ public partial class GameObjects : Node
     {
         foreach (var n in GetChildren())
         {
-            if (n is VisualComponentBase { Location: VisualComponentBase.ComponentLocation.Board, IsDragging: false } p)
+            if (
+                n is VisualComponentBase
+                {
+                    Location: VisualComponentBase.ComponentLocation.Board,
+                    IsDragging: false
+                } p
+            )
             {
                 yield return p;
             }
@@ -1041,7 +1044,9 @@ public partial class GameObjects : Node
         if (component == null)
             return;
 
-        GD.Print($"Syncing creation for component {component.Reference}. Prototype {component.PrototypeRef}");
+        GD.Print(
+            $"Syncing creation for component {component.Reference}. Prototype {component.PrototypeRef}"
+        );
 
         _spawnQueue.Enqueue(component.Reference);
     }
@@ -1052,7 +1057,10 @@ public partial class GameObjects : Node
     {
         if (_spawnQueue.Count == 0)
             return;
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true || !MultiplayerManager.Instance.IsServer)
+        if (
+            MultiplayerManager.Instance?.IsMultiplayerActive != true
+            || !MultiplayerManager.Instance.IsServer
+        )
             return;
 
         int cnt = 0;
@@ -1089,8 +1097,12 @@ public partial class GameObjects : Node
         GD.Print($"Received spawn for {componentRefStr}");
         if (!TryExecuteSpawn(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson))
         {
-            GD.Print($"Prototype {prototypeRefStr} not yet available, queuing spawn for {componentRefStr}");
-            _pendingSpawns.Add(new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson));
+            GD.Print(
+                $"Prototype {prototypeRefStr} not yet available, queuing spawn for {componentRefStr}"
+            );
+            _pendingSpawns.Add(
+                new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson)
+            );
         }
     }
 
@@ -1099,15 +1111,29 @@ public partial class GameObjects : Node
     /// Returns false if the prototype is not yet present — caller should defer the request.
     /// Returns true when the spawn was executed (even on a fatal data error that should not be retried).
     /// </summary>
-    private bool TryExecuteSpawn(string prototypeRefStr, string componentRefStr, string parentRefStr, string syncDtoJson)
+    private bool TryExecuteSpawn(
+        string prototypeRefStr,
+        string componentRefStr,
+        string parentRefStr,
+        string syncDtoJson
+    )
     {
         var prototypeRef = Guid.Parse(prototypeRefStr);
-        if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(prototypeRef, out var proto))
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                prototypeRef,
+                out var proto
+            )
+        )
             return false;
 
         var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson);
 
-        var path = Utility.ComponentTypeToScenePath(proto.Type, proto.Parameters, syncDto.DataSetRow);
+        var path = Utility.ComponentTypeToScenePath(
+            proto.Type,
+            proto.Parameters,
+            syncDto.DataSetRow
+        );
         var scene = GD.Load<PackedScene>(path).Instantiate();
 
         if (scene is not VisualComponentBase vcb)
@@ -1120,7 +1146,6 @@ public partial class GameObjects : Node
         vcb.PrototypeRef = prototypeRef;
         vcb.Parent = Guid.Parse(parentRefStr);
 
-       
         vcb.SpawnBuild(prototypeRef, syncDto, TextureFactory);
 
         AddComponentToScene(vcb, false);
@@ -1142,9 +1167,18 @@ public partial class GameObjects : Node
         foreach (var r in pending)
         {
             GD.Print($"Retrying spawn for {r.ComponentRefStr}");
-            if (!TryExecuteSpawn(r.PrototypeRefStr, r.ComponentRefStr, r.ParentRefStr, r.SyncDtoJson))
+            if (
+                !TryExecuteSpawn(
+                    r.PrototypeRefStr,
+                    r.ComponentRefStr,
+                    r.ParentRefStr,
+                    r.SyncDtoJson
+                )
+            )
             {
-                GD.PrintErr($"Still cannot spawn {r.ComponentRefStr} because prototype {r.PrototypeRefStr} is not available");
+                GD.PrintErr(
+                    $"Still cannot spawn {r.ComponentRefStr} because prototype {r.PrototypeRefStr} is not available"
+                );
                 _pendingSpawns.Add(r); // Prototype still not available — keep in list
             }
         }
@@ -1154,7 +1188,8 @@ public partial class GameObjects : Node
         string PrototypeRefStr,
         string ComponentRefStr,
         string ParentRefStr,
-        string SyncDtoJson);
+        string SyncDtoJson
+    );
 
     /// <summary>
     /// Sync object deletion across network
@@ -1311,7 +1346,9 @@ public partial class GameObjects : Node
             return;
 
         int sent = 0;
-        while (sent < MaxPropertySyncsPerFrame && _componentPropertyQueue.TryDequeue(out var reference))
+        while (
+            sent < MaxPropertySyncsPerFrame && _componentPropertyQueue.TryDequeue(out var reference)
+        )
         {
             var component = GetComponent(reference);
             if (component == null)
@@ -1369,7 +1406,9 @@ public partial class GameObjects : Node
         var component = GetComponent(compGuid);
         if (component == null || component.IsDragging)
         {
-            GD.PrintErr($"Client/ServerReceiveProperties: Component {componentRef} not found or is being dragged");
+            GD.PrintErr(
+                $"Client/ServerReceiveProperties: Component {componentRef} not found or is being dragged"
+            );
             return;
         }
 

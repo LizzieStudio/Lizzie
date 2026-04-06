@@ -22,6 +22,18 @@ dotnet tool restore
 dotnet csharpier format .
 ```
 
+### Pre-commit Hook
+
+A pre-commit hook is provided to catch formatting issues before committing.
+Install it once after cloning:
+
+```bash
+cp hooks/pre-commit .git/hooks/pre-commit
+```
+
+This is only a check. It's best to configure CSharpier to format on save in
+whatever editor you use.
+
 ## License
 
 [MIT](https://opensource.org/licenses/MIT).

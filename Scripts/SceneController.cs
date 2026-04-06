@@ -90,7 +90,6 @@ public partial class SceneController : Node3D
         _gameObjects.EnterSpawnMode(component);
     }
 
-
     public void PopupClosed()
     {
         _gameObjects.PopupClosed();

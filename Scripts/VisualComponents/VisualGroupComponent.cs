@@ -102,7 +102,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         var r = Rnd.RandiRange(0, Children.Count - 1);
         var c = Children[r];
 
-       Children.RemoveAt(r);
+        Children.RemoveAt(r);
         OnChildrenChanged();
 
         return c;

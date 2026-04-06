@@ -1,0 +1,25 @@
+name: Format
+
+on: push
+
+jobs:
+  csharpier:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - uses: actions/setup-dotnet@v4
+      - name: Restore tools
+        run: dotnet tool restore
+      - name: Format
+        run: dotnet csharpier format .
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: apply csharpier formatting"

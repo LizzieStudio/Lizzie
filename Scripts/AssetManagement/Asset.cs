@@ -8,10 +8,14 @@ namespace Lizzie.AssetManagement
     /// </summary>
     public class Asset
     {
-        
-        public enum AssetType {Image, Spreadsheet, Mesh, Document}
-        
-        
+        public enum AssetType
+        {
+            Image,
+            Spreadsheet,
+            Mesh,
+            Document,
+        }
+
         public AssetType Type { get; set; }
 
         /// <summary>
@@ -74,7 +78,6 @@ namespace Lizzie.AssetManagement
         /// Cached image data for quick access (optional, can be null if not loaded)
         /// </summary>
         public Image Image { get; set; }
-
 
         /// <summary>
         /// We do not load the asset until it's needed, so this flag indicates whether we've downloaded it yet

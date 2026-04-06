@@ -312,7 +312,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         d.Add("Type", VcToken.TokenType.Token);
         d.Add("FrontFontSize", 24);
 
-
         switch (_tabs.CurrentTab)
         {
             case 0:
@@ -327,7 +326,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
                 d.Add("DifferentBack", false);
                 break;
         }
-
 
         d.Add("BackBgColor", _quickBackgroundColor2.Color);
         d.Add("BackFontSize", 24);
