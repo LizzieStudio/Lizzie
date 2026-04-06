@@ -295,7 +295,7 @@ public class ShowDatasetEditor : IEvent
 
 public class ShowImageManagerEvent : IEvent
 {
-     public Guid ImageReference { get; set; }
+    public Guid ImageReference { get; set; }
 }
 
 public class PrototypeChangedEvent : IEvent
@@ -319,27 +319,20 @@ public class SyncTransformEvent : IEvent
 }
 
 /// <summary>
-/// When a dialog is opened, this event is published to disable inputs 
+/// When a dialog is opened, this event is published to disable inputs
 /// </summary>
-public class ModalDialogOpenedEvent : IEvent
-{
-}
-
+public class ModalDialogOpenedEvent : IEvent { }
 
 /// <summary>
 /// When a dialog is closed, this event is published to re-enable inputs
 /// </summary>
-public class ModalDialogClosedEvent : IEvent
-{
-}
+public class ModalDialogClosedEvent : IEvent { }
 
 public class AddComponentToSceneEvent : IEvent
 {
-
     public AddComponentToSceneEvent(VisualComponentBase component)
     {
         Component = component;
-
     }
 
     public VisualComponentBase Component { get; set; }

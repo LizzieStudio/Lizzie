@@ -58,7 +58,7 @@ public class TemplateElement : ITemplateElement
     }
 
     public int Id { get; set; }
-    public int Parent { get; set; } = -1;   //top level
+    public int Parent { get; set; } = -1; //top level
 
     public void SetParameterValue(string name, string value)
     {

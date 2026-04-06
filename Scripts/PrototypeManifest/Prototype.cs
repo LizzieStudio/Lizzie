@@ -6,9 +6,7 @@ using Godot;
 
 public class Prototype
 {
-    public Prototype()
-    {
-    }
+    public Prototype() { }
 
     public Prototype(PrototypeDto dto)
     {
@@ -21,7 +19,6 @@ public class Prototype
         Parameters = JsonUtilities.ParseJsonToDictionary(Type, d);
     }
 
-
     //unique identifier for this prototype. Should be generated when the component is created, and never changed.
     //Called "PrototypeRef" to distinguish it from the "Ref" property of VisualComponentBase, which is a reference to the visual component that represents this component in the current project.
     //(The same component may be represented by multiple visual components in different projects, but it will only have one PrototypeRef.)
@@ -29,7 +26,6 @@ public class Prototype
     public string Name { get; set; }
 
     public Dictionary<string, object> Parameters { get; set; }
-
 
     public VisualComponentBase.VisualComponentType Type { get; set; }
 
@@ -41,9 +37,8 @@ public class Prototype
     }
 }
 
-
 /// <summary>
-/// This class is used for serializing and deserializing prototypes to and from JSON. 
+/// This class is used for serializing and deserializing prototypes to and from JSON.
 /// </summary>
 public class PrototypeDto
 {
@@ -58,10 +53,7 @@ public class PrototypeDto
     /// <summary>
     /// Need parameterless constructor for JSON deserialization. The properties will be set manually after deserialization.
     /// </summary>
-    public PrototypeDto()
-    {
-    }
-
+    public PrototypeDto() { }
 
     public Guid PrototypeRef { get; set; }
     public string Name { get; set; }

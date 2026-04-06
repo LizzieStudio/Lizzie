@@ -48,8 +48,6 @@ namespace Lizzie.AssetManagement
                 await _provider.InitializeAsync(baseFolderUrl, credentials);
                 GD.Print($"CloudAssetService initialized with {providerType} provider");
             }
-
-            
         }
 
         /// <summary>
@@ -478,7 +476,6 @@ namespace Lizzie.AssetManagement
         /// on <see cref="_testSprite"/>. The image is decoded entirely in-memory; nothing is
         /// written to disk.
         /// </summary>
-
         /// <param name="url">Public URL to download from</param>
         /// <returns>Record (string, image). If success, string is empty. Otherwise it contains the error message </returns>
         public async Task<(string, Image)> DownloadImageAsync(string url)
@@ -486,7 +483,11 @@ namespace Lizzie.AssetManagement
             try
             {
                 var service = new CloudAssetService();
-                await service.InitializeAsync(CloudProviderType.GoogleDrive, string.Empty, string.Empty);
+                await service.InitializeAsync(
+                    CloudProviderType.GoogleDrive,
+                    string.Empty,
+                    string.Empty
+                );
 
                 using var stream = await service.DownloadPublicFileStreamAsync(url);
                 using var ms = new MemoryStream();
@@ -518,5 +519,4 @@ namespace Lizzie.AssetManagement
             }
         }
     }
-
 }

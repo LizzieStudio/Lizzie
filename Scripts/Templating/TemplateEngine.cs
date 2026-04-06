@@ -143,35 +143,41 @@ public static class TemplateEngine
     }
 
     public static List<Dictionary<string, string>> MapTemplateElementsToProjectFormat(
-        IEnumerable<ITemplateElement> elements)
+        IEnumerable<ITemplateElement> elements
+    )
     {
         var l = new List<Dictionary<string, string>>();
         foreach (var element in elements)
         {
-            MapRecursive(element, l);   
+            MapRecursive(element, l);
         }
 
         return l;
     }
 
-    private static void MapRecursive(ITemplateElement element,List< Dictionary<string, string>> parentDictionary)
+    private static void MapRecursive(
+        ITemplateElement element,
+        List<Dictionary<string, string>> parentDictionary
+    )
     {
-       parentDictionary.Add(MapTemplateElementToProjectFormat(element));
-       foreach(var child in element.Children)
-       {
-           MapRecursive(child, parentDictionary);
-       }
-       return;
+        parentDictionary.Add(MapTemplateElementToProjectFormat(element));
+        foreach (var child in element.Children)
+        {
+            MapRecursive(child, parentDictionary);
+        }
+        return;
     }
 
-    public static Dictionary<string, string> MapTemplateElementToProjectFormat(ITemplateElement element)
+    public static Dictionary<string, string> MapTemplateElementToProjectFormat(
+        ITemplateElement element
+    )
     {
         var d = new Dictionary<string, string>
         {
             { "Type", element.ElementType.ToString() },
             { "Name", element.ElementName },
             { "Id", element.Id.ToString() },
-            { "Parent", element.Parent.ToString() }
+            { "Parent", element.Parent.ToString() },
         };
         foreach (var p in element.Parameters)
         {

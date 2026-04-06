@@ -173,7 +173,7 @@ public static class JsonUtilities
         p.Add("Grid", TryGetBoolJaggedArray(d, "Grid"));
         return p;
     }
-    
+
     private static string TryGetString(Dictionary<string, object> d, string key)
     {
         if (d.TryGetValue(key, out var value) && value != null)
@@ -310,7 +310,10 @@ public static class JsonUtilities
         return new bool[0][]; // Default empty jagged array if not found or deserialization fails
     }
 
-    private static List<QuickCardData> TryGetQuickCardDataList(Dictionary<string, object> d, string key)
+    private static List<QuickCardData> TryGetQuickCardDataList(
+        Dictionary<string, object> d,
+        string key
+    )
     {
         if (d.TryGetValue(key, out var value) && value != null)
         {
@@ -386,7 +389,10 @@ public static class JsonUtilities
             else if (element.ValueKind == JsonValueKind.Object)
             {
                 // Parse color object directly
-                float r = 0, g = 0, b = 0, a = 1;
+                float r = 0,
+                    g = 0,
+                    b = 0,
+                    a = 1;
 
                 if (element.TryGetProperty("R", out var rProp))
                     r = (float)rProp.GetDouble();
@@ -445,5 +451,4 @@ public static class JsonUtilities
 
         return null; // Default null if not found
     }
-
 }

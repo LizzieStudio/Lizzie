@@ -26,7 +26,9 @@ public partial class GameController : Node3D
         _uiController.CreateObject += OnCreateObject;
         _uiController.SetGameController(this);
 
-        ProjectService.Instance.CurrentProject = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
+        ProjectService.Instance.CurrentProject = ProjectService.Instance.LoadProject(
+            ProjectService.SampleProjectName
+        );
         ProjectService.Instance.GameObjects = _mainScene.GameObjects;
 
         var commandDic = new CommandDictionary(_mainScene);

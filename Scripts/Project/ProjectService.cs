@@ -96,7 +96,10 @@ public partial class ProjectService : Node
 
     public bool SaveProject(Project project)
     {
-        using var saveFile = FileAccess.Open($"user://{project.Name}.proj", FileAccess.ModeFlags.Write);
+        using var saveFile = FileAccess.Open(
+            $"user://{project.Name}.proj",
+            FileAccess.ModeFlags.Write
+        );
 
         var s = JsonSerializer.Serialize<Project>(project);
 
@@ -136,11 +139,11 @@ public partial class ProjectService : Node
     }
 
     public DataSet DeserializeDataSet(string json)
-        {
-            if (string.IsNullOrEmpty(json))
-                return null;
-            var dataset = JsonSerializer.Deserialize<DataSet>(json);
-            return dataset;
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+        var dataset = JsonSerializer.Deserialize<DataSet>(json);
+        return dataset;
     }
 
     public void UpdateDataSet(DataSet dataset)
@@ -149,7 +152,9 @@ public partial class ProjectService : Node
             return;
         CurrentProject.Datasets.TryAdd(dataset.Name, dataset);
         CurrentProject.Datasets[dataset.Name] = dataset;
-        EventBus.Instance.Publish(new DataSetChangedEvent{DataSet = dataset, DataSetName = dataset.Name});
+        EventBus.Instance.Publish(
+            new DataSetChangedEvent { DataSet = dataset, DataSetName = dataset.Name }
+        );
     }
 
     public void UpdateTemplate(Template template)
@@ -158,7 +163,9 @@ public partial class ProjectService : Node
             return;
         CurrentProject.Templates.TryAdd(template.Name, template);
         CurrentProject.Templates[template.Name] = template;
-        EventBus.Instance.Publish(new TemplateChangedEvent{Template = template, TemplateName = template.Name});
+        EventBus.Instance.Publish(
+            new TemplateChangedEvent { Template = template, TemplateName = template.Name }
+        );
     }
 
     public void UpdatePrototype(Prototype prototype)
@@ -167,12 +174,15 @@ public partial class ProjectService : Node
             return;
         CurrentProject.Prototypes.TryAdd(prototype.PrototypeRef, prototype);
         CurrentProject.Prototypes[prototype.PrototypeRef] = prototype;
-        EventBus.Instance.Publish(new PrototypeChangedEvent{PrototypeId = prototype.PrototypeRef});
+        EventBus.Instance.Publish(
+            new PrototypeChangedEvent { PrototypeId = prototype.PrototypeRef }
+        );
     }
 
     public void UpdateImage(Asset image)
     {
-        if (CurrentProject == null || image == null) return;
+        if (CurrentProject == null || image == null)
+            return;
         CurrentProject.Images.TryAdd(image.AssetId.ToString(), image);
         CurrentProject.Images[image.AssetId.ToString()] = image;
         EventBus.Instance.Publish(new AssetChangedEvent { Asset = image });
@@ -207,5 +217,4 @@ public partial class ProjectService : Node
     }
 
     public GameObjects GameObjects { get; set; }
-
 }

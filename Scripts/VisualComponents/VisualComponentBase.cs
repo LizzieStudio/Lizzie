@@ -39,7 +39,8 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    [Export] private float _highlightScale = 1.1f;
+    [Export]
+    private float _highlightScale = 1.1f;
 
     public const int TooltipTime = 1000;
     private float _curScale = 1;
@@ -93,7 +94,11 @@ public abstract partial class VisualComponentBase : Area3D
         return Build(parameters, string.Empty, textureFactory);
     }
 
-    public virtual bool Build(Dictionary<string, object> parameters, string dataSetRow, TextureFactory textureFactory)
+    public virtual bool Build(
+        Dictionary<string, object> parameters,
+        string dataSetRow,
+        TextureFactory textureFactory
+    )
     {
         TextureFactory = textureFactory;
         TextureReady = false;
@@ -103,7 +108,8 @@ public abstract partial class VisualComponentBase : Area3D
             ComponentName = parameters[nameof(ComponentName)].ToString();
         }
 
-        if (!string.IsNullOrEmpty(dataSetRow)) DataSetRow = dataSetRow;
+        if (!string.IsNullOrEmpty(dataSetRow))
+            DataSetRow = dataSetRow;
 
         return true;
     }
@@ -121,11 +127,12 @@ public abstract partial class VisualComponentBase : Area3D
         if (ProjectService.Instance.CurrentProject == null)
             return false;
 
-        if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
                 prototypeRef,
                 out var proto
             )
-           )
+        )
         {
             return false;
         }
@@ -133,13 +140,17 @@ public abstract partial class VisualComponentBase : Area3D
         Build(proto.Parameters, textureFactory);
 
         PrototypeRef = prototypeRef;
-        if (!string.IsNullOrEmpty(dataSetRow)) DataSetRow = dataSetRow;
+        if (!string.IsNullOrEmpty(dataSetRow))
+            DataSetRow = dataSetRow;
 
         return true;
     }
 
-
-    public virtual void SpawnBuild(Guid prototypeRef, VcSyncDto syncDto, TextureFactory textureFactory)
+    public virtual void SpawnBuild(
+        Guid prototypeRef,
+        VcSyncDto syncDto,
+        TextureFactory textureFactory
+    )
     {
         syncDto.ApplyToComponent(this);
         Build(prototypeRef, syncDto.DataSetRow, textureFactory);
@@ -160,7 +171,6 @@ public abstract partial class VisualComponentBase : Area3D
     {
         QueueFree();
     }
-
 
     /// <summary>
     /// Checks the parameter dictionary to make sure that everything required for this
@@ -314,7 +324,6 @@ public abstract partial class VisualComponentBase : Area3D
     /// If two items have the same Z-Order (should never happen), then
     /// there is no guarantee which will go first.
     /// </summary>
-
     private int _zOrder;
 
     public virtual int ZOrder
@@ -432,7 +441,6 @@ public abstract partial class VisualComponentBase : Area3D
         AddComponentToObjects?.Invoke(this, new VisualComponentEventArgs(component));
     }
 
-
     private bool _neverHighlight = false;
 
     public bool NeverHighlight
@@ -454,7 +462,8 @@ public abstract partial class VisualComponentBase : Area3D
         get => _isDragging;
         set
         {
-            if (!CanDrag) return;
+            if (!CanDrag)
+                return;
             if (_isDragging == value)
                 return;
             _isDragging = value;
@@ -490,9 +499,7 @@ public abstract partial class VisualComponentBase : Area3D
         return true;
     }
 
-    public virtual void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
-    {
-    }
+    public virtual void DropObjects(IEnumerable<VisualComponentBase> dragObjects) { }
 
     public virtual string GetPreviewComponentScene() => string.Empty;
 
@@ -535,7 +542,8 @@ public abstract partial class VisualComponentBase : Area3D
     /// <param name="enableDim"></param>
     public virtual void DimMode(bool enableDim)
     {
-        if (DragMesh == null) return;
+        if (DragMesh == null)
+            return;
 
         if (enableDim)
         {
@@ -551,7 +559,7 @@ public abstract partial class VisualComponentBase : Area3D
     {
         Board,
         Container,
-        Hand
+        Hand,
     }
 
     private ComponentLocation _location;
@@ -561,13 +569,13 @@ public abstract partial class VisualComponentBase : Area3D
         get => _location;
         set
         {
-            if (_location == value) return;
+            if (_location == value)
+                return;
             SyncRequired = true;
             _location = value;
             SetVisibility(value == ComponentLocation.Board);
         }
     }
-
 
     public void SetPositionAndRotation(Vector3 position, Vector3 rotation)
     {
@@ -578,37 +586,35 @@ public abstract partial class VisualComponentBase : Area3D
 
     public void SetPosition(Vector3 position)
     {
-        if (position == Position) return;
+        if (position == Position)
+            return;
         Position = position;
         SyncRequired = true;
     }
 
     public void SetRotation(Vector3 rotation)
     {
-        if (RotationDegrees == rotation) return;
+        if (RotationDegrees == rotation)
+            return;
         RotationDegrees = rotation;
         SyncRequired = true;
     }
 
     public void SetRotationDegrees(Vector3 rotationDegrees)
     {
-        if (RotationDegrees == rotationDegrees) return;
+        if (RotationDegrees == rotationDegrees)
+            return;
         RotationDegrees = rotationDegrees;
         SyncRequired = true;
     }
 
-
     public void SetVisibility(bool visible)
     {
-        if (visible == Visible) return;
+        if (visible == Visible)
+            return;
         Visible = visible;
         SyncRequired = true;
     }
-
-
-
-
-
 
     public bool SuppressSync { get; set; }
 

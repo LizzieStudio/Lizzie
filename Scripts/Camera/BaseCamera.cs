@@ -34,7 +34,7 @@ public abstract partial class BaseCamera : Node3D, ICamera
         base._Ready();
         ActualCamera = GetCameraNode();
         _initialTransform = Transform;
-        _initialCameraTransform = ActualCamera.Transform; 
+        _initialCameraTransform = ActualCamera.Transform;
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
     }
@@ -45,18 +45,19 @@ public abstract partial class BaseCamera : Node3D, ICamera
     }
 
     private bool _modalOpen;
+
     private void OnModalOpened()
     {
         _modalOpen = true;
     }
-    
 
     public override void _Process(double delta)
     {
         base._Process(delta);
 
-        if (_modalOpen) return;
-        
+        if (_modalOpen)
+            return;
+
         if (
             !Current
             || _gameObjects.CursorMode == CursorMode.DragSelect

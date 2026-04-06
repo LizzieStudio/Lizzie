@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Text.Json.Serialization;
+using Godot;
 
 /// <summary>
 /// This class captures all the properties that need to be synced across the network for a visual component. This is used to ensure that all clients have the same state for each component, and to minimize the amount of data that needs to be sent over the network by only syncing relevant properties.
@@ -10,9 +10,7 @@ public class VcSyncDto
     /// <summary>
     /// Need a parameterless constructor for JSON deserialization. This is used when receiving data from the network and creating a new instance of this class to apply the properties to a visual component.
     /// </summary>
-    public VcSyncDto()
-    {
-    }
+    public VcSyncDto() { }
 
     public VcSyncDto(VisualComponentBase component)
     {
@@ -35,7 +33,8 @@ public class VcSyncDto
     public Vector3 Position
     {
         get => new(Px, Py, Pz);
-        set         {
+        set
+        {
             Px = value.X;
             Py = value.Y;
             Pz = value.Z;
@@ -43,7 +42,7 @@ public class VcSyncDto
     }
 
     [JsonIgnore]
-    public Vector3 Rotation 
+    public Vector3 Rotation
     {
         get => new(Rx, Ry, Rz);
         set
@@ -62,7 +61,6 @@ public class VcSyncDto
     public float Rx { get; set; }
     public float Ry { get; set; }
     public float Rz { get; set; }
-
 
     public bool Visible { get; set; }
 

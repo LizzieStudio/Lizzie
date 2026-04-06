@@ -257,7 +257,8 @@ public partial class VcDeck : VisualComponentGroup
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
 
-            if (comp == null) continue;
+            if (comp == null)
+                continue;
 
             if (comp is VisualComponentFlat vcf)
             {
@@ -305,16 +306,21 @@ public partial class VcDeck : VisualComponentGroup
         return new CommandResponse(true, c);
     }
 
-    public override void SpawnBuild(Guid prototypeRef, VcSyncDto syncDto, TextureFactory textureFactory)
+    public override void SpawnBuild(
+        Guid prototypeRef,
+        VcSyncDto syncDto,
+        TextureFactory textureFactory
+    )
     {
         if (ProjectService.Instance.CurrentProject == null)
             return;
 
-        if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
                 prototypeRef,
                 out var proto
             )
-           )
+        )
         {
             return;
         }
@@ -323,17 +329,16 @@ public partial class VcDeck : VisualComponentGroup
         BuildInternal(proto.Parameters, textureFactory, false);
     }
 
-    public override bool Build(
-        Dictionary<string, object> parameters,
-        TextureFactory textureFactory
-    )
+    public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
         return BuildInternal(parameters, textureFactory, true);
     }
 
     private bool BuildInternal(
         System.Collections.Generic.Dictionary<string, object> parameters,
-        TextureFactory textureFactory, bool spawnCards)
+        TextureFactory textureFactory,
+        bool spawnCards
+    )
     {
         base.Build(parameters, textureFactory);
 
@@ -427,9 +432,7 @@ public partial class VcDeck : VisualComponentGroup
         return true;
     }
 
-    public override bool Refresh(
-        TextureFactory textureFactory
-    )
+    public override bool Refresh(TextureFactory textureFactory)
     {
         /*
         var fTemplateParam = Utility.GetParam<string>(parameters, "FrontTemplate");
@@ -450,7 +453,8 @@ public partial class VcDeck : VisualComponentGroup
         foreach (var c in Children)
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(c);
-            if (comp is VcToken card) card.Refresh(textureFactory);
+            if (comp is VcToken card)
+                card.Refresh(textureFactory);
         }
 
         return true;
@@ -698,7 +702,7 @@ public partial class VcDeck : VisualComponentGroup
         p.Add("FrontFontSize", 72);
         p.Add("BackFontSize", 24);
 
-       var fqt = new QuickTextureField
+        var fqt = new QuickTextureField
         {
             ForegroundColor = Colors.Black,
             FaceType = TextureFactory.TextureObjectType.Text,
@@ -717,7 +721,7 @@ public partial class VcDeck : VisualComponentGroup
         p.Add("QuickBack", bqt);
 
         //card.Build(p, cardNum.ToString(), textureFactory);
-        card.Build(p,  textureFactory);
+        card.Build(p, textureFactory);
 
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
@@ -747,9 +751,8 @@ public partial class VcDeck : VisualComponentGroup
             { "FrontTemplate", frontTemplate },
             { "BackTemplate", backTemplate },
             { "Dataset", dataset },
-            { "CardReference", cardRef }
+            { "CardReference", cardRef },
         };
-
 
         card.PrototypeRef = PrototypeRef;
         card.DataSetRow = cardRef;
@@ -888,7 +891,6 @@ public partial class VcDeck : VisualComponentGroup
     private bool _frontTextureReady;
     private bool _backTextureReady;
 
-
     private void CheckForSpriteUpdate()
     {
         if (Children.Count > 0)
@@ -896,7 +898,7 @@ public partial class VcDeck : VisualComponentGroup
             var c = ProjectService.Instance.GameObjects.GetComponent(Children.First());
             if (c is VisualComponentFlat vcf)
             {
-                if (vcf.TextureChanged  && vcf.IsNodeReady() && vcf.BackTexture != null)
+                if (vcf.TextureChanged && vcf.IsNodeReady() && vcf.BackTexture != null)
                 {
                     _frontSprite.Texture = vcf.BackTexture;
                     _frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize());
