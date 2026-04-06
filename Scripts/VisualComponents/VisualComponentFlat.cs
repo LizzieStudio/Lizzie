@@ -8,17 +8,23 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
 
     private Texture2D _faceTexture = new ImageTexture();
 
+    public override void _Ready()
+    {
+        //if (_faceTexture != null) FaceSprite.Texture = _faceTexture;
+        //if (_backTexture != null) BackSprite.Texture = _backTexture;
+    }
+
     public Texture2D FaceTexture
     {
         get => _faceTexture;
         set
         {
             _faceTexture = value;
-            if (FaceSprite != null && FaceSprite.IsNodeReady()) FaceSprite.Texture = value;
+            if (GodotObject.IsInstanceValid(FaceSprite) && FaceSprite.IsNodeReady()) FaceSprite.Texture = value;
         }
     }
 
-    private Texture2D _backTexture = new ImageTexture();
+    private Texture2D _backTexture;
 
     public Texture2D BackTexture
     {
@@ -26,7 +32,7 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
         set
         {
             _backTexture = value;
-            if (BackSprite != null && BackSprite.IsNodeReady()) BackSprite.Texture = value;
+            if (GodotObject.IsInstanceValid(BackSprite) && BackSprite.IsNodeReady()) BackSprite.Texture = value;
         }
     }
 

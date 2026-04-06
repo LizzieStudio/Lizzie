@@ -1,4 +1,5 @@
 using System;
+using Godot;
 
 namespace Lizzie.AssetManagement
 {
@@ -7,6 +8,12 @@ namespace Lizzie.AssetManagement
     /// </summary>
     public class Asset
     {
+        
+        public enum AssetType {Image, Spreadsheet, Mesh, Document}
+        
+        
+        public AssetType Type { get; set; }
+
         /// <summary>
         /// Unique identifier for this asset
         /// </summary>
@@ -62,5 +69,16 @@ namespace Lizzie.AssetManagement
         /// Additional metadata specific to the cloud provider
         /// </summary>
         public string ProviderMetadata { get; set; }
+
+        /// <summary>
+        /// Cached image data for quick access (optional, can be null if not loaded)
+        /// </summary>
+        public Image Image { get; set; }
+
+
+        /// <summary>
+        /// We do not load the asset until it's needed, so this flag indicates whether we've downloaded it yet
+        /// </summary>
+        public bool AssetDownloaded { get; set; }
     }
 }

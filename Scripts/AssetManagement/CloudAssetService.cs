@@ -43,8 +43,13 @@ namespace Lizzie.AssetManagement
                 _ => throw new ArgumentException($"Unsupported provider type: {providerType}"),
             };
 
-            await _provider.InitializeAsync(baseFolderUrl, credentials);
-            GD.Print($"CloudAssetService initialized with {providerType} provider");
+            if (!string.IsNullOrEmpty(baseFolderUrl) && !string.IsNullOrEmpty(credentials))
+            {
+                await _provider.InitializeAsync(baseFolderUrl, credentials);
+                GD.Print($"CloudAssetService initialized with {providerType} provider");
+            }
+
+            
         }
 
         /// <summary>
@@ -467,5 +472,51 @@ namespace Lizzie.AssetManagement
                 _ => "application/octet-stream",
             };
         }
+
+        /// <summary>
+        /// Downloads an image from a Google Drive public URL and applies it as the texture
+        /// on <see cref="_testSprite"/>. The image is decoded entirely in-memory; nothing is
+        /// written to disk.
+        /// </summary>
+
+        /// <param name="url">Public URL to download from</param>
+        /// <returns>Record (string, image). If success, string is empty. Otherwise it contains the error message </returns>
+        public async Task<(string, Image)> DownloadImageAsync(string url)
+        {
+            try
+            {
+                var service = new CloudAssetService();
+                await service.InitializeAsync(CloudProviderType.GoogleDrive, string.Empty, string.Empty);
+
+                using var stream = await service.DownloadPublicFileStreamAsync(url);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                var bytes = ms.ToArray();
+
+                var image = new Image();
+                var err = image.LoadPngFromBuffer(bytes);
+                if (err != Error.Ok)
+                    err = image.LoadJpgFromBuffer(bytes);
+                if (err != Error.Ok)
+                    err = image.LoadWebpFromBuffer(bytes);
+
+                if (err != Error.Ok)
+                {
+                    var s = $"DownloadImage {url}: could not decode image data (error: {err})";
+                    GD.PrintErr(s);
+                    return (s, new Image());
+                }
+
+                return (string.Empty, image);
+                GD.Print("SpriteDownloadTest: texture applied to sprite");
+            }
+            catch (Exception ex)
+            {
+                var s = $"SpriteDownloadTest failed: {ex.Message}";
+                GD.PrintErr(s);
+                return (s, new Image());
+            }
+        }
     }
+
 }

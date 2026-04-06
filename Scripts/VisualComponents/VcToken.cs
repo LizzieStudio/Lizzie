@@ -605,7 +605,7 @@ public partial class VcToken : VisualComponentFlat
     private void MapFrontTexture()
     {
 
-        if (FaceSprite == null || !FaceSprite.IsNodeReady())
+        if (!GodotObject.IsInstanceValid(FaceSprite) || !FaceSprite.IsNodeReady())
         {
             _mapFrontTextureRequired = true;
             return;
@@ -631,7 +631,7 @@ public partial class VcToken : VisualComponentFlat
     private void MapBackTexture()
     {
 
-        if (BackSprite == null || !IsInstanceValid(BackSprite))
+        if (!GodotObject.IsInstanceValid(BackSprite) || !BackSprite.IsNodeReady())
         {
             _mapBackTextureRequired = true;
             return;

@@ -1,9 +1,12 @@
 using System;
 using System.Text.Json;
 using Godot;
+using Lizzie.AssetManagement;
 
 public partial class ProjectService : Node
 {
+    public const string SampleProjectName = "Test Project";
+
     public enum ProjectElement
     {
         Dataset,
@@ -67,9 +70,11 @@ public partial class ProjectService : Node
             return null; // Error! We don't have a save to load.
         }
 
-        using var saveFile = FileAccess.Open($"user://{name}.proj", FileAccess.ModeFlags.Read);
+        using var loadFile = FileAccess.Open($"user://{name}.proj", FileAccess.ModeFlags.Read);
 
-        var s = saveFile.GetAsText();
+        var s = loadFile.GetAsText();
+
+        loadFile.Close();
 
         var p = JsonSerializer.Deserialize<Project>(s);
 
@@ -89,9 +94,9 @@ public partial class ProjectService : Node
         return p;
     }
 
-    public bool SaveProject(Project project, string fileName)
+    public bool SaveProject(Project project)
     {
-        using var saveFile = FileAccess.Open($"user://{fileName}.proj", FileAccess.ModeFlags.Write);
+        using var saveFile = FileAccess.Open($"user://{project.Name}.proj", FileAccess.ModeFlags.Write);
 
         var s = JsonSerializer.Serialize<Project>(project);
 
@@ -163,6 +168,15 @@ public partial class ProjectService : Node
         CurrentProject.Prototypes.TryAdd(prototype.PrototypeRef, prototype);
         CurrentProject.Prototypes[prototype.PrototypeRef] = prototype;
         EventBus.Instance.Publish(new PrototypeChangedEvent{PrototypeId = prototype.PrototypeRef});
+    }
+
+    public void UpdateImage(Asset image)
+    {
+        if (CurrentProject == null || image == null) return;
+        CurrentProject.Images.TryAdd(image.AssetId.ToString(), image);
+        CurrentProject.Images[image.AssetId.ToString()] = image;
+        EventBus.Instance.Publish(new AssetChangedEvent { Asset = image });
+        SaveProject(CurrentProject); // Auto-save on image change
     }
 
     public void AddPrototypeToManifest(CreateObjectEventArgs args)

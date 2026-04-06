@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://vohqwwocx8x7"]
+
+[ext_resource type="Script" uid="uid://c7fwteyhgq6cx" path="res://Scripts/AssetManagement/ImageTile.cs" id="1_ik0g4"]
+[ext_resource type="Texture2D" uid="uid://coi3i5pe1cv5l" path="res://Textures/Shapes/notfound.png" id="2_ik0g4"]
+
+[node name="ImageTile" type="MarginContainer" unique_id=552496931]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+script = ExtResource("1_ik0g4")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=935392184]
+layout_mode = 2
+
+[node name="Thumbnail" type="TextureRect" parent="VBoxContainer" unique_id=704991009]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+texture = ExtResource("2_ik0g4")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="ImageName" type="Label" parent="VBoxContainer" unique_id=350080981]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Image 1"
+horizontal_alignment = 1

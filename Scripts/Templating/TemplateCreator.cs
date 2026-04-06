@@ -306,7 +306,7 @@ public partial class TemplateCreator : Window
     private void SaveTemplate()
     {
         CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(_hierarchicalElements);
-        ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject, "TestProject");
+        ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject);
         EventBus.Instance.Publish(
             new TemplateChangedEvent
             {

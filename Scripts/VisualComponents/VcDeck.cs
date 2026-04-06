@@ -645,6 +645,8 @@ public partial class VcDeck : VisualComponentGroup
     {
         Clear();
 
+        int cardNum = 1;
+
         foreach (var q in _quickCardList)
         {
             var values = Utility.ParseValueRanges(q.Caption);
@@ -656,10 +658,12 @@ public partial class VcDeck : VisualComponentGroup
                     q.BackgroundColor,
                     q.CardBackValue,
                     q.CardBackColor,
+                    cardNum,
                     textureFactory
                 );
 
                 CreateAndAddChildComponent(c);
+                cardNum++;
             }
         }
     }
@@ -669,11 +673,12 @@ public partial class VcDeck : VisualComponentGroup
         Color faceColor,
         string backCaption,
         Color backColor,
+        int cardNum,
         TextureFactory textureFactory
     )
     {
         var card = (VcToken)_templateCard.Duplicate();
-        var p = new System.Collections.Generic.Dictionary<string, object>();
+        var p = new Dictionary<string, object>();
 
         p.Add("Height", _height * 10);
         p.Add("Width", _width * 10);
@@ -692,8 +697,30 @@ public partial class VcDeck : VisualComponentGroup
         p.Add("BackCaptionColor", Colors.Black);
         p.Add("FrontFontSize", 72);
         p.Add("BackFontSize", 24);
-        card.Build(p, textureFactory);
 
+       var fqt = new QuickTextureField
+        {
+            ForegroundColor = Colors.Black,
+            FaceType = TextureFactory.TextureObjectType.Text,
+            Caption = faceCaption,
+            Quantity = 1,
+        };
+        p.Add("QuickFront", fqt);
+
+        var bqt = new QuickTextureField
+        {
+            ForegroundColor = Colors.Black,
+            FaceType = TextureFactory.TextureObjectType.Text,
+            Caption = backCaption,
+            Quantity = 1,
+        };
+        p.Add("QuickBack", bqt);
+
+        //card.Build(p, cardNum.ToString(), textureFactory);
+        card.Build(p,  textureFactory);
+
+        card.Parent = Reference;
+        card.PrototypeRef = PrototypeRef;
         card.Parent = Reference;
 
         return card;
@@ -869,7 +896,7 @@ public partial class VcDeck : VisualComponentGroup
             var c = ProjectService.Instance.GameObjects.GetComponent(Children.First());
             if (c is VisualComponentFlat vcf)
             {
-                if (vcf.TextureChanged)
+                if (vcf.TextureChanged  && vcf.IsNodeReady() && vcf.BackTexture != null)
                 {
                     _frontSprite.Texture = vcf.BackTexture;
                     _frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize());
@@ -882,7 +909,7 @@ public partial class VcDeck : VisualComponentGroup
             var l = ProjectService.Instance.GameObjects.GetComponent(Children.Last());
             if (l is VisualComponentFlat vcb)
             {
-                if (vcb.TextureChanged)
+                if (vcb.TextureChanged && vcb.IsNodeReady() && vcb.FaceTexture != null)
                 {
                     _backSprite.Texture = vcb.FaceTexture;
                     _backSprite.PixelSize = PixelSize(_backSprite.Texture.GetSize());

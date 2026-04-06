@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using Godot;
+using Lizzie.AssetManagement;
 
 public partial class SceneController : Node3D
 {
@@ -17,6 +20,8 @@ public partial class SceneController : Node3D
     private GameObjects _gameObjects;
 
     private VcMeeple _meepletest;
+
+    private Sprite3D _testSprite;
 
     public override void _Ready()
     {
@@ -84,6 +89,7 @@ public partial class SceneController : Node3D
     {
         _gameObjects.EnterSpawnMode(component);
     }
+
 
     public void PopupClosed()
     {

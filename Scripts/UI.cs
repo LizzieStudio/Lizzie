@@ -39,6 +39,7 @@ public partial class UI : CanvasLayer
     private DatasetEditor _datasetEditor;
     private PrototypeManifest _prototypeManifest;
     private MultiplayerDialog _multiplayerDialog;
+    private ImageManager _imageManager;
 
     private Node _modalDialogs;
 
@@ -62,6 +63,7 @@ public partial class UI : CanvasLayer
         _editMenu = GetNode<PopupMenu>("MenuBar/Edit");
         _editMenu.AddItem("Templates", 1);
         _editMenu.AddItem("Datasets", 2);
+        _editMenu.AddItem("Images", 4);
         _editMenu.AddItem("Prototype Manifest", 3);
         _editMenu.IdPressed += OnEditMenuSelection;
 
@@ -88,6 +90,7 @@ public partial class UI : CanvasLayer
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
         EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
+        EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
     }
 
 
@@ -171,6 +174,28 @@ public partial class UI : CanvasLayer
         _datasetEditor.QueueFree();
     }
 
+
+    private void ShowImageManager()
+    {
+        ShowImageManagerFromEvent(new ShowImageManagerEvent { ImageReference = Guid.Empty });
+    }
+
+    private void ShowImageManagerFromEvent(ShowImageManagerEvent e)
+    {
+        string s = "res://Scenes/Controls/ImageManager.tscn";
+        _imageManager = GD.Load<PackedScene>(s).Instantiate<ImageManager>();
+        _imageManager.Closed += ImageManagerOnClosed;
+        _modalDialogs.AddChild(_imageManager);
+    }
+
+
+    private void ImageManagerOnClosed(object sender, EventArgs e)
+    {
+        _imageManager.Closed -= ImageManagerOnClosed;
+        _imageManager.Hide();
+        _imageManager.QueueFree();
+    }
+
     public void SetGameController(GameController gameController)
     {
         _gameController = gameController;
@@ -185,13 +210,13 @@ public partial class UI : CanvasLayer
                 break;
 
             case 1:
-                var p = ProjectService.Instance.LoadProject("TestProj");
+                var p = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
                 ProjectService.Instance.CurrentProject = p;
                 break;
 
             case 2:
                 var op = _projectManager.CreateTestProject();
-                ProjectService.Instance.SaveProject(op, "TestProj");
+                ProjectService.Instance.SaveProject(op);
                 break;
 
             case 10:
@@ -502,6 +527,11 @@ public partial class UI : CanvasLayer
         if (id == 3)
         {
             ShowPrototypeManifest();
+        }
+
+        if (id == 4)
+        {
+            ShowImageManager();
         }
     }
 

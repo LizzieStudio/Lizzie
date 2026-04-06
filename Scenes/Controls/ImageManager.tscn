@@ -1,0 +1,121 @@
+[gd_scene format=3 uid="uid://cnxyg0daqnpmu"]
+
+[ext_resource type="Script" uid="uid://bjsykaoceokhe" path="res://Scripts/AssetManagement/ImageManager.cs" id="1_oe4yn"]
+[ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="3_rcwif"]
+
+[node name="ImageManager" type="Window" unique_id=1595850932]
+oversampling_override = 1.0
+title = "ImageManager"
+initial_position = 2
+size = Vector2i(600, 400)
+script = ExtResource("1_oe4yn")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=531586979]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=872761313]
+layout_mode = 2
+
+[node name="Toolbar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1120376067]
+layout_mode = 2
+
+[node name="AddNewButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1421907643]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add New"
+
+[node name="RemoveButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=998356568]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Remove"
+
+[node name="Panel" type="Panel" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=481204357]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=842620960]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=831685732]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TileContainer" type="HFlowContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=1336304993]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="AddImagePanel" type="Panel" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=23214448]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(200, 150)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_styles/panel = ExtResource("3_rcwif")
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel" unique_id=1278981682]
+layout_mode = 1
+offset_right = 191.0
+offset_bottom = 136.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer" unique_id=1480480400]
+layout_mode = 2
+
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer" unique_id=555832750]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1050739579]
+layout_mode = 2
+text = "Service"
+
+[node name="CloudService" type="OptionButton" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1325240250]
+unique_name_in_owner = true
+layout_mode = 2
+item_count = 3
+popup/item_0/text = "Google Drive"
+popup/item_0/id = 0
+popup/item_1/text = "Dropbox"
+popup/item_1/id = 1
+popup/item_2/text = "OneDrive"
+popup/item_2/id = 2
+
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1500212282]
+layout_mode = 2
+text = "URL"
+
+[node name="UrlInput" type="LineEdit" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=478212971]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=851393597]
+layout_mode = 2
+text = "Name"
+
+[node name="NameInput" type="LineEdit" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1557635290]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer" unique_id=1546665641]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="AddImageButton" type="Button" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=606209130]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add"
+
+[node name="CancelImageButton" type="Button" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=109525484]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"

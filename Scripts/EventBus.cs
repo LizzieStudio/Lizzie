@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Lizzie.AssetManagement;
 
 /// <summary>
 /// Global event bus for decoupled communication between components
@@ -292,6 +293,11 @@ public class ShowDatasetEditor : IEvent
     public string DatasetName { get; set; }
 }
 
+public class ShowImageManagerEvent : IEvent
+{
+     public Guid ImageReference { get; set; }
+}
+
 public class PrototypeChangedEvent : IEvent
 {
     public Guid PrototypeId { get; set; }
@@ -337,6 +343,11 @@ public class AddComponentToSceneEvent : IEvent
     }
 
     public VisualComponentBase Component { get; set; }
+}
+
+public class AssetChangedEvent : IEvent
+{
+    public Asset Asset { get; set; }
 }
 
 /// <summary>
