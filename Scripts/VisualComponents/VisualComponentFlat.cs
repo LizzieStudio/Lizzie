@@ -20,7 +20,8 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
         set
         {
             _faceTexture = value;
-            if (GodotObject.IsInstanceValid(FaceSprite) && FaceSprite.IsNodeReady()) FaceSprite.Texture = value;
+            if (GodotObject.IsInstanceValid(FaceSprite) && FaceSprite.IsNodeReady())
+                FaceSprite.Texture = value;
         }
     }
 
@@ -32,10 +33,10 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
         set
         {
             _backTexture = value;
-            if (GodotObject.IsInstanceValid(BackSprite) && BackSprite.IsNodeReady()) BackSprite.Texture = value;
+            if (GodotObject.IsInstanceValid(BackSprite) && BackSprite.IsNodeReady())
+                BackSprite.Texture = value;
         }
     }
-
 
     public virtual bool ShowFace { get; protected set; }
 

@@ -416,7 +416,8 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         _colorPicker.Color = (Color)prototype.Parameters["Color"];
 
         if (
-            prototype.Parameters.ContainsKey("Grid") && prototype.Parameters["Grid"] is bool[][] grid
+            prototype.Parameters.ContainsKey("Grid")
+            && prototype.Parameters["Grid"] is bool[][] grid
         )
         {
             SetGridState(grid);

@@ -21,8 +21,6 @@ public partial class VcToken : VisualComponentFlat
         //FaceSprite = GetNode<Sprite3D>("FrontSprite");
         //BackSprite = GetNode<Sprite3D>("BackSprite");
         //_sideMesh = GetNode<MeshInstance3D>("SideMesh");
-
-
     }
 
     public override void _Process(double delta)
@@ -37,7 +35,6 @@ public partial class VcToken : VisualComponentFlat
             BuildToken();
             _buildRequired = false;
         }
-
 
         if (_mapFrontTextureRequired)
         {
@@ -56,9 +53,6 @@ public partial class VcToken : VisualComponentFlat
 
         base._Process(delta);
     }
-
-   
-
 
     public override GeometryInstance3D DragMesh => FaceSprite;
     public override float MaxAxisSize => Math.Max(_height, _width);
@@ -184,7 +178,6 @@ public partial class VcToken : VisualComponentFlat
                 break;
         }
 
-
         BuildToken();
 
         return true;
@@ -202,7 +195,6 @@ public partial class VcToken : VisualComponentFlat
         BackSprite = GetNode<Sprite3D>("BackSprite");
         _sideMesh = GetNode<MeshInstance3D>("SideMesh");
 
-      
         YHeight = _thickness;
 
         Scale = new Vector3(_width, _thickness, _height);
@@ -365,7 +357,6 @@ public partial class VcToken : VisualComponentFlat
     private string _frontTemplateName;
     private string _backTemplateName;
     private string _datasetName;
-    
 
     private void BuildTemplate(TextureFactory textureFactory)
     {
@@ -405,7 +396,6 @@ public partial class VcToken : VisualComponentFlat
 
         _frontTextureGenerated = true;
         _backTextureGenerated = true;
-
 
         if (ft is not null)
         {
@@ -586,7 +576,7 @@ public partial class VcToken : VisualComponentFlat
         if (!_differentBack)
         {
             _backTextureGenerated = true;
-           
+
             BackTexture = t;
         }
 
@@ -604,7 +594,6 @@ public partial class VcToken : VisualComponentFlat
 
     private void MapFrontTexture()
     {
-
         if (!GodotObject.IsInstanceValid(FaceSprite) || !FaceSprite.IsNodeReady())
         {
             _mapFrontTextureRequired = true;
@@ -612,9 +601,9 @@ public partial class VcToken : VisualComponentFlat
         }
 
         _mapFrontTextureRequired = false;
-        
+
         _frontTextureGenerated = true;
-        
+
         FaceSprite.Texture = FaceTexture;
         float pixelSize = PixelSize(FaceTexture.GetSize());
         FaceSprite.PixelSize = pixelSize;
@@ -630,7 +619,6 @@ public partial class VcToken : VisualComponentFlat
 
     private void MapBackTexture()
     {
-
         if (!GodotObject.IsInstanceValid(BackSprite) || !BackSprite.IsNodeReady())
         {
             _mapBackTextureRequired = true;
@@ -638,8 +626,9 @@ public partial class VcToken : VisualComponentFlat
         }
 
         _mapBackTextureRequired = false;
-        
-        BackSprite.PixelSize = PixelSize(BackTexture.GetSize()); ;
+
+        BackSprite.PixelSize = PixelSize(BackTexture.GetSize());
+        ;
         BackSprite.Texture = BackTexture;
     }
 
@@ -652,7 +641,6 @@ public partial class VcToken : VisualComponentFlat
 
     private void FinalizeBackTexture(ImageTexture t)
     {
-
         _backTextureGenerated = true;
 
         BackTexture = t;
@@ -721,7 +709,8 @@ public partial class VcToken : VisualComponentFlat
         _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
         _backTemplateName = Utility.GetParam<string>(parameters, "BackTemplate");
         _datasetName = Utility.GetParam<string>(parameters, "Dataset");
-        if (string.IsNullOrWhiteSpace(DataSetRow)) DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
+        if (string.IsNullOrWhiteSpace(DataSetRow))
+            DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
 
         return true;
     }

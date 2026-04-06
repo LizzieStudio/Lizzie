@@ -1,5 +1,5 @@
-using Godot;
 using System;
+using Godot;
 using Lizzie.AssetManagement;
 
 public partial class ImageManager : Window
@@ -45,14 +45,8 @@ public partial class ImageManager : Window
         InitializeTiles();
     }
 
-
-
     // Called every frame. 'delta' is the elapsed time since the previous frame.
-    public override void _Process(double delta)
-    {
-    }
-
-    
+    public override void _Process(double delta) { }
 
     public event EventHandler Closed;
 
@@ -61,9 +55,7 @@ public partial class ImageManager : Window
         Closed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnRemovePressed()
-    {
-    }
+    private void OnRemovePressed() { }
 
     private void UpdateButtons(bool enable)
     {
@@ -113,7 +105,6 @@ public partial class ImageManager : Window
         ProjectService.Instance.UpdateImage(asset);
     }
 
-    
     private void OnCancelImagePressed()
     {
         _addPanel.Visible = false;

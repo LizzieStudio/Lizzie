@@ -82,7 +82,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         //register for events
         EventBus.Instance.Subscribe<TemplateChangedEvent>(TemplateChanged);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(DataSetChanged);
-
     }
 
     private void TemplateChanged(TemplateChangedEvent obj)
@@ -92,7 +91,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void DataSetChanged(DataSetChangedEvent obj)
     {
-            UpdatePreview();
+        UpdatePreview();
     }
 
     public override void Activate()
@@ -169,7 +168,9 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void EditDataset()
     {
-        EventBus.Instance.Publish(new ShowDatasetEditor { DatasetName = _textureContext.DataSet?.Name });
+        EventBus.Instance.Publish(
+            new ShowDatasetEditor { DatasetName = _textureContext.DataSet?.Name }
+        );
     }
 
     private void StandardSizeChanged(long index)
@@ -653,7 +654,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         d.Add("Dataset", _textureContext.DataSet?.Name);
         d.Add("CardReference", _textureContext.CurrentRowName);
         var c = _componentPreview.GetComponent();
-        if (c != null) c.DataSetRow = _textureContext.CurrentRowName;
+        if (c != null)
+            c.DataSetRow = _textureContext.CurrentRowName;
     }
 
     private void UpdateQuick(Dictionary<string, object> d, int card)

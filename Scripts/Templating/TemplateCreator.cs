@@ -198,11 +198,12 @@ public partial class TemplateCreator : Window
         }
     }
 
-
     private string _tempTemplateName = string.Empty;
+
     public void SetTemplateByName(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return;
+        if (string.IsNullOrWhiteSpace(name))
+            return;
 
         if (!IsNodeReady())
         {
@@ -305,7 +306,9 @@ public partial class TemplateCreator : Window
 
     private void SaveTemplate()
     {
-        CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(_hierarchicalElements);
+        CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(
+            _hierarchicalElements
+        );
         ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject);
         EventBus.Instance.Publish(
             new TemplateChangedEvent
@@ -437,7 +440,6 @@ public partial class TemplateCreator : Window
         {
             _selectedElement.SetParameterValue(name, value);
         }
-        
     }
 
     private IParamControl GetParamControl(string name)

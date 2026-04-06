@@ -15,7 +15,7 @@ public partial class VcDie : VisualComponentBase
     public override void _Ready()
     {
         base._Ready();
-        
+
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
