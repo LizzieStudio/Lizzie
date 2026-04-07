@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 
 public partial class Config : Node
 {
@@ -27,9 +27,12 @@ public partial class Config : Node
 
         Variant value = config.GetValue(section, name);
 
-        try {
+        try
+        {
             return value.As<T>();
-        } catch {
+        }
+        catch
+        {
             throw new Exception("Invalid value in '" + section + "->" + name + "'.");
         }
     }
