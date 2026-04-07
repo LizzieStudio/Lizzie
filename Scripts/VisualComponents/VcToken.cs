@@ -147,7 +147,11 @@ public partial class VcToken : VisualComponentFlat
 
     private bool _buildRequired = false;
 
-    public override bool Build(Dictionary<string, object> parameters, string dataSetRow, TextureFactory textureFactory)
+    public override bool Build(
+        Dictionary<string, object> parameters,
+        string dataSetRow,
+        TextureFactory textureFactory
+    )
     {
         TextureFactory = textureFactory;
         TempParams = parameters;
@@ -181,12 +185,11 @@ public partial class VcToken : VisualComponentFlat
         BuildToken();
 
         return true;
-        
     }
 
     public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
-       return Build(parameters, string.Empty, textureFactory);
+        return Build(parameters, string.Empty, textureFactory);
     }
 
     private void BuildToken()
