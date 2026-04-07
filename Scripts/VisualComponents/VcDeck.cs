@@ -720,8 +720,8 @@ public partial class VcDeck : VisualComponentGroup
         };
         p.Add("QuickBack", bqt);
 
-        //card.Build(p, cardNum.ToString(), textureFactory);
-        card.Build(p, textureFactory);
+        card.Build(p, cardNum.ToString(), textureFactory);
+        //card.Build(p, textureFactory);
 
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;

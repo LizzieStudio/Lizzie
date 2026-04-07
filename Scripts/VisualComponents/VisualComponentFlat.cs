@@ -12,6 +12,8 @@ public abstract partial class VisualComponentFlat : VisualComponentBase
     {
         //if (_faceTexture != null) FaceSprite.Texture = _faceTexture;
         //if (_backTexture != null) BackSprite.Texture = _backTexture;
+
+        base._Ready();
     }
 
     public Texture2D FaceTexture
