@@ -254,6 +254,8 @@ public partial class GameObjects : Node
         component.ZOrder = GetMaxComponentZ() + 1;
         var vv = component.Position;
 
+        GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
+
         AddChild(component);
         component.AddComponentToObjects += ComponentOnAddComponentToObjects;
 
@@ -1070,7 +1072,10 @@ public partial class GameObjects : Node
             cnt++;
             var component = GetComponent(reference);
             if (component == null)
+            {
+                GD.PrintErr($"ProcessSpawnQueue: Component with reference {reference} not found.");
                 continue;
+            }
 
             var prototypeRef = component.PrototypeRef.ToString();
             var componentRef = component.Reference.ToString();

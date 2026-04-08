@@ -387,7 +387,10 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private void GenerateQuickCards()
     {
         _suitCount = _quickSuitCount.Selected + 1;
-
+        LoadQuickSuits();
+        
+        _quickCards = TemplateEngine.GenerateQuickCards(_quickSuits, _suitCount);
+        
         _quickCards.Clear();
 
         for (int i = 0; i < _suitCount; i++)

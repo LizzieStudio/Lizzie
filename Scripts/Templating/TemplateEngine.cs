@@ -186,4 +186,57 @@ public static class TemplateEngine
 
         return d;
     }
+
+    public static List<QuickCardData> GenerateQuickCards(List<QuickCardData> quickSuitData, int suitCount)
+    {
+        var outCards = new List<QuickCardData>();
+
+        for (int i = 0; i < suitCount; i++)
+        {
+            var values = Utility.ParseValueRanges(quickSuitData[i].Caption);
+
+            foreach (var v in values)
+            {
+                var c = new QuickCardData
+                {
+                    BackgroundColor = quickSuitData[i].BackgroundColor,
+                    Caption = v,
+                    CardBackColor = quickSuitData[i].CardBackColor,
+                    CardBackValue = quickSuitData[i].CardBackValue,
+                };
+
+                outCards.Add(c);
+            }
+        }
+
+        return outCards;
+    }
+
+    public static QuickCardData GenerateQuickCardByRow(List<QuickCardData> quickSuitData, int suitCount, int row)
+    {
+        int curRow = 0;
+
+        for (int i = 0; i < suitCount; i++)
+        {
+            var values = Utility.ParseValueRanges(quickSuitData[i].Caption);
+
+            foreach (var v in values)
+            {
+                var c = new QuickCardData
+                {
+                    BackgroundColor = quickSuitData[i].BackgroundColor,
+                    Caption = v,
+                    CardBackColor = quickSuitData[i].CardBackColor,
+                    CardBackValue = quickSuitData[i].CardBackValue,
+                };
+
+                if (curRow == row) return c;
+
+                curRow++;
+                
+            }
+        }
+
+        return new QuickCardData();
+    }
 }

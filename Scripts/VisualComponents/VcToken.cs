@@ -143,6 +143,7 @@ public partial class VcToken : VisualComponentFlat
         Grid,
         Template,
         Nandeck,
+        QuickDeck, //need to parse the QuickBuild string to pull out the caption
     }
 
     private bool _buildRequired = false;
@@ -156,7 +157,7 @@ public partial class VcToken : VisualComponentFlat
         TextureFactory = textureFactory;
         TempParams = parameters;
 
-        if (!InitializeParameters(parameters, textureFactory))
+        if (!InitializeParameters(parameters, dataSetRow, textureFactory))
             return false;
 
         switch (_mode)
@@ -180,12 +181,17 @@ public partial class VcToken : VisualComponentFlat
             case TokenBuildMode.Nandeck:
                 BuildNanDeck();
                 break;
+
+            case TokenBuildMode.QuickDeck:
+                BuildQuickDeck(textureFactory);
+                break;
         }
 
         BuildToken();
 
         return true;
     }
+
 
     public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
@@ -419,6 +425,28 @@ public partial class VcToken : VisualComponentFlat
             _backTextureGenerated = false;
             textureFactory.GenerateTexture(btd, FinalizeBackTexture);
         }
+    }
+
+    private List<QuickCardData> _quickCardList = new();
+
+    private void BuildQuickDeck(TextureFactory textureFactory)
+    {
+        int.TryParse(DataSetRow, out var r);
+
+        if (r < 0 || r >= _quickCardList.Count)
+            return;
+
+        var qtf = TemplateEngine.GenerateQuickCardByRow(_quickCardList, _quickCardList.Count, r);
+        var td = CreateQuickTextureDefinition(qtf.BackgroundColor, 
+            new QuickTextureField
+            {
+                Caption = qtf.Caption,
+                FaceType = TextureFactory.TextureObjectType.Text ,
+                ForegroundColor = Colors.Black,
+                Quantity = 1,
+            });
+
+        textureFactory.GenerateTexture(td, FinalizeFrontTexture);
     }
 
     private bool _frontTextureGenerated;
@@ -662,10 +690,11 @@ public partial class VcToken : VisualComponentFlat
 
     private bool InitializeParameters(
         Dictionary<string, object> parameters,
+        string dataSetRow,
         TextureFactory textureFactory
     )
     {
-        base.Build(parameters, string.Empty, textureFactory);
+        base.Build(parameters, dataSetRow, textureFactory);
 
         var h = Utility.GetParam<float>(parameters, "Height");
         if (h <= 0)
@@ -720,6 +749,12 @@ public partial class VcToken : VisualComponentFlat
         _datasetName = Utility.GetParam<string>(parameters, "Dataset");
         if (string.IsNullOrWhiteSpace(DataSetRow))
             DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
+
+
+        _quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
+
+        if (_quickCardList == null)
+            _quickCardList = new();
 
         return true;
     }
