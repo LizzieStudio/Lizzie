@@ -192,7 +192,6 @@ public partial class VcToken : VisualComponentFlat
         return true;
     }
 
-
     public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
         return Build(parameters, string.Empty, textureFactory);
@@ -437,14 +436,16 @@ public partial class VcToken : VisualComponentFlat
             return;
 
         var qtf = TemplateEngine.GenerateQuickCardByRow(_quickCardList, _quickCardList.Count, r);
-        var td = CreateQuickTextureDefinition(qtf.BackgroundColor, 
+        var td = CreateQuickTextureDefinition(
+            qtf.BackgroundColor,
             new QuickTextureField
             {
                 Caption = qtf.Caption,
-                FaceType = TextureFactory.TextureObjectType.Text ,
+                FaceType = TextureFactory.TextureObjectType.Text,
                 ForegroundColor = Colors.Black,
                 Quantity = 1,
-            });
+            }
+        );
 
         textureFactory.GenerateTexture(td, FinalizeFrontTexture);
     }
@@ -749,7 +750,6 @@ public partial class VcToken : VisualComponentFlat
         _datasetName = Utility.GetParam<string>(parameters, "Dataset");
         if (string.IsNullOrWhiteSpace(DataSetRow))
             DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
-
 
         _quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
 

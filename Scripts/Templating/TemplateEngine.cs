@@ -187,7 +187,10 @@ public static class TemplateEngine
         return d;
     }
 
-    public static List<QuickCardData> GenerateQuickCards(List<QuickCardData> quickSuitData, int suitCount)
+    public static List<QuickCardData> GenerateQuickCards(
+        List<QuickCardData> quickSuitData,
+        int suitCount
+    )
     {
         var outCards = new List<QuickCardData>();
 
@@ -212,7 +215,11 @@ public static class TemplateEngine
         return outCards;
     }
 
-    public static QuickCardData GenerateQuickCardByRow(List<QuickCardData> quickSuitData, int suitCount, int row)
+    public static QuickCardData GenerateQuickCardByRow(
+        List<QuickCardData> quickSuitData,
+        int suitCount,
+        int row
+    )
     {
         int curRow = 0;
 
@@ -230,10 +237,10 @@ public static class TemplateEngine
                     CardBackValue = quickSuitData[i].CardBackValue,
                 };
 
-                if (curRow == row) return c;
+                if (curRow == row)
+                    return c;
 
                 curRow++;
-                
             }
         }
 

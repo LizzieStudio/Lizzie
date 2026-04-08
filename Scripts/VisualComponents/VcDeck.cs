@@ -726,7 +726,7 @@ public partial class VcDeck : VisualComponentGroup
         */
 
         card.Build(p, cardNum.ToString(), textureFactory);
-       
+
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
         card.Parent = Reference;
