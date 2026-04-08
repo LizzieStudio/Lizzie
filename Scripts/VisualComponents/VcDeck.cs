@@ -724,7 +724,6 @@ public partial class VcDeck : VisualComponentGroup
             Quantity = 1,
         };
         p.Add("QuickBack", bqt);
-        
 
         card.Build(p, cardNum.ToString(), textureFactory);
 
