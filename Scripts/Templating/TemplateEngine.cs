@@ -221,7 +221,7 @@ public static class TemplateEngine
         int row
     )
     {
-        int curRow = 0;
+        int curRow = 1;
 
         for (int i = 0; i < suitCount; i++)
         {

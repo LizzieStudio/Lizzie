@@ -448,6 +448,9 @@ public partial class VcToken : VisualComponentFlat
         );
 
         textureFactory.GenerateTexture(td, FinalizeFrontTexture);
+        
+        if (_differentBack)
+            CreateQuickBackTexture(textureFactory);
     }
 
     private bool _frontTextureGenerated;

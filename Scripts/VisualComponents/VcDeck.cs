@@ -714,6 +714,7 @@ public partial class VcDeck : VisualComponentGroup
             Quantity = 1,
         };
         p.Add("QuickFront", fqt);
+        */
 
         var bqt = new QuickTextureField
         {
@@ -723,7 +724,7 @@ public partial class VcDeck : VisualComponentGroup
             Quantity = 1,
         };
         p.Add("QuickBack", bqt);
-        */
+        
 
         card.Build(p, cardNum.ToString(), textureFactory);
 
