@@ -137,11 +137,11 @@ public abstract partial class VisualComponentBase : Area3D
             return false;
         }
 
-        Build(proto.Parameters, textureFactory);
-
         PrototypeRef = prototypeRef;
         if (!string.IsNullOrEmpty(dataSetRow))
             DataSetRow = dataSetRow;
+
+        Build(proto.Parameters, textureFactory);
 
         return true;
     }

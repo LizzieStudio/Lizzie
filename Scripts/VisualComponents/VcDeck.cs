@@ -231,7 +231,7 @@ public partial class VcDeck : VisualComponentGroup
             }
         }
 
-        RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
+        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
     }
 
     private CommandResponse DrawCards(int count)
@@ -355,7 +355,7 @@ public partial class VcDeck : VisualComponentGroup
         {
             switch (_mode)
             {
-                case VcToken.TokenBuildMode.Quick:
+                case VcToken.TokenBuildMode.QuickDeck:
                     BuildQuick(parameters, textureFactory);
                     break;
 
@@ -429,6 +429,7 @@ public partial class VcDeck : VisualComponentGroup
         _backTextureReady = false;
 
         UpdateDeckSprites();
+        SyncRequired = true;
         return true;
     }
 
@@ -684,6 +685,7 @@ public partial class VcDeck : VisualComponentGroup
         var card = (VcToken)_templateCard.Duplicate();
         card.ComponentType = VisualComponentType.Token;
 
+        /*
         var p = new Dictionary<string, object>();
 
         p.Add("Height", _height * 10);
@@ -705,7 +707,7 @@ public partial class VcDeck : VisualComponentGroup
         p.Add("BackFontSize", 24);
         p.Add("QuickCardData", _quickCardList);
 
-        /*
+        
         var fqt = new QuickTextureField
         {
             ForegroundColor = Colors.Black,
@@ -714,7 +716,7 @@ public partial class VcDeck : VisualComponentGroup
             Quantity = 1,
         };
         p.Add("QuickFront", fqt);
-        */
+        
 
         var bqt = new QuickTextureField
         {
@@ -724,13 +726,14 @@ public partial class VcDeck : VisualComponentGroup
             Quantity = 1,
         };
         p.Add("QuickBack", bqt);
-
-        card.Build(p, cardNum.ToString(), textureFactory);
+        */
 
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
         card.Parent = Reference;
 
+        card.Build(PrototypeRef, cardNum.ToString(), textureFactory);
+        
         return card;
     }
 
@@ -743,26 +746,11 @@ public partial class VcDeck : VisualComponentGroup
         TextureFactory textureFactory
     )
     {
-        var p = new Dictionary<string, object>
-        {
-            { "Height", _height * 10 },
-            { "Width", _width * 10 },
-            { "Thickness", 0.1f * 10 },
-            { "ComponentName", string.Empty }, //TODO add card name
-            { "Shape", 0 },
-            { "Mode", VcToken.TokenBuildMode.Template },
-            { "DifferentBack", true },
-            { "FrontTemplate", frontTemplate },
-            { "BackTemplate", backTemplate },
-            { "Dataset", dataset },
-            { "CardReference", cardRef },
-        };
-
         card.PrototypeRef = PrototypeRef;
         card.DataSetRow = cardRef;
         card.Parent = Reference;
 
-        card.Build(p, textureFactory);
+        card.Build(PrototypeRef, cardRef, textureFactory);
     }
 
     #region Grid Cards
@@ -947,6 +935,9 @@ public partial class VcDeck : VisualComponentGroup
     private void UpdateDeckSprites()
     {
         //set the top and bottom sprites.
+        if (_frontSprite == null || _backSprite == null)
+            return;
+
 
         //The top of the deck displays the back of the first card.
         //The bottom of the deck displays the face of the last card.
@@ -959,6 +950,9 @@ public partial class VcDeck : VisualComponentGroup
             {
                 if (vcf.TextureReady)
                 {
+                    if (vcf.BackTexture == null || vcf.BackSprite == null)
+                        return;
+
                     _frontSprite.PixelSize = vcf.BackSprite.PixelSize;
                     _frontSprite.Texture = vcf.BackTexture;
                     _frontTextureReady = true;
@@ -970,6 +964,9 @@ public partial class VcDeck : VisualComponentGroup
             {
                 if (vcb.TextureReady)
                 {
+                    if (vcb.FaceTexture == null || vcb.FaceSprite == null)
+                        return;
+
                     _backSprite.PixelSize = vcb.FaceSprite.PixelSize;
                     _backSprite.Texture = vcb.FaceTexture;
                     _backTextureReady = true;

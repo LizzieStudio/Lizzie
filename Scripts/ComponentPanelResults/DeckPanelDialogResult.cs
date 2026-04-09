@@ -73,6 +73,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         InitializeStandardSizes();
         InitializeTemplates();
 
+        ComponentType = VisualComponentBase.VisualComponentType.Deck;
+
         HeightWidthChange(string.Empty); //just to start
 
         QuickSuitCountChanged(_quickSuitCount.Selected);
@@ -451,7 +453,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     {
         LoadQuickSuits();
         d.Add("QuickCardData", _quickSuits);
-        d.Add("Mode", VcToken.TokenBuildMode.Quick);
+        d.Add("DifferentBack", true);
+        d.Add("Mode", VcToken.TokenBuildMode.QuickDeck);
     }
 
     private void AddGridParameters(Dictionary<string, object> d)
@@ -468,12 +471,35 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private void AddTemplateParameters(Dictionary<string, object> d)
     {
         d.Add("Mode", VcToken.TokenBuildMode.Template);
+
+        /*
+        if (_textureContext.DataSet == null)
+        {
+            _textureContext.CurrentRowName = string.Empty;
+        }
+        else
+        {
+            var cardName = _textureContext.DataSet.Rows.ElementAt(card).Key;
+            _textureContext.CurrentRowName = cardName;
+        }
+        */
+
         if (_frontTemplate != null)
         {
             d.Add("FrontTemplate", _frontTemplate.Name);
-            d.Add("BackTemplate", _backTemplate.Name);
-            d.Add("Dataset", _textureContext.DataSet.Name);
         }
+
+        if (_backTemplate != null)
+        {
+            d.Add("BackTemplate", _backTemplate.Name);
+        }
+        else if (_frontTemplate != null)
+        {
+            d.Add("BackTemplate", _frontTemplate.Name);
+        }
+
+        d.Add("Dataset", _textureContext.DataSet?.Name);
+        //d.Add("CardReference", _textureContext.CurrentRowName);
     }
 
     private void QuickSuitCountChanged(long suitCount)
@@ -527,6 +553,9 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _textureContext.ParentSize = new Vector2(350, 250);
         _textureContext.Dpi = 100; //TODO - Figure out what this should be
 
+        var card = _componentPreview.CurrentItem;
+
+        /*
         var d = new Dictionary<string, object>();
 
         d.Add("ComponentName", _nameInput.Text);
@@ -534,8 +563,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         d.Add("Width", w * scale);
         d.Add("Thickness", 0.3f);
         d.Add("Type", VcToken.TokenType.Card);
-
-        var card = _componentPreview.CurrentItem;
 
         switch (_tabs.CurrentTab)
         {
@@ -550,9 +577,34 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
                 UpdateTemplate(d, card);
                 break;
         }
+        */
 
-        _componentPreview.Build(d, TextureFactory);
+        var d = GetParams();
+
+        Utility.UpdateParam(d, "Height", h * scale);
+        Utility.UpdateParam(d, "Width", w * scale);
+        _componentPreview.Build(d, GetRow(card), TextureFactory);
     }
+
+    private string GetRow(int card)
+    {
+        switch (_tabs.CurrentTab)
+        {
+            case 0: //Quick
+            case 1: //Grid
+                return (card +1).ToString();
+
+            case 2:
+                if (_textureContext.DataSet == null)
+                    return string.Empty;
+                if (card < 0 || card >= _textureContext.DataSet.Rows.Count)
+                    return string.Empty;
+                return _textureContext.DataSet.Rows.ElementAt(card).Key;
+        }
+
+        return string.Empty;
+
+    }   
 
     private Texture2D _frontMasterSprite;
     private Texture2D _backMasterSprite;
@@ -682,7 +734,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         var p = new Dictionary<string, object>();
 
         p.Add("Shape", 0);
-        p.Add("Mode", VcToken.TokenBuildMode.Quick);
+        p.Add("Mode", VcToken.TokenBuildMode.QuickDeck);
         p.Add("FrontBgColor", cardData.BackgroundColor);
         p.Add("FrontCaption", cardData.Caption);
         p.Add("FrontCaptionColor", Colors.Black);
@@ -768,7 +820,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         {
             _tabs.CurrentTab = mode switch
             {
-                VcToken.TokenBuildMode.Quick => 0,
+                VcToken.TokenBuildMode.QuickDeck => 0,
                 VcToken.TokenBuildMode.Grid => 1,
                 VcToken.TokenBuildMode.Template => 2,
                 _ => 0,

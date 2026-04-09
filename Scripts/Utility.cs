@@ -157,6 +157,14 @@ public partial class Utility : Node
         throw new Exception($"Parameter {key} is not type {typeof(T)}");
     }
 
+    public static void UpdateParam(Dictionary<string, object> parameters, string key, object value)
+    {
+        if (parameters.ContainsKey(key))
+        {
+            parameters[key] = value;
+        }
+    }
+
     public static ImageTexture LoadTexture(string filename)
     {
         var image = new Image();

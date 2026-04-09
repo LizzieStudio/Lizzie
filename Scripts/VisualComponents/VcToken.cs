@@ -194,7 +194,7 @@ public partial class VcToken : VisualComponentFlat
 
     public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
-        return Build(parameters, string.Empty, textureFactory);
+        return Build(parameters, DataSetRow, textureFactory);
     }
 
     private void BuildToken()
@@ -432,8 +432,7 @@ public partial class VcToken : VisualComponentFlat
     {
         int.TryParse(DataSetRow, out var r);
 
-        if (r < 0 || r >= _quickCardList.Count)
-            return;
+        if (r == 0) return;
 
         var qtf = TemplateEngine.GenerateQuickCardByRow(_quickCardList, _quickCardList.Count, r);
         var td = CreateQuickTextureDefinition(
@@ -450,7 +449,17 @@ public partial class VcToken : VisualComponentFlat
         textureFactory.GenerateTexture(td, FinalizeFrontTexture);
 
         if (_differentBack)
+        {
+            _backBgColor = qtf.CardBackColor;
+            _backField = new QuickTextureField
+            {
+                Caption = qtf.CardBackValue,
+                FaceType = TextureFactory.TextureObjectType.Text,
+                ForegroundColor = Colors.Black,
+                Quantity = 1,
+            };
             CreateQuickBackTexture(textureFactory);
+        }
     }
 
     private bool _frontTextureGenerated;

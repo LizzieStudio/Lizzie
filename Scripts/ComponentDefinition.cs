@@ -125,7 +125,7 @@ public partial class ComponentDefinition : Window
         {
             CreateObjectEventArgs e = new()
             {
-                ComponentType = NameToType(CurName),
+                ComponentType = r.ComponentType,
                 Params = r.GetParams(),
                 PrototypeRef = Guid.NewGuid(),
             };

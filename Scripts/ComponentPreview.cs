@@ -96,7 +96,7 @@ public partial class ComponentPreview : Panel
 
         if (_buildNeeded && _component != null && _component.IsNodeReady())
         {
-            Build(_component.Parameters, _textureFactory);
+            Build(_component.Parameters, _row, _textureFactory);
             _buildNeeded = false;
         }
     }
@@ -108,6 +108,7 @@ public partial class ComponentPreview : Panel
 
     private VisualComponentBase _component;
     private bool _buildNeeded;
+    private string _row;
 
     private bool _componentActive;
 
@@ -196,20 +197,40 @@ public partial class ComponentPreview : Panel
 
     public void Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
+        Build(parameters, string.Empty, textureFactory);
+}
+
+    public void Build(Dictionary<string, object> parameters, string row, TextureFactory textureFactory)
+    {
         if (_component != null)
         {
-            _component.Build(parameters, textureFactory);
+            if (string.IsNullOrWhiteSpace(row))
+            {
+                _component.Build(parameters, textureFactory);   //we are doing this because not all components override the Build method with the row parameter, and we don't want to break those that don't
+            }
+            else
+            {
+                _component.Build(parameters, row, textureFactory);
+            }
         }
     }
 
     public void Build(Prototype prototype, TextureFactory textureFactory)
     {
+        Build(prototype, string.Empty, textureFactory);
+    }
+
+    public void Build(Prototype prototype, string row, TextureFactory textureFactory)
+    {
         var c = SpawnComponent(prototype);
+        _row = row;
         _buildNeeded = true;
 
         SetComponent(c, GetRotationVector(prototype.Type));
         _textureFactory = textureFactory;
     }
+
+    
 
     private VisualComponentBase SpawnComponent(Prototype prototype)
     {

@@ -105,6 +105,8 @@ public static class JsonUtilities
         p.Add("Dataset", TryGetString(d, "Dataset"));
         p.Add("CardReference", TryGetString(d, "CardReference"));
 
+        p.Add("QuickCardData", TryGetQuickCardDataList(d, "QuickCardData"));
+
         return p;
     }
 
@@ -140,7 +142,9 @@ public static class JsonUtilities
         switch (mode)
         {
             case VcToken.TokenBuildMode.Quick:
+            case VcToken.TokenBuildMode.QuickDeck:
                 p.Add("QuickCardData", TryGetQuickCardDataList(d, "QuickCardData"));
+                p.Add("DifferentBack", TryGetBool(d, "DifferentBack"));
                 break;
 
             case VcToken.TokenBuildMode.Grid:
@@ -317,63 +321,20 @@ public static class JsonUtilities
     {
         if (d.TryGetValue(key, out var value) && value != null)
         {
-            // If it's already a List<QuickCardData>, return it
-            if (value is List<QuickCardData> list)
+            object[] array = JsonSerializer.Deserialize<object[]>(value.ToString());
+
+            var r = new List<QuickCardData>();
+            
+            foreach (var item in array)
             {
-                return list;
+                var qcd = JsonSerializer.Deserialize<QuickCardData>(item.ToString());
+                r.Add(qcd);
             }
 
-            // Try to deserialize from JSON
-            try
-            {
-                var json = value.ToString();
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                if (root.ValueKind == JsonValueKind.Array)
-                {
-                    var result = new List<QuickCardData>();
-
-                    foreach (var item in root.EnumerateArray())
-                    {
-                        if (item.ValueKind == JsonValueKind.Object)
-                        {
-                            var cardData = new QuickCardData();
-
-                            if (item.TryGetProperty("BackgroundColor", out var bgColor))
-                            {
-                                cardData.BackgroundColor = ParseColorFromJson(bgColor);
-                            }
-
-                            if (item.TryGetProperty("Caption", out var caption))
-                            {
-                                cardData.Caption = caption.GetString();
-                            }
-
-                            if (item.TryGetProperty("CardBackColor", out var backColor))
-                            {
-                                cardData.CardBackColor = ParseColorFromJson(backColor);
-                            }
-
-                            if (item.TryGetProperty("CardBackValue", out var backValue))
-                            {
-                                cardData.CardBackValue = backValue.GetString();
-                            }
-
-                            result.Add(cardData);
-                        }
-                    }
-
-                    return result;
-                }
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"Error deserializing QuickCardData list: {ex.Message}");
-            }
+            return r;
         }
+        return []; // Default if not found or deserialization fails
 
-        return new List<QuickCardData>(); // Default empty list
     }
 
     private static Color ParseColorFromJson(JsonElement element)
