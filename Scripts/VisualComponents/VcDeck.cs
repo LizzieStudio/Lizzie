@@ -733,7 +733,7 @@ public partial class VcDeck : VisualComponentGroup
         card.Parent = Reference;
 
         card.Build(PrototypeRef, cardNum.ToString(), textureFactory);
-        
+
         return card;
     }
 
@@ -937,7 +937,6 @@ public partial class VcDeck : VisualComponentGroup
         //set the top and bottom sprites.
         if (_frontSprite == null || _backSprite == null)
             return;
-
 
         //The top of the deck displays the back of the first card.
         //The bottom of the deck displays the face of the last card.

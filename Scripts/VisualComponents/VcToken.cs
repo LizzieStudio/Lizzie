@@ -432,7 +432,8 @@ public partial class VcToken : VisualComponentFlat
     {
         int.TryParse(DataSetRow, out var r);
 
-        if (r == 0) return;
+        if (r == 0)
+            return;
 
         var qtf = TemplateEngine.GenerateQuickCardByRow(_quickCardList, _quickCardList.Count, r);
         var td = CreateQuickTextureDefinition(

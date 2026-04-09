@@ -592,7 +592,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         {
             case 0: //Quick
             case 1: //Grid
-                return (card +1).ToString();
+                return (card + 1).ToString();
 
             case 2:
                 if (_textureContext.DataSet == null)
@@ -603,8 +603,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         }
 
         return string.Empty;
-
-    }   
+    }
 
     private Texture2D _frontMasterSprite;
     private Texture2D _backMasterSprite;

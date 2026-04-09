@@ -324,7 +324,7 @@ public static class JsonUtilities
             object[] array = JsonSerializer.Deserialize<object[]>(value.ToString());
 
             var r = new List<QuickCardData>();
-            
+
             foreach (var item in array)
             {
                 var qcd = JsonSerializer.Deserialize<QuickCardData>(item.ToString());
@@ -334,7 +334,6 @@ public static class JsonUtilities
             return r;
         }
         return []; // Default if not found or deserialization fails
-
     }
 
     private static Color ParseColorFromJson(JsonElement element)

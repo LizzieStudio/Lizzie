@@ -198,15 +198,19 @@ public partial class ComponentPreview : Panel
     public void Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
         Build(parameters, string.Empty, textureFactory);
-}
+    }
 
-    public void Build(Dictionary<string, object> parameters, string row, TextureFactory textureFactory)
+    public void Build(
+        Dictionary<string, object> parameters,
+        string row,
+        TextureFactory textureFactory
+    )
     {
         if (_component != null)
         {
             if (string.IsNullOrWhiteSpace(row))
             {
-                _component.Build(parameters, textureFactory);   //we are doing this because not all components override the Build method with the row parameter, and we don't want to break those that don't
+                _component.Build(parameters, textureFactory); //we are doing this because not all components override the Build method with the row parameter, and we don't want to break those that don't
             }
             else
             {
@@ -229,8 +233,6 @@ public partial class ComponentPreview : Panel
         SetComponent(c, GetRotationVector(prototype.Type));
         _textureFactory = textureFactory;
     }
-
-    
 
     private VisualComponentBase SpawnComponent(Prototype prototype)
     {
