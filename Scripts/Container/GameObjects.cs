@@ -1067,9 +1067,8 @@ public partial class GameObjects : Node
 
         int cnt = 0;
 
-        while (_spawnQueue.TryDequeue(out var reference) && cnt < MaxSpawnProcess)
+        while (_spawnQueue.TryDequeue(out var reference))
         {
-            cnt++;
             var component = GetComponent(reference);
             if (component == null)
             {
@@ -1084,6 +1083,9 @@ public partial class GameObjects : Node
             var syncDtoJson = JsonSerializer.Serialize(syncDto);
 
             Rpc(nameof(ClientSpawnObject), prototypeRef, componentRef, parentRef, syncDtoJson);
+
+            cnt++;
+            if (cnt >= MaxSpawnProcess) break;
         }
     }
 
