@@ -1085,7 +1085,8 @@ public partial class GameObjects : Node
             Rpc(nameof(ClientSpawnObject), prototypeRef, componentRef, parentRef, syncDtoJson);
 
             cnt++;
-            if (cnt >= MaxSpawnProcess) break;
+            if (cnt >= MaxSpawnProcess)
+                break;
         }
     }
 
