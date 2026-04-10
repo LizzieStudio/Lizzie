@@ -848,6 +848,7 @@ public partial class VcToken : VisualComponentFlat
     private Texture2D _backMasterSprite;
     private int _gridRows;
     private int _gridCols;
+
     //private int _gridIndex;
 
     public enum TokenType
