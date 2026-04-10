@@ -109,6 +109,13 @@ public partial class ProjectService : Node
         return true;
     }
 
+    public bool SaveProject()
+    {
+        if (CurrentProject == null)
+            return false;
+        return SaveProject(CurrentProject);
+    }
+
     /// <summary>
     /// Serialize a project to JSON string for network sync
     /// </summary>

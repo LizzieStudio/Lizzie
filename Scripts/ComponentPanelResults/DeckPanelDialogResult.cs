@@ -317,7 +317,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _frontMasterSprite = Utility.LoadTexture(file);
 
         UpdatePreview();
-        return;
     }
 
     private void GetBackFile()
@@ -328,8 +327,9 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private void BackFileSelected(string file)
     {
         _gridBackImageFile.Text = file;
+        _backMasterSprite = Utility.LoadTexture(file);
+
         UpdatePreview();
-        return;
     }
 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
@@ -460,12 +460,13 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private void AddGridParameters(Dictionary<string, object> d)
     {
         d.Add("FrontMasterSprite", _frontMasterSprite);
+        d.Add("BackMasterSprite", _backMasterSprite);
         d.Add("GridRows", _gridRows);
         d.Add("GridCols", _gridCols);
         d.Add("GridCount", _gridCols);
 
         d.Add("Mode", VcToken.TokenBuildMode.Grid);
-        d.Add("DifferentBack", false);
+        d.Add("DifferentBack", true);
     }
 
     private void AddTemplateParameters(Dictionary<string, object> d)
@@ -554,30 +555,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _textureContext.Dpi = 100; //TODO - Figure out what this should be
 
         var card = _componentPreview.CurrentItem;
-
-        /*
-        var d = new Dictionary<string, object>();
-
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", h * scale);
-        d.Add("Width", w * scale);
-        d.Add("Thickness", 0.3f);
-        d.Add("Type", VcToken.TokenType.Card);
-
-        switch (_tabs.CurrentTab)
-        {
-            case 0:
-                UpdateQuick(d, card);
-                break;
-            case 1:
-                UpdateGrid(d, card);
-                break;
-
-            case 2:
-                UpdateTemplate(d, card);
-                break;
-        }
-        */
 
         var d = GetParams();
 

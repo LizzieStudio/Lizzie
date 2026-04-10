@@ -352,22 +352,31 @@ public partial class VcToken : VisualComponentFlat
         var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
         var pixelSize = PixelSize(cv);
 
-        FaceSprite.PixelSize = pixelSize;
+        //FaceSprite.PixelSize = pixelSize;
         _frontTextureGenerated = true;
 
-        if (!_differentBack)
+        if (_differentBack)
         {
-            BackSprite.PixelSize = pixelSize;
+            var backPixelSize = PixelSize(_backMasterSprite.GetSize());
+
+            //BackSprite.PixelSize = backPixelSize;
             _backTextureGenerated = true;
-            //BackSprite.Texture = t;
+            BackTexture = _backMasterSprite;
+            MapBackTexture();
         }
 
         int.TryParse(DataSetRow, out var r);
 
+
+        FaceTexture = _frontMasterSprite;
+        MapFrontTexture();
+        
+        /*
         FaceSprite.Texture = _frontMasterSprite;
         FaceSprite.Hframes = _gridCols;
         FaceSprite.Vframes = _gridRows;
         FaceSprite.Frame = r;
+        */
     }
 
     private string _frontTemplateName;
@@ -658,7 +667,22 @@ public partial class VcToken : VisualComponentFlat
         _frontTextureGenerated = true;
 
         FaceSprite.Texture = FaceTexture;
+
         float pixelSize = PixelSize(FaceTexture.GetSize());
+
+        if (_mode == TokenBuildMode.Grid)
+        {
+            FaceSprite.Hframes = _gridCols;
+            FaceSprite.Vframes = _gridRows;
+            int.TryParse(DataSetRow, out var r);
+            FaceSprite.Frame = r;
+
+            var ts = FaceTexture.GetSize();
+            var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
+            pixelSize = PixelSize(cv);
+
+        }
+
         FaceSprite.PixelSize = pixelSize;
 
         if (!_differentBack)

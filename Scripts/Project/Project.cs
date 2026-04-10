@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
 using Lizzie.AssetManagement;
 using TTSS.Scripts.Templating;
