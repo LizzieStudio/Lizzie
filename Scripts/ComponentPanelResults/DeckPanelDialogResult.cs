@@ -591,8 +591,10 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         switch (_tabs.CurrentTab)
         {
             case 0: //Quick
-            case 1: //Grid
                 return (card + 1).ToString();
+
+            case 1: //Grid
+                return card.ToString();
 
             case 2:
                 if (_textureContext.DataSet == null)

@@ -362,10 +362,12 @@ public partial class VcToken : VisualComponentFlat
             //BackSprite.Texture = t;
         }
 
+        int.TryParse(DataSetRow, out var r);
+
         FaceSprite.Texture = _frontMasterSprite;
         FaceSprite.Hframes = _gridCols;
         FaceSprite.Vframes = _gridRows;
-        FaceSprite.Frame = _gridIndex;
+        FaceSprite.Frame = r;
     }
 
     private string _frontTemplateName;
@@ -747,7 +749,7 @@ public partial class VcToken : VisualComponentFlat
 
         _gridRows = Utility.GetParam<int>(parameters, "GridRows");
         _gridCols = Utility.GetParam<int>(parameters, "GridCols");
-        _gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
+        //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
 
         if (parameters.TryGetValue("Type", out var tokenType))
         {
@@ -846,7 +848,7 @@ public partial class VcToken : VisualComponentFlat
     private Texture2D _backMasterSprite;
     private int _gridRows;
     private int _gridCols;
-    private int _gridIndex;
+    //private int _gridIndex;
 
     public enum TokenType
     {
