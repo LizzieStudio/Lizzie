@@ -4,3 +4,7 @@
 addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll
 
 .vs/
+
+# Build folder except Godot ignore file
+/.builds/*
+!*/.gdignore
