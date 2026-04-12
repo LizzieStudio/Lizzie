@@ -1,6 +1,12 @@
 # Godot 4+ specific ignores
 .godot/
 
-addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll
-
 .vs/
+
+# Ignore these artifacts from godot-git-plugin
+addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll
+addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll~*.TMP
+
+# Build folder except Godot ignore file
+/.builds/*
+!*/.gdignore
