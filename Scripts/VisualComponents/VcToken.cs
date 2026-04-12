@@ -367,10 +367,9 @@ public partial class VcToken : VisualComponentFlat
 
         int.TryParse(DataSetRow, out var r);
 
-
         FaceTexture = _frontMasterSprite;
         MapFrontTexture();
-        
+
         /*
         FaceSprite.Texture = _frontMasterSprite;
         FaceSprite.Hframes = _gridCols;
@@ -680,7 +679,6 @@ public partial class VcToken : VisualComponentFlat
             var ts = FaceTexture.GetSize();
             var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
             pixelSize = PixelSize(cv);
-
         }
 
         FaceSprite.PixelSize = pixelSize;

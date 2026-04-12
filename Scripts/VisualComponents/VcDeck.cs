@@ -936,9 +936,7 @@ public partial class VcDeck : VisualComponentGroup
                         var ts = _backSprite.Texture.GetSize();
                         var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
                         _backSprite.PixelSize = PixelSize(cv);
-
                     }
-
 
                     _backTextureReady = true;
                 }

@@ -11,13 +11,24 @@ public partial class TemplateCreator : Window
     [Export]
     private TextureRect _preview;
 
-    [Export] private Texture2D _d4_overlay;
-    [Export] private Texture2D _d6_overlay;
-    [Export] private Texture2D _d8_overlay;
-    [Export] private Texture2D _d10_overlay;
-    [Export] private Texture2D _d12_overlay;
-    [Export] private Texture2D _d20_overlay;
-    
+    [Export]
+    private Texture2D _d4_overlay;
+
+    [Export]
+    private Texture2D _d6_overlay;
+
+    [Export]
+    private Texture2D _d8_overlay;
+
+    [Export]
+    private Texture2D _d10_overlay;
+
+    [Export]
+    private Texture2D _d12_overlay;
+
+    [Export]
+    private Texture2D _d20_overlay;
+
     private Tree _elementTree;
     private VBoxContainer _paramContainer;
     private TextureRect _previewOverlay;
@@ -910,7 +921,7 @@ public partial class TemplateCreator : Window
         _standardSizes.Add("Mini Euro", (1.75f, 2.5f));
         _standardSizes.Add("Tarot", (2.75f, 4.75f));
         _standardSizes.Add("Custom", (0, 0));
-        
+
         _cardSizes.Clear();
         foreach (var kv in _standardSizes)
         {
@@ -925,7 +936,7 @@ public partial class TemplateCreator : Window
         _standardSizes.Add("D10", (10, 0));
         _standardSizes.Add("D12", (12, 0));
         _standardSizes.Add("D20", (20, 0));
-        
+
         _cardSizes.AddSeparator();
         _cardSizes.AddItem("D4");
         _cardSizes.AddItem("D6");
@@ -933,7 +944,6 @@ public partial class TemplateCreator : Window
         _cardSizes.AddItem("D10");
         _cardSizes.AddItem("D12");
         _cardSizes.AddItem("D20");
-
     }
 
     private float _curHeight;
@@ -1013,7 +1023,7 @@ public partial class TemplateCreator : Window
                 break;
             case 6:
                 h = 170;
-                t= _d6_overlay;
+                t = _d6_overlay;
                 break;
             case 8:
                 t = _d8_overlay;
@@ -1583,8 +1593,6 @@ public partial class TemplateCreator : Window
 
     public void InitializeFit(float w, float h)
     {
-
-
         if (w <= 0 || h <= 0)
             return;
 
