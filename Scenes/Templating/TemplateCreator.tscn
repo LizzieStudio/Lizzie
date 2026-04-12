@@ -1,21 +1,28 @@
 [gd_scene format=3 uid="uid://0wsvxlpthnkp"]
 
 [ext_resource type="Script" uid="uid://blvugxyae05ee" path="res://Scripts/Templating/TemplateCreator.cs" id="1_wn7e0"]
+[ext_resource type="Texture2D" uid="uid://cyt6b8i7mho8a" path="res://Textures/Dice/d4overlay.png" id="2_20sb7"]
 [ext_resource type="Texture2D" uid="uid://73pb5eqwq0y4" path="res://Textures/Shapes/square.png" id="2_cvjoa"]
 [ext_resource type="Texture2D" uid="uid://t7ascv1jxv5n" path="res://Textures/UI/text.png" id="3_5nlvd"]
 [ext_resource type="PackedScene" uid="uid://c1a1y6r1hea4l" path="res://Scenes/Controls/page_control.tscn" id="3_275yv"]
+[ext_resource type="Texture2D" uid="uid://dpnb4fm0ytqyp" path="res://Textures/Dice/d6overlay.png" id="3_j014s"]
+[ext_resource type="Texture2D" uid="uid://dx64fk71k2j8d" path="res://Textures/Dice/d8overlay.png" id="4_78jf6"]
 [ext_resource type="Texture2D" uid="uid://cc44r4l4uo3o4" path="res://Textures/UI/image16.png" id="4_oqooe"]
 [ext_resource type="Script" uid="uid://bl1v61t413ui2" path="res://Scripts/Templating/BoundsRect.cs" id="5_4cjo0"]
+[ext_resource type="Texture2D" uid="uid://bh1qhv3tc53yp" path="res://Textures/Dice/d10overlay.png" id="5_lgkf3"]
 [ext_resource type="Texture2D" uid="uid://cetgsjrqd6vjj" path="res://Textures/UI/trash-can.png" id="5_si24g"]
 [ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="5_y48xi"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="6_6qm3h"]
 [ext_resource type="Texture2D" uid="uid://mi8u70je714x" path="res://Textures/UI/crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="6_uraoc"]
+[ext_resource type="Texture2D" uid="uid://y43ui6pyd8s2" path="res://Textures/Dice/d12overlay.png" id="6_x0gbg"]
+[ext_resource type="Texture2D" uid="uid://g2yrf6t7xvh8" path="res://Textures/Dice/d20overlay.png" id="7_1cjt3"]
 [ext_resource type="Texture2D" uid="uid://dbkp2tyv4uxrj" path="res://Textures/UI/content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="7_5a5fc"]
 [ext_resource type="Texture2D" uid="uid://deb2r31qo50wk" path="res://Textures/UI/VerTrack.png" id="7_55du8"]
 [ext_resource type="Texture2D" uid="uid://b2dp0funivpga" path="res://Textures/UI/zoom-out.png" id="9_6qm3h"]
 [ext_resource type="Texture2D" uid="uid://b0qbv1mmnp4c4" path="res://Textures/UI/fullscreen.png" id="10_5a5fc"]
 [ext_resource type="Texture2D" uid="uid://c2xtoa1ewjtfd" path="res://Textures/UI/zoom-in.png" id="11_275yv"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="13_275yv"]
+[ext_resource type="Texture2D" uid="uid://4fhs1s6om6ta" path="res://Textures/Dice/die.png" id="16_uraoc"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hnkns"]
 bg_color = Color(0.99736375, 0.793054, 0.8017672, 1)
@@ -27,6 +34,12 @@ position = Vector2i(0, 36)
 size = Vector2i(1100, 600)
 script = ExtResource("1_wn7e0")
 _preview = NodePath("Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow/TemplatePreview")
+_d4_overlay = ExtResource("2_20sb7")
+_d6_overlay = ExtResource("3_j014s")
+_d8_overlay = ExtResource("4_78jf6")
+_d10_overlay = ExtResource("5_lgkf3")
+_d12_overlay = ExtResource("6_x0gbg")
+_d20_overlay = ExtResource("7_1cjt3")
 
 [node name="Panel" type="Panel" parent="." unique_id=2088514366]
 anchors_preset = 15
@@ -122,7 +135,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 selected = 0
-item_count = 5
+item_count = 12
 popup/item_0/text = "Poker"
 popup/item_0/id = 0
 popup/item_1/text = "Bridge"
@@ -133,6 +146,20 @@ popup/item_3/text = "Tarot"
 popup/item_3/id = 3
 popup/item_4/text = "Custom"
 popup/item_4/id = 4
+popup/item_5/id = 5
+popup/item_5/separator = true
+popup/item_6/text = "D4"
+popup/item_6/id = 6
+popup/item_7/text = "D6"
+popup/item_7/id = 7
+popup/item_8/text = "D8"
+popup/item_8/id = 8
+popup/item_9/text = "D10"
+popup/item_9/id = 9
+popup/item_10/text = "D12"
+popup/item_10/id = 10
+popup/item_11/text = "D20"
+popup/item_11/id = 11
 
 [node name="Width" type="LineEdit" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=731191474]
 unique_name_in_owner = true
@@ -447,6 +474,26 @@ icon = ExtResource("10_5a5fc")
 unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("11_275yv")
+
+[node name="DieOverlay" type="TextureRect" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow" unique_id=1559184523]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0.5019608)
+custom_minimum_size = Vector2(350, 250)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -124.0
+offset_right = 175.0
+offset_bottom = 126.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("16_uraoc")
+expand_mode = 3
 
 [node name="Timer" type="Timer" parent="." unique_id=234808723]
 wait_time = 0.1

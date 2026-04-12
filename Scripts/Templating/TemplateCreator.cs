@@ -10,8 +10,13 @@ public partial class TemplateCreator : Window
     [Export]
     private TextureRect _preview;
 
-    //private VBoxContainer _elementContainer;
-
+    [Export] private Texture2D _d4_overlay;
+    [Export] private Texture2D _d6_overlay;
+    [Export] private Texture2D _d8_overlay;
+    [Export] private Texture2D _d10_overlay;
+    [Export] private Texture2D _d12_overlay;
+    [Export] private Texture2D _d20_overlay;
+    
     private Tree _elementTree;
     private VBoxContainer _paramContainer;
 
@@ -892,12 +897,28 @@ public partial class TemplateCreator : Window
         _standardSizes.Add("Mini Euro", (1.75f, 2.5f));
         _standardSizes.Add("Tarot", (2.75f, 4.75f));
         _standardSizes.Add("Custom", (0, 0));
-
+        
         _cardSizes.Clear();
         foreach (var kv in _standardSizes)
         {
             _cardSizes.AddItem(kv.Key);
         }
+
+        _standardSizes.Add("D4", (4, 0));
+        _standardSizes.Add("D6", (4, 0));
+        _standardSizes.Add("D8", (4, 0));
+        _standardSizes.Add("D10", (4, 0));
+        _standardSizes.Add("D12", (4, 0));
+        _standardSizes.Add("D20", (4, 0));
+
+        _cardSizes.AddSeparator();
+        _cardSizes.AddItem("D4");
+        _cardSizes.AddItem("D6");
+        _cardSizes.AddItem("D8");
+        _cardSizes.AddItem("D10");
+        _cardSizes.AddItem("D12");
+        _cardSizes.AddItem("D20");
+
     }
 
     private float _curHeight;
