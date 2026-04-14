@@ -240,9 +240,11 @@ public partial class BoundsRect : MarginContainer
             (int)(rect.Size.Y * scaleH)
         );
 
-
         //change from center origin to top left origin
-        sRect.Position = new(sRect.Position.X - sRect.Size.X / 2, sRect.Position.Y - sRect.Size.Y / 2);
+        sRect.Position = new(
+            sRect.Position.X - sRect.Size.X / 2,
+            sRect.Position.Y - sRect.Size.Y / 2
+        );
 
         AddThemeConstantOverride("margin_left", sRect.Position.X);
         AddThemeConstantOverride("margin_top", sRect.Position.Y);

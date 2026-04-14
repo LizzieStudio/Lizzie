@@ -277,8 +277,6 @@ public partial class TemplateCreator : Window
             }
         }
 
-
-
         //set up element tree
         _elementTree.Clear();
         _rootItem = _elementTree.CreateItem(); //create root item
@@ -470,7 +468,8 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
-        if (_curWidth ==0 || _curHeight == 0) return;
+        if (_curWidth == 0 || _curHeight == 0)
+            return;
 
         var m = _boundsRect.GetBounds();
 
@@ -480,8 +479,14 @@ public partial class TemplateCreator : Window
         float scaleX = 100 / _curWidth;
         float scaleY = 100 / _curHeight;
 
-        UpdateParamControl("X", ((int)(scaleX * (m.l + w / 2f))).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Y", ((int)(scaleY * (m.t + h / 2f))).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl(
+            "X",
+            ((int)(scaleX * (m.l + w / 2f))).ToString(CultureInfo.InvariantCulture)
+        );
+        UpdateParamControl(
+            "Y",
+            ((int)(scaleY * (m.t + h / 2f))).ToString(CultureInfo.InvariantCulture)
+        );
         UpdateParamControl("Width", ((int)(scaleX * w)).ToString(CultureInfo.InvariantCulture));
         UpdateParamControl("Height", ((int)(scaleY * h)).ToString(CultureInfo.InvariantCulture));
 
@@ -981,7 +986,8 @@ public partial class TemplateCreator : Window
 
     private void OnStandardSizeChanged(long index)
     {
-        if (CurrentTemplate == null) return;
+        if (CurrentTemplate == null)
+            return;
 
         _curSizeType = _cardSizes.Text;
 
@@ -1644,7 +1650,6 @@ public partial class TemplateCreator : Window
 
         _fitRequired = false;
 
-     
         //size to fit in the preview window
         var aspectRation = w / h;
 
