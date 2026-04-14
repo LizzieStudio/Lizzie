@@ -69,13 +69,16 @@ public static class TemplateEngine
     {
         foreach (var l in element.GetElementData(_textureContext))
         {
+            float sW = _textureContext.ParentSize.X / 100f;
+            float sH = _textureContext.ParentSize.Y / 100f;
+
             td.Objects.Add(
                 new TextureFactory.TextureObject
                 {
-                    Width = l.Width,
-                    Height = l.Height,
-                    CenterX = l.CenterX,
-                    CenterY = l.CenterY,
+                    Width = (int)(sW * l.Width),
+                    Height = (int)(sH * l.Height),
+                    CenterX = (int)(sW * l.CenterX),
+                    CenterY = (int)(sH * l.CenterY),
                     Anchor = l.Anchor,
                     Multiline = true,
                     Text = l.Text,

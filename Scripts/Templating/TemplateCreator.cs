@@ -262,6 +262,22 @@ public partial class TemplateCreator : Window
     private void MapTemplate()
     {
         //change sizes
+        var size = CurrentTemplate.SizeTemplate;
+
+        if (!string.IsNullOrEmpty(size))
+        {
+            for (int i = 0; i < _cardSizes.ItemCount; i++)
+            {
+                if (_cardSizes.GetItemText(i) == size)
+                {
+                    _cardSizes.Select(i);
+                    OnStandardSizeChanged(i);
+                    break;
+                }
+            }
+        }
+
+
 
         //set up element tree
         _elementTree.Clear();
@@ -965,6 +981,8 @@ public partial class TemplateCreator : Window
 
     private void OnStandardSizeChanged(long index)
     {
+        if (CurrentTemplate == null) return;
+
         _curSizeType = _cardSizes.Text;
 
         if (!_standardSizes.TryGetValue(_curSizeType, out var size))
@@ -972,6 +990,7 @@ public partial class TemplateCreator : Window
 
         _curWidth = size.Item1;
         _curHeight = size.Item2;
+        CurrentTemplate.SizeTemplate = _curSizeType;
 
         if (_curWidth == 0 && _curHeight == 0)
         {
@@ -1056,7 +1075,12 @@ public partial class TemplateCreator : Window
         }
 
         InitializeFit(w, h);
-        _previewOverlay.Texture = t;
+
+        var image = t.GetImage();
+        var s = _preview.GetSize();
+        image.Resize((int)s.X, (int)s.Y);
+        var t2 = ImageTexture.CreateFromImage(image);
+        _previewOverlay.Texture = t2;
     }
 
     private void InitializeDataSets()
@@ -1620,9 +1644,7 @@ public partial class TemplateCreator : Window
 
         _fitRequired = false;
 
-        _textureContext.ParentSize = _preview.Size;
-        _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
-
+     
         //size to fit in the preview window
         var aspectRation = w / h;
 
@@ -1646,6 +1668,9 @@ public partial class TemplateCreator : Window
         //_previewOverlay.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
 
         _previewDpi = 25.4f * sw / w;
+
+        _textureContext.ParentSize = new Vector2(sw, sh);
+        _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
 
         ZoomFit();
     }
