@@ -295,7 +295,6 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_hnkns")
 
 [node name="TemplatePreview" type="TextureRect" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow" unique_id=752990848]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(250, 350)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -309,6 +308,21 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("2_cvjoa")
+expand_mode = 1
+stretch_mode = 3
+
+[node name="PreviewOverlay" type="TextureRect" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow/TemplatePreview" unique_id=1559184523]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0.5019608)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("16_uraoc")
+expand_mode = 1
 
 [node name="BoundsRect" type="MarginContainer" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow/TemplatePreview" unique_id=1974649870]
 unique_name_in_owner = true
@@ -490,26 +504,6 @@ unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("11_275yv")
 
-[node name="PreviewOverlay" type="TextureRect" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow" unique_id=1559184523]
-unique_name_in_owner = true
-visible = false
-modulate = Color(1, 1, 1, 0.5019608)
-custom_minimum_size = Vector2(350, 250)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -175.0
-offset_top = -124.0
-offset_right = 175.0
-offset_bottom = 126.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("16_uraoc")
-expand_mode = 3
-
 [node name="Timer" type="Timer" parent="." unique_id=234808723]
 wait_time = 0.1
 
@@ -579,7 +573,8 @@ unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Width"
 
-[node name="Label" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1031830595]
+[node name="NTX" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1031830595]
+unique_name_in_owner = true
 layout_mode = 2
 text = "x"
 

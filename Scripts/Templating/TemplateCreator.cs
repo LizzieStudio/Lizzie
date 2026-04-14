@@ -117,6 +117,14 @@ public partial class TemplateCreator : Window
         }
     }
 
+    public override void _Process(double delta)
+    {
+        if (_fitRequired)
+        {
+            OnStandardSizeChanged(0);
+        }
+    }
+
     private void InitToolbar()
     {
         _templateNameSelector = GetNode<OptionButton>("%TemplateName");
@@ -446,15 +454,20 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
+        if (_curWidth ==0 || _curHeight == 0) return;
+
         var m = _boundsRect.GetBounds();
 
         int w = (int)_textureContext.ParentSize.X - m.l - m.r;
         int h = (int)_textureContext.ParentSize.Y - m.t - m.b;
 
-        UpdateParamControl("X", (m.l + w / 2).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Y", (m.t + h / 2).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Width", w.ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Height", h.ToString(CultureInfo.InvariantCulture));
+        float scaleX = 100 / _curWidth;
+        float scaleY = 100 / _curHeight;
+
+        UpdateParamControl("X", ((int)(scaleX * (m.l + w / 2f))).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("Y", ((int)(scaleY * (m.t + h / 2f))).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("Width", ((int)(scaleX * w)).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("Height", ((int)(scaleY * h)).ToString(CultureInfo.InvariantCulture));
 
         _updateRequired = true;
     }
@@ -1591,10 +1604,21 @@ public partial class TemplateCreator : Window
         InitializeFit(w, h);
     }
 
+    //It may take a few frames for the Size of the preview window to be set properly
+    private bool _fitRequired;
+
     public void InitializeFit(float w, float h)
     {
         if (w <= 0 || h <= 0)
             return;
+
+        if (_previewWindow.Size == Vector2.Zero)
+        {
+            _fitRequired = true;
+            return;
+        }
+
+        _fitRequired = false;
 
         _textureContext.ParentSize = _preview.Size;
         _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
@@ -1618,8 +1642,8 @@ public partial class TemplateCreator : Window
         _preview.SetSize(new Vector2(sw, sh));
         _preview.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
 
-        _previewOverlay.SetSize(new Vector2(sw, sh));
-        _previewOverlay.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
+        //_previewOverlay.SetSize(new Vector2(sw, sh));
+        //_previewOverlay.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
 
         _previewDpi = 25.4f * sw / w;
 
@@ -1649,6 +1673,7 @@ public partial class TemplateCreator : Window
         else
         {
             var n = _dataSetSelector.GetItemText((int)index);
+            CurrentTemplate.DataSet = n;
         }
 
         UpdateTextureContext(CurrentTemplate.DataSet);

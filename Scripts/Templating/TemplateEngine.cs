@@ -113,6 +113,13 @@ public static class TemplateEngine
             case "Image":
                 te = new ImageElement();
                 break;
+            case "Frame":
+                te = new FrameElement();
+                break;
+
+            case "Track":
+                te = new TrackElement();
+                break;
 
             default:
                 return null;

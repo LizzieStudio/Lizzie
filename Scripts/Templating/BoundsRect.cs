@@ -230,18 +230,29 @@ public partial class BoundsRect : MarginContainer
 
     public void SetBounds(Rect2I rect, TextureContext context)
     {
-        //change from center origin to top left origin
-        rect.Position = new(rect.Position.X - rect.Size.X / 2, rect.Position.Y - rect.Size.Y / 2);
+        float scaleW = context.ParentSize.X / 100;
+        float scaleH = context.ParentSize.Y / 100;
 
-        AddThemeConstantOverride("margin_left", rect.Position.X);
-        AddThemeConstantOverride("margin_top", rect.Position.Y);
+        var sRect = new Rect2I(
+            (int)(rect.Position.X * scaleW),
+            (int)(rect.Position.Y * scaleH),
+            (int)(rect.Size.X * scaleW),
+            (int)(rect.Size.Y * scaleH)
+        );
+
+
+        //change from center origin to top left origin
+        sRect.Position = new(sRect.Position.X - sRect.Size.X / 2, sRect.Position.Y - sRect.Size.Y / 2);
+
+        AddThemeConstantOverride("margin_left", sRect.Position.X);
+        AddThemeConstantOverride("margin_top", sRect.Position.Y);
         AddThemeConstantOverride(
             "margin_right",
-            (int)context.ParentSize.X - rect.Position.X - rect.Size.X
+            (int)context.ParentSize.X - sRect.Position.X - sRect.Size.X
         );
         AddThemeConstantOverride(
             "margin_bottom",
-            (int)context.ParentSize.Y - rect.Position.Y - rect.Size.Y
+            (int)context.ParentSize.Y - sRect.Position.Y - sRect.Size.Y
         );
     }
 
