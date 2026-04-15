@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://c4j00mcp5m0od" path="res://Scripts/ComponentPanelResults/DiePanelDialogResult.cs" id="1_5kaje"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="2_6el8t"]
 [ext_resource type="PackedScene" uid="uid://bqjj4fvs81gaw" path="res://Scenes/ComponentPanels/quick_texture_entry.tscn" id="3_ap6wc"]
+[ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="3_b5pde"]
 
 [node name="DiePanel" type="MarginContainer" unique_id=1725091934 node_paths=PackedStringArray("_quickSideEntries")]
 anchors_preset = 15
@@ -131,9 +132,10 @@ theme_override_constants/margin_bottom = 6
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
-current_tab = 0
+current_tab = 2
 
 [node name="Quick Sides" type="ScrollContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=11125790]
+visible = false
 layout_mode = 2
 horizontal_scroll_mode = 0
 metadata/_tab_index = 0
@@ -230,6 +232,68 @@ metadata/_tab_index = 1
 [node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Image" unique_id=1023684477]
 layout_mode = 2
 text = "Side 1"
+
+[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1818089421]
+layout_mode = 2
+metadata/_tab_index = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template" unique_id=587209092]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer" unique_id=1071694883]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer" unique_id=1264663274]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=698176118]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Front:"
+
+[node name="FrontTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1796966430]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "Hello"
+popup/item_0/id = 0
+popup/item_1/text = "Goodbye"
+popup/item_1/id = 1
+
+[node name="EditFrontTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1223203755]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Template Editor"
+icon = ExtResource("3_b5pde")
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer" unique_id=1704337453]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=2048004565]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "DataSet:"
+
+[node name="DatasetList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=825345651]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+item_count = 1
+popup/item_0/text = "(none)"
+popup/item_0/id = 0
+
+[node name="EditDatasetButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=225263054]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "DataSet Editor"
+icon = ExtResource("3_b5pde")
 
 [node name="Preview" parent="HBoxContainer" unique_id=1142160244 instance=ExtResource("2_6el8t")]
 unique_name_in_owner = true

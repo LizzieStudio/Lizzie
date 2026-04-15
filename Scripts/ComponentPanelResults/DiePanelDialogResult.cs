@@ -1,6 +1,7 @@
+using Godot;
 using System;
 using System.Collections.Generic;
-using Godot;
+using System.Linq;
 
 public partial class DiePanelDialogResult : ComponentPanelDialogResult
 {
@@ -12,8 +13,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private TabContainer _tabContainer;
     private ComponentPreview _preview;
 
-    [Export]
-    private QuickTextureEntry[] _quickSideEntries;
+    private OptionButton _frontTemplatePicker;
+    private Button _editFrontTemplateButton;
+
+    private OptionButton _datasetPicker;
+    private Button _datasetEditorButton;
+
+
+    [Export] private QuickTextureEntry[] _quickSideEntries;
 
     private IconLibrary _iconLibrary = new();
 
@@ -24,6 +31,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _diameterInput = GetNode<LineEdit>("%Diameter");
         _diameterInput.TextChanged += text => UpdatePreview();
 
+        InitializeTemplates();
+
         _sidesInput = GetNode<OptionButton>("%Sides");
         _sidesInput.ItemSelected += SidesInputOnItemSelected;
 
@@ -31,9 +40,11 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _dieColor.ColorChanged += color => UpdatePreview();
 
         _preview = GetNode<ComponentPreview>("%Preview");
+        _preview.ItemSelected += PreviewOnItemSelected;
 
         _tabContainer = GetNode<TabContainer>("%TabContainer");
         _tabContainer.CurrentTab = 0;
+        _tabContainer.TabChanged += t => UpdatePreview();
 
         int i = 0;
         foreach (var l in _quickSideEntries)
@@ -46,6 +57,122 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         PrototypeIndex = 1;
         UpdateQuickSidesVisibility();
+
+        //register for events
+        EventBus.Instance.Subscribe<TemplateChangedEvent>(TemplateChanged);
+        EventBus.Instance.Subscribe<DataSetChangedEvent>(DataSetChanged);
+    }
+
+    private int _curDie;
+
+    private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
+    {
+        _curDie = e.Index;
+        UpdatePreview();
+    }
+
+    private void TemplateChanged(TemplateChangedEvent obj)
+    {
+        UpdatePreview();
+    }
+
+    private void DataSetChanged(DataSetChangedEvent obj)
+    {
+        UpdatePreview();
+    }
+
+
+    private void InitializeTemplates()
+    {
+        _frontTemplatePicker = GetNode<OptionButton>("%FrontTemplateList");
+        _frontTemplatePicker.ItemSelected += OnFrontTemplateChanged;
+        _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
+        _editFrontTemplateButton.Pressed += EditFrontTemplate;
+
+
+        _datasetPicker = GetNode<OptionButton>("%DatasetList");
+        _datasetPicker.ItemSelected += OnDatasetChanged;
+
+        _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
+        _datasetEditorButton.Pressed += EditDataset;
+
+        UpdateTemplateTab();
+    }
+
+    private void UpdateTemplateTab()
+    {
+        if (CurrentProject == null || _frontTemplatePicker == null)
+            return;
+
+        _frontTemplatePicker.Clear();
+
+
+        _frontTemplatePicker.AddItem("(none)");
+        foreach (var t in CurrentProject.Templates)
+        {
+            _frontTemplatePicker.AddItem(t.Key);
+        }
+
+        _datasetPicker.Clear();
+        _datasetPicker.AddItem("(none)");
+        foreach (var d in CurrentProject.Datasets)
+        {
+            _datasetPicker.AddItem(d.Key);
+        }
+    }
+
+    private TextureContext _textureContext = new();
+
+    private void OnDatasetChanged(long index)
+    {
+        if (_datasetPicker.Selected == 0)
+        {
+            _textureContext.DataSet = null;
+            _textureContext.CurrentRowName = null;
+            _preview.MultiItemMode = false;
+        }
+        else
+        {
+            _textureContext.DataSet = ProjectService.Instance.CurrentProject.Datasets[
+                _datasetPicker.GetItemText((int)index)
+            ];
+            _preview.MultiItemMode = true;
+            _preview.SetItemLabels(_textureContext.DataSet.Rows.Keys.ToList());
+        }
+
+        UpdatePreview();
+    }
+
+    private Template _frontTemplate;
+    private Template _backTemplate;
+
+    private void OnFrontTemplateChanged(long index)
+    {
+        if (_frontTemplatePicker.Selected == 0)
+        {
+            _frontTemplate = null;
+        }
+        else
+        {
+            _frontTemplate = ProjectService.Instance.CurrentProject.Templates[
+                _frontTemplatePicker.GetItemText((int)index)
+            ];
+        }
+
+        UpdatePreview();
+    }
+
+
+    private void EditFrontTemplate()
+    {
+        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _frontTemplate?.Name });
+    }
+
+    private void EditDataset()
+    {
+        EventBus.Instance.Publish(
+            new ShowDatasetEditor { DatasetName = _textureContext.DataSet?.Name }
+        );
     }
 
     public override void Activate()
@@ -131,7 +258,35 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         d.Add("ComponentName", _nameInput.Text);
         d.Add("Size", ParamToFloat(_diameterInput.Text));
         d.Add("Color", _dieColor.Color);
-        d.Add("Sides", PackageSides());
+        if (!int.TryParse(_sidesInput.Text, out var sides))
+        {
+            d.Add("SideCount", sides);
+        }
+
+        switch (_tabContainer.CurrentTab)
+        {
+            case 0:
+                d.Add("Mode", VcToken.TokenBuildMode.Quick);
+                d.Add("Sides", PackageSides());
+                break;
+
+            case 1: //Custom
+                d.Add("Mode", VcToken.TokenBuildMode.Custom);
+
+                break;
+
+            case 2:
+                d.Add("Mode", VcToken.TokenBuildMode.Template);
+
+                if (_frontTemplate != null)
+                {
+                    d.Add("FrontTemplate", _frontTemplate.Name);
+                }
+
+                d.Add("Dataset", _textureContext.DataSet?.Name);
+                break;
+        }
+
         return d;
     }
 
@@ -164,14 +319,18 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var d = new Dictionary<string, object>();
+        var d = GetParams();
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Size", dia / 2);
-        d.Add("Color", _dieColor.Color);
-        d.Add("Sides", PackageSides());
+        _preview.Build(d, GetRow(_curDie), TextureFactory);
+    }
 
-        _preview.Build(d, TextureFactory);
+    private string GetRow(int rowNum)
+    {
+        if (_textureContext.DataSet == null)
+            return string.Empty;
+        if (rowNum < 0 || rowNum >= _textureContext.DataSet.Rows.Count)
+            return string.Empty;
+        return _textureContext.DataSet.Rows.ElementAt(rowNum).Key;
     }
 
     public override void DisplayPrototype(Guid prototypeId)

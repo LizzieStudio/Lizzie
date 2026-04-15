@@ -1,16 +1,20 @@
+using Godot;
 using System;
 using System.Collections.Generic;
-using Godot;
+using static VcToken;
 
 public partial class VcDie : VisualComponentBase
 {
-    [Export]
-    private int _sides;
+    [Export] private int _sides;
 
-    [Export]
-    private Vector3[] _sideRotations;
+    [Export] private Vector3[] _sideRotations;
 
     private MeshInstance3D _mainMesh;
+
+    private TextureFactory _textureFactory;
+    private QuickTextureField[] _sideData;
+    private Color _dieColor;
+
 
     public override void _Ready()
     {
@@ -210,16 +214,31 @@ public partial class VcDie : VisualComponentBase
         return new CommandResponse(true, c);
     }
 
-    public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    private TokenBuildMode _mode;
+
+    public override bool Build(Dictionary<string, object> parameters, string datasetRow, TextureFactory textureFactory)
     {
-        base.Build(parameters, textureFactory);
+        DataSetRow = datasetRow;
+
+        base.Build(parameters, datasetRow, textureFactory);
+
+        _textureFactory = textureFactory;
 
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
+
+        _sideData = Utility.GetParam<QuickTextureField[]>(parameters, "Sides");
+
+        _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
+        _datasetName = Utility.GetParam<string>(parameters, "Dataset");
+
+        _mode = Utility.GetParam<TokenBuildMode>(parameters, "Mode");
+
+        _sides = Utility.GetParam<int>(parameters, "SideCount");
 
         var dieColor = Colors.White;
         if (parameters["Color"] is Color color)
         {
-            dieColor = color;
+            _dieColor = color;
         }
 
         float size = 0;
@@ -234,6 +253,25 @@ public partial class VcDie : VisualComponentBase
             }
         }
 
+        YHeight = size;
+
+        Scale = new Vector3(size, size, size);
+
+        switch (_mode)
+        {
+            case TokenBuildMode.Quick:
+                BuildQuick();
+                break;
+            case TokenBuildMode.Custom:
+                break;
+            case TokenBuildMode.Template:
+                BuildTemplate();
+                break;
+            default:
+                return false;
+        }
+
+
         if (parameters.ContainsKey("Color"))
         {
             if (_mainMesh.GetSurfaceOverrideMaterial(0) is StandardMaterial3D material)
@@ -242,61 +280,80 @@ public partial class VcDie : VisualComponentBase
             }
         }
 
-        var sides = Utility.GetParam<QuickTextureField[]>(parameters, "Sides");
-
-        YHeight = size;
-
-        Scale = new Vector3(size, size, size);
-
-        var mat = new StandardMaterial3D();
-
-        ImageTexture t = new ImageTexture();
-
-        if (sides != null && sides.Length > 0)
-        {
-            if (sides.Length == 6)
-            {
-                var tx = D6TextureDefinition(sides, dieColor);
-
-                textureFactory.GenerateTexture(tx, TextureDone);
-                return true;
-            }
-
-            if (sides.Length == 8)
-            {
-                var tx = D8TextureDefinition(sides, dieColor);
-                textureFactory.GenerateTexture(tx, TextureDone);
-                return true;
-            }
-
-            if (sides.Length == 10)
-            {
-                var tx = D10TextureDefinition(sides, dieColor);
-                textureFactory.GenerateTexture(tx, TextureDone);
-                return true;
-            }
-
-            if (sides.Length == 12)
-            {
-                var tx = D12TextureDefinition(sides, dieColor);
-                textureFactory.GenerateTexture(tx, TextureDone);
-                return true;
-            }
-
-            if (sides.Length == 20)
-            {
-                var tx = D20TextureDefinition(sides, dieColor);
-                textureFactory.GenerateTexture(tx, TextureDone);
-                return true;
-            }
-
-            mat.AlbedoTexture = t;
-        }
-
-        _mainMesh.MaterialOverride = mat;
 
         return true;
     }
+
+    private void BuildQuick()
+    {
+        if (_sideData != null && _sideData.Length > 0)
+        {
+            if (_sideData.Length == 6)
+            {
+                var tx = D6TextureDefinition(_sideData, _dieColor);
+
+                _textureFactory.GenerateTexture(tx, TextureDone);
+                return;
+            }
+
+            if (_sideData.Length == 8)
+            {
+                var tx = D8TextureDefinition(_sideData, _dieColor);
+                _textureFactory.GenerateTexture(tx, TextureDone);
+                return;
+            }
+
+            if (_sideData.Length == 10)
+            {
+                var tx = D10TextureDefinition(_sideData, _dieColor);
+                _textureFactory.GenerateTexture(tx, TextureDone);
+                return;
+            }
+
+            if (_sideData.Length == 12)
+            {
+                var tx = D12TextureDefinition(_sideData, _dieColor);
+                _textureFactory.GenerateTexture(tx, TextureDone);
+                return;
+            }
+
+            if (_sideData.Length == 20)
+            {
+                var tx = D20TextureDefinition(_sideData, _dieColor);
+                _textureFactory.GenerateTexture(tx, TextureDone);
+                return;
+            }
+        }
+    }
+
+    private void BuildTemplate()
+    {
+        var tc = new TextureContext
+        {
+            CurrentRowName = DataSetRow,
+            Dpi = 100,
+            ParentSize = new Vector2(512, 512),
+        };
+
+        if (_sides == 6)
+        {
+            tc.ParentSize = new Vector2(512, 340);
+        }
+
+
+        ProjectService.Instance.CurrentProject.Datasets.TryGetValue(_datasetName, out var ds);
+        tc.DataSet = ds;
+
+        ProjectService.Instance.CurrentProject.Templates.TryGetValue(_frontTemplateName, out var template);
+        if (template == null) return;
+
+        var tx = TemplateEngine.GenerateTextureDefinition(template, tc);
+        _textureFactory.GenerateTexture(tx, TextureDone);
+    }
+
+    private string _frontTemplateName;
+    private string _datasetName;
+
 
     private void TextureDone(ImageTexture texture)
     {

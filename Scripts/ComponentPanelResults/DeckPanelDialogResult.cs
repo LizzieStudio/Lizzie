@@ -473,18 +473,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     {
         d.Add("Mode", VcToken.TokenBuildMode.Template);
 
-        /*
-        if (_textureContext.DataSet == null)
-        {
-            _textureContext.CurrentRowName = string.Empty;
-        }
-        else
-        {
-            var cardName = _textureContext.DataSet.Rows.ElementAt(card).Key;
-            _textureContext.CurrentRowName = cardName;
-        }
-        */
-
         if (_frontTemplate != null)
         {
             d.Add("FrontTemplate", _frontTemplate.Name);
@@ -654,58 +642,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void UpdateTemplate(Dictionary<string, object> d, int card)
-    {
-        _textureContext.ParentSize = new Vector2(250, 350);
-        _textureContext.Dpi = 100;
+  
 
-        d.Add("Mode", VcToken.TokenBuildMode.Template);
-        if (_textureContext.DataSet == null)
-        {
-            _textureContext.CurrentRowName = string.Empty;
-        }
-        else
-        {
-            var cardName = _textureContext.DataSet.Rows.ElementAt(card).Key;
-            _textureContext.CurrentRowName = cardName;
-        }
-
-        if (_frontTemplate != null)
-        {
-            d.Add("FrontTemplate", _frontTemplate.Name);
-        }
-
-        if (_backTemplate != null)
-        {
-            d.Add("BackTemplate", _backTemplate.Name);
-        }
-        else if (_frontTemplate != null)
-        {
-            d.Add("BackTemplate", _frontTemplate.Name);
-        }
-
-        d.Add("Dataset", _textureContext.DataSet?.Name);
-        d.Add("CardReference", _textureContext.CurrentRowName);
-        var c = _componentPreview.GetComponent();
-        if (c != null)
-            c.DataSetRow = _textureContext.CurrentRowName;
-    }
-
-    private void UpdateQuick(Dictionary<string, object> d, int card)
-    {
-        if (card < 0 || card >= _quickCards.Count)
-        {
-            GD.PrintErr("Invalid card # in deck UpdatePreview");
-            return;
-        }
-
-        var qc = _quickCards[card];
-
-        foreach (var param in QuickCardParams(qc))
-        {
-            d.Add(param.Key, param.Value);
-        }
-    }
 
     private Dictionary<string, object> QuickCardParams(QuickCardData cardData)
     {
