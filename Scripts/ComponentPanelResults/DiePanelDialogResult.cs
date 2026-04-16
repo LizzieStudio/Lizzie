@@ -31,10 +31,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _diameterInput = GetNode<LineEdit>("%Diameter");
         _diameterInput.TextChanged += text => UpdatePreview();
 
-        InitializeTemplates();
-
         _sidesInput = GetNode<OptionButton>("%Sides");
         _sidesInput.ItemSelected += SidesInputOnItemSelected;
+
+        InitializeTemplates();
 
         _dieColor = GetNode<ColorPickerButton>("%DieColor");
         _dieColor.ColorChanged += color => UpdatePreview();
@@ -108,7 +108,11 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
 
         _frontTemplatePicker.AddItem("(none)");
-        foreach (var t in CurrentProject.Templates)
+
+        int.TryParse(_sidesInput.Text, out var sides);
+        var target = SidesToTarget(sides);
+
+        foreach (var t in CurrentProject.Templates.Where(x => x.Value.Target == target))
         {
             _frontTemplatePicker.AddItem(t.Key);
         }
@@ -121,6 +125,22 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
     }
 
+    private Template.TemplateTarget SidesToTarget(int sides)
+    {
+        switch (sides)
+        {
+            case 4: return Template.TemplateTarget.D4;
+            case 6: return Template.TemplateTarget.D6;
+            case 8: return Template.TemplateTarget.D8;
+            case 10: return Template.TemplateTarget.D10;
+            case 12: return Template.TemplateTarget.D12;
+            case 20: return Template.TemplateTarget.D20;
+        }
+
+        return Template.TemplateTarget.D6;
+    }
+
+   
     private TextureContext _textureContext = new();
 
     private void OnDatasetChanged(long index)
@@ -255,10 +275,15 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     {
         var d = new Dictionary<string, object>();
 
+        MultipleCreateMode = false;
+        DataSet = null;
+
         d.Add("ComponentName", _nameInput.Text);
-        d.Add("Size", ParamToFloat(_diameterInput.Text));
+
+        var dia = ParamToFloat(_diameterInput.Text);
+        d.Add("Size", dia);
         d.Add("Color", _dieColor.Color);
-        if (!int.TryParse(_sidesInput.Text, out var sides))
+        if (int.TryParse(_sidesInput.Text, out var sides))
         {
             d.Add("SideCount", sides);
         }
@@ -284,6 +309,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 }
 
                 d.Add("Dataset", _textureContext.DataSet?.Name);
+
+                DataSet = ProjectService.Instance.GetDataSetByName(_textureContext.DataSet?.Name);
+                MultipleCreateMode = (DataSet != null);
+                WidthHint = dia / 10;
+                HeightHint = dia / 10;
+                
                 break;
         }
 

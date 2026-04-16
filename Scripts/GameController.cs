@@ -45,12 +45,47 @@ public partial class GameController : Node3D
 
     private void OnCreateObject(object sender, CreateObjectEventArgs args)
     {
+        //Add to Prototype Manifest if it's not already there
+        ProjectService.Instance.AddPrototypeToManifest(args);
+
+        var components = new List<VisualComponentBase>();
+
+        if (args.MultipleCreateMode)
+        {
+            int i = 0;
+            float w = args.WidthHint * 1.5f;
+
+            foreach (var r in args.DataSet.Rows)
+            {
+                var mc = SingleComponentSpawn(args, r.Key);
+
+                if (mc != null)
+                {
+                    mc.SpawnDelta = new Vector3(w * i, 0, 0);
+                    i++;
+
+                    components.Add(mc);
+                }
+            }
+        }
+        else
+        {
+            var sc = SingleComponentSpawn(args, string.Empty);
+            if (sc != null) components.Add(sc);
+        }
+
+        _mainScene.EnterSpawnMode(components);
+
+    }
+
+    private VisualComponentBase SingleComponentSpawn(CreateObjectEventArgs args, string row)
+    {
         VisualComponentBase component = SpawnComponent(args.PrototypeName);
 
         if (component == null)
         {
             GD.PrintErr("Null Spawn Component");
-            return;
+            return null;
         }
 
         component.PrototypeRef = args.PrototypeRef;
@@ -67,17 +102,16 @@ public partial class GameController : Node3D
             }
         }
 
-        //Add to Prototype Manifest if it's not already there
-        ProjectService.Instance.AddPrototypeToManifest(args);
-
-        if (component.Build(args.PrototypeRef, _textureFactory))
+        if (component.Build(args.PrototypeRef, row, _textureFactory))
         {
-            _mainScene.EnterSpawnMode(component);
+            return component;
         }
         else
         {
             GD.PrintErr("Error building component");
+            return null;
         }
+
     }
 
     private void OnSceneModeChange(object sender, SceneModeChangeArgs e)

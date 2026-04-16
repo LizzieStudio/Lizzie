@@ -341,10 +341,11 @@ public partial class VcDie : VisualComponentBase
         }
 
 
-        ProjectService.Instance.CurrentProject.Datasets.TryGetValue(_datasetName, out var ds);
+
+        var ds = ProjectService.Instance.GetDataSetByName(_datasetName);
         tc.DataSet = ds;
 
-        ProjectService.Instance.CurrentProject.Templates.TryGetValue(_frontTemplateName, out var template);
+        var template = ProjectService.Instance.GetTemplateByName(_frontTemplateName);
         if (template == null) return;
 
         var tx = TemplateEngine.GenerateTextureDefinition(template, tc);
@@ -364,7 +365,7 @@ public partial class VcDie : VisualComponentBase
         _mainMesh.MaterialOverride = mat;
 
         var d = texture.GetImage();
-        d.SavePng(@"c:\winwam5\d8.png");
+        //d.SavePng(@"c:\winwam5\d8.png");
     }
 
     public override List<string> ValidateParameters(Dictionary<string, object> parameters)

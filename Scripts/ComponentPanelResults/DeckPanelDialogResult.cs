@@ -703,7 +703,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         _frontTemplatePicker.AddItem("(none)");
         _backTemplatePicker.AddItem("(none)");
-        foreach (var t in CurrentProject.Templates)
+        foreach (var t in CurrentProject.Templates.Where(x => x.Value.Target == Template.TemplateTarget.Flat))
         {
             _frontTemplatePicker.AddItem(t.Key);
             _backTemplatePicker.AddItem(t.Key);
