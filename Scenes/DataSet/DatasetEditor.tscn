@@ -26,6 +26,53 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="Toolbar2" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=672584365]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="DatasetList" type="OptionButton" parent="Panel/VBoxContainer/Toolbar2" unique_id=1848543083]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 1, 0, 1)
+clip_text = true
+selected = 0
+item_count = 5
+popup/item_0/text = "Attack Card Face"
+popup/item_0/id = 0
+popup/item_1/text = "Attack Card Back"
+popup/item_1/id = 1
+popup/item_2/text = "Issue Card Face"
+popup/item_2/id = 2
+popup/item_3/text = "Issue Card Back"
+popup/item_3/id = 3
+popup/item_4/text = "Player Mat"
+popup/item_4/id = 4
+
+[node name="New" type="Button" parent="Panel/VBoxContainer/Toolbar2" unique_id=2069448569]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New Dataset"
+
+[node name="Save" type="Button" parent="Panel/VBoxContainer/Toolbar2" unique_id=1514391226]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
+[node name="Panel" type="Panel" parent="Panel/VBoxContainer/Toolbar2" unique_id=1038972778]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Cancel" type="Button" parent="Panel/VBoxContainer/Toolbar2" unique_id=1838688513]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"
+
 [node name="Toolbar" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=1866594890]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
@@ -35,19 +82,20 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Delete Row"
 
-[node name="Panel" type="Panel" parent="Panel/VBoxContainer/Toolbar" unique_id=1148527077]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Save" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1643031148]
+[node name="AddColumn" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1268024575]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Save"
+text = "Add Col"
 
-[node name="Cancel" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=679910917]
+[node name="DeleteColumn" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=233397807]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Cancel"
+text = "Delete Col"
+
+[node name="Link" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1399230963]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Import"
 
 [node name="GridMargin" type="MarginContainer" parent="Panel/VBoxContainer" unique_id=227603288]
 layout_mode = 2

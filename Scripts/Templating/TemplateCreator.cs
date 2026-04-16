@@ -468,16 +468,15 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
-        if (_curWidth == 0 || _curHeight == 0)
-            return;
+        if (_textureContext.ParentSize.X == 0 || _textureContext.ParentSize.Y == 0) return;
 
         var m = _boundsRect.GetBounds();
 
         int w = (int)_textureContext.ParentSize.X - m.l - m.r;
         int h = (int)_textureContext.ParentSize.Y - m.t - m.b;
 
-        float scaleX = 100 / _curWidth;
-        float scaleY = 100 / _curHeight;
+        float scaleX = 100 / _textureContext.ParentSize.X;
+        float scaleY = 100 / _textureContext.ParentSize.Y;
 
         UpdateParamControl(
             "X",
@@ -1079,6 +1078,9 @@ public partial class TemplateCreator : Window
             default:
                 throw new ArgumentOutOfRangeException(nameof(sides), sides, null);
         }
+
+        _curWidth = w;
+        _curHeight = h;
 
         InitializeFit(w, h);
 

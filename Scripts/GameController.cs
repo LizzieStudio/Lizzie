@@ -52,8 +52,13 @@ public partial class GameController : Node3D
 
         if (args.MultipleCreateMode)
         {
+            int cols = (int)Math.Ceiling(Math.Sqrt(args.DataSet.Rows.Count));
+            
             int i = 0;
+            int j = 0;
+
             float w = args.WidthHint * 1.5f;
+            float h = args.HeightHint * 1.5f;
 
             foreach (var r in args.DataSet.Rows)
             {
@@ -61,8 +66,13 @@ public partial class GameController : Node3D
 
                 if (mc != null)
                 {
-                    mc.SpawnDelta = new Vector3(w * i, 0, 0);
+                    mc.SpawnDelta = new Vector3(w * i, 0, h * j);
                     i++;
+                    if (i == cols)
+                    {
+                        i = 0;
+                        j++;
+                    }
 
                     components.Add(mc);
                 }
