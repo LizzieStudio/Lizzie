@@ -410,11 +410,13 @@ public partial class VcToken : VisualComponentFlat
         var bt = curProj.GetTemplate(_backTemplateName);
         var ds = curProj.GetDataset(_datasetName);
 
+        if (ft is null) return;
+
         TextureContext context = new TextureContext
         {
             DataSet = ds,
             Dpi = 100,
-            ParentSize = new Vector2(250, 350),
+            ParentSize = new Vector2(ft.Width * 10, ft.Height * 10),
             CurrentRowName = DataSetRow,
         };
 

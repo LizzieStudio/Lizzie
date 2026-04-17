@@ -1000,6 +1000,11 @@ public partial class TemplateCreator : Window
         if (_curWidth == 0 && _curHeight == 0)
         {
             ShowCardMode();
+            _heightInput.Text = (CurrentTemplate.Height).ToString("f1");
+            _widthInput.Text = (CurrentTemplate.Width).ToString("f1");
+            _curWidth = CurrentTemplate.Width;
+            _curHeight = CurrentTemplate.Height;
+            HeightWidthChange(string.Empty);
             return;
             //both = 0 means custom size.
         }

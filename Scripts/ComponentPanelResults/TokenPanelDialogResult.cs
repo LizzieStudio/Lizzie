@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Godot;
 
 public partial class TokenPanelDialogResult : ComponentPanelDialogResult
@@ -44,6 +45,13 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
     private QuickTextureEntry _backField;
 
     private IconLibrary _iconLibrary = new();
+
+    private OptionButton _frontTemplatePicker;
+    private Button _editFrontTemplateButton;
+    private OptionButton _backTemplatePicker;
+    private Button _editBackTemplateButton;
+    private OptionButton _datasetPicker;
+    private Button _datasetEditorButton;
 
     public override void _Ready()
     {
@@ -99,6 +107,9 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         _tabs.TabSelected += OnTabSelected;
 
         _preview = GetNode<ComponentPreview>("%Preview");
+        _preview.ItemSelected += PreviewOnItemSelected;
+
+        InitializeTemplates();
 
         OnQuickBackCheckboxChange(); //just to set the initial line visibility in case someone messed with the control.
         OnCustomBackCheckboxChange();
@@ -106,6 +117,122 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         OnTabSelected(0);
 
         //ShapePickerOnItemSelected(0);
+    }
+    private void InitializeTemplates()
+    {
+        _frontTemplatePicker = GetNode<OptionButton>("%FrontTemplateList");
+        _frontTemplatePicker.ItemSelected += OnFrontTemplateChanged;
+        _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
+        _editFrontTemplateButton.Pressed += EditFrontTemplate;
+
+        _backTemplatePicker = GetNode<OptionButton>("%BackTemplateList");
+        _backTemplatePicker.ItemSelected += OnBackTemplateChanged;
+        _editBackTemplateButton = GetNode<Button>("%EditBackTemplateButton");
+        _editBackTemplateButton.Pressed += EditBackTemplate;
+
+        _datasetPicker = GetNode<OptionButton>("%DatasetList");
+        _datasetPicker.ItemSelected += OnDatasetChanged;
+
+        _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
+        _datasetEditorButton.Pressed += EditDataset;
+
+        UpdateTemplateTab();
+    }
+
+    private void EditFrontTemplate()
+    {
+        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _frontTemplate?.Name });
+    }
+
+    private void EditBackTemplate()
+    {
+        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _backTemplate?.Name });
+    }
+
+    private void EditDataset()
+    {
+        EventBus.Instance.Publish(
+            new ShowDatasetEditor { DatasetName = _textureContext.DataSet?.Name }
+        );
+    }
+
+    private TextureContext _textureContext = new();
+    private Project _currentProject => ProjectService.Instance.CurrentProject;
+    private void OnDatasetChanged(long index)
+    {
+        if (_datasetPicker.Selected == 0)
+        {
+            _textureContext.DataSet = null;
+            _textureContext.CurrentRowName = null;
+            _preview.MultiItemMode = false;
+        }
+        else
+        {
+            _textureContext.DataSet = _currentProject.Datasets[
+                _datasetPicker.GetItemText((int)index)
+            ];
+            _preview.MultiItemMode = true;
+            _preview.SetItemLabels(_textureContext.DataSet.Rows.Keys.ToList());
+        }
+
+        UpdatePreview();
+    }
+
+    private Template _frontTemplate;
+    private Template _backTemplate;
+
+    private void OnFrontTemplateChanged(long index)
+    {
+        if (_frontTemplatePicker.Selected == 0)
+        {
+            _frontTemplate = null;
+        }
+        else
+        {
+            _frontTemplate = _currentProject.Templates[
+                _frontTemplatePicker.GetItemText((int)index)
+            ];
+        }
+
+        UpdatePreview();
+    }
+
+    private void OnBackTemplateChanged(long index)
+    {
+        if (_backTemplatePicker.Selected == 0)
+        {
+            _backTemplate = null;
+        }
+        else
+        {
+            _backTemplate = _currentProject.Templates[_backTemplatePicker.GetItemText((int)index)];
+        }
+
+        UpdatePreview();
+    }
+
+    private void UpdateTemplateTab()
+    {
+        if (CurrentProject == null || _frontTemplatePicker == null)
+            return;
+
+        _frontTemplatePicker.Clear();
+        _backTemplatePicker.Clear();
+
+        _frontTemplatePicker.AddItem("(none)");
+        _backTemplatePicker.AddItem("(none)");
+        foreach (var t in CurrentProject.Templates.Where(x => x.Value.Target == Template.TemplateTarget.Flat))
+        {
+            _frontTemplatePicker.AddItem(t.Key);
+            _backTemplatePicker.AddItem(t.Key);
+        }
+
+        _datasetPicker.Clear();
+        _datasetPicker.AddItem("(none)");
+        foreach (var d in CurrentProject.Datasets)
+        {
+            _datasetPicker.AddItem(d.Key);
+        }
     }
 
     public override void Activate()
@@ -293,6 +420,9 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
     public override Dictionary<string, object> GetParams()
     {
+        MultipleCreateMode = false;
+        DataSet = null;
+
         var d = new Dictionary<string, object>();
 
         d.Add("ComponentName", _nameInput.Text);
@@ -302,28 +432,35 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         d.Add("FrontImage", _frontImage.Text);
         d.Add("BackImage", _backImage.Text);
         d.Add("Shape", _shapePicker.Selected);
-        d.Add("Mode", TabToBuildMode(_tabs.CurrentTab));
         d.Add("FrontBgColor", _quickBackgroundColor.Color);
 
         //TODO Replace with panel
-        d.Add("QuickFront", _frontField.GetQuickTextureField());
-        d.Add("QuickBack", _backField.GetQuickTextureField());
-
+        
         d.Add("Type", VcToken.TokenType.Token);
         d.Add("FrontFontSize", 24);
 
         switch (_tabs.CurrentTab)
         {
+            //quick
             case 0:
-                d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
+                AddQuickParams(d);
                 break;
 
+            //custom
             case 1:
+                d.Add("Mode", VcToken.TokenBuildMode.Custom );
                 d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
                 break;
 
+            //grid
             case 2:
+                d.Add("Mode", VcToken.TokenBuildMode.Grid);
                 d.Add("DifferentBack", false);
+                break;
+
+            //template
+            case 3:
+                AddTemplateParams(d);
                 break;
         }
 
@@ -331,6 +468,41 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         d.Add("BackFontSize", 24);
 
         return d;
+    }
+
+    private void AddQuickParams(Dictionary<string, object> d)
+    {
+        d.Add("Mode", VcToken.TokenBuildMode.Quick);
+        d.Add("QuickFront", _frontField.GetQuickTextureField());
+        d.Add("QuickBack", _backField.GetQuickTextureField());
+        d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
+
+    }
+
+    private void AddTemplateParams(Dictionary<string, object> d)
+    {
+        d.Add("Mode", VcToken.TokenBuildMode.Template);
+
+        if (_frontTemplate != null)
+        {
+            d.Add("FrontTemplate", _frontTemplate.Name);
+        }
+
+        if (_backTemplate != null)
+        {
+            d.Add("BackTemplate", _backTemplate.Name);
+        }
+        else if (_frontTemplate != null)
+        {
+            //d.Add("BackTemplate", _frontTemplate.Name);
+        }
+
+        d.Add("Dataset", _textureContext.DataSet?.Name);
+
+        DataSet = ProjectService.Instance.GetDataSetByName(_textureContext.DataSet?.Name);
+        MultipleCreateMode = (DataSet != null);
+        WidthHint = ParamToFloat(_heightInput.Text) / 10f;
+        HeightHint = ParamToFloat(_heightInput.Text) / 10f;
     }
 
     private VcToken.TokenBuildMode TabToBuildMode(int tab)
@@ -343,6 +515,8 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
                 return VcToken.TokenBuildMode.Custom;
             case 2:
                 return VcToken.TokenBuildMode.Grid;
+            case 3:
+                return VcToken.TokenBuildMode.Template;
         }
 
         throw new Exception("Unknown Tab Type in TokenPanelDialogResult");
@@ -365,40 +539,28 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         //normalize dimensions to 10x10x10 outer extants
         var scale = 10f / Math.Max(h, Math.Max(w, t));
 
-        var d = new Dictionary<string, object>();
+        var d = GetParams();
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", h * scale);
-        d.Add("Width", w * scale);
-        d.Add("Thickness", t * scale);
-        d.Add("FrontImage", _frontImage.Text);
-        d.Add("BackImage", _backImage.Text);
-        d.Add("Shape", _shapePicker.Selected);
-        d.Add("Mode", TabToBuildMode(_tabs.CurrentTab));
-        d.Add("FrontBgColor", _quickBackgroundColor.Color);
 
-        //TODO fix for panel
-        //d.Add("FrontCaption", "");
-        //d.Add("FrontCaptionColor", Colors.Black);
-        d.Add("QuickFront", _frontField.GetQuickTextureField());
-        d.Add("QuickBack", _backField.GetQuickTextureField());
 
-        d.Add("Type", VcToken.TokenType.Token);
-        d.Add("FrontFontSize", 24);
+        _preview.Build(d, GetRow(_curToken), TextureFactory);
+    }
 
-        if (_tabs.CurrentTab == 0)
-        {
-            d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
-        }
-        else
-        {
-            d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
-        }
+    private string GetRow(int rowNum)
+    {
+        if (_textureContext.DataSet == null)
+            return string.Empty;
+        if (rowNum < 0 || rowNum >= _textureContext.DataSet.Rows.Count)
+            return string.Empty;
+        return _textureContext.DataSet.Rows.ElementAt(rowNum).Key;
+    }
 
-        d.Add("BackBgColor", _quickBackgroundColor2.Color);
-        d.Add("BackFontSize", 24);
+    private int _curToken;
 
-        _preview.Build(d, TextureFactory);
+    private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
+    {
+        _curToken = e.Index;
+        UpdatePreview();
     }
 
     public override void DisplayPrototype(Guid prototypeId)
