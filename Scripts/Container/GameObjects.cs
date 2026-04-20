@@ -174,9 +174,9 @@ public partial class GameObjects : Node
         {
             if (c is VisualComponentBase vcb && vcb.IsHovered)
             {
-                if (_hoveredComopnent != vcb)
+                if (_hoveredComponent != vcb)
                 {
-                    _hoveredComopnent = vcb;
+                    _hoveredComponent = vcb;
                     HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(vcb));
                     return;
                 }
@@ -185,14 +185,14 @@ public partial class GameObjects : Node
             }
         }
 
-        if (_hoveredComopnent == null)
+        if (_hoveredComponent == null)
             return;
 
-        _hoveredComopnent = null;
+        _hoveredComponent = null;
         HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(null));
     }
 
-    private VisualComponentBase _hoveredComopnent;
+    private VisualComponentBase _hoveredComponent;
 
     public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange;
 
@@ -204,7 +204,7 @@ public partial class GameObjects : Node
         {
             if (@event.IsActionPressed("spawn_component"))
             {
-                SpawnComponent();
+                SpawnComponents();
                 QueueStackingUpdate();
                 GetViewport().SetInputAsHandled();
             }
@@ -653,46 +653,62 @@ public partial class GameObjects : Node
     #endregion
 
     #region Spawn
-    private VisualComponentBase _spawnComponent;
+    private List<VisualComponentBase> _spawnComponents;
 
-    public void EnterSpawnMode(VisualComponentBase component)
+    public void EnterSpawnMode(List<VisualComponentBase> components)
     {
         CursorMode = CursorMode.Spawn;
-        _spawnComponent = component;
-        _spawnComponent.DimMode(true);
-        _spawnComponent.NeverHighlight = true;
-        _spawnComponent.ExcludeFromSync = true;
-        AddComponentToScene(_spawnComponent, false);
+        _spawnComponents = components;
+
+        foreach (var c in components)
+        {
+            c.DimMode(true);
+            c.NeverHighlight = true;
+            c.ExcludeFromSync = true;
+            AddComponentToScene(c, false);
+        }
     }
 
     private void HandleSpawnMode()
     {
-        _spawnComponent.Position = _dragPlane.GetCursorProjection();
+        var p = _dragPlane.GetCursorProjection();
+
+        foreach (var c in _spawnComponents)
+        {
+            c.Position = p + c.SpawnDelta;
+        }
     }
 
     public TextureFactory TextureFactory { get; set; }
 
-    private void SpawnComponent()
+    private void SpawnComponents()
     {
-        var newComp = (VisualComponentBase)_spawnComponent.Duplicate();
-        newComp.ExcludeFromSync = false;
-        newComp.PrototypeRef = _spawnComponent.PrototypeRef;
+        foreach (var c in _spawnComponents)
+        {
+            var newComp = (VisualComponentBase)c.Duplicate();
+            newComp.ExcludeFromSync = false;
+            newComp.PrototypeRef = c.PrototypeRef;
 
-        var spawnPosition = _dragPlane.GetCursorProjection();
+            var spawnPosition = _dragPlane.GetCursorProjection();
 
-        newComp.Build(_spawnComponent.PrototypeRef, TextureFactory);
-        newComp.Position = new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z);
+            newComp.Build(c.PrototypeRef, c.DataSetRow, TextureFactory);
+            newComp.Position =
+                new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z) + c.SpawnDelta;
 
-        newComp.DimMode(false);
-        newComp.NeverHighlight = false;
+            newComp.DimMode(false);
+            newComp.NeverHighlight = false;
 
-        AddComponentToScene(newComp);
+            AddComponentToScene(newComp);
+        }
     }
 
     private void ExitSpawnMode()
     {
-        _spawnComponent?.Delete();
-        _spawnComponent = null;
+        foreach (var c in _spawnComponents)
+        {
+            c.Delete();
+        }
+        _spawnComponents = null;
         CursorMode = CursorMode.Normal;
     }
 

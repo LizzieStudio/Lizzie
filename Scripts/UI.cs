@@ -211,8 +211,7 @@ public partial class UI : CanvasLayer
                 break;
 
             case 2:
-                var op = _projectManager.CreateTestProject();
-                ProjectService.Instance.SaveProject(op);
+                ProjectService.Instance.SaveProject();
                 break;
 
             case 10:

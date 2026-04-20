@@ -70,6 +70,13 @@ public abstract partial class ComponentPanelDialogResult : Control
 
     public virtual Project CurrentProject { get; set; }
 
+    public DataSet DataSet { get; set; }
+    public bool MultipleCreateMode { get; set; } = false;
+
+    //These parameters are used to create a grid of objects in multiple mode.
+    public float WidthHint { get; set; }
+    public float HeightHint { get; set; }
+
     public virtual void DisplayPrototype(Guid prototypeId) { }
 
     public virtual void DisplayPrototype(Prototype prototype) { }

@@ -83,12 +83,12 @@ public partial class SceneController : Node3D
     private void TextureDone(ImageTexture obj)
     {
         var d = obj.GetImage();
-        d.SavePng(@"c:\winwam5\tfTest.png");
+        //d.SavePng(@"c:\winwam5\tfTest.png");
     }
 
-    public void EnterSpawnMode(VisualComponentBase component)
+    public void EnterSpawnMode(List<VisualComponentBase> components)
     {
-        _gameObjects.EnterSpawnMode(component);
+        _gameObjects.EnterSpawnMode(components);
     }
 
     public void PopupClosed()

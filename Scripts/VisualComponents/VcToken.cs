@@ -352,20 +352,30 @@ public partial class VcToken : VisualComponentFlat
         var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
         var pixelSize = PixelSize(cv);
 
-        FaceSprite.PixelSize = pixelSize;
+        //FaceSprite.PixelSize = pixelSize;
         _frontTextureGenerated = true;
 
-        if (!_differentBack)
+        if (_differentBack)
         {
-            BackSprite.PixelSize = pixelSize;
+            var backPixelSize = PixelSize(_backMasterSprite.GetSize());
+
+            //BackSprite.PixelSize = backPixelSize;
             _backTextureGenerated = true;
-            //BackSprite.Texture = t;
+            BackTexture = _backMasterSprite;
+            MapBackTexture();
         }
 
+        int.TryParse(DataSetRow, out var r);
+
+        FaceTexture = _frontMasterSprite;
+        MapFrontTexture();
+
+        /*
         FaceSprite.Texture = _frontMasterSprite;
         FaceSprite.Hframes = _gridCols;
         FaceSprite.Vframes = _gridRows;
-        FaceSprite.Frame = _gridIndex;
+        FaceSprite.Frame = r;
+        */
     }
 
     private string _frontTemplateName;
@@ -400,11 +410,14 @@ public partial class VcToken : VisualComponentFlat
         var bt = curProj.GetTemplate(_backTemplateName);
         var ds = curProj.GetDataset(_datasetName);
 
+        if (ft is null)
+            return;
+
         TextureContext context = new TextureContext
         {
             DataSet = ds,
             Dpi = 100,
-            ParentSize = new Vector2(250, 350),
+            ParentSize = new Vector2(ft.Width * 10, ft.Height * 10),
             CurrentRowName = DataSetRow,
         };
 
@@ -656,7 +669,21 @@ public partial class VcToken : VisualComponentFlat
         _frontTextureGenerated = true;
 
         FaceSprite.Texture = FaceTexture;
+
         float pixelSize = PixelSize(FaceTexture.GetSize());
+
+        if (_mode == TokenBuildMode.Grid)
+        {
+            FaceSprite.Hframes = _gridCols;
+            FaceSprite.Vframes = _gridRows;
+            int.TryParse(DataSetRow, out var r);
+            FaceSprite.Frame = r;
+
+            var ts = FaceTexture.GetSize();
+            var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
+            pixelSize = PixelSize(cv);
+        }
+
         FaceSprite.PixelSize = pixelSize;
 
         if (!_differentBack)
@@ -747,7 +774,7 @@ public partial class VcToken : VisualComponentFlat
 
         _gridRows = Utility.GetParam<int>(parameters, "GridRows");
         _gridCols = Utility.GetParam<int>(parameters, "GridCols");
-        _gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
+        //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
 
         if (parameters.TryGetValue("Type", out var tokenType))
         {
@@ -846,7 +873,8 @@ public partial class VcToken : VisualComponentFlat
     private Texture2D _backMasterSprite;
     private int _gridRows;
     private int _gridCols;
-    private int _gridIndex;
+
+    //private int _gridIndex;
 
     public enum TokenType
     {

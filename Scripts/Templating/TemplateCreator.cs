@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Godot;
 using Lizzie.Scripts.Templating;
 
@@ -10,10 +11,30 @@ public partial class TemplateCreator : Window
     [Export]
     private TextureRect _preview;
 
-    //private VBoxContainer _elementContainer;
+    [Export]
+    private Texture2D _d4_overlay;
+
+    [Export]
+    private Texture2D _d6_overlay;
+
+    [Export]
+    private Texture2D _d8_overlay;
+
+    [Export]
+    private Texture2D _d10_overlay;
+
+    [Export]
+    private Texture2D _d12_overlay;
+
+    [Export]
+    private Texture2D _d20_overlay;
 
     private Tree _elementTree;
     private VBoxContainer _paramContainer;
+    private TextureRect _previewOverlay;
+    private HBoxContainer _sizeControls;
+    private HBoxContainer _overlayControls;
+    private Button _showOverlayButton;
 
     private Button _textButton;
     private Button _closeButton;
@@ -79,7 +100,7 @@ public partial class TemplateCreator : Window
 
         _textureContext.ParentSize = _preview.GetSize();
 
-        InitializeFit();
+        InitializeCardFit();
 
         _acceptDialog = (AcceptDialog)GetNode("ConfirmationDialog");
 
@@ -93,6 +114,14 @@ public partial class TemplateCreator : Window
         if (!string.IsNullOrWhiteSpace(_tempTemplateName))
         {
             SetTemplateByName(_tempTemplateName);
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_fitRequired)
+        {
+            OnStandardSizeChanged(0);
         }
     }
 
@@ -119,10 +148,15 @@ public partial class TemplateCreator : Window
         _widthInput = GetNode<LineEdit>("%Width");
         _widthInput.TextChanged += HeightWidthChange;
 
+        _sizeControls = GetNode<HBoxContainer>("%SizeControls");
+        _overlayControls = GetNode<HBoxContainer>("%OverlayControls");
+        _showOverlayButton = GetNode<Button>("%ShowOverlayToggle");
+        _showOverlayButton.Pressed += OnOverlayToggle;
+
         _cardSizes = GetNode<OptionButton>("%StandardSize");
-        _cardSizes.ItemSelected += StandardSizeChanged;
+        _cardSizes.ItemSelected += OnStandardSizeChanged;
         InitializeStandardSizes();
-        StandardSizeChanged(0);
+        OnStandardSizeChanged(0);
 
         _dataSetSelector = GetNode<OptionButton>("%Dataset");
         _dataSetSelector.ItemSelected += OnDatasetChanged;
@@ -228,6 +262,20 @@ public partial class TemplateCreator : Window
     private void MapTemplate()
     {
         //change sizes
+        var size = CurrentTemplate.SizeTemplate;
+
+        if (!string.IsNullOrEmpty(size))
+        {
+            for (int i = 0; i < _cardSizes.ItemCount; i++)
+            {
+                if (_cardSizes.GetItemText(i) == size)
+                {
+                    _cardSizes.Select(i);
+                    OnStandardSizeChanged(i);
+                    break;
+                }
+            }
+        }
 
         //set up element tree
         _elementTree.Clear();
@@ -338,6 +386,9 @@ public partial class TemplateCreator : Window
         _previewWindow = GetNode<Panel>("%PreviewWindow");
         _windowSize = _previewWindow.GetSize();
 
+        _previewOverlay = GetNode<TextureRect>("%PreviewOverlay");
+        _previewOverlay.Visible = false;
+
         _previewHScroll = GetNode<ScrollBar>("%PreviewHScroll");
         _previewHScroll.ValueChanged += OnScroll;
 
@@ -397,7 +448,7 @@ public partial class TemplateCreator : Window
 
     private void HeightWidthChange(string newtext)
     {
-        InitializeFit();
+        InitializeCardFit();
         _updateRequired = true;
     }
 
@@ -417,15 +468,27 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
+        if (_textureContext.ParentSize.X == 0 || _textureContext.ParentSize.Y == 0)
+            return;
+
         var m = _boundsRect.GetBounds();
 
         int w = (int)_textureContext.ParentSize.X - m.l - m.r;
         int h = (int)_textureContext.ParentSize.Y - m.t - m.b;
 
-        UpdateParamControl("X", (m.l + w / 2).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Y", (m.t + h / 2).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Width", w.ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Height", h.ToString(CultureInfo.InvariantCulture));
+        float scaleX = 100 / _textureContext.ParentSize.X;
+        float scaleY = 100 / _textureContext.ParentSize.Y;
+
+        UpdateParamControl(
+            "X",
+            ((int)(scaleX * (m.l + w / 2f))).ToString(CultureInfo.InvariantCulture)
+        );
+        UpdateParamControl(
+            "Y",
+            ((int)(scaleY * (m.t + h / 2f))).ToString(CultureInfo.InvariantCulture)
+        );
+        UpdateParamControl("Width", ((int)(scaleX * w)).ToString(CultureInfo.InvariantCulture));
+        UpdateParamControl("Height", ((int)(scaleY * h)).ToString(CultureInfo.InvariantCulture));
 
         _updateRequired = true;
     }
@@ -898,14 +961,34 @@ public partial class TemplateCreator : Window
         {
             _cardSizes.AddItem(kv.Key);
         }
+
+        //die standard sizes have the die size as width and 0 as height.
+
+        _standardSizes.Add("D4", (4, 0));
+        _standardSizes.Add("D6", (6, 0));
+        _standardSizes.Add("D8", (8, 0));
+        _standardSizes.Add("D10", (10, 0));
+        _standardSizes.Add("D12", (12, 0));
+        _standardSizes.Add("D20", (20, 0));
+
+        _cardSizes.AddSeparator();
+        _cardSizes.AddItem("D4");
+        _cardSizes.AddItem("D6");
+        _cardSizes.AddItem("D8");
+        _cardSizes.AddItem("D10");
+        _cardSizes.AddItem("D12");
+        _cardSizes.AddItem("D20");
     }
 
     private float _curHeight;
     private float _curWidth;
     private string _curSizeType;
 
-    private void StandardSizeChanged(long index)
+    private void OnStandardSizeChanged(long index)
     {
+        if (CurrentTemplate == null)
+            return;
+
         _curSizeType = _cardSizes.Text;
 
         if (!_standardSizes.TryGetValue(_curSizeType, out var size))
@@ -913,9 +996,28 @@ public partial class TemplateCreator : Window
 
         _curWidth = size.Item1;
         _curHeight = size.Item2;
+        CurrentTemplate.SizeTemplate = _curSizeType;
 
-        if (_curWidth == 0 || _curHeight == 0)
+        if (_curWidth == 0 && _curHeight == 0)
+        {
+            ShowCardMode();
+            _heightInput.Text = (CurrentTemplate.Height).ToString("f1");
+            _widthInput.Text = (CurrentTemplate.Width).ToString("f1");
+            _curWidth = CurrentTemplate.Width;
+            _curHeight = CurrentTemplate.Height;
+            HeightWidthChange(string.Empty);
             return;
+            //both = 0 means custom size.
+        }
+
+        if (_curHeight == 0)
+        {
+            //die mode
+            ShowDieMode(_curWidth);
+            return;
+        }
+
+        ShowCardMode();
 
         float conversion = 25.4f;
 
@@ -923,6 +1025,76 @@ public partial class TemplateCreator : Window
         _widthInput.Text = (_curWidth * conversion).ToString("f1");
 
         HeightWidthChange(string.Empty);
+    }
+
+    private void ShowDieMode(float index)
+    {
+        _sizeControls.Visible = false;
+        InitOverlay((int)index);
+        _overlayControls.Visible = true;
+        OnOverlayToggle();
+    }
+
+    private void ShowCardMode()
+    {
+        HideOverlay();
+        _sizeControls.Visible = true;
+        _overlayControls.Visible = false;
+    }
+
+    private void HideOverlay()
+    {
+        _previewOverlay.Visible = false;
+    }
+
+    private void OnOverlayToggle()
+    {
+        _previewOverlay.Visible = _showOverlayButton.ButtonPressed;
+    }
+
+    private void InitOverlay(int sides)
+    {
+        var h = 256;
+        var w = 256;
+
+        Texture2D t;
+
+        switch (sides)
+        {
+            case 4:
+                t = _d4_overlay;
+                break;
+            case 6:
+                h = 170;
+                t = _d6_overlay;
+                break;
+            case 8:
+                t = _d8_overlay;
+                break;
+            case 10:
+                t = _d10_overlay;
+                break;
+            case 12:
+                t = _d12_overlay;
+                break;
+            case 20:
+                t = _d20_overlay;
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(sides), sides, null);
+        }
+
+        _curWidth = w;
+        _curHeight = h;
+
+        InitializeFit(w, h);
+
+        var image = t.GetImage();
+        var s = _preview.GetSize();
+        image.Resize((int)s.X, (int)s.Y);
+        var t2 = ImageTexture.CreateFromImage(image);
+        _previewOverlay.Texture = t2;
     }
 
     private void InitializeDataSets()
@@ -1463,16 +1635,28 @@ public partial class TemplateCreator : Window
 
     private float _previewDpi;
 
-    public void InitializeFit()
+    private void InitializeCardFit()
     {
         float.TryParse(_widthInput.Text, out var w);
         float.TryParse(_heightInput.Text, out var h);
+        InitializeFit(w, h);
+    }
 
+    //It may take a few frames for the Size of the preview window to be set properly
+    private bool _fitRequired;
+
+    public void InitializeFit(float w, float h)
+    {
         if (w <= 0 || h <= 0)
             return;
 
-        _textureContext.ParentSize = _preview.Size;
-        _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
+        if (_previewWindow.Size == Vector2.Zero)
+        {
+            _fitRequired = true;
+            return;
+        }
+
+        _fitRequired = false;
 
         //size to fit in the preview window
         var aspectRation = w / h;
@@ -1493,7 +1677,13 @@ public partial class TemplateCreator : Window
         _preview.SetSize(new Vector2(sw, sh));
         _preview.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
 
+        //_previewOverlay.SetSize(new Vector2(sw, sh));
+        //_previewOverlay.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
+
         _previewDpi = 25.4f * sw / w;
+
+        _textureContext.ParentSize = new Vector2(sw, sh);
+        _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
 
         ZoomFit();
     }
@@ -1521,6 +1711,7 @@ public partial class TemplateCreator : Window
         else
         {
             var n = _dataSetSelector.GetItemText((int)index);
+            CurrentTemplate.DataSet = n;
         }
 
         UpdateTextureContext(CurrentTemplate.DataSet);

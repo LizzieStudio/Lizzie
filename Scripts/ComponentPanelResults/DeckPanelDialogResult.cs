@@ -317,7 +317,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _frontMasterSprite = Utility.LoadTexture(file);
 
         UpdatePreview();
-        return;
     }
 
     private void GetBackFile()
@@ -328,8 +327,9 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private void BackFileSelected(string file)
     {
         _gridBackImageFile.Text = file;
+        _backMasterSprite = Utility.LoadTexture(file);
+
         UpdatePreview();
-        return;
     }
 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
@@ -460,29 +460,18 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private void AddGridParameters(Dictionary<string, object> d)
     {
         d.Add("FrontMasterSprite", _frontMasterSprite);
+        d.Add("BackMasterSprite", _backMasterSprite);
         d.Add("GridRows", _gridRows);
         d.Add("GridCols", _gridCols);
         d.Add("GridCount", _gridCols);
 
         d.Add("Mode", VcToken.TokenBuildMode.Grid);
-        d.Add("DifferentBack", false);
+        d.Add("DifferentBack", true);
     }
 
     private void AddTemplateParameters(Dictionary<string, object> d)
     {
         d.Add("Mode", VcToken.TokenBuildMode.Template);
-
-        /*
-        if (_textureContext.DataSet == null)
-        {
-            _textureContext.CurrentRowName = string.Empty;
-        }
-        else
-        {
-            var cardName = _textureContext.DataSet.Rows.ElementAt(card).Key;
-            _textureContext.CurrentRowName = cardName;
-        }
-        */
 
         if (_frontTemplate != null)
         {
@@ -555,30 +544,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         var card = _componentPreview.CurrentItem;
 
-        /*
-        var d = new Dictionary<string, object>();
-
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", h * scale);
-        d.Add("Width", w * scale);
-        d.Add("Thickness", 0.3f);
-        d.Add("Type", VcToken.TokenType.Card);
-
-        switch (_tabs.CurrentTab)
-        {
-            case 0:
-                UpdateQuick(d, card);
-                break;
-            case 1:
-                UpdateGrid(d, card);
-                break;
-
-            case 2:
-                UpdateTemplate(d, card);
-                break;
-        }
-        */
-
         var d = GetParams();
 
         Utility.UpdateParam(d, "Height", h * scale);
@@ -591,8 +556,10 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         switch (_tabs.CurrentTab)
         {
             case 0: //Quick
-            case 1: //Grid
                 return (card + 1).ToString();
+
+            case 1: //Grid
+                return card.ToString();
 
             case 2:
                 if (_textureContext.DataSet == null)
@@ -675,59 +642,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void UpdateTemplate(Dictionary<string, object> d, int card)
-    {
-        _textureContext.ParentSize = new Vector2(250, 350);
-        _textureContext.Dpi = 100;
-
-        d.Add("Mode", VcToken.TokenBuildMode.Template);
-        if (_textureContext.DataSet == null)
-        {
-            _textureContext.CurrentRowName = string.Empty;
-        }
-        else
-        {
-            var cardName = _textureContext.DataSet.Rows.ElementAt(card).Key;
-            _textureContext.CurrentRowName = cardName;
-        }
-
-        if (_frontTemplate != null)
-        {
-            d.Add("FrontTemplate", _frontTemplate.Name);
-        }
-
-        if (_backTemplate != null)
-        {
-            d.Add("BackTemplate", _backTemplate.Name);
-        }
-        else if (_frontTemplate != null)
-        {
-            d.Add("BackTemplate", _frontTemplate.Name);
-        }
-
-        d.Add("Dataset", _textureContext.DataSet?.Name);
-        d.Add("CardReference", _textureContext.CurrentRowName);
-        var c = _componentPreview.GetComponent();
-        if (c != null)
-            c.DataSetRow = _textureContext.CurrentRowName;
-    }
-
-    private void UpdateQuick(Dictionary<string, object> d, int card)
-    {
-        if (card < 0 || card >= _quickCards.Count)
-        {
-            GD.PrintErr("Invalid card # in deck UpdatePreview");
-            return;
-        }
-
-        var qc = _quickCards[card];
-
-        foreach (var param in QuickCardParams(qc))
-        {
-            d.Add(param.Key, param.Value);
-        }
-    }
-
     private Dictionary<string, object> QuickCardParams(QuickCardData cardData)
     {
         var p = new Dictionary<string, object>();
@@ -786,7 +700,11 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         _frontTemplatePicker.AddItem("(none)");
         _backTemplatePicker.AddItem("(none)");
-        foreach (var t in CurrentProject.Templates)
+        foreach (
+            var t in CurrentProject.Templates.Where(x =>
+                x.Value.Target == Template.TemplateTarget.Flat
+            )
+        )
         {
             _frontTemplatePicker.AddItem(t.Key);
             _backTemplatePicker.AddItem(t.Key);

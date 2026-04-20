@@ -13,6 +13,9 @@ public partial class DatasetEditor : Window
     private Button _deleteButton;
     private Button _saveButton;
     private Button _cancelButton;
+    private Button _newButton;
+    private OptionButton _datasetList;
+    private Button _linkButton;
 
     private HBoxContainer _headerContainer;
     private ScrollContainer _dataScrollContainer;
@@ -21,6 +24,10 @@ public partial class DatasetEditor : Window
 
     private List<float> _columnWidths = new();
     private List<CheckBox> _rowCheckboxes = new();
+
+    private ConfirmationDialog _newDatasetDialog;
+    private LineEdit _newDatasetNameInput;
+    private Label _newDatasetErrorLabel;
     private HBoxContainer _newRowContainer;
     private int _nextRowId = 0;
     private const float CheckboxColumnWidth = 40f;
@@ -32,28 +39,15 @@ public partial class DatasetEditor : Window
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        InitializeSpreadsheet();
-
         _project = ProjectService.Instance.CurrentProject;
 
-        if (_project != null)
-        {
-            MapDataSet(_project.Datasets.First().Value);
-        }
+        InitializeSpreadsheet();
     }
 
     private void InitializeSpreadsheet()
     {
         _mainContainer = GetNode<VBoxContainer>("%MainContainer");
         _mainContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-
-        _deleteButton = GetNode<Button>("%DeleteRow");
-        _deleteButton.Pressed += OnDeleteButtonPressed;
-
-        _saveButton = GetNode<Button>("%Save");
-        _saveButton.Pressed += SaveDataSet;
-        _cancelButton = GetNode<Button>("%Cancel");
-        _cancelButton.Pressed += CloseDialog;
 
         _headerContainer = new HBoxContainer();
         _headerContainer.CustomMinimumSize = new Vector2(0, HeaderHeight);
@@ -68,8 +62,122 @@ public partial class DatasetEditor : Window
         _dataContainer = new VBoxContainer();
         _dataScrollContainer.AddChild(_dataContainer);
 
-        if (_project != null)
-            MapDataSet(_project.Datasets.First().Value);
+        _deleteButton = GetNode<Button>("%DeleteRow");
+        _deleteButton.Pressed += OnDeleteButtonPressed;
+
+        _saveButton = GetNode<Button>("%Save");
+        _saveButton.Pressed += SaveDataSet;
+        _cancelButton = GetNode<Button>("%Cancel");
+        _cancelButton.Pressed += CloseDialog;
+        _newButton = GetNode<Button>("%New");
+        _newButton.Pressed += OnNewDatasetPressed;
+
+        _datasetList = GetNode<OptionButton>("%DatasetList");
+        _datasetList.ItemSelected += OnDatasetSelected;
+
+        InitializeNewDatasetDialog();
+        LoadDatasetList();
+    }
+
+    private void LoadDatasetList()
+    {
+        if (_project == null || _datasetList == null)
+            return;
+
+        _datasetList.Clear();
+        foreach (var kv in _project.Datasets)
+            _datasetList.AddItem(kv.Key);
+
+        if (_datasetList.ItemCount > 0)
+        {
+            _datasetList.Select(0);
+            MapDataSet(_project.Datasets.Values.First());
+        }
+    }
+
+    private void OnDatasetSelected(long index)
+    {
+        if (_project == null)
+            return;
+
+        var name = _datasetList.GetItemText((int)index);
+        if (_project.Datasets.TryGetValue(name, out var ds))
+            MapDataSet(ds);
+    }
+
+    private void OnNewDatasetPressed()
+    {
+        _newDatasetNameInput.Clear();
+        _newDatasetErrorLabel.Text = string.Empty;
+        _newDatasetDialog.GetOkButton().Disabled = true;
+        _newDatasetDialog.PopupCentered();
+    }
+
+    private void InitializeNewDatasetDialog()
+    {
+        _newDatasetDialog = new ConfirmationDialog();
+        _newDatasetDialog.Title = "New Dataset";
+        _newDatasetDialog.OkButtonText = "Create";
+
+        var vbox = new VBoxContainer();
+        vbox.CustomMinimumSize = new Vector2(300, 0);
+
+        var label = new Label();
+        label.Text = "Dataset name:";
+        vbox.AddChild(label);
+
+        _newDatasetNameInput = new LineEdit();
+        _newDatasetNameInput.PlaceholderText = "Enter unique name...";
+        _newDatasetNameInput.TextChanged += OnNewDatasetNameChanged;
+        vbox.AddChild(_newDatasetNameInput);
+
+        _newDatasetErrorLabel = new Label();
+        _newDatasetErrorLabel.AddThemeColorOverride("font_color", new Color(1, 0.3f, 0.3f));
+        vbox.AddChild(_newDatasetErrorLabel);
+
+        _newDatasetDialog.AddChild(vbox);
+        _newDatasetDialog.Confirmed += OnNewDatasetConfirmed;
+        AddChild(_newDatasetDialog);
+    }
+
+    private void OnNewDatasetNameChanged(string text)
+    {
+        var trimmed = text.Trim();
+        var isDuplicate = _project != null && _project.Datasets.ContainsKey(trimmed);
+        var isEmpty = string.IsNullOrWhiteSpace(trimmed);
+
+        if (isDuplicate)
+            _newDatasetErrorLabel.Text = "A dataset with that name already exists.";
+        else
+            _newDatasetErrorLabel.Text = string.Empty;
+
+        _newDatasetDialog.GetOkButton().Disabled = isEmpty || isDuplicate;
+    }
+
+    private void OnNewDatasetConfirmed()
+    {
+        if (_project == null)
+            return;
+
+        var name = _newDatasetNameInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(name) || _project.Datasets.ContainsKey(name))
+            return;
+
+        var ds = new DataSet { Name = name };
+        _project.Datasets[name] = ds;
+
+        LoadDatasetList();
+
+        // Select the newly created dataset
+        for (int i = 0; i < _datasetList.ItemCount; i++)
+        {
+            if (_datasetList.GetItemText(i) == name)
+            {
+                _datasetList.Select(i);
+                MapDataSet(ds);
+                break;
+            }
+        }
     }
 
     public event EventHandler Closed;
@@ -392,9 +500,7 @@ public partial class DatasetEditor : Window
     {
         _project = project;
         if (_mainContainer != null)
-        {
-            MapDataSet(project.Datasets.First().Value);
-        }
+            LoadDatasetList();
     }
 
     private void OnDeleteButtonPressed()

@@ -91,7 +91,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
-        return Build(parameters, string.Empty, textureFactory);
+        return Build(parameters, DataSetRow, textureFactory);
     }
 
     public virtual bool Build(
@@ -635,6 +635,27 @@ public abstract partial class VisualComponentBase : Area3D
     /// If true, this component will not be synced to other nodes
     /// </summary>
     public bool ExcludeFromSync { get; set; }
+
+    #region Spawn
+
+    public virtual List<VisualComponentBase> SpawnComponents(
+        Guid prototypeRef,
+        TextureFactory textureFactory
+    )
+    {
+        var l = new List<VisualComponentBase>();
+
+        var c = Build(prototypeRef, textureFactory);
+
+        return [];
+    }
+
+    /// <summary>
+    /// The delta from trh cursoe prosition for this object in spawn mode
+    /// </summary>
+    public Vector3 SpawnDelta { get; set; } = Vector3.Zero;
+
+    #endregion
 }
 
 public class VisualComponentEventArgs : EventArgs

@@ -685,49 +685,6 @@ public partial class VcDeck : VisualComponentGroup
         var card = (VcToken)_templateCard.Duplicate();
         card.ComponentType = VisualComponentType.Token;
 
-        /*
-        var p = new Dictionary<string, object>();
-
-        p.Add("Height", _height * 10);
-        p.Add("Width", _width * 10);
-        p.Add("Thickness", 0.1f * 10);
-        p.Add("ComponentName", string.Empty); //TODO add card name
-        p.Add("FrontImage", string.Empty);
-        p.Add("BackImage", string.Empty);
-        p.Add("Shape", 0);
-        p.Add("Mode", VcToken.TokenBuildMode.QuickDeck);
-        p.Add("FrontBgColor", faceColor);
-        p.Add("FrontCaption", faceCaption);
-        p.Add("FrontCaptionColor", Colors.Black);
-        p.Add("DifferentBack", true);
-        p.Add("BackBgColor", backColor);
-        p.Add("BackCaption", backCaption);
-        p.Add("BackCaptionColor", Colors.Black);
-        p.Add("FrontFontSize", 72);
-        p.Add("BackFontSize", 24);
-        p.Add("QuickCardData", _quickCardList);
-
-        
-        var fqt = new QuickTextureField
-        {
-            ForegroundColor = Colors.Black,
-            FaceType = TextureFactory.TextureObjectType.Text,
-            Caption = faceCaption,
-            Quantity = 1,
-        };
-        p.Add("QuickFront", fqt);
-        
-
-        var bqt = new QuickTextureField
-        {
-            ForegroundColor = Colors.Black,
-            FaceType = TextureFactory.TextureObjectType.Text,
-            Caption = backCaption,
-            Quantity = 1,
-        };
-        p.Add("QuickBack", bqt);
-        */
-
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
         card.Parent = Reference;
@@ -805,9 +762,11 @@ public partial class VcDeck : VisualComponentGroup
 
         p.Add("DifferentBack", false);
 
-        card.Build(p, textureFactory);
-
         card.Parent = Reference;
+        card.PrototypeRef = PrototypeRef;
+        card.Parent = Reference;
+
+        card.Build(PrototypeRef, index.ToString(), textureFactory);
 
         return card;
     }
@@ -968,6 +927,17 @@ public partial class VcDeck : VisualComponentGroup
 
                     _backSprite.PixelSize = vcb.FaceSprite.PixelSize;
                     _backSprite.Texture = vcb.FaceTexture;
+
+                    if (_mode == VcToken.TokenBuildMode.Grid)
+                    {
+                        _backSprite.Frame = 0;
+                        _backSprite.Hframes = _gridCols;
+                        _backSprite.Vframes = _gridRows;
+                        var ts = _backSprite.Texture.GetSize();
+                        var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
+                        _backSprite.PixelSize = PixelSize(cv);
+                    }
+
                     _backTextureReady = true;
                 }
             }

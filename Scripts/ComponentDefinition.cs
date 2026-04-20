@@ -128,6 +128,10 @@ public partial class ComponentDefinition : Window
                 ComponentType = r.ComponentType,
                 Params = r.GetParams(),
                 PrototypeRef = Guid.NewGuid(),
+                DataSet = r.DataSet,
+                MultipleCreateMode = r.MultipleCreateMode,
+                WidthHint = r.WidthHint,
+                HeightHint = r.HeightHint,
             };
 
             if (!e.Params.ContainsKey("BaseName"))
@@ -340,4 +344,10 @@ public class CreateObjectEventArgs : EventArgs
     public string PrototypeName { get; set; }
 
     public Guid PrototypeRef { get; set; }
+
+    public DataSet DataSet { get; set; }
+
+    public bool MultipleCreateMode { get; set; }
+    public float WidthHint { get; set; }
+    public float HeightHint { get; set; }
 }

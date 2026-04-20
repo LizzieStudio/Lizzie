@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using Godot;
 using Lizzie.AssetManagement;
@@ -109,6 +110,13 @@ public partial class ProjectService : Node
         return true;
     }
 
+    public bool SaveProject()
+    {
+        if (CurrentProject == null)
+            return false;
+        return SaveProject(CurrentProject);
+    }
+
     /// <summary>
     /// Serialize a project to JSON string for network sync
     /// </summary>
@@ -214,6 +222,24 @@ public partial class ProjectService : Node
 
             UpdatePrototype(newProto);
         }
+    }
+
+    public DataSet GetDataSetByName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null)
+            return null;
+        if (CurrentProject.Datasets == null)
+            return null;
+        return CurrentProject.Datasets.GetValueOrDefault(name);
+    }
+
+    public Template GetTemplateByName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null)
+            return null;
+        if (CurrentProject.Templates == null)
+            return null;
+        return CurrentProject.Templates.GetValueOrDefault(name);
     }
 
     public GameObjects GameObjects { get; set; }
