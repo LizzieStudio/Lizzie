@@ -6,7 +6,16 @@ using TTSS.Scripts.Templating;
 
 public class Template
 {
-    public enum TemplateTarget {Flat, D4, D6, D8, D10, D12, D20}
+    public enum TemplateTarget
+    {
+        Flat,
+        D4,
+        D6,
+        D8,
+        D10,
+        D12,
+        D20,
+    }
 
     public string Name { get; set; }
     public string Description { get; set; }
@@ -23,12 +32,18 @@ public class Template
         {
             switch (SizeTemplate)
             {
-                case "D4": return TemplateTarget.D4;
-                case "D6": return TemplateTarget.D6;
-                case "D8": return TemplateTarget.D8;
-                case "D10": return TemplateTarget.D10;
-                case "D12": return TemplateTarget.D12;
-                case "D20": return TemplateTarget.D20;
+                case "D4":
+                    return TemplateTarget.D4;
+                case "D6":
+                    return TemplateTarget.D6;
+                case "D8":
+                    return TemplateTarget.D8;
+                case "D10":
+                    return TemplateTarget.D10;
+                case "D12":
+                    return TemplateTarget.D12;
+                case "D20":
+                    return TemplateTarget.D20;
             }
 
             return TemplateTarget.Flat;

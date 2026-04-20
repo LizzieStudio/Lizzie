@@ -410,7 +410,8 @@ public partial class VcToken : VisualComponentFlat
         var bt = curProj.GetTemplate(_backTemplateName);
         var ds = curProj.GetDataset(_datasetName);
 
-        if (ft is null) return;
+        if (ft is null)
+            return;
 
         TextureContext context = new TextureContext
         {

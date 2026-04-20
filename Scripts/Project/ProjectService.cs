@@ -226,15 +226,19 @@ public partial class ProjectService : Node
 
     public DataSet GetDataSetByName(string name)
     {
-        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null) return null;
-        if (CurrentProject.Datasets == null) return null;
+        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null)
+            return null;
+        if (CurrentProject.Datasets == null)
+            return null;
         return CurrentProject.Datasets.GetValueOrDefault(name);
     }
 
     public Template GetTemplateByName(string name)
     {
-        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null) return null;
-        if (CurrentProject.Templates == null) return null;
+        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null)
+            return null;
+        if (CurrentProject.Templates == null)
+            return null;
         return CurrentProject.Templates.GetValueOrDefault(name);
     }
 

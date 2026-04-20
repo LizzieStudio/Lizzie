@@ -642,9 +642,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-  
-
-
     private Dictionary<string, object> QuickCardParams(QuickCardData cardData)
     {
         var p = new Dictionary<string, object>();
@@ -703,7 +700,11 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         _frontTemplatePicker.AddItem("(none)");
         _backTemplatePicker.AddItem("(none)");
-        foreach (var t in CurrentProject.Templates.Where(x => x.Value.Target == Template.TemplateTarget.Flat))
+        foreach (
+            var t in CurrentProject.Templates.Where(x =>
+                x.Value.Target == Template.TemplateTarget.Flat
+            )
+        )
         {
             _frontTemplatePicker.AddItem(t.Key);
             _backTemplatePicker.AddItem(t.Key);

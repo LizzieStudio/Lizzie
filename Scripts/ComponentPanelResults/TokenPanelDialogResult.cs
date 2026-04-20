@@ -118,6 +118,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
         //ShapePickerOnItemSelected(0);
     }
+
     private void InitializeTemplates()
     {
         _frontTemplatePicker = GetNode<OptionButton>("%FrontTemplateList");
@@ -158,6 +159,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
     private TextureContext _textureContext = new();
     private Project _currentProject => ProjectService.Instance.CurrentProject;
+
     private void OnDatasetChanged(long index)
     {
         if (_datasetPicker.Selected == 0)
@@ -221,7 +223,11 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
         _frontTemplatePicker.AddItem("(none)");
         _backTemplatePicker.AddItem("(none)");
-        foreach (var t in CurrentProject.Templates.Where(x => x.Value.Target == Template.TemplateTarget.Flat))
+        foreach (
+            var t in CurrentProject.Templates.Where(x =>
+                x.Value.Target == Template.TemplateTarget.Flat
+            )
+        )
         {
             _frontTemplatePicker.AddItem(t.Key);
             _backTemplatePicker.AddItem(t.Key);
@@ -435,7 +441,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         d.Add("FrontBgColor", _quickBackgroundColor.Color);
 
         //TODO Replace with panel
-        
+
         d.Add("Type", VcToken.TokenType.Token);
         d.Add("FrontFontSize", 24);
 
@@ -448,7 +454,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
             //custom
             case 1:
-                d.Add("Mode", VcToken.TokenBuildMode.Custom );
+                d.Add("Mode", VcToken.TokenBuildMode.Custom);
                 d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
                 break;
 
@@ -476,7 +482,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         d.Add("QuickFront", _frontField.GetQuickTextureField());
         d.Add("QuickBack", _backField.GetQuickTextureField());
         d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
-
     }
 
     private void AddTemplateParams(Dictionary<string, object> d)
@@ -540,8 +545,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         var scale = 10f / Math.Max(h, Math.Max(w, t));
 
         var d = GetParams();
-
-
 
         _preview.Build(d, GetRow(_curToken), TextureFactory);
     }

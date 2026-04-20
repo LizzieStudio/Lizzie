@@ -468,7 +468,8 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
-        if (_textureContext.ParentSize.X == 0 || _textureContext.ParentSize.Y == 0) return;
+        if (_textureContext.ParentSize.X == 0 || _textureContext.ParentSize.Y == 0)
+            return;
 
         var m = _boundsRect.GetBounds();
 

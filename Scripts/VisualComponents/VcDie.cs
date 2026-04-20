@@ -1,20 +1,21 @@
-using Godot;
 using System;
 using System.Collections.Generic;
+using Godot;
 using static VcToken;
 
 public partial class VcDie : VisualComponentBase
 {
-    [Export] private int _sides;
+    [Export]
+    private int _sides;
 
-    [Export] private Vector3[] _sideRotations;
+    [Export]
+    private Vector3[] _sideRotations;
 
     private MeshInstance3D _mainMesh;
 
     private TextureFactory _textureFactory;
     private QuickTextureField[] _sideData;
     private Color _dieColor;
-
 
     public override void _Ready()
     {
@@ -216,7 +217,11 @@ public partial class VcDie : VisualComponentBase
 
     private TokenBuildMode _mode;
 
-    public override bool Build(Dictionary<string, object> parameters, string datasetRow, TextureFactory textureFactory)
+    public override bool Build(
+        Dictionary<string, object> parameters,
+        string datasetRow,
+        TextureFactory textureFactory
+    )
     {
         DataSetRow = datasetRow;
 
@@ -271,7 +276,6 @@ public partial class VcDie : VisualComponentBase
                 return false;
         }
 
-
         if (parameters.ContainsKey("Color"))
         {
             if (_mainMesh.GetSurfaceOverrideMaterial(0) is StandardMaterial3D material)
@@ -279,7 +283,6 @@ public partial class VcDie : VisualComponentBase
                 material.AlbedoColor = dieColor;
             }
         }
-
 
         return true;
     }
@@ -340,13 +343,12 @@ public partial class VcDie : VisualComponentBase
             tc.ParentSize = new Vector2(512, 340);
         }
 
-
-
         var ds = ProjectService.Instance.GetDataSetByName(_datasetName);
         tc.DataSet = ds;
 
         var template = ProjectService.Instance.GetTemplateByName(_frontTemplateName);
-        if (template == null) return;
+        if (template == null)
+            return;
 
         var tx = TemplateEngine.GenerateTextureDefinition(template, tc);
         _textureFactory.GenerateTexture(tx, TextureDone);
@@ -354,7 +356,6 @@ public partial class VcDie : VisualComponentBase
 
     private string _frontTemplateName;
     private string _datasetName;
-
 
     private void TextureDone(ImageTexture texture)
     {

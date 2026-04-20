@@ -73,7 +73,7 @@ public abstract partial class ComponentPanelDialogResult : Control
     public DataSet DataSet { get; set; }
     public bool MultipleCreateMode { get; set; } = false;
 
-    //These parameters are used to create a grid of objects in multiple mode. 
+    //These parameters are used to create a grid of objects in multiple mode.
     public float WidthHint { get; set; }
     public float HeightHint { get; set; }
 

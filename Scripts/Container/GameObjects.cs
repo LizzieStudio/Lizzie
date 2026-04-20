@@ -653,14 +653,14 @@ public partial class GameObjects : Node
     #endregion
 
     #region Spawn
-    private List< VisualComponentBase> _spawnComponents;
+    private List<VisualComponentBase> _spawnComponents;
 
     public void EnterSpawnMode(List<VisualComponentBase> components)
     {
         CursorMode = CursorMode.Spawn;
         _spawnComponents = components;
 
-        foreach(var c in components)
+        foreach (var c in components)
         {
             c.DimMode(true);
             c.NeverHighlight = true;
@@ -671,13 +671,12 @@ public partial class GameObjects : Node
 
     private void HandleSpawnMode()
     {
-        var p = _dragPlane.GetCursorProjection(); 
-        
+        var p = _dragPlane.GetCursorProjection();
+
         foreach (var c in _spawnComponents)
         {
             c.Position = p + c.SpawnDelta;
         }
-
     }
 
     public TextureFactory TextureFactory { get; set; }
@@ -689,11 +688,12 @@ public partial class GameObjects : Node
             var newComp = (VisualComponentBase)c.Duplicate();
             newComp.ExcludeFromSync = false;
             newComp.PrototypeRef = c.PrototypeRef;
-            
+
             var spawnPosition = _dragPlane.GetCursorProjection();
 
             newComp.Build(c.PrototypeRef, c.DataSetRow, TextureFactory);
-            newComp.Position = new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z) + c.SpawnDelta;
+            newComp.Position =
+                new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z) + c.SpawnDelta;
 
             newComp.DimMode(false);
             newComp.NeverHighlight = false;

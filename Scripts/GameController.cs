@@ -53,7 +53,7 @@ public partial class GameController : Node3D
         if (args.MultipleCreateMode)
         {
             int cols = (int)Math.Ceiling(Math.Sqrt(args.DataSet.Rows.Count));
-            
+
             int i = 0;
             int j = 0;
 
@@ -81,11 +81,11 @@ public partial class GameController : Node3D
         else
         {
             var sc = SingleComponentSpawn(args, string.Empty);
-            if (sc != null) components.Add(sc);
+            if (sc != null)
+                components.Add(sc);
         }
 
         _mainScene.EnterSpawnMode(components);
-
     }
 
     private VisualComponentBase SingleComponentSpawn(CreateObjectEventArgs args, string row)
@@ -121,7 +121,6 @@ public partial class GameController : Node3D
             GD.PrintErr("Error building component");
             return null;
         }
-
     }
 
     private void OnSceneModeChange(object sender, SceneModeChangeArgs e)

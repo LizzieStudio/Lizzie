@@ -129,9 +129,9 @@ public partial class ComponentDefinition : Window
                 Params = r.GetParams(),
                 PrototypeRef = Guid.NewGuid(),
                 DataSet = r.DataSet,
-                MultipleCreateMode =r.MultipleCreateMode,
+                MultipleCreateMode = r.MultipleCreateMode,
                 WidthHint = r.WidthHint,
-                HeightHint = r.HeightHint
+                HeightHint = r.HeightHint,
             };
 
             if (!e.Params.ContainsKey("BaseName"))

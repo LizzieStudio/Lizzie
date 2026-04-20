@@ -61,7 +61,7 @@ public partial class DatasetEditor : Window
 
         _dataContainer = new VBoxContainer();
         _dataScrollContainer.AddChild(_dataContainer);
-        
+
         _deleteButton = GetNode<Button>("%DeleteRow");
         _deleteButton.Pressed += OnDeleteButtonPressed;
 
@@ -77,7 +77,6 @@ public partial class DatasetEditor : Window
 
         InitializeNewDatasetDialog();
         LoadDatasetList();
-
     }
 
     private void LoadDatasetList()

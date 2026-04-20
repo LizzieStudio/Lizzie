@@ -638,7 +638,10 @@ public abstract partial class VisualComponentBase : Area3D
 
     #region Spawn
 
-    public virtual List<VisualComponentBase> SpawnComponents(Guid prototypeRef, TextureFactory textureFactory)
+    public virtual List<VisualComponentBase> SpawnComponents(
+        Guid prototypeRef,
+        TextureFactory textureFactory
+    )
     {
         var l = new List<VisualComponentBase>();
 

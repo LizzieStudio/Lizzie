@@ -1,7 +1,7 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Godot;
 
 public partial class DiePanelDialogResult : ComponentPanelDialogResult
 {
@@ -19,8 +19,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private OptionButton _datasetPicker;
     private Button _datasetEditorButton;
 
-
-    [Export] private QuickTextureEntry[] _quickSideEntries;
+    [Export]
+    private QuickTextureEntry[] _quickSideEntries;
 
     private IconLibrary _iconLibrary = new();
 
@@ -81,14 +81,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-
     private void InitializeTemplates()
     {
         _frontTemplatePicker = GetNode<OptionButton>("%FrontTemplateList");
         _frontTemplatePicker.ItemSelected += OnFrontTemplateChanged;
         _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
         _editFrontTemplateButton.Pressed += EditFrontTemplate;
-
 
         _datasetPicker = GetNode<OptionButton>("%DatasetList");
         _datasetPicker.ItemSelected += OnDatasetChanged;
@@ -105,7 +103,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             return;
 
         _frontTemplatePicker.Clear();
-
 
         _frontTemplatePicker.AddItem("(none)");
 
@@ -129,18 +126,23 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     {
         switch (sides)
         {
-            case 4: return Template.TemplateTarget.D4;
-            case 6: return Template.TemplateTarget.D6;
-            case 8: return Template.TemplateTarget.D8;
-            case 10: return Template.TemplateTarget.D10;
-            case 12: return Template.TemplateTarget.D12;
-            case 20: return Template.TemplateTarget.D20;
+            case 4:
+                return Template.TemplateTarget.D4;
+            case 6:
+                return Template.TemplateTarget.D6;
+            case 8:
+                return Template.TemplateTarget.D8;
+            case 10:
+                return Template.TemplateTarget.D10;
+            case 12:
+                return Template.TemplateTarget.D12;
+            case 20:
+                return Template.TemplateTarget.D20;
         }
 
         return Template.TemplateTarget.D6;
     }
 
-   
     private TextureContext _textureContext = new();
 
     private void OnDatasetChanged(long index)
@@ -181,7 +183,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         UpdatePreview();
     }
-
 
     private void EditFrontTemplate()
     {
@@ -314,7 +315,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 MultipleCreateMode = (DataSet != null);
                 WidthHint = dia / 10;
                 HeightHint = dia / 10;
-                
+
                 break;
         }
 
