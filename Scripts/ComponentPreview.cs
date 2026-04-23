@@ -210,11 +210,14 @@ public partial class ComponentPreview : Panel
         {
             if (string.IsNullOrWhiteSpace(row))
             {
-                _component.Build(parameters, textureFactory); //we are doing this because not all components override the Build method with the row parameter, and we don't want to break those that don't
+                //we are doing this because not all components override the Build method with the row parameter, and we don't want to break those that don't
+                _component.Setup(parameters, textureFactory);
+                _component.Build();
             }
             else
             {
-                _component.Build(parameters, row, textureFactory);
+                _component.Setup(parameters, row, textureFactory);
+                _component.Build();
             }
         }
     }
@@ -249,10 +252,7 @@ public partial class ComponentPreview : Panel
         {
             VisualComponentBase.VisualComponentType.Cube => new Vector3(Mathf.DegToRad(-10), 0, 0),
             VisualComponentBase.VisualComponentType.Disc => new Vector3(Mathf.DegToRad(-10), 0, 0),
-            VisualComponentBase.VisualComponentType.Tile => new Vector3(Mathf.DegToRad(90), 0, 0),
             VisualComponentBase.VisualComponentType.Token => new Vector3(Mathf.DegToRad(90), 0, 0),
-            VisualComponentBase.VisualComponentType.Board => new Vector3(Mathf.DegToRad(90), 0, 0),
-            VisualComponentBase.VisualComponentType.Card => new Vector3(Mathf.DegToRad(90), 0, 0),
             VisualComponentBase.VisualComponentType.Deck => new Vector3(Mathf.DegToRad(90), 0, 0),
             VisualComponentBase.VisualComponentType.Die => new Vector3(Mathf.DegToRad(-45), 0, 0),
             VisualComponentBase.VisualComponentType.Mesh => new Vector3(Mathf.DegToRad(-10), 0, 0),

@@ -5,8 +5,53 @@ using Godot;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using Vector2 = Godot.Vector2;
 
-public partial class VcToken : VisualComponentFlat
+/// <summary>
+/// VcToken represents any object that is flat on two opposite sides, a geometric prism.
+/// This includes cards, tiles, and most wood pieces like meeples.
+/// VcToken may have a graphic on either of its flat faces, but otherwise has a simple color.
+/// </summary>
+public partial class VcToken : VisualComponentBase
 {
+    public Sprite3D FaceSprite { get; protected set; }
+    public Sprite3D BackSprite { get; protected set; }
+
+    private Texture2D _faceTexture = new ImageTexture();
+    private Texture2D _backTexture;
+
+    public Texture2D FaceTexture
+    {
+        get => _faceTexture;
+        set
+        {
+            _faceTexture = value;
+            if (GodotObject.IsInstanceValid(FaceSprite) && FaceSprite.IsNodeReady())
+                FaceSprite.Texture = value;
+        }
+    }
+
+    public Texture2D BackTexture
+    {
+        get => _backTexture;
+        set
+        {
+            _backTexture = value;
+            if (GodotObject.IsInstanceValid(BackSprite) && BackSprite.IsNodeReady())
+                BackSprite.Texture = value;
+        }
+    }
+
+    public virtual bool ShowFace { get; protected set; } = true;
+
+    public void ForceFace()
+    {
+        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, 0));
+    }
+
+    public void ForceBack()
+    {
+        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, 180));
+    }
+
     private TokenTextureSubViewport _frontView;
     private TokenTextureSubViewport _backView;
 
@@ -32,8 +77,9 @@ public partial class VcToken : VisualComponentFlat
 
         if (_buildRequired)
         {
-            BuildToken();
             _buildRequired = false;
+            GD.PrintErr("VcToken's Build was never called.");
+            Build();
         }
 
         if (_mapFrontTextureRequired)
@@ -134,8 +180,6 @@ public partial class VcToken : VisualComponentFlat
         SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
     }
 
-    private bool _firstBuild = true;
-
     public enum TokenBuildMode
     {
         Quick,
@@ -146,24 +190,94 @@ public partial class VcToken : VisualComponentFlat
         QuickDeck, //need to parse the QuickBuild string to pull out the caption
     }
 
-    private bool _buildRequired = false;
+    private bool _buildRequired = true;
 
-    public override bool Build(
+    public override bool Setup(
         Dictionary<string, object> parameters,
         string dataSetRow,
         TextureFactory textureFactory
     )
     {
-        TextureFactory = textureFactory;
-        TempParams = parameters;
+        base.Setup(parameters, dataSetRow, textureFactory);
 
-        if (!InitializeParameters(parameters, dataSetRow, textureFactory))
+        var h = Utility.GetParam<float>(parameters, "Height");
+        if (h <= 0)
             return false;
+        _height = h / 10f;
+
+        var w = Utility.GetParam<float>(parameters, "Width");
+        _width = w / 10;
+
+        var t = Utility.GetParam<float>(parameters, "Thickness");
+        _thickness = Math.Max(t / 10f, 0.03f);
+
+        _frontImage = Utility.GetParam<string>(parameters, "FrontImage");
+        _backImage = Utility.GetParam<string>(parameters, "BackImage");
+
+        _shape = Utility.GetParam<int>(parameters, "Shape");
+        _mode = Utility.GetParam<TokenBuildMode>(parameters, "Mode");
+
+        // Quick parameters
+        _frontBgColor = Utility.GetParam<Color>(parameters, "FrontBgColor");
+
+        //_frontCaption = Utility.GetParam<string>(parameters, "FrontCaption");
+        //_frontCaptionColor = Utility.GetParam<Color>(parameters, "FrontCaptionColor");
+        _frontField = Utility.GetParam<QuickTextureField>(parameters, "QuickFront");
+        _backField = Utility.GetParam<QuickTextureField>(parameters, "QuickBack");
+
+        _frontFontSize = Utility.GetParam<int>(parameters, "FrontFontSize");
+        _differentBack = Utility.GetParam<bool>(parameters, "DifferentBack");
+
+        _backBgColor = Utility.GetParam<Color>(parameters, "BackBgColor");
+        _backFontSize = Utility.GetParam<int>(parameters, "BackFontSize");
+
+        //Grid Parameters
+        _frontMasterSprite = Utility.GetParam<Texture2D>(parameters, "FrontMasterSprite");
+        _backMasterSprite = Utility.GetParam<Texture2D>(parameters, "BackMasterSprite");
+
+        _gridRows = Utility.GetParam<int>(parameters, "GridRows");
+        _gridCols = Utility.GetParam<int>(parameters, "GridCols");
+        //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
+
+        if (parameters.TryGetValue("Type", out var tokenType))
+        {
+            _tokenType = (TokenType)tokenType;
+        }
+        else
+        {
+            _tokenType = TokenType.Token; //default
+        }
+
+        _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
+        _backTemplateName = Utility.GetParam<string>(parameters, "BackTemplate");
+        _datasetName = Utility.GetParam<string>(parameters, "Dataset");
+        if (string.IsNullOrWhiteSpace(DataSetRow))
+            DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
+
+        _quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
+
+        if (_quickCardList == null)
+            _quickCardList = new();
+
+        return true;
+    }
+
+    public override void Build()
+    {
+        if (!IsNodeReady())
+        {
+            GD.PrintErr("VcToken was built before the node was ready.");
+            return;
+        }
+
+        this._buildRequired = false;
+
+        BuildToken();
 
         switch (_mode)
         {
             case TokenBuildMode.Quick:
-                BuildQuick(textureFactory);
+                BuildQuick(TextureFactory);
                 break;
 
             case TokenBuildMode.Custom:
@@ -175,7 +289,7 @@ public partial class VcToken : VisualComponentFlat
                 break;
 
             case TokenBuildMode.Template:
-                BuildTemplate(textureFactory);
+                BuildTemplate(TextureFactory);
                 break;
 
             case TokenBuildMode.Nandeck:
@@ -183,28 +297,18 @@ public partial class VcToken : VisualComponentFlat
                 break;
 
             case TokenBuildMode.QuickDeck:
-                BuildQuickDeck(textureFactory);
+                BuildQuickDeck(TextureFactory);
                 break;
         }
-
-        BuildToken();
-
-        return true;
     }
 
-    public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
-        return Build(parameters, DataSetRow, textureFactory);
+        return Setup(parameters, DataSetRow, textureFactory);
     }
 
     private void BuildToken()
     {
-        if (!IsNodeReady())
-        {
-            _buildRequired = true;
-            return;
-        }
-
         FaceSprite = GetNode<Sprite3D>("FrontSprite");
         BackSprite = GetNode<Sprite3D>("BackSprite");
         _sideMesh = GetNode<MeshInstance3D>("SideMesh");
@@ -260,8 +364,6 @@ public partial class VcToken : VisualComponentFlat
             default:
                 throw new ArgumentOutOfRangeException();
         }
-
-        _firstBuild = false;
     }
 
     private Vector2[] CalcHexPointVertices()
@@ -316,26 +418,12 @@ public partial class VcToken : VisualComponentFlat
     private void BuildCustom()
     {
         _frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
-        if (_firstBuild)
-        {
-            _frontView.Ready += CreateCustomFrontTexture;
-        }
-        else
-        {
-            CreateCustomFrontTexture();
-        }
+        CreateCustomFrontTexture();
 
         if (_differentBack)
         {
             _backView = GetNode<TokenTextureSubViewport>("BackViewport");
-            if (_firstBuild)
-            {
-                _backView.Ready += CreateCustomBackTexture;
-            }
-            else
-            {
-                CreateCustomBackTexture();
-            }
+            CreateCustomBackTexture();
         }
     }
 
@@ -727,76 +815,6 @@ public partial class VcToken : VisualComponentFlat
         TextureChanged = true;
 
         MapBackTexture();
-    }
-
-    private bool InitializeParameters(
-        Dictionary<string, object> parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
-    {
-        base.Build(parameters, dataSetRow, textureFactory);
-
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
-            return false;
-        _height = h / 10f;
-
-        var w = Utility.GetParam<float>(parameters, "Width");
-        _width = w / 10;
-
-        var t = Utility.GetParam<float>(parameters, "Thickness");
-        _thickness = Math.Max(t / 10f, 0.03f);
-
-        _frontImage = Utility.GetParam<string>(parameters, "FrontImage");
-        _backImage = Utility.GetParam<string>(parameters, "BackImage");
-
-        _shape = Utility.GetParam<int>(parameters, "Shape");
-        _mode = Utility.GetParam<TokenBuildMode>(parameters, "Mode");
-
-        // Quick parameters
-        _frontBgColor = Utility.GetParam<Color>(parameters, "FrontBgColor");
-
-        //_frontCaption = Utility.GetParam<string>(parameters, "FrontCaption");
-        //_frontCaptionColor = Utility.GetParam<Color>(parameters, "FrontCaptionColor");
-        _frontField = Utility.GetParam<QuickTextureField>(parameters, "QuickFront");
-        _backField = Utility.GetParam<QuickTextureField>(parameters, "QuickBack");
-
-        _frontFontSize = Utility.GetParam<int>(parameters, "FrontFontSize");
-        _differentBack = Utility.GetParam<bool>(parameters, "DifferentBack");
-
-        _backBgColor = Utility.GetParam<Color>(parameters, "BackBgColor");
-        _backFontSize = Utility.GetParam<int>(parameters, "BackFontSize");
-
-        //Grid Parameters
-        _frontMasterSprite = Utility.GetParam<Texture2D>(parameters, "FrontMasterSprite");
-        _backMasterSprite = Utility.GetParam<Texture2D>(parameters, "BackMasterSprite");
-
-        _gridRows = Utility.GetParam<int>(parameters, "GridRows");
-        _gridCols = Utility.GetParam<int>(parameters, "GridCols");
-        //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
-
-        if (parameters.TryGetValue("Type", out var tokenType))
-        {
-            _tokenType = (TokenType)tokenType;
-        }
-        else
-        {
-            _tokenType = TokenType.Token; //default
-        }
-
-        _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
-        _backTemplateName = Utility.GetParam<string>(parameters, "BackTemplate");
-        _datasetName = Utility.GetParam<string>(parameters, "Dataset");
-        if (string.IsNullOrWhiteSpace(DataSetRow))
-            DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
-
-        _quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
-
-        if (_quickCardList == null)
-            _quickCardList = new();
-
-        return true;
     }
 
     public override List<string> ValidateParameters(Dictionary<string, object> parameters)

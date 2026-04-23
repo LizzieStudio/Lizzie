@@ -257,6 +257,7 @@ public partial class GameObjects : Node
         GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
 
         AddChild(component);
+        component.Build();
         component.AddComponentToObjects += ComponentOnAddComponentToObjects;
 
         // Add networked object for multiplayer sync
@@ -691,7 +692,7 @@ public partial class GameObjects : Node
 
             var spawnPosition = _dragPlane.GetCursorProjection();
 
-            newComp.Build(c.PrototypeRef, c.DataSetRow, TextureFactory);
+            newComp.Setup(c.PrototypeRef, c.DataSetRow, TextureFactory);
             newComp.Position =
                 new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z) + c.SpawnDelta;
 

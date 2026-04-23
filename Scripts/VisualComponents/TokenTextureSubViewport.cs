@@ -130,10 +130,10 @@ public partial class TokenTextureSubViewport : SubViewport
 
     public void SetTexture(ImageTexture texture)
     {
-        int h = (int)Math.Floor(_textureRect.Size.Y);
-        int w = (int)Math.Floor(_textureRect.Size.X);
-
-        texture.SetSizeOverride(new Vector2I(w, h));
+        var imageSize = texture.GetSize();
+        var viewportSize = new Vector2I((int)imageSize.X, (int)imageSize.Y);
+        Size = viewportSize;
+        Size2DOverride = viewportSize;
         _textureRect.Texture = texture;
     }
 

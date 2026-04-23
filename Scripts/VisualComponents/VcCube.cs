@@ -13,9 +13,9 @@ public partial class VcCube : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    public override bool Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
-        base.Build(parameters, textureFactory);
+        base.Setup(parameters, textureFactory);
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");

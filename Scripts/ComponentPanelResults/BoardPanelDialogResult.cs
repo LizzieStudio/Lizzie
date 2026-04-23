@@ -16,7 +16,7 @@ public partial class BoardPanelDialogResult : ComponentPanelDialogResult
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Card;
+        ComponentType = VisualComponentBase.VisualComponentType.Token;
 
         _nameInput = GetNode<LineEdit>("GridContainer/ItemName");
         _heightInput = GetNode<LineEdit>("GridContainer/HBoxContainer3/Height");
@@ -79,6 +79,8 @@ public partial class BoardPanelDialogResult : ComponentPanelDialogResult
         d.Add("FrontImage", _frontImage.Text);
         d.Add("BackImage", _backImage.Text);
         d.Add("Type", VcToken.TokenType.Board);
+        d.Add("Mode", VcToken.TokenBuildMode.Custom);
+        d.Add("DifferentBack", !string.IsNullOrEmpty(_backImage.Text));
 
         return d;
     }

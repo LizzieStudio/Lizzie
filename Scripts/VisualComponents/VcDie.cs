@@ -124,7 +124,6 @@ public partial class VcDie : VisualComponentBase
             case VisualCommand.Num13:
                 cr = ShowSide(13);
                 break;
-                break;
             case VisualCommand.Num14:
                 cr = ShowSide(14);
                 break;
@@ -217,7 +216,7 @@ public partial class VcDie : VisualComponentBase
 
     private TokenBuildMode _mode;
 
-    public override bool Build(
+    public override bool Setup(
         Dictionary<string, object> parameters,
         string datasetRow,
         TextureFactory textureFactory
@@ -225,7 +224,7 @@ public partial class VcDie : VisualComponentBase
     {
         DataSetRow = datasetRow;
 
-        base.Build(parameters, datasetRow, textureFactory);
+        base.Setup(parameters, datasetRow, textureFactory);
 
         _textureFactory = textureFactory;
 

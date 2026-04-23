@@ -19,22 +19,18 @@ public static class JsonUtilities
             case VisualComponentBase.VisualComponentType.Disc:
                 return ParseDisc(d);
 
-            case VisualComponentBase.VisualComponentType.Tile:
-                break;
             case VisualComponentBase.VisualComponentType.Token:
                 return ParseToken(d);
 
-            case VisualComponentBase.VisualComponentType.Board:
-                break;
-            case VisualComponentBase.VisualComponentType.Card:
-                break;
             case VisualComponentBase.VisualComponentType.Deck:
                 return ParseDeck(d);
+
             case VisualComponentBase.VisualComponentType.Die:
                 return ParseDie(d);
 
             case VisualComponentBase.VisualComponentType.Mesh:
                 break;
+
             case VisualComponentBase.VisualComponentType.Meeple:
                 return ParseMeeple(d);
 

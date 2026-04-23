@@ -202,20 +202,11 @@ public partial class Utility : Node
         {
             case VisualComponentBase.VisualComponentType.Cube:
                 return "res://Scenes/VisualComponents/VcCube.tscn";
-                break;
+
             case VisualComponentBase.VisualComponentType.Disc:
                 return "res://Scenes/VisualComponents/VcDisc.tscn";
 
-            case VisualComponentBase.VisualComponentType.Tile:
-                return TokenScene(parameters);
-
             case VisualComponentBase.VisualComponentType.Token:
-                return TokenScene(parameters);
-
-            case VisualComponentBase.VisualComponentType.Board:
-                return TokenScene(parameters);
-
-            case VisualComponentBase.VisualComponentType.Card:
                 return TokenScene(parameters);
 
             case VisualComponentBase.VisualComponentType.Deck:
