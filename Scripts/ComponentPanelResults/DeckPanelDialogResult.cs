@@ -47,13 +47,9 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private OptionButton _cardSizes;
 
     //Grid Tab elements
-    private LineEdit _gridFrontImageFile;
-    private Button _gridFrontImageButton;
-
-    private LineEdit _gridBackImageFile;
-    private Button _gridBackImageButton;
     private ImageSelector _gridFrontImageSelector;
-
+    private ImageSelector _gridBackImageSelector;
+    
     private LineEdit _gridRowCount;
     private LineEdit _gridColCount;
     private LineEdit _gridCardCount;
@@ -264,11 +260,10 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridFrontImageSelector.ImageSelected += FrontImageSelected;
         _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
         
-        _gridBackImageFile = GetNode<LineEdit>("%GridBack");
-        _gridBackImageFile.TextChanged += LoadBackGridFile;
-
-        _gridBackImageButton = GetNode<Button>("%GridBackButton");
-        _gridBackImageButton.Pressed += GetBackFile;
+        _gridBackImageSelector = GetNode<ImageSelector>("%BackImageSelector");
+        _gridBackImageSelector.ImageSelected += BackImageSelected;
+        _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+       
 
         _gridRowCount = GetNode<LineEdit>("%GridRows");
         _gridRowCount.TextChanged += t => GenerateGridCards();
@@ -281,14 +276,42 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridSingleBack.Pressed += () => GenerateQuickCards();
     }
 
-    private void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
+    private async void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
     {
         if (e.SelectedItem == null)
         {
-            _frontMasterSprite = null;  //maybe set to blank white?
+            _frontMasterSprite = new ImageTexture();  //maybe set to blank white?
         }
         else
         {
+            var a = e.SelectedItem;
+            if (!a.AssetDownloaded)
+            {  //TODO move this to a better spot - share resources, etc
+                try
+                {
+                    var service = new CloudAssetService();
+                    await service.InitializeAsync(
+                        CloudProviderType.GoogleDrive,
+                        string.Empty,
+                        string.Empty
+                    );
+
+                    var r = await service.DownloadImageAsync(a.CloudPath);
+
+                    if (!string.IsNullOrWhiteSpace(r.Item1))
+                    {
+                        GD.PrintErr(r.Item1);
+                        return;
+                    }
+
+                    a.Image = r.Item2;
+                    a.AssetDownloaded = true;
+                }
+                catch (Exception ex)
+                {
+                    GD.PrintErr($"Tile Refresh failed: {ex.Message}");
+                }
+            }
             var texture = new ImageTexture();
             texture.SetImage(e.SelectedItem.Image);
             _frontMasterSprite = texture;
@@ -297,62 +320,50 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void LoadFrontGridFile(string newtext)
+    private async void BackImageSelected(object sender, SelectedEventArgs<Asset> e)
     {
-        //Get the texture
-        if (File.Exists(_gridFrontImageFile.Text))
+        if (e.SelectedItem == null)
         {
-            _frontMasterSprite = Utility.LoadTexture(_gridFrontImageFile.Text);
+            _backMasterSprite = new ImageTexture();  //maybe set to blank white?
         }
         else
         {
-            _frontMasterSprite = null;
+            var a = e.SelectedItem;
+            if (!a.AssetDownloaded)
+            {  //TODO move this to a better spot - share resources, etc
+                try
+                {
+                    var service = new CloudAssetService();
+                    await service.InitializeAsync(
+                        CloudProviderType.GoogleDrive,
+                        string.Empty,
+                        string.Empty
+                    );
+
+                    var r = await service.DownloadImageAsync(a.CloudPath);
+
+                    if (!string.IsNullOrWhiteSpace(r.Item1))
+                    {
+                        GD.PrintErr(r.Item1);
+                        return;
+                    }
+
+                    a.Image = r.Item2;
+                    a.AssetDownloaded = true;
+                }
+                catch (Exception ex)
+                {
+                    GD.PrintErr($"Tile Refresh failed: {ex.Message}");
+                }
+            }
+            var texture = new ImageTexture();
+            texture.SetImage(e.SelectedItem.Image);
+            _backMasterSprite = texture;
         }
 
         UpdatePreview();
     }
 
-    private void LoadBackGridFile(string newtext)
-    {
-        //Get the texture
-        if (File.Exists(_gridBackImageFile.Text))
-        {
-            _backMasterSprite = Utility.LoadTexture(_gridBackImageFile.Text);
-        }
-        else
-        {
-            _backMasterSprite = null;
-        }
-
-        UpdatePreview();
-    }
-
-    private void GetFrontFile()
-    {
-        ShowFileDialog("Select Front Image File", FrontFileSelected);
-    }
-
-    private void FrontFileSelected(string file)
-    {
-        _gridFrontImageFile.Text = file;
-
-        _frontMasterSprite = Utility.LoadTexture(file);
-
-        UpdatePreview();
-    }
-
-    private void GetBackFile()
-    {
-        ShowFileDialog("Select Back Image File", BackFileSelected);
-    }
-
-    private void BackFileSelected(string file)
-    {
-        _gridBackImageFile.Text = file;
-        _backMasterSprite = Utility.LoadTexture(file);
-
-        UpdatePreview();
-    }
 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
     {

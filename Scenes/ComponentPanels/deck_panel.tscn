@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://bifubswbhqkkp"]
 
-[ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_8qg10"]
 [ext_resource type="Script" uid="uid://bidlim05r6ggr" path="res://Scripts/ComponentPanelResults/DeckPanelDialogResult.cs" id="1_a0rs8"]
 [ext_resource type="PackedScene" uid="uid://byv8s3wlrrbwb" path="res://Scenes/Controls/ImageSelector.tscn" id="2_a2j8a"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="3_0meyn"]
@@ -360,17 +359,10 @@ size_flags_horizontal = 0
 text = "Back  "
 horizontal_alignment = 2
 
-[node name="GridBack" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=582668875]
+[node name="BackImageSelector" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=592107688 instance=ExtResource("2_a2j8a")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "(file)"
-alignment = 2
-
-[node name="GridBackButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=961532060]
-unique_name_in_owner = true
-layout_mode = 2
-icon = ExtResource("1_8qg10")
 
 [node name="GridSingleBack" type="CheckButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=1798620749]
 unique_name_in_owner = true
