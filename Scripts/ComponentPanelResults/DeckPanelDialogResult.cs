@@ -1,9 +1,11 @@
+using Godot;
+using Lizzie.AssetManagement;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
-using Godot;
+using static System.Net.Mime.MediaTypeNames;
 
 public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 {
@@ -50,6 +52,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private LineEdit _gridBackImageFile;
     private Button _gridBackImageButton;
+    private ImageSelector _gridFrontImageSelector;
 
     private LineEdit _gridRowCount;
     private LineEdit _gridColCount;
@@ -253,11 +256,14 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void InitializeGridBindings()
     {
-        _gridFrontImageFile = GetNode<LineEdit>("%GridFront");
-        _gridFrontImageFile.TextChanged += LoadFrontGridFile;
-        _gridFrontImageButton = GetNode<Button>("%GridFrontButton");
-        _gridFrontImageButton.Pressed += GetFrontFile;
-
+        //_gridFrontImageFile = GetNode<LineEdit>("%GridFront");
+        //_gridFrontImageFile.TextChanged += LoadFrontGridFile;
+        //_gridFrontImageButton = GetNode<Button>("%GridFrontButton");
+        //_gridFrontImageButton.Pressed += GetFrontFile;
+        _gridFrontImageSelector = GetNode<ImageSelector>("%FrontImageSelector");
+        _gridFrontImageSelector.ImageSelected += FrontImageSelected;
+        _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+        
         _gridBackImageFile = GetNode<LineEdit>("%GridBack");
         _gridBackImageFile.TextChanged += LoadBackGridFile;
 
@@ -273,6 +279,22 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         _gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
         _gridSingleBack.Pressed += () => GenerateQuickCards();
+    }
+
+    private void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
+    {
+        if (e.SelectedItem == null)
+        {
+            _frontMasterSprite = null;  //maybe set to blank white?
+        }
+        else
+        {
+            var texture = new ImageTexture();
+            texture.SetImage(e.SelectedItem.Image);
+            _frontMasterSprite = texture;
+        }
+        
+        UpdatePreview();
     }
 
     private void LoadFrontGridFile(string newtext)

@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://byv8s3wlrrbwb"]
+
+[ext_resource type="Script" uid="uid://28a0xnj1qoo1" path="res://Scripts/Controls/ImageSelector.cs" id="1_fc0rx"]
+[ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="2_4gg3c"]
+
+[node name="ImageSelector" type="HBoxContainer" unique_id=1463407889]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fc0rx")
+
+[node name="ImageList" type="OptionButton" parent="." unique_id=1402208693]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ImageManagerButton" type="Button" parent="." unique_id=38230527]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Open image manager"
+icon = ExtResource("2_4gg3c")
