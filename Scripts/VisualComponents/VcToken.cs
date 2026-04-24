@@ -361,15 +361,14 @@ public partial class VcToken : VisualComponentFlat
         {
             ProjectService.Instance.FetchImageAsync(_backMasterAsset, BuildGridBack);
         }
-        
+
         //if (_gridCols == 0 || _gridRows == 0) return;
-
-
     }
 
     private void BuildGridFace(Asset asset)
     {
-        if (!asset.AssetDownloaded) return;
+        if (!asset.AssetDownloaded)
+            return;
 
         var texture = new ImageTexture();
         texture.SetImage(asset.Image);
@@ -393,13 +392,13 @@ public partial class VcToken : VisualComponentFlat
         FaceTexture = _frontMasterSprite;
         MapFrontTexture();
     }
-    
+
     private void BuildGridBack(Asset asset)
     {
         var texture = new ImageTexture();
         texture.SetImage(asset.Image);
         _backMasterSprite = texture;
-        
+
         ApplyGridBackTexture();
     }
 
@@ -810,7 +809,10 @@ public partial class VcToken : VisualComponentFlat
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Images.TryGetValue(_frontGridImageKey, out _frontMasterAsset);
+            ProjectService.Instance.CurrentProject.Images.TryGetValue(
+                _frontGridImageKey,
+                out _frontMasterAsset
+            );
         }
 
         _backGridImageKey = Utility.GetParam<string>(parameters, "BackGridImageKey");
@@ -821,10 +823,12 @@ public partial class VcToken : VisualComponentFlat
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Images.TryGetValue(_backGridImageKey, out _backMasterAsset);
+            ProjectService.Instance.CurrentProject.Images.TryGetValue(
+                _backGridImageKey,
+                out _backMasterAsset
+            );
         }
-        
-        
+
         _gridRows = Utility.GetParam<int>(parameters, "GridRows");
         _gridCols = Utility.GetParam<int>(parameters, "GridCols");
         //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
@@ -928,7 +932,6 @@ public partial class VcToken : VisualComponentFlat
     private Asset _backMasterAsset;
     private string _frontGridImageKey;
     private string _backGridImageKey;
-
 
     private int _gridRows;
     private int _gridCols;

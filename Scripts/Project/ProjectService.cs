@@ -250,7 +250,7 @@ public partial class ProjectService : Node
             callback(asset);
             return;
         }
-        
+
         //TODO move this to a better spot - share resources, etc
         try
         {

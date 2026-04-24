@@ -1,10 +1,10 @@
-using Godot;
-using Lizzie.AssetManagement;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
+using Godot;
+using Lizzie.AssetManagement;
 using static System.Net.Mime.MediaTypeNames;
 
 public partial class DeckPanelDialogResult : ComponentPanelDialogResult
@@ -264,7 +264,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridBackImageSelector.ImageSelected += BackImageSelected;
         _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
 
-
         _gridRowCount = GetNode<LineEdit>("%GridRows");
         _gridRowCount.TextChanged += t => GenerateGridCards();
         _gridColCount = GetNode<LineEdit>("%GridCols");
@@ -275,7 +274,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
         _gridSingleBack.Pressed += () => GenerateQuickCards();
     }
-
 
     private string _frontGridImage;
     private string _backGridImage;
@@ -296,14 +294,15 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
             var a = e.SelectedItem;
             _frontGridImage = a.AssetId.ToString();
         }
-      
+
         //ProjectService.Instance.FetchImageAsync(a, UpdateFrontGridTexture);
         UpdatePreview();
     }
 
     private void UpdateFrontGridTexture(Asset a)
     {
-        if (!a.AssetDownloaded) return;
+        if (!a.AssetDownloaded)
+            return;
 
         var texture = new ImageTexture();
         texture.SetImage(a.Image);
@@ -335,7 +334,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void UpdateBackGridTexture(Asset a)
     {
-        if (!a.AssetDownloaded) return;
+        if (!a.AssetDownloaded)
+            return;
 
         var texture = new ImageTexture();
         texture.SetImage(a.Image);
@@ -343,7 +343,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         UpdatePreview();
     }
-
 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
     {
