@@ -49,7 +49,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     //Grid Tab elements
     private ImageSelector _gridFrontImageSelector;
     private ImageSelector _gridBackImageSelector;
-    
+
     private LineEdit _gridRowCount;
     private LineEdit _gridColCount;
     private LineEdit _gridCardCount;
@@ -259,11 +259,11 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridFrontImageSelector = GetNode<ImageSelector>("%FrontImageSelector");
         _gridFrontImageSelector.ImageSelected += FrontImageSelected;
         _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
-        
+
         _gridBackImageSelector = GetNode<ImageSelector>("%BackImageSelector");
         _gridBackImageSelector.ImageSelected += BackImageSelected;
         _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
-       
+
 
         _gridRowCount = GetNode<LineEdit>("%GridRows");
         _gridRowCount.TextChanged += t => GenerateGridCards();
@@ -276,47 +276,39 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridSingleBack.Pressed += () => GenerateQuickCards();
     }
 
+
+    private string _frontGridImage;
+    private string _backGridImage;
+
     private async void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
     {
         if (e.SelectedItem == null)
         {
-            _frontMasterSprite = new ImageTexture();  //maybe set to blank white?
+            _frontGridImage = string.Empty;
+            /*
+            _frontMasterSprite = new ImageTexture(); //maybe set to blank white?
+            UpdatePreview();
+            return;
+            */
         }
-        else
+
         {
             var a = e.SelectedItem;
-            if (!a.AssetDownloaded)
-            {  //TODO move this to a better spot - share resources, etc
-                try
-                {
-                    var service = new CloudAssetService();
-                    await service.InitializeAsync(
-                        CloudProviderType.GoogleDrive,
-                        string.Empty,
-                        string.Empty
-                    );
-
-                    var r = await service.DownloadImageAsync(a.CloudPath);
-
-                    if (!string.IsNullOrWhiteSpace(r.Item1))
-                    {
-                        GD.PrintErr(r.Item1);
-                        return;
-                    }
-
-                    a.Image = r.Item2;
-                    a.AssetDownloaded = true;
-                }
-                catch (Exception ex)
-                {
-                    GD.PrintErr($"Tile Refresh failed: {ex.Message}");
-                }
-            }
-            var texture = new ImageTexture();
-            texture.SetImage(e.SelectedItem.Image);
-            _frontMasterSprite = texture;
+            _frontGridImage = a.AssetId.ToString();
         }
-        
+      
+        //ProjectService.Instance.FetchImageAsync(a, UpdateFrontGridTexture);
+        UpdatePreview();
+    }
+
+    private void UpdateFrontGridTexture(Asset a)
+    {
+        if (!a.AssetDownloaded) return;
+
+        var texture = new ImageTexture();
+        texture.SetImage(a.Image);
+        _frontMasterSprite = texture;
+
         UpdatePreview();
     }
 
@@ -324,42 +316,30 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     {
         if (e.SelectedItem == null)
         {
-            _backMasterSprite = new ImageTexture();  //maybe set to blank white?
+            _backGridImage = string.Empty;
+            /*
+            _backMasterSprite = new ImageTexture(); //maybe set to blank white?
+            UpdatePreview();
+            return;
+            */
         }
         else
         {
             var a = e.SelectedItem;
-            if (!a.AssetDownloaded)
-            {  //TODO move this to a better spot - share resources, etc
-                try
-                {
-                    var service = new CloudAssetService();
-                    await service.InitializeAsync(
-                        CloudProviderType.GoogleDrive,
-                        string.Empty,
-                        string.Empty
-                    );
-
-                    var r = await service.DownloadImageAsync(a.CloudPath);
-
-                    if (!string.IsNullOrWhiteSpace(r.Item1))
-                    {
-                        GD.PrintErr(r.Item1);
-                        return;
-                    }
-
-                    a.Image = r.Item2;
-                    a.AssetDownloaded = true;
-                }
-                catch (Exception ex)
-                {
-                    GD.PrintErr($"Tile Refresh failed: {ex.Message}");
-                }
-            }
-            var texture = new ImageTexture();
-            texture.SetImage(e.SelectedItem.Image);
-            _backMasterSprite = texture;
+            _backGridImage = a.AssetId.ToString();
         }
+        UpdatePreview();
+
+        //ProjectService.Instance.FetchImageAsync(a, UpdateBackGridTexture);
+    }
+
+    private void UpdateBackGridTexture(Asset a)
+    {
+        if (!a.AssetDownloaded) return;
+
+        var texture = new ImageTexture();
+        texture.SetImage(a.Image);
+        _backMasterSprite = texture;
 
         UpdatePreview();
     }
@@ -492,11 +472,11 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void AddGridParameters(Dictionary<string, object> d)
     {
-        d.Add("FrontMasterSprite", _frontMasterSprite);
-        d.Add("BackMasterSprite", _backMasterSprite);
+        d.Add("FrontGridImageKey", _frontGridImage);
+        d.Add("BackGridImageKey", _backGridImage);
         d.Add("GridRows", _gridRows);
         d.Add("GridCols", _gridCols);
-        d.Add("GridCount", _gridCols);
+        d.Add("GridCount", _gridCount);
 
         d.Add("Mode", VcToken.TokenBuildMode.Grid);
         d.Add("DifferentBack", true);
@@ -713,6 +693,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     }
 
     private Project _currentProject;
+
     public override Project CurrentProject
     {
         get => _currentProject;
@@ -788,6 +769,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
                     _quickSuitColors[i].Color = quickData[i].BackgroundColor;
                     _quickSuitValues[i].Text = quickData[i].Caption;
                 }
+
                 if (quickData.Count > 0)
                 {
                     _quickBackColor.Color = quickData[0].CardBackColor;
@@ -803,10 +785,12 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
             {
                 _gridRowCount.Text = prototype.Parameters["GridRows"].ToString();
             }
+
             if (prototype.Parameters.ContainsKey("GridCols"))
             {
                 _gridColCount.Text = prototype.Parameters["GridCols"].ToString();
             }
+
             if (prototype.Parameters.ContainsKey("GridCount"))
             {
                 _gridCardCount.Text = prototype.Parameters["GridCount"].ToString();

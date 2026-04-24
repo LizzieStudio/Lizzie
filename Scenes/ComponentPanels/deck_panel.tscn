@@ -120,10 +120,9 @@ theme_override_constants/margin_bottom = 6
 [node name="TabContainer" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1050980002]
 unique_name_in_owner = true
 layout_mode = 2
-current_tab = 1
+current_tab = 0
 
 [node name="Quick" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=2108398528]
-visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
@@ -320,12 +319,14 @@ text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
 [node name="Grid Image" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1791511184]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 metadata/_tab_index = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image" unique_id=500526234]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
@@ -382,7 +383,7 @@ horizontal_alignment = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 alignment = 2
 
 [node name="HBoxContainer8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=1991433002]
@@ -397,7 +398,7 @@ horizontal_alignment = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 alignment = 2
 
 [node name="HBoxContainer9" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=443313381]
@@ -412,7 +413,7 @@ horizontal_alignment = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 alignment = 2
 
 [node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1656811611]
