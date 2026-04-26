@@ -9,4 +9,4 @@ ComponentName = "Mesh"
 Icon = ExtResource("1_kykan")
 DefinitionDialogName = "res://Scenes/ComponentPanels/mesh_panel.tscn"
 PrototypeName = ""
-ComponentType = 8
+ComponentType = "Mesh"

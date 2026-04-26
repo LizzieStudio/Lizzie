@@ -9,4 +9,4 @@ ComponentName = "Meeple"
 Icon = ExtResource("1_wck64")
 DefinitionDialogName = "res://Scenes/ComponentPanels/MeeplePanel.tscn"
 PrototypeName = "res://Scenes/VisualComponents/VcMeeple.tscn"
-ComponentType = 9
+ComponentType = "Meeple"

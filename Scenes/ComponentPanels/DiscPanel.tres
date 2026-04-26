@@ -9,4 +9,4 @@ ComponentName = "Disc"
 Icon = ExtResource("2_76ns6")
 DefinitionDialogName = "res://Scenes/ComponentPanels/disc_panel.tscn"
 PrototypeName = "res://Scenes/VisualComponents/VcDisc.tscn"
-ComponentType = 1
+ComponentType = "Disc"

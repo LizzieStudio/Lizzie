@@ -9,5 +9,5 @@ ComponentName = "Die"
 Icon = ExtResource("1_ff517")
 DefinitionDialogName = "res://Scenes/ComponentPanels/die_panel.tscn"
 PrototypeName = ""
-ComponentType = 7
+ComponentType = "Die"
 PrototypeNames = PackedStringArray("res://Scenes/VisualComponents/Dice/vc_d_4.tscn", "res://Scenes/VisualComponents/Dice/VcD6s.tscn", "res://Scenes/VisualComponents/Dice/VcD8.tscn", "res://Scenes/VisualComponents/Dice/VcD10.tscn", "res://Scenes/VisualComponents/Dice/VcD12.tscn", "res://Scenes/VisualComponents/Dice/VcD20.tscn")

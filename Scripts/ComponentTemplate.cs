@@ -16,7 +16,7 @@ public partial class ComponentTemplate : Resource
     public string PrototypeName;
 
     [Export]
-    public VisualComponentBase.VisualComponentType ComponentType;
+    public string ComponentType;
 
     [Export]
     public string[] PrototypeNames;

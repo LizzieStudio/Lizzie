@@ -6,13 +6,13 @@ public abstract partial class VisualComponentBase : Area3D
 {
     public enum VisualComponentType
     {
-        Cube,
-        Disc,
-        Token,
-        Deck,
-        Die,
-        Mesh,
-        Meeple,
+        Cube = 0,
+        Disc = 1,
+        Token = 3,
+        Deck = 6,
+        Die = 7,
+        Mesh = 8,
+        Meeple = 9,
     }
 
     public bool TextureReady { get; set; }

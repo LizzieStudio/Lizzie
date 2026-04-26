@@ -9,4 +9,4 @@ ComponentName = "Board"
 Icon = ExtResource("1_sv3xi")
 DefinitionDialogName = "res://Scenes/ComponentPanels/board_panel.tscn"
 PrototypeName = "res://Scenes/VisualComponents/VcToken.tscn"
-ComponentType = 4
+ComponentType = "Token"

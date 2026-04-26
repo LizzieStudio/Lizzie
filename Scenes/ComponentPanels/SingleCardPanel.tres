@@ -9,4 +9,4 @@ ComponentName = "Card"
 Icon = ExtResource("1_gka1p")
 DefinitionDialogName = "res://Scenes/ComponentPanels/single_card_panel.tscn"
 PrototypeName = "res://Scenes/VisualComponents/VcToken.tscn"
-ComponentType = 5
+ComponentType = "Token"
