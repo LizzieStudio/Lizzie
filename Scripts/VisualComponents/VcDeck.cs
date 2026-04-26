@@ -908,10 +908,10 @@ public partial class VcDeck : VisualComponentGroup
             {
                 if (vcf.TextureReady)
                 {
-                    if (vcf.BackTexture == null || vcf.BackSprite == null)
+                    if (vcf.BackTexture == null)
                         return;
 
-                    _frontSprite.PixelSize = vcf.BackSprite.PixelSize;
+                    _frontSprite.PixelSize = PixelSize(vcf.BackTexture.GetSize());
                     _frontSprite.Texture = vcf.BackTexture;
                     _frontTextureReady = true;
                 }
@@ -922,10 +922,10 @@ public partial class VcDeck : VisualComponentGroup
             {
                 if (vcb.TextureReady)
                 {
-                    if (vcb.FaceTexture == null || vcb.FaceSprite == null)
+                    if (vcb.FaceTexture == null)
                         return;
 
-                    _backSprite.PixelSize = vcb.FaceSprite.PixelSize;
+                    _backSprite.PixelSize = PixelSize(vcb.FaceTexture.GetSize());
                     _backSprite.Texture = vcb.FaceTexture;
 
                     if (_mode == VcToken.TokenBuildMode.Grid)

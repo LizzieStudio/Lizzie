@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Godot;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using Vector2 = Godot.Vector2;
@@ -12,8 +13,13 @@ using Vector2 = Godot.Vector2;
 /// </summary>
 public partial class VcToken : VisualComponentBase
 {
-    public Sprite3D FaceSprite { get; protected set; }
-    public Sprite3D BackSprite { get; protected set; }
+    private MeshInstance3D _mainMesh;
+    private StandardMaterial3D _frontMaterial;
+    private StandardMaterial3D _backMaterial;
+
+    private const float FaceH = 0.475f;
+    private const float FaceR = 0.475f;
+    private const int CircleSegments = 32;
 
     private Texture2D _faceTexture = new ImageTexture();
     private Texture2D _backTexture;
@@ -24,8 +30,8 @@ public partial class VcToken : VisualComponentBase
         set
         {
             _faceTexture = value;
-            if (GodotObject.IsInstanceValid(FaceSprite) && FaceSprite.IsNodeReady())
-                FaceSprite.Texture = value;
+            if (_frontMaterial != null && value != null)
+                _frontMaterial.AlbedoTexture = value;
         }
     }
 
@@ -35,8 +41,8 @@ public partial class VcToken : VisualComponentBase
         set
         {
             _backTexture = value;
-            if (GodotObject.IsInstanceValid(BackSprite) && BackSprite.IsNodeReady())
-                BackSprite.Texture = value;
+            if (_backMaterial != null && value != null)
+                _backMaterial.AlbedoTexture = value;
         }
     }
 
@@ -55,17 +61,11 @@ public partial class VcToken : VisualComponentBase
     private TokenTextureSubViewport _frontView;
     private TokenTextureSubViewport _backView;
 
-    private MeshInstance3D _sideMesh;
-
     public override void _Ready()
     {
         base._Ready();
         ComponentType = VisualComponentType.Token;
-
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
-        //FaceSprite = GetNode<Sprite3D>("FrontSprite");
-        //BackSprite = GetNode<Sprite3D>("BackSprite");
-        //_sideMesh = GetNode<MeshInstance3D>("SideMesh");
     }
 
     public override void _Process(double delta)
@@ -100,7 +100,7 @@ public partial class VcToken : VisualComponentBase
         base._Process(delta);
     }
 
-    public override GeometryInstance3D DragMesh => FaceSprite;
+    public override GeometryInstance3D DragMesh => _mainMesh;
     public override float MaxAxisSize => Math.Max(_height, _width);
 
     public override CommandResponse ProcessCommand(VisualCommand command)
@@ -309,103 +309,177 @@ public partial class VcToken : VisualComponentBase
 
     private void BuildToken()
     {
-        FaceSprite = GetNode<Sprite3D>("FrontSprite");
-        BackSprite = GetNode<Sprite3D>("BackSprite");
-        _sideMesh = GetNode<MeshInstance3D>("SideMesh");
+        _mainMesh = GetNode<MeshInstance3D>("SideMesh");
 
         YHeight = _thickness;
-
         Scale = new Vector3(_width, _thickness, _height);
 
-        //Don't show the sidemesh if the thickness is too small
-        //_sideMesh.Visible = (_thickness > 0.1);
-
-        //adjust the scales for the sprites based on the textures so they don't double adjust
-        if (_width > 0 && _height > 0)
+        _frontMaterial = new StandardMaterial3D
         {
-            float scale = Math.Max(_width, _height);
-
-            var size = new Vector3(scale / _width, 1, scale / _height);
-            FaceSprite.Scale = size;
-            BackSprite.Scale = size;
-            //GD.PrintErr(size);
-        }
-
-        ShapeProfiles.Clear();
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        };
+        _backMaterial = new StandardMaterial3D
+        {
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        };
+        var sideMaterial = new StandardMaterial3D
+        {
+            AlbedoColor = new Color(0.506f, 0.506f, 0.506f),
+        };
 
         var shape = (TokenTextureSubViewport.TokenShape)_shape;
+        var ring = GetFaceRing(shape);
 
+        var mesh = new ArrayMesh();
+        CommitFaceSurface(mesh, _frontMaterial, ring, +FaceH, mirrorU: false);
+        CommitFaceSurface(mesh, _backMaterial, ring, -FaceH, mirrorU: true);
+        CommitSideSurface(mesh, sideMaterial, ring);
+        _mainMesh.Mesh = mesh;
+
+        var highlightShader = GD.Load<Shader>("res://Shaders/outline2.gdshader");
+        var highlightMat = new ShaderMaterial { Shader = highlightShader };
+        highlightMat.SetShaderParameter("outline_color", Colors.White);
+        highlightMat.SetShaderParameter("border_width", 0.04f);
+        HighlightMesh.Mesh = mesh;
+        HighlightMesh.MaterialOverride = highlightMat;
+
+        ShapeProfiles.Clear();
         switch (shape)
         {
             case TokenTextureSubViewport.TokenShape.Square:
-                var r = new RectangleShape2D();
-                r.Size = new Vector2(_width, _height);
-                ShapeProfiles.Add(new OffsetShape2D(r));
+                ShapeProfiles.Add(
+                    new OffsetShape2D(new RectangleShape2D { Size = new Vector2(_width, _height) })
+                );
                 break;
-
             case TokenTextureSubViewport.TokenShape.Circle:
-                var c = new CircleShape2D();
-                c.Radius = _width / 2f;
-                ShapeProfiles.Add(new OffsetShape2D(c));
+                ShapeProfiles.Add(new OffsetShape2D(new CircleShape2D { Radius = _width / 2f }));
                 break;
-
             case TokenTextureSubViewport.TokenShape.HexPoint:
-                var hp = new ConvexPolygonShape2D();
-                hp.Points = CalcHexPointVertices();
-                ShapeProfiles.Add(new OffsetShape2D(hp));
-                break;
-
             case TokenTextureSubViewport.TokenShape.HexFlat:
-                var hf = new ConvexPolygonShape2D();
-                hf.Points = CalcHexPointVertices();
-                ShapeProfiles.Add(new OffsetShape2D(hf));
+                var poly = new ConvexPolygonShape2D();
+                poly.Points = ring.Select(v => new Vector2(v.X, v.Z)).ToArray();
+                ShapeProfiles.Add(new OffsetShape2D(poly));
                 break;
-
             default:
                 throw new ArgumentOutOfRangeException();
         }
     }
 
-    private Vector2[] CalcHexPointVertices()
-    {
-        Vector2[] arr = new Vector2[6];
-
-        var x = (_width / 4f) * Mathf.Sqrt(3) / 2f;
-        var y = (_height / 4f);
-
-        arr[0] = new Vector2(0, y * 2);
-        arr[1] = new Vector2(-x, y);
-        arr[2] = new Vector2(-x, -y);
-        arr[3] = new Vector2(0, -y * 2);
-        arr[4] = new Vector2(-x, -y);
-        arr[5] = new Vector2(-x, y);
-
-        //enable this to print the hex coordinates
-        /*
-        foreach (var p in arr)
+    private Vector3[] GetFaceRing(TokenTextureSubViewport.TokenShape shape) =>
+        shape switch
         {
-            GD.Print(p);
-        }
-        */
+            TokenTextureSubViewport.TokenShape.Square => new[]
+            {
+                new Vector3(-FaceR, 0, -FaceR),
+                new Vector3(+FaceR, 0, -FaceR),
+                new Vector3(+FaceR, 0, +FaceR),
+                new Vector3(-FaceR, 0, +FaceR),
+            },
+            TokenTextureSubViewport.TokenShape.Circle => Enumerable
+                .Range(0, CircleSegments)
+                .Select(i =>
+                {
+                    float a = i * Mathf.Tau / CircleSegments;
+                    return new Vector3(FaceR * Mathf.Cos(a), 0, FaceR * Mathf.Sin(a));
+                })
+                .ToArray(),
+            TokenTextureSubViewport.TokenShape.HexPoint => HexRing(Mathf.Pi / 2f),
+            TokenTextureSubViewport.TokenShape.HexFlat => HexRing(0f),
+            _ => new[]
+            {
+                new Vector3(-FaceR, 0, -FaceR),
+                new Vector3(+FaceR, 0, -FaceR),
+                new Vector3(+FaceR, 0, +FaceR),
+                new Vector3(-FaceR, 0, +FaceR),
+            },
+        };
 
-        return arr;
+    private static Vector3[] HexRing(float startAngle) =>
+        Enumerable
+            .Range(0, 6)
+            .Select(i =>
+            {
+                float a = startAngle + i * Mathf.Tau / 6f;
+                return new Vector3(FaceR * Mathf.Cos(a), 0, FaceR * Mathf.Sin(a));
+            })
+            .ToArray();
+
+    private static void CommitFaceSurface(
+        ArrayMesh mesh,
+        StandardMaterial3D mat,
+        Vector3[] ring,
+        float y,
+        bool mirrorU
+    )
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        st.SetMaterial(mat);
+        var normal = mirrorU ? Vector3.Down : Vector3.Up;
+        for (int i = 0; i < ring.Length; i++)
+        {
+            var a = ring[i];
+            var b = ring[(i + 1) % ring.Length];
+            // front: (center, a, b) → +Y normal; back: (center, b, a) → −Y normal
+            AddFaceVert(st, Vector3.Zero, y, normal, mirrorU);
+            if (!mirrorU)
+            {
+                AddFaceVert(st, a, y, normal, false);
+                AddFaceVert(st, b, y, normal, false);
+            }
+            else
+            {
+                AddFaceVert(st, b, y, normal, true);
+                AddFaceVert(st, a, y, normal, true);
+            }
+        }
+        st.Commit(mesh);
     }
 
-    private Vector2[] CalcHexFlatVertices()
+    private static void AddFaceVert(
+        SurfaceTool st,
+        Vector3 xz,
+        float y,
+        Vector3 normal,
+        bool mirrorU
+    )
     {
-        Vector2[] arr = new Vector2[6];
+        st.SetNormal(normal);
+        float u = 0.5f + xz.X / (2f * FaceR);
+        if (mirrorU)
+            u = 1f - u;
+        st.SetUV(new Vector2(u, 0.5f + xz.Z / (2f * FaceR)));
+        st.AddVertex(new Vector3(xz.X, y, xz.Z));
+    }
 
-        var x = (_width / 4f);
-        var y = (_height / 4f) * Mathf.Sqrt(3) / 2f;
-
-        arr[0] = new Vector2(x * 2, 0);
-        arr[1] = new Vector2(x, y);
-        arr[2] = new Vector2(-x, y);
-        arr[3] = new Vector2(-x * 2, 0);
-        arr[4] = new Vector2(-x, -y);
-        arr[5] = new Vector2(x, -y);
-
-        return arr;
+    private static void CommitSideSurface(ArrayMesh mesh, StandardMaterial3D mat, Vector3[] ring)
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        st.SetMaterial(mat);
+        for (int i = 0; i < ring.Length; i++)
+        {
+            var a = ring[i];
+            var b = ring[(i + 1) % ring.Length];
+            var outward = new Vector3((a.X + b.X) * 0.5f, 0, (a.Z + b.Z) * 0.5f).Normalized();
+            var aT = new Vector3(a.X, +FaceH, a.Z);
+            var bT = new Vector3(b.X, +FaceH, b.Z);
+            var aB = new Vector3(a.X, -FaceH, a.Z);
+            var bB = new Vector3(b.X, -FaceH, b.Z);
+            st.SetNormal(outward);
+            st.AddVertex(aT);
+            st.SetNormal(outward);
+            st.AddVertex(aB);
+            st.SetNormal(outward);
+            st.AddVertex(bT);
+            st.SetNormal(outward);
+            st.AddVertex(bT);
+            st.SetNormal(outward);
+            st.AddVertex(aB);
+            st.SetNormal(outward);
+            st.AddVertex(bB);
+        }
+        st.Commit(mesh);
     }
 
     private void BuildQuick(TextureFactory textureFactory)
@@ -429,41 +503,19 @@ public partial class VcToken : VisualComponentBase
 
     private void BuildGrid()
     {
-        if (_frontMasterSprite is null)
+        if (_frontMasterSprite is null || _gridCols == 0 || _gridRows == 0)
             return;
 
-        if (_gridCols == 0 || _gridRows == 0)
-            return;
-
-        var ts = _frontMasterSprite.GetSize();
-
-        var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
-        var pixelSize = PixelSize(cv);
-
-        //FaceSprite.PixelSize = pixelSize;
         _frontTextureGenerated = true;
+        FaceTexture = _frontMasterSprite;
+        MapFrontTexture();
 
         if (_differentBack)
         {
-            var backPixelSize = PixelSize(_backMasterSprite.GetSize());
-
-            //BackSprite.PixelSize = backPixelSize;
             _backTextureGenerated = true;
             BackTexture = _backMasterSprite;
             MapBackTexture();
         }
-
-        int.TryParse(DataSetRow, out var r);
-
-        FaceTexture = _frontMasterSprite;
-        MapFrontTexture();
-
-        /*
-        FaceSprite.Texture = _frontMasterSprite;
-        FaceSprite.Hframes = _gridCols;
-        FaceSprite.Vframes = _gridRows;
-        FaceSprite.Frame = r;
-        */
     }
 
     private string _frontTemplateName;
@@ -579,27 +631,16 @@ public partial class VcToken : VisualComponentBase
         _frontView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
         _frontView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
         _frontView.SetTexture(LoadTexture(_frontImage));
-
         _frontTextureGenerated = true;
 
-        var t = _frontView.GetTexture();
-
-        float pixelSize = PixelSize(t.GetSize());
-        FaceSprite.PixelSize = pixelSize;
-        FaceSprite.Texture = t;
+        FaceTexture = _frontView.GetTexture();
 
         if (!_differentBack)
         {
-            BackSprite.PixelSize = pixelSize;
-            BackSprite.Texture = t;
+            BackTexture = FaceTexture;
             _backTextureGenerated = true;
         }
     }
-
-    //In all the texture creation routines, we scale the pixel size to 0.95.
-    //This is the base size of the front and bottom sprites in the token,
-    //and matches the side mesh (the gray punchboard texture
-    //The width is 0.95 so the highlight mesh, which is size 1.0, so it still shows.
 
     private void CreateCustomBackTexture()
     {
@@ -608,23 +649,9 @@ public partial class VcToken : VisualComponentBase
 
         _backView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
         _backView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
-        var t = _backView.GetTexture();
-
-        float pixelSize = PixelSize(t.GetSize());
-        BackSprite.PixelSize = pixelSize;
         _backView.SetTexture(LoadTexture(_backImage));
-
-        BackSprite.Texture = _backView.GetTexture();
-
+        BackTexture = _backView.GetTexture();
         _backTextureGenerated = true;
-    }
-
-    private float PixelSize(Vector2 size)
-    {
-        if (size.X == 0 || size.Y == 0)
-            return 0;
-
-        return 0.95f / Mathf.Max(size.X, size.Y);
     }
 
     private void CreateQuickFrontTexture(TextureFactory textureFactory)
@@ -746,56 +773,46 @@ public partial class VcToken : VisualComponentBase
 
     private void MapFrontTexture()
     {
-        if (!GodotObject.IsInstanceValid(FaceSprite) || !FaceSprite.IsNodeReady())
+        if (_frontMaterial == null)
         {
             _mapFrontTextureRequired = true;
             return;
         }
 
         _mapFrontTextureRequired = false;
-
         _frontTextureGenerated = true;
-
-        FaceSprite.Texture = FaceTexture;
-
-        float pixelSize = PixelSize(FaceTexture.GetSize());
+        _frontMaterial.AlbedoTexture = FaceTexture;
 
         if (_mode == TokenBuildMode.Grid)
         {
-            FaceSprite.Hframes = _gridCols;
-            FaceSprite.Vframes = _gridRows;
             int.TryParse(DataSetRow, out var r);
-            FaceSprite.Frame = r;
-
-            var ts = FaceTexture.GetSize();
-            var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
-            pixelSize = PixelSize(cv);
+            int col = r % _gridCols;
+            int row = r / _gridCols;
+            _frontMaterial.Uv1Scale = new Vector3(1f / _gridCols, 1f / _gridRows, 1f);
+            _frontMaterial.Uv1Offset = new Vector3(
+                (float)col / _gridCols,
+                (float)row / _gridRows,
+                0f
+            );
         }
-
-        FaceSprite.PixelSize = pixelSize;
 
         if (!_differentBack)
-        {
-            BackSprite.PixelSize = pixelSize;
             BackTexture = FaceTexture;
-        }
     }
 
     private bool _mapBackTextureRequired;
 
     private void MapBackTexture()
     {
-        if (!GodotObject.IsInstanceValid(BackSprite) || !BackSprite.IsNodeReady())
+        if (_backMaterial == null)
         {
             _mapBackTextureRequired = true;
             return;
         }
 
         _mapBackTextureRequired = false;
-
-        BackSprite.PixelSize = PixelSize(BackTexture.GetSize());
-        ;
-        BackSprite.Texture = BackTexture;
+        _backTextureGenerated = true;
+        _backMaterial.AlbedoTexture = BackTexture;
     }
 
     private void CreateQuickBackTexture(TextureFactory textureFactory)
