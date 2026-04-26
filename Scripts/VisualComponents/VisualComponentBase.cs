@@ -160,7 +160,10 @@ public abstract partial class VisualComponentBase : Area3D
     /// <returns></returns>
     public virtual bool Refresh(TextureFactory textureFactory)
     {
-        return Setup(PrototypeRef, DataSetRow, textureFactory);
+        var result = Setup(PrototypeRef, DataSetRow, textureFactory);
+        if (result)
+            Build();
+        return result;
     }
 
     public virtual void Delete()
