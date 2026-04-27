@@ -256,7 +256,7 @@ public class TokenMovedEvent : IEvent
 /// </summary>
 public class DataSetChangedEvent : IEvent
 {
-    public string DataSetName { get; set; }  //use ID if item deleted
+    public string DataSetName { get; set; } //use ID if item deleted
     public DataSet DataSet { get; set; }
 }
 
@@ -265,17 +265,16 @@ public class DataSetChangedEvent : IEvent
 /// </summary>
 public class TemplateChangedEvent : IEvent
 {
-    public string TemplateName { get; set; }  //use ID if item deleted
+    public string TemplateName { get; set; } //use ID if item deleted
     public Template Template { get; set; }
 }
-
 
 /// <summary>
 /// Named Image has been added/removed/updated
 /// </summary>
 public class ImageChangedEvent : IEvent
 {
-    public Guid ImageId { get; set; }   //use ID if item deleted
+    public Guid ImageId { get; set; } //use ID if item deleted
     public Asset Image { get; set; }
 }
 

@@ -73,12 +73,15 @@ public partial class GameController : Node3D
         _mainScene.EnterSpawnMode(components);
     }
 
-    private void SpawnGridMultiples(CreateObjectEventArgs args, List<VisualComponentBase> components)
+    private void SpawnGridMultiples(
+        CreateObjectEventArgs args,
+        List<VisualComponentBase> components
+    )
     {
         var gridRows = Utility.GetParam<int>(args.Params, "GridRows");
         var gridCols = Utility.GetParam<int>(args.Params, "GridCols");
         var cardCount = Utility.GetParam<int>(args.Params, "GridCount");
-        
+
         float w = args.WidthHint * 1.5f;
         float h = args.HeightHint * 1.5f;
 
@@ -89,30 +92,34 @@ public partial class GameController : Node3D
 
         int cardNum = 0;
 
-        for(int i = 0; i < gridRows; i++)
-            for (int j = 0; j < gridCols; j++)
+        for (int i = 0; i < gridRows; i++)
+        for (int j = 0; j < gridCols; j++)
+        {
+            var mc = SingleComponentSpawn(args, cardNum.ToString());
+
+            if (mc != null)
             {
-                var mc = SingleComponentSpawn(args, cardNum.ToString());
+                mc.SpawnDelta = new Vector3(w * ci, 0, h * cj);
+                components.Add(mc);
+            }
 
-                if (mc != null)
-                {
-                    mc.SpawnDelta = new Vector3(w * ci, 0, h * cj);
-                    components.Add(mc);
-                }
+            cardNum++;
+            if (cardNum >= cardCount)
+                return;
 
-                cardNum++;
-                if (cardNum >= cardCount) return;
-
-                ci++;
-                if (ci == cols)
-                {
-                    ci = 0;
-                    cj++;
-                }
-}
+            ci++;
+            if (ci == cols)
+            {
+                ci = 0;
+                cj++;
+            }
+        }
     }
 
-    private void SpawnDataSetMultiples(CreateObjectEventArgs args, List<VisualComponentBase> components)
+    private void SpawnDataSetMultiples(
+        CreateObjectEventArgs args,
+        List<VisualComponentBase> components
+    )
     {
         int cols = (int)Math.Ceiling(Math.Sqrt(args.DataSet.Rows.Count));
 

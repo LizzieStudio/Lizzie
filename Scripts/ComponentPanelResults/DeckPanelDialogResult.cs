@@ -91,14 +91,14 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         //reload image selectors
         var f = _gridFrontImageSelector.SelectedImage;
         var b = _gridBackImageSelector.SelectedImage;
-        
+
         _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
         _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
 
         //try to re-select the items
         _gridFrontImageSelector.SelectedImage = f;
         _gridBackImageSelector.SelectedImage = b;
-        
+
         UpdatePreview();
     }
 
@@ -332,7 +332,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         //ProjectService.Instance.FetchImageAsync(a, UpdateBackGridTexture);
     }
-
 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
     {

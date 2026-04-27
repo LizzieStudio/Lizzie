@@ -54,7 +54,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
     private OptionButton _datasetPicker;
     private Button _datasetEditorButton;
 
-
     //Grid Tab elements
     private ImageSelector _gridFrontImageSelector;
     private ImageSelector _gridBackImageSelector;
@@ -64,7 +63,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
     private LineEdit _gridCardCount;
 
     private CheckButton _gridSingleBack;
-    
+
     public override void _Ready()
     {
         ComponentType = VisualComponentBase.VisualComponentType.Token;
@@ -163,7 +162,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         _gridBackImageSelector.ImageSelected += BackImageSelected;
         _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
 
-
         _gridRowCount = GetNode<LineEdit>("%GridRows");
         _gridRowCount.TextChanged += t => GenerateGridTokens();
         _gridColCount = GetNode<LineEdit>("%GridCols");
@@ -220,7 +218,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         //ProjectService.Instance.FetchImageAsync(a, UpdateBackGridTexture);
     }
 
-
     private int _gridRows;
     private int _gridCols;
     private int _gridCount;
@@ -235,7 +232,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
         ChangePreviewToken(0);
     }
-    
+
     private void EditFrontTemplate()
     {
         EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _frontTemplate?.Name });
@@ -604,6 +601,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         WidthHint = ParamToFloat(_heightInput.Text) / 10f;
         HeightHint = ParamToFloat(_heightInput.Text) / 10f;
     }
+
     private void AddGridParameters(Dictionary<string, object> d)
     {
         d.Add("FrontGridImageKey", _frontGridImage);
