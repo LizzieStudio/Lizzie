@@ -58,10 +58,10 @@ public partial class TextureFactory : SubViewport
             }
         }
 
-        if (_activeQueueEntry == null & _textureGenerationQueue.Count > 0)
+        if (!_waitingForAsset && _activeQueueEntry == null && _textureGenerationQueue.Count > 0)
         {
             _activeQueueEntry = _textureGenerationQueue.Dequeue();
-            InitiateTextureGeneration(_activeQueueEntry.TextureDefinition);
+            PreFetchAssetsAndInitiate(_activeQueueEntry.TextureDefinition);
         }
     }
 
@@ -70,6 +70,7 @@ public partial class TextureFactory : SubViewport
     private TextureQueueEntry _activeQueueEntry;
     private int _skip;
     private const int Take = 10;
+    private bool _waitingForAsset;
 
     private Queue<TextureQueueEntry> _textureGenerationQueue = new();
 
@@ -90,6 +91,43 @@ public partial class TextureFactory : SubViewport
         };
 
         _textureGenerationQueue.Enqueue(tqe);
+    }
+
+    private async void PreFetchAssetsAndInitiate(TextureDefinition definition)
+    {
+        var project = ProjectService.Instance.CurrentProject;
+        if (project != null)
+        {
+            var pendingAssets = new System.Collections.Generic.List<Lizzie.AssetManagement.Asset>();
+            foreach (var obj in definition.Objects)
+            {
+                if (obj.Text != null && obj.Text.StartsWith("u:"))
+                {
+                    string imageName = obj.Text.Substring(2);
+                    var asset = project.Images.Values.FirstOrDefault(a => a.Name == imageName);
+                    if (asset != null && !asset.AssetDownloaded)
+                    {
+                        pendingAssets.Add(asset);
+                    }
+                }
+            }
+
+            if (pendingAssets.Count > 0)
+            {
+                _waitingForAsset = true;
+                var tasks = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+                foreach (var asset in pendingAssets)
+                {
+                    var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+                    await ProjectService.Instance.FetchImageAsync(asset, _ => tcs.TrySetResult(true));
+                    tasks.Add(tcs.Task);
+                }
+                await System.Threading.Tasks.Task.WhenAll(tasks);
+                _waitingForAsset = false;
+            }
+        }
+
+        InitiateTextureGeneration(definition);
     }
 
     private void InitiateTextureGeneration(TextureDefinition definition)
@@ -724,8 +762,31 @@ public partial class TextureFactory : SubViewport
         var tr = new TextureRect();
         Texture2D texture;
 
-        //caption has the key to the icon
-        texture = _iconLibrary.TextureFromKey(obj.Text);
+        bool externalMode = false;
+        
+        // "u:<name>" means fetch from the current project's image library
+        if (obj.Text != null && obj.Text.StartsWith("u:"))
+        {
+            string imageName = obj.Text.Substring(2);
+            var project = ProjectService.Instance.CurrentProject;
+            var asset = project?.Images.Values.FirstOrDefault(a => a.Name == imageName);
+            if (asset?.Image != null)
+            {
+                texture = ImageTexture.CreateFromImage(asset.Image);
+            }
+            else
+            {
+                texture = _iconLibrary.TextureFromKey(string.Empty);
+            }
+
+            externalMode = true;
+            
+        }
+        else
+        {
+            //caption has the key to the icon
+            texture = _iconLibrary.TextureFromKey(obj.Text);
+        }
 
         var scaleWidth = obj.Width * obj.Scale;
         var scaleHeight = obj.Height * obj.Scale;
@@ -771,14 +832,17 @@ public partial class TextureFactory : SubViewport
 
         tr.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
 
-        tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
         tr.Texture = ImageTexture.CreateFromImage(image);
 
-        var bgRect = new ColorRect();
-        bgRect.Color = obj.ForegroundColor;
-        bgRect.Size = new Vector2(scaleWidth, scaleHeight);
-        tr.AddChild(bgRect);
-
+        if (!externalMode)
+        {
+            tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
+            var bgRect = new ColorRect();
+            bgRect.Color = obj.ForegroundColor;
+            bgRect.Size = new Vector2(scaleWidth, scaleHeight);
+            tr.AddChild(bgRect);
+        }
+        
         tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
