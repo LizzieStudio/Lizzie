@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -240,6 +241,43 @@ public partial class ProjectService : Node
         if (CurrentProject.Templates == null)
             return null;
         return CurrentProject.Templates.GetValueOrDefault(name);
+    }
+
+    public async Task FetchImageAsync(Asset asset, Action<Asset> callback)
+    {
+        if (asset.AssetDownloaded)
+        {
+            callback(asset);
+            return;
+        }
+
+        //TODO move this to a better spot - share resources, etc
+        try
+        {
+            var service = new CloudAssetService();
+            await service.InitializeAsync(
+                CloudProviderType.GoogleDrive,
+                string.Empty,
+                string.Empty
+            );
+
+            var r = await service.DownloadImageAsync(asset.CloudPath);
+
+            if (!string.IsNullOrWhiteSpace(r.Item1))
+            {
+                GD.PrintErr(r.Item1);
+                return;
+            }
+
+            asset.Image = r.Item2;
+            asset.AssetDownloaded = true;
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"Image fetch failed: {ex.Message}");
+        }
+
+        callback(asset);
     }
 
     public GameObjects GameObjects { get; set; }

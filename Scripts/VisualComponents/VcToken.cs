@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Godot;
+using Lizzie.AssetManagement;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using Vector2 = Godot.Vector2;
 
@@ -232,11 +233,37 @@ public partial class VcToken : VisualComponentBase
         _backFontSize = Utility.GetParam<int>(parameters, "BackFontSize");
 
         //Grid Parameters
-        _frontMasterSprite = Utility.GetParam<Texture2D>(parameters, "FrontMasterSprite");
-        _backMasterSprite = Utility.GetParam<Texture2D>(parameters, "BackMasterSprite");
+        _frontGridImageKey = Utility.GetParam<string>(parameters, "FrontGridImageKey");
+        if (string.IsNullOrEmpty(_frontGridImageKey))
+        {
+            _frontMasterAsset = null;
+            _frontMasterSprite = new ImageTexture();
+        }
+        else
+        {
+            ProjectService.Instance.CurrentProject.Images.TryGetValue(
+                _frontGridImageKey,
+                out _frontMasterAsset
+            );
+        }
+
+        _backGridImageKey = Utility.GetParam<string>(parameters, "BackGridImageKey");
+        if (string.IsNullOrEmpty(_backGridImageKey))
+        {
+            _backMasterAsset = null;
+            _backMasterSprite = new ImageTexture();
+        }
+        else
+        {
+            ProjectService.Instance.CurrentProject.Images.TryGetValue(
+                _backGridImageKey,
+                out _backMasterAsset
+            );
+        }
 
         _gridRows = Utility.GetParam<int>(parameters, "GridRows");
         _gridCols = Utility.GetParam<int>(parameters, "GridCols");
+        _gridCount = Utility.GetParam<int>(parameters, "GridCount");
         //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
 
         if (parameters.TryGetValue("Type", out var tokenType))
@@ -503,19 +530,66 @@ public partial class VcToken : VisualComponentBase
 
     private void BuildGrid()
     {
-        if (_frontMasterSprite is null || _gridCols == 0 || _gridRows == 0)
-            return;
-
-        _frontTextureGenerated = true;
-        FaceTexture = _frontMasterSprite;
-        MapFrontTexture();
+        if (_frontMasterAsset == null)
+        {
+            _frontMasterSprite = new ImageTexture();
+            ApplyGridFaceTexture();
+        }
+        else
+        {
+            ProjectService.Instance.FetchImageAsync(_frontMasterAsset, BuildGridFace);
+        }
 
         if (_differentBack)
         {
-            _backTextureGenerated = true;
-            BackTexture = _backMasterSprite;
-            MapBackTexture();
+            if (_backMasterAsset == null)
+            {
+                _backMasterSprite = new ImageTexture();
+                ApplyGridBackTexture();
+            }
+            else
+            {
+                ProjectService.Instance.FetchImageAsync(_backMasterAsset, BuildGridBack);
+            }
         }
+    }
+
+    private void BuildGridFace(Asset asset)
+    {
+        if (!asset.AssetDownloaded)
+            return;
+
+        var texture = new ImageTexture();
+        texture.SetImage(asset.Image);
+        _frontMasterSprite = texture;
+
+        ApplyGridFaceTexture();
+    }
+
+    private void ApplyGridFaceTexture()
+    {
+        if (!_differentBack)
+            _backTextureGenerated = true;
+        FaceTexture = _frontMasterSprite;
+        MapFrontTexture();
+    }
+
+    private void BuildGridBack(Asset asset)
+    {
+        if (!asset.AssetDownloaded)
+            return;
+
+        var texture = new ImageTexture();
+        texture.SetImage(asset.Image);
+        _backMasterSprite = texture;
+
+        ApplyGridBackTexture();
+    }
+
+    private void ApplyGridBackTexture()
+    {
+        BackTexture = _backMasterSprite;
+        MapBackTexture();
     }
 
     private string _frontTemplateName;
@@ -786,14 +860,12 @@ public partial class VcToken : VisualComponentBase
         if (_mode == TokenBuildMode.Grid)
         {
             int.TryParse(DataSetRow, out var r);
-            int col = r % _gridCols;
-            int row = r / _gridCols;
-            _frontMaterial.Uv1Scale = new Vector3(1f / _gridCols, 1f / _gridRows, 1f);
-            _frontMaterial.Uv1Offset = new Vector3(
-                (float)col / _gridCols,
-                (float)row / _gridRows,
-                0f
-            );
+            int cols = Math.Max(_gridCols, 1);
+            int rows = Math.Max(_gridRows, 1);
+            int col = r % cols;
+            int row = r / cols;
+            _frontMaterial.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
+            _frontMaterial.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
         }
 
         if (!_differentBack)
@@ -906,8 +978,15 @@ public partial class VcToken : VisualComponentBase
     //grid parameters
     private Texture2D _frontMasterSprite;
     private Texture2D _backMasterSprite;
+    private Asset _frontMasterAsset;
+    private Asset _backMasterAsset;
+    private string _frontGridImageKey;
+    private string _backGridImageKey;
+
     private int _gridRows;
     private int _gridCols;
+
+    private int _gridCount;
 
     //private int _gridIndex;
 

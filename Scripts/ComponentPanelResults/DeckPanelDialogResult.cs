@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 using Godot;
+using Lizzie.AssetManagement;
+using static System.Net.Mime.MediaTypeNames;
 
 public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 {
@@ -45,11 +47,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private OptionButton _cardSizes;
 
     //Grid Tab elements
-    private LineEdit _gridFrontImageFile;
-    private Button _gridFrontImageButton;
-
-    private LineEdit _gridBackImageFile;
-    private Button _gridBackImageButton;
+    private ImageSelector _gridFrontImageSelector;
+    private ImageSelector _gridBackImageSelector;
 
     private LineEdit _gridRowCount;
     private LineEdit _gridColCount;
@@ -84,6 +83,23 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         //register for events
         EventBus.Instance.Subscribe<TemplateChangedEvent>(TemplateChanged);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(DataSetChanged);
+        EventBus.Instance.Subscribe<ImageChangedEvent>(ImageChanged);
+    }
+
+    private void ImageChanged(ImageChangedEvent obj)
+    {
+        //reload image selectors
+        var f = _gridFrontImageSelector.SelectedImage;
+        var b = _gridBackImageSelector.SelectedImage;
+
+        _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+        _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+
+        //try to re-select the items
+        _gridFrontImageSelector.SelectedImage = f;
+        _gridBackImageSelector.SelectedImage = b;
+
+        UpdatePreview();
     }
 
     private void TemplateChanged(TemplateChangedEvent obj)
@@ -253,16 +269,13 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void InitializeGridBindings()
     {
-        _gridFrontImageFile = GetNode<LineEdit>("%GridFront");
-        _gridFrontImageFile.TextChanged += LoadFrontGridFile;
-        _gridFrontImageButton = GetNode<Button>("%GridFrontButton");
-        _gridFrontImageButton.Pressed += GetFrontFile;
+        _gridFrontImageSelector = GetNode<ImageSelector>("%FrontImageSelector");
+        _gridFrontImageSelector.ImageSelected += FrontImageSelected;
+        _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
 
-        _gridBackImageFile = GetNode<LineEdit>("%GridBack");
-        _gridBackImageFile.TextChanged += LoadBackGridFile;
-
-        _gridBackImageButton = GetNode<Button>("%GridBackButton");
-        _gridBackImageButton.Pressed += GetBackFile;
+        _gridBackImageSelector = GetNode<ImageSelector>("%BackImageSelector");
+        _gridBackImageSelector.ImageSelected += BackImageSelected;
+        _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
 
         _gridRowCount = GetNode<LineEdit>("%GridRows");
         _gridRowCount.TextChanged += t => GenerateGridCards();
@@ -272,64 +285,52 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridCardCount.TextChanged += t => GenerateGridCards();
 
         _gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
-        _gridSingleBack.Pressed += () => GenerateQuickCards();
+        _gridSingleBack.Pressed += GenerateGridCards;
     }
 
-    private void LoadFrontGridFile(string newtext)
+    private string _frontGridImage;
+    private string _backGridImage;
+
+    private async void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
     {
-        //Get the texture
-        if (File.Exists(_gridFrontImageFile.Text))
+        if (e.SelectedItem == null)
         {
-            _frontMasterSprite = Utility.LoadTexture(_gridFrontImageFile.Text);
+            _frontGridImage = string.Empty;
+            /*
+            _frontMasterSprite = new ImageTexture(); //maybe set to blank white?
+            UpdatePreview();
+            return;
+            */
+        }
+
+        {
+            var a = e.SelectedItem;
+            _frontGridImage = a.AssetId.ToString();
+        }
+
+        //ProjectService.Instance.FetchImageAsync(a, UpdateFrontGridTexture);
+        UpdatePreview();
+    }
+
+    private async void BackImageSelected(object sender, SelectedEventArgs<Asset> e)
+    {
+        if (e.SelectedItem == null)
+        {
+            _backGridImage = string.Empty;
+            /*
+            _backMasterSprite = new ImageTexture(); //maybe set to blank white?
+            UpdatePreview();
+            return;
+            */
         }
         else
         {
-            _frontMasterSprite = null;
+            var a = e.SelectedItem;
+            _backGridImage = a.AssetId.ToString();
         }
-
         UpdatePreview();
-    }
 
-    private void LoadBackGridFile(string newtext)
-    {
-        //Get the texture
-        if (File.Exists(_gridBackImageFile.Text))
-        {
-            _backMasterSprite = Utility.LoadTexture(_gridBackImageFile.Text);
-        }
-        else
-        {
-            _backMasterSprite = null;
-        }
-
-        UpdatePreview();
-    }
-
-    private void GetFrontFile()
-    {
-        ShowFileDialog("Select Front Image File", FrontFileSelected);
-    }
-
-    private void FrontFileSelected(string file)
-    {
-        _gridFrontImageFile.Text = file;
-
-        _frontMasterSprite = Utility.LoadTexture(file);
-
-        UpdatePreview();
-    }
-
-    private void GetBackFile()
-    {
-        ShowFileDialog("Select Back Image File", BackFileSelected);
-    }
-
-    private void BackFileSelected(string file)
-    {
-        _gridBackImageFile.Text = file;
-        _backMasterSprite = Utility.LoadTexture(file);
-
-        UpdatePreview();
+        //ProjectService.Instance.FetchImageAsync(a, UpdateBackGridTexture);
     }
 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
@@ -459,11 +460,11 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void AddGridParameters(Dictionary<string, object> d)
     {
-        d.Add("FrontMasterSprite", _frontMasterSprite);
-        d.Add("BackMasterSprite", _backMasterSprite);
+        d.Add("FrontGridImageKey", _frontGridImage);
+        d.Add("BackGridImageKey", _backGridImage);
         d.Add("GridRows", _gridRows);
         d.Add("GridCols", _gridCols);
-        d.Add("GridCount", _gridCols);
+        d.Add("GridCount", _gridCount);
 
         d.Add("Mode", VcToken.TokenBuildMode.Grid);
         d.Add("DifferentBack", true);
@@ -680,6 +681,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     }
 
     private Project _currentProject;
+
     public override Project CurrentProject
     {
         get => _currentProject;
@@ -755,6 +757,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
                     _quickSuitColors[i].Color = quickData[i].BackgroundColor;
                     _quickSuitValues[i].Text = quickData[i].Caption;
                 }
+
                 if (quickData.Count > 0)
                 {
                     _quickBackColor.Color = quickData[0].CardBackColor;
@@ -770,10 +773,12 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
             {
                 _gridRowCount.Text = prototype.Parameters["GridRows"].ToString();
             }
+
             if (prototype.Parameters.ContainsKey("GridCols"))
             {
                 _gridColCount.Text = prototype.Parameters["GridCols"].ToString();
             }
+
             if (prototype.Parameters.ContainsKey("GridCount"))
             {
                 _gridCardCount.Text = prototype.Parameters["GridCount"].ToString();

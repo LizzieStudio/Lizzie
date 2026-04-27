@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Godot;
+using Lizzie.AssetManagement;
 
 public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 {
@@ -52,6 +53,16 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
     private Button _editBackTemplateButton;
     private OptionButton _datasetPicker;
     private Button _datasetEditorButton;
+
+    //Grid Tab elements
+    private ImageSelector _gridFrontImageSelector;
+    private ImageSelector _gridBackImageSelector;
+
+    private LineEdit _gridRowCount;
+    private LineEdit _gridColCount;
+    private LineEdit _gridCardCount;
+
+    private CheckButton _gridSingleBack;
 
     public override void _Ready()
     {
@@ -110,6 +121,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         _preview.ItemSelected += PreviewOnItemSelected;
 
         InitializeTemplates();
+        InitializeGridBindings();
 
         OnQuickBackCheckboxChange(); //just to set the initial line visibility in case someone messed with the control.
         OnCustomBackCheckboxChange();
@@ -138,6 +150,87 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         _datasetEditorButton.Pressed += EditDataset;
 
         UpdateTemplateTab();
+    }
+
+    private void InitializeGridBindings()
+    {
+        _gridFrontImageSelector = GetNode<ImageSelector>("%FrontImageSelector");
+        _gridFrontImageSelector.ImageSelected += FrontImageSelected;
+        _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+
+        _gridBackImageSelector = GetNode<ImageSelector>("%BackImageSelector");
+        _gridBackImageSelector.ImageSelected += BackImageSelected;
+        _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+
+        _gridRowCount = GetNode<LineEdit>("%GridRows");
+        _gridRowCount.TextChanged += t => GenerateGridTokens();
+        _gridColCount = GetNode<LineEdit>("%GridCols");
+        _gridColCount.TextChanged += t => GenerateGridTokens();
+        _gridCardCount = GetNode<LineEdit>("%GridCardCount");
+        _gridCardCount.TextChanged += t => GenerateGridTokens();
+
+        _gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
+        _gridSingleBack.Pressed += GenerateGridTokens;
+    }
+
+    private string _frontGridImage;
+    private string _backGridImage;
+
+    private async void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
+    {
+        if (e.SelectedItem == null)
+        {
+            _frontGridImage = string.Empty;
+            /*
+            _frontMasterSprite = new ImageTexture(); //maybe set to blank white?
+            UpdatePreview();
+            return;
+            */
+        }
+
+        {
+            var a = e.SelectedItem;
+            _frontGridImage = a.AssetId.ToString();
+        }
+
+        //ProjectService.Instance.FetchImageAsync(a, UpdateFrontGridTexture);
+        UpdatePreview();
+    }
+
+    private async void BackImageSelected(object sender, SelectedEventArgs<Asset> e)
+    {
+        if (e.SelectedItem == null)
+        {
+            _backGridImage = string.Empty;
+            /*
+            _backMasterSprite = new ImageTexture(); //maybe set to blank white?
+            UpdatePreview();
+            return;
+            */
+        }
+        else
+        {
+            var a = e.SelectedItem;
+            _backGridImage = a.AssetId.ToString();
+        }
+        UpdatePreview();
+
+        //ProjectService.Instance.FetchImageAsync(a, UpdateBackGridTexture);
+    }
+
+    private int _gridRows;
+    private int _gridCols;
+    private int _gridCount;
+
+    private void GenerateGridTokens()
+    {
+        int.TryParse(_gridRowCount.Text, out _gridRows);
+        int.TryParse(_gridColCount.Text, out _gridCols);
+        int.TryParse(_gridCardCount.Text, out _gridCount);
+
+        _preview.ItemCount = _gridCount;
+
+        ChangePreviewToken(0);
     }
 
     private void EditFrontTemplate()
@@ -460,8 +553,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
             //grid
             case 2:
-                d.Add("Mode", VcToken.TokenBuildMode.Grid);
-                d.Add("DifferentBack", false);
+                AddGridParameters(d);
                 break;
 
             //template
@@ -506,6 +598,21 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
         DataSet = ProjectService.Instance.GetDataSetByName(_textureContext.DataSet?.Name);
         MultipleCreateMode = (DataSet != null);
+        WidthHint = ParamToFloat(_heightInput.Text) / 10f;
+        HeightHint = ParamToFloat(_heightInput.Text) / 10f;
+    }
+
+    private void AddGridParameters(Dictionary<string, object> d)
+    {
+        d.Add("FrontGridImageKey", _frontGridImage);
+        d.Add("BackGridImageKey", _backGridImage);
+        d.Add("GridRows", _gridRows);
+        d.Add("GridCols", _gridCols);
+        d.Add("GridCount", _gridCount);
+
+        d.Add("Mode", VcToken.TokenBuildMode.Grid);
+        d.Add("DifferentBack", true);
+        MultipleCreateMode = true;
         WidthHint = ParamToFloat(_heightInput.Text) / 10f;
         HeightHint = ParamToFloat(_heightInput.Text) / 10f;
     }
@@ -562,7 +669,12 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
     private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
     {
-        _curToken = e.Index;
+        ChangePreviewToken(e.Index);
+    }
+
+    private void ChangePreviewToken(int token)
+    {
+        _curToken = token;
         UpdatePreview();
     }
 

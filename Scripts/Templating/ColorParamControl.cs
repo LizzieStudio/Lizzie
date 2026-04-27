@@ -41,8 +41,17 @@ public partial class ColorParamControl : HBoxContainer, IParamControl
     private void MapParam()
     {
         _label.Text = _parameter.Name;
-        _value.Text = _parameter.Value.ToString();
-        _colorPicker.Color = new Color(_parameter.Value);
+        _value.Text = _parameter.Value;
+        var c = new Color(Colors.Black);
+        try
+        {
+            c = new Color(_parameter.Value);
+        }
+        catch
+        {
+            c = new Color(Colors.Black);
+        }
+        _colorPicker.Color = c;
     }
 
     public void SetParameter(TemplateParameter parameter)
