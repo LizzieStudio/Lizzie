@@ -83,6 +83,23 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         //register for events
         EventBus.Instance.Subscribe<TemplateChangedEvent>(TemplateChanged);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(DataSetChanged);
+        EventBus.Instance.Subscribe<ImageChangedEvent>(ImageChanged);
+    }
+
+    private void ImageChanged(ImageChangedEvent obj)
+    {
+        //reload image selectors
+        var f = _gridFrontImageSelector.SelectedImage;
+        var b = _gridBackImageSelector.SelectedImage;
+        
+        _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+        _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
+
+        //try to re-select the items
+        _gridFrontImageSelector.SelectedImage = f;
+        _gridBackImageSelector.SelectedImage = b;
+        
+        UpdatePreview();
     }
 
     private void TemplateChanged(TemplateChangedEvent obj)
@@ -252,10 +269,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private void InitializeGridBindings()
     {
-        //_gridFrontImageFile = GetNode<LineEdit>("%GridFront");
-        //_gridFrontImageFile.TextChanged += LoadFrontGridFile;
-        //_gridFrontImageButton = GetNode<Button>("%GridFrontButton");
-        //_gridFrontImageButton.Pressed += GetFrontFile;
         _gridFrontImageSelector = GetNode<ImageSelector>("%FrontImageSelector");
         _gridFrontImageSelector.ImageSelected += FrontImageSelected;
         _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
@@ -272,7 +285,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridCardCount.TextChanged += t => GenerateGridCards();
 
         _gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
-        _gridSingleBack.Pressed += () => GenerateQuickCards();
+        _gridSingleBack.Pressed += GenerateGridCards;
     }
 
     private string _frontGridImage;
@@ -299,18 +312,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void UpdateFrontGridTexture(Asset a)
-    {
-        if (!a.AssetDownloaded)
-            return;
-
-        var texture = new ImageTexture();
-        texture.SetImage(a.Image);
-        _frontMasterSprite = texture;
-
-        UpdatePreview();
-    }
-
     private async void BackImageSelected(object sender, SelectedEventArgs<Asset> e)
     {
         if (e.SelectedItem == null)
@@ -332,17 +333,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         //ProjectService.Instance.FetchImageAsync(a, UpdateBackGridTexture);
     }
 
-    private void UpdateBackGridTexture(Asset a)
-    {
-        if (!a.AssetDownloaded)
-            return;
-
-        var texture = new ImageTexture();
-        texture.SetImage(a.Image);
-        _backMasterSprite = texture;
-
-        UpdatePreview();
-    }
 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
     {

@@ -57,6 +57,42 @@ public partial class ImageSelector : Control
         }
     }
 
+    public Asset SelectedImage
+    {
+        get
+        {
+            var s = _optionDropdown.GetItemMetadata(_optionDropdown.Selected).ToString();
+
+            if (string.IsNullOrEmpty(s))
+            {
+                return null;
+            }
+            var a = ProjectService.Instance.CurrentProject.Images.First(x => x.Key == s);
+            return a.Value;
+        }
+        set
+        {
+            if (value == null)
+            {
+                _optionDropdown.Select(0);
+                return;
+            }
+
+            var key = _project?.Images.FirstOrDefault(x => x.Value.AssetId == value.AssetId).Key;
+
+            for (int i = 0; i < _optionDropdown.ItemCount; i++)
+            {
+                if (_optionDropdown.GetItemMetadata(i).ToString() == key)
+                {
+                    _optionDropdown.Select(i);
+                    return;
+                }
+            }
+
+            _optionDropdown.Select(0);
+        }
+    }
+
     private void ItemSelected(long index)
     {
         var s = _optionDropdown.GetItemMetadata((int)index).ToString();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using Godot;
 
 public partial class GameController : Node3D
@@ -52,30 +53,14 @@ public partial class GameController : Node3D
 
         if (args.MultipleCreateMode)
         {
-            int cols = (int)Math.Ceiling(Math.Sqrt(args.DataSet.Rows.Count));
-
-            int i = 0;
-            int j = 0;
-
-            float w = args.WidthHint * 1.5f;
-            float h = args.HeightHint * 1.5f;
-
-            foreach (var r in args.DataSet.Rows)
+            var mode = Utility.GetParam<VcToken.TokenBuildMode>(args.Params, "Mode");
+            if (mode == VcToken.TokenBuildMode.Grid)
             {
-                var mc = SingleComponentSpawn(args, r.Key);
-
-                if (mc != null)
-                {
-                    mc.SpawnDelta = new Vector3(w * i, 0, h * j);
-                    i++;
-                    if (i == cols)
-                    {
-                        i = 0;
-                        j++;
-                    }
-
-                    components.Add(mc);
-                }
+                SpawnGridMultiples(args, components);
+            }
+            else
+            {
+                SpawnDataSetMultiples(args, components);
             }
         }
         else
@@ -86,6 +71,74 @@ public partial class GameController : Node3D
         }
 
         _mainScene.EnterSpawnMode(components);
+    }
+
+    private void SpawnGridMultiples(CreateObjectEventArgs args, List<VisualComponentBase> components)
+    {
+        var gridRows = Utility.GetParam<int>(args.Params, "GridRows");
+        var gridCols = Utility.GetParam<int>(args.Params, "GridCols");
+        var cardCount = Utility.GetParam<int>(args.Params, "GridCount");
+        
+        float w = args.WidthHint * 1.5f;
+        float h = args.HeightHint * 1.5f;
+
+        //we map the tokens into as much of a square as possible, regardless of the grid dims.
+        int cols = (int)Math.Ceiling(Math.Sqrt(cardCount));
+        int ci = 0;
+        int cj = 0;
+
+        int cardNum = 0;
+
+        for(int i = 0; i < gridRows; i++)
+            for (int j = 0; j < gridCols; j++)
+            {
+                var mc = SingleComponentSpawn(args, cardNum.ToString());
+
+                if (mc != null)
+                {
+                    mc.SpawnDelta = new Vector3(w * ci, 0, h * cj);
+                    components.Add(mc);
+                }
+
+                cardNum++;
+                if (cardNum >= cardCount) return;
+
+                ci++;
+                if (ci == cols)
+                {
+                    ci = 0;
+                    cj++;
+                }
+}
+    }
+
+    private void SpawnDataSetMultiples(CreateObjectEventArgs args, List<VisualComponentBase> components)
+    {
+        int cols = (int)Math.Ceiling(Math.Sqrt(args.DataSet.Rows.Count));
+
+        int i = 0;
+        int j = 0;
+
+        float w = args.WidthHint * 1.5f;
+        float h = args.HeightHint * 1.5f;
+
+        foreach (var r in args.DataSet.Rows)
+        {
+            var mc = SingleComponentSpawn(args, r.Key);
+
+            if (mc != null)
+            {
+                mc.SpawnDelta = new Vector3(w * i, 0, h * j);
+                i++;
+                if (i == cols)
+                {
+                    i = 0;
+                    j++;
+                }
+
+                components.Add(mc);
+            }
+        }
     }
 
     private VisualComponentBase SingleComponentSpawn(CreateObjectEventArgs args, string row)

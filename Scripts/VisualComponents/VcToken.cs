@@ -706,13 +706,13 @@ public partial class VcToken : VisualComponentFlat
 
         if (_mode == TokenBuildMode.Grid)
         {
-            FaceSprite.Hframes = _gridCols;
-            FaceSprite.Vframes = _gridRows;
+            FaceSprite.Hframes = Math.Max(_gridCols,1);
+            FaceSprite.Vframes = Math.Max(_gridRows,1);
             int.TryParse(DataSetRow, out var r);
             FaceSprite.Frame = r;
 
             var ts = FaceTexture.GetSize();
-            var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
+            var cv = new Vector2(ts.X / Math.Max(_gridCols,1), ts.Y / Math.Max(_gridRows,1));
             pixelSize = PixelSize(cv);
         }
 
@@ -831,6 +831,7 @@ public partial class VcToken : VisualComponentFlat
 
         _gridRows = Utility.GetParam<int>(parameters, "GridRows");
         _gridCols = Utility.GetParam<int>(parameters, "GridCols");
+        _gridCount = Utility.GetParam<int>(parameters, "GridCount");
         //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
 
         if (parameters.TryGetValue("Type", out var tokenType))
@@ -936,6 +937,8 @@ public partial class VcToken : VisualComponentFlat
     private int _gridRows;
     private int _gridCols;
 
+    private int _gridCount;
+    
     //private int _gridIndex;
 
     public enum TokenType
