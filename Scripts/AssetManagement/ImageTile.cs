@@ -52,34 +52,11 @@ public partial class ImageTile : MarginContainer
     public async void Refresh()
     {
         _imageName.Text = _asset.Name;
-        if (!_asset.AssetDownloaded)
-        {
-            //TODO move this to a better spot - share resources, etc
-            try
-            {
-                var service = new CloudAssetService();
-                await service.InitializeAsync(
-                    CloudProviderType.GoogleDrive,
-                    string.Empty,
-                    string.Empty
-                );
+        await ProjectService.Instance.FetchImageAsync(_asset, OnImageFetched);
+    }
 
-                var r = await service.DownloadImageAsync(_asset.CloudPath);
-
-                if (!string.IsNullOrWhiteSpace(r.Item1))
-                {
-                    GD.PrintErr(r.Item1);
-                    return;
-                }
-
-                _asset.Image = r.Item2;
-                _asset.AssetDownloaded = true;
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"Tile Refresh failed: {ex.Message}");
-            }
-        }
+    private void OnImageFetched(Asset asset)
+    {
         _thumbnail.Texture = ImageTexture.CreateFromImage(_asset.Image);
     }
 }

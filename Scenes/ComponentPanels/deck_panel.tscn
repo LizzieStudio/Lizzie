@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bifubswbhqkkp"]
 
-[ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_8qg10"]
 [ext_resource type="Script" uid="uid://bidlim05r6ggr" path="res://Scripts/ComponentPanelResults/DeckPanelDialogResult.cs" id="1_a0rs8"]
+[ext_resource type="PackedScene" uid="uid://byv8s3wlrrbwb" path="res://Scenes/Controls/ImageSelector.tscn" id="2_a2j8a"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="3_0meyn"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_ud6kl"]
 
@@ -11,6 +11,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
@@ -24,6 +26,7 @@ theme_override_constants/separation = 20
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer" unique_id=1515338731]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="GridContainer" type="GridContainer" parent="HBoxContainer/VBoxContainer" unique_id=707709142]
 layout_mode = 2
@@ -117,9 +120,10 @@ theme_override_constants/margin_bottom = 6
 [node name="TabContainer" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1050980002]
 unique_name_in_owner = true
 layout_mode = 2
-current_tab = 0
+current_tab = 1
 
 [node name="Quick" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=2108398528]
+visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
@@ -316,13 +320,13 @@ text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9,  J, SKIP, +2)"
 
 [node name="Grid Image" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1791511184]
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 metadata/_tab_index = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image" unique_id=500526234]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
@@ -342,17 +346,10 @@ size_flags_horizontal = 0
 text = "Front  "
 horizontal_alignment = 2
 
-[node name="GridFront" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=243905940]
+[node name="FrontImageSelector" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=1463407889 instance=ExtResource("2_a2j8a")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "(file)"
-alignment = 2
-
-[node name="GridFrontButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=145671109]
-unique_name_in_owner = true
-layout_mode = 2
-icon = ExtResource("1_8qg10")
 
 [node name="HBoxContainer6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=234277260]
 layout_mode = 2
@@ -363,17 +360,10 @@ size_flags_horizontal = 0
 text = "Back  "
 horizontal_alignment = 2
 
-[node name="GridBack" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=582668875]
+[node name="BackImageSelector" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=592107688 instance=ExtResource("2_a2j8a")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "(file)"
-alignment = 2
-
-[node name="GridBackButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=961532060]
-unique_name_in_owner = true
-layout_mode = 2
-icon = ExtResource("1_8qg10")
 
 [node name="GridSingleBack" type="CheckButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=1798620749]
 unique_name_in_owner = true
@@ -381,60 +371,49 @@ layout_mode = 2
 size_flags_horizontal = 0
 text = "Single Back"
 
-[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image" unique_id=113476529]
-layout_mode = 2
-theme_override_constants/margin_left = 6
-theme_override_constants/margin_top = 6
-theme_override_constants/margin_right = 6
-theme_override_constants/margin_bottom = 6
-
-[node name="VBoxContainer2" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2" unique_id=70213115]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2" unique_id=1749619235]
+[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=1749619235]
 layout_mode = 2
 
-[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer7" unique_id=1385307147]
+[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=1385307147]
 layout_mode = 2
 text = "Cols  "
 horizontal_alignment = 2
 
-[node name="GridCols" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer7" unique_id=354922630]
+[node name="GridCols" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=354922630]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 alignment = 2
 
-[node name="HBoxContainer8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2" unique_id=1991433002]
+[node name="HBoxContainer8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=1991433002]
 layout_mode = 2
 
-[node name="Label12" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer8" unique_id=1337010761]
+[node name="Label12" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1337010761]
 layout_mode = 2
 text = "Rows  "
 horizontal_alignment = 2
 
-[node name="GridRows" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer8" unique_id=1443952497]
+[node name="GridRows" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1443952497]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 alignment = 2
 
-[node name="HBoxContainer9" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2" unique_id=443313381]
+[node name="HBoxContainer9" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer" unique_id=443313381]
 layout_mode = 2
 
-[node name="Label13" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer9" unique_id=437932328]
+[node name="Label13" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer9" unique_id=437932328]
 layout_mode = 2
 text = "# Cards  "
 horizontal_alignment = 2
 
-[node name="GridCardCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer2/VBoxContainer2/HBoxContainer9" unique_id=884984682]
+[node name="GridCardCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Grid Image/MarginContainer/VBoxContainer/HBoxContainer9" unique_id=884984682]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 alignment = 2
 
 [node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1656811611]
