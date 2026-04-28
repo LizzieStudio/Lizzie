@@ -468,6 +468,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         d.Add("Mode", VcToken.TokenBuildMode.Grid);
         d.Add("DifferentBack", true);
+        d.Add("GridSingleBack", _gridSingleBack.ButtonPressed);
     }
 
     private void AddTemplateParameters(Dictionary<string, object> d)

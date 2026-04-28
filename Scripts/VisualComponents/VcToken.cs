@@ -264,6 +264,7 @@ public partial class VcToken : VisualComponentBase
         _gridRows = Utility.GetParam<int>(parameters, "GridRows");
         _gridCols = Utility.GetParam<int>(parameters, "GridCols");
         _gridCount = Utility.GetParam<int>(parameters, "GridCount");
+        _gridSingleBack = Utility.GetParam<bool>(parameters, "GridSingleBack");
         //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
 
         if (parameters.TryGetValue("Type", out var tokenType))
@@ -885,6 +886,17 @@ public partial class VcToken : VisualComponentBase
         _mapBackTextureRequired = false;
         _backTextureGenerated = true;
         _backMaterial.AlbedoTexture = BackTexture;
+
+        if (_mode == TokenBuildMode.Grid && !_gridSingleBack)
+        {
+            int.TryParse(DataSetRow, out var r);
+            int cols = Math.Max(_gridCols, 1);
+            int rows = Math.Max(_gridRows, 1);
+            int col = r % cols;
+            int row = r / cols;
+            _backMaterial.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
+            _backMaterial.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
+        }
     }
 
     private void CreateQuickBackTexture(TextureFactory textureFactory)
@@ -987,6 +999,7 @@ public partial class VcToken : VisualComponentBase
     private int _gridCols;
 
     private int _gridCount;
+    private bool _gridSingleBack;
 
     //private int _gridIndex;
 

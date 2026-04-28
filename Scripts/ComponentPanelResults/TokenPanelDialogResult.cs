@@ -612,6 +612,7 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
 
         d.Add("Mode", VcToken.TokenBuildMode.Grid);
         d.Add("DifferentBack", true);
+        d.Add("GridSingleBack", _gridSingleBack.ButtonPressed);
         MultipleCreateMode = true;
         WidthHint = ParamToFloat(_heightInput.Text) / 10f;
         HeightHint = ParamToFloat(_heightInput.Text) / 10f;

@@ -717,6 +717,7 @@ public partial class VcDeck : VisualComponentGroup
     private int _gridRows;
     private int _gridCols;
     private int _gridCount;
+    private bool _gridSingleBack;
 
     private void BuildGrid(Dictionary<string, object> parameters, TextureFactory textureFactory)
     {
@@ -727,6 +728,7 @@ public partial class VcDeck : VisualComponentGroup
         _gridRows = Utility.GetParam<int>(parameters, "GridRows");
         _gridCols = Utility.GetParam<int>(parameters, "GridCols");
         _gridCount = Utility.GetParam<int>(parameters, "GridCount");
+        _gridSingleBack = Utility.GetParam<bool>(parameters, "GridSingleBack");
 
         CreateGridCards(textureFactory);
     }
@@ -913,6 +915,17 @@ public partial class VcDeck : VisualComponentGroup
 
                     _frontSprite.PixelSize = PixelSize(vcf.BackTexture.GetSize());
                     _frontSprite.Texture = vcf.BackTexture;
+
+                    if (_mode == VcToken.TokenBuildMode.Grid && !_gridSingleBack)
+                    {
+                        _frontSprite.Frame = 0;
+                        _frontSprite.Hframes = _gridCols;
+                        _frontSprite.Vframes = _gridRows;
+                        var ts = _frontSprite.Texture.GetSize();
+                        var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
+                        _frontSprite.PixelSize = PixelSize(cv);
+                    }
+
                     _frontTextureReady = true;
                 }
             }
