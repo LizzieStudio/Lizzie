@@ -47,8 +47,6 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
-    public virtual bool ShowFace { get; protected set; } = true;
-
     public void ForceFace()
     {
         SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, 0));
@@ -129,16 +127,13 @@ public partial class VcToken : VisualComponentBase
     }
 
     private float _flipRate = 720; //degrees per second
-    private int _rotMult = 1;
     private float _targetZ;
     private bool _flipInProcess;
 
     private CommandResponse StartFlip()
     {
         _flipInProcess = true;
-        ShowFace = !ShowFace;
-        _rotMult = ShowFace ? -1 : 1;
-        _targetZ = ShowFace ? 0 : 180;
+        _targetZ = RotationDegrees.Z < 90 ? 180 : 0;
 
         var c = new Change
         {
@@ -159,23 +154,12 @@ public partial class VcToken : VisualComponentBase
 
     private void ProcessFlip(double delta)
     {
-        var curZ = RotationDegrees.Z;
-        float newZ = curZ + (_flipRate * (float)delta * _rotMult);
-        if (ShowFace)
+        float dir = _targetZ == 0 ? -1 : 1;
+        float newZ = RotationDegrees.Z + (_flipRate * (float)delta * dir);
+        if (dir * (newZ - _targetZ) >= 0)
         {
-            if (newZ < _targetZ)
-            {
-                newZ = _targetZ;
-                _flipInProcess = false;
-            }
-        }
-        else
-        {
-            if (newZ > _targetZ)
-            {
-                newZ = _targetZ;
-                _flipInProcess = false;
-            }
+            newZ = _targetZ;
+            _flipInProcess = false;
         }
 
         SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
