@@ -918,7 +918,8 @@ public partial class VcDeck : VisualComponentGroup
 
                     if (_mode == VcToken.TokenBuildMode.Grid && !_gridSingleBack)
                     {
-                        _frontSprite.Frame = 0;
+                        int.TryParse(vcf.DataSetRow, out var frontFrame);
+                        _frontSprite.Frame = frontFrame;
                         _frontSprite.Hframes = _gridCols;
                         _frontSprite.Vframes = _gridRows;
                         var ts = _frontSprite.Texture.GetSize();
@@ -943,7 +944,8 @@ public partial class VcDeck : VisualComponentGroup
 
                     if (_mode == VcToken.TokenBuildMode.Grid)
                     {
-                        _backSprite.Frame = 0;
+                        int.TryParse(vcb.DataSetRow, out var lastFrame);
+                        _backSprite.Frame = lastFrame;
                         _backSprite.Hframes = _gridCols;
                         _backSprite.Vframes = _gridRows;
                         var ts = _backSprite.Texture.GetSize();
