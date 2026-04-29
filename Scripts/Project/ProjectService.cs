@@ -188,6 +188,15 @@ public partial class ProjectService : Node
         );
     }
 
+    public void DeletePrototype(Guid prototypeRef)
+    {
+        if (CurrentProject == null)
+            return;
+        CurrentProject.Prototypes.Remove(prototypeRef);
+        SaveProject(CurrentProject);
+        EventBus.Instance.Publish(new DeletePrototypeEvent { PrototypeRef = prototypeRef });
+    }
+
     public void UpdateImage(Asset image)
     {
         if (CurrentProject == null || image == null)

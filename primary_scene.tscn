@@ -17,6 +17,48 @@ _textureFactory = NodePath("UI/TextureFactory")
 script = ExtResource("2_a0mv7")
 highlightFontColor = Color(0.54902, 0.694118, 1, 1)
 
+[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=571287879]
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 0
+
+[node name="Panel" type="Panel" parent="UI/MarginContainer" unique_id=378692394]
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+
+[node name="MenuBar" type="MenuBar" parent="UI/MarginContainer/Panel" unique_id=672250976]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 31.0
+grow_horizontal = 2
+
+[node name="File" type="PopupMenu" parent="UI/MarginContainer/Panel/MenuBar" unique_id=709451553]
+unique_name_in_owner = true
+oversampling_override = 1.0
+title = "File"
+size = Vector2i(168, 100)
+item_count = 3
+item_0/text = "Project Manager"
+item_0/id = 0
+item_1/text = "Open Project"
+item_1/id = 1
+item_2/text = "Save Project"
+item_2/id = 2
+
+[node name="Edit" type="PopupMenu" parent="UI/MarginContainer/Panel/MenuBar" unique_id=1056068936]
+unique_name_in_owner = true
+title = "Edit"
+
+[node name="Insert" type="PopupMenu" parent="UI/MarginContainer/Panel/MenuBar" unique_id=1536859569]
+unique_name_in_owner = true
+title = "Insert"
+
+[node name="Help" type="PopupMenu" parent="UI/MarginContainer/Panel/MenuBar" unique_id=1339962661]
+unique_name_in_owner = true
+title = "Help"
+
 [node name="Hand" type="Panel" parent="UI" unique_id=1988859394]
 visible = false
 custom_minimum_size = Vector2(0, 200)
@@ -58,31 +100,6 @@ text = "Play 2D"
 [node name="Play3D" type="Button" parent="UI/Mode" unique_id=1596224388]
 layout_mode = 2
 text = "Play 3D"
-
-[node name="MenuBar" type="MenuBar" parent="UI" unique_id=672250976]
-offset_right = 183.0
-offset_bottom = 31.0
-
-[node name="File" type="PopupMenu" parent="UI/MenuBar" unique_id=709451553]
-oversampling_override = 1.0
-title = "File"
-size = Vector2i(168, 100)
-item_count = 3
-item_0/text = "Project Manager"
-item_0/id = 0
-item_1/text = "Open Project"
-item_1/id = 1
-item_2/text = "Save Project"
-item_2/id = 2
-
-[node name="Edit" type="PopupMenu" parent="UI/MenuBar" unique_id=1056068936]
-title = "Edit"
-
-[node name="Insert" type="PopupMenu" parent="UI/MenuBar" unique_id=1536859569]
-title = "Insert"
-
-[node name="Help" type="PopupMenu" parent="UI/MenuBar" unique_id=1339962661]
-title = "Help"
 
 [node name="ComponentPopup" type="PopupMenu" parent="UI" unique_id=1851200208]
 oversampling_override = 1.0

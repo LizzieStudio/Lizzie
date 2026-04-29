@@ -118,7 +118,99 @@ public partial class PrototypeManifest : Window
     {
         var prototypeRef = Guid.Parse(item.GetMetadata(0).AsString());
 
-        EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = prototypeRef });
+        switch (id)
+        {
+            case 0:
+                EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = prototypeRef });
+                break;
+
+            case 1:
+                SpawnPrototype(prototypeRef);
+                break;
+
+            case 2:
+                DuplicatePrototype(prototypeRef);
+                break;
+
+            case 3:
+                DeletePrototype(prototypeRef);
+                break;
+        }
+    }
+
+    private void SpawnPrototype(Guid prototypeRef)
+    {
+        OnClose();
+        EventBus.Instance.Publish(new SpawnPrototypeEvent { PrototypeRef = prototypeRef });
+    }
+
+    private void DeletePrototype(Guid prototypeRef)
+    {
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                prototypeRef,
+                out var prototype
+            )
+        )
+            return;
+
+        var dialog = new ConfirmationDialog();
+        dialog.Title = "Delete Prototype";
+        dialog.DialogText = $"Delete \"{prototype.Name}\"? This cannot be undone.";
+        dialog.OkButtonText = "Delete";
+
+        dialog.Confirmed += () =>
+        {
+            ProjectService.Instance.DeletePrototype(prototypeRef);
+            Refresh(_prototypeCounts);
+            dialog.QueueFree();
+        };
+        dialog.Canceled += () => dialog.QueueFree();
+
+        AddChild(dialog);
+        dialog.PopupCentered();
+    }
+
+    private void DuplicatePrototype(Guid prototypeRef)
+    {
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                prototypeRef,
+                out var original
+            )
+        )
+            return;
+
+        var existingNames = ProjectService.Instance.CurrentProject.Prototypes.Values
+            .Select(p => p.Name)
+            .ToHashSet();
+
+        // Strip any existing trailing " (N)" suffix before generating the new name
+        var baseName = System.Text.RegularExpressions.Regex.Replace(
+            original.Name,
+            @"\s*\(\d+\)$",
+            string.Empty
+        );
+
+        int n = 1;
+        string newName;
+        do
+        {
+            newName = $"{baseName} ({n})";
+            n++;
+        } while (existingNames.Contains(newName));
+
+        var duplicate = new Prototype
+        {
+            PrototypeRef = Guid.NewGuid(),
+            Name = newName,
+            Type = original.Type,
+            Parameters = new Dictionary<string, object>(original.Parameters),
+        };
+        duplicate.Parameters["ComponentName"] = newName;
+
+        ProjectService.Instance.UpdatePrototype(duplicate);
+        Refresh(_prototypeCounts);
     }
 
     private bool _refreshRequired;
@@ -146,6 +238,11 @@ public partial class PrototypeManifest : Window
             return;
 
         Texture2D pencil = ResourceLoader.Load<Texture2D>("res://Textures/UI/pencil.png");
+        Texture2D trash = ResourceLoader.Load<Texture2D>("res://Textures/UI/trash-can.png");
+        Texture2D copy =
+            ResourceLoader.Load<Texture2D>("res://Textures/UI/content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg");
+        Texture2D spawn = ResourceLoader.Load<Texture2D>("res://Textures/UI/bottom.png");
+
 
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
@@ -186,6 +283,9 @@ public partial class PrototypeManifest : Window
 
             item.SetMetadata(0, prototype.PrototypeRef.ToString());
             item.AddButton(2, pencil);
+            item.AddButton(2, spawn);
+            item.AddButton(2, copy);
+            item.AddButton(2, trash);
         }
     }
 
