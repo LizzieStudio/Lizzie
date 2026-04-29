@@ -91,9 +91,17 @@ public partial class CardPanelDialogResult : ComponentPanelDialogResult
     public override void DisplayPrototype(Prototype prototype)
     {
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height") ? prototype.Parameters["Height"].ToString() : "";
-        _widthInput.Text = prototype.Parameters.ContainsKey("Width") ? prototype.Parameters["Width"].ToString() : "";
-        _frontImage.Text = prototype.Parameters.ContainsKey("FrontImage") ? prototype.Parameters["FrontImage"].ToString() : "";
-        _backImage.Text = prototype.Parameters.ContainsKey("BackImage") ? prototype.Parameters["BackImage"].ToString() : "";
+        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
+            ? prototype.Parameters["Height"].ToString()
+            : "";
+        _widthInput.Text = prototype.Parameters.ContainsKey("Width")
+            ? prototype.Parameters["Width"].ToString()
+            : "";
+        _frontImage.Text = prototype.Parameters.ContainsKey("FrontImage")
+            ? prototype.Parameters["FrontImage"].ToString()
+            : "";
+        _backImage.Text = prototype.Parameters.ContainsKey("BackImage")
+            ? prototype.Parameters["BackImage"].ToString()
+            : "";
     }
 }

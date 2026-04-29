@@ -374,8 +374,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     public override void DisplayPrototype(Prototype prototype)
     {
         _nameInput.Text = prototype.Name;
-        _diameterInput.Text = prototype.Parameters.ContainsKey("Size") ? prototype.Parameters["Size"].ToString() : "";
-        _dieColor.Color = prototype.Parameters.ContainsKey("Color") ? (Color)prototype.Parameters["Color"] : Colors.Black;
+        _diameterInput.Text = prototype.Parameters.ContainsKey("Size")
+            ? prototype.Parameters["Size"].ToString()
+            : "";
+        _dieColor.Color = prototype.Parameters.ContainsKey("Color")
+            ? (Color)prototype.Parameters["Color"]
+            : Colors.Black;
 
         if (
             prototype.Parameters.ContainsKey("Sides")
@@ -446,7 +450,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 if (_frontTemplatePicker.GetItemText(i) == frontTemplateName)
                 {
                     _frontTemplatePicker.Select(i);
-                    _frontTemplate = ProjectService.Instance.CurrentProject.Templates.GetValueOrDefault(frontTemplateName);
+                    _frontTemplate =
+                        ProjectService.Instance.CurrentProject.Templates.GetValueOrDefault(
+                            frontTemplateName
+                        );
                     break;
                 }
             }
@@ -466,7 +473,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                     if (_datasetPicker.GetItemText(i) == datasetName)
                     {
                         _datasetPicker.Select(i);
-                        _textureContext.DataSet = ProjectService.Instance.CurrentProject.Datasets.GetValueOrDefault(datasetName);
+                        _textureContext.DataSet =
+                            ProjectService.Instance.CurrentProject.Datasets.GetValueOrDefault(
+                                datasetName
+                            );
                         break;
                     }
                 }

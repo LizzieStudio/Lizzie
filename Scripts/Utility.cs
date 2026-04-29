@@ -273,7 +273,8 @@ public partial class Utility : Node
     {
         var sides = GetParam<QuickTextureField[]>(parameters, "Sides");
 
-        if (sides == null) return $"res://Scenes/VisualComponents/Dice/VcD6s.tscn";
+        if (sides == null)
+            return $"res://Scenes/VisualComponents/Dice/VcD6s.tscn";
 
         string shape = string.Empty;
 

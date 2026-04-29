@@ -117,10 +117,18 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
     public override void DisplayPrototype(Prototype prototype)
     {
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height") ? prototype.Parameters["Height"].ToString() : "";
-        _widthInput.Text = prototype.Parameters.ContainsKey("Width") ? prototype.Parameters["Width"].ToString() : "";
-        _lengthInput.Text = prototype.Parameters.ContainsKey("Length") ? prototype.Parameters["Length"].ToString() : "";
-        _colorPicker.Color = prototype.Parameters.ContainsKey("Color") ? (Color)prototype.Parameters["Color"] : Colors.Red;
+        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
+            ? prototype.Parameters["Height"].ToString()
+            : "";
+        _widthInput.Text = prototype.Parameters.ContainsKey("Width")
+            ? prototype.Parameters["Width"].ToString()
+            : "";
+        _lengthInput.Text = prototype.Parameters.ContainsKey("Length")
+            ? prototype.Parameters["Length"].ToString()
+            : "";
+        _colorPicker.Color = prototype.Parameters.ContainsKey("Color")
+            ? (Color)prototype.Parameters["Color"]
+            : Colors.Red;
 
         Activate();
     }

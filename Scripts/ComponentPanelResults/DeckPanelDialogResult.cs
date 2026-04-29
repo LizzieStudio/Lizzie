@@ -47,8 +47,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
     private OptionButton _cardSizes;
 
-  
-
     private ComponentPreview _componentPreview;
 
     private OptionButton _frontTemplatePicker;
@@ -59,7 +57,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private Button _datasetEditorButton;
 
     private GridEntry _gridEntry;
-    
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -79,7 +76,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _gridEntry = GetNode<GridEntry>("%GridEntry");
         _gridEntry.GridUpdated += OnGridUpdated;
         _gridEntry.CardCountUpdated += OnGridCardCountUpdate;
-        
+
         //register for events
         EventBus.Instance.Subscribe<TemplateChangedEvent>(TemplateChanged);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(DataSetChanged);
@@ -100,7 +97,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     {
         UpdatePreview();
     }
-
 
     private void TemplateChanged(TemplateChangedEvent obj)
     {
@@ -240,7 +236,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _cardSizes.ItemSelected += StandardSizeChanged;
 
         InitializeQuickBindings();
-
     }
 
     private void InitializeQuickBindings()
@@ -266,7 +261,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _quickBackText.TextChanged += t => GenerateQuickCards();
     }
 
- 
     private void ComponentPreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
     {
         _curCard = e.Index;
@@ -303,7 +297,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     {
         UpdatePreview();
     }
-
 
     private int _suitCount;
 
@@ -489,8 +482,6 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private Texture2D _frontMasterSprite;
     private Texture2D _backMasterSprite;
 
-
-
     private TextureContext _textureContext = new();
 
     private void OnDatasetChanged(long index)
@@ -632,8 +623,12 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     public override void DisplayPrototype(Prototype prototype)
     {
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height") ? prototype.Parameters["Height"].ToString() : "";
-        _widthInput.Text = prototype.Parameters.ContainsKey("Width") ? prototype.Parameters["Width"].ToString() : "";
+        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
+            ? prototype.Parameters["Height"].ToString()
+            : "";
+        _widthInput.Text = prototype.Parameters.ContainsKey("Width")
+            ? prototype.Parameters["Width"].ToString()
+            : "";
 
         if (
             prototype.Parameters.ContainsKey("Mode")

@@ -108,9 +108,15 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
     public override void DisplayPrototype(Prototype prototype)
     {
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height") ? prototype.Parameters["Height"].ToString() : "";
-        _diameterInput.Text = prototype.Parameters.ContainsKey("Diameter") ? prototype.Parameters["Diameter"].ToString() : "";
-        _colorPicker.Color = prototype.Parameters.ContainsKey("Color") ? (Color)prototype.Parameters["Color"] : Colors.Red;
+        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
+            ? prototype.Parameters["Height"].ToString()
+            : "";
+        _diameterInput.Text = prototype.Parameters.ContainsKey("Diameter")
+            ? prototype.Parameters["Diameter"].ToString()
+            : "";
+        _colorPicker.Color = prototype.Parameters.ContainsKey("Color")
+            ? (Color)prototype.Parameters["Color"]
+            : Colors.Red;
 
         Activate();
     }

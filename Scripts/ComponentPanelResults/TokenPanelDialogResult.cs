@@ -206,7 +206,6 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
         //ProjectService.Instance.FetchImageAsync(a, UpdateBackGridTexture);
     }
 
-
     private void EditFrontTemplate()
     {
         EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _frontTemplate?.Name });
@@ -651,14 +650,30 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
     public override void DisplayPrototype(Prototype prototype)
     {
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height") ? prototype.Parameters["Height"].ToString() : "";
-        _widthInput.Text = prototype.Parameters.ContainsKey("Width") ? prototype.Parameters["Width"].ToString() : "";
-        _thicknessInput.Text = prototype.Parameters.ContainsKey("Thickness") ? prototype.Parameters["Thickness"].ToString() : "";
-        _frontImage.Text = prototype.Parameters.ContainsKey("FrontImage") ? prototype.Parameters["FrontImage"].ToString() : "";
-        _backImage.Text = prototype.Parameters.ContainsKey("BackImage") ? prototype.Parameters["BackImage"].ToString() : "";
-        _shapePicker.Select(prototype.Parameters.ContainsKey("Shape") ? (int)prototype.Parameters["Shape"] : 0);
-        _quickBackgroundColor.Color = prototype.Parameters.ContainsKey("FrontBgColor") ? (Color)prototype.Parameters["FrontBgColor"] : Colors.Black;
-        _quickBackgroundColor2.Color = prototype.Parameters.ContainsKey("BackBgColor") ? (Color)prototype.Parameters["BackBgColor"] : Colors.Black;
+        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
+            ? prototype.Parameters["Height"].ToString()
+            : "";
+        _widthInput.Text = prototype.Parameters.ContainsKey("Width")
+            ? prototype.Parameters["Width"].ToString()
+            : "";
+        _thicknessInput.Text = prototype.Parameters.ContainsKey("Thickness")
+            ? prototype.Parameters["Thickness"].ToString()
+            : "";
+        _frontImage.Text = prototype.Parameters.ContainsKey("FrontImage")
+            ? prototype.Parameters["FrontImage"].ToString()
+            : "";
+        _backImage.Text = prototype.Parameters.ContainsKey("BackImage")
+            ? prototype.Parameters["BackImage"].ToString()
+            : "";
+        _shapePicker.Select(
+            prototype.Parameters.ContainsKey("Shape") ? (int)prototype.Parameters["Shape"] : 0
+        );
+        _quickBackgroundColor.Color = prototype.Parameters.ContainsKey("FrontBgColor")
+            ? (Color)prototype.Parameters["FrontBgColor"]
+            : Colors.Black;
+        _quickBackgroundColor2.Color = prototype.Parameters.ContainsKey("BackBgColor")
+            ? (Color)prototype.Parameters["BackBgColor"]
+            : Colors.Black;
 
         if (prototype.Parameters.ContainsKey("QuickFront"))
         {
@@ -740,7 +755,9 @@ public partial class TokenPanelDialogResult : ComponentPanelDialogResult
                     if (_datasetPicker.GetItemText(i) == datasetName)
                     {
                         _datasetPicker.Select(i);
-                        _textureContext.DataSet = _currentProject.Datasets.GetValueOrDefault(datasetName);
+                        _textureContext.DataSet = _currentProject.Datasets.GetValueOrDefault(
+                            datasetName
+                        );
                         break;
                     }
                 }

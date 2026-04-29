@@ -181,8 +181,8 @@ public partial class PrototypeManifest : Window
         )
             return;
 
-        var existingNames = ProjectService.Instance.CurrentProject.Prototypes.Values
-            .Select(p => p.Name)
+        var existingNames = ProjectService
+            .Instance.CurrentProject.Prototypes.Values.Select(p => p.Name)
             .ToHashSet();
 
         // Strip any existing trailing " (N)" suffix before generating the new name
@@ -239,10 +239,10 @@ public partial class PrototypeManifest : Window
 
         Texture2D pencil = ResourceLoader.Load<Texture2D>("res://Textures/UI/pencil.png");
         Texture2D trash = ResourceLoader.Load<Texture2D>("res://Textures/UI/trash-can.png");
-        Texture2D copy =
-            ResourceLoader.Load<Texture2D>("res://Textures/UI/content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg");
+        Texture2D copy = ResourceLoader.Load<Texture2D>(
+            "res://Textures/UI/content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg"
+        );
         Texture2D spawn = ResourceLoader.Load<Texture2D>("res://Textures/UI/bottom.png");
-
 
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();

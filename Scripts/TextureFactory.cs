@@ -119,7 +119,10 @@ public partial class TextureFactory : SubViewport
                 foreach (var asset in pendingAssets)
                 {
                     var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
-                    await ProjectService.Instance.FetchImageAsync(asset, _ => tcs.TrySetResult(true));
+                    await ProjectService.Instance.FetchImageAsync(
+                        asset,
+                        _ => tcs.TrySetResult(true)
+                    );
                     tasks.Add(tcs.Task);
                 }
                 await System.Threading.Tasks.Task.WhenAll(tasks);
@@ -763,7 +766,7 @@ public partial class TextureFactory : SubViewport
         Texture2D texture;
 
         bool externalMode = false;
-        
+
         // "u:<name>" means fetch from the current project's image library
         if (obj.Text != null && obj.Text.StartsWith("u:"))
         {
@@ -780,7 +783,6 @@ public partial class TextureFactory : SubViewport
             }
 
             externalMode = true;
-            
         }
         else
         {
@@ -842,7 +844,7 @@ public partial class TextureFactory : SubViewport
             bgRect.Size = new Vector2(scaleWidth, scaleHeight);
             tr.AddChild(bgRect);
         }
-        
+
         tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
