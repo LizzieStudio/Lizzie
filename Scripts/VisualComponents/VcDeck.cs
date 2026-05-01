@@ -409,7 +409,7 @@ public partial class VcDeck : VisualComponentGroup
 
             case TokenTextureSubViewport.TokenShape.HexFlat:
                 var hf = new ConvexPolygonShape2D();
-                hf.Points = CalcHexPointVertices();
+                hf.Points = CalcHexFlatVertices();
                 ShapeProfiles.Add(new OffsetShape2D(hf));
                 break;
 
@@ -474,8 +474,8 @@ public partial class VcDeck : VisualComponentGroup
         arr[1] = new Vector2(-x, y);
         arr[2] = new Vector2(-x, -y);
         arr[3] = new Vector2(0, -y * 2);
-        arr[4] = new Vector2(-x, -y);
-        arr[5] = new Vector2(-x, y);
+        arr[4] = new Vector2(x, -y);
+        arr[5] = new Vector2(x, y);
 
         /*
         foreach (var p in arr)
@@ -687,7 +687,6 @@ public partial class VcDeck : VisualComponentGroup
 
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
-        card.Parent = Reference;
 
         card.Setup(PrototypeRef, cardNum.ToString(), textureFactory);
 
@@ -766,7 +765,6 @@ public partial class VcDeck : VisualComponentGroup
 
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
-        card.Parent = Reference;
 
         card.Setup(PrototypeRef, index.ToString(), textureFactory);
 
@@ -855,7 +853,6 @@ public partial class VcDeck : VisualComponentGroup
                 {
                     _frontSprite.Texture = vcf.BackTexture;
                     _frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize());
-                    ;
                     _frontTextureReady = true;
                     vcf.TextureChanged = false;
                 }
