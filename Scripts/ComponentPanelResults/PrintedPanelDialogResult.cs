@@ -67,22 +67,22 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     {
         ["Card"] = new[]
         {
-            new CutPreset("Custom",         0),
-            new CutPreset("Poker Card",     0, 63.5f,  88.9f,   0.2f),
-            new CutPreset("Bridge Card",    0, 57.15f, 88.9f,   0.2f),
-            new CutPreset("Mini Euro Card", 0, 44.45f, 63.5f,   0.2f),
-            new CutPreset("Tarot Card",     0, 69.85f, 120.65f, 0.2f),
+            new CutPreset("Custom", 0),
+            new CutPreset("Poker Card", 0, 63.5f, 88.9f, 0.2f),
+            new CutPreset("Bridge Card", 0, 57.15f, 88.9f, 0.2f),
+            new CutPreset("Mini Euro Card", 0, 44.45f, 63.5f, 0.2f),
+            new CutPreset("Tarot Card", 0, 69.85f, 120.65f, 0.2f),
         },
         ["Token"] = new[]
         {
             new CutPreset("Rectangle", 0),
-            new CutPreset("Circle",    1),
-            new CutPreset("Hex",       2),
+            new CutPreset("Circle", 1),
+            new CutPreset("Hex", 2),
         },
         ["Board"] = new[]
         {
             new CutPreset("Quad Fold", 0, 254f, 254f, 2f),
-            new CutPreset("Hex Fold",  0, 762f, 254f, 2f),
+            new CutPreset("Hex Fold", 0, 762f, 254f, 2f),
         },
     };
 
@@ -130,8 +130,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _portraitButton.Pressed += OnOrientationChanged;
         _landscapeButton.Pressed += OnOrientationChanged;
 
-        _iconPortrait = GD.Load<Texture2D>("res://Textures/UI/crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg");
-        _iconLandscape = GD.Load<Texture2D>("res://Textures/UI/crop_landscape_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg");
+        _iconPortrait = GD.Load<Texture2D>(
+            "res://Textures/UI/crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg"
+        );
+        _iconLandscape = GD.Load<Texture2D>(
+            "res://Textures/UI/crop_landscape_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg"
+        );
         _iconHexPoint = GD.Load<Texture2D>("res://Textures/UI/hex_point_up.svg");
         _iconHexFlat = GD.Load<Texture2D>("res://Textures/UI/hex_edge_up.svg");
 
@@ -228,7 +232,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void OnOrientationChanged()
     {
-        if (_suppressCutReset) return;
+        if (_suppressCutReset)
+            return;
         var cut = GetCurrentCut();
         if (cut.Shape == 0)
         {
@@ -249,7 +254,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _widthLabel.Visible = isRect;
         _widthRow.Visible = isRect;
-        _heightLabel.Text = isCircle ? "Diameter" : isRect ? "Height" : "Size";
+        _heightLabel.Text =
+            isCircle ? "Diameter"
+            : isRect ? "Height"
+            : "Size";
         _orientationLabel.Visible = !isCircle;
         _orientationRow.Visible = !isCircle;
 
@@ -638,10 +646,11 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     {
         _suppressCutReset = true;
 
-        var storedType = prototype.Parameters.TryGetValue("Type", out var typeObj)
+        var storedType =
+            prototype.Parameters.TryGetValue("Type", out var typeObj)
             && typeObj is VcToken.TokenType tt
-            ? tt
-            : VcToken.TokenType.Token;
+                ? tt
+                : VcToken.TokenType.Token;
 
         int storedShape = prototype.Parameters.ContainsKey("Shape")
             ? Convert.ToInt32(prototype.Parameters["Shape"])
