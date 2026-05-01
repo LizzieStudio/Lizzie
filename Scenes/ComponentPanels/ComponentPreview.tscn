@@ -103,6 +103,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3000, 0)
 
 [node name="Camera3D" type="Camera3D" parent="VBoxContainer/HBoxContainer/SubViewportContainer/SubViewport/Node3D" unique_id=1965615795]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 100)
 projection = 1
 size = 2.0

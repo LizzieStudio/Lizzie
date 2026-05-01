@@ -3,9 +3,7 @@
 [ext_resource type="Script" uid="uid://34qdnax57ldx" path="res://Scripts/ComponentDefinition.cs" id="1_07jbk"]
 [ext_resource type="Resource" uid="uid://cp47ebupgytwa" path="res://Scenes/ComponentPanels/CubePanel.tres" id="2_iaba6"]
 [ext_resource type="Resource" uid="uid://bctoe33s67u03" path="res://Scenes/ComponentPanels/DiscPanel.tres" id="3_fr6ym"]
-[ext_resource type="Resource" uid="uid://ceywqk4reme07" path="res://Scenes/ComponentPanels/TokenPanel.tres" id="4_m15dm"]
-[ext_resource type="Resource" uid="uid://mljy81wn7au4" path="res://Scenes/ComponentPanels/BoardPanel.tres" id="5_8eegm"]
-[ext_resource type="Resource" uid="uid://cvcpmheck0rjq" path="res://Scenes/ComponentPanels/DeckPanel.tres" id="6_07jbk"]
+[ext_resource type="Resource" path="res://Scenes/ComponentPanels/PrintedPanel.tres" id="4_prntd"]
 [ext_resource type="Resource" uid="uid://bodj2sxcbs4l8" path="res://Scenes/ComponentPanels/DiePanel.tres" id="8_y2q7k"]
 [ext_resource type="Resource" uid="uid://crthu53rha88m" path="res://Scenes/ComponentPanels/MeshPanel.tres" id="9_u0tcw"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="9_w3b7a"]
@@ -20,7 +18,7 @@ title = "Component Creation"
 initial_position = 1
 size = Vector2i(850, 550)
 script = ExtResource("1_07jbk")
-_components = Array[Resource]([ExtResource("2_iaba6"), ExtResource("3_fr6ym"), ExtResource("4_m15dm"), ExtResource("8_y2q7k"), ExtResource("6_07jbk"), ExtResource("10_1hq20"), ExtResource("5_8eegm"), ExtResource("9_u0tcw")])
+_components = Array[Resource]([ExtResource("2_iaba6"), ExtResource("3_fr6ym"), ExtResource("4_prntd"), ExtResource("8_y2q7k"), ExtResource("10_1hq20"), ExtResource("9_u0tcw")])
 
 [node name="Panel" type="Panel" parent="." unique_id=1842311903]
 anchors_preset = 15

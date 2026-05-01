@@ -1,0 +1,493 @@
+[gd_scene format=3 uid="uid://printed_panel_v1"]
+
+[ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_qeff1"]
+[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/PrintedPanelDialogResult.cs" id="1_ykbf8"]
+[ext_resource type="PackedScene" uid="uid://bqjj4fvs81gaw" path="res://Scenes/ComponentPanels/quick_texture_entry.tscn" id="2_25k1d"]
+[ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_aum2n"]
+[ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="4_rdyhr"]
+[ext_resource type="PackedScene" uid="uid://byv8s3wlrrbwb" path="res://Scenes/Controls/ImageSelector.tscn" id="4_vooyf"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_orient"]
+
+[sub_resource type="Theme" id="Theme_vm378"]
+
+[node name="PrintedPanel" type="MarginContainer" unique_id=1127930468]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_vm378")
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+script = ExtResource("1_ykbf8")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1269825971]
+layout_mode = 2
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer" unique_id=1860243025]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GridContainer" type="GridContainer" parent="HBoxContainer/VBoxContainer" unique_id=738774959]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=895177348]
+layout_mode = 2
+text = "Name  "
+horizontal_alignment = 2
+
+[node name="ItemName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=196439806]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+
+[node name="LabelType" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=981779475]
+layout_mode = 2
+text = "Type:"
+
+[node name="TypePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1816476011]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "Card"
+popup/item_0/id = 0
+popup/item_1/text = "Token"
+popup/item_1/id = 1
+popup/item_2/text = "Board"
+popup/item_2/id = 2
+
+[node name="LabelCut" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000001]
+layout_mode = 2
+text = "Cut:"
+
+[node name="CutPicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000002]
+unique_name_in_owner = true
+layout_mode = 2
+item_count = 1
+popup/item_0/text = "Custom"
+popup/item_0/id = 0
+
+[node name="OrientationLabel" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000003]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Orientation:"
+
+[node name="OrientationRow" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000004]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PortraitButton" type="Button" parent="HBoxContainer/VBoxContainer/GridContainer/OrientationRow" unique_id=3000000005]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+button_group = SubResource("ButtonGroup_orient")
+theme_override_colors/icon_pressed_color = Color(0.329412, 0.533333, 0.992157, 1)
+
+[node name="LandscapeButton" type="Button" parent="HBoxContainer/VBoxContainer/GridContainer/OrientationRow" unique_id=3000000006]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_orient")
+theme_override_colors/icon_pressed_color = Color(0.329412, 0.533333, 0.992157, 1)
+
+[node name="WidthLabel" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1731445939]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Width"
+horizontal_alignment = 2
+
+[node name="WidthRow" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=319433435]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Width" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/WidthRow" unique_id=991591035]
+unique_name_in_owner = true
+layout_mode = 2
+text = "25"
+alignment = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/WidthRow" unique_id=144760602]
+layout_mode = 2
+text = "mm"
+
+[node name="HeightLabel" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1815128949]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Height"
+horizontal_alignment = 2
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=21825889]
+layout_mode = 2
+
+[node name="Height" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=709309258]
+unique_name_in_owner = true
+layout_mode = 2
+text = "25"
+alignment = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=745669444]
+layout_mode = 2
+text = "mm"
+
+[node name="Label11" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1085386115]
+layout_mode = 2
+text = "Thickness"
+horizontal_alignment = 2
+
+[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=404480909]
+layout_mode = 2
+
+[node name="Thickness" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7" unique_id=676056749]
+unique_name_in_owner = true
+layout_mode = 2
+text = "2"
+alignment = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7" unique_id=2141174891]
+layout_mode = 2
+text = "mm"
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer" unique_id=178445283]
+layout_mode = 2
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
+
+[node name="Tabs" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1800227696]
+unique_name_in_owner = true
+layout_mode = 2
+current_tab = 0
+
+[node name="Quick" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=147592434]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick" unique_id=893903103]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer" unique_id=471795062]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+alignment = 1
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=1760347777]
+layout_mode = 2
+size_flags_vertical = 6
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=1262023080]
+layout_mode = 2
+size_flags_vertical = 6
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=933372617]
+layout_mode = 2
+text = "Background:"
+
+[node name="TopBgColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer" unique_id=82616634]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+
+[node name="FrontField" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=839081491 instance=ExtResource("2_25k1d")]
+unique_name_in_owner = true
+layout_mode = 2
+FieldCaption = "Front:"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=84555581]
+layout_mode = 2
+size_flags_vertical = 6
+
+[node name="ToggleBack" type="CheckBox" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=1888562399]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Different Back"
+
+[node name="BottomBgContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=1738045303]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 6
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/BottomBgContainer" unique_id=457019958]
+layout_mode = 2
+text = "Background:"
+
+[node name="BottomBgColor" type="ColorPickerButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer/BottomBgContainer" unique_id=788045866]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+
+[node name="BackField" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Quick/MarginContainer/VBoxContainer" unique_id=16886751 instance=ExtResource("2_25k1d")]
+unique_name_in_owner = true
+layout_mode = 2
+FieldCaption = "Back:"
+
+[node name="Custom" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=1889754922]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom" unique_id=397574428]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2" unique_id=162530993]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer" unique_id=1884341708]
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer" unique_id=2076521332]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Front  "
+horizontal_alignment = 2
+
+[node name="FrontFile" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer" unique_id=608441887]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+placeholder_text = "(file)"
+alignment = 2
+
+[node name="FrontFileButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/HBoxContainer" unique_id=915219464]
+unique_name_in_owner = true
+layout_mode = 2
+icon = ExtResource("1_qeff1")
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer" unique_id=2100709252]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+
+[node name="CustomDifferentBack" type="CheckBox" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/MarginContainer" unique_id=1395967311]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Different Back"
+
+[node name="CustomBackFileRow" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer" unique_id=2032670322]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow" unique_id=1126452826]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Back  "
+horizontal_alignment = 2
+
+[node name="BackFile" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow" unique_id=1813323061]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+placeholder_text = "(file)"
+alignment = 2
+
+[node name="BackFileButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Custom/MarginContainer2/VBoxContainer/CustomBackFileRow" unique_id=1394277807]
+unique_name_in_owner = true
+layout_mode = 2
+icon = ExtResource("1_qeff1")
+
+[node name="Grid" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=1464329553]
+layout_mode = 2
+metadata/_tab_index = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid" unique_id=289542405]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer" unique_id=240285518]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="HBoxContainer5" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=767740841]
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=1656822071]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Front  "
+horizontal_alignment = 2
+
+[node name="FrontImageSelector" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=1463407889 instance=ExtResource("4_vooyf")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=519252428]
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=1044580426]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Back  "
+horizontal_alignment = 2
+
+[node name="BackImageSelector" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=855247831 instance=ExtResource("4_vooyf")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GridSingleBack" type="CheckButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=1274019345]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Single Back"
+
+[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=283566052]
+layout_mode = 2
+
+[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=49238213]
+layout_mode = 2
+text = "Cols  "
+horizontal_alignment = 2
+
+[node name="GridCols" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=1491268480]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+alignment = 2
+
+[node name="HBoxContainer8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=248741003]
+layout_mode = 2
+
+[node name="Label12" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1351769633]
+layout_mode = 2
+text = "Rows  "
+horizontal_alignment = 2
+
+[node name="GridRows" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1022792488]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+alignment = 2
+
+[node name="HBoxContainer9" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=2130162290]
+layout_mode = 2
+
+[node name="Label13" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer9" unique_id=1699713823]
+layout_mode = 2
+text = "# Tokens  "
+horizontal_alignment = 2
+
+[node name="GridCardCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer9" unique_id=1062244030]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+alignment = 2
+
+[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=805627747]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template" unique_id=1976915884]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer" unique_id=292657894]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer" unique_id=1011347456]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=66033774]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Front:"
+
+[node name="FrontTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1828835977]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "Hello"
+popup/item_0/id = 0
+popup/item_1/text = "Goodbye"
+popup/item_1/id = 1
+
+[node name="EditFrontTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=244434395]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Template Editor"
+icon = ExtResource("4_rdyhr")
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer" unique_id=711236394]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=340676388]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Back:"
+
+[node name="BackTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=2046169962]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "Hello"
+popup/item_0/id = 0
+popup/item_1/text = "Goodbye"
+popup/item_1/id = 1
+
+[node name="EditBackTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=1748829103]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Template Editor"
+icon = ExtResource("4_rdyhr")
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer" unique_id=516241590]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=828667385]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "DataSet:"
+
+[node name="DatasetList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1967995419]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+item_count = 1
+popup/item_0/text = "(none)"
+popup/item_0/id = 0
+
+[node name="EditDatasetButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=581691997]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "DataSet Editor"
+icon = ExtResource("4_rdyhr")
+
+[node name="Preview" parent="HBoxContainer" unique_id=725754392 instance=ExtResource("3_aum2n")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2

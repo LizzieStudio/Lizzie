@@ -188,6 +188,7 @@ public partial class ComponentPreview : Panel
             var size = aabb.Size;
             var maxSize = size.Length();
             _camera.Size = maxSize * 1.2f;
+            _camera.Position = new Vector3(0, 0, Mathf.Max(100f, maxSize + 1f));
         }
         else
         {
@@ -219,6 +220,7 @@ public partial class ComponentPreview : Panel
                 _component.Setup(parameters, row, textureFactory);
                 _component.Build();
             }
+
         }
     }
 

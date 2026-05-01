@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=3 format=3 uid="uid://printed_panel_tres_v1"]
+
+[ext_resource type="Texture2D" uid="uid://mi8u70je714x" path="res://Textures/UI/crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_prntd"]
+[ext_resource type="Script" path="res://Scripts/ComponentTemplate.cs" id="2_prntd"]
+
+[resource]
+script = ExtResource("2_prntd")
+ComponentName = "Printed"
+Icon = ExtResource("1_prntd")
+DefinitionDialogName = "res://Scenes/ComponentPanels/printed_panel.tscn"
+PrototypeName = "res://Scenes/VisualComponents/VcToken.tscn"
+ComponentType = "Token"
+PrototypeNames = PackedStringArray("res://Scenes/VisualComponents/VcToken.tscn", "res://Scenes/VisualComponents/VcTokenCircle.tscn", "res://Scenes/VisualComponents/VcTokenHexPoint.tscn", "res://Scenes/VisualComponents/VcTokenHexFlat.tscn", "res://Scenes/VisualComponents/VcDeck.tscn")

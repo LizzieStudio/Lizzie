@@ -287,6 +287,8 @@ public partial class ComponentDefinition : Window
 
     public string TypeToName(VisualComponentBase.VisualComponentType componentType)
     {
+        if (componentType == VisualComponentBase.VisualComponentType.Deck)
+            return "Printed";
         return _components.First(x => x.ComponentType == componentType.ToString()).ComponentName;
     }
 
