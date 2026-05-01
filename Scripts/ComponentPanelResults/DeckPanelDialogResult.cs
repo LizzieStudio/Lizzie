@@ -141,11 +141,11 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private void InitializeStandardSizes()
     {
         _standardSizes = new();
-        _standardSizes.Add("Poker",     (63.5f,  88.9f,   0.3f));
-        _standardSizes.Add("Bridge",    (57.15f, 88.9f,   0.3f));
-        _standardSizes.Add("Mini Euro", (44.45f, 63.5f,   0.3f));
-        _standardSizes.Add("Tarot",     (69.85f, 120.65f, 0.3f));
-        _standardSizes.Add("Custom",    (0,      0,       0));
+        _standardSizes.Add("Poker", (63.5f, 88.9f, 0.3f));
+        _standardSizes.Add("Bridge", (57.15f, 88.9f, 0.3f));
+        _standardSizes.Add("Mini Euro", (44.45f, 63.5f, 0.3f));
+        _standardSizes.Add("Tarot", (69.85f, 120.65f, 0.3f));
+        _standardSizes.Add("Custom", (0, 0, 0));
 
         _cardSizes.Clear();
         foreach (var kv in _standardSizes)
@@ -202,8 +202,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         if (size.W == 0 || size.H == 0)
             return;
 
-        _widthInput.Text     = size.W.ToString("f1");
-        _heightInput.Text    = size.H.ToString("f1");
+        _widthInput.Text = size.W.ToString("f1");
+        _heightInput.Text = size.H.ToString("f1");
         _thicknessInput.Text = size.T.ToString("f1");
 
         HeightWidthChange(string.Empty);
