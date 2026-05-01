@@ -12,6 +12,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
     private LineEdit _nameInput;
     private LineEdit _heightInput;
     private LineEdit _widthInput;
+    private LineEdit _thicknessInput;
 
     private HBoxContainer _customBackRow;
 
@@ -135,16 +136,16 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _componentPreview.ClearComponent();
     }
 
-    private Dictionary<string, (float, float)> _standardSizes;
+    private Dictionary<string, (float W, float H, float T)> _standardSizes;
 
     private void InitializeStandardSizes()
     {
         _standardSizes = new();
-        _standardSizes.Add("Poker", (2.5f, 3.5f));
-        _standardSizes.Add("Bridge", (2.25f, 3.5f));
-        _standardSizes.Add("Mini Euro", (1.75f, 2.5f));
-        _standardSizes.Add("Tarot", (2.75f, 4.75f));
-        _standardSizes.Add("Custom", (0, 0));
+        _standardSizes.Add("Poker",     (63.5f,  88.9f,   0.3f));
+        _standardSizes.Add("Bridge",    (57.15f, 88.9f,   0.3f));
+        _standardSizes.Add("Mini Euro", (44.45f, 63.5f,   0.3f));
+        _standardSizes.Add("Tarot",     (69.85f, 120.65f, 0.3f));
+        _standardSizes.Add("Custom",    (0,      0,       0));
 
         _cardSizes.Clear();
         foreach (var kv in _standardSizes)
@@ -198,16 +199,12 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         if (!_standardSizes.TryGetValue(cardType, out var size))
             return;
 
-        var w = size.Item1;
-        var h = size.Item2;
-
-        if (w == 0 || h == 0)
+        if (size.W == 0 || size.H == 0)
             return;
 
-        float conversion = 25.4f;
-
-        _heightInput.Text = (h * conversion).ToString("f1");
-        _widthInput.Text = (w * conversion).ToString("f1");
+        _widthInput.Text     = size.W.ToString("f1");
+        _heightInput.Text    = size.H.ToString("f1");
+        _thicknessInput.Text = size.T.ToString("f1");
 
         HeightWidthChange(string.Empty);
     }
@@ -228,6 +225,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
 
         _widthInput = GetNode<LineEdit>("%Width");
         _widthInput.TextChanged += HeightWidthChange;
+
+        _thicknessInput = GetNode<LineEdit>("%Thickness");
 
         _componentPreview = GetNode<ComponentPreview>("%ComponentPreview");
         _componentPreview.MultiItemMode = true;
@@ -430,6 +429,7 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         d.Add("ComponentName", _nameInput.Text);
         d.Add("Height", ParamToFloat(_heightInput.Text));
         d.Add("Width", ParamToFloat(_widthInput.Text));
+        d.Add("Thickness", ParamToFloat(_thicknessInput.Text));
         d.Add("Shape", 0);
 
         switch (_tabs.CurrentTab)
@@ -732,6 +732,8 @@ public partial class DeckPanelDialogResult : ComponentPanelDialogResult
         _nameInput.Text = prototype.Name;
         _heightInput.Text = prototype.Parameters["Height"].ToString();
         _widthInput.Text = prototype.Parameters["Width"].ToString();
+        if (prototype.Parameters.ContainsKey("Thickness"))
+            _thicknessInput.Text = prototype.Parameters["Thickness"].ToString();
 
         if (
             prototype.Parameters.ContainsKey("Mode")
