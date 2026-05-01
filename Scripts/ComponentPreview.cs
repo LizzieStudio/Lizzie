@@ -220,7 +220,6 @@ public partial class ComponentPreview : Panel
                 _component.Setup(parameters, row, textureFactory);
                 _component.Build();
             }
-
         }
     }
 
