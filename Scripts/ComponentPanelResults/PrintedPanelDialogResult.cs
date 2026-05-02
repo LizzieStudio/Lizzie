@@ -355,6 +355,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         int.TryParse(_gridCardCount.Text, out _gridCount);
 
         _preview.ItemCount = _gridCount;
+        _preview.MultiItemMode = _gridCount > 1;
         ChangePreviewToken(0);
     }
 
@@ -635,7 +636,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private string GetRow(int rowNum)
     {
         if (_textureContext.DataSet == null)
-            return string.Empty;
+            return rowNum.ToString();
         if (rowNum < 0 || rowNum >= _textureContext.DataSet.Rows.Count)
             return string.Empty;
         return _textureContext.DataSet.Rows.ElementAt(rowNum).Key;
