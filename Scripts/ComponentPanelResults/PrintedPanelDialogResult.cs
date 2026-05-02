@@ -908,6 +908,70 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         if (prototype.Parameters.ContainsKey("GridSingleBack"))
             _gridSingleBack.ButtonPressed = (bool)prototype.Parameters["GridSingleBack"];
 
+        _frontTemplatePicker.Select(0);
+        _frontTemplate = null;
+        if (prototype.Parameters.ContainsKey("FrontTemplate"))
+        {
+            string frontTemplateName = prototype.Parameters["FrontTemplate"]?.ToString();
+            if (!string.IsNullOrEmpty(frontTemplateName))
+            {
+                for (int i = 0; i < _frontTemplatePicker.ItemCount; i++)
+                {
+                    if (_frontTemplatePicker.GetItemText(i) == frontTemplateName)
+                    {
+                        _frontTemplatePicker.Select(i);
+                        _frontTemplate = _currentProject.Templates.GetValueOrDefault(
+                            frontTemplateName
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+
+        _backTemplatePicker.Select(0);
+        _backTemplate = null;
+        if (prototype.Parameters.ContainsKey("BackTemplate"))
+        {
+            string backTemplateName = prototype.Parameters["BackTemplate"]?.ToString();
+            if (!string.IsNullOrEmpty(backTemplateName))
+            {
+                for (int i = 0; i < _backTemplatePicker.ItemCount; i++)
+                {
+                    if (_backTemplatePicker.GetItemText(i) == backTemplateName)
+                    {
+                        _backTemplatePicker.Select(i);
+                        _backTemplate = _currentProject.Templates.GetValueOrDefault(
+                            backTemplateName
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+
+        _datasetPicker.Select(0);
+        _textureContext.DataSet = null;
+        _textureContext.CurrentRowName = null;
+        if (prototype.Parameters.ContainsKey("Dataset"))
+        {
+            string datasetName = prototype.Parameters["Dataset"]?.ToString();
+            if (!string.IsNullOrEmpty(datasetName))
+            {
+                for (int i = 0; i < _datasetPicker.ItemCount; i++)
+                {
+                    if (_datasetPicker.GetItemText(i) == datasetName)
+                    {
+                        _datasetPicker.Select(i);
+                        _textureContext.DataSet = _currentProject.Datasets.GetValueOrDefault(
+                            datasetName
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+
         UpdateDimensionUI();
         Activate();
     }
