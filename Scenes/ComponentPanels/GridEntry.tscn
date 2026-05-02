@@ -1,0 +1,96 @@
+[gd_scene format=3 uid="uid://pa30bchnvkwr"]
+
+[ext_resource type="PackedScene" uid="uid://byv8s3wlrrbwb" path="res://Scenes/Controls/ImageSelector.tscn" id="1_7e4lg"]
+[ext_resource type="Script" uid="uid://b2rhd1yeqjquq" path="res://Scripts/ComponentPanelResults/GridEntry.cs" id="1_si1p1"]
+
+[node name="MarginContainer" type="MarginContainer" unique_id=1755057700]
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+script = ExtResource("1_si1p1")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1402429067]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="HBoxContainer5" type="HBoxContainer" parent="VBoxContainer" unique_id=554676033]
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="VBoxContainer/HBoxContainer5" unique_id=566369939]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Front  "
+horizontal_alignment = 2
+
+[node name="FrontImageSelector" parent="VBoxContainer/HBoxContainer5" unique_id=1463407889 instance=ExtResource("1_7e4lg")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer6" type="HBoxContainer" parent="VBoxContainer" unique_id=442931535]
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="VBoxContainer/HBoxContainer6" unique_id=1900733997]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Back  "
+horizontal_alignment = 2
+
+[node name="BackImageSelector" parent="VBoxContainer/HBoxContainer6" unique_id=1553925284 instance=ExtResource("1_7e4lg")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GridSingleBack" type="CheckButton" parent="VBoxContainer" unique_id=70571393]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Single Back"
+
+[node name="HBoxContainer7" type="HBoxContainer" parent="VBoxContainer" unique_id=1522385998]
+layout_mode = 2
+
+[node name="Label10" type="Label" parent="VBoxContainer/HBoxContainer7" unique_id=1814577127]
+layout_mode = 2
+text = "Cols  "
+horizontal_alignment = 2
+
+[node name="GridCols" type="LineEdit" parent="VBoxContainer/HBoxContainer7" unique_id=1007342488]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+alignment = 2
+
+[node name="HBoxContainer8" type="HBoxContainer" parent="VBoxContainer" unique_id=1334309396]
+layout_mode = 2
+
+[node name="Label12" type="Label" parent="VBoxContainer/HBoxContainer8" unique_id=885490974]
+layout_mode = 2
+text = "Rows  "
+horizontal_alignment = 2
+
+[node name="GridRows" type="LineEdit" parent="VBoxContainer/HBoxContainer8" unique_id=1621014227]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+alignment = 2
+
+[node name="HBoxContainer9" type="HBoxContainer" parent="VBoxContainer" unique_id=1840337014]
+layout_mode = 2
+
+[node name="Label13" type="Label" parent="VBoxContainer/HBoxContainer9" unique_id=1572714327]
+layout_mode = 2
+text = "# Cards  "
+horizontal_alignment = 2
+
+[node name="GridCardCount" type="LineEdit" parent="VBoxContainer/HBoxContainer9" unique_id=1778972651]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+alignment = 2

@@ -374,8 +374,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     public override void DisplayPrototype(Prototype prototype)
     {
         _nameInput.Text = prototype.Name;
-        _diameterInput.Text = prototype.Parameters["Size"].ToString();
-        _dieColor.Color = (Color)prototype.Parameters["Color"];
+        _diameterInput.Text = prototype.Parameters.ContainsKey("Size")
+            ? prototype.Parameters["Size"].ToString()
+            : "";
+        _dieColor.Color = prototype.Parameters.ContainsKey("Color")
+            ? (Color)prototype.Parameters["Color"]
+            : Colors.Black;
 
         if (
             prototype.Parameters.ContainsKey("Sides")
@@ -400,6 +404,83 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             };
             _sidesInput.Select(sideIndex);
             SidesInputOnItemSelected(sideIndex);
+        }
+        else if (prototype.Parameters.ContainsKey("SideCount"))
+        {
+            int sideCount = (int)prototype.Parameters["SideCount"];
+            int sideIndex = sideCount switch
+            {
+                4 => 0,
+                6 => 1,
+                8 => 2,
+                10 => 3,
+                12 => 4,
+                20 => 5,
+                _ => 1,
+            };
+            _sidesInput.Select(sideIndex);
+            SidesInputOnItemSelected(sideIndex);
+        }
+
+        // Restore tab/mode
+        if (prototype.Parameters.ContainsKey("Mode"))
+        {
+            var mode = (VcToken.TokenBuildMode)prototype.Parameters["Mode"];
+            _tabContainer.CurrentTab = mode switch
+            {
+                VcToken.TokenBuildMode.Quick => 0,
+                VcToken.TokenBuildMode.Custom => 1,
+                VcToken.TokenBuildMode.Template => 2,
+                _ => 0,
+            };
+        }
+        else
+        {
+            _tabContainer.CurrentTab = 0;
+        }
+
+        // Restore template
+        _frontTemplatePicker.Select(0);
+        _frontTemplate = null;
+        if (prototype.Parameters.ContainsKey("FrontTemplate"))
+        {
+            string frontTemplateName = prototype.Parameters["FrontTemplate"].ToString();
+            for (int i = 0; i < _frontTemplatePicker.ItemCount; i++)
+            {
+                if (_frontTemplatePicker.GetItemText(i) == frontTemplateName)
+                {
+                    _frontTemplatePicker.Select(i);
+                    _frontTemplate =
+                        ProjectService.Instance.CurrentProject.Templates.GetValueOrDefault(
+                            frontTemplateName
+                        );
+                    break;
+                }
+            }
+        }
+
+        // Restore dataset
+        _datasetPicker.Select(0);
+        _textureContext.DataSet = null;
+        _textureContext.CurrentRowName = null;
+        if (prototype.Parameters.ContainsKey("Dataset"))
+        {
+            string datasetName = prototype.Parameters["Dataset"]?.ToString();
+            if (!string.IsNullOrEmpty(datasetName))
+            {
+                for (int i = 0; i < _datasetPicker.ItemCount; i++)
+                {
+                    if (_datasetPicker.GetItemText(i) == datasetName)
+                    {
+                        _datasetPicker.Select(i);
+                        _textureContext.DataSet =
+                            ProjectService.Instance.CurrentProject.Datasets.GetValueOrDefault(
+                                datasetName
+                            );
+                        break;
+                    }
+                }
+            }
         }
     }
 }

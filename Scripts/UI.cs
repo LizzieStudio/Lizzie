@@ -52,7 +52,7 @@ public partial class UI : CanvasLayer
 
         SetSceneMode(Config.Registry.Get<SceneMode>("SceneMode"));
 
-        _fileMenu = GetNode<PopupMenu>("MenuBar/File");
+        _fileMenu = GetNode<PopupMenu>("%File");
         _fileMenu.AddSeparator();
         _fileMenu.AddItem("Multiplayer...", 10);
         _fileMenu.IdPressed += FileMenuOnIdPressed;
@@ -60,19 +60,19 @@ public partial class UI : CanvasLayer
         //_componentDefinition.CreateObject += OnCreateObject;
         //_componentDefinition.CancelDialog += OnCancelCreate;
 
-        _editMenu = GetNode<PopupMenu>("MenuBar/Edit");
+        _editMenu = GetNode<PopupMenu>("%Edit");
         _editMenu.AddItem("Templates", 1);
         _editMenu.AddItem("Datasets", 2);
         _editMenu.AddItem("Images", 4);
         _editMenu.AddItem("Prototype Manifest", 3);
         _editMenu.IdPressed += OnEditMenuSelection;
 
-        _insertMenu = GetNode<PopupMenu>("MenuBar/Insert");
+        _insertMenu = GetNode<PopupMenu>("%Insert");
         _insertMenu.AddItem("Component", 1);
         _insertMenu.AddItem("Zone", 2);
         _insertMenu.IdPressed += OnInsertMenuSelection;
 
-        _helpMenu = GetNode<PopupMenu>("MenuBar/Help");
+        _helpMenu = GetNode<PopupMenu>("%Help");
         _helpMenu.AddItem("Test Function", 1);
         _helpMenu.IdPressed += OnHelpMenuSelection;
 

@@ -26,6 +26,8 @@ public partial class GameController : Node3D
         _uiController.CreateObject += OnCreateObject;
         _uiController.SetGameController(this);
 
+        EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawnPrototype);
+
         ProjectService.Instance.CurrentProject =
             ProjectService.Instance.LoadProject(ProjectService.SampleProjectName)
             ?? new Project { Name = ProjectService.SampleProjectName };
@@ -71,6 +73,41 @@ public partial class GameController : Node3D
         }
 
         _mainScene.EnterSpawnMode(components);
+    }
+
+    private void OnSpawnPrototype(SpawnPrototypeEvent e)
+    {
+        if (
+            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                e.PrototypeRef,
+                out var prototype
+            )
+        )
+        {
+            GD.PrintErr($"SpawnPrototype: prototype {e.PrototypeRef} not found");
+            return;
+        }
+
+        var scenePath = Utility.ComponentTypeToScenePath(prototype.Type, prototype.Parameters);
+        if (string.IsNullOrEmpty(scenePath))
+        {
+            GD.PrintErr($"SpawnPrototype: could not resolve scene path for {prototype.Type}");
+            return;
+        }
+
+        var args = new CreateObjectEventArgs
+        {
+            ComponentType = prototype.Type,
+            Params = new Dictionary<string, object>(prototype.Parameters),
+            PrototypeRef = prototype.PrototypeRef,
+            PrototypeName = scenePath,
+        };
+
+        var component = SingleComponentSpawn(args, string.Empty);
+        if (component != null)
+        {
+            _mainScene.EnterSpawnMode(new List<VisualComponentBase> { component });
+        }
     }
 
     private void SpawnGridMultiples(
