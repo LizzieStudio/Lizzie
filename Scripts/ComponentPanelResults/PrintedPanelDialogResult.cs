@@ -67,7 +67,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     {
         ["Card"] = new[]
         {
-            new CutPreset("Custom", 0),
             new CutPreset("Poker Card", 0, 63.5f, 88.9f, 0.2f),
             new CutPreset("Bridge Card", 0, 57.15f, 88.9f, 0.2f),
             new CutPreset("Mini Euro Card", 0, 44.45f, 63.5f, 0.2f),
@@ -75,9 +74,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         },
         ["Token"] = new[]
         {
-            new CutPreset("Rectangle", 0),
-            new CutPreset("Circle", 1),
-            new CutPreset("Hex", 2),
+            new CutPreset("Rectangle", 0, 25.4f, 25.4f, 1f),
+            new CutPreset("Circle", 1, 25.4f, 25.4f, 1f),
+            new CutPreset("Hex", 2, 25.4f, 25.4f, 1f),
         },
         ["Board"] = new[]
         {
@@ -98,10 +97,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _heightInput.TextChanged += _ =>
         {
             if (!_suppressCutReset)
-            {
-                OnDimensionManualEdit();
                 UpdateOrientationButtons();
-            }
             UpdatePreview();
         };
 
@@ -109,19 +105,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _widthInput.TextChanged += _ =>
         {
             if (!_suppressCutReset)
-            {
-                OnDimensionManualEdit();
                 UpdateOrientationButtons();
-            }
             UpdatePreview();
         };
 
         _thicknessInput = GetNode<LineEdit>("%Thickness");
-        _thicknessInput.TextChanged += _ =>
-        {
-            if (!_suppressCutReset)
-                OnDimensionManualEdit();
-        };
+        _thicknessInput.TextChanged += _ => UpdatePreview();
 
         _typePicker = GetNode<OptionButton>("%TypePicker");
         _typePicker.ItemSelected += OnTypeChanged;
@@ -296,12 +285,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _landscapeButton.Icon = isHex ? _iconHexFlat : _iconLandscape;
 
         UpdateOrientationButtons();
-    }
-
-    private void OnDimensionManualEdit()
-    {
-        if (TypeKey() == "Card" && _cutPicker.ItemCount > 0)
-            _cutPicker.Select(0);
     }
 
     private void InitializeTemplates()
