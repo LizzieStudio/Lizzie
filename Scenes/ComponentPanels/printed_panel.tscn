@@ -362,6 +362,7 @@ color = Color(1, 1, 0, 1)
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+text = "1-6"
 placeholder_text = "(examples: 1, 2, 3, 1-9, J, SKIP, +2)"
 
 [node name="QSRow5" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Multi/MarginContainer/VBoxContainer" unique_id=1771635434]
