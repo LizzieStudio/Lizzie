@@ -745,6 +745,39 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             };
         }
 
+        _gridRowCount.Text = prototype.Parameters.ContainsKey("GridRows")
+            ? prototype.Parameters["GridRows"].ToString()
+            : "";
+        _gridColCount.Text = prototype.Parameters.ContainsKey("GridCols")
+            ? prototype.Parameters["GridCols"].ToString()
+            : "";
+        _gridCardCount.Text = prototype.Parameters.ContainsKey("GridCount")
+            ? prototype.Parameters["GridCount"].ToString()
+            : "";
+        int.TryParse(_gridRowCount.Text, out _gridRows);
+        int.TryParse(_gridColCount.Text, out _gridCols);
+        int.TryParse(_gridCardCount.Text, out _gridCount);
+        _preview.ItemCount = _gridCount;
+
+        _frontGridImage = prototype.Parameters.ContainsKey("FrontGridImageKey")
+            ? prototype.Parameters["FrontGridImageKey"].ToString()
+            : string.Empty;
+        var frontGridAsset = _currentProject?.Images.Values.FirstOrDefault(a =>
+            a.AssetId.ToString() == _frontGridImage
+        );
+        _gridFrontImageSelector.SelectedImage = frontGridAsset;
+
+        _backGridImage = prototype.Parameters.ContainsKey("BackGridImageKey")
+            ? prototype.Parameters["BackGridImageKey"].ToString()
+            : string.Empty;
+        var backGridAsset = _currentProject?.Images.Values.FirstOrDefault(a =>
+            a.AssetId.ToString() == _backGridImage
+        );
+        _gridBackImageSelector.SelectedImage = backGridAsset;
+
+        if (prototype.Parameters.ContainsKey("GridSingleBack"))
+            _gridSingleBack.ButtonPressed = (bool)prototype.Parameters["GridSingleBack"];
+
         UpdateDimensionUI();
         Activate();
     }
