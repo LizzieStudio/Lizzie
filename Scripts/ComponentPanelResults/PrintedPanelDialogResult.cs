@@ -26,7 +26,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private CheckBox _customBackCheckbox;
 
     private OptionButton _typePicker;
-    private OptionButton _cutPicker;
+    private OptionButton _shapePicker;
     private Label _orientationLabel;
     private HBoxContainer _orientationRow;
     private Button _portraitButton;
@@ -61,31 +61,31 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private LineEdit _gridCardCount;
     private CheckButton _gridSingleBack;
 
-    private record CutPreset(string Label, int Shape, float W = 0f, float H = 0f, float T = 0f);
+    private record ShapePreset(string Label, int Shape, float W = 0f, float H = 0f, float T = 0f);
 
-    private static readonly Dictionary<string, CutPreset[]> CutsByType = new()
+    private static readonly Dictionary<string, ShapePreset[]> ShapesByType = new()
     {
         ["Card"] = new[]
         {
-            new CutPreset("Poker Card", 0, 63.5f, 88.9f, 0.2f),
-            new CutPreset("Bridge Card", 0, 57.15f, 88.9f, 0.2f),
-            new CutPreset("Mini Euro Card", 0, 44.45f, 63.5f, 0.2f),
-            new CutPreset("Tarot Card", 0, 69.85f, 120.65f, 0.2f),
+            new ShapePreset("Poker Card", 0, 63.5f, 88.9f, 0.2f),
+            new ShapePreset("Bridge Card", 0, 57.15f, 88.9f, 0.2f),
+            new ShapePreset("Mini Euro Card", 0, 44.45f, 63.5f, 0.2f),
+            new ShapePreset("Tarot Card", 0, 69.85f, 120.65f, 0.2f),
         },
         ["Token"] = new[]
         {
-            new CutPreset("Rectangle", 0, 25.4f, 25.4f, 1f),
-            new CutPreset("Circle", 1, 25.4f, 25.4f, 1f),
-            new CutPreset("Hex", 2, 25.4f, 25.4f, 1f),
+            new ShapePreset("Rectangle", 0, 25.4f, 25.4f, 1f),
+            new ShapePreset("Circle", 1, 25.4f, 25.4f, 1f),
+            new ShapePreset("Hex", 2, 25.4f, 25.4f, 1f),
         },
         ["Board"] = new[]
         {
-            new CutPreset("Quad Fold", 0, 254f, 254f, 2f),
-            new CutPreset("Hex Fold", 0, 762f, 254f, 2f),
+            new ShapePreset("Quad Fold", 0, 254f, 254f, 2f),
+            new ShapePreset("Hex Fold", 0, 762f, 254f, 2f),
         },
     };
 
-    private bool _suppressCutReset;
+    private bool _suppressShapeReset;
 
     public override void _Ready()
     {
@@ -96,7 +96,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _heightInput = GetNode<LineEdit>("%Height");
         _heightInput.TextChanged += _ =>
         {
-            if (!_suppressCutReset)
+            if (!_suppressShapeReset)
                 UpdateOrientationButtons();
             UpdatePreview();
         };
@@ -104,7 +104,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _widthInput = GetNode<LineEdit>("%Width");
         _widthInput.TextChanged += _ =>
         {
-            if (!_suppressCutReset)
+            if (!_suppressShapeReset)
                 UpdateOrientationButtons();
             UpdatePreview();
         };
@@ -115,8 +115,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _typePicker = GetNode<OptionButton>("%TypePicker");
         _typePicker.ItemSelected += OnTypeChanged;
 
-        _cutPicker = GetNode<OptionButton>("%CutPicker");
-        _cutPicker.ItemSelected += OnCutChanged;
+        _shapePicker = GetNode<OptionButton>("%ShapePicker");
+        _shapePicker.ItemSelected += OnShapeChanged;
 
         _orientationLabel = GetNode<Label>("%OrientationLabel");
         _orientationRow = GetNode<HBoxContainer>("%OrientationRow");
@@ -184,16 +184,16 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             _ => "Card",
         };
 
-    private CutPreset GetCurrentCut()
+    private ShapePreset GetCurrentShape()
     {
-        var cuts = CutsByType[TypeKey()];
-        var idx = Math.Clamp(_cutPicker.Selected, 0, cuts.Length - 1);
+        var cuts = ShapesByType[TypeKey()];
+        var idx = Math.Clamp(_shapePicker.Selected, 0, cuts.Length - 1);
         return cuts[idx];
     }
 
     private int GetEffectiveShape()
     {
-        var cut = GetCurrentCut();
+        var cut = GetCurrentShape();
         if (cut.Shape == 2 && _landscapeButton.ButtonPressed)
             return 3; // Hex Edge Up
         return cut.Shape;
@@ -201,35 +201,35 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void OnTypeChanged(long _)
     {
-        _cutPicker.Clear();
-        foreach (var cut in CutsByType[TypeKey()])
-            _cutPicker.AddItem(cut.Label);
-        OnCutChanged(0);
+        _shapePicker.Clear();
+        foreach (var cut in ShapesByType[TypeKey()])
+            _shapePicker.AddItem(cut.Label);
+        OnShapeChanged(0);
     }
 
-    private void OnCutChanged(long _)
+    private void OnShapeChanged(long _)
     {
-        var cut = GetCurrentCut();
+        var cut = GetCurrentShape();
         if (cut.W != 0f)
         {
-            _suppressCutReset = true;
+            _suppressShapeReset = true;
             _widthInput.Text = cut.W.ToString("f1");
             _heightInput.Text = cut.H.ToString("f1");
             _thicknessInput.Text = cut.T.ToString("f1");
-            _suppressCutReset = false;
+            _suppressShapeReset = false;
         }
 
         UpdateDimensionUI();
 
-        if (Visible && !_suppressCutReset)
+        if (Visible && !_suppressShapeReset)
             Activate();
     }
 
     private void OnOrientationChanged()
     {
-        if (_suppressCutReset)
+        if (_suppressShapeReset)
             return;
-        var cut = GetCurrentCut();
+        var cut = GetCurrentShape();
         if (cut.Shape == 0)
         {
             if (
@@ -241,9 +241,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 bool needsSwap = wantLandscape ? h > w : w > h;
                 if (needsSwap)
                 {
-                    _suppressCutReset = true;
+                    _suppressShapeReset = true;
                     (_widthInput.Text, _heightInput.Text) = (_heightInput.Text, _widthInput.Text);
-                    _suppressCutReset = false;
+                    _suppressShapeReset = false;
                 }
             }
         }
@@ -253,7 +253,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void UpdateOrientationButtons()
     {
-        var cut = GetCurrentCut();
+        var cut = GetCurrentShape();
         if (cut.Shape != 0)
             return;
         if (
@@ -660,7 +660,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(Prototype prototype)
     {
-        _suppressCutReset = true;
+        _suppressShapeReset = true;
 
         var storedType =
             prototype.Parameters.TryGetValue("Type", out var typeObj)
@@ -676,33 +676,33 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         {
             _typePicker.Select(0);
             OnTypeChanged(0);
-            _cutPicker.Select(0);
+            _shapePicker.Select(0);
         }
         else if (storedType == VcToken.TokenType.Board)
         {
             _typePicker.Select(2);
             OnTypeChanged(2);
-            _cutPicker.Select(0);
+            _shapePicker.Select(0);
         }
         else
         {
             _typePicker.Select(1);
             OnTypeChanged(1);
-            (int cutIdx, bool rotate) = storedShape switch
+            (int shapeIdx, bool rotate) = storedShape switch
             {
                 1 => (1, false),
                 2 => (2, false),
                 3 => (2, true),
                 _ => (0, false),
             };
-            _cutPicker.Select(cutIdx);
+            _shapePicker.Select(shapeIdx);
             if (rotate)
                 _landscapeButton.ButtonPressed = true;
             else
                 _portraitButton.ButtonPressed = true;
         }
 
-        _suppressCutReset = false;
+        _suppressShapeReset = false;
 
         _nameInput.Text = prototype.Name;
         _heightInput.Text = prototype.Parameters.GetValueOrDefault("Height", "")?.ToString() ?? "";

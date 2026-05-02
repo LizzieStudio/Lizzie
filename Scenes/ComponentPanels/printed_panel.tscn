@@ -62,11 +62,11 @@ popup/item_1/id = 1
 popup/item_2/text = "Board"
 popup/item_2/id = 2
 
-[node name="LabelCut" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000001]
+[node name="LabelShape" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000001]
 layout_mode = 2
-text = "Cut:"
+text = "Shape:"
 
-[node name="CutPicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000002]
+[node name="ShapePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=3000000002]
 unique_name_in_owner = true
 layout_mode = 2
 item_count = 1
