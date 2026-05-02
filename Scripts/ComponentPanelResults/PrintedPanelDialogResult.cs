@@ -98,7 +98,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _heightInput.TextChanged += _ =>
         {
             if (!_suppressCutReset)
+            {
                 OnDimensionManualEdit();
+                UpdateOrientationButtons();
+            }
             UpdatePreview();
         };
 
@@ -106,7 +109,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _widthInput.TextChanged += _ =>
         {
             if (!_suppressCutReset)
+            {
                 OnDimensionManualEdit();
+                UpdateOrientationButtons();
+            }
             UpdatePreview();
         };
 
@@ -237,12 +243,37 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         var cut = GetCurrentCut();
         if (cut.Shape == 0)
         {
-            _suppressCutReset = true;
-            (_widthInput.Text, _heightInput.Text) = (_heightInput.Text, _widthInput.Text);
-            _suppressCutReset = false;
+            if (
+                float.TryParse(_widthInput.Text, out var w)
+                && float.TryParse(_heightInput.Text, out var h)
+            )
+            {
+                bool wantLandscape = _landscapeButton.ButtonPressed;
+                bool needsSwap = wantLandscape ? h > w : w > h;
+                if (needsSwap)
+                {
+                    _suppressCutReset = true;
+                    (_widthInput.Text, _heightInput.Text) = (_heightInput.Text, _widthInput.Text);
+                    _suppressCutReset = false;
+                }
+            }
         }
 
         UpdatePreview();
+    }
+
+    private void UpdateOrientationButtons()
+    {
+        var cut = GetCurrentCut();
+        if (cut.Shape != 0)
+            return;
+        if (
+            !float.TryParse(_widthInput.Text, out var w)
+            || !float.TryParse(_heightInput.Text, out var h)
+        )
+            return;
+        _landscapeButton.ButtonPressed = w > h;
+        _portraitButton.ButtonPressed = h >= w;
     }
 
     private void UpdateDimensionUI()
@@ -263,6 +294,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _portraitButton.Icon = isHex ? _iconHexPoint : _iconPortrait;
         _landscapeButton.Icon = isHex ? _iconHexFlat : _iconLandscape;
+
+        UpdateOrientationButtons();
     }
 
     private void OnDimensionManualEdit()
