@@ -45,6 +45,17 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private QuickTextureEntry _frontField;
     private QuickTextureEntry _backField;
 
+    private const int MaxQuickSuitCount = 8;
+    private ColorPickerButton[] _quickSuitColors = new ColorPickerButton[MaxQuickSuitCount];
+    private LineEdit[] _quickSuitValues = new LineEdit[MaxQuickSuitCount];
+    private HBoxContainer[] _quickSuitRows = new HBoxContainer[MaxQuickSuitCount];
+    private OptionButton _quickSuitCount;
+    private ColorPickerButton _quickBackColor;
+    private LineEdit _quickBackText;
+    private List<QuickCardData> _quickCards = new();
+    private List<QuickCardData> _quickSuits = new();
+    private int _suitCount;
+
     private IconLibrary _iconLibrary = new();
 
     private OptionButton _frontTemplatePicker;
@@ -162,17 +173,25 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _backField.SetIcons(_iconLibrary);
 
         _tabs = GetNode<TabContainer>("%Tabs");
-        _tabs.TabSelected += _ => UpdatePreview();
+        _tabs.TabSelected += tab =>
+        {
+            if (tab == 1)
+                GenerateQuickCards();
+            UpdatePreview();
+        };
 
         _preview = GetNode<ComponentPreview>("%Preview");
         _preview.ItemSelected += PreviewOnItemSelected;
 
         InitializeTemplates();
         InitializeGridBindings();
+        InitializeMultiBindings();
 
         OnQuickBackCheckboxChange();
         OnCustomBackCheckboxChange();
         OnTypeChanged(0);
+        QuickSuitCountChanged(3);
+        GenerateQuickCards();
     }
 
     private string TypeKey() =>
@@ -327,6 +346,84 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
         _gridSingleBack.Pressed += GenerateGridTokens;
+    }
+
+    private void InitializeMultiBindings()
+    {
+        for (int i = 0; i < MaxQuickSuitCount; i++)
+        {
+            _quickSuitColors[i] = GetNode<ColorPickerButton>($"%QuickSuit{i + 1}Color");
+            _quickSuitValues[i] = GetNode<LineEdit>($"%QuickSuit{i + 1}Contents");
+            _quickSuitRows[i] = GetNode<HBoxContainer>($"%QSRow{i + 1}");
+
+            _quickSuitColors[i].ColorChanged += _ => GenerateQuickCards();
+            _quickSuitValues[i].TextChanged += _ => GenerateQuickCards();
+        }
+
+        _quickSuitCount = GetNode<OptionButton>("%QuickSuitCount");
+        _quickSuitCount.ItemSelected += QuickSuitCountChanged;
+
+        _quickBackColor = GetNode<ColorPickerButton>("%QuickBackColor");
+        _quickBackColor.ColorChanged += _ => GenerateQuickCards();
+
+        _quickBackText = GetNode<LineEdit>("%QuickBackText");
+        _quickBackText.TextChanged += _ => GenerateQuickCards();
+    }
+
+    private void QuickSuitCountChanged(long suitCount)
+    {
+        for (int i = 0; i < _quickSuitRows.Length; i++)
+            _quickSuitRows[i].Visible = suitCount > i - 1;
+
+        GenerateQuickCards();
+    }
+
+    private void LoadQuickSuits()
+    {
+        _quickSuits.Clear();
+        _suitCount = _quickSuitCount.Selected + 1;
+        for (int i = 0; i < _suitCount; i++)
+        {
+            _quickSuits.Add(
+                new QuickCardData
+                {
+                    BackgroundColor = _quickSuitColors[i].Color,
+                    Caption = _quickSuitValues[i].Text,
+                    CardBackColor = _quickBackColor.Color,
+                    CardBackValue = _quickBackText.Text,
+                }
+            );
+        }
+    }
+
+    private void GenerateQuickCards()
+    {
+        _suitCount = _quickSuitCount.Selected + 1;
+        _quickCards.Clear();
+
+        for (int i = 0; i < _suitCount; i++)
+        {
+            var values = Utility.ParseValueRanges(_quickSuitValues[i].Text);
+            foreach (var v in values)
+            {
+                _quickCards.Add(
+                    new QuickCardData
+                    {
+                        BackgroundColor = _quickSuitColors[i].Color,
+                        Caption = v,
+                        CardBackColor = _quickBackColor.Color,
+                        CardBackValue = _quickBackText.Text,
+                    }
+                );
+            }
+        }
+
+        if (_tabs?.CurrentTab == 1)
+        {
+            _preview.ItemCount = _quickCards.Count;
+            _preview.MultiItemMode = _quickCards.Count > 1;
+            ChangePreviewToken(0);
+        }
     }
 
     private string _frontGridImage;
@@ -559,11 +656,21 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 break;
 
             case 1:
+                LoadQuickSuits();
+                d.Add("QuickCardData", _quickSuits);
+                d.Add("DifferentBack", true);
+                d.Add("Mode", VcToken.TokenBuildMode.QuickDeck);
+                spawnAsDeck = true;
+                WidthHint = width / 10f;
+                HeightHint = height / 10f;
+                break;
+
+            case 2:
                 d.Add("Mode", VcToken.TokenBuildMode.Custom);
                 d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
                 break;
 
-            case 2:
+            case 3:
                 d.Add("FrontGridImageKey", _frontGridImage);
                 d.Add("BackGridImageKey", _backGridImage);
                 d.Add("GridRows", _gridRows);
@@ -580,7 +687,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 }
                 break;
 
-            case 3:
+            case 4:
                 d.Add("Mode", VcToken.TokenBuildMode.Template);
                 if (_frontTemplate != null)
                     d.Add("FrontTemplate", _frontTemplate.Name);
@@ -635,6 +742,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private string GetRow(int rowNum)
     {
+        if (_tabs.CurrentTab == 1)
+            return (rowNum + 1).ToString();
         if (_textureContext.DataSet == null)
             return rowNum.ToString();
         if (rowNum < 0 || rowNum >= _textureContext.DataSet.Rows.Count)
@@ -739,11 +848,31 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             _tabs.CurrentTab = mode switch
             {
                 VcToken.TokenBuildMode.Quick => 0,
-                VcToken.TokenBuildMode.Custom => 1,
-                VcToken.TokenBuildMode.Grid => 2,
-                VcToken.TokenBuildMode.Template => 3,
+                VcToken.TokenBuildMode.QuickDeck => 1,
+                VcToken.TokenBuildMode.Custom => 2,
+                VcToken.TokenBuildMode.Grid => 3,
+                VcToken.TokenBuildMode.Template => 4,
                 _ => 0,
             };
+        }
+
+        if (
+            prototype.Parameters.ContainsKey("QuickCardData")
+            && prototype.Parameters["QuickCardData"] is List<QuickCardData> quickData
+        )
+        {
+            _quickSuitCount.Select(Math.Min(quickData.Count - 1, MaxQuickSuitCount - 1));
+            QuickSuitCountChanged(_quickSuitCount.Selected);
+            for (int i = 0; i < quickData.Count && i < MaxQuickSuitCount; i++)
+            {
+                _quickSuitColors[i].Color = quickData[i].BackgroundColor;
+                _quickSuitValues[i].Text = quickData[i].Caption;
+            }
+            if (quickData.Count > 0)
+            {
+                _quickBackColor.Color = quickData[0].CardBackColor;
+                _quickBackText.Text = quickData[0].CardBackValue;
+            }
         }
 
         _gridRowCount.Text = prototype.Parameters.ContainsKey("GridRows")
