@@ -271,7 +271,49 @@ public partial class VcToken : VisualComponentBase
         if (_quickCardList == null)
             _quickCardList = new();
 
+        _faceHframes = ReadIntParam(parameters, "FaceHframes", 1, min: 1);
+        _faceVframes = ReadIntParam(parameters, "FaceVframes", 1, min: 1);
+        _faceFrame = ReadIntParam(parameters, "FaceFrame", 0, min: 0);
+        _backHframes = ReadIntParam(parameters, "BackHframes", 1, min: 1);
+        _backVframes = ReadIntParam(parameters, "BackVframes", 1, min: 1);
+        _backFrame = ReadIntParam(parameters, "BackFrame", 0, min: 0);
+
+        if (_mode == TokenBuildMode.Grid && !parameters.ContainsKey("FaceHframes"))
+        {
+            int cols = Math.Max(_gridCols, 1);
+            int rows = Math.Max(_gridRows, 1);
+            int.TryParse(DataSetRow, out var idx);
+            idx = Math.Max(idx, 0);
+            _faceHframes = cols;
+            _faceVframes = rows;
+            _faceFrame = idx;
+            if (_gridSingleBack)
+            {
+                _backHframes = 1;
+                _backVframes = 1;
+                _backFrame = 0;
+            }
+            else
+            {
+                _backHframes = cols;
+                _backVframes = rows;
+                _backFrame = idx;
+            }
+        }
+
         return true;
+    }
+
+    private static int ReadIntParam(
+        Dictionary<string, object> parameters,
+        string key,
+        int defaultValue,
+        int min = int.MinValue
+    )
+    {
+        if (!parameters.TryGetValue(key, out var raw) || raw is not int v)
+            return defaultValue;
+        return v < min ? min : v;
     }
 
     public override void Build()
@@ -285,6 +327,21 @@ public partial class VcToken : VisualComponentBase
         this._buildRequired = false;
 
         BuildToken();
+
+        if (_pendingSheetAssignment)
+        {
+            if (_frontMasterSprite != null)
+            {
+                FaceTexture = _frontMasterSprite;
+                BackTexture = _backMasterSprite ?? _frontMasterSprite;
+                _frontTextureGenerated = true;
+                _backTextureGenerated = true;
+                MapFrontTexture();
+                MapBackTexture();
+                TextureChanged = true;
+            }
+            return;
+        }
 
         switch (_mode)
         {
@@ -312,6 +369,43 @@ public partial class VcToken : VisualComponentBase
                 BuildQuickDeck(TextureFactory);
                 break;
         }
+    }
+
+    private bool _pendingSheetAssignment;
+
+    public void MarkPendingSheet()
+    {
+        _pendingSheetAssignment = true;
+    }
+
+    public void AssignSheet(
+        Texture2D frontSheet,
+        Texture2D backSheet,
+        int faceHframes,
+        int faceVframes,
+        int faceFrame,
+        int backHframes,
+        int backVframes,
+        int backFrame
+    )
+    {
+        _frontMasterSprite = frontSheet;
+        _backMasterSprite = backSheet ?? frontSheet;
+        _faceHframes = Math.Max(faceHframes, 1);
+        _faceVframes = Math.Max(faceVframes, 1);
+        _faceFrame = Math.Max(faceFrame, 0);
+        _backHframes = Math.Max(backHframes, 1);
+        _backVframes = Math.Max(backVframes, 1);
+        _backFrame = Math.Max(backFrame, 0);
+
+        FaceTexture = _frontMasterSprite;
+        BackTexture = _backMasterSprite;
+        _frontTextureGenerated = true;
+        _backTextureGenerated = true;
+        TextureChanged = true;
+
+        MapFrontTexture();
+        MapBackTexture();
     }
 
     public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
@@ -544,9 +638,7 @@ public partial class VcToken : VisualComponentBase
         if (!asset.AssetDownloaded)
             return;
 
-        var texture = new ImageTexture();
-        texture.SetImage(asset.Image);
-        _frontMasterSprite = texture;
+        _frontMasterSprite = TextureCache.Instance.GetOrCreateAssetTexture(asset);
 
         ApplyGridFaceTexture();
     }
@@ -564,9 +656,7 @@ public partial class VcToken : VisualComponentBase
         if (!asset.AssetDownloaded)
             return;
 
-        var texture = new ImageTexture();
-        texture.SetImage(asset.Image);
-        _backMasterSprite = texture;
+        _backMasterSprite = TextureCache.Instance.GetOrCreateAssetTexture(asset);
 
         ApplyGridBackTexture();
     }
@@ -715,9 +805,20 @@ public partial class VcToken : VisualComponentBase
 
     private void CreateQuickFrontTexture(TextureFactory textureFactory)
     {
-        var td = CreateQuickTextureDefinition(_frontBgColor, _frontField);
+        var key = QuickSingleKey(_frontBgColor, _frontField, side: "f");
+        bool weBuild = TextureCache.Instance.RequestDerived(
+            key,
+            tex =>
+            {
+                if (tex is ImageTexture it)
+                    FinalizeFrontTexture(it);
+            }
+        );
+        if (!weBuild)
+            return;
 
-        textureFactory.GenerateTexture(td, FinalizeFrontTexture);
+        var td = CreateQuickTextureDefinition(_frontBgColor, _frontField);
+        textureFactory.GenerateTexture(td, t => TextureCache.Instance.PutDerived(key, t));
     }
 
     private TextureFactory.TextureDefinition CreateQuickTextureDefinition(
@@ -725,18 +826,29 @@ public partial class VcToken : VisualComponentBase
         QuickTextureField qtf
     )
     {
+        return BuildQuickTextureDefinition(bgColor, qtf, _height, _width, _shape);
+    }
+
+    public static TextureFactory.TextureDefinition BuildQuickTextureDefinition(
+        Color bgColor,
+        QuickTextureField qtf,
+        float height,
+        float width,
+        int shape
+    )
+    {
         int sH = 256;
         int sW = 256;
 
-        if (_height <= 0 || _width <= 0)
+        if (height <= 0 || width <= 0)
             return new TextureFactory.TextureDefinition();
-        if (_height > _width)
+        if (height > width)
         {
-            sW = (int)(_width * 256 / _height);
+            sW = (int)(width * 256 / height);
         }
         else
         {
-            sH = (int)(_height * 256 / _width);
+            sH = (int)(height * 256 / width);
         }
 
         var td = new TextureFactory.TextureDefinition
@@ -765,7 +877,7 @@ public partial class VcToken : VisualComponentBase
             };
         }
 
-        switch (_shape)
+        switch (shape)
         {
             case 0:
                 td.Shape = TextureFactory.TokenShape.Square;
@@ -842,16 +954,7 @@ public partial class VcToken : VisualComponentBase
         _frontTextureGenerated = true;
         _frontMaterial.AlbedoTexture = FaceTexture;
 
-        if (_mode == TokenBuildMode.Grid)
-        {
-            int.TryParse(DataSetRow, out var r);
-            int cols = Math.Max(_gridCols, 1);
-            int rows = Math.Max(_gridRows, 1);
-            int col = r % cols;
-            int row = r / cols;
-            _frontMaterial.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
-            _frontMaterial.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
-        }
+        ApplyUvOffset(_frontMaterial, _faceHframes, _faceVframes, _faceFrame);
 
         if (!_differentBack)
             BackTexture = FaceTexture;
@@ -871,23 +974,44 @@ public partial class VcToken : VisualComponentBase
         _backTextureGenerated = true;
         _backMaterial.AlbedoTexture = BackTexture;
 
-        if (_mode == TokenBuildMode.Grid && !_gridSingleBack)
-        {
-            int.TryParse(DataSetRow, out var r);
-            int cols = Math.Max(_gridCols, 1);
-            int rows = Math.Max(_gridRows, 1);
-            int col = r % cols;
-            int row = r / cols;
-            _backMaterial.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
-            _backMaterial.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
-        }
+        ApplyUvOffset(_backMaterial, _backHframes, _backVframes, _backFrame);
+    }
+
+    private static void ApplyUvOffset(StandardMaterial3D mat, int hframes, int vframes, int frame)
+    {
+        int cols = Math.Max(hframes, 1);
+        int rows = Math.Max(vframes, 1);
+        int col = frame % cols;
+        int row = frame / cols;
+        mat.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
+        mat.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
     }
 
     private void CreateQuickBackTexture(TextureFactory textureFactory)
     {
-        var td = CreateQuickTextureDefinition(_backBgColor, _backField);
+        var key = QuickSingleKey(_backBgColor, _backField, side: "b");
+        bool weBuild = TextureCache.Instance.RequestDerived(
+            key,
+            tex =>
+            {
+                if (tex is ImageTexture it)
+                    FinalizeBackTexture(it);
+            }
+        );
+        if (!weBuild)
+            return;
 
-        textureFactory.GenerateTexture(td, FinalizeBackTexture);
+        var td = CreateQuickTextureDefinition(_backBgColor, _backField);
+        textureFactory.GenerateTexture(td, t => TextureCache.Instance.PutDerived(key, t));
+    }
+
+    private string QuickSingleKey(Color bgColor, QuickTextureField qtf, string side)
+    {
+        var caption = qtf?.Caption ?? string.Empty;
+        var fg = (qtf?.ForegroundColor ?? Colors.Black).ToHtml();
+        var type = (int)(qtf?.FaceType ?? TextureFactory.TextureObjectType.Text);
+        var qty = qtf?.Quantity ?? 1;
+        return $"qs-{side}:{_shape}:{(int)(_width * 256)}x{(int)(_height * 256)}:{bgColor.ToHtml()}:{type}:{qty}:{fg}:{caption}";
     }
 
     private void FinalizeBackTexture(ImageTexture t)
@@ -986,6 +1110,20 @@ public partial class VcToken : VisualComponentBase
     private bool _gridSingleBack;
 
     //private int _gridIndex;
+
+    private int _faceHframes = 1;
+    private int _faceVframes = 1;
+    private int _faceFrame = 0;
+    private int _backHframes = 1;
+    private int _backVframes = 1;
+    private int _backFrame = 0;
+
+    public int FaceHframes => _faceHframes;
+    public int FaceVframes => _faceVframes;
+    public int FaceFrame => _faceFrame;
+    public int BackHframes => _backHframes;
+    public int BackVframes => _backVframes;
+    public int BackFrame => _backFrame;
 
     public enum TokenType
     {

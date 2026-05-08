@@ -47,6 +47,8 @@ public partial class ProjectService : Node
         get => _currentProject;
         set
         {
+            if (!ReferenceEquals(_currentProject, value))
+                TextureCache.Instance.Clear();
             _currentProject = value;
             if (!_suppressProjectChangeEvent)
             {
@@ -61,6 +63,8 @@ public partial class ProjectService : Node
     public void SetProjectSilent(Project project)
     {
         _suppressProjectChangeEvent = true;
+        if (!ReferenceEquals(_currentProject, project))
+            TextureCache.Instance.Clear();
         _currentProject = project;
         _suppressProjectChangeEvent = false;
     }

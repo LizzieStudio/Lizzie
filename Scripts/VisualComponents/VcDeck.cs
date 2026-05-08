@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using Godot;
 
 public partial class VcDeck : VisualComponentGroup
@@ -534,22 +535,180 @@ public partial class VcDeck : VisualComponentGroup
     {
         Clear();
 
-        foreach (var kv in dataset.Rows)
+        var rows = dataset.Rows.Select(r => r.Key).ToList();
+        int n = rows.Count;
+        if (n == 0)
+            return;
+
+        var curProj = ProjectService.Instance.CurrentProject;
+        var ft = curProj.GetTemplate(frontTemplate);
+        var bt = curProj.GetTemplate(backTemplate);
+        if (ft == null)
+            return;
+
+        int cellW = (int)(ft.Width * 10);
+        int cellH = (int)(ft.Height * 10);
+        if (cellW <= 0 || cellH <= 0)
+            return;
+
+        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
+        int vframes = (int)Math.Ceiling((double)n / hframes);
+
+        var children = new List<VcToken>();
+        for (int i = 0; i < n; i++)
         {
             var card = (VcToken)_templateCard.Duplicate();
             card.ComponentType = VisualComponentType.Token;
-
-            CreateTemplateCard(
-                frontTemplate,
-                backTemplate,
-                dataset.Name,
-                card,
-                kv.Key,
-                textureFactory
-            );
-
+            card.Parent = Reference;
+            card.PrototypeRef = PrototypeRef;
+            card.MarkPendingSheet();
+            card.Setup(PrototypeRef, rows[i], textureFactory);
+            children.Add(card);
             CreateAndAddChildComponent(card);
         }
+
+        string frontKey = TemplateSheetKey(
+            frontTemplate,
+            dataset.Name,
+            rows,
+            cellW,
+            cellH,
+            hframes,
+            vframes,
+            "f"
+        );
+        string backKey = TemplateSheetKey(
+            backTemplate,
+            dataset.Name,
+            rows,
+            cellW,
+            cellH,
+            hframes,
+            vframes,
+            "b"
+        );
+
+        Texture2D frontSheet = null;
+        Texture2D backSheet = null;
+        bool backReady = bt == null; // no back template ⇒ back reuses the front
+
+        void AssignAll()
+        {
+            if (frontSheet == null || !backReady)
+                return;
+            var effectiveBack = bt == null ? frontSheet : backSheet;
+            if (effectiveBack == null)
+                return;
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                children[i]
+                    .AssignSheet(
+                        frontSheet,
+                        effectiveBack,
+                        hframes,
+                        vframes,
+                        i,
+                        hframes,
+                        vframes,
+                        i
+                    );
+            }
+        }
+
+        bool weBuildFront = TextureCache.Instance.RequestDerived(
+            frontKey,
+            tex =>
+            {
+                frontSheet = tex;
+                AssignAll();
+            }
+        );
+
+        bool weBuildBack = false;
+        if (bt != null)
+        {
+            weBuildBack = TextureCache.Instance.RequestDerived(
+                backKey,
+                tex =>
+                {
+                    backSheet = tex;
+                    backReady = true;
+                    AssignAll();
+                }
+            );
+        }
+
+        if (weBuildFront)
+        {
+            var defs = BuildTemplateDefinitions(ft, dataset, rows);
+            new SpriteSheetBuilder(
+                textureFactory,
+                defs,
+                cellW,
+                cellH,
+                hframes,
+                vframes,
+                tex => TextureCache.Instance.PutDerived(frontKey, tex)
+            ).Start();
+        }
+
+        if (weBuildBack)
+        {
+            var defs = BuildTemplateDefinitions(bt, dataset, rows);
+            new SpriteSheetBuilder(
+                textureFactory,
+                defs,
+                cellW,
+                cellH,
+                hframes,
+                vframes,
+                tex => TextureCache.Instance.PutDerived(backKey, tex)
+            ).Start();
+        }
+    }
+
+    private static List<TextureFactory.TextureDefinition> BuildTemplateDefinitions(
+        Template template,
+        DataSet dataset,
+        List<string> rows
+    )
+    {
+        var defs = new List<TextureFactory.TextureDefinition>(rows.Count);
+        var context = new TextureContext
+        {
+            DataSet = dataset,
+            Dpi = 100,
+            ParentSize = new Vector2(template.Width * 10, template.Height * 10),
+        };
+        foreach (var row in rows)
+        {
+            context.CurrentRowName = row;
+            defs.Add(TemplateEngine.GenerateTextureDefinition(template, context));
+        }
+        return defs;
+    }
+
+    private string TemplateSheetKey(
+        string templateName,
+        string datasetName,
+        List<string> rows,
+        int cellW,
+        int cellH,
+        int hframes,
+        int vframes,
+        string side
+    )
+    {
+        var sb = new StringBuilder();
+        sb.Append("tpl-").Append(side).Append(':');
+        sb.Append(templateName ?? "").Append(':');
+        sb.Append(datasetName ?? "").Append(':');
+        sb.Append(cellW).Append('x').Append(cellH).Append(':');
+        sb.Append(hframes).Append('x').Append(vframes).Append(':');
+        foreach (var r in rows)
+            sb.Append(r).Append(';');
+        return sb.ToString();
     }
 
     private void RefreshTemplateCards(
@@ -650,47 +809,223 @@ public partial class VcDeck : VisualComponentGroup
     {
         Clear();
 
-        int cardNum = 1;
-
+        var cards = new List<QuickCardData>();
         foreach (var q in _quickCardList)
         {
-            var values = Utility.ParseValueRanges(q.Caption);
-
-            foreach (var v in values)
+            foreach (var v in Utility.ParseValueRanges(q.Caption))
             {
-                var c = CreateQuickCard(
-                    v,
-                    q.BackgroundColor,
-                    q.CardBackValue,
-                    q.CardBackColor,
-                    cardNum,
-                    textureFactory
+                cards.Add(
+                    new QuickCardData
+                    {
+                        Caption = v,
+                        BackgroundColor = q.BackgroundColor,
+                        CardBackValue = q.CardBackValue,
+                        CardBackColor = q.CardBackColor,
+                    }
                 );
-
-                CreateAndAddChildComponent(c);
-                cardNum++;
             }
+        }
+
+        int n = cards.Count;
+        if (n == 0)
+            return;
+
+        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
+        int vframes = (int)Math.Ceiling((double)n / hframes);
+
+        ComputeCellSize(out var cellW, out var cellH);
+
+        bool singleBack = AllBacksIdentical(cards);
+
+        var children = new List<VcToken>();
+        for (int i = 0; i < n; i++)
+        {
+            var c = (VcToken)_templateCard.Duplicate();
+            c.ComponentType = VisualComponentType.Token;
+            c.Parent = Reference;
+            c.PrototypeRef = PrototypeRef;
+            c.MarkPendingSheet();
+            c.Setup(PrototypeRef, (i + 1).ToString(), textureFactory);
+            children.Add(c);
+            CreateAndAddChildComponent(c);
+        }
+
+        string frontKey = QuickDeckSheetKey(cards, cellW, cellH, hframes, vframes, side: "f");
+        string backKey = singleBack
+            ? QuickDeckSingleBackKey(cards[0], cellW, cellH)
+            : QuickDeckSheetKey(cards, cellW, cellH, hframes, vframes, side: "b");
+
+        Texture2D frontSheet = null;
+        Texture2D backSheet = null;
+
+        void AssignAll()
+        {
+            if (frontSheet == null || backSheet == null)
+                return;
+            int backH = singleBack ? 1 : hframes;
+            int backV = singleBack ? 1 : vframes;
+            for (int i = 0; i < children.Count; i++)
+            {
+                int backFrame = singleBack ? 0 : i;
+                children[i]
+                    .AssignSheet(
+                        frontSheet,
+                        backSheet,
+                        hframes,
+                        vframes,
+                        i,
+                        backH,
+                        backV,
+                        backFrame
+                    );
+            }
+        }
+
+        bool weBuildFront = TextureCache.Instance.RequestDerived(
+            frontKey,
+            tex =>
+            {
+                frontSheet = tex;
+                AssignAll();
+            }
+        );
+        bool weBuildBack = TextureCache.Instance.RequestDerived(
+            backKey,
+            tex =>
+            {
+                backSheet = tex;
+                AssignAll();
+            }
+        );
+
+        if (weBuildFront)
+        {
+            var defs = new List<TextureFactory.TextureDefinition>(n);
+            foreach (var card in cards)
+            {
+                defs.Add(
+                    VcToken.BuildQuickTextureDefinition(
+                        card.BackgroundColor,
+                        new QuickTextureField
+                        {
+                            Caption = card.Caption,
+                            FaceType = TextureFactory.TextureObjectType.Text,
+                            ForegroundColor = Colors.Black,
+                            Quantity = 1,
+                        },
+                        _height,
+                        _width,
+                        _shape
+                    )
+                );
+            }
+            new SpriteSheetBuilder(
+                textureFactory,
+                defs,
+                cellW,
+                cellH,
+                hframes,
+                vframes,
+                tex => TextureCache.Instance.PutDerived(frontKey, tex)
+            ).Start();
+        }
+
+        if (weBuildBack)
+        {
+            int bH = singleBack ? 1 : hframes;
+            int bV = singleBack ? 1 : vframes;
+            var defs = new List<TextureFactory.TextureDefinition>();
+            var backCards = singleBack ? new List<QuickCardData> { cards[0] } : cards;
+            foreach (var card in backCards)
+            {
+                defs.Add(
+                    VcToken.BuildQuickTextureDefinition(
+                        card.CardBackColor,
+                        new QuickTextureField
+                        {
+                            Caption = card.CardBackValue,
+                            FaceType = TextureFactory.TextureObjectType.Text,
+                            ForegroundColor = Colors.Black,
+                            Quantity = 1,
+                        },
+                        _height,
+                        _width,
+                        _shape
+                    )
+                );
+            }
+            new SpriteSheetBuilder(
+                textureFactory,
+                defs,
+                cellW,
+                cellH,
+                bH,
+                bV,
+                tex => TextureCache.Instance.PutDerived(backKey, tex)
+            ).Start();
         }
     }
 
-    private VcToken CreateQuickCard(
-        string faceCaption,
-        Color faceColor,
-        string backCaption,
-        Color backColor,
-        int cardNum,
-        TextureFactory textureFactory
+    private void ComputeCellSize(out int cellW, out int cellH)
+    {
+        cellH = 256;
+        cellW = 256;
+        if (_height <= 0 || _width <= 0)
+            return;
+        if (_height > _width)
+            cellW = (int)(_width * 256 / _height);
+        else
+            cellH = (int)(_height * 256 / _width);
+    }
+
+    private static bool AllBacksIdentical(List<QuickCardData> cards)
+    {
+        if (cards.Count <= 1)
+            return true;
+        var first = cards[0];
+        for (int i = 1; i < cards.Count; i++)
+        {
+            if (
+                cards[i].CardBackValue != first.CardBackValue
+                || cards[i].CardBackColor != first.CardBackColor
+            )
+                return false;
+        }
+        return true;
+    }
+
+    private string QuickDeckSheetKey(
+        List<QuickCardData> cards,
+        int cellW,
+        int cellH,
+        int hframes,
+        int vframes,
+        string side
     )
     {
-        var card = (VcToken)_templateCard.Duplicate();
-        card.ComponentType = VisualComponentType.Token;
+        var sb = new StringBuilder();
+        sb.Append("qd-").Append(side).Append(':');
+        sb.Append(cellW).Append('x').Append(cellH).Append(':');
+        sb.Append(hframes).Append('x').Append(vframes).Append(':');
+        sb.Append(_shape).Append(':');
+        foreach (var c in cards)
+        {
+            if (side == "f")
+                sb.Append(c.Caption).Append('|').Append(c.BackgroundColor.ToHtml()).Append(';');
+            else
+                sb.Append(c.CardBackValue).Append('|').Append(c.CardBackColor.ToHtml()).Append(';');
+        }
+        return sb.ToString();
+    }
 
-        card.Parent = Reference;
-        card.PrototypeRef = PrototypeRef;
-
-        card.Setup(PrototypeRef, cardNum.ToString(), textureFactory);
-
-        return card;
+    private string QuickDeckSingleBackKey(QuickCardData card, int cellW, int cellH)
+    {
+        var sb = new StringBuilder();
+        sb.Append("qd-bsingle:");
+        sb.Append(cellW).Append('x').Append(cellH).Append(':');
+        sb.Append(_shape).Append(':');
+        sb.Append(card.CardBackValue).Append('|').Append(card.CardBackColor.ToHtml());
+        return sb.ToString();
     }
 
     private void CreateTemplateCard(
@@ -851,8 +1186,13 @@ public partial class VcDeck : VisualComponentGroup
             {
                 if (vcf.TextureChanged && vcf.IsNodeReady() && vcf.BackTexture != null)
                 {
-                    _frontSprite.Texture = vcf.BackTexture;
-                    _frontSprite.PixelSize = PixelSize(_frontSprite.Texture.GetSize());
+                    ApplyTokenToSprite(
+                        _frontSprite,
+                        vcf.BackTexture,
+                        vcf.BackFrame,
+                        vcf.BackHframes,
+                        vcf.BackVframes
+                    );
                     _frontTextureReady = true;
                     vcf.TextureChanged = false;
                 }
@@ -863,8 +1203,13 @@ public partial class VcDeck : VisualComponentGroup
             {
                 if (vcb.TextureChanged && vcb.IsNodeReady() && vcb.FaceTexture != null)
                 {
-                    _backSprite.Texture = vcb.FaceTexture;
-                    _backSprite.PixelSize = PixelSize(_backSprite.Texture.GetSize());
+                    ApplyTokenToSprite(
+                        _backSprite,
+                        vcb.FaceTexture,
+                        vcb.FaceFrame,
+                        vcb.FaceHframes,
+                        vcb.FaceVframes
+                    );
                     _backTextureReady = true;
                     vcb.TextureChanged = false;
                 }
@@ -872,6 +1217,25 @@ public partial class VcDeck : VisualComponentGroup
 
             TextureReady = _frontTextureReady && _backTextureReady;
         }
+    }
+
+    private void ApplyTokenToSprite(
+        Sprite3D sprite,
+        Texture2D tex,
+        int frame,
+        int hframes,
+        int vframes
+    )
+    {
+        int cols = Math.Max(hframes, 1);
+        int rows = Math.Max(vframes, 1);
+        sprite.Texture = tex;
+        sprite.Hframes = cols;
+        sprite.Vframes = rows;
+        sprite.Frame = Math.Max(frame, 0);
+        var ts = tex.GetSize();
+        var cellSize = new Vector2(ts.X / cols, ts.Y / rows);
+        sprite.PixelSize = PixelSize(cellSize);
     }
 
     private void CreateAndAddChildComponent(VisualComponentBase component)
@@ -910,19 +1274,13 @@ public partial class VcDeck : VisualComponentGroup
                     if (vcf.BackTexture == null)
                         return;
 
-                    _frontSprite.PixelSize = PixelSize(vcf.BackTexture.GetSize());
-                    _frontSprite.Texture = vcf.BackTexture;
-
-                    if (_mode == VcToken.TokenBuildMode.Grid && !_gridSingleBack)
-                    {
-                        int.TryParse(vcf.DataSetRow, out var frontFrame);
-                        _frontSprite.Frame = frontFrame;
-                        _frontSprite.Hframes = _gridCols;
-                        _frontSprite.Vframes = _gridRows;
-                        var ts = _frontSprite.Texture.GetSize();
-                        var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
-                        _frontSprite.PixelSize = PixelSize(cv);
-                    }
+                    ApplyTokenToSprite(
+                        _frontSprite,
+                        vcf.BackTexture,
+                        vcf.BackFrame,
+                        vcf.BackHframes,
+                        vcf.BackVframes
+                    );
 
                     _frontTextureReady = true;
                 }
@@ -936,19 +1294,13 @@ public partial class VcDeck : VisualComponentGroup
                     if (vcb.FaceTexture == null)
                         return;
 
-                    _backSprite.PixelSize = PixelSize(vcb.FaceTexture.GetSize());
-                    _backSprite.Texture = vcb.FaceTexture;
-
-                    if (_mode == VcToken.TokenBuildMode.Grid)
-                    {
-                        int.TryParse(vcb.DataSetRow, out var lastFrame);
-                        _backSprite.Frame = lastFrame;
-                        _backSprite.Hframes = _gridCols;
-                        _backSprite.Vframes = _gridRows;
-                        var ts = _backSprite.Texture.GetSize();
-                        var cv = new Vector2(ts.X / _gridCols, ts.Y / _gridRows);
-                        _backSprite.PixelSize = PixelSize(cv);
-                    }
+                    ApplyTokenToSprite(
+                        _backSprite,
+                        vcb.FaceTexture,
+                        vcb.FaceFrame,
+                        vcb.FaceHframes,
+                        vcb.FaceVframes
+                    );
 
                     _backTextureReady = true;
                 }
