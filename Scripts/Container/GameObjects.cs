@@ -15,14 +15,10 @@ public partial class GameObjects : Node
     [Export]
     private int _stackingUpdateFrames = 3; //Test hack to avoid issue with stacking not seeing colliders
 
-    [Export]
-    private int _spawnQueueFrames = 3;
-
     [Signal]
     public delegate void CameraActivationEventHandler(bool cameraActivated);
 
     private int _stackingUpdateRequired;
-    private int _spawnQueueTimer;
     private readonly SpawnQueue _spawnQueue = new();
     private readonly ComponentPropertyQueue _componentPropertyQueue = new();
     private const int MaxPropertySyncsPerFrame = 3;
@@ -130,13 +126,7 @@ public partial class GameObjects : Node
     {
         base._Process(delta);
 
-        _spawnQueueTimer++;
-        if (_spawnQueueTimer >= _spawnQueueFrames)
-        {
-            _spawnQueueTimer = 0;
-            ProcessSpawnQueue();
-        }
-
+        ProcessSpawnQueue();
         ProcessComponentPropertyQueue();
 
         /*
@@ -267,8 +257,7 @@ public partial class GameObjects : Node
             networkedObject.Component = component;
             component.AddChild(networkedObject);
 
-            // Server syncs object creation to all clients
-            if (MultiplayerManager.Instance.IsServer && syncCreation)
+            if (syncCreation)
             {
                 SyncCreation(component);
             }
@@ -1210,8 +1199,6 @@ public partial class GameObjects : Node
     {
         if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
             return;
-        if (!MultiplayerManager.Instance.IsServer)
-            return;
         if (component == null)
             return;
 
@@ -1228,10 +1215,7 @@ public partial class GameObjects : Node
     {
         if (_spawnQueue.Count == 0)
             return;
-        if (
-            MultiplayerManager.Instance?.IsMultiplayerActive != true
-            || !MultiplayerManager.Instance.IsServer
-        )
+        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
             return;
 
         int cnt = 0;
@@ -1251,7 +1235,17 @@ public partial class GameObjects : Node
             var syncDto = new VcSyncDto(component);
             var syncDtoJson = JsonSerializer.Serialize(syncDto);
 
-            Rpc(nameof(ClientSpawnObject), prototypeRef, componentRef, parentRef, syncDtoJson);
+            if (MultiplayerManager.Instance.IsServer)
+                Rpc(nameof(ClientSpawnObject), prototypeRef, componentRef, parentRef, syncDtoJson);
+            else
+                RpcId(
+                    1,
+                    nameof(ServerSpawnObject),
+                    prototypeRef,
+                    componentRef,
+                    parentRef,
+                    syncDtoJson
+                );
 
             cnt++;
             if (cnt >= MaxSpawnProcess)
@@ -1279,6 +1273,49 @@ public partial class GameObjects : Node
             );
             _pendingSpawns.Add(
                 new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson)
+            );
+        }
+    }
+
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ServerSpawnObject(
+        string prototypeRefStr,
+        string componentRefStr,
+        string parentRefStr,
+        string syncDtoJson
+    )
+    {
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
+
+        var senderId = Multiplayer.GetRemoteSenderId();
+        GD.Print($"Server received spawn request for {componentRefStr} from {senderId}");
+
+        if (!TryExecuteSpawn(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson))
+        {
+            GD.Print(
+                $"Prototype {prototypeRefStr} not yet available on server, queuing spawn for {componentRefStr}"
+            );
+            _pendingSpawns.Add(
+                new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson)
+            );
+        }
+
+        foreach (var player in MultiplayerManager.Instance.Players)
+        {
+            if (player.Key == senderId || player.Key == 1)
+                continue;
+            RpcId(
+                player.Key,
+                nameof(ClientSpawnObject),
+                prototypeRefStr,
+                componentRefStr,
+                parentRefStr,
+                syncDtoJson
             );
         }
     }
