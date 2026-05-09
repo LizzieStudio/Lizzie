@@ -328,21 +328,6 @@ public partial class VcToken : VisualComponentBase
 
         BuildToken();
 
-        if (_pendingSheetAssignment)
-        {
-            if (_frontMasterSprite != null)
-            {
-                FaceTexture = _frontMasterSprite;
-                BackTexture = _backMasterSprite ?? _frontMasterSprite;
-                _frontTextureGenerated = true;
-                _backTextureGenerated = true;
-                MapFrontTexture();
-                MapBackTexture();
-                TextureChanged = true;
-            }
-            return;
-        }
-
         switch (_mode)
         {
             case TokenBuildMode.Quick:
@@ -369,43 +354,6 @@ public partial class VcToken : VisualComponentBase
                 BuildQuickDeck(TextureFactory);
                 break;
         }
-    }
-
-    private bool _pendingSheetAssignment;
-
-    public void MarkPendingSheet()
-    {
-        _pendingSheetAssignment = true;
-    }
-
-    public void AssignSheet(
-        Texture2D frontSheet,
-        Texture2D backSheet,
-        int faceHframes,
-        int faceVframes,
-        int faceFrame,
-        int backHframes,
-        int backVframes,
-        int backFrame
-    )
-    {
-        _frontMasterSprite = frontSheet;
-        _backMasterSprite = backSheet ?? frontSheet;
-        _faceHframes = Math.Max(faceHframes, 1);
-        _faceVframes = Math.Max(faceVframes, 1);
-        _faceFrame = Math.Max(faceFrame, 0);
-        _backHframes = Math.Max(backHframes, 1);
-        _backVframes = Math.Max(backVframes, 1);
-        _backFrame = Math.Max(backFrame, 0);
-
-        FaceTexture = _frontMasterSprite;
-        BackTexture = _backMasterSprite;
-        _frontTextureGenerated = true;
-        _backTextureGenerated = true;
-        TextureChanged = true;
-
-        MapFrontTexture();
-        MapBackTexture();
     }
 
     public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
@@ -675,57 +623,192 @@ public partial class VcToken : VisualComponentBase
     {
         _differentBack = true;
 
-        int sH = 256;
-        int sW = 256;
-
         if (_height <= 0 || _width <= 0)
             return;
-
-        if (_height > _width)
-        {
-            sW = (int)(_width * 256 / _height);
-        }
-        else
-        {
-            sH = (int)(_height * 256 / _width);
-        }
 
         if (string.IsNullOrWhiteSpace(_frontTemplateName))
             return;
 
         var curProj = ProjectService.Instance.CurrentProject;
-
         var ft = curProj.GetTemplate(_frontTemplateName);
         var bt = curProj.GetTemplate(_backTemplateName);
         var ds = curProj.GetDataset(_datasetName);
 
-        if (ft is null)
+        if (ft is null || ds is null)
             return;
 
-        TextureContext context = new TextureContext
+        var rows = ds.Rows.Select(r => r.Key).ToList();
+        int n = rows.Count;
+        if (n == 0)
+            return;
+
+        int faceFrame = rows.IndexOf(DataSetRow);
+        if (faceFrame < 0)
+            return;
+
+        int cellW = (int)(ft.Width * 10);
+        int cellH = (int)(ft.Height * 10);
+        if (cellW <= 0 || cellH <= 0)
+            return;
+
+        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
+        int vframes = (int)Math.Ceiling((double)n / hframes);
+
+        string frontKey = TemplateSheetKey(
+            _frontTemplateName,
+            _datasetName,
+            rows,
+            cellW,
+            cellH,
+            hframes,
+            vframes,
+            "f"
+        );
+        string backKey = TemplateSheetKey(
+            _backTemplateName,
+            _datasetName,
+            rows,
+            cellW,
+            cellH,
+            hframes,
+            vframes,
+            "b"
+        );
+
+        Texture2D front = null;
+        Texture2D back = null;
+        bool backReady = bt == null; // no back template ⇒ back reuses the front
+
+        void Apply()
         {
-            DataSet = ds,
+            if (front == null || !backReady)
+                return;
+            var effectiveBack = bt == null ? front : back;
+            if (effectiveBack == null)
+                return;
+
+            _frontMasterSprite = front;
+            _backMasterSprite = effectiveBack;
+            _faceHframes = hframes;
+            _faceVframes = vframes;
+            _faceFrame = faceFrame;
+            _backHframes = hframes;
+            _backVframes = vframes;
+            _backFrame = faceFrame;
+            FaceTexture = front;
+            BackTexture = effectiveBack;
+            _frontTextureGenerated = true;
+            _backTextureGenerated = true;
+            TextureChanged = true;
+            MapFrontTexture();
+            MapBackTexture();
+        }
+
+        bool weBuildFront = TextureCache.Instance.RequestDerived(
+            frontKey,
+            t =>
+            {
+                front = t;
+                Apply();
+            }
+        );
+
+        bool weBuildBack = false;
+        if (bt != null)
+        {
+            weBuildBack = TextureCache.Instance.RequestDerived(
+                backKey,
+                t =>
+                {
+                    back = t;
+                    backReady = true;
+                    Apply();
+                }
+            );
+        }
+
+        if (weBuildFront)
+            StartTemplateSheetBuild(
+                textureFactory,
+                ft,
+                ds,
+                rows,
+                cellW,
+                cellH,
+                hframes,
+                vframes,
+                frontKey
+            );
+
+        if (weBuildBack)
+            StartTemplateSheetBuild(
+                textureFactory,
+                bt,
+                ds,
+                rows,
+                cellW,
+                cellH,
+                hframes,
+                vframes,
+                backKey
+            );
+    }
+
+    private static void StartTemplateSheetBuild(
+        TextureFactory factory,
+        Template template,
+        DataSet dataset,
+        List<string> rows,
+        int cellW,
+        int cellH,
+        int hframes,
+        int vframes,
+        string cacheKey
+    )
+    {
+        var defs = new List<TextureFactory.TextureDefinition>(rows.Count);
+        var ctx = new TextureContext
+        {
+            DataSet = dataset,
             Dpi = 100,
-            ParentSize = new Vector2(ft.Width * 10, ft.Height * 10),
-            CurrentRowName = DataSetRow,
+            ParentSize = new Vector2(template.Width * 10, template.Height * 10),
         };
-
-        _frontTextureGenerated = true;
-        _backTextureGenerated = true;
-
-        if (ft is not null)
+        foreach (var row in rows)
         {
-            var ftd = TemplateEngine.GenerateTextureDefinition(ft, context);
-            _frontTextureGenerated = false;
-            textureFactory.GenerateTexture(ftd, FinalizeFrontTexture);
+            ctx.CurrentRowName = row;
+            defs.Add(TemplateEngine.GenerateTextureDefinition(template, ctx));
         }
+        new SpriteSheetBuilder(
+            factory,
+            defs,
+            cellW,
+            cellH,
+            hframes,
+            vframes,
+            tex => TextureCache.Instance.PutDerived(cacheKey, tex)
+        ).Start();
+    }
 
-        if (bt is not null)
-        {
-            var btd = TemplateEngine.GenerateTextureDefinition(bt, context);
-            _backTextureGenerated = false;
-            textureFactory.GenerateTexture(btd, FinalizeBackTexture);
-        }
+    public static string TemplateSheetKey(
+        string templateName,
+        string datasetName,
+        List<string> rows,
+        int cellW,
+        int cellH,
+        int hframes,
+        int vframes,
+        string side
+    )
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("tpl-").Append(side).Append(':');
+        sb.Append(templateName ?? "").Append(':');
+        sb.Append(datasetName ?? "").Append(':');
+        sb.Append(cellW).Append('x').Append(cellH).Append(':');
+        sb.Append(hframes).Append('x').Append(vframes).Append(':');
+        foreach (var r in rows)
+            sb.Append(r).Append(';');
+        return sb.ToString();
     }
 
     private List<QuickCardData> _quickCardList = new();
@@ -733,36 +816,252 @@ public partial class VcToken : VisualComponentBase
     private void BuildQuickDeck(TextureFactory textureFactory)
     {
         int.TryParse(DataSetRow, out var r);
-
         if (r == 0)
             return;
 
-        var qtf = TemplateEngine.GenerateQuickCardByRow(_quickCardList, _quickCardList.Count, r);
-        var td = CreateQuickTextureDefinition(
-            qtf.BackgroundColor,
-            new QuickTextureField
+        var cards = ExpandQuickCardList(_quickCardList);
+        int n = cards.Count;
+        if (n == 0)
+            return;
+
+        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
+        int vframes = (int)Math.Ceiling((double)n / hframes);
+
+        ComputeCellSize(_height, _width, out var cellW, out var cellH);
+
+        bool singleBack = AllBacksIdentical(cards);
+        int faceFrame = r - 1;
+        int backFrameIndex = singleBack ? 0 : faceFrame;
+        int backH = singleBack ? 1 : hframes;
+        int backV = singleBack ? 1 : vframes;
+
+        string frontKey = QuickDeckSheetKey(cards, _shape, cellW, cellH, hframes, vframes, "f");
+        string backKey = singleBack
+            ? QuickDeckSingleBackKey(cards[0], _shape, cellW, cellH)
+            : QuickDeckSheetKey(cards, _shape, cellW, cellH, hframes, vframes, "b");
+
+        ApplySheetWhenReady(
+            textureFactory,
+            cards,
+            frontKey,
+            backKey,
+            cellW,
+            cellH,
+            hframes,
+            vframes,
+            backH,
+            backV,
+            faceFrame,
+            backFrameIndex,
+            singleBack
+        );
+    }
+
+    private void ApplySheetWhenReady(
+        TextureFactory textureFactory,
+        List<QuickCardData> cards,
+        string frontKey,
+        string backKey,
+        int cellW,
+        int cellH,
+        int hframes,
+        int vframes,
+        int backH,
+        int backV,
+        int faceFrame,
+        int backFrameIndex,
+        bool singleBack
+    )
+    {
+        Texture2D front = null;
+        Texture2D back = null;
+
+        void Apply()
+        {
+            if (front == null || back == null)
+                return;
+            _frontMasterSprite = front;
+            _backMasterSprite = back;
+            _faceHframes = hframes;
+            _faceVframes = vframes;
+            _faceFrame = faceFrame;
+            _backHframes = backH;
+            _backVframes = backV;
+            _backFrame = backFrameIndex;
+            FaceTexture = front;
+            BackTexture = back;
+            _frontTextureGenerated = true;
+            _backTextureGenerated = true;
+            TextureChanged = true;
+            MapFrontTexture();
+            MapBackTexture();
+        }
+
+        bool weBuildFront = TextureCache.Instance.RequestDerived(
+            frontKey,
+            t =>
             {
-                Caption = qtf.Caption,
-                FaceType = TextureFactory.TextureObjectType.Text,
-                ForegroundColor = Colors.Black,
-                Quantity = 1,
+                front = t;
+                Apply();
+            }
+        );
+        bool weBuildBack = TextureCache.Instance.RequestDerived(
+            backKey,
+            t =>
+            {
+                back = t;
+                Apply();
             }
         );
 
-        textureFactory.GenerateTexture(td, FinalizeFrontTexture);
-
-        if (_differentBack)
+        if (weBuildFront)
         {
-            _backBgColor = qtf.CardBackColor;
-            _backField = new QuickTextureField
+            var defs = new List<TextureFactory.TextureDefinition>(cards.Count);
+            foreach (var card in cards)
             {
-                Caption = qtf.CardBackValue,
-                FaceType = TextureFactory.TextureObjectType.Text,
-                ForegroundColor = Colors.Black,
-                Quantity = 1,
-            };
-            CreateQuickBackTexture(textureFactory);
+                defs.Add(
+                    BuildQuickTextureDefinition(
+                        card.BackgroundColor,
+                        new QuickTextureField
+                        {
+                            Caption = card.Caption,
+                            FaceType = TextureFactory.TextureObjectType.Text,
+                            ForegroundColor = Colors.Black,
+                            Quantity = 1,
+                        },
+                        _height,
+                        _width,
+                        _shape
+                    )
+                );
+            }
+            new SpriteSheetBuilder(
+                textureFactory,
+                defs,
+                cellW,
+                cellH,
+                hframes,
+                vframes,
+                tex => TextureCache.Instance.PutDerived(frontKey, tex)
+            ).Start();
         }
+
+        if (weBuildBack)
+        {
+            var defs = new List<TextureFactory.TextureDefinition>();
+            var backCards = singleBack ? new List<QuickCardData> { cards[0] } : cards;
+            foreach (var card in backCards)
+            {
+                defs.Add(
+                    BuildQuickTextureDefinition(
+                        card.CardBackColor,
+                        new QuickTextureField
+                        {
+                            Caption = card.CardBackValue,
+                            FaceType = TextureFactory.TextureObjectType.Text,
+                            ForegroundColor = Colors.Black,
+                            Quantity = 1,
+                        },
+                        _height,
+                        _width,
+                        _shape
+                    )
+                );
+            }
+            new SpriteSheetBuilder(
+                textureFactory,
+                defs,
+                cellW,
+                cellH,
+                backH,
+                backV,
+                tex => TextureCache.Instance.PutDerived(backKey, tex)
+            ).Start();
+        }
+    }
+
+    private static List<QuickCardData> ExpandQuickCardList(List<QuickCardData> source)
+    {
+        var cards = new List<QuickCardData>();
+        foreach (var q in source)
+        {
+            foreach (var v in Utility.ParseValueRanges(q.Caption))
+            {
+                cards.Add(
+                    new QuickCardData
+                    {
+                        Caption = v,
+                        BackgroundColor = q.BackgroundColor,
+                        CardBackValue = q.CardBackValue,
+                        CardBackColor = q.CardBackColor,
+                    }
+                );
+            }
+        }
+        return cards;
+    }
+
+    private static bool AllBacksIdentical(List<QuickCardData> cards)
+    {
+        if (cards.Count <= 1)
+            return true;
+        var first = cards[0];
+        for (int i = 1; i < cards.Count; i++)
+        {
+            if (
+                cards[i].CardBackValue != first.CardBackValue
+                || cards[i].CardBackColor != first.CardBackColor
+            )
+                return false;
+        }
+        return true;
+    }
+
+    public static void ComputeCellSize(float height, float width, out int cellW, out int cellH)
+    {
+        cellW = 256;
+        cellH = 256;
+        if (height <= 0 || width <= 0)
+            return;
+        if (height > width)
+            cellW = (int)(width * 256 / height);
+        else
+            cellH = (int)(height * 256 / width);
+    }
+
+    public static string QuickDeckSheetKey(
+        List<QuickCardData> cards,
+        int shape,
+        int cellW,
+        int cellH,
+        int hframes,
+        int vframes,
+        string side
+    )
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("qd-").Append(side).Append(':');
+        sb.Append(cellW).Append('x').Append(cellH).Append(':');
+        sb.Append(hframes).Append('x').Append(vframes).Append(':');
+        sb.Append(shape).Append(':');
+        foreach (var c in cards)
+        {
+            if (side == "f")
+                sb.Append(c.Caption).Append('|').Append(c.BackgroundColor.ToHtml()).Append(';');
+            else
+                sb.Append(c.CardBackValue).Append('|').Append(c.CardBackColor.ToHtml()).Append(';');
+        }
+        return sb.ToString();
+    }
+
+    public static string QuickDeckSingleBackKey(QuickCardData card, int shape, int cellW, int cellH)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("qd-bsingle:");
+        sb.Append(cellW).Append('x').Append(cellH).Append(':');
+        sb.Append(shape).Append(':');
+        sb.Append(card.CardBackValue).Append('|').Append(card.CardBackColor.ToHtml());
+        return sb.ToString();
     }
 
     private bool _frontTextureGenerated;
