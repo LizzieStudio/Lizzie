@@ -252,15 +252,53 @@ public partial class ProjectService : Node
         return CurrentProject.Templates.GetValueOrDefault(name);
     }
 
+    private readonly Dictionary<Guid, Task> _inFlightFetches = new();
+
     public async Task FetchImageAsync(Asset asset, Action<Asset> callback)
     {
+        if (asset == null)
+            return;
+
         if (asset.AssetDownloaded)
         {
             callback(asset);
             return;
         }
 
-        //TODO move this to a better spot - share resources, etc
+        Task fetch;
+        lock (_inFlightFetches)
+        {
+            if (!_inFlightFetches.TryGetValue(asset.AssetId, out fetch))
+            {
+                fetch = DownloadAssetAsync(asset);
+                _inFlightFetches[asset.AssetId] = fetch;
+            }
+        }
+
+        try
+        {
+            await fetch;
+        }
+        finally
+        {
+            lock (_inFlightFetches)
+            {
+                if (
+                    _inFlightFetches.TryGetValue(asset.AssetId, out var current)
+                    && current == fetch
+                    && fetch.IsCompleted
+                )
+                {
+                    _inFlightFetches.Remove(asset.AssetId);
+                }
+            }
+        }
+
+        callback(asset);
+    }
+
+    private static async Task DownloadAssetAsync(Asset asset)
+    {
         try
         {
             var service = new CloudAssetService();
@@ -285,8 +323,6 @@ public partial class ProjectService : Node
         {
             GD.PrintErr($"Image fetch failed: {ex.Message}");
         }
-
-        callback(asset);
     }
 
     public GameObjects GameObjects { get; set; }
