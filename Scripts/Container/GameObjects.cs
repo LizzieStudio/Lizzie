@@ -277,6 +277,7 @@ public partial class GameObjects : Node
         foreach (var go in GetSelectedObjects())
         {
             go.Hide();
+            SyncDeletion(go);
             var change = new Change { Component = go, Action = Change.ChangeType.Deletion };
             update.Add(change);
         }
@@ -1410,12 +1411,17 @@ public partial class GameObjects : Node
     /// </summary>
     public void SyncDeletion(VisualComponentBase component)
     {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
+        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
             return;
-        if (!MultiplayerManager.Instance.IsServer)
+        if (component == null)
             return;
 
-        Rpc(nameof(ClientDeleteObject), component.GetPath());
+        var componentRef = component.Reference.ToString();
+
+        if (MultiplayerManager.Instance.IsServer)
+            Rpc(nameof(ClientDeleteObject), componentRef);
+        else
+            RpcId(1, nameof(ServerDeleteObject), componentRef);
     }
 
     [Rpc(
@@ -1423,14 +1429,41 @@ public partial class GameObjects : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void ClientDeleteObject(NodePath componentPath)
+    private void ClientDeleteObject(string componentRef)
     {
-        GD.Print($"Received delete for: {componentPath}");
+        GD.Print($"Received delete for: {componentRef}");
 
-        var node = GetNode(componentPath);
-        if (node != null)
+        if (!Guid.TryParse(componentRef, out var compGuid))
+            return;
+
+        var component = GetComponent(compGuid);
+        component?.Delete();
+    }
+
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ServerDeleteObject(string componentRef)
+    {
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
+
+        if (!Guid.TryParse(componentRef, out var compGuid))
+            return;
+
+        var senderId = Multiplayer.GetRemoteSenderId();
+        GD.Print($"Server received delete request for {componentRef} from {senderId}");
+
+        var component = GetComponent(compGuid);
+        component?.Delete();
+
+        foreach (var player in MultiplayerManager.Instance.Players)
         {
-            node.QueueFree();
+            if (player.Key == senderId || player.Key == 1)
+                continue;
+            RpcId(player.Key, nameof(ClientDeleteObject), componentRef);
         }
     }
 

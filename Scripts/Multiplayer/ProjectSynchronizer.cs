@@ -117,7 +117,7 @@ public partial class ProjectSynchronizer : Node
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        // Server received project update, broadcast to all clients
+        ReceiveProject(projectJson);
         Rpc(nameof(ReceiveProject), projectJson);
     }
 
@@ -156,7 +156,7 @@ public partial class ProjectSynchronizer : Node
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        // Broadcast to all clients
+        ReceiveDataSetChange(dataSetJson);
         Rpc(nameof(ReceiveDataSetChange), dataSetJson);
     }
 
@@ -195,7 +195,7 @@ public partial class ProjectSynchronizer : Node
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        // Broadcast to all clients
+        ReceivePrototype(prototypeJson);
         Rpc(nameof(ReceivePrototype), prototypeJson);
     }
 
@@ -235,7 +235,7 @@ public partial class ProjectSynchronizer : Node
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        // Broadcast to all clients
+        ReceiveTemplate(templateName, templateJson);
         Rpc(nameof(ReceiveTemplate), templateName, templateJson);
     }
 
