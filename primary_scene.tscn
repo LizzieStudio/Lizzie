@@ -160,12 +160,12 @@ item_6/id = 4
 
 [node name="ComponentName" type="Label" parent="UI" unique_id=843150342]
 unique_name_in_owner = true
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -40.0
-offset_bottom = 23.0
-grow_horizontal = 0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -23.0
+offset_right = 40.0
+grow_vertical = 0
 horizontal_alignment = 2
 
 [node name="TextureFactory" type="SubViewport" parent="UI" unique_id=1184539869]

@@ -356,11 +356,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     #endregion
 
-    public override List<string> Validity()
-    {
-        return new List<string>();
-    }
-
     public override Dictionary<string, object> GetParams()
     {
         var d = new Dictionary<string, object>();
@@ -430,5 +425,52 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         }
 
         Activate();
+    }
+
+    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    {
+        var ret = new List<string>();
+
+        //must have a name and height. Width/length optional
+        if (parameters.ContainsKey("ComponentName"))
+        {
+            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
+                ret.Add("Name may not be blank");
+        }
+        else
+        {
+            ret.Add("Instance Name not included");
+        }
+
+        var h = Utility.GetParam<float>(parameters, "Height");
+        if (h <= 0)
+            ret.Add("Height must be > 0");
+
+
+        var w = Utility.GetParam<float>(parameters, "Thickness");
+        if (w <= 0)
+            ret.Add("Thickness must be > 0");
+
+        //check grid
+        bool found = false;
+        foreach(var i in _gridState)
+        {
+            foreach(var j in i)
+            {
+                if (j)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
+
+        if (!found)
+        {
+            ret.Add("Grid must have at least one active cell");
+        }
+
+        return ret;
     }
 }

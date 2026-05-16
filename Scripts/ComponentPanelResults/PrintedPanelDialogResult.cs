@@ -606,13 +606,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             }
         );
 
-    public override List<string> Validity()
-    {
-        var ret = new List<string>();
-        if (string.IsNullOrEmpty(_nameInput.Text.Trim()))
-            ret.Add("Component Name required");
-        return ret;
-    }
 
     public override Dictionary<string, object> GetParams()
     {
@@ -974,5 +967,33 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         UpdateDimensionUI();
         Activate();
+    }
+
+    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    {
+        var ret = new List<string>();
+
+        //must have a name and height. Width/length optional
+        if (parameters.ContainsKey("ComponentName"))
+        {
+            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
+                ret.Add("Name may not be blank");
+        }
+        else
+        {
+            ret.Add("Instance Name not included");
+        }
+
+        var h = Utility.GetParam<float>(parameters, "Height");
+        if (h <= 0)
+            ret.Add("Height must be > 0");
+
+
+        var w = Utility.GetParam<float>(parameters, "Width");
+        if (w <= 0)
+            ret.Add("Width must be > 0");
+
+
+        return ret;
     }
 }

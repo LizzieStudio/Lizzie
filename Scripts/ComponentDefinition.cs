@@ -26,9 +26,15 @@ public partial class ComponentDefinition : Window
 
     public Project CurrentProject { get; set; }
 
+    private AcceptDialog _errorDialog;
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        _errorDialog = new AcceptDialog();
+        _errorDialog.Title = "Validation Error";
+        AddChild(_errorDialog);
+
         _createButton = GetNode<Button>("%CreateButton");
         _createButton.Pressed += CreateClicked;
 
@@ -123,6 +129,14 @@ public partial class ComponentDefinition : Window
     {
         if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
         {
+            var errors = r.ValidateParameters(r.GetParams());
+            if (errors != null && errors.Count > 0)
+            {
+                _errorDialog.DialogText = string.Join("\n", errors);
+                _errorDialog.PopupCentered();
+                return;
+            }
+
             CreateObjectEventArgs e = new()
             {
                 ComponentType = r.ComponentType,
@@ -166,6 +180,18 @@ public partial class ComponentDefinition : Window
     {
         if (_mapPrototype == null)
             return;
+
+        if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
+        {
+            var errors = r.ValidateParameters(r.GetParams());
+            if (errors != null && errors.Count > 0)
+            {
+                _errorDialog.DialogText = string.Join("\n", errors);
+                _errorDialog.PopupCentered();
+                return;
+            }
+        }
+
         //update the project prototype
 
         if (

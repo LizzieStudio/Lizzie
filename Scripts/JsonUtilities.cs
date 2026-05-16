@@ -175,6 +175,7 @@ public static class JsonUtilities
                 p.Add("GridCols", TryGetInt(d, "GridCols"));
                 p.Add("GridCount", TryGetInt(d, "GridCount"));
                 p.Add("DifferentBack", TryGetBool(d, "DifferentBack"));
+                p.Add("GridSingleBack", TryGetBool(d, "GridSingleBack"));
                 break;
 
             case VcToken.TokenBuildMode.Template:

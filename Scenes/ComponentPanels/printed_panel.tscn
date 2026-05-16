@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dgxle1a8aquwd"]
 
 [ext_resource type="Texture2D" uid="uid://dn6uytmhm5r7q" path="res://Textures/UI/folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="1_qeff1"]
-[ext_resource type="Script" path="res://Scripts/ComponentPanelResults/PrintedPanelDialogResult.cs" id="1_ykbf8"]
+[ext_resource type="Script" uid="uid://3whugn303phg" path="res://Scripts/ComponentPanelResults/PrintedPanelDialogResult.cs" id="1_ykbf8"]
 [ext_resource type="PackedScene" uid="uid://bqjj4fvs81gaw" path="res://Scenes/ComponentPanels/quick_texture_entry.tscn" id="2_25k1d"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_aum2n"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="4_rdyhr"]
@@ -164,9 +164,10 @@ theme_override_constants/margin_bottom = 3
 [node name="Tabs" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1800227696]
 unique_name_in_owner = true
 layout_mode = 2
-current_tab = 0
+current_tab = 3
 
 [node name="Single" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=147592434]
+visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
@@ -497,7 +498,6 @@ layout_mode = 2
 icon = ExtResource("1_qeff1")
 
 [node name="Grid" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=1464329553]
-visible = false
 layout_mode = 2
 metadata/_tab_index = 3
 

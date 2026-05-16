@@ -267,10 +267,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
     }
 
-    public override List<string> Validity()
-    {
-        return new List<string>();
-    }
+
 
     public override Dictionary<string, object> GetParams()
     {
@@ -482,5 +479,30 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 }
             }
         }
+    }
+
+    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    {
+        var ret = new List<string>();
+
+        //must have a name and height. Width/length optional
+        if (parameters.ContainsKey("ComponentName"))
+        {
+            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
+                ret.Add("Name may not be blank");
+        }
+        else
+        {
+            ret.Add("Instance Name not included");
+        }
+
+
+        var w = Utility.GetParam<float>(parameters, "Diameter");
+        if (w <= 0)
+            ret.Add("Diameter must be > 0");
+
+
+
+        return ret;
     }
 }

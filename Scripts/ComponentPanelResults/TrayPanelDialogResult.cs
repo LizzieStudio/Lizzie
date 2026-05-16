@@ -33,9 +33,28 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         LoadPrototypeList();
         _prototypeList.ItemSelected += PrototypeSelected;
 
+        UpdatePrototypeSelection();
+
         _preview = GetNode<ComponentPreview>("%Preview");
     }
 
+    private void UpdatePrototypeSelection()
+    {
+        if (_prototypeList == null) return;
+        
+        if (!string.IsNullOrEmpty(_selectedPrototypeKey))
+        {
+            for (int i = 0; i < _prototypeList.GetItemCount(); i++)
+            {
+                if (_prototypeList.GetItemMetadata(i).ToString() == _selectedPrototypeKey)
+                {
+                    _prototypeList.Selected = i;
+                    break;
+                }
+            }
+        }
+    }
+    
     private void LoadPrototypeList()
     {
         _prototypeList.Clear();
@@ -82,17 +101,6 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-    public override List<string> Validity()
-    {
-        var ret = new List<string>();
-
-        if (string.IsNullOrEmpty(_nameInput.Text.Trim()))
-        {
-            ret.Add("Component Name required");
-        }
-
-        return ret;
-    }
 
     public override Dictionary<string, object> GetParams()
     {
@@ -159,6 +167,48 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             ? (Color)prototype.Parameters["Color"]
             : Colors.Red;
 
+        _selectedPrototypeKey = prototype.Parameters.ContainsKey("Prototype")
+            ? prototype.Parameters["Prototype"].ToString()
+            : string.Empty;
+        
+        UpdatePrototypeSelection();
+        
         Activate();
+    }
+
+    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    {
+        var ret = new List<string>();
+
+        //must have a name and height. Width/length optional
+        if (parameters.ContainsKey("ComponentName"))
+        {
+            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
+                ret.Add("Name may not be blank");
+        }
+        else
+        {
+            ret.Add("Instance Name not included");
+        }
+
+        var h = Utility.GetParam<float>(parameters, "Height");
+        if (h <= 0)
+            ret.Add("Height must be > 0");
+
+
+        var w = Utility.GetParam<float>(parameters, "Width");
+        if (w <= 0)
+            ret.Add("Width must be > 0");
+
+
+        var l = Utility.GetParam<float>(parameters, "Length");
+        if (l <= 0)
+            ret.Add("Length must be > 0");
+
+        var p = Utility.GetParam<string>(parameters, "Prototype");
+        if (string.IsNullOrEmpty(p))
+            ret.Add("Component must be specified");
+
+        return ret;
     }
 }

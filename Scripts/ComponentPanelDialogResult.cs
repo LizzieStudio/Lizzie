@@ -6,7 +6,6 @@ using Godot;
 
 public abstract partial class ComponentPanelDialogResult : Control
 {
-    public abstract List<string> Validity();
     public abstract Dictionary<string, object> GetParams();
 
     public virtual void Activate() { }
@@ -80,4 +79,6 @@ public abstract partial class ComponentPanelDialogResult : Control
     public virtual void DisplayPrototype(Guid prototypeId) { }
 
     public virtual void DisplayPrototype(Prototype prototype) { }
+
+    public abstract List<string> ValidateParameters(Dictionary<string, object> parameters);
 }
