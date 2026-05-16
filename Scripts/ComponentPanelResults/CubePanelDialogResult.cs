@@ -141,16 +141,13 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
         if (h <= 0)
             ret.Add("Height must be > 0");
 
-
         var w = Utility.GetParam<float>(parameters, "Width");
         if (w <= 0)
             ret.Add("Width must be > 0");
 
-
         var l = Utility.GetParam<float>(parameters, "Length");
         if (l <= 0)
             ret.Add("Length must be > 0");
-
 
         return ret;
     }

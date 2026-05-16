@@ -1,11 +1,9 @@
-﻿
-    [Command(VisualCommand.Shuffle)]
-    public class ShuffleCommand : BasicCommand
+﻿[Command(VisualCommand.Shuffle)]
+public class ShuffleCommand : BasicCommand
+{
+    public ShuffleCommand()
     {
-        public ShuffleCommand()
-        {
-            Caption = "Shuffle";
-            Command = VisualCommand.Shuffle;
-        }
+        Caption = "Shuffle";
+        Command = VisualCommand.Shuffle;
     }
-
+}

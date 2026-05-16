@@ -606,7 +606,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             }
         );
 
-
     public override Dictionary<string, object> GetParams()
     {
         MultipleCreateMode = false;
@@ -988,11 +987,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         if (h <= 0)
             ret.Add("Height must be > 0");
 
-
         var w = Utility.GetParam<float>(parameters, "Width");
         if (w <= 0)
             ret.Add("Width must be > 0");
-
 
         return ret;
     }

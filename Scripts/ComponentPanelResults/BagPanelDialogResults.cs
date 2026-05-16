@@ -54,7 +54,6 @@ public partial class BagPanelDialogResults : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-
     public override Dictionary<string, object> GetParams()
     {
         var d = new Dictionary<string, object>();
@@ -137,12 +136,9 @@ public partial class BagPanelDialogResults : ComponentPanelDialogResult
         if (h <= 0)
             ret.Add("Height must be > 0");
 
-
         var w = Utility.GetParam<float>(parameters, "Diameter");
         if (w <= 0)
             ret.Add("Diameter must be > 0");
-
-
 
         return ret;
     }

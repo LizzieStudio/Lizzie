@@ -40,8 +40,9 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
 
     private void UpdatePrototypeSelection()
     {
-        if (_prototypeList == null) return;
-        
+        if (_prototypeList == null)
+            return;
+
         if (!string.IsNullOrEmpty(_selectedPrototypeKey))
         {
             for (int i = 0; i < _prototypeList.GetItemCount(); i++)
@@ -54,7 +55,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             }
         }
     }
-    
+
     private void LoadPrototypeList()
     {
         _prototypeList.Clear();
@@ -100,7 +101,6 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
     {
         _preview.ClearComponent();
     }
-
 
     public override Dictionary<string, object> GetParams()
     {
@@ -170,9 +170,9 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _selectedPrototypeKey = prototype.Parameters.ContainsKey("Prototype")
             ? prototype.Parameters["Prototype"].ToString()
             : string.Empty;
-        
+
         UpdatePrototypeSelection();
-        
+
         Activate();
     }
 
@@ -195,11 +195,9 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         if (h <= 0)
             ret.Add("Height must be > 0");
 
-
         var w = Utility.GetParam<float>(parameters, "Width");
         if (w <= 0)
             ret.Add("Width must be > 0");
-
 
         var l = Utility.GetParam<float>(parameters, "Length");
         if (l <= 0)

@@ -446,16 +446,15 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         if (h <= 0)
             ret.Add("Height must be > 0");
 
-
         var w = Utility.GetParam<float>(parameters, "Thickness");
         if (w <= 0)
             ret.Add("Thickness must be > 0");
 
         //check grid
         bool found = false;
-        foreach(var i in _gridState)
+        foreach (var i in _gridState)
         {
-            foreach(var j in i)
+            foreach (var j in i)
             {
                 if (j)
                 {
@@ -463,7 +462,8 @@ public partial class MeeplePanel : ComponentPanelDialogResult
                     break;
                 }
             }
-            if (found) break;
+            if (found)
+                break;
         }
 
         if (!found)

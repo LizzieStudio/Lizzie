@@ -267,8 +267,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
     }
 
-
-
     public override Dictionary<string, object> GetParams()
     {
         var d = new Dictionary<string, object>();
@@ -496,12 +494,9 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             ret.Add("Instance Name not included");
         }
 
-
         var w = Utility.GetParam<float>(parameters, "Diameter");
         if (w <= 0)
             ret.Add("Diameter must be > 0");
-
-
 
         return ret;
     }
