@@ -5,6 +5,7 @@
 [ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="3_5wibl"]
 [ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="4_jl3ru"]
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="5_lsa78"]
+[ext_resource type="Texture2D" uid="uid://b0udl2xpqnc7l" path="res://Scenes/VisualComponents/deck-dash-outline.png" id="6_3uk5r"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
 size = Vector3(0.25, 0.25, 0.25)
@@ -66,3 +67,12 @@ transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.6
 modulate = Color(1, 0, 0, 1)
 text = "0"
 font_size = 24
+
+[node name="Sprite3D" type="Sprite3D" parent="." unique_id=509082668]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, -0.4392587, 0)
+axis = 1
+texture = ExtResource("6_3uk5r")
+
+[node name="Label3D" type="Label3D" parent="Sprite3D" unique_id=304577863]
+transform = Transform3D(2, 0, 0, 0, -8.742278e-08, 2, 0, -2, -8.742278e-08, 0, 0, 0)
+text = "Draw"

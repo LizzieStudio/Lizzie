@@ -12,7 +12,8 @@ public partial class VcDeck : VisualComponentGroup
 {
     private Sprite3D _frontSprite;
     private Sprite3D _backSprite;
-
+    private MeshInstance3D _sideMesh;
+    
     private TokenTextureSubViewport _frontView;
     private TokenTextureSubViewport _backView;
 
@@ -29,6 +30,7 @@ public partial class VcDeck : VisualComponentGroup
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _frontSprite = GetNode<Sprite3D>("FrontSprite");
         _backSprite = GetNode<Sprite3D>("BackSprite");
+        _sideMesh = GetNode<MeshInstance3D>("SideMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
         UpdateComponentCount();
 
@@ -893,13 +895,12 @@ public partial class VcDeck : VisualComponentGroup
     private void UpdateDeckSprites()
     {
         //set the top and bottom sprites.
-        if (_frontSprite == null || _backSprite == null)
+        if (_frontSprite == null || _backSprite == null || _sideMesh == null)
             return;
 
         //The top of the deck displays the back of the first card.
         //The bottom of the deck displays the face of the last card.
 
-        //TODO Handle if there are no cards in the deck?
         if (Children.Count > 0)
         {
             var c = ProjectService.Instance.GameObjects.GetComponent(Children.First());
@@ -942,25 +943,17 @@ public partial class VcDeck : VisualComponentGroup
                 }
             }
 
+            _frontSprite.Visible = true;
+            _backSprite.Visible = true;
+            _sideMesh.Visible = true;
+            
             TextureReady = _frontTextureReady && _backTextureReady;
-
-            /*
-            switch (_mode)
-                {
-                    case VcToken.TokenBuildMode.Quick:
-                        CreateQuickFrontTexture();
-                        CreateQuickBackTexture();
-                        break;
-                    case VcToken.TokenBuildMode.Grid:
-                        break;
-                    case VcToken.TokenBuildMode.Template:
-                        break;
-                    case VcToken.TokenBuildMode.Nandeck:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-                */
+        }
+        else
+        {
+            _frontSprite.Visible = false;
+            _backSprite.Visible = false;
+            _sideMesh.Visible = false;
         }
     }
 
