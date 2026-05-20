@@ -371,6 +371,10 @@ public class DeletePrototypeEvent : IEvent
     public Guid PrototypeRef { get; set; }
 }
 
+public class QueueStackingUpdateEvent: IEvent
+{
+}
+
 /// <summary>
 /// Published by a VisualComponentBase when one of its synced properties changes
 /// and the change needs to be broadcast to other multiplayer clients.

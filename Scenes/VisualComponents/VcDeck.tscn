@@ -7,18 +7,18 @@
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="5_lsa78"]
 [ext_resource type="Texture2D" uid="uid://b0udl2xpqnc7l" path="res://Scenes/VisualComponents/deck-dash-outline.png" id="6_3uk5r"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
-size = Vector3(0.25, 0.25, 0.25)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_lsa78"]
-resource_local_to_scene = true
-
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0sugy"]
 albedo_color = Color(0.505882, 0.505882, 0.505882, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_dg08o"]
 material = SubResource("StandardMaterial3D_0sugy")
 size = Vector3(0.95, 0.9, 0.95)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
+size = Vector3(0.25, 0.25, 0.25)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_lsa78"]
+resource_local_to_scene = true
 
 [sub_resource type="BoxMesh" id="BoxMesh_ggpqp"]
 material = ExtResource("3_5wibl")
@@ -27,18 +27,27 @@ material = ExtResource("3_5wibl")
 script = ExtResource("1_7r5pi")
 _highlightScale = null
 
-[node name="FrontSprite" type="Sprite3D" parent="." unique_id=598044503]
+[node name="SpinnyBits" type="Node3D" parent="." unique_id=466449167]
+
+[node name="FrontSprite" type="Sprite3D" parent="SpinnyBits" unique_id=598044503]
+unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.49, 0)
 pixel_size = 0.007
 axis = 1
 double_sided = false
 texture = ExtResource("2_8g6p4")
 
-[node name="BackSprite" type="Sprite3D" parent="." unique_id=1547966797]
+[node name="BackSprite" type="Sprite3D" parent="SpinnyBits" unique_id=1547966797]
+unique_name_in_owner = true
 transform = Transform3D(-1, 8.74228e-08, 0, -8.74228e-08, -1, 0, 0, 0, 1, 0, -0.49, 0)
 pixel_size = 0.007
 axis = 1
 texture = ExtResource("2_8g6p4")
+
+[node name="SideMesh" type="MeshInstance3D" parent="SpinnyBits" unique_id=1666429244]
+unique_name_in_owner = true
+mesh = SubResource("BoxMesh_dg08o")
+skeleton = NodePath("../..")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1991276807]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6439891, 0.5023112, 0)
@@ -46,9 +55,6 @@ shape = SubResource("BoxShape3D_bjoi2")
 
 [node name="DrawCollider" type="CollisionShape3D" parent="." unique_id=924871312]
 shape = SubResource("BoxShape3D_lsa78")
-
-[node name="SideMesh" type="MeshInstance3D" parent="." unique_id=1666429244]
-mesh = SubResource("BoxMesh_dg08o")
 
 [node name="HighlightMesh" type="MeshInstance3D" parent="." unique_id=1404325339]
 mesh = SubResource("BoxMesh_ggpqp")

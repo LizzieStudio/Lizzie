@@ -38,8 +38,9 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<AddComponentToSceneEvent>(OnAddComponentToScene);
         EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
         EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
+        EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
     }
-
+    
     private void OnModalClosed()
     {
         _modalOpen = false;
@@ -746,7 +747,10 @@ public partial class GameObjects : Node
 
     private void QueueStackingUpdate()
     {
-        _stackingUpdateRequired = _stackingUpdateFrames;
+        if (_stackingUpdateRequired == 0)
+        {
+            _stackingUpdateRequired = _stackingUpdateFrames;
+        }
     }
     #endregion
 
