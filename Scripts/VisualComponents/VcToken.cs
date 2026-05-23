@@ -438,6 +438,9 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
+    public float Height => _height;
+    public float Width => _width;
+    
     private Vector3[] GetFaceRing(TokenTextureSubViewport.TokenShape shape) =>
         shape switch
         {
@@ -1455,4 +1458,11 @@ public partial class VcToken : VisualComponentBase
         Token,
         Board,
     }
+}
+
+public class TokenSize
+{
+    public float Height { get; set; }
+    public float Width { get; set; }
+    
 }

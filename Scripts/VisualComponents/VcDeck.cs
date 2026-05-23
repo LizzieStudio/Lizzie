@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Godot;
 
 public partial class VcDeck : VisualComponentGroup
@@ -19,7 +20,7 @@ public partial class VcDeck : VisualComponentGroup
     private string _templateCardPath = "res://Scenes/VisualComponents/VcToken.tscn";
 
     private Node3D _spinnyBits;
-    
+    private Label3D _blankLabel;
     public override void _Ready()
     {
         base._Ready();
@@ -31,6 +32,8 @@ public partial class VcDeck : VisualComponentGroup
         _sideMesh = GetNode<MeshInstance3D>("%SideMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
         _spinnyBits = GetNode<Node3D>("SpinnyBits");
+        DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
+        _blankLabel = GetNode<Label3D>("%BlankLabel");
         UpdateComponentCount();
 
         CanAcceptDrop = true;
@@ -355,8 +358,12 @@ public partial class VcDeck : VisualComponentGroup
         _frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
         _backView = GetNode<TokenTextureSubViewport>("BackViewport");
 
+        _blankLabel = GetNode<Label3D>("%BlankLabel");
+
         if (!InitializeParameters(parameters))
             return false;
+
+        _blankLabel.Text = ComponentName;
 
         if (spawnCards)
         {
@@ -778,12 +785,12 @@ public partial class VcDeck : VisualComponentGroup
             if (w is float d)
             {
                 if (d <= 0)
-                    ret.Add("Diameter must be > 0");
+                    ret.Add("Width must be > 0");
             }
         }
         else
         {
-            ret.Add("Diameter not included");
+            ret.Add("Width not included");
         }
 
         if (parameters.TryGetValue(nameof(_frontImage), out var parameter))
@@ -1036,4 +1043,39 @@ public partial class VcDeck : VisualComponentGroup
 
         EventBus.Instance.Publish(new ShowAndDragComponentEvent { ComponentList = cards.ToList() });
     }
+
+    #region Drop Processing
+
+    
+    
+    public override bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
+    {
+        float epsilon = 0.01f;
+        
+        foreach (var c in dragObjects)
+        {
+            if (c is not VcToken token) return false;
+            
+            //check size
+            if (Math.Abs(token.Height - _height) > epsilon || Math.Abs(token.Width - _width) > epsilon) return false;
+        }
+        
+        return true;
+    }
+
+    public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
+    {
+        //Add to the top or bottom of deck depending on orientation
+
+        if (_showFace)
+        {
+            AddChildComponents(dragObjects, false);
+        }
+        else
+        {
+            AddChildComponents(dragObjects, true);
+        }
+    }
+
+    #endregion
 }

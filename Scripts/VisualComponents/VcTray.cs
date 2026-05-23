@@ -17,6 +17,7 @@ public partial class VcTray : VisualComponentGroup
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _prototypeSpawnPoint = GetNode<Node3D>("ProtoAnchor");
+        DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
     }
 
     public override void _Process(double delta)

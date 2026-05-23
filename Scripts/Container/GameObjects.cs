@@ -1007,6 +1007,8 @@ public partial class GameObjects : Node
         QueueStackingUpdate();
     }
 
+    private VisualComponentGroup _currentDragDropTarget;
+
     private void HandleDrag()
     {
         if (Input.IsMouseButtonPressed(MouseButton.Left))
@@ -1025,23 +1027,119 @@ public partial class GameObjects : Node
                 go.SetPosition(new Vector3(p.X, _dragHeight + go.YHeight, p.Z));
             }
 
-            //check to see if we are over something that can accept the object(s)
-            var hover = GetHoveredDropTarget();
-            if (hover != null && hover.CanAcceptDrop && hover.DragOver(GetDraggingObjects()))
+            //check to see if we are over a VisualComponentGroup that can accept a drop,
+            var dragTarget = GetGroupDropTargetUnderDrag();
+
+            if (dragTarget != _currentDragDropTarget)
             {
-                //do something with the cursor
+                _currentDragDropTarget?.DragOverExit();
+                if (_currentDragDropTarget != null)
+                {
+                    _currentDragDropTarget.IsHovered = false;
+                    _currentDragDropTarget.IsMouseSelected = false;
+                }
+                _currentDragDropTarget = dragTarget;
+                if (_currentDragDropTarget != null)
+                {
+                    _currentDragDropTarget.IsHovered = true;
+                    _currentDragDropTarget.IsMouseSelected = true;
+                }
+            }
+
+            if (dragTarget != null && dragTarget.DragOver(GetDraggingObjects()))
+            {
                 Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
             }
             else
             {
                 Input.SetDefaultCursorShape(Input.CursorShape.Drag);
-                //reset the cursor
             }
         }
         else
         {
             EndDrag();
         }
+    }
+
+    private VisualComponentGroup GetGroupDropTargetUnderDrag()
+    {
+        var camera = GetViewport().GetCamera3D();
+        if (camera == null)
+            return null;
+
+        var mousePos = GetViewport().GetMousePosition();
+
+        // Exclude all dragging objects so the ray passes through them
+        var exclude = new Godot.Collections.Array<Rid>();
+        foreach (var dragging in GetDraggingObjects())
+            exclude.Add(dragging.GetRid());
+        
+        foreach (var o in GetChildren())
+        {
+            if (o is VisualComponentBase vcb && vcb is not VisualComponentGroup)
+            {
+                exclude.Add(vcb.GetRid());
+            }
+        }
+
+        var ray = new PhysicsRayQueryParameters3D
+        {
+            From = camera.ProjectRayOrigin(mousePos),
+            To = camera.ProjectRayOrigin(mousePos) + camera.ProjectRayNormal(mousePos) * 500f,
+            CollideWithAreas = true,
+            CollideWithBodies = false,
+            Exclude = exclude,
+        };
+
+        var result = GetViewport().FindWorld3D().DirectSpaceState.IntersectRay(ray);
+        if (!result.ContainsKey("collider"))
+            return null;
+
+        var collider = result["collider"].As<Node>();
+
+        GD.Print($"Collider: {collider.Name} Parent: {collider.GetParent()?.Name}");
+        // If the hit node is not itself a VisualComponentGroup, walk up the parent chain
+        var group = collider as VisualComponentGroup;
+        
+        if (group != null) GD.Print($"VCG: {group.Name}");
+        
+        if (group == null)
+        {
+            var parent = collider?.GetParent();
+            while (parent != null)
+            {
+                if (parent is VisualComponentGroup g)
+                {
+                    group = g;
+                    break;
+                }
+                parent = parent.GetParent();
+            }
+        }
+
+        if (group == null || !group.CanAcceptDrop || group.IsDragging)
+            return null;
+
+        /*
+        // Verify the ray hit the DragDropCollider specifically, not another shape on the group
+        if (group.DragDropCollider != null)
+        {
+            int hitShapeIndex = result["shape"].AsInt32();
+            int dragDropIndex = 0;
+            foreach (var child in group.GetChildren())
+            {
+                if (child is CollisionShape3D cs)
+                {
+                    if (cs == group.DragDropCollider)
+                        break;
+                    dragDropIndex++;
+                }
+            }
+            if (hitShapeIndex != dragDropIndex) return null;
+        }
+        */
+        
+        return group;
     }
 
     private IEnumerable<VisualComponentBase> GetDraggingObjects()
@@ -1074,10 +1172,23 @@ public partial class GameObjects : Node
 
     private void EndDrag()
     {
-        var hover = GetHoveredDropTarget();
-        if (hover != null && hover.CanAcceptDrop && hover.CanObjectsBeDropped(GetDraggingObjects()))
+        if (_currentDragDropTarget != null)
         {
-            hover.DropObjects(GetDraggingObjects());
+            if (_currentDragDropTarget.CanObjectsBeDropped(GetDraggingObjects()))
+                _currentDragDropTarget.DropObjects(GetDraggingObjects());
+
+            _currentDragDropTarget.DragOverExit();
+            _currentDragDropTarget.IsHovered = false;
+            _currentDragDropTarget.IsMouseSelected = false;
+            _currentDragDropTarget = null;
+        }
+        else
+        {
+            var hover = GetHoveredDropTarget();
+            if (hover != null && hover.CanAcceptDrop && hover.CanObjectsBeDropped(GetDraggingObjects()))
+            {
+                hover.DropObjects(GetDraggingObjects());
+            }
         }
 
         //move all the dragged items to the top of the stack

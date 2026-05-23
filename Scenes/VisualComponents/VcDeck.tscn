@@ -79,6 +79,7 @@ transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, -0.4392587, 0)
 axis = 1
 texture = ExtResource("6_3uk5r")
 
-[node name="Label3D" type="Label3D" parent="Sprite3D" unique_id=304577863]
+[node name="BlankLabel" type="Label3D" parent="Sprite3D" unique_id=304577863]
+unique_name_in_owner = true
 transform = Transform3D(2, 0, 0, 0, -8.742278e-08, 2, 0, -2, -8.742278e-08, 0, 0, 0)
 text = "Draw"

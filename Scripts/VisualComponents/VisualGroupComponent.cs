@@ -9,6 +9,9 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
     protected RandomNumberGenerator Rnd = new();
 
+    public CollisionShape3D DragDropCollider { get; set; }
+    
+    
     /// <summary>
     /// Deletes all contained visual objects
     /// </summary>
@@ -36,13 +39,16 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         OnChildrenChanged();
     }
 
-    public virtual void AddChildComponents(IEnumerable<VisualComponentBase> components)
+    public virtual void AddChildComponents(IEnumerable<VisualComponentBase> components, bool addToTop = false)
     {
         var compArr = components as VisualComponentBase[] ?? components.ToArray(); //avoid multiple iterations
         foreach (var c in compArr)
         {
             c.Location = ComponentLocation.Container;
-            Children.Add(c.Reference);
+            if (addToTop)
+                Children.Insert(0, c.Reference);
+            else
+                Children.Add(c.Reference);
         }
 
         OnChildrenChanged();
@@ -52,8 +58,10 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     {
         AddChildComponents(dragObjects);
     }
-
+    
     protected abstract void OnChildrenChanged();
+
+    
 
     /// <summary>
     /// Returns the first item in the group, and removes it.

@@ -458,7 +458,7 @@ public abstract partial class VisualComponentBase : Area3D
         IsClickSelected = false;
     }
 
-    public virtual bool IsHovered { get; protected set; }
+    public virtual bool IsHovered { get; set; }
 
     private bool _isClickSelected;
 
