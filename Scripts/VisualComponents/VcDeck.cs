@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
+using System.Runtime.CompilerServices;
 using Godot;
 
 public partial class VcDeck : VisualComponentGroup
 {
     private Sprite3D _frontSprite;
     private Sprite3D _backSprite;
-
+    private MeshInstance3D _sideMesh;
+    
     private TokenTextureSubViewport _frontView;
     private TokenTextureSubViewport _backView;
 
@@ -21,15 +19,21 @@ public partial class VcDeck : VisualComponentGroup
     private VcToken _templateCard;
     private string _templateCardPath = "res://Scenes/VisualComponents/VcToken.tscn";
 
+    private Node3D _spinnyBits;
+    private Label3D _blankLabel;
     public override void _Ready()
     {
         base._Ready();
         ComponentType = VisualComponentType.Deck;
 
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
-        _frontSprite = GetNode<Sprite3D>("FrontSprite");
-        _backSprite = GetNode<Sprite3D>("BackSprite");
+        _frontSprite = GetNode<Sprite3D>("%FrontSprite");
+        _backSprite = GetNode<Sprite3D>("%BackSprite");
+        _sideMesh = GetNode<MeshInstance3D>("%SideMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
+        _spinnyBits = GetNode<Node3D>("SpinnyBits");
+        DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
+        _blankLabel = GetNode<Label3D>("%BlankLabel");
         UpdateComponentCount();
 
         CanAcceptDrop = true;
@@ -217,7 +221,7 @@ public partial class VcDeck : VisualComponentGroup
 
     private void ProcessFlip(double delta)
     {
-        var curZ = RotationDegrees.Z;
+        var curZ = _spinnyBits.RotationDegrees.Z;
         float newZ = curZ + (_flipRate * (float)delta * _rotMult);
         if (_showFace)
         {
@@ -236,7 +240,8 @@ public partial class VcDeck : VisualComponentGroup
             }
         }
 
-        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
+        _spinnyBits.RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
+        //SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
     }
 
     private CommandResponse DrawCards(int count)
@@ -347,14 +352,18 @@ public partial class VcDeck : VisualComponentGroup
     {
         base.Setup(parameters, textureFactory);
 
-        _frontSprite = GetNode<Sprite3D>("FrontSprite");
-        _backSprite = GetNode<Sprite3D>("BackSprite");
+        _frontSprite = GetNode<Sprite3D>("%FrontSprite");
+        _backSprite = GetNode<Sprite3D>("%BackSprite");
 
         _frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
         _backView = GetNode<TokenTextureSubViewport>("BackViewport");
 
+        _blankLabel = GetNode<Label3D>("%BlankLabel");
+
         if (!InitializeParameters(parameters))
             return false;
+
+        _blankLabel.Text = ComponentName;
 
         if (spawnCards)
         {
@@ -374,10 +383,7 @@ public partial class VcDeck : VisualComponentGroup
             }
         }
 
-        _thickness = 0.03f * Children.Count;
-        YHeight = _thickness;
-
-        Scale = new Vector3(_width, _thickness, _height);
+        UpdateThickness();
 
         //adjust the scales for the sprites based on the textures so they don't double adjust
         if (_width > 0 && _height > 0)
@@ -779,12 +785,12 @@ public partial class VcDeck : VisualComponentGroup
             if (w is float d)
             {
                 if (d <= 0)
-                    ret.Add("Diameter must be > 0");
+                    ret.Add("Width must be > 0");
             }
         }
         else
         {
-            ret.Add("Diameter not included");
+            ret.Add("Width not included");
         }
 
         if (parameters.TryGetValue(nameof(_frontImage), out var parameter))
@@ -893,13 +899,12 @@ public partial class VcDeck : VisualComponentGroup
     private void UpdateDeckSprites()
     {
         //set the top and bottom sprites.
-        if (_frontSprite == null || _backSprite == null)
+        if (_frontSprite == null || _backSprite == null || _sideMesh == null)
             return;
 
         //The top of the deck displays the back of the first card.
         //The bottom of the deck displays the face of the last card.
 
-        //TODO Handle if there are no cards in the deck?
         if (Children.Count > 0)
         {
             var c = ProjectService.Instance.GameObjects.GetComponent(Children.First());
@@ -942,25 +947,17 @@ public partial class VcDeck : VisualComponentGroup
                 }
             }
 
+            _frontSprite.Visible = true;
+            _backSprite.Visible = true;
+            _sideMesh.Visible = true;
+            
             TextureReady = _frontTextureReady && _backTextureReady;
-
-            /*
-            switch (_mode)
-                {
-                    case VcToken.TokenBuildMode.Quick:
-                        CreateQuickFrontTexture();
-                        CreateQuickBackTexture();
-                        break;
-                    case VcToken.TokenBuildMode.Grid:
-                        break;
-                    case VcToken.TokenBuildMode.Template:
-                        break;
-                    case VcToken.TokenBuildMode.Nandeck:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-                */
+        }
+        else
+        {
+            _frontSprite.Visible = false;
+            _backSprite.Visible = false;
+            _sideMesh.Visible = false;
         }
     }
 
@@ -983,6 +980,7 @@ public partial class VcDeck : VisualComponentGroup
     protected override void OnChildrenChanged()
     {
         UpdateDeckSprites();
+        UpdateThickness();
         UpdateComponentCount();
     }
 
@@ -991,6 +989,15 @@ public partial class VcDeck : VisualComponentGroup
         if (_componentCount == null)
             return;
         _componentCount.Text = Children.Count().ToString();
+    }
+
+    private void UpdateThickness()
+    {
+        _thickness = 0.03f * Children.Count;
+        YHeight = _thickness;
+
+        Scale = new Vector3(_width, _thickness, _height);
+        EventBus.Instance.Publish(new QueueStackingUpdateEvent());
     }
 
     public override void DragDraw(int count)
@@ -1036,4 +1043,39 @@ public partial class VcDeck : VisualComponentGroup
 
         EventBus.Instance.Publish(new ShowAndDragComponentEvent { ComponentList = cards.ToList() });
     }
+
+    #region Drop Processing
+
+    
+    
+    public override bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
+    {
+        float epsilon = 0.01f;
+        
+        foreach (var c in dragObjects)
+        {
+            if (c is not VcToken token) return false;
+            
+            //check size
+            if (Math.Abs(token.Height - _height) > epsilon || Math.Abs(token.Width - _width) > epsilon) return false;
+        }
+        
+        return true;
+    }
+
+    public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
+    {
+        //Add to the top or bottom of deck depending on orientation
+
+        if (_showFace)
+        {
+            AddChildComponents(dragObjects, false);
+        }
+        else
+        {
+            AddChildComponents(dragObjects, true);
+        }
+    }
+
+    #endregion
 }

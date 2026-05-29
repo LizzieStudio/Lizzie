@@ -164,10 +164,9 @@ theme_override_constants/margin_bottom = 3
 [node name="Tabs" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1800227696]
 unique_name_in_owner = true
 layout_mode = 2
-current_tab = 3
+current_tab = 0
 
 [node name="Single" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=147592434]
-visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
@@ -498,6 +497,7 @@ layout_mode = 2
 icon = ExtResource("1_qeff1")
 
 [node name="Grid" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=1464329553]
+visible = false
 layout_mode = 2
 metadata/_tab_index = 3
 

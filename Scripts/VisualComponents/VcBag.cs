@@ -17,6 +17,7 @@ public partial class VcBag : VisualComponentGroup
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
+        DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
         UpdateComponentCount();
         CanAcceptDrop = true;
     }

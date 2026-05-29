@@ -32,10 +32,24 @@ public partial class VcToken : VisualComponentBase
         set
         {
             _faceTexture = value;
+            
+            /*
+            if (value != null)
+            {
+                var image = value.GetImage();
+                if (image != null)
+                {
+                    image.SavePng("c:/winwam5/facetest.png");
+                }
+            }
+            */
+            
             if (_frontMaterial != null && value != null)
                 _frontMaterial.AlbedoTexture = value;
         }
     }
+
+    public Image FaceSprite => FaceTexture.GetImage();
 
     public Texture2D BackTexture
     {
@@ -47,6 +61,8 @@ public partial class VcToken : VisualComponentBase
                 _backMaterial.AlbedoTexture = value;
         }
     }
+
+    public Image BackSprite => BackTexture.GetImage();
 
     public void ForceFace()
     {
@@ -369,6 +385,9 @@ public partial class VcToken : VisualComponentBase
     {
         _mainMesh = GetNode<MeshInstance3D>("SideMesh");
 
+        //FaceSprite = GetNode<Sprite3D>("FrontSprite");
+        //BackSprite = GetNode<Sprite3D>("BackSprite");
+        
         YHeight = _thickness;
         Scale = new Vector3(_width, _thickness, _height);
 
@@ -423,6 +442,9 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
+    public float Height => _height;
+    public float Width => _width;
+    
     private Vector3[] GetFaceRing(TokenTextureSubViewport.TokenShape shape) =>
         shape switch
         {
@@ -650,8 +672,8 @@ public partial class VcToken : VisualComponentBase
         if (faceFrame < 0)
             return;
 
-        int cellW = (int)(ft.Width * 10);
-        int cellH = (int)(ft.Height * 10);
+        int cellW = (int)(ft.Width * 10 * BASE_DPI);
+        int cellH = (int)(ft.Height * 10 * BASE_DPI);
         if (cellW <= 0 || cellH <= 0)
             return;
 
@@ -758,6 +780,8 @@ public partial class VcToken : VisualComponentBase
             );
     }
 
+    public const float BASE_DPI = 10f;
+
     private static void StartTemplateSheetBuild(
         TextureFactory factory,
         Template template,
@@ -774,8 +798,8 @@ public partial class VcToken : VisualComponentBase
         var ctx = new TextureContext
         {
             DataSet = dataset,
-            Dpi = 100,
-            ParentSize = new Vector2(template.Width * 10, template.Height * 10),
+            Dpi = BASE_DPI,
+            ParentSize = new Vector2(cellW, cellH)
         };
         foreach (var row in rows)
         {
@@ -1243,6 +1267,7 @@ public partial class VcToken : VisualComponentBase
         //d.SavePng(@"c:\winwam5\token.png");
     }
 
+    
     private bool _mapFrontTextureRequired;
 
     private void MapFrontTexture()
@@ -1289,7 +1314,7 @@ public partial class VcToken : VisualComponentBase
         int rows = Math.Max(vframes, 1);
         int col = frame % cols;
         int row = frame / cols;
-        mat.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
+        mat.Uv1Scale = new Vector3(1f / cols , 1f / rows , 1f);
         mat.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
     }
 
@@ -1437,4 +1462,11 @@ public partial class VcToken : VisualComponentBase
         Token,
         Board,
     }
+}
+
+public class TokenSize
+{
+    public float Height { get; set; }
+    public float Width { get; set; }
+    
 }

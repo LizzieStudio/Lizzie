@@ -41,7 +41,8 @@ public partial class UI : CanvasLayer
     private PrototypeManifest _prototypeManifest;
     private MultiplayerDialog _multiplayerDialog;
     private ImageManager _imageManager;
-
+    private ComponentPreviewPopup _componentPreviewPopup;
+    
     private OptionButton _rotationStep;
 
     private Node _modalDialogs;
@@ -106,6 +107,24 @@ public partial class UI : CanvasLayer
         EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
+        EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
+    }
+
+    private void ShowComponentPreviewDialog(ShowComponentPreviewDialogEvent obj)
+    {
+        string s = "res://Scenes/Controls/ComponentPreviewPopup.tscn";
+        _componentPreviewPopup = GD.Load<PackedScene>(s).Instantiate<ComponentPreviewPopup>();
+        _componentPreviewPopup.CloseDialog += ComponentPreviewPopupOnClosed;
+        _modalDialogs.AddChild(_componentPreviewPopup);
+        
+        _componentPreviewPopup.ShowComponent(obj.Component, _textureFactory);
+    }
+
+    private void ComponentPreviewPopupOnClosed(object sender, EventArgs e)
+    {
+        _componentPreviewPopup.CloseDialog -= ComponentPreviewPopupOnClosed;
+        _componentPreviewPopup.Hide();
+        _componentPreviewPopup.QueueFree();
     }
 
     private void RotationStepSelected(long index)
