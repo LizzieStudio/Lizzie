@@ -40,7 +40,7 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
     }
-
+    
     private void OnModalClosed()
     {
         _modalOpen = false;
