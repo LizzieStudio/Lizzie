@@ -389,4 +389,9 @@ public class ComponentPropertyChangedEvent : IEvent
     public VisualComponentBase Component { get; set; }
 }
 
+public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IEvent
+{
+    public VisualComponentBase Component { get; set; } = component;
+}
+
 #endregion

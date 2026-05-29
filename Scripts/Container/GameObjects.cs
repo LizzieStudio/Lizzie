@@ -238,6 +238,14 @@ public partial class GameObjects : Node
                 }
             }
         }
+        else if (@event.IsActionPressed("component_preview"))
+        {
+            var cp = GetHoveredObject();
+            if (cp != null)
+            {
+                EventBus.Instance.Publish(new ShowComponentPreviewDialogEvent(cp));
+            }
+        }
     }
 
     #region Components

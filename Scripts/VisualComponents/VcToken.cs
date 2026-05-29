@@ -49,6 +49,8 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
+    public Image FaceSprite => FaceTexture.GetImage();
+
     public Texture2D BackTexture
     {
         get => _backTexture;
@@ -59,6 +61,8 @@ public partial class VcToken : VisualComponentBase
                 _backMaterial.AlbedoTexture = value;
         }
     }
+
+    public Image BackSprite => BackTexture.GetImage();
 
     public void ForceFace()
     {
