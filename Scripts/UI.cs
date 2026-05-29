@@ -42,7 +42,7 @@ public partial class UI : CanvasLayer
     private MultiplayerDialog _multiplayerDialog;
     private ImageManager _imageManager;
     private ComponentPreviewPopup _componentPreviewPopup;
-    
+
     private OptionButton _rotationStep;
 
     private Node _modalDialogs;
@@ -116,7 +116,7 @@ public partial class UI : CanvasLayer
         _componentPreviewPopup = GD.Load<PackedScene>(s).Instantiate<ComponentPreviewPopup>();
         _componentPreviewPopup.CloseDialog += ComponentPreviewPopupOnClosed;
         _modalDialogs.AddChild(_componentPreviewPopup);
-        
+
         _componentPreviewPopup.ShowComponent(obj.Component, _textureFactory);
     }
 

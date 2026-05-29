@@ -395,7 +395,7 @@ public partial class ComponentPreview : Panel
     {
         DisableFrontViewInternal(false);
     }
-    
+
     #endregion
 }
 

@@ -371,9 +371,7 @@ public class DeletePrototypeEvent : IEvent
     public Guid PrototypeRef { get; set; }
 }
 
-public class QueueStackingUpdateEvent: IEvent
-{
-}
+public class QueueStackingUpdateEvent : IEvent { }
 
 /// <summary>
 /// Published by a VisualComponentBase when one of its synced properties changes

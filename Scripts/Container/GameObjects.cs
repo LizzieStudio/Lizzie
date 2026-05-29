@@ -40,7 +40,7 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
     }
-    
+
     private void OnModalClosed()
     {
         _modalOpen = false;
@@ -1081,7 +1081,7 @@ public partial class GameObjects : Node
         var exclude = new Godot.Collections.Array<Rid>();
         foreach (var dragging in GetDraggingObjects())
             exclude.Add(dragging.GetRid());
-        
+
         foreach (var o in GetChildren())
         {
             if (o is VisualComponentBase vcb && vcb is not VisualComponentGroup)
@@ -1108,9 +1108,10 @@ public partial class GameObjects : Node
         GD.Print($"Collider: {collider.Name} Parent: {collider.GetParent()?.Name}");
         // If the hit node is not itself a VisualComponentGroup, walk up the parent chain
         var group = collider as VisualComponentGroup;
-        
-        if (group != null) GD.Print($"VCG: {group.Name}");
-        
+
+        if (group != null)
+            GD.Print($"VCG: {group.Name}");
+
         if (group == null)
         {
             var parent = collider?.GetParent();
@@ -1146,7 +1147,7 @@ public partial class GameObjects : Node
             if (hitShapeIndex != dragDropIndex) return null;
         }
         */
-        
+
         return group;
     }
 
@@ -1193,7 +1194,11 @@ public partial class GameObjects : Node
         else
         {
             var hover = GetHoveredDropTarget();
-            if (hover != null && hover.CanAcceptDrop && hover.CanObjectsBeDropped(GetDraggingObjects()))
+            if (
+                hover != null
+                && hover.CanAcceptDrop
+                && hover.CanObjectsBeDropped(GetDraggingObjects())
+            )
             {
                 hover.DropObjects(GetDraggingObjects());
             }

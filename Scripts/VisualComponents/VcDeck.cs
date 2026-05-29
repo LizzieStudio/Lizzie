@@ -10,7 +10,7 @@ public partial class VcDeck : VisualComponentGroup
     private Sprite3D _frontSprite;
     private Sprite3D _backSprite;
     private MeshInstance3D _sideMesh;
-    
+
     private TokenTextureSubViewport _frontView;
     private TokenTextureSubViewport _backView;
 
@@ -21,6 +21,7 @@ public partial class VcDeck : VisualComponentGroup
 
     private Node3D _spinnyBits;
     private Label3D _blankLabel;
+
     public override void _Ready()
     {
         base._Ready();
@@ -950,7 +951,7 @@ public partial class VcDeck : VisualComponentGroup
             _frontSprite.Visible = true;
             _backSprite.Visible = true;
             _sideMesh.Visible = true;
-            
+
             TextureReady = _frontTextureReady && _backTextureReady;
         }
         else
@@ -1046,20 +1047,24 @@ public partial class VcDeck : VisualComponentGroup
 
     #region Drop Processing
 
-    
-    
+
     public override bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
     {
         float epsilon = 0.01f;
-        
+
         foreach (var c in dragObjects)
         {
-            if (c is not VcToken token) return false;
-            
+            if (c is not VcToken token)
+                return false;
+
             //check size
-            if (Math.Abs(token.Height - _height) > epsilon || Math.Abs(token.Width - _width) > epsilon) return false;
+            if (
+                Math.Abs(token.Height - _height) > epsilon
+                || Math.Abs(token.Width - _width) > epsilon
+            )
+                return false;
         }
-        
+
         return true;
     }
 

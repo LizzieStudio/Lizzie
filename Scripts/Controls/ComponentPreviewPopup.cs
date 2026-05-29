@@ -1,34 +1,38 @@
-using Godot;
 using System;
+using Godot;
 
 public partial class ComponentPreviewPopup : Window
 {
     private ComponentPreview _preview;
     private Button _closeButton;
-	
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-		_preview = GetNode<ComponentPreview>("%ComponentPreview");
+
+    // Called when the node enters the scene tree for the first time.
+    public override void _Ready()
+    {
+        _preview = GetNode<ComponentPreview>("%ComponentPreview");
         _closeButton = GetNode<Button>("%CloseButton");
         _closeButton.Pressed += OnCloseClick;
         CloseRequested += OnCloseClick;
-        
-        if (_readyNeeded) ShowComponent(_pendingComponent, _textureFactory);
-	}
-    
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
-	}
+
+        if (_readyNeeded)
+            ShowComponent(_pendingComponent, _textureFactory);
+    }
+
+    // Called every frame. 'delta' is the elapsed time since the previous frame.
+    public override void _Process(double delta) { }
 
     public void ShowComponent(VisualComponentBase component, TextureFactory textureFactory)
     {
         if (IsNodeReady())
         {
             _readyNeeded = false;
-            
-            if (ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(component.PrototypeRef, out var prototype))
+
+            if (
+                ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                    component.PrototypeRef,
+                    out var prototype
+                )
+            )
             {
                 _preview.Build(prototype, component.DataSetRow, textureFactory);
                 _preview.SpinStop();

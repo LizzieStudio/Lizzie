@@ -32,7 +32,7 @@ public partial class VcToken : VisualComponentBase
         set
         {
             _faceTexture = value;
-            
+
             /*
             if (value != null)
             {
@@ -43,7 +43,7 @@ public partial class VcToken : VisualComponentBase
                 }
             }
             */
-            
+
             if (_frontMaterial != null && value != null)
                 _frontMaterial.AlbedoTexture = value;
         }
@@ -387,7 +387,7 @@ public partial class VcToken : VisualComponentBase
 
         //FaceSprite = GetNode<Sprite3D>("FrontSprite");
         //BackSprite = GetNode<Sprite3D>("BackSprite");
-        
+
         YHeight = _thickness;
         Scale = new Vector3(_width, _thickness, _height);
 
@@ -444,7 +444,7 @@ public partial class VcToken : VisualComponentBase
 
     public float Height => _height;
     public float Width => _width;
-    
+
     private Vector3[] GetFaceRing(TokenTextureSubViewport.TokenShape shape) =>
         shape switch
         {
@@ -799,7 +799,7 @@ public partial class VcToken : VisualComponentBase
         {
             DataSet = dataset,
             Dpi = BASE_DPI,
-            ParentSize = new Vector2(cellW, cellH)
+            ParentSize = new Vector2(cellW, cellH),
         };
         foreach (var row in rows)
         {
@@ -1267,7 +1267,6 @@ public partial class VcToken : VisualComponentBase
         //d.SavePng(@"c:\winwam5\token.png");
     }
 
-    
     private bool _mapFrontTextureRequired;
 
     private void MapFrontTexture()
@@ -1314,7 +1313,7 @@ public partial class VcToken : VisualComponentBase
         int rows = Math.Max(vframes, 1);
         int col = frame % cols;
         int row = frame / cols;
-        mat.Uv1Scale = new Vector3(1f / cols , 1f / rows , 1f);
+        mat.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
         mat.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
     }
 
@@ -1468,5 +1467,4 @@ public class TokenSize
 {
     public float Height { get; set; }
     public float Width { get; set; }
-    
 }
