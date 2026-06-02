@@ -24,6 +24,8 @@ public partial class GameObjects : Node
     private const int MaxPropertySyncsPerFrame = 3;
     private readonly List<PendingSpawnRequest> _pendingSpawns = new();
 
+    private GameController _gameController;
+    
     public CursorMode CursorMode { get; private set; }
 
     public override void _Ready()
@@ -40,7 +42,12 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
     }
-    
+
+    public void SetGameController(GameController gameController)
+    {
+        _gameController = gameController;
+    }
+
     private void OnModalClosed()
     {
         _modalOpen = false;
@@ -1021,6 +1028,12 @@ public partial class GameObjects : Node
     {
         if (Input.IsMouseButtonPressed(MouseButton.Left))
         {
+            var mousePosition = GetViewport().GetMousePosition();
+            if (mousePosition.Y > _gameController.HandY)
+            {
+                GD.Print("Mouse is over the hand area");
+            }
+            
             var newDragPosition = _dragPlane.GetCursorProjection();
             var delta = newDragPosition - _lastDragPosition;
             _lastDragPosition = newDragPosition;

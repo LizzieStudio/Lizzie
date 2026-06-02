@@ -43,6 +43,8 @@ public partial class UI : CanvasLayer
     private ImageManager _imageManager;
     private ComponentPreviewPopup _componentPreviewPopup;
 
+    private HandManager _handManager;
+
     private OptionButton _rotationStep;
 
     private Node _modalDialogs;
@@ -101,6 +103,8 @@ public partial class UI : CanvasLayer
 
         _modalDialogs = GetNode("%ModalDialogs");
 
+        _handManager = GetNode<HandManager>("%Hand");
+        
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
         EventBus.Instance.Subscribe<GameStateChangedEvent>(OnGameStateChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
@@ -829,6 +833,8 @@ public partial class UI : CanvasLayer
     }
 
     public const int LongClickTime = 1000;
+
+    public float HandY => _handManager.HandY;
 
     #region UI Texture Paths
 

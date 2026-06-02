@@ -20,11 +20,13 @@ public partial class GameController : Node3D
         _mainScene.ShowComponentPopup2 += MainSceneOnShowComponentPopup2;
         _mainScene.HoveredComponentChange += MainSceneOnHoveredNameChange;
         _mainScene.GameObjects.TextureFactory = _textureFactory;
-
+        _mainScene.GameObjects.SetGameController(this);
+        
         _uiController = GetNode<UI>("UI");
         _uiController.SceneModeChange += OnSceneModeChange;
         _uiController.CreateObject += OnCreateObject;
         _uiController.SetGameController(this);
+        
 
         EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawnPrototype);
 
@@ -266,6 +268,8 @@ public partial class GameController : Node3D
         ComponentPopupClosed();
         return result;
     }
+
+    public float HandY => _uiController.HandY;
 
     //test function
     public void TestFunction()

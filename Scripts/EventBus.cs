@@ -392,4 +392,9 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
     public VisualComponentBase Component { get; set; } = component;
 }
 
+public class AddToHandEvent : IEvent
+{
+    public IEnumerable<VcToken> Cards { get; set; } = new List<VcToken>();
+}
+
 #endregion

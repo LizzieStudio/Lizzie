@@ -261,6 +261,27 @@ public partial class VcDeck : VisualComponentGroup
             cards = cards.Reverse().ToArray();
         }
 
+        var cl = new List<VcToken>();
+        
+        for (int i = 0; i < cards.Length; i++)
+        {
+            var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
+            if (comp is VcToken token) cl.Add(token);
+        }
+        EventBus.Instance.Publish(new AddToHandEvent { Cards = cl });
+
+        var change = new Change
+        {
+            Action = Change.ChangeType.Transform,
+            Begin = Transform,
+            End = Transform,
+            Component = this,
+        };
+
+        UpdateDeckSprites();
+
+        return new CommandResponse(true, change);
+
         //splay
         var basePos = Position;
 
@@ -303,7 +324,7 @@ public partial class VcDeck : VisualComponentGroup
 
             comp.ZOrder = ZOrder + i + 1;
         }
-
+        
         var c = new Change
         {
             Action = Change.ChangeType.Transform,
