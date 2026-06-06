@@ -21,9 +21,10 @@ layout_mode = 2
 [node name="TabContainer" type="TabContainer" parent="MarginContainer/VBoxContainer" unique_id=1715348245]
 layout_mode = 2
 size_flags_vertical = 3
-current_tab = 0
+current_tab = 2
 
 [node name="Setup" type="MarginContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=1443464902]
+visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
@@ -39,7 +40,7 @@ columns = 2
 layout_mode = 2
 text = "Start in 2D mode"
 
-[node name="2dToggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=613447960]
+[node name="StartIn2dToggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=613447960]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -48,7 +49,7 @@ size_flags_horizontal = 0
 layout_mode = 2
 text = "Enable Player Hands"
 
-[node name="PlayerHandsTogggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=423889100]
+[node name="PlayerHandsToggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=423889100]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -308,7 +309,6 @@ layout_mode = 2
 color = Color(0.5019608, 0.5019608, 0.5019608, 1)
 
 [node name="Game Info" type="MarginContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=614151916]
-visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
@@ -325,6 +325,7 @@ layout_mode = 2
 text = "Game Title"
 
 [node name="GameTitle" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=324713326]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -333,7 +334,8 @@ size_flags_horizontal = 0
 layout_mode = 2
 text = "Designers"
 
-[node name="GameTitle2" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1414137699]
+[node name="Designers" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1414137699]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -342,7 +344,8 @@ size_flags_horizontal = 0
 layout_mode = 2
 text = "Graphic Design"
 
-[node name="GameTitle5" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1549194842]
+[node name="GraphicDesign" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1549194842]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -351,7 +354,8 @@ size_flags_horizontal = 0
 layout_mode = 2
 text = "Artists"
 
-[node name="GameTitle6" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=599668802]
+[node name="Artists" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=599668802]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -360,7 +364,8 @@ size_flags_horizontal = 0
 layout_mode = 2
 text = "Contact Info"
 
-[node name="GameTitle3" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1046070965]
+[node name="ContactInfo" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1046070965]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -369,7 +374,8 @@ size_flags_horizontal = 0
 layout_mode = 2
 text = "Vision Statement"
 
-[node name="GameTitle4" type="TextEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1681225609]
+[node name="VisionStatement" type="TextEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1681225609]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 100)
 layout_mode = 2
 size_flags_horizontal = 0

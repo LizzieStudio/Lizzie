@@ -22,6 +22,11 @@ public class Project
     public Dictionary<string, GameState> GameStates { get; set; } = new();
 
     /// <summary>
+    /// Project-level settings edited via the Project Settings dialog.
+    /// </summary>
+    public ProjectGameSettings GameSettings { get; set; } = new();
+
+    /// <summary>
     /// List of cloud-stored assets associated with this project
     /// </summary>
     public List<Asset> Assets { get; set; } = new();
