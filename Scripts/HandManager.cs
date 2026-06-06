@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using Godot;
 
 public partial class HandManager : Panel
@@ -21,20 +20,22 @@ public partial class HandManager : Panel
 
     private Texture2D _openIcon;
     private Texture2D _closeIcon;
-    
+
+    // Drag-preview sprite shown while a 3D card is dragged over the hand panel
+    private TextureRect _dragPreview;
+    private VcToken _dragPreviewCard;
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         UpdatePositions();
         Position = new Vector2(0, _openPosition);
-        //MouseEntered += ShowPanel;
-        //MouseExited += HidePanel;
 
         _openCloseButton = GetNode<Button>("HandLockButton");
         _openCloseButton.Pressed += TogglePanel;
-            
+
         GetTree().Root.SizeChanged += OnWindowResized;
-        
+
         _handContainer = GetNode<HBoxContainer>("%HandContainer");
 
         EventBus.Instance.Subscribe<AddToHandEvent>(OnAddToHand);
@@ -42,6 +43,16 @@ public partial class HandManager : Panel
         _openIcon = ResourceLoader.Load<Texture2D>(OpenIcon);
         _closeIcon = ResourceLoader.Load<Texture2D>(CloseIcon);
 
+        _dragPreview = new TextureRect
+        {
+            ExpandMode = TextureRect.ExpandModeEnum.FitWidthProportional,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspect,
+            Size = new Vector2(80, 120),
+            Visible = false,
+            MouseFilter = MouseFilterEnum.Ignore,
+            ZIndex = 10,
+        };
+        AddChild(_dragPreview);
     }
 
     private void OnAddToHand(AddToHandEvent obj)
@@ -65,10 +76,8 @@ public partial class HandManager : Panel
             else if (!mb.Pressed && _isResizing)
             {
                 _isResizing = false;
-                // Update open position to reflect new size
                 UpdatePositions();
                 GetViewport().SetInputAsHandled();
-                //DisplayServer.CursorSetShape(DisplayServer.CursorShape.Arrow);
             }
         }
         else if (@event is InputEventMouseMotion motion)
@@ -80,7 +89,6 @@ public partial class HandManager : Panel
                 float newHeight = _resizePanelStartHeight - dy;
                 float viewportHeight = GetViewport().GetVisibleRect().Size.Y;
 
-                // Clamp: panel must stay on screen and have a minimum height
                 newHeight = Math.Max(newHeight, 50f);
                 newY = Math.Min(newY, viewportHeight - 50f);
 
@@ -93,17 +101,10 @@ public partial class HandManager : Panel
             }
             else
             {
-                // Update cursor when hovering the resize handle
                 if (IsOverResizeHandle(motion.Position))
-                {
                     DisplayServer.CursorSetShape(DisplayServer.CursorShape.Vsize);
-                    //GD.Print("VSize");
-                }
                 else
-                {
                     DisplayServer.CursorSetShape(DisplayServer.CursorShape.Arrow);
-                    //GD.Print("Arrow");
-                }
             }
         }
     }
@@ -111,14 +112,11 @@ public partial class HandManager : Panel
     private bool IsOverResizeHandle(Vector2 globalMousePos)
     {
         var localPos = globalMousePos - GlobalPosition;
-        //GD.Print(localPos.Y);
         return localPos.Y >= 0 && localPos.Y <= ResizeHandleHeight;
     }
 
     private const string OpenIcon = "res://Textures/UI/arrowup16.png";
     private const string CloseIcon = "res://Textures/UI/arrowdown16.png";
-
-
 
     private void TogglePanel()
     {
@@ -168,7 +166,6 @@ public partial class HandManager : Panel
         _targetPos = _closedPosition;
         _panelMoveDir = 1;
         Position = new Vector2(0, _closedPosition);
-
     }
 
     private void ShowPanel()
@@ -177,7 +174,6 @@ public partial class HandManager : Panel
         _currentlyClosed = false;
         _panelMoveDir = -1;
         Position = new Vector2(0, _openPosition);
-
     }
 
     [Export]
@@ -189,7 +185,7 @@ public partial class HandManager : Panel
     public override void _Process(double delta)
     {
         return;
-        
+
         if (_panelMoveDir != 0)
         {
             var curPos = Position.Y;
@@ -197,13 +193,9 @@ public partial class HandManager : Panel
             float newPos = curPos + _panelMoveDir * ((float)delta * _openSpeed);
 
             if (_panelMoveDir > 0)
-            {
                 newPos = Math.Min(newPos, _targetPos);
-            }
             else
-            {
                 newPos = Math.Max(newPos, _targetPos);
-            }
 
             Position = new Vector2(0, newPos);
 
@@ -212,23 +204,55 @@ public partial class HandManager : Panel
         }
     }
 
+    #region Drag-over preview (called from GameObjects during 3D drag)
+
+    /// <summary>
+    /// Called by GameObjects while a VcToken is being dragged and the mouse Y is over the hand panel.
+    /// Shows a 2D preview image under the mouse cursor inside the panel.
+    /// Pass null to hide the preview.
+    /// </summary>
+    public void ShowDragPreview(VcToken card, Vector2 globalMousePos)
+    {
+        if (card == null)
+        {
+            HideDragPreview();
+            return;
+        }
+
+        if (card != _dragPreviewCard)
+        {
+            _dragPreviewCard = card;
+            _dragPreview.Texture = GetCardTexture(card);
+        }
+
+        // Position the preview relative to this panel's local space
+        var localPos = globalMousePos - GlobalPosition;
+        _dragPreview.Position = localPos - _dragPreview.Size / 2f;
+        _dragPreview.Visible = true;
+    }
+
+    public void HideDragPreview()
+    {
+        _dragPreview.Visible = false;
+        _dragPreviewCard = null;
+    }
+
+    #endregion
+
     #region Hand Management
 
     public void AddToHand(VcToken card)
     {
+        card.Location = VisualComponentBase.ComponentLocation.Hand;
         _cards.Add(card);
         MapHandToContainer();
     }
-    
-    public void AddToHand(Guid cardId)
-    {
-        
-    }
-    
+
     public void AddToHand(IEnumerable<VcToken> cards)
     {
         foreach (var card in cards)
         {
+            card.Location = VisualComponentBase.ComponentLocation.Hand;
             _cards.Add(card);
         }
         MapHandToContainer();
@@ -236,19 +260,37 @@ public partial class HandManager : Panel
 
     public void RemoveFromHand(VcToken card)
     {
-        
+        if (!_cards.Remove(card))
+            return;
+
+        card.Location = VisualComponentBase.ComponentLocation.Board;
+        EventBus.Instance.Publish(new ReturnFromHandEvent { Card = card });
+        MapHandToContainer();
     }
 
-    public void RemoveFromHand(Guid card)
+    private static ImageTexture GetCardTexture(VcToken card)
     {
-        
+        if (card.FaceSprite == null)
+            return null;
+
+        var fullImage = card.FaceSprite;
+        if (fullImage.IsCompressed())
+            fullImage.Decompress();
+
+        int hframes = Math.Max(1, card.FaceHframes);
+        int vframes = Math.Max(1, card.FaceVframes);
+        int frameW = fullImage.GetWidth() / hframes;
+        int frameH = fullImage.GetHeight() / vframes;
+        int col = card.FaceFrame % hframes;
+        int row = card.FaceFrame / hframes;
+        var region = new Rect2I(col * frameW, row * frameH, frameW, frameH);
+        var frameImage = fullImage.GetRegion(region);
+        return ImageTexture.CreateFromImage(frameImage);
     }
 
     private void MapHandToContainer()
     {
-        //Clear out the old containers 
-        //TODO - this is pretty inefficient, but we can optimize later if needed
-        foreach(var c in _handContainer.GetChildren())
+        foreach (var c in _handContainer.GetChildren())
         {
             _handContainer.RemoveChild(c);
             c.QueueFree();
@@ -259,34 +301,29 @@ public partial class HandManager : Panel
             var t = new TextureRect();
             t.ExpandMode = TextureRect.ExpandModeEnum.FitWidthProportional;
             t.StretchMode = TextureRect.StretchModeEnum.Scale;
-            t.MouseEntered += TOnMouseEntered;
+            t.Texture = GetCardTexture(card);
 
-            if (card.FaceSprite != null)
-            {
-                var fullImage = card.FaceSprite;
-                if (fullImage.IsCompressed())
-                {
-                    fullImage.Decompress(); //GetRegion only works on decompressed images
-                }
-                int hframes = Math.Max(1, card.FaceHframes);
-                int vframes = Math.Max(1, card.FaceVframes);
-                int frameW = fullImage.GetWidth() / hframes;
-                int frameH = fullImage.GetHeight() / vframes;
-                int col = card.FaceFrame % hframes;
-                int row = card.FaceFrame / hframes;
-                var region = new Rect2I(col * frameW, row * frameH, frameW, frameH);
-                var frameImage = fullImage.GetRegion(region);
-                t.Texture = ImageTexture.CreateFromImage(frameImage);
-            }
-
+            // Allow dragging this card back to the board
+            var capturedCard = card;
+            t.GuiInput += (inputEvent) => OnCardGuiInput(inputEvent, capturedCard, t);
 
             _handContainer.AddChild(t);
         }
     }
 
-    private void TOnMouseEntered()
+    // Tracks which hand card is being dragged back to the board
+    private VcToken _handDragCard;
+
+    private void OnCardGuiInput(InputEvent inputEvent, VcToken card, TextureRect rect)
     {
-        GD.Print("Mouse Entered");
+        if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left } mb && mb.Pressed)
+        {
+            // Remove from hand immediately and hand off to the 3D drag system.
+            // OnReturnFromHand will set IsDragging = true so the normal HandleDrag loop takes over.
+            _handDragCard = card;
+            RemoveFromHand(card);
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     #endregion

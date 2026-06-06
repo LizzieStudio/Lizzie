@@ -271,6 +271,8 @@ public partial class GameController : Node3D
 
     public float HandY => _uiController.HandY;
 
+    public HandManager HandManager => _uiController.HandManager;
+
     //test function
     public void TestFunction()
     {

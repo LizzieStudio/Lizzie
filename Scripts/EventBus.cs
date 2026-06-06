@@ -397,4 +397,9 @@ public class AddToHandEvent : IEvent
     public IEnumerable<VcToken> Cards { get; set; } = new List<VcToken>();
 }
 
+public class ReturnFromHandEvent : IEvent
+{
+    public VcToken Card { get; set; }
+}
+
 #endregion

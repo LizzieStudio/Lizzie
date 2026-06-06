@@ -77,13 +77,15 @@ public partial class UI : CanvasLayer
         _editMenu = GetNode<PopupMenu>("%Edit");
         _editMenu.AddItem("Templates", 1);
         _editMenu.AddItem("Datasets", 2);
-        _editMenu.AddItem("Images", 4);
         _editMenu.AddItem("Prototype Manifest", 3);
+        _editMenu.AddItem("Images", 4);
+        _editMenu.AddItem("Project Settings", 5);
         _editMenu.IdPressed += OnEditMenuSelection;
 
         _insertMenu = GetNode<PopupMenu>("%Insert");
-        _insertMenu.AddItem("Component", 1);
-        _insertMenu.AddItem("Zone", 2);
+        _insertMenu.AddItem("Existing Component", 1);
+        _insertMenu.AddItem("New Component", 2);
+        _insertMenu.AddItem("Zone", 3);
         _insertMenu.IdPressed += OnInsertMenuSelection;
 
         _helpMenu = GetNode<PopupMenu>("%Help");
@@ -266,6 +268,21 @@ public partial class UI : CanvasLayer
     private void ShowImageManager()
     {
         ShowImageManagerFromEvent(new ShowImageManagerEvent { ImageReference = Guid.Empty });
+    }
+
+    private void ShowProjectSettings()
+    {
+        string s = "res://Scenes/Project/ProjectSettings.tscn";
+        _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettings>();
+        _projectSettings.Closed += ProjectSettingsOnClosed;
+        _modalDialogs.AddChild(_projectSettings);
+    }
+
+    private void ProjectSettingsOnClosed(object sender, EventArgs e)
+    {
+        _projectSettings.Closed -= ProjectSettingsOnClosed;
+        _projectSettings.Hide();
+        _projectSettings.QueueFree();
     }
 
     private void ShowImageManagerFromEvent(ShowImageManagerEvent e)
@@ -710,6 +727,11 @@ public partial class UI : CanvasLayer
     {
         if (id == 1)
         {
+            ShowPrototypeManifest();
+        }
+        
+        if (id == 2)
+        {
             ShowComponentDefinition();
         }
     }
@@ -735,6 +757,13 @@ public partial class UI : CanvasLayer
         {
             ShowImageManager();
         }
+
+        if (id == 5)
+        {
+            ShowProjectSettings();
+        }
+        
+        
     }
 
     private void OnInsertPressed()
@@ -758,6 +787,7 @@ public partial class UI : CanvasLayer
     }
 
     private bool _popupShown;
+    private ProjectSettings _projectSettings;
 
     public void ShowComponentPopup(Vector2I position)
     {
@@ -835,6 +865,8 @@ public partial class UI : CanvasLayer
     public const int LongClickTime = 1000;
 
     public float HandY => _handManager.HandY;
+
+    public HandManager HandManager => _handManager;
 
     #region UI Texture Paths
 

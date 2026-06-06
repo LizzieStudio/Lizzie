@@ -41,6 +41,24 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
         EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
+        EventBus.Instance.Subscribe<ReturnFromHandEvent>(OnReturnFromHand);
+    }
+
+    private void OnReturnFromHand(ReturnFromHandEvent obj)
+    {
+        var card = obj.Card;
+        if (card == null) return;
+
+        card.Location = VisualComponentBase.ComponentLocation.Board;
+
+        _lastDragPosition = _dragPlane.GetCursorProjection();
+        card.SetPosition(new Vector3(_lastDragPosition.X, card.YHeight, _lastDragPosition.Z));
+
+        CursorMode = CursorMode.Drag;
+        StartDragUndo(card);
+        card.IsDragging = true;
+
+        QueueStackingUpdate();
     }
 
     public void SetGameController(GameController gameController)
@@ -1029,11 +1047,26 @@ public partial class GameObjects : Node
         if (Input.IsMouseButtonPressed(MouseButton.Left))
         {
             var mousePosition = GetViewport().GetMousePosition();
-            if (mousePosition.Y > _gameController.HandY)
+            bool overHand = mousePosition.Y > _gameController.HandY;
+
+            if (overHand)
             {
-                GD.Print("Mouse is over the hand area");
+                // Show a 2D preview under the cursor for the first dragging VcToken
+                VcToken previewCard = null;
+                foreach (var go in GetDraggingObjects())
+                {
+                    if (go is VcToken vct) { previewCard = vct; break; }
+                }
+                _gameController.HandManager.ShowDragPreview(previewCard, mousePosition);
+                previewCard.Visible = false;
+                Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
+                return; // don't move the 3D objects while hovering the hand
             }
-            
+            else
+            {
+                _gameController.HandManager.HideDragPreview();
+            }
+
             var newDragPosition = _dragPlane.GetCursorProjection();
             var delta = newDragPosition - _lastDragPosition;
             _lastDragPosition = newDragPosition;
@@ -1043,9 +1076,8 @@ public partial class GameObjects : Node
             foreach (var go in GetDraggingObjects())
             {
                 var p = go.Position + delta;
-
-                //go.MoveToTargetY(_dragHeight+ go.YHeight);
                 go.SetPosition(new Vector3(p.X, _dragHeight + go.YHeight, p.Z));
+                go.Visible = true;
             }
 
             //check to see if we are over a VisualComponentGroup that can accept a drop,
@@ -1194,6 +1226,40 @@ public partial class GameObjects : Node
 
     private void EndDrag()
     {
+        _gameController.HandManager.HideDragPreview();
+
+        var mousePosition = GetViewport().GetMousePosition();
+        bool droppedOnHand = mousePosition.Y > _gameController.HandY;
+
+        if (droppedOnHand)
+        {
+            // Send all dragging VcToken objects to the hand
+            var toHand = new List<VcToken>();
+            foreach (var go in GetDraggingObjects())
+            {
+                if (go is VcToken vct)
+                    toHand.Add(vct);
+            }
+
+            // End dragging state before handing off
+            foreach (var go in GetDraggingObjects().ToList())
+            {
+                go.IsDragging = false;
+                if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+                {
+                    var networkedObject = go.GetNodeOrNull<NetworkedObject>("NetworkedObject");
+                    networkedObject?.Unlock();
+                }
+            }
+
+            _gameController.HandManager.AddToHand(toHand);
+            Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
+            CursorMode = CursorMode.Normal;
+            QueueStackingUpdate();
+            EndDragUndo();
+            return;
+        }
+
         if (_currentDragDropTarget != null)
         {
             if (_currentDragDropTarget.CanObjectsBeDropped(GetDraggingObjects()))
