@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://caw45erf0ap1j" path="res://Scripts/UI.cs" id="2_a0mv7"]
 [ext_resource type="PackedScene" uid="uid://c10pvpfntkay3" path="res://Scenes/3d_scene_no_physics.tscn" id="3_6khan"]
 [ext_resource type="Script" uid="uid://3274wuq0qfvx" path="res://Scripts/HandManager.cs" id="3_h6pmi"]
-[ext_resource type="Texture2D" uid="uid://cx5dv08dde75e" path="res://Textures/UI/arrowup16.png" id="5_sly7x"]
+[ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="4_n88ql"]
 [ext_resource type="Texture2D" uid="uid://41ftdwu6bvkv" path="res://Textures/UI/lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="19_mftnr"]
 [ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
@@ -125,9 +125,9 @@ alignment = 1
 
 [node name="HandLockButton" type="Button" parent="UI/Hand" unique_id=1128516974]
 layout_mode = 1
-offset_right = 68.0
+offset_right = 24.0
 offset_bottom = 28.0
-icon = ExtResource("5_sly7x")
+icon = ExtResource("4_n88ql")
 
 [node name="Mode" type="HBoxContainer" parent="UI" unique_id=1351550218]
 anchors_preset = 3

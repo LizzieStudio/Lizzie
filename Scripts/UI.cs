@@ -114,6 +114,17 @@ public partial class UI : CanvasLayer
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
         EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
+        EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+    }
+
+    private void OnProjectSettingsChanged()
+    {
+        var s = ProjectService.Instance.CurrentProject.GameSettings;
+
+        if (_handManager != null) HandManager.Visible = s.EnablePlayerHands;
+        
+        if (_rotationStep != null) _rotationStep.Selected = s.RotationStepIndex;
+        
     }
 
     private void ShowComponentPreviewDialog(ShowComponentPreviewDialogEvent obj)

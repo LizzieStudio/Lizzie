@@ -29,8 +29,7 @@ public partial class Table : StaticBody3D
         }
 
         var color = new Color(s.TableColorR, s.TableColorG, s.TableColorB, s.TableColorA);
-        var mat = _mesh.Material as StandardMaterial3D;
-        if (mat != null)
+        if (_mesh.Material is StandardMaterial3D mat)
         {
             mat.AlbedoColor = color;
         }

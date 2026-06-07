@@ -53,6 +53,7 @@ public partial class ProjectService : Node
             if (!_suppressProjectChangeEvent)
             {
                 EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
+                EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
             }
         }
     }
