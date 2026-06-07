@@ -402,4 +402,6 @@ public class ReturnFromHandEvent : IEvent
     public VcToken Card { get; set; }
 }
 
+public class ProjectSettingsChangedEvent : IEvent { }
+
 #endregion

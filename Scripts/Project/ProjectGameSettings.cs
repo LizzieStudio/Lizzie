@@ -28,10 +28,6 @@ public class ProjectGameSettings
         new ProjectPlayerSettings { Name = "Player 2", ColorR = 1f, ColorG = 0f, ColorB = 0f },
         new ProjectPlayerSettings { Name = "Player 3", ColorR = 0f, ColorG = 1f, ColorB = 0f },
         new ProjectPlayerSettings { Name = "Player 4", ColorR = 1f, ColorG = 1f, ColorB = 0f },
-        new ProjectPlayerSettings { Name = "Player 5", ColorR = 1f, ColorG = 0f, ColorB = 1f },
-        new ProjectPlayerSettings { Name = "Player 6", ColorR = 0f, ColorG = 1f, ColorB = 1f },
-        new ProjectPlayerSettings { Name = "Player 7", ColorR = 0.62f, ColorG = 0.44f, ColorB = 0.32f },
-        new ProjectPlayerSettings { Name = "Player 8", ColorR = 0.5f, ColorG = 0.5f, ColorB = 0.5f },
     };
 
     // Game Info tab

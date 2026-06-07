@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://y82ths1w8xke"]
+
+[ext_resource type="Script" uid="uid://ewg7r81pkrog" path="res://Scripts/Project/PlayerDefinition.cs" id="1_3w03b"]
+
+[node name="PlayerDefinition" type="HBoxContainer" unique_id=921644963]
+script = ExtResource("1_3w03b")
+
+[node name="PlayerNumber" type="Label" parent="." unique_id=510847131]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(125, 0)
+layout_mode = 2
+text = "Player 8"
+
+[node name="PlayerName" type="LineEdit" parent="." unique_id=32951922]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Player 8"
+
+[node name="PlayerColor" type="ColorPickerButton" parent="." unique_id=1143524958]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+color = Color(0.5019608, 0.5019608, 0.5019608, 1)
