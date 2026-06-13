@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://c10pvpfntkay3" path="res://Scenes/3d_scene_no_physics.tscn" id="3_6khan"]
 [ext_resource type="Script" uid="uid://3274wuq0qfvx" path="res://Scripts/HandManager.cs" id="3_h6pmi"]
 [ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="4_n88ql"]
+[ext_resource type="Texture2D" uid="uid://jkpxes8koyxv" path="res://Textures/card_back.jpg" id="8_sly7x"]
 [ext_resource type="Texture2D" uid="uid://41ftdwu6bvkv" path="res://Textures/UI/lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="19_mftnr"]
 [ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
@@ -16,7 +17,6 @@ _textureFactory = NodePath("UI/TextureFactory")
 [node name="UI" type="CanvasLayer" parent="." unique_id=309296479]
 script = ExtResource("2_a0mv7")
 highlightFontColor = Color(0.54902, 0.694118, 1, 1)
-baseFontColor = null
 
 [node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=571287879]
 anchors_preset = 10
@@ -103,7 +103,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 0
 script = ExtResource("3_h6pmi")
-_openSpeed = null
 
 [node name="MarginContainer" type="MarginContainer" parent="UI/Hand" unique_id=184998263]
 layout_mode = 1
@@ -190,6 +189,120 @@ script = ExtResource("25_461bj")
 
 [node name="ModalDialogs" type="Node" parent="UI" unique_id=693207545]
 unique_name_in_owner = true
+
+[node name="PlayerHandsPanel" type="Panel" parent="UI" unique_id=1510600927]
+custom_minimum_size = Vector2(100, 200)
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -158.0
+offset_top = -274.0
+offset_bottom = 16.0
+grow_horizontal = 0
+grow_vertical = 2
+size_flags_vertical = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/PlayerHandsPanel" unique_id=2081137204]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="PlayerHands" type="VBoxContainer" parent="UI/PlayerHandsPanel/MarginContainer" unique_id=1118646796]
+custom_minimum_size = Vector2(100, 300)
+layout_mode = 2
+
+[node name="Opponent1" type="VBoxContainer" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands" unique_id=1632368220]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent1" unique_id=2145970228]
+layout_mode = 2
+size_flags_vertical = 0
+text = "Player1 (3)"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent1" unique_id=2005783708]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent1/HBoxContainer" unique_id=1680113552]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="TextureRect2" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent1/HBoxContainer" unique_id=548952134]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="TextureRect3" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent1/HBoxContainer" unique_id=1247624346]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="Opponent2" type="VBoxContainer" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands" unique_id=695595853]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent2" unique_id=211422242]
+layout_mode = 2
+size_flags_vertical = 0
+text = "Player2 (3)"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent2" unique_id=377052297]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent2/HBoxContainer" unique_id=137356053]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="TextureRect2" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent2/HBoxContainer" unique_id=488067556]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="TextureRect3" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent2/HBoxContainer" unique_id=2091542554]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="Opponent3" type="VBoxContainer" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands" unique_id=1758523335]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent3" unique_id=7670230]
+layout_mode = 2
+size_flags_vertical = 0
+text = "Player4 (4)"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent3" unique_id=692070243]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TextureRect" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=974427081]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="TextureRect2" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=1851382339]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="TextureRect3" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=750644595]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
+
+[node name="TextureRect4" type="TextureRect" parent="UI/PlayerHandsPanel/MarginContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=1868130232]
+layout_mode = 2
+texture = ExtResource("8_sly7x")
+expand_mode = 3
 
 [node name="FileDialog" type="FileDialog" parent="." unique_id=350939739]
 oversampling_override = 1.0

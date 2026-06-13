@@ -44,6 +44,7 @@ public partial class UI : CanvasLayer
     private ComponentPreviewPopup _componentPreviewPopup;
 
     private HandManager _handManager;
+    private Panel _opponentHands;
 
     private OptionButton _rotationStep;
 
@@ -106,7 +107,9 @@ public partial class UI : CanvasLayer
         _modalDialogs = GetNode("%ModalDialogs");
 
         _handManager = GetNode<HandManager>("%Hand");
-        
+        _opponentHands = GetNode<Panel>("%PlayerHandsPanel");
+
+
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
         EventBus.Instance.Subscribe<GameStateChangedEvent>(OnGameStateChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
@@ -121,7 +124,12 @@ public partial class UI : CanvasLayer
     {
         var s = ProjectService.Instance.CurrentProject.GameSettings;
 
-        if (_handManager != null) HandManager.Visible = s.EnablePlayerHands;
+        if (_handManager != null)
+        {
+            
+            HandManager.Visible = s.EnablePlayerHands;
+            _opponentHands.Visible = s.EnablePlayerHands;
+        }
         
         if (_rotationStep != null) _rotationStep.Selected = s.RotationStepIndex;
         
