@@ -298,5 +298,25 @@ public partial class ProjectSynchronizer : Node
         );
 
         RpcId(senderId, nameof(ReceiveProject), projectJson);
+
+        // Push existing seat assignments so the new client sees who is seated,
+        // then prompt the client to choose their own position.
+        PlayerSeatManager.Instance?.PushSeatMapToClient(senderId);
+        RpcId(senderId, nameof(NotifyClientProjectReady));
+    }
+
+    /// <summary>
+    /// Called on the client after the server has sent the full project and the seat map.
+    /// Prompts the local player to pick their position.
+    /// </summary>
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void NotifyClientProjectReady()
+    {
+        GD.Print("[ProjectSynchronizer] Project ready – requesting player position selection.");
+        EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
     }
 }

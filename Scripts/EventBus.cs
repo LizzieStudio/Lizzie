@@ -404,4 +404,21 @@ public class ReturnFromHandEvent : IEvent
 
 public class ProjectSettingsChangedEvent : IEvent { }
 
+/// <summary>
+/// Published when the local player should be prompted to pick a player position.
+/// </summary>
+public class RequestPlayerPositionEvent : IEvent { }
+
+/// <summary>
+/// Published (host-authoritative) after a seat claim is confirmed or rejected.
+/// SeatIndex: 0-based player slot, -1 = observer, -2 = unclaimed/rejected.
+/// </summary>
+public class PlayerSeatClaimedEvent : IEvent
+{
+    public int PeerId { get; set; }
+    public int SeatIndex { get; set; }
+    /// <summary>True if the claim was accepted; false if the seat was already taken.</summary>
+    public bool Accepted { get; set; }
+}
+
 #endregion

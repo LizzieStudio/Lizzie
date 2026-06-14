@@ -42,9 +42,17 @@ public partial class UI : CanvasLayer
     private MultiplayerDialog _multiplayerDialog;
     private ImageManager _imageManager;
     private ComponentPreviewPopup _componentPreviewPopup;
+    private PlayerPositionDialog _playerPositionDialog;
 
     private HandManager _handManager;
-    private Panel _opponentHands;
+    private PlayerHandsPanel _opponentHands;
+    private float _opponentHandsOpenOffsetLeft;
+    private float _opponentHandsOpenOffsetRight;
+    private float _opponentHandsHiddenOffsetLeft;
+    private float _opponentHandsHiddenOffsetRight;
+    private const float OpponentHandsAnimDuration = 0.25f;
+    private const float OpponentHandsPanelMargin = 6f;
+    private Tween _opponentHandsTween;
 
     private OptionButton _rotationStep;
 
@@ -107,7 +115,11 @@ public partial class UI : CanvasLayer
         _modalDialogs = GetNode("%ModalDialogs");
 
         _handManager = GetNode<HandManager>("%Hand");
-        _opponentHands = GetNode<Panel>("%PlayerHandsPanel");
+        _opponentHands = GetNode<PlayerHandsPanel>("%PlayerHandsPanel");
+        _opponentHands.ShowHideToggled += OnOpponentHandsShowHideToggled;
+
+        // Defer position capture until layout is resolved.
+        CallDeferred(nameof(InitOpponentHandsPositions));
 
 
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
@@ -118,6 +130,7 @@ public partial class UI : CanvasLayer
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
         EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
         EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+        EventBus.Instance.Subscribe<RequestPlayerPositionEvent>(OnRequestPlayerPosition);
     }
 
     private void OnProjectSettingsChanged()
@@ -126,13 +139,72 @@ public partial class UI : CanvasLayer
 
         if (_handManager != null)
         {
-            
+
             HandManager.Visible = s.EnablePlayerHands;
             _opponentHands.Visible = s.EnablePlayerHands;
         }
-        
+
         if (_rotationStep != null) _rotationStep.Selected = s.RotationStepIndex;
+
+    }
+
+    private void InitOpponentHandsPositions()
+    {
+        if (_opponentHands == null) return;
+
+        _opponentHandsOpenOffsetLeft  = _opponentHands.OffsetLeft;
+        _opponentHandsOpenOffsetRight = _opponentHands.OffsetRight;
+
+        // Slide the whole panel right so only the button tab remains on screen.
+        // Moving both offsets by the same delta keeps the panel width constant,
+        // so the minimum-size constraint never interferes.
+        var btn = _opponentHands.GetNode<Button>("%ShowHideButton");
+        float visibleWidth = btn.Size.X + OpponentHandsPanelMargin * 2;
+        float slideAmount  = _opponentHands.Size.X - visibleWidth;
+
+        _opponentHandsHiddenOffsetLeft  = _opponentHandsOpenOffsetLeft  + slideAmount;
+        _opponentHandsHiddenOffsetRight = _opponentHandsOpenOffsetRight + slideAmount;
+    }
+
+    private void OnOpponentHandsShowHideToggled(object sender, bool isHidden)
+    {
+        if (_opponentHands == null) return;
+
+        float targetLeft  = isHidden ? _opponentHandsHiddenOffsetLeft  : _opponentHandsOpenOffsetLeft;
+        float targetRight = isHidden ? _opponentHandsHiddenOffsetRight : _opponentHandsOpenOffsetRight;
+
+        _opponentHandsTween?.Kill();
+        _opponentHandsTween = _opponentHands.CreateTween();
+        _opponentHandsTween
+            .TweenProperty(_opponentHands, "offset_left", targetLeft, OpponentHandsAnimDuration)
+            .SetTrans(Tween.TransitionType.Quad)
+            .SetEase(Tween.EaseType.Out);
+        _opponentHandsTween.Parallel()
+            .TweenProperty(_opponentHands, "offset_right", targetRight, OpponentHandsAnimDuration)
+            .SetTrans(Tween.TransitionType.Quad)
+            .SetEase(Tween.EaseType.Out);
+    }
+
+    private void OnRequestPlayerPosition(RequestPlayerPositionEvent _)
+    {
+        ShowPlayerPositionDialog();
+    }
+
+    private void ShowPlayerPositionDialog()
+    {
+        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
+        if (settings == null)
+            return;
+
+        // Don't open if there are no player slots and observers are not allowed.
+        if (settings.Players.Count == 0 && !settings.AllowObservers)
+            return;
+
+        string s = "res://Scenes/Controls/player_position_dialog.tscn";
         
+        _playerPositionDialog = GD.Load<PackedScene>(s).Instantiate<PlayerPositionDialog>();
+        _modalDialogs.AddChild(_playerPositionDialog);
+        _playerPositionDialog.ShowCentered();
     }
 
     private void ShowComponentPreviewDialog(ShowComponentPreviewDialogEvent obj)
@@ -335,6 +407,9 @@ public partial class UI : CanvasLayer
             case 1:
                 var p = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
                 ProjectService.Instance.CurrentProject = p;
+                // Local project open: ask the player which seat they want.
+                if (p != null)
+                    ShowPlayerPositionDialog();
                 break;
 
             case 2:
