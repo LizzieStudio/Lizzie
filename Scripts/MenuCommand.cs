@@ -36,4 +36,6 @@ public class MenuCommand
     /// If true, command is only valid if only one component is selected
     /// </summary>
     public bool SingleOnly { get; set; }
+
+    public bool AddQtySubmenu { get; set; }
 }

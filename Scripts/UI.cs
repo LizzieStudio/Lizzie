@@ -687,7 +687,8 @@ public partial class UI : CanvasLayer
         string icon,
         bool enabled = true,
         bool checkable = false,
-        bool isChecked = false
+        bool isChecked = false,
+        bool addQtySubmenu = false
     )
     {
         int index = -1;
@@ -724,7 +725,25 @@ public partial class UI : CanvasLayer
         }
 
         popup.SetItemDisabled(index, !enabled);
+
+        if (addQtySubmenu)
+        {
+            // Submenu item IDs are encoded as: baseId * 100 + qty
+            // qty 1-5 = draw that many; qty 0 = draw all
+            var sub = new PopupMenu();
+            sub.Name = $"QtySubmenu_{id}";
+
+            for (int qty = 1; qty <= MAX_CARD_DEAL; qty++)
+                sub.AddItem(qty.ToString(), id * 100 + qty);
+            sub.AddItem("All", id * 100 + 0);
+
+            sub.IdPressed += OnQtySubmenuItemSelected;
+            popup.AddChild(sub);
+            popup.SetItemSubmenu(index, sub.Name);
+        }
     }
+
+    public const int MAX_CARD_DEAL = 8;
 
     //we need to save which components are being affected by the right-click menu when it pops up
     private List<VisualComponentBase> _popupComponents;
@@ -785,6 +804,20 @@ public partial class UI : CanvasLayer
                     );
                     break;
 
+                case VisualCommand.Deal:
+                case VisualCommand.Draw:
+                    AddItemToPopupMenu(
+                        _componentPopup,
+                        command,
+                        menuCommand.Caption,
+                        string.Empty,
+                        true,
+                        false,
+                        false,
+                        addQtySubmenu: true
+                    );
+                    break;
+
                 default:
                     AddItemToPopupMenu(
                         _componentPopup,
@@ -801,6 +834,8 @@ public partial class UI : CanvasLayer
 
     private void PopupMenuCommandSelected(long id)
     {
+        // Submenu items handled by OnQtySubmenuItemSelected; skip raw command IDs
+        // that belong to commands with qty submenus (they are parent labels, not actions).
         if (id >= (int)VisualCommand.MaximumVC)
             return;
 
@@ -808,6 +843,21 @@ public partial class UI : CanvasLayer
         if (GetParent() is GameController gc)
         {
             gc.ProcessPopupCommand(vc, _popupComponents);
+        }
+    }
+
+    private void OnQtySubmenuItemSelected(long encodedId)
+    {
+        // Decode: baseId * 100 + qty  (qty 0 = All)
+        int qty = (int)(encodedId % 100);
+        VisualCommand vc = (VisualCommand)(encodedId / 100);
+
+        if (qty == 0)
+            qty = int.MaxValue; // sentinel meaning "all"
+
+        if (GetParent() is GameController gc)
+        {
+            gc.ProcessPopupCommandWithQuantity(vc, _popupComponents, qty);
         }
     }
 

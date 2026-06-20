@@ -15,4 +15,5 @@ public abstract class CommandBase
     public bool SingleOnly { get; protected set; } = false;
     public bool EnableToggle { get; protected set; } = false;
     public bool IsToggled { get; set; } = false;
+    public bool AddQtySubmenu { get; set; }
 }

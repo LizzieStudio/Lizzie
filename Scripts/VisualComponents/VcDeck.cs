@@ -169,6 +169,17 @@ public partial class VcDeck : VisualComponentGroup
         return cr.Consumed == false ? base.ProcessCommand(command) : cr;
     }
 
+    public override CommandResponse ProcessCommandWithQuantity(VisualCommand command, int quantity)
+    {
+        // quantity == int.MaxValue means "All"; DrawCards already clamps to deck size.
+        return command switch
+        {
+            VisualCommand.Draw => DrawCards(quantity),
+            VisualCommand.Deal => DrawCards(quantity), // Deal logic can be differentiated later
+            _ => base.ProcessCommandWithQuantity(command, quantity),
+        };
+    }
+
     private CommandResponse PerformShuffle()
     {
         Shuffle();
@@ -187,6 +198,8 @@ public partial class VcDeck : VisualComponentGroup
 
         l.Add(new MenuCommand(VisualCommand.Flip));
         l.Add(new MenuCommand(VisualCommand.Shuffle));
+        l.Add(new MenuCommand(VisualCommand.Draw){ AddQtySubmenu = true, SingleOnly = true});
+        l.Add(new MenuCommand(VisualCommand.Deal) { AddQtySubmenu = true, SingleOnly = true });
         return l;
     }
 

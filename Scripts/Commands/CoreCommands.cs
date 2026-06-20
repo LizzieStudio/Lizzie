@@ -98,4 +98,28 @@ namespace Lizzie.Scripts.Commands
             SingleOnly = true;
         }
     }
+
+    [Command(VisualCommand.Draw)]
+    public class DrawCommand : BasicCommand
+    {
+        public DrawCommand()
+        {
+            Caption = "Draw";
+            Command = VisualCommand.Draw;
+            SingleOnly = true;
+            AddQtySubmenu = true;
+        }
+    }
+
+    [Command(VisualCommand.Deal)]
+    public class DealCommand : BasicCommand
+    {
+        public DealCommand()
+        {
+            Caption = "Deal";
+            Command = VisualCommand.Deal;
+            SingleOnly = true;
+            AddQtySubmenu = true;
+        }
+    }
 }
