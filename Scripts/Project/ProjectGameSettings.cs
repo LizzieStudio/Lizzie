@@ -24,10 +24,10 @@ public class ProjectGameSettings
     public int MaxPlayers { get; set; } = 4;
     public List<ProjectPlayerSettings> Players { get; set; } = new()
     {
-        new ProjectPlayerSettings { Name = "Player 1", ColorR = 0f, ColorG = 0f, ColorB = 1f },
-        new ProjectPlayerSettings { Name = "Player 2", ColorR = 1f, ColorG = 0f, ColorB = 0f },
-        new ProjectPlayerSettings { Name = "Player 3", ColorR = 0f, ColorG = 1f, ColorB = 0f },
-        new ProjectPlayerSettings { Name = "Player 4", ColorR = 1f, ColorG = 1f, ColorB = 0f },
+        new ProjectPlayerSettings { Name = "Seat 1", ColorR = 0f, ColorG = 0f, ColorB = 1f },
+        new ProjectPlayerSettings { Name = "Seat 2", ColorR = 1f, ColorG = 0f, ColorB = 0f },
+        new ProjectPlayerSettings { Name = "Seat 3", ColorR = 0f, ColorG = 1f, ColorB = 0f },
+        new ProjectPlayerSettings { Name = "Seat 4", ColorR = 1f, ColorG = 1f, ColorB = 0f },
     };
 
     // Game Info tab
