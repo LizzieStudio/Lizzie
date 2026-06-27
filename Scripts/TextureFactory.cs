@@ -337,17 +337,18 @@ public partial class TextureFactory : SubViewport
     }
 
     private static readonly System.Text.RegularExpressions.Regex ImgTagRegex =
-        new(@"\[img\](.*?)\[/img\]",
+        new(@"\[img(?:\s+color=([^\]]+))?\](.*?)\[/img\]",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase |
             System.Text.RegularExpressions.RegexOptions.Compiled);
 
     /// <summary>
     /// Populates a RichTextLabel by splitting text on [img]name[/img] tags.
+    /// Supports an optional color attribute: [img color=red]name[/img] or [img color=#rrggbb]name[/img].
     /// Plain-text segments are appended as BBCode; image segments are resolved
     /// via IconLibrary and inserted with AddImage scaled to the font line height.
-    /// The icon is modulated to match <paramref name="color"/> so it blends with the text.
+    /// The icon is modulated to match the supplied color (or <paramref name="defaultColor"/> if none).
     /// </summary>
-    private void PopulateRichTextLabel(RichTextLabel label, string text, Font font, int fontSize, Color color)
+    private void PopulateRichTextLabel(RichTextLabel label, string text, Font font, int fontSize, Color defaultColor)
     {
         // Use the font's line height as the icon size so icons match text height.
         float lineHeight = font.GetHeight(fontSize);
@@ -360,11 +361,17 @@ public partial class TextureFactory : SubViewport
             if (m.Index > cursor)
                 label.AppendText(text.Substring(cursor, m.Index - cursor));
 
-            // Resolve the icon name (case-insensitive match against IconLibrary keys)
-            string iconName = m.Groups[1].Value.Trim();
+            // Group 1 = optional color value, Group 2 = icon name
+            string colorValue = m.Groups[1].Value.Trim();
+            string iconName   = m.Groups[2].Value.Trim();
+
+            Color iconColor = string.IsNullOrEmpty(colorValue)
+                ? defaultColor
+                : ParseImgColor(colorValue, defaultColor);
+
             Texture2D iconTexture = ResolveIconTexture(iconName);
             if (iconTexture != null)
-                label.AddImage(iconTexture, (int)iconSize.X, (int)iconSize.Y, color);
+                label.AddImage(iconTexture, (int)iconSize.X, (int)iconSize.Y, iconColor);
 
             cursor = m.Index + m.Length;
         }
@@ -372,6 +379,53 @@ public partial class TextureFactory : SubViewport
         // Append any remaining plain text after the last tag
         if (cursor < text.Length)
             label.AppendText(text.Substring(cursor));
+    }
+
+    /// <summary>
+    /// Parses a color string from an [img color=...] attribute.
+    /// Supports:
+    ///   - Named Godot colors (e.g. "red", "DodgerBlue")
+    ///   - 6-digit hex with optional leading # (e.g. "#ff0000" or "ff0000")
+    ///   - 8-digit hex with optional leading # (e.g. "#ff0000ff")
+    /// Returns <paramref name="fallback"/> when the value cannot be parsed.
+    /// </summary>
+    private static Color ParseImgColor(string value, Color fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        // Strip leading '#' for uniform handling
+        string hex = value.StartsWith("#") ? value.Substring(1) : value;
+
+        // Try 6-digit hex  RRGGBB
+        if (hex.Length == 6 && IsHex(hex))
+        {
+            uint r = Convert.ToUInt32(hex.Substring(0, 2), 16);
+            uint g = Convert.ToUInt32(hex.Substring(2, 2), 16);
+            uint b = Convert.ToUInt32(hex.Substring(4, 2), 16);
+            return new Color(r / 255f, g / 255f, b / 255f);
+        }
+
+        // Try 8-digit hex  RRGGBBAA
+        if (hex.Length == 8 && IsHex(hex))
+        {
+            uint r = Convert.ToUInt32(hex.Substring(0, 2), 16);
+            uint g = Convert.ToUInt32(hex.Substring(2, 2), 16);
+            uint b = Convert.ToUInt32(hex.Substring(4, 2), 16);
+            uint a = Convert.ToUInt32(hex.Substring(6, 2), 16);
+            return new Color(r / 255f, g / 255f, b / 255f, a / 255f);
+        }
+
+        // Try Godot named color (Color.FromString returns black on failure, so check first)
+        var namedColor = Color.FromString(value, fallback);
+        return namedColor;
+    }
+
+    private static bool IsHex(string s)
+    {
+        foreach (char c in s)
+            if (!Uri.IsHexDigit(c)) return false;
+        return true;
     }
 
     private Texture2D ResolveIconTexture(string name)

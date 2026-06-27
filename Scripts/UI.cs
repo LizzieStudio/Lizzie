@@ -645,7 +645,14 @@ public partial class UI : CanvasLayer
             ComponentPopupClosed();
         }
 
-        ModalDialogShown = _modalDialogs.GetChildCount() > 0;
+        if (_modalDialogs == null)
+        {
+            ModalDialogShown = false;
+        }
+        else
+        {
+            ModalDialogShown = _modalDialogs.GetChildCount() > 0;
+        }
     }
 
     /// <summary>
