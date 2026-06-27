@@ -298,7 +298,13 @@ public partial class TextureFactory : SubViewport
         if (fontSize == 0)
             return;
 
-        Vector2 textSize = GetTextBounds(obj.Font, fontSize, obj.Text);
+        // Strip [img] tags when measuring text bounds so the measurement
+        // reflects only the plain-text portion.
+        var plainText = System.Text.RegularExpressions.Regex.Replace(
+            obj.Text, @"\[img\].*?\[/img\]", string.Empty,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        Vector2 textSize = GetTextBounds(obj.Font, fontSize, plainText.Length > 0 ? plainText : obj.Text);
 
         if (textSize.X == 0 || textSize.Y == 0)
             return;
@@ -313,10 +319,13 @@ public partial class TextureFactory : SubViewport
         label.BbcodeEnabled = true;
         label.FitContent = true;
         label.ScrollActive = false;
-        label.Text = obj.Text;
         label.AddThemeColorOverride("default_color", obj.ForegroundColor);
         label.AddThemeFontOverride("normal_font", obj.Font);
         label.AddThemeFontSizeOverride("normal_font_size", fontSize);
+
+        // Build content segment by segment so [img] tags become real AddImage calls,
+        // scaled to match the font line height.
+        PopulateRichTextLabel(label, obj.Text, obj.Font, fontSize, obj.ForegroundColor);
 
         label.Position = MoveOriginForAlignment(obj, textSize);
 
@@ -325,6 +334,62 @@ public partial class TextureFactory : SubViewport
         label.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(label);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex ImgTagRegex =
+        new(@"\[img\](.*?)\[/img\]",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// Populates a RichTextLabel by splitting text on [img]name[/img] tags.
+    /// Plain-text segments are appended as BBCode; image segments are resolved
+    /// via IconLibrary and inserted with AddImage scaled to the font line height.
+    /// The icon is modulated to match <paramref name="color"/> so it blends with the text.
+    /// </summary>
+    private void PopulateRichTextLabel(RichTextLabel label, string text, Font font, int fontSize, Color color)
+    {
+        // Use the font's line height as the icon size so icons match text height.
+        float lineHeight = font.GetHeight(fontSize);
+        var iconSize = new Vector2(lineHeight, lineHeight);
+
+        int cursor = 0;
+        foreach (System.Text.RegularExpressions.Match m in ImgTagRegex.Matches(text))
+        {
+            // Append any plain text before this tag
+            if (m.Index > cursor)
+                label.AppendText(text.Substring(cursor, m.Index - cursor));
+
+            // Resolve the icon name (case-insensitive match against IconLibrary keys)
+            string iconName = m.Groups[1].Value.Trim();
+            Texture2D iconTexture = ResolveIconTexture(iconName);
+            if (iconTexture != null)
+                label.AddImage(iconTexture, (int)iconSize.X, (int)iconSize.Y, color);
+
+            cursor = m.Index + m.Length;
+        }
+
+        // Append any remaining plain text after the last tag
+        if (cursor < text.Length)
+            label.AppendText(text.Substring(cursor));
+    }
+
+    private Texture2D ResolveIconTexture(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return _iconLibrary.TextureFromKey(string.Empty);
+
+        // Try exact key first, then case-insensitive search
+        if (_iconLibrary.ContainsKey(name))
+            return _iconLibrary.TextureFromKey(name);
+
+        foreach (var key in _iconLibrary.Keys)
+        {
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+                return _iconLibrary.TextureFromKey(key);
+        }
+
+        return _iconLibrary.TextureFromKey(string.Empty); // not-found fallback
     }
 
     private Vector2 MoveOriginForAlignment(TextureObject obj, Vector2 size)
