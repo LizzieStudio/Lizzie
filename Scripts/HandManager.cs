@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 public partial class HandManager : Panel
@@ -39,6 +40,7 @@ public partial class HandManager : Panel
         _handContainer = GetNode<HBoxContainer>("%HandContainer");
 
         EventBus.Instance.Subscribe<AddToHandEvent>(OnAddToHand);
+        EventBus.Instance.Subscribe<HandChangedEvent>(OnHandChanged);
 
         _openIcon = ResourceLoader.Load<Texture2D>(OpenIcon);
         _closeIcon = ResourceLoader.Load<Texture2D>(CloseIcon);
@@ -57,7 +59,15 @@ public partial class HandManager : Panel
 
     private void OnAddToHand(AddToHandEvent obj)
     {
-        AddToHand(obj.Cards);
+        // PlayerHandService handles storage; we just need to refresh our display
+        // if the event targets the local seat.
+        // (PlayerHandService publishes HandChangedEvent which triggers OnHandChanged.)
+    }
+
+    private void OnHandChanged(HandChangedEvent evt)
+    {
+        if (evt.SeatIndex == PlayerHandService.LocalSeatIndex())
+            RefreshDisplay();
     }
 
     public override void _Input(InputEvent @event)
@@ -241,31 +251,37 @@ public partial class HandManager : Panel
 
     #region Hand Management
 
+    /// <summary>
+    /// Refreshes the local player's hand display from PlayerHandService.
+    /// Shows the Face (front) of each card.
+    /// </summary>
+    public void RefreshDisplay()
+    {
+        _cards = PlayerHandService.Instance
+            .GetHand(PlayerHandService.LocalSeatIndex())
+            .ToList();
+
+        MapHandToContainer();
+    }
+
     public void AddToHand(VcToken card)
     {
-        card.Location = VisualComponentBase.ComponentLocation.Hand;
-        _cards.Add(card);
-        MapHandToContainer();
+        PlayerHandService.Instance?.AddCards(PlayerHandService.LocalSeatIndex(), new[] { card });
+        // RefreshDisplay triggered by HandChangedEvent
     }
 
     public void AddToHand(IEnumerable<VcToken> cards)
     {
-        foreach (var card in cards)
-        {
-            card.Location = VisualComponentBase.ComponentLocation.Hand;
-            _cards.Add(card);
-        }
-        MapHandToContainer();
+        PlayerHandService.Instance?.AddCards(PlayerHandService.LocalSeatIndex(), cards);
+        // RefreshDisplay triggered by HandChangedEvent
     }
 
     public void RemoveFromHand(VcToken card)
     {
-        if (!_cards.Remove(card))
-            return;
-
+        PlayerHandService.Instance?.RemoveCard(card);
         card.Location = VisualComponentBase.ComponentLocation.Board;
         EventBus.Instance.Publish(new ReturnFromHandEvent { Card = card });
-        MapHandToContainer();
+        // RefreshDisplay triggered by HandChangedEvent
     }
 
     private static ImageTexture GetCardTexture(VcToken card)

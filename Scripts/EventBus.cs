@@ -394,12 +394,30 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
 
 public class AddToHandEvent : IEvent
 {
+    /// <summary>
+    /// Cards to add. For Draw this is the local player's seat; for Deal each card batch
+    /// is published per seat.
+    /// </summary>
     public IEnumerable<VcToken> Cards { get; set; } = new List<VcToken>();
+    /// <summary>
+    /// The seat index that should receive these cards.
+    /// Use -2 to direct to the local player's current seat.
+    /// </summary>
+    public int SeatIndex { get; set; } = -2;
 }
 
 public class ReturnFromHandEvent : IEvent
 {
     public VcToken Card { get; set; }
+}
+
+/// <summary>
+/// Published whenever any player's hand changes (cards added or removed).
+/// Subscribers (HandManager, PlayerHandsPanel) should refresh their display.
+/// </summary>
+public class HandChangedEvent : IEvent
+{
+    public int SeatIndex { get; set; }
 }
 
 public class ProjectSettingsChangedEvent : IEvent { }

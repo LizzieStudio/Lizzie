@@ -307,12 +307,16 @@ public partial class TextureFactory : SubViewport
         float halfWidth = textSize.X / 2f;
         float halfHeight = textSize.Y / 2f;
 
-        // Create a Label for the text
-        var label = new Label();
+        // Create a RichTextLabel for the text
+        var label = new RichTextLabel();
+        label.AutowrapMode = TextServer.AutowrapMode.Off;
+        label.BbcodeEnabled = true;
+        label.FitContent = true;
+        label.ScrollActive = false;
         label.Text = obj.Text;
-        label.AddThemeColorOverride("font_color", obj.ForegroundColor);
-        label.AddThemeFontOverride("font", obj.Font);
-        label.AddThemeFontSizeOverride("font_size", fontSize);
+        label.AddThemeColorOverride("default_color", obj.ForegroundColor);
+        label.AddThemeFontOverride("normal_font", obj.Font);
+        label.AddThemeFontSizeOverride("normal_font_size", fontSize);
 
         label.Position = MoveOriginForAlignment(obj, textSize);
 

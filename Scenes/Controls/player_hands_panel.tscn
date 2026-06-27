@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://s4e3sjhq6cm1"]
 
 [ext_resource type="Script" uid="uid://ublvk3w28xaf" path="res://Scripts/UI/PlayerHandsPanel.cs" id="1_kyexm"]
-[ext_resource type="Texture2D" uid="uid://jkpxes8koyxv" path="res://Textures/card_back.jpg" id="2_wswwp"]
 
 [node name="PlayerHandsPanel" type="Panel" unique_id=416397088]
 custom_minimum_size = Vector2(100, 200)
@@ -41,95 +40,8 @@ text = ">"
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1733820871]
 layout_mode = 2
-text = "Hide"
+text = "Opponents"
 
 [node name="PlayerHands" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1577901107]
-custom_minimum_size = Vector2(100, 300)
+unique_name_in_owner = true
 layout_mode = 2
-
-[node name="Opponent1" type="VBoxContainer" parent="MarginContainer/VBoxContainer/PlayerHands" unique_id=151301931]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent1" unique_id=199387970]
-layout_mode = 2
-size_flags_vertical = 0
-text = "Player1 (3)"
-
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent1" unique_id=1301618646]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent1/HBoxContainer" unique_id=219762821]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="TextureRect2" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent1/HBoxContainer" unique_id=1414361402]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="TextureRect3" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent1/HBoxContainer" unique_id=167987539]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="Opponent2" type="VBoxContainer" parent="MarginContainer/VBoxContainer/PlayerHands" unique_id=693490774]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent2" unique_id=2017671289]
-layout_mode = 2
-size_flags_vertical = 0
-text = "Player2 (3)"
-
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent2" unique_id=842201775]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent2/HBoxContainer" unique_id=1362316421]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="TextureRect2" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent2/HBoxContainer" unique_id=1126742758]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="TextureRect3" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent2/HBoxContainer" unique_id=549929219]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="Opponent3" type="VBoxContainer" parent="MarginContainer/VBoxContainer/PlayerHands" unique_id=1496542256]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent3" unique_id=330815015]
-layout_mode = 2
-size_flags_vertical = 0
-text = "Player4 (4)"
-
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent3" unique_id=201352965]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=1921254581]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="TextureRect2" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=756771285]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="TextureRect3" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=1052854235]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
-
-[node name="TextureRect4" type="TextureRect" parent="MarginContainer/VBoxContainer/PlayerHands/Opponent3/HBoxContainer" unique_id=1887012723]
-layout_mode = 2
-texture = ExtResource("2_wswwp")
-expand_mode = 3
