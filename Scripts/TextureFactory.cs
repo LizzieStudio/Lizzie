@@ -276,7 +276,7 @@ public partial class TextureFactory : SubViewport
         }
         else
         {
-            RenderRectangleText(obj);
+            RenderRectangleText(obj, obj.Multiline);
         }
     }
 
@@ -285,52 +285,87 @@ public partial class TextureFactory : SubViewport
         return font.GetStringSize(text, fontSize: fontSize);
     }
 
-    private void RenderRectangleText(TextureObject obj)
+    private void RenderRectangleText(TextureObject obj, bool wrap = false)
     {
-        // Get text size for centering
+        // Strip BBCode for measurement: [img]...[/img] -> "M", all other tags removed.
+        var plainText = System.Text.RegularExpressions.Regex.Replace(
+            System.Text.RegularExpressions.Regex.Replace(
+                obj.Text,
+                @"\[img(?:\s+[^\]]+)?\].*?\[/img\]",
+                "M",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                System.Text.RegularExpressions.RegexOptions.Singleline),
+            @"\[[^\]]+\]",
+            string.Empty,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        string measureText = plainText.Length > 0 ? plainText : obj.Text;
 
         int fontSize = obj.FontSize;
         if (obj.Autosize)
         {
-            fontSize = AutosizeFont(obj.Text, obj.Font, obj.Height, obj.Width, 6, 72);
+            fontSize = AutosizeFont(measureText, obj.Font, obj.Height, obj.Width, 6, 72, wrap);
         }
 
         if (fontSize == 0)
             return;
 
-        // Strip [img] tags when measuring text bounds so the measurement
-        // reflects only the plain-text portion.
-        var plainText = System.Text.RegularExpressions.Regex.Replace(
-            obj.Text, @"\[img\].*?\[/img\]", string.Empty,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        Vector2 labelSize;
+        if (wrap)
+        {
+            // Measure the wrapped size and clamp to obj.Height.
+            float wrapWidth = obj.Width * 0.9f;
+            Vector2 wrappedSize = obj.Font.GetMultilineStringSize(
+                measureText,
+                width: (int)wrapWidth,
+                fontSize: fontSize);
 
-        Vector2 textSize = GetTextBounds(obj.Font, fontSize, plainText.Length > 0 ? plainText : obj.Text);
+            if (wrappedSize.X == 0 || wrappedSize.Y == 0)
+                return;
 
-        if (textSize.X == 0 || textSize.Y == 0)
-            return;
+            // Label spans the full width so PushParagraph can align content inside it.
+            labelSize = new Vector2(obj.Width, Math.Min(wrappedSize.Y, obj.Height));
+        }
+        else
+        {
+            // Single-line: shrink the label to the measured text size so that
+            // MoveOriginForAlignment places it correctly for all three alignments.
+            Vector2 singleSize = obj.Font.GetStringSize(measureText, fontSize: fontSize);
 
-        // Calculate the position to center the text
-        float halfWidth = textSize.X / 2f;
-        float halfHeight = textSize.Y / 2f;
+            if (singleSize.X == 0 || singleSize.Y == 0)
+                return;
 
-        // Create a RichTextLabel for the text
+            labelSize = singleSize;
+        }
+
+        // Create a RichTextLabel sized to the measured text area.
         var label = new RichTextLabel();
-        label.AutowrapMode = TextServer.AutowrapMode.Off;
-        label.BbcodeEnabled = true;
-        label.FitContent = true;
-        label.ScrollActive = false;
+        label.AutowrapMode   = wrap ? TextServer.AutowrapMode.Word : TextServer.AutowrapMode.Off;
+        label.BbcodeEnabled  = true;
+        label.FitContent     = !wrap;
+        label.ClipContents   = wrap;
+        label.ScrollActive   = false;
+        label.Size           = labelSize;
         label.AddThemeColorOverride("default_color", obj.ForegroundColor);
         label.AddThemeFontOverride("normal_font", obj.Font);
         label.AddThemeFontSizeOverride("normal_font_size", fontSize);
+
+        if (wrap)
+        {
+            // Drive internal text alignment through the paragraph so that all
+            // three HorizontalAlignment values work inside the full-width label.
+            label.PushParagraph(obj.HorizontalAlignment);
+        }
 
         // Build content segment by segment so [img] tags become real AddImage calls,
         // scaled to match the font line height.
         PopulateRichTextLabel(label, obj.Text, obj.Font, fontSize, obj.ForegroundColor);
 
-        label.Position = MoveOriginForAlignment(obj, textSize);
+        if (wrap)
+            label.Pop();
 
-        label.PivotOffset = new Vector2(halfWidth, halfHeight); //always pivot at the center
-
+        label.Position        = MoveOriginForAlignment(obj, labelSize);
+        label.PivotOffset     = new Vector2(labelSize.X / 2f, labelSize.Y / 2f);
         label.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(label);
@@ -824,7 +859,7 @@ public partial class TextureFactory : SubViewport
             Type = TextureObjectType.Text,
         };
 
-        RenderRectangleText(o);
+        RenderRectangleText(o, o.Multiline);
     }
 
     private static Vector2 ScaleRectangleInTriangle(int triangleSide, float aspectRatio)
@@ -996,28 +1031,30 @@ public partial class TextureFactory : SubViewport
         int height,
         int width,
         int minSize,
-        int maxSize
+        int maxSize,
+        bool wrap = false
     )
     {
-        var size = minSize;
+        float targetHeight = height * 0.9f;
+        float targetWidth  = width  * 0.9f;
 
-        float targetWidth = width * 0.8f;
-        float targetHeight = height * 0.8f;
-
-        while (true)
+        int last = minSize;
+        for (int size = minSize; size <= maxSize; size++)
         {
-            var fontSize = font.GetStringSize(caption, fontSize: size);
+            Vector2 measured = wrap
+                ? font.GetMultilineStringSize(caption, width: (int)targetWidth, fontSize: size)
+                : font.GetStringSize(caption, fontSize: size);
 
-            if (fontSize.X > targetWidth || fontSize.Y > targetHeight)
-            {
-                return Math.Max(size, minSize);
-            }
+            bool tooBig = wrap
+                ? measured.Y > targetHeight
+                : measured.X > targetWidth || measured.Y > targetHeight;
 
-            size++;
+            if (tooBig)
+                return last;
 
-            if (size > maxSize)
-                return maxSize;
+            last = size;
         }
+        return maxSize;
     }
 
     public enum TextureObjectType
