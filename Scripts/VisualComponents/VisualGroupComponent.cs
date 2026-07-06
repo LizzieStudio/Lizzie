@@ -60,8 +60,10 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     {
         AddChildComponents(dragObjects);
     }
-
+    
     protected abstract void OnChildrenChanged();
+
+    
 
     /// <summary>
     /// Returns the first item in the group, and removes it.

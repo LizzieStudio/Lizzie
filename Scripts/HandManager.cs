@@ -343,3 +343,4 @@ public partial class HandManager : Panel
 
     #endregion
 }
+
