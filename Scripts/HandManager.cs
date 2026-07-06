@@ -163,7 +163,8 @@ public partial class HandManager : Panel
     {
         get
         {
-            if (_currentlyClosed) return _closedPosition;
+            if (_currentlyClosed)
+                return _closedPosition;
             return _openPosition;
         }
     }
@@ -257,9 +258,7 @@ public partial class HandManager : Panel
     /// </summary>
     public void RefreshDisplay()
     {
-        _cards = PlayerHandService.Instance
-            .GetHand(PlayerHandService.LocalSeatIndex())
-            .ToList();
+        _cards = PlayerHandService.Instance.GetHand(PlayerHandService.LocalSeatIndex()).ToList();
 
         MapHandToContainer();
     }
@@ -344,4 +343,3 @@ public partial class HandManager : Panel
 
     #endregion
 }
-

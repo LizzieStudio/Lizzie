@@ -121,7 +121,6 @@ public partial class UI : CanvasLayer
         // Defer position capture until layout is resolved.
         CallDeferred(nameof(InitOpponentHandsPositions));
 
-
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
         EventBus.Instance.Subscribe<GameStateChangedEvent>(OnGameStateChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
@@ -139,20 +138,20 @@ public partial class UI : CanvasLayer
 
         if (_handManager != null)
         {
-
             HandManager.Visible = s.EnablePlayerHands;
             _opponentHands.Visible = s.EnablePlayerHands;
         }
 
-        if (_rotationStep != null) _rotationStep.Selected = s.RotationStepIndex;
-
+        if (_rotationStep != null)
+            _rotationStep.Selected = s.RotationStepIndex;
     }
 
     private void InitOpponentHandsPositions()
     {
-        if (_opponentHands == null) return;
+        if (_opponentHands == null)
+            return;
 
-        _opponentHandsOpenOffsetLeft  = _opponentHands.OffsetLeft;
+        _opponentHandsOpenOffsetLeft = _opponentHands.OffsetLeft;
         _opponentHandsOpenOffsetRight = _opponentHands.OffsetRight;
 
         // Slide the whole panel right so only the button tab remains on screen.
@@ -160,18 +159,21 @@ public partial class UI : CanvasLayer
         // so the minimum-size constraint never interferes.
         var btn = _opponentHands.GetNode<Button>("%ShowHideButton");
         float visibleWidth = btn.Size.X + OpponentHandsPanelMargin * 2;
-        float slideAmount  = _opponentHands.Size.X - visibleWidth;
+        float slideAmount = _opponentHands.Size.X - visibleWidth;
 
-        _opponentHandsHiddenOffsetLeft  = _opponentHandsOpenOffsetLeft  + slideAmount;
+        _opponentHandsHiddenOffsetLeft = _opponentHandsOpenOffsetLeft + slideAmount;
         _opponentHandsHiddenOffsetRight = _opponentHandsOpenOffsetRight + slideAmount;
     }
 
     private void OnOpponentHandsShowHideToggled(object sender, bool isHidden)
     {
-        if (_opponentHands == null) return;
+        if (_opponentHands == null)
+            return;
 
-        float targetLeft  = isHidden ? _opponentHandsHiddenOffsetLeft  : _opponentHandsOpenOffsetLeft;
-        float targetRight = isHidden ? _opponentHandsHiddenOffsetRight : _opponentHandsOpenOffsetRight;
+        float targetLeft = isHidden ? _opponentHandsHiddenOffsetLeft : _opponentHandsOpenOffsetLeft;
+        float targetRight = isHidden
+            ? _opponentHandsHiddenOffsetRight
+            : _opponentHandsOpenOffsetRight;
 
         _opponentHandsTween?.Kill();
         _opponentHandsTween = _opponentHands.CreateTween();
@@ -179,7 +181,8 @@ public partial class UI : CanvasLayer
             .TweenProperty(_opponentHands, "offset_left", targetLeft, OpponentHandsAnimDuration)
             .SetTrans(Tween.TransitionType.Quad)
             .SetEase(Tween.EaseType.Out);
-        _opponentHandsTween.Parallel()
+        _opponentHandsTween
+            .Parallel()
             .TweenProperty(_opponentHands, "offset_right", targetRight, OpponentHandsAnimDuration)
             .SetTrans(Tween.TransitionType.Quad)
             .SetEase(Tween.EaseType.Out);
@@ -201,7 +204,7 @@ public partial class UI : CanvasLayer
             return;
 
         string s = "res://Scenes/Controls/player_position_dialog.tscn";
-        
+
         _playerPositionDialog = GD.Load<PackedScene>(s).Instantiate<PlayerPositionDialog>();
         _modalDialogs.AddChild(_playerPositionDialog);
         _playerPositionDialog.ShowCentered();
@@ -880,7 +883,7 @@ public partial class UI : CanvasLayer
         {
             ShowPrototypeManifest();
         }
-        
+
         if (id == 2)
         {
             ShowComponentDefinition();
@@ -913,8 +916,6 @@ public partial class UI : CanvasLayer
         {
             ShowProjectSettings();
         }
-        
-        
     }
 
     private void OnInsertPressed()

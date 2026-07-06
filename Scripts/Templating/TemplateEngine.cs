@@ -91,7 +91,7 @@ public static class TemplateEngine
                     Type = l.Type,
                     Stretch = l.Stretch,
                     BackgroundColor = l.BackgroundColor,
-                    RotationDegrees = l.RotationDegrees
+                    RotationDegrees = l.RotationDegrees,
                 }
             );
 

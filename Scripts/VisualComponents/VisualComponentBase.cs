@@ -677,7 +677,6 @@ public abstract partial class VisualComponentBase : Area3D
     //public Vector3 TargetPosition { get; set; }
     //public Vector3 TargetRotationDegrees { get; set; }
 
-
     public void SetPositionAndRotation(Vector3 position, Vector3 rotation)
     {
         Position = position;

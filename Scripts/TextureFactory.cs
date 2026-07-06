@@ -293,11 +293,13 @@ public partial class TextureFactory : SubViewport
                 obj.Text,
                 @"\[img(?:\s+[^\]]+)?\].*?\[/img\]",
                 "M",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase |
-                System.Text.RegularExpressions.RegexOptions.Singleline),
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                    | System.Text.RegularExpressions.RegexOptions.Singleline
+            ),
             @"\[[^\]]+\]",
             string.Empty,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        );
 
         string measureText = plainText.Length > 0 ? plainText : obj.Text;
 
@@ -318,7 +320,8 @@ public partial class TextureFactory : SubViewport
             Vector2 wrappedSize = obj.Font.GetMultilineStringSize(
                 measureText,
                 width: (int)wrapWidth,
-                fontSize: fontSize);
+                fontSize: fontSize
+            );
 
             if (wrappedSize.X == 0 || wrappedSize.Y == 0)
                 return;
@@ -340,12 +343,12 @@ public partial class TextureFactory : SubViewport
 
         // Create a RichTextLabel sized to the measured text area.
         var label = new RichTextLabel();
-        label.AutowrapMode   = wrap ? TextServer.AutowrapMode.Word : TextServer.AutowrapMode.Off;
-        label.BbcodeEnabled  = true;
-        label.FitContent     = !wrap;
-        label.ClipContents   = wrap;
-        label.ScrollActive   = false;
-        label.Size           = labelSize;
+        label.AutowrapMode = wrap ? TextServer.AutowrapMode.Word : TextServer.AutowrapMode.Off;
+        label.BbcodeEnabled = true;
+        label.FitContent = !wrap;
+        label.ClipContents = wrap;
+        label.ScrollActive = false;
+        label.Size = labelSize;
         label.AddThemeColorOverride("default_color", obj.ForegroundColor);
         label.AddThemeFontOverride("normal_font", obj.Font);
         label.AddThemeFontSizeOverride("normal_font_size", fontSize);
@@ -364,16 +367,17 @@ public partial class TextureFactory : SubViewport
         if (wrap)
             label.Pop();
 
-        label.Position        = MoveOriginForAlignment(obj, labelSize);
-        label.PivotOffset     = new Vector2(labelSize.X / 2f, labelSize.Y / 2f);
+        label.Position = MoveOriginForAlignment(obj, labelSize);
+        label.PivotOffset = new Vector2(labelSize.X / 2f, labelSize.Y / 2f);
         label.RotationDegrees = obj.RotationDegrees;
         _viewport.AddChild(label);
     }
 
-    private static readonly System.Text.RegularExpressions.Regex ImgTagRegex =
-        new(@"\[img(?:\s+color=([^\]]+))?\](.*?)\[/img\]",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
-            System.Text.RegularExpressions.RegexOptions.Compiled);
+    private static readonly System.Text.RegularExpressions.Regex ImgTagRegex = new(
+        @"\[img(?:\s+color=([^\]]+))?\](.*?)\[/img\]",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            | System.Text.RegularExpressions.RegexOptions.Compiled
+    );
 
     /// <summary>
     /// Populates a RichTextLabel by splitting text on [img]name[/img] tags.
@@ -382,7 +386,13 @@ public partial class TextureFactory : SubViewport
     /// via IconLibrary and inserted with AddImage scaled to the font line height.
     /// The icon is modulated to match the supplied color (or <paramref name="defaultColor"/> if none).
     /// </summary>
-    private void PopulateRichTextLabel(RichTextLabel label, string text, Font font, int fontSize, Color defaultColor)
+    private void PopulateRichTextLabel(
+        RichTextLabel label,
+        string text,
+        Font font,
+        int fontSize,
+        Color defaultColor
+    )
     {
         // Use the font's line height as the icon size so icons match text height.
         float lineHeight = font.GetHeight(fontSize);
@@ -397,7 +407,7 @@ public partial class TextureFactory : SubViewport
 
             // Group 1 = optional color value, Group 2 = icon name
             string colorValue = m.Groups[1].Value.Trim();
-            string iconName   = m.Groups[2].Value.Trim();
+            string iconName = m.Groups[2].Value.Trim();
 
             Color iconColor = string.IsNullOrEmpty(colorValue)
                 ? defaultColor
@@ -458,7 +468,8 @@ public partial class TextureFactory : SubViewport
     private static bool IsHex(string s)
     {
         foreach (char c in s)
-            if (!Uri.IsHexDigit(c)) return false;
+            if (!Uri.IsHexDigit(c))
+                return false;
         return true;
     }
 
@@ -1036,7 +1047,7 @@ public partial class TextureFactory : SubViewport
     )
     {
         float targetHeight = height * 0.9f;
-        float targetWidth  = width  * 0.9f;
+        float targetWidth = width * 0.9f;
 
         int last = minSize;
         for (int size = minSize; size <= maxSize; size++)

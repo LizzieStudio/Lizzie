@@ -25,7 +25,7 @@ public partial class GameObjects : Node
     private readonly List<PendingSpawnRequest> _pendingSpawns = new();
 
     private GameController _gameController;
-    
+
     public CursorMode CursorMode { get; private set; }
 
     public override void _Ready()
@@ -47,7 +47,8 @@ public partial class GameObjects : Node
     private void OnReturnFromHand(ReturnFromHandEvent obj)
     {
         var card = obj.Card;
-        if (card == null) return;
+        if (card == null)
+            return;
 
         card.Location = VisualComponentBase.ComponentLocation.Board;
 
@@ -1055,7 +1056,11 @@ public partial class GameObjects : Node
                 VcToken previewCard = null;
                 foreach (var go in GetDraggingObjects())
                 {
-                    if (go is VcToken vct) { previewCard = vct; break; }
+                    if (go is VcToken vct)
+                    {
+                        previewCard = vct;
+                        break;
+                    }
                 }
                 _gameController.HandManager.ShowDragPreview(previewCard, mousePosition);
                 previewCard.Visible = false;

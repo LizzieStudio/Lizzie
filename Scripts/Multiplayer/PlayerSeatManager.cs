@@ -56,8 +56,7 @@ public partial class PlayerSeatManager : Node
     /// <summary>
     /// Returns the seat index for a given peer, or -2 if unknown.
     /// </summary>
-    public int GetSeat(int peerId) =>
-        _claims.TryGetValue(peerId, out var seat) ? seat : -2;
+    public int GetSeat(int peerId) => _claims.TryGetValue(peerId, out var seat) ? seat : -2;
 
     /// <summary>
     /// Request to claim a seat for the local player.
@@ -91,12 +90,14 @@ public partial class PlayerSeatManager : Node
         if (MultiplayerManager.Instance?.Players.TryGetValue(peerId, out var pi) == true)
             pi.PlayerPosition = -2;
 
-        EventBus.Instance?.Publish(new PlayerSeatClaimedEvent
-        {
-            PeerId = peerId,
-            SeatIndex = -2,
-            Accepted = true,
-        });
+        EventBus.Instance?.Publish(
+            new PlayerSeatClaimedEvent
+            {
+                PeerId = peerId,
+                SeatIndex = -2,
+                Accepted = true,
+            }
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -116,7 +117,13 @@ public partial class PlayerSeatManager : Node
         var settings = ProjectService.Instance.CurrentProject?.GameSettings;
         if (settings == null)
         {
-            RpcId(requestingPeerId, nameof(ClientReceiveClaimResult), requestingPeerId, requestedSeat, false);
+            RpcId(
+                requestingPeerId,
+                nameof(ClientReceiveClaimResult),
+                requestingPeerId,
+                requestedSeat,
+                false
+            );
             return;
         }
 
@@ -134,8 +141,8 @@ public partial class PlayerSeatManager : Node
         {
             // Accept if not already taken by someone else
             accepted = !_claims.TryGetValue(requestingPeerId, out _)
-                       ? IsAvailable(requestedSeat)
-                       : IsAvailableExcluding(requestedSeat, requestingPeerId);
+                ? IsAvailable(requestedSeat)
+                : IsAvailableExcluding(requestedSeat, requestingPeerId);
         }
 
         if (accepted)
@@ -150,7 +157,13 @@ public partial class PlayerSeatManager : Node
         else
         {
             // Inform only the requester that the seat was rejected
-            RpcId(requestingPeerId, nameof(ClientReceiveClaimResult), requestingPeerId, requestedSeat, false);
+            RpcId(
+                requestingPeerId,
+                nameof(ClientReceiveClaimResult),
+                requestingPeerId,
+                requestedSeat,
+                false
+            );
         }
     }
 
@@ -190,12 +203,14 @@ public partial class PlayerSeatManager : Node
                 pi.PlayerPosition = seatIndex;
         }
 
-        EventBus.Instance?.Publish(new PlayerSeatClaimedEvent
-        {
-            PeerId = peerId,
-            SeatIndex = seatIndex,
-            Accepted = accepted,
-        });
+        EventBus.Instance?.Publish(
+            new PlayerSeatClaimedEvent
+            {
+                PeerId = peerId,
+                SeatIndex = seatIndex,
+                Accepted = accepted,
+            }
+        );
     }
 
     private bool IsAvailableExcluding(int seatIndex, int excludePeerId)

@@ -199,7 +199,7 @@ public partial class ComponentPreview : Panel
 
             // The camera sits on the +Z axis looking toward -Z, so the visible plane
             // is XY. Determine how much orthographic Size is needed to fit both axes.
-            float compWidth  = Mathf.Abs(size.X);
+            float compWidth = Mathf.Abs(size.X);
             float compHeight = Mathf.Abs(size.Y);
 
             // Camera3D.Size is the vertical extent of the orthographic frustum.
@@ -207,15 +207,16 @@ public partial class ComponentPreview : Panel
             // To fit width:  Size >= compWidth  / aspectRatio
             // To fit height: Size >= compHeight
             var viewportSize = _subViewport.Size;
-            float aspectRatio = (viewportSize.X > 0 && viewportSize.Y > 0)
-                ? (float)viewportSize.X / viewportSize.Y
-                : 1f;
+            float aspectRatio =
+                (viewportSize.X > 0 && viewportSize.Y > 0)
+                    ? (float)viewportSize.X / viewportSize.Y
+                    : 1f;
 
-            float neededForWidth  = aspectRatio > 0f ? compWidth / aspectRatio : compWidth;
+            float neededForWidth = aspectRatio > 0f ? compWidth / aspectRatio : compWidth;
             float neededForHeight = compHeight;
-            float largestNeeded   = Mathf.Max(neededForWidth, neededForHeight);
+            float largestNeeded = Mathf.Max(neededForWidth, neededForHeight);
 
-            _camera.Size     = Mathf.Max(largestNeeded * 1.2f, 0.1f);
+            _camera.Size = Mathf.Max(largestNeeded * 1.2f, 0.1f);
             _camera.Position = new Vector3(0, 0, Mathf.Max(100f, size.Length() + 1f));
         }
         else

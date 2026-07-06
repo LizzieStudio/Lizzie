@@ -30,7 +30,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         _statusLabel = GetNode<Label>("%StatusLabel");
         _statusLabel.AddThemeColorOverride("font_color", new Color(1f, 0.4f, 0.4f));
         _statusLabel.Visible = false;
-        
+
         Confirmed += OnConfirmed;
         Canceled += OnCanceled;
 

@@ -1,6 +1,6 @@
-using Godot;
 using System;
 using System.ComponentModel.Design;
+using Godot;
 
 public partial class ProjectSettings : Window
 {
@@ -71,14 +71,25 @@ public partial class ProjectSettings : Window
 
     public const int MAX_PLAYERS = 16;
 
-    public Color[] _playerColors = 
+    public Color[] _playerColors =
     {
-        Colors.Blue, Colors.Red, Colors.Green, Colors.Yellow,
-        Colors.Aqua, Colors.HotPink, Colors.LimeGreen, Colors.Orange,
-        Colors.Brown, Colors.Purple, Colors.Beige, Colors.LightBlue,
-        Colors.White, Colors.Black, Colors.Gray, Colors.LightGray
+        Colors.Blue,
+        Colors.Red,
+        Colors.Green,
+        Colors.Yellow,
+        Colors.Aqua,
+        Colors.HotPink,
+        Colors.LimeGreen,
+        Colors.Orange,
+        Colors.Brown,
+        Colors.Purple,
+        Colors.Beige,
+        Colors.LightBlue,
+        Colors.White,
+        Colors.Black,
+        Colors.Gray,
+        Colors.LightGray,
     };
-    
 
     private void OnMaxPlayersUpdated(string newText)
     {
@@ -99,28 +110,33 @@ public partial class ProjectSettings : Window
 
     private void UpdatePlayerDefinitionList(int playerCount)
     {
-        if (playerCount < 1) return;
+        if (playerCount < 1)
+            return;
 
         var curCount = _playerDefinitionContainer.GetChildren().Count;
 
-        if (curCount == playerCount) return;
+        if (curCount == playerCount)
+            return;
 
         if (curCount < playerCount)
         {
             for (int i = curCount; i < playerCount; i++)
             {
                 var c = _playerColors[i];
-                
-                
-                var newPd = GD.Load<PackedScene>(_playerDefinitionScene).Instantiate<PlayerDefinition>();
-                newPd.SetPlayerInfo(i + 1, new ProjectPlayerSettings
-                {
-                    Name = $"Player {i + 1}",
-                    ColorA = _playerColors[i].A,
-                    ColorR = _playerColors[i].R,
-                    ColorG = _playerColors[i].G,
-                    ColorB = _playerColors[i].B,
-                });
+
+                var newPd = GD.Load<PackedScene>(_playerDefinitionScene)
+                    .Instantiate<PlayerDefinition>();
+                newPd.SetPlayerInfo(
+                    i + 1,
+                    new ProjectPlayerSettings
+                    {
+                        Name = $"Player {i + 1}",
+                        ColorA = _playerColors[i].A,
+                        ColorR = _playerColors[i].R,
+                        ColorG = _playerColors[i].G,
+                        ColorB = _playerColors[i].B,
+                    }
+                );
                 _playerDefinitionContainer.AddChild(newPd);
             }
         }
@@ -136,9 +152,7 @@ public partial class ProjectSettings : Window
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
-    public override void _Process(double delta)
-    {
-    }
+    public override void _Process(double delta) { }
 
     public event EventHandler Closed;
 
@@ -150,7 +164,8 @@ public partial class ProjectSettings : Window
     private void LoadFromProject()
     {
         var s = ProjectService.Instance.CurrentProject?.GameSettings;
-        if (s == null) return;
+        if (s == null)
+            return;
 
         _2dToggle.ButtonPressed = s.StartIn2D;
         _playerHandsToggle.ButtonPressed = s.EnablePlayerHands;
@@ -177,12 +192,15 @@ public partial class ProjectSettings : Window
     private void SetPlayers(ProjectGameSettings gameSettings)
     {
         UpdatePlayerDefinitionList(gameSettings.MaxPlayers);
-        foreach(var c in _playerDefinitionContainer.GetChildren())
+        foreach (var c in _playerDefinitionContainer.GetChildren())
         {
             if (c is PlayerDefinition pd)
             {
                 var index = _playerDefinitionContainer.GetChildren().IndexOf(c);
-                var settings = gameSettings.Players.Count > index ? gameSettings.Players[index] : new ProjectPlayerSettings();
+                var settings =
+                    gameSettings.Players.Count > index
+                        ? gameSettings.Players[index]
+                        : new ProjectPlayerSettings();
                 pd.SetPlayerInfo(index + 1, settings);
             }
         }
@@ -220,14 +238,16 @@ public partial class ProjectSettings : Window
             if (c is PlayerDefinition pd)
             {
                 var i = pd.GetPlayerInfo();
-               s.Players.Add(new ProjectPlayerSettings
-               {
-                   Name = i.Item1,
-                   ColorR = i.Item2.R,
-                   ColorG = i.Item2.G,
-                   ColorB = i.Item2.B,
-                   ColorA = i.Item2.A
-               });
+                s.Players.Add(
+                    new ProjectPlayerSettings
+                    {
+                        Name = i.Item1,
+                        ColorR = i.Item2.R,
+                        ColorG = i.Item2.G,
+                        ColorB = i.Item2.B,
+                        ColorA = i.Item2.A,
+                    }
+                );
             }
         }
 
@@ -243,8 +263,6 @@ public partial class ProjectSettings : Window
         EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
         OnClosePressed();
     }
-
-
 
     private static float ParseFloat(string text, float fallback) =>
         float.TryParse(text, out var v) ? v : fallback;

@@ -1267,7 +1267,6 @@ public partial class VcToken : VisualComponentBase
         //d.SavePng(@"c:\winwam5\token.png");
     }
 
-    
     private bool _mapFrontTextureRequired;
 
     private void MapFrontTexture()
@@ -1314,7 +1313,7 @@ public partial class VcToken : VisualComponentBase
         int rows = Math.Max(vframes, 1);
         int col = frame % cols;
         int row = frame / cols;
-        mat.Uv1Scale = new Vector3(1f / cols , 1f / rows , 1f);
+        mat.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
         mat.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
     }
 

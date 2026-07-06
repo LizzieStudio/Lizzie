@@ -198,7 +198,7 @@ public partial class VcDeck : VisualComponentGroup
 
         l.Add(new MenuCommand(VisualCommand.Flip));
         l.Add(new MenuCommand(VisualCommand.Shuffle));
-        l.Add(new MenuCommand(VisualCommand.Draw){ AddQtySubmenu = true, SingleOnly = true});
+        l.Add(new MenuCommand(VisualCommand.Draw) { AddQtySubmenu = true, SingleOnly = true });
         l.Add(new MenuCommand(VisualCommand.Deal) { AddQtySubmenu = true, SingleOnly = true });
         return l;
     }
@@ -279,12 +279,12 @@ public partial class VcDeck : VisualComponentGroup
         for (int i = 0; i < cards.Length; i++)
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
-            if (comp is VcToken token) cl.Add(token);
+            if (comp is VcToken token)
+                cl.Add(token);
         }
 
         //if there are player hands, draw to that. Otherwise draw to the table.
         if (ProjectService.Instance.CurrentProject.GameSettings.EnablePlayerHands)
-
         {
             // SeatIndex -2 resolves to the local player's seat inside PlayerHandService.
             EventBus.Instance.Publish(new AddToHandEvent { Cards = cl, SeatIndex = -2 });
@@ -333,7 +333,6 @@ public partial class VcDeck : VisualComponentGroup
 
                 comp.ZOrder = ZOrder + i + 1;
             }
-
         }
 
         var change = new Change
@@ -347,8 +346,6 @@ public partial class VcDeck : VisualComponentGroup
         UpdateDeckSprites();
 
         return new CommandResponse(true, change);
-
-        
     }
 
     /// <summary>
@@ -390,7 +387,9 @@ public partial class VcDeck : VisualComponentGroup
         foreach (var kv in handsToAdd)
         {
             if (kv.Value.Count > 0)
-                EventBus.Instance.Publish(new AddToHandEvent { Cards = kv.Value, SeatIndex = kv.Key });
+                EventBus.Instance.Publish(
+                    new AddToHandEvent { Cards = kv.Value, SeatIndex = kv.Key }
+                );
         }
 
         UpdateDeckSprites();

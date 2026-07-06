@@ -253,6 +253,7 @@ public class PlayerInfo
     public int PlayerId { get; set; }
     public string PlayerName { get; set; }
     public bool IsLocal { get; set; }
+
     /// <summary>0-based index into GameSettings.Players, -1 = observer, -2 = unclaimed.</summary>
     public int PlayerPosition { get; set; } = -2;
 }

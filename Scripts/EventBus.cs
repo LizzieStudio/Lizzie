@@ -399,6 +399,7 @@ public class AddToHandEvent : IEvent
     /// is published per seat.
     /// </summary>
     public IEnumerable<VcToken> Cards { get; set; } = new List<VcToken>();
+
     /// <summary>
     /// The seat index that should receive these cards.
     /// Use -2 to direct to the local player's current seat.
@@ -435,6 +436,7 @@ public class PlayerSeatClaimedEvent : IEvent
 {
     public int PeerId { get; set; }
     public int SeatIndex { get; set; }
+
     /// <summary>True if the claim was accepted; false if the seat was already taken.</summary>
     public bool Accepted { get; set; }
 }
