@@ -6,7 +6,6 @@ namespace Lizzie.Scripts.Templating;
 
 public class TextElement : TemplateElement
 {
-    // Called when the node enters the scene tree for the first time.
     public TextElement()
         : base()
     {
@@ -53,6 +52,13 @@ public class TextElement : TemplateElement
                 Name = "Autosize",
                 Value = "False",
                 Type = TemplateParameter.TemplateParameterType.Boolean,
+            });
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Wrap Text",
+                Value = "False",
+                Type = TemplateParameter.TemplateParameterType.Boolean,
             }
         );
         UpdateBounds();
@@ -88,13 +94,16 @@ public class TextElement : TemplateElement
         t.FontSize = ScaleFontSize(f, context);
 
         t.Autosize = EvaluateBooleanParameter(Parameters, "Autosize", context);
+        t.Multiline = EvaluateBooleanParameter(Parameters, "Wrap Text", context);
         l.Add(t);
         return l;
     }
 
     private int ScaleFontSize(int fontSize, TextureContext context)
     {
-        const int TwelvePointHeight = 18; //pixels in 12 point font. (Actually was 17, but I changed it to 18 to make it look better)
+        const int
+            TwelvePointHeight =
+                18; //pixels in 12 point font. (Actually was 17, but I changed it to 18 to make it look better)
 
         float targetDots = (fontSize / 72f) * context.Dpi; //fontsize / 72 = font size in inches
 

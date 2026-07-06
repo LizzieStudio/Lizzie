@@ -367,7 +367,6 @@ public partial class TextureFactory : SubViewport
         label.Position        = MoveOriginForAlignment(obj, labelSize);
         label.PivotOffset     = new Vector2(labelSize.X / 2f, labelSize.Y / 2f);
         label.RotationDegrees = obj.RotationDegrees;
-
         _viewport.AddChild(label);
     }
 
@@ -1003,7 +1002,8 @@ public partial class TextureFactory : SubViewport
             tr.AddChild(bgRect);
         }
 
-        tr.PivotOffset = new Vector2(halfWidth, halfHeight);
+        tr.PivotOffset = new Vector2(tr.Size.X / 2f, tr.Size.Y / 2f);
+        //tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(tr);
