@@ -6,7 +6,6 @@ namespace Lizzie.Scripts.Templating;
 
 public class TextElement : TemplateElement
 {
-    // Called when the node enters the scene tree for the first time.
     public TextElement()
         : base()
     {
@@ -55,6 +54,14 @@ public class TextElement : TemplateElement
                 Type = TemplateParameter.TemplateParameterType.Boolean,
             }
         );
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Wrap Text",
+                Value = "False",
+                Type = TemplateParameter.TemplateParameterType.Boolean,
+            }
+        );
         UpdateBounds();
     }
 
@@ -88,6 +95,7 @@ public class TextElement : TemplateElement
         t.FontSize = ScaleFontSize(f, context);
 
         t.Autosize = EvaluateBooleanParameter(Parameters, "Autosize", context);
+        t.Multiline = EvaluateBooleanParameter(Parameters, "Wrap Text", context);
         l.Add(t);
         return l;
     }

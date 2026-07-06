@@ -1,0 +1,246 @@
+[gd_scene format=3 uid="uid://ciqnkl4mvlnfn"]
+
+[ext_resource type="Script" uid="uid://dwwrrtdbe5o1q" path="res://Scripts/Project/ProjectSettings.cs" id="1_l4pns"]
+
+[node name="ProjectSettings" type="Window" unique_id=1143015133]
+oversampling_override = 1.0
+initial_position = 1
+size = Vector2i(600, 500)
+script = ExtResource("1_l4pns")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1828229724]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=798104221]
+layout_mode = 2
+
+[node name="TabContainer" type="TabContainer" parent="MarginContainer/VBoxContainer" unique_id=1715348245]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Setup" type="MarginContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=1443464902]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+metadata/_tab_index = 0
+
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Setup" unique_id=1752201456]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=1950241992]
+layout_mode = 2
+text = "Start in 2D mode"
+
+[node name="StartIn2dToggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=613447960]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=317889509]
+layout_mode = 2
+text = "Enable Player Hands"
+
+[node name="PlayerHandsToggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=423889100]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label3" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=1890259266]
+layout_mode = 2
+text = "Table Size"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=18210220]
+layout_mode = 2
+
+[node name="TableWidth" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer/HBoxContainer" unique_id=2012753738]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer/HBoxContainer" unique_id=740786619]
+layout_mode = 2
+text = "x"
+
+[node name="TableHeight" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer/HBoxContainer" unique_id=46172970]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TableUnits" type="OptionButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer/HBoxContainer" unique_id=1591810134]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "Feet"
+popup/item_0/id = 0
+popup/item_1/text = "Meters"
+popup/item_1/id = 1
+
+[node name="Label4" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=1522990019]
+layout_mode = 2
+text = "Table Color"
+
+[node name="TableColor" type="ColorPickerButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=1374179059]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+color = Color(0.28096977, 0.5964353, 0.41195634, 1)
+
+[node name="Label5" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=1165123301]
+layout_mode = 2
+text = "Default Rotation Angle  "
+
+[node name="RotationStep" type="OptionButton" parent="MarginContainer/VBoxContainer/TabContainer/Setup/GridContainer" unique_id=1165464553]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+selected = 0
+item_count = 6
+popup/item_0/text = "15°"
+popup/item_0/id = 0
+popup/item_1/text = "30°"
+popup/item_1/id = 1
+popup/item_2/text = "45°"
+popup/item_2/id = 2
+popup/item_3/text = "60°"
+popup/item_3/id = 3
+popup/item_4/text = "90°"
+popup/item_4/id = 4
+popup/item_5/text = "180°"
+popup/item_5/id = 5
+
+[node name="Players" type="MarginContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=1042105751]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+metadata/_tab_index = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players" unique_id=276233634]
+layout_mode = 2
+
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer" unique_id=1340418435]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=1052519456]
+layout_mode = 2
+text = "Allow Observers"
+
+[node name="ObserverToggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=1181583422]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=234621506]
+layout_mode = 2
+text = "Max Players"
+
+[node name="MaxPlayers" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=616620205]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer" unique_id=2000285049]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PlayerDefinitionContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/ScrollContainer" unique_id=665993197]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Game Info" type="MarginContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=614151916]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+metadata/_tab_index = 2
+
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game Info" unique_id=1243388763]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1811486335]
+layout_mode = 2
+text = "Game Title"
+
+[node name="GameTitle" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=324713326]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1766320141]
+layout_mode = 2
+text = "Designers"
+
+[node name="Designers" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1414137699]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label5" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1610031768]
+layout_mode = 2
+text = "Graphic Design"
+
+[node name="GraphicDesign" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1549194842]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label6" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1409697736]
+layout_mode = 2
+text = "Artists"
+
+[node name="Artists" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=599668802]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label3" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=237200450]
+layout_mode = 2
+text = "Contact Info"
+
+[node name="ContactInfo" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1046070965]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Label4" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=628070859]
+layout_mode = 2
+text = "Vision Statement"
+
+[node name="VisionStatement" type="TextEdit" parent="MarginContainer/VBoxContainer/TabContainer/Game Info/GridContainer" unique_id=1681225609]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 100)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1468139267]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="SaveButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=12577530]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
+[node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1087752569]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"

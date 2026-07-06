@@ -58,6 +58,8 @@ public enum VisualCommand
     Num20,
     Roll,
     Shuffle,
+    Draw,
+    Deal,
     Refresh,
     MakeUnique,
     MaximumVC,

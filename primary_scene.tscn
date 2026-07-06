@@ -4,7 +4,8 @@
 [ext_resource type="Script" uid="uid://caw45erf0ap1j" path="res://Scripts/UI.cs" id="2_a0mv7"]
 [ext_resource type="PackedScene" uid="uid://c10pvpfntkay3" path="res://Scenes/3d_scene_no_physics.tscn" id="3_6khan"]
 [ext_resource type="Script" uid="uid://3274wuq0qfvx" path="res://Scripts/HandManager.cs" id="3_h6pmi"]
-[ext_resource type="Texture2D" uid="uid://r8l25si7dbtm" path="res://Textures/queen_of_spades.jpg" id="4_vbm5h"]
+[ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="4_n88ql"]
+[ext_resource type="PackedScene" uid="uid://s4e3sjhq6cm1" path="res://Scenes/Controls/player_hands_panel.tscn" id="8_sly7x"]
 [ext_resource type="Texture2D" uid="uid://41ftdwu6bvkv" path="res://Textures/UI/lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="19_mftnr"]
 [ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
@@ -94,26 +95,40 @@ popup/item_5/text = "180°"
 popup/item_5/id = 5
 
 [node name="Hand" type="Panel" parent="UI" unique_id=1988859394]
-visible = false
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 200)
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -200.0
 grow_horizontal = 2
 grow_vertical = 0
 script = ExtResource("3_h6pmi")
 _openSpeed = null
 
-[node name="TextureRect" type="TextureRect" parent="UI/Hand" unique_id=946244927]
-layout_mode = 0
-offset_left = 20.0
-offset_top = 20.0
-offset_right = 120.0
-offset_bottom = 180.0
-texture = ExtResource("4_vbm5h")
-expand_mode = 5
+[node name="MarginContainer" type="MarginContainer" parent="UI/Hand" unique_id=184998263]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="HandContainer" type="HBoxContainer" parent="UI/Hand/MarginContainer" unique_id=1158201109]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="HandLockButton" type="Button" parent="UI/Hand" unique_id=1128516974]
+layout_mode = 1
+offset_right = 24.0
+offset_bottom = 28.0
+icon = ExtResource("4_n88ql")
 
 [node name="Mode" type="HBoxContainer" parent="UI" unique_id=1351550218]
 anchors_preset = 3
@@ -121,11 +136,11 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -1152.0
+offset_left = -136.0
 offset_top = -31.0
 grow_horizontal = 0
 grow_vertical = 0
-size_flags_horizontal = 4
+size_flags_horizontal = 8
 alignment = 2
 
 [node name="Play2D" type="Button" parent="UI/Mode" unique_id=1870421792]
@@ -175,6 +190,9 @@ render_target_update_mode = 4
 script = ExtResource("25_461bj")
 
 [node name="ModalDialogs" type="Node" parent="UI" unique_id=693207545]
+unique_name_in_owner = true
+
+[node name="PlayerHandsPanel" parent="UI" unique_id=416397088 instance=ExtResource("8_sly7x")]
 unique_name_in_owner = true
 
 [node name="FileDialog" type="FileDialog" parent="." unique_id=350939739]

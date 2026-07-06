@@ -153,6 +153,7 @@ public partial class MultiplayerManager : Node
         GD.Print($"Peer disconnected: {id}");
 
         var playerId = (int)id;
+        PlayerSeatManager.Instance?.ReleaseSeat(playerId);
         _players.Remove(playerId);
 
         EmitSignal("PlayerDisconnected", playerId);
@@ -252,4 +253,7 @@ public class PlayerInfo
     public int PlayerId { get; set; }
     public string PlayerName { get; set; }
     public bool IsLocal { get; set; }
+
+    /// <summary>0-based index into GameSettings.Players, -1 = observer, -2 = unclaimed.</summary>
+    public int PlayerPosition { get; set; } = -2;
 }

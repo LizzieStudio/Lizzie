@@ -392,4 +392,53 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
     public VisualComponentBase Component { get; set; } = component;
 }
 
+public class AddToHandEvent : IEvent
+{
+    /// <summary>
+    /// Cards to add. For Draw this is the local player's seat; for Deal each card batch
+    /// is published per seat.
+    /// </summary>
+    public IEnumerable<VcToken> Cards { get; set; } = new List<VcToken>();
+
+    /// <summary>
+    /// The seat index that should receive these cards.
+    /// Use -2 to direct to the local player's current seat.
+    /// </summary>
+    public int SeatIndex { get; set; } = -2;
+}
+
+public class ReturnFromHandEvent : IEvent
+{
+    public VcToken Card { get; set; }
+}
+
+/// <summary>
+/// Published whenever any player's hand changes (cards added or removed).
+/// Subscribers (HandManager, PlayerHandsPanel) should refresh their display.
+/// </summary>
+public class HandChangedEvent : IEvent
+{
+    public int SeatIndex { get; set; }
+}
+
+public class ProjectSettingsChangedEvent : IEvent { }
+
+/// <summary>
+/// Published when the local player should be prompted to pick a player position.
+/// </summary>
+public class RequestPlayerPositionEvent : IEvent { }
+
+/// <summary>
+/// Published (host-authoritative) after a seat claim is confirmed or rejected.
+/// SeatIndex: 0-based player slot, -1 = observer, -2 = unclaimed/rejected.
+/// </summary>
+public class PlayerSeatClaimedEvent : IEvent
+{
+    public int PeerId { get; set; }
+    public int SeatIndex { get; set; }
+
+    /// <summary>True if the claim was accepted; false if the seat was already taken.</summary>
+    public bool Accepted { get; set; }
+}
+
 #endregion

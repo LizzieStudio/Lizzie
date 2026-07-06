@@ -295,6 +295,16 @@ public abstract partial class VisualComponentBase : Area3D
         return new CommandResponse(false, null);
     }
 
+    /// <summary>
+    /// Override in subclasses that support quantity-based commands (e.g. Draw N, Deal N).
+    /// The base implementation returns an unconsumed response.
+    /// <paramref name="quantity"/> is Int32.MaxValue when the user chose "All".
+    /// </summary>
+    public virtual CommandResponse ProcessCommandWithQuantity(VisualCommand command, int quantity)
+    {
+        return new CommandResponse(false, null);
+    }
+
     protected TextureFactory TextureFactory;
 
     public virtual List<MenuCommand> GetMenuCommands()
@@ -664,6 +674,9 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
+    //public Vector3 TargetPosition { get; set; }
+    //public Vector3 TargetRotationDegrees { get; set; }
+
     public void SetPositionAndRotation(Vector3 position, Vector3 rotation)
     {
         Position = position;
@@ -681,7 +694,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public void SetRotation(Vector3 rotation)
     {
-        if (RotationDegrees == rotation)
+        if (rotation == RotationDegrees)
             return;
         RotationDegrees = rotation;
         SyncRequired = true;
@@ -689,7 +702,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public void SetRotationDegrees(Vector3 rotationDegrees)
     {
-        if (RotationDegrees == rotationDegrees)
+        if (rotationDegrees == RotationDegrees)
             return;
         RotationDegrees = rotationDegrees;
         SyncRequired = true;

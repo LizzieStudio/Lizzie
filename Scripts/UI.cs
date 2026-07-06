@@ -42,6 +42,17 @@ public partial class UI : CanvasLayer
     private MultiplayerDialog _multiplayerDialog;
     private ImageManager _imageManager;
     private ComponentPreviewPopup _componentPreviewPopup;
+    private PlayerPositionDialog _playerPositionDialog;
+
+    private HandManager _handManager;
+    private PlayerHandsPanel _opponentHands;
+    private float _opponentHandsOpenOffsetLeft;
+    private float _opponentHandsOpenOffsetRight;
+    private float _opponentHandsHiddenOffsetLeft;
+    private float _opponentHandsHiddenOffsetRight;
+    private const float OpponentHandsAnimDuration = 0.25f;
+    private const float OpponentHandsPanelMargin = 6f;
+    private Tween _opponentHandsTween;
 
     private OptionButton _rotationStep;
 
@@ -75,13 +86,15 @@ public partial class UI : CanvasLayer
         _editMenu = GetNode<PopupMenu>("%Edit");
         _editMenu.AddItem("Templates", 1);
         _editMenu.AddItem("Datasets", 2);
-        _editMenu.AddItem("Images", 4);
         _editMenu.AddItem("Prototype Manifest", 3);
+        _editMenu.AddItem("Images", 4);
+        _editMenu.AddItem("Project Settings", 5);
         _editMenu.IdPressed += OnEditMenuSelection;
 
         _insertMenu = GetNode<PopupMenu>("%Insert");
-        _insertMenu.AddItem("Component", 1);
-        _insertMenu.AddItem("Zone", 2);
+        _insertMenu.AddItem("Existing Component", 1);
+        _insertMenu.AddItem("New Component", 2);
+        _insertMenu.AddItem("Zone", 3);
         _insertMenu.IdPressed += OnInsertMenuSelection;
 
         _helpMenu = GetNode<PopupMenu>("%Help");
@@ -101,6 +114,13 @@ public partial class UI : CanvasLayer
 
         _modalDialogs = GetNode("%ModalDialogs");
 
+        _handManager = GetNode<HandManager>("%Hand");
+        _opponentHands = GetNode<PlayerHandsPanel>("%PlayerHandsPanel");
+        _opponentHands.ShowHideToggled += OnOpponentHandsShowHideToggled;
+
+        // Defer position capture until layout is resolved.
+        CallDeferred(nameof(InitOpponentHandsPositions));
+
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
         EventBus.Instance.Subscribe<GameStateChangedEvent>(OnGameStateChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
@@ -108,6 +128,86 @@ public partial class UI : CanvasLayer
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
         EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
+        EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+        EventBus.Instance.Subscribe<RequestPlayerPositionEvent>(OnRequestPlayerPosition);
+    }
+
+    private void OnProjectSettingsChanged()
+    {
+        var s = ProjectService.Instance.CurrentProject.GameSettings;
+
+        if (_handManager != null)
+        {
+            HandManager.Visible = s.EnablePlayerHands;
+            _opponentHands.Visible = s.EnablePlayerHands;
+        }
+
+        if (_rotationStep != null)
+            _rotationStep.Selected = s.RotationStepIndex;
+    }
+
+    private void InitOpponentHandsPositions()
+    {
+        if (_opponentHands == null)
+            return;
+
+        _opponentHandsOpenOffsetLeft = _opponentHands.OffsetLeft;
+        _opponentHandsOpenOffsetRight = _opponentHands.OffsetRight;
+
+        // Slide the whole panel right so only the button tab remains on screen.
+        // Moving both offsets by the same delta keeps the panel width constant,
+        // so the minimum-size constraint never interferes.
+        var btn = _opponentHands.GetNode<Button>("%ShowHideButton");
+        float visibleWidth = btn.Size.X + OpponentHandsPanelMargin * 2;
+        float slideAmount = _opponentHands.Size.X - visibleWidth;
+
+        _opponentHandsHiddenOffsetLeft = _opponentHandsOpenOffsetLeft + slideAmount;
+        _opponentHandsHiddenOffsetRight = _opponentHandsOpenOffsetRight + slideAmount;
+    }
+
+    private void OnOpponentHandsShowHideToggled(object sender, bool isHidden)
+    {
+        if (_opponentHands == null)
+            return;
+
+        float targetLeft = isHidden ? _opponentHandsHiddenOffsetLeft : _opponentHandsOpenOffsetLeft;
+        float targetRight = isHidden
+            ? _opponentHandsHiddenOffsetRight
+            : _opponentHandsOpenOffsetRight;
+
+        _opponentHandsTween?.Kill();
+        _opponentHandsTween = _opponentHands.CreateTween();
+        _opponentHandsTween
+            .TweenProperty(_opponentHands, "offset_left", targetLeft, OpponentHandsAnimDuration)
+            .SetTrans(Tween.TransitionType.Quad)
+            .SetEase(Tween.EaseType.Out);
+        _opponentHandsTween
+            .Parallel()
+            .TweenProperty(_opponentHands, "offset_right", targetRight, OpponentHandsAnimDuration)
+            .SetTrans(Tween.TransitionType.Quad)
+            .SetEase(Tween.EaseType.Out);
+    }
+
+    private void OnRequestPlayerPosition(RequestPlayerPositionEvent _)
+    {
+        ShowPlayerPositionDialog();
+    }
+
+    private void ShowPlayerPositionDialog()
+    {
+        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
+        if (settings == null)
+            return;
+
+        // Don't open if there are no player slots and observers are not allowed.
+        if (settings.Players.Count == 0 && !settings.AllowObservers)
+            return;
+
+        string s = "res://Scenes/Controls/player_position_dialog.tscn";
+
+        _playerPositionDialog = GD.Load<PackedScene>(s).Instantiate<PlayerPositionDialog>();
+        _modalDialogs.AddChild(_playerPositionDialog);
+        _playerPositionDialog.ShowCentered();
     }
 
     private void ShowComponentPreviewDialog(ShowComponentPreviewDialogEvent obj)
@@ -264,6 +364,21 @@ public partial class UI : CanvasLayer
         ShowImageManagerFromEvent(new ShowImageManagerEvent { ImageReference = Guid.Empty });
     }
 
+    private void ShowProjectSettings()
+    {
+        string s = "res://Scenes/Project/ProjectSettings.tscn";
+        _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettings>();
+        _projectSettings.Closed += ProjectSettingsOnClosed;
+        _modalDialogs.AddChild(_projectSettings);
+    }
+
+    private void ProjectSettingsOnClosed(object sender, EventArgs e)
+    {
+        _projectSettings.Closed -= ProjectSettingsOnClosed;
+        _projectSettings.Hide();
+        _projectSettings.QueueFree();
+    }
+
     private void ShowImageManagerFromEvent(ShowImageManagerEvent e)
     {
         string s = "res://Scenes/Controls/ImageManager.tscn";
@@ -295,6 +410,9 @@ public partial class UI : CanvasLayer
             case 1:
                 var p = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
                 ProjectService.Instance.CurrentProject = p;
+                // Local project open: ask the player which seat they want.
+                if (p != null)
+                    ShowPlayerPositionDialog();
                 break;
 
             case 2:
@@ -530,7 +648,14 @@ public partial class UI : CanvasLayer
             ComponentPopupClosed();
         }
 
-        ModalDialogShown = _modalDialogs.GetChildCount() > 0;
+        if (_modalDialogs == null)
+        {
+            ModalDialogShown = false;
+        }
+        else
+        {
+            ModalDialogShown = _modalDialogs.GetChildCount() > 0;
+        }
     }
 
     /// <summary>
@@ -572,7 +697,8 @@ public partial class UI : CanvasLayer
         string icon,
         bool enabled = true,
         bool checkable = false,
-        bool isChecked = false
+        bool isChecked = false,
+        bool addQtySubmenu = false
     )
     {
         int index = -1;
@@ -609,7 +735,25 @@ public partial class UI : CanvasLayer
         }
 
         popup.SetItemDisabled(index, !enabled);
+
+        if (addQtySubmenu)
+        {
+            // Submenu item IDs are encoded as: baseId * 100 + qty
+            // qty 1-5 = draw that many; qty 0 = draw all
+            var sub = new PopupMenu();
+            sub.Name = $"QtySubmenu_{id}";
+
+            for (int qty = 1; qty <= MAX_CARD_DEAL; qty++)
+                sub.AddItem(qty.ToString(), id * 100 + qty);
+            sub.AddItem("All", id * 100 + 0);
+
+            sub.IdPressed += OnQtySubmenuItemSelected;
+            popup.AddChild(sub);
+            popup.SetItemSubmenu(index, sub.Name);
+        }
     }
+
+    public const int MAX_CARD_DEAL = 8;
 
     //we need to save which components are being affected by the right-click menu when it pops up
     private List<VisualComponentBase> _popupComponents;
@@ -670,6 +814,20 @@ public partial class UI : CanvasLayer
                     );
                     break;
 
+                case VisualCommand.Deal:
+                case VisualCommand.Draw:
+                    AddItemToPopupMenu(
+                        _componentPopup,
+                        command,
+                        menuCommand.Caption,
+                        string.Empty,
+                        true,
+                        false,
+                        false,
+                        addQtySubmenu: true
+                    );
+                    break;
+
                 default:
                     AddItemToPopupMenu(
                         _componentPopup,
@@ -686,6 +844,8 @@ public partial class UI : CanvasLayer
 
     private void PopupMenuCommandSelected(long id)
     {
+        // Submenu items handled by OnQtySubmenuItemSelected; skip raw command IDs
+        // that belong to commands with qty submenus (they are parent labels, not actions).
         if (id >= (int)VisualCommand.MaximumVC)
             return;
 
@@ -693,6 +853,21 @@ public partial class UI : CanvasLayer
         if (GetParent() is GameController gc)
         {
             gc.ProcessPopupCommand(vc, _popupComponents);
+        }
+    }
+
+    private void OnQtySubmenuItemSelected(long encodedId)
+    {
+        // Decode: baseId * 100 + qty  (qty 0 = All)
+        int qty = (int)(encodedId % 100);
+        VisualCommand vc = (VisualCommand)(encodedId / 100);
+
+        if (qty == 0)
+            qty = int.MaxValue; // sentinel meaning "all"
+
+        if (GetParent() is GameController gc)
+        {
+            gc.ProcessPopupCommandWithQuantity(vc, _popupComponents, qty);
         }
     }
 
@@ -705,6 +880,11 @@ public partial class UI : CanvasLayer
     private void OnInsertMenuSelection(long id)
     {
         if (id == 1)
+        {
+            ShowPrototypeManifest();
+        }
+
+        if (id == 2)
         {
             ShowComponentDefinition();
         }
@@ -731,6 +911,11 @@ public partial class UI : CanvasLayer
         {
             ShowImageManager();
         }
+
+        if (id == 5)
+        {
+            ShowProjectSettings();
+        }
     }
 
     private void OnInsertPressed()
@@ -754,6 +939,7 @@ public partial class UI : CanvasLayer
     }
 
     private bool _popupShown;
+    private ProjectSettings _projectSettings;
 
     public void ShowComponentPopup(Vector2I position)
     {
@@ -829,6 +1015,10 @@ public partial class UI : CanvasLayer
     }
 
     public const int LongClickTime = 1000;
+
+    public float HandY => _handManager.HandY;
+
+    public HandManager HandManager => _handManager;
 
     #region UI Texture Paths
 

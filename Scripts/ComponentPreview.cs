@@ -105,6 +105,7 @@ public partial class ComponentPreview : Panel
         {
             Build(_component.Parameters, _row, _textureFactory);
             _buildNeeded = false;
+            AutoZoomComponent(_component);
         }
     }
 
@@ -173,33 +174,66 @@ public partial class ComponentPreview : Panel
         var aabb = new Aabb();
         bool hasAabb = false;
 
-        foreach (var child in component.GetChildren())
+        // Walk the entire subtree so nested mesh nodes (e.g. SpinnyBits/SideMesh) are included.
+        // Use GlobalTransform so the result is in world space regardless of per-node transforms.
+        foreach (var mesh in GetAllMeshInstances(component))
         {
-            if (child is VisualInstance3D visualInstance)
+            if (mesh.Mesh == null)
+                continue;
+
+            var worldAabb = mesh.GlobalTransform * mesh.GetAabb();
+            if (!hasAabb)
             {
-                var childAabb = visualInstance.GetAabb();
-                if (!hasAabb)
-                {
-                    aabb = childAabb;
-                    hasAabb = true;
-                }
-                else
-                {
-                    aabb = aabb.Merge(childAabb);
-                }
+                aabb = worldAabb;
+                hasAabb = true;
+            }
+            else
+            {
+                aabb = aabb.Merge(worldAabb);
             }
         }
 
         if (hasAabb)
         {
             var size = aabb.Size;
-            var maxSize = size.Length();
-            _camera.Size = maxSize * 1.2f;
-            _camera.Position = new Vector3(0, 0, Mathf.Max(100f, maxSize + 1f));
+
+            // The camera sits on the +Z axis looking toward -Z, so the visible plane
+            // is XY. Determine how much orthographic Size is needed to fit both axes.
+            float compWidth = Mathf.Abs(size.X);
+            float compHeight = Mathf.Abs(size.Y);
+
+            // Camera3D.Size is the vertical extent of the orthographic frustum.
+            // Visible horizontal extent = Size * aspectRatio.
+            // To fit width:  Size >= compWidth  / aspectRatio
+            // To fit height: Size >= compHeight
+            var viewportSize = _subViewport.Size;
+            float aspectRatio =
+                (viewportSize.X > 0 && viewportSize.Y > 0)
+                    ? (float)viewportSize.X / viewportSize.Y
+                    : 1f;
+
+            float neededForWidth = aspectRatio > 0f ? compWidth / aspectRatio : compWidth;
+            float neededForHeight = compHeight;
+            float largestNeeded = Mathf.Max(neededForWidth, neededForHeight);
+
+            _camera.Size = Mathf.Max(largestNeeded * 1.2f, 0.1f);
+            _camera.Position = new Vector3(0, 0, Mathf.Max(100f, size.Length() + 1f));
         }
         else
         {
             _camera.Size = 5.0f;
+        }
+    }
+
+    private static IEnumerable<MeshInstance3D> GetAllMeshInstances(Node root)
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is MeshInstance3D mesh)
+                yield return mesh;
+
+            foreach (var nested in GetAllMeshInstances(child))
+                yield return nested;
         }
     }
 

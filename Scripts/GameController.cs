@@ -20,6 +20,7 @@ public partial class GameController : Node3D
         _mainScene.ShowComponentPopup2 += MainSceneOnShowComponentPopup2;
         _mainScene.HoveredComponentChange += MainSceneOnHoveredNameChange;
         _mainScene.GameObjects.TextureFactory = _textureFactory;
+        _mainScene.GameObjects.SetGameController(this);
 
         _uiController = GetNode<UI>("UI");
         _uiController.SceneModeChange += OnSceneModeChange;
@@ -266,6 +267,26 @@ public partial class GameController : Node3D
         ComponentPopupClosed();
         return result;
     }
+
+    /// <summary>
+    /// Processes a popup command that carries a quantity (e.g. Draw 3, Deal All).
+    /// The quantity is forwarded to each component via SendCommandToComponents using
+    /// the pre-existing Num1–Num5 commands, or the base command with Int32.MaxValue for "All".
+    /// </summary>
+    public bool ProcessPopupCommandWithQuantity(
+        VisualCommand command,
+        List<VisualComponentBase> components,
+        int quantity
+    )
+    {
+        var result = _mainScene.SendCommandToComponentsWithQuantity(command, components, quantity);
+        ComponentPopupClosed();
+        return result;
+    }
+
+    public float HandY => _uiController.HandY;
+
+    public HandManager HandManager => _uiController.HandManager;
 
     //test function
     public void TestFunction()

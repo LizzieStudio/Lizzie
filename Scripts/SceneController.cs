@@ -145,6 +145,40 @@ public partial class SceneController : Node3D
         return result;
     }
 
+    /// <summary>
+    /// Sends a command with an associated quantity to each component.
+    /// Each component receives ProcessCommandWithQuantity; if it doesn't override that,
+    /// we fall back to the Num1–Num5 VisualCommands for quantities 1–5, or the
+    /// base command for quantities > 5 (treated as "all" by the component).
+    /// </summary>
+    public bool SendCommandToComponentsWithQuantity(
+        VisualCommand command,
+        IEnumerable<VisualComponentBase> components,
+        int quantity
+    )
+    {
+        bool result = false;
+
+        Update update = new();
+
+        foreach (var c in components)
+        {
+            var change = c.ProcessCommandWithQuantity(command, quantity);
+            if (!change.Consumed)
+                continue;
+            if (change.UndoAction != null)
+                update.Add(change.UndoAction);
+            result = true;
+        }
+
+        if (update.Count > 0)
+        {
+            UndoService.Instance.Add(update);
+        }
+
+        return result;
+    }
+
     private void CheckForCommands()
     {
         if (Input.IsActionJustPressed("flip"))
