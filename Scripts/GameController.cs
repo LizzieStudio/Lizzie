@@ -26,7 +26,6 @@ public partial class GameController : Node3D
         _uiController.SceneModeChange += OnSceneModeChange;
         _uiController.CreateObject += OnCreateObject;
         _uiController.SetGameController(this);
-        
 
         EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawnPrototype);
 

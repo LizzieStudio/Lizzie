@@ -52,7 +52,8 @@ public class TextElement : TemplateElement
                 Name = "Autosize",
                 Value = "False",
                 Type = TemplateParameter.TemplateParameterType.Boolean,
-            });
+            }
+        );
         Parameters.Add(
             new TemplateParameter
             {
@@ -109,9 +110,7 @@ public class TextElement : TemplateElement
 
     private int ScaleFontSize(int fontSize, TextureContext context)
     {
-        const int
-            TwelvePointHeight =
-                18; //pixels in 12 point font. (Actually was 17, but I changed it to 18 to make it look better)
+        const int TwelvePointHeight = 18; //pixels in 12 point font. (Actually was 17, but I changed it to 18 to make it look better)
 
         float targetDots = (fontSize / 72f) * context.Dpi; //fontsize / 72 = font size in inches
 
