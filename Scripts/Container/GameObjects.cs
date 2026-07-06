@@ -66,7 +66,7 @@ public partial class GameObjects : Node
     {
         _gameController = gameController;
     }
-    
+
     private void OnModalClosed()
     {
         _modalOpen = false;
