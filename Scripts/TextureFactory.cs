@@ -276,7 +276,7 @@ public partial class TextureFactory : SubViewport
         }
         else
         {
-            RenderRectangleText(obj);
+            RenderRectangleText(obj, obj.Multiline);
         }
     }
 
@@ -285,42 +285,199 @@ public partial class TextureFactory : SubViewport
         return font.GetStringSize(text, fontSize: fontSize);
     }
 
-    private void RenderRectangleText(TextureObject obj)
+    private void RenderRectangleText(TextureObject obj, bool wrap = false)
     {
-        // Get text size for centering
+        // Strip BBCode for measurement: [img]...[/img] -> "M", all other tags removed.
+        var plainText = System.Text.RegularExpressions.Regex.Replace(
+            System.Text.RegularExpressions.Regex.Replace(
+                obj.Text,
+                @"\[img(?:\s+[^\]]+)?\].*?\[/img\]",
+                "M",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                System.Text.RegularExpressions.RegexOptions.Singleline),
+            @"\[[^\]]+\]",
+            string.Empty,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        string measureText = plainText.Length > 0 ? plainText : obj.Text;
 
         int fontSize = obj.FontSize;
         if (obj.Autosize)
         {
-            fontSize = AutosizeFont(obj.Text, obj.Font, obj.Height, obj.Width, 6, 72);
+            fontSize = AutosizeFont(measureText, obj.Font, obj.Height, obj.Width, 6, 72, wrap);
         }
 
         if (fontSize == 0)
             return;
 
-        Vector2 textSize = GetTextBounds(obj.Font, fontSize, obj.Text);
+        Vector2 labelSize;
+        if (wrap)
+        {
+            // Measure the wrapped size and clamp to obj.Height.
+            float wrapWidth = obj.Width * 0.9f;
+            Vector2 wrappedSize = obj.Font.GetMultilineStringSize(
+                measureText,
+                width: (int)wrapWidth,
+                fontSize: fontSize);
 
-        if (textSize.X == 0 || textSize.Y == 0)
-            return;
+            if (wrappedSize.X == 0 || wrappedSize.Y == 0)
+                return;
 
-        // Calculate the position to center the text
-        float halfWidth = textSize.X / 2f;
-        float halfHeight = textSize.Y / 2f;
+            // Label spans the full width so PushParagraph can align content inside it.
+            labelSize = new Vector2(obj.Width, Math.Min(wrappedSize.Y, obj.Height));
+        }
+        else
+        {
+            // Single-line: shrink the label to the measured text size so that
+            // MoveOriginForAlignment places it correctly for all three alignments.
+            Vector2 singleSize = obj.Font.GetStringSize(measureText, fontSize: fontSize);
 
-        // Create a Label for the text
-        var label = new Label();
-        label.Text = obj.Text;
-        label.AddThemeColorOverride("font_color", obj.ForegroundColor);
-        label.AddThemeFontOverride("font", obj.Font);
-        label.AddThemeFontSizeOverride("font_size", fontSize);
+            if (singleSize.X == 0 || singleSize.Y == 0)
+                return;
 
-        label.Position = MoveOriginForAlignment(obj, textSize);
+            labelSize = singleSize;
+        }
 
-        label.PivotOffset = new Vector2(halfWidth, halfHeight); //always pivot at the center
+        // Create a RichTextLabel sized to the measured text area.
+        var label = new RichTextLabel();
+        label.AutowrapMode   = wrap ? TextServer.AutowrapMode.Word : TextServer.AutowrapMode.Off;
+        label.BbcodeEnabled  = true;
+        label.FitContent     = !wrap;
+        label.ClipContents   = wrap;
+        label.ScrollActive   = false;
+        label.Size           = labelSize;
+        label.AddThemeColorOverride("default_color", obj.ForegroundColor);
+        label.AddThemeFontOverride("normal_font", obj.Font);
+        label.AddThemeFontSizeOverride("normal_font_size", fontSize);
 
+        if (wrap)
+        {
+            // Drive internal text alignment through the paragraph so that all
+            // three HorizontalAlignment values work inside the full-width label.
+            label.PushParagraph(obj.HorizontalAlignment);
+        }
+
+        // Build content segment by segment so [img] tags become real AddImage calls,
+        // scaled to match the font line height.
+        PopulateRichTextLabel(label, obj.Text, obj.Font, fontSize, obj.ForegroundColor);
+
+        if (wrap)
+            label.Pop();
+
+        label.Position        = MoveOriginForAlignment(obj, labelSize);
+        label.PivotOffset     = new Vector2(labelSize.X / 2f, labelSize.Y / 2f);
         label.RotationDegrees = obj.RotationDegrees;
-
         _viewport.AddChild(label);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex ImgTagRegex =
+        new(@"\[img(?:\s+color=([^\]]+))?\](.*?)\[/img\]",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// Populates a RichTextLabel by splitting text on [img]name[/img] tags.
+    /// Supports an optional color attribute: [img color=red]name[/img] or [img color=#rrggbb]name[/img].
+    /// Plain-text segments are appended as BBCode; image segments are resolved
+    /// via IconLibrary and inserted with AddImage scaled to the font line height.
+    /// The icon is modulated to match the supplied color (or <paramref name="defaultColor"/> if none).
+    /// </summary>
+    private void PopulateRichTextLabel(RichTextLabel label, string text, Font font, int fontSize, Color defaultColor)
+    {
+        // Use the font's line height as the icon size so icons match text height.
+        float lineHeight = font.GetHeight(fontSize);
+        var iconSize = new Vector2(lineHeight, lineHeight);
+
+        int cursor = 0;
+        foreach (System.Text.RegularExpressions.Match m in ImgTagRegex.Matches(text))
+        {
+            // Append any plain text before this tag
+            if (m.Index > cursor)
+                label.AppendText(text.Substring(cursor, m.Index - cursor));
+
+            // Group 1 = optional color value, Group 2 = icon name
+            string colorValue = m.Groups[1].Value.Trim();
+            string iconName   = m.Groups[2].Value.Trim();
+
+            Color iconColor = string.IsNullOrEmpty(colorValue)
+                ? defaultColor
+                : ParseImgColor(colorValue, defaultColor);
+
+            Texture2D iconTexture = ResolveIconTexture(iconName);
+            if (iconTexture != null)
+                label.AddImage(iconTexture, (int)iconSize.X, (int)iconSize.Y, iconColor);
+
+            cursor = m.Index + m.Length;
+        }
+
+        // Append any remaining plain text after the last tag
+        if (cursor < text.Length)
+            label.AppendText(text.Substring(cursor));
+    }
+
+    /// <summary>
+    /// Parses a color string from an [img color=...] attribute.
+    /// Supports:
+    ///   - Named Godot colors (e.g. "red", "DodgerBlue")
+    ///   - 6-digit hex with optional leading # (e.g. "#ff0000" or "ff0000")
+    ///   - 8-digit hex with optional leading # (e.g. "#ff0000ff")
+    /// Returns <paramref name="fallback"/> when the value cannot be parsed.
+    /// </summary>
+    private static Color ParseImgColor(string value, Color fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        // Strip leading '#' for uniform handling
+        string hex = value.StartsWith("#") ? value.Substring(1) : value;
+
+        // Try 6-digit hex  RRGGBB
+        if (hex.Length == 6 && IsHex(hex))
+        {
+            uint r = Convert.ToUInt32(hex.Substring(0, 2), 16);
+            uint g = Convert.ToUInt32(hex.Substring(2, 2), 16);
+            uint b = Convert.ToUInt32(hex.Substring(4, 2), 16);
+            return new Color(r / 255f, g / 255f, b / 255f);
+        }
+
+        // Try 8-digit hex  RRGGBBAA
+        if (hex.Length == 8 && IsHex(hex))
+        {
+            uint r = Convert.ToUInt32(hex.Substring(0, 2), 16);
+            uint g = Convert.ToUInt32(hex.Substring(2, 2), 16);
+            uint b = Convert.ToUInt32(hex.Substring(4, 2), 16);
+            uint a = Convert.ToUInt32(hex.Substring(6, 2), 16);
+            return new Color(r / 255f, g / 255f, b / 255f, a / 255f);
+        }
+
+        // Try Godot named color (Color.FromString returns black on failure, so check first)
+        var namedColor = Color.FromString(value, fallback);
+        return namedColor;
+    }
+
+    private static bool IsHex(string s)
+    {
+        foreach (char c in s)
+            if (!Uri.IsHexDigit(c)) return false;
+        return true;
+    }
+
+    private Texture2D ResolveIconTexture(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return _iconLibrary.TextureFromKey(string.Empty);
+
+        // Try exact key first, then case-insensitive search
+        if (_iconLibrary.ContainsKey(name))
+            return _iconLibrary.TextureFromKey(name);
+
+        foreach (var key in _iconLibrary.Keys)
+        {
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+                return _iconLibrary.TextureFromKey(key);
+        }
+
+        return _iconLibrary.TextureFromKey(string.Empty); // not-found fallback
     }
 
     private Vector2 MoveOriginForAlignment(TextureObject obj, Vector2 size)
@@ -701,7 +858,7 @@ public partial class TextureFactory : SubViewport
             Type = TextureObjectType.Text,
         };
 
-        RenderRectangleText(o);
+        RenderRectangleText(o, o.Multiline);
     }
 
     private static Vector2 ScaleRectangleInTriangle(int triangleSide, float aspectRatio)
@@ -845,7 +1002,8 @@ public partial class TextureFactory : SubViewport
             tr.AddChild(bgRect);
         }
 
-        tr.PivotOffset = new Vector2(halfWidth, halfHeight);
+        tr.PivotOffset = new Vector2(tr.Size.X / 2f, tr.Size.Y / 2f);
+        //tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
         _viewport.AddChild(tr);
@@ -873,28 +1031,30 @@ public partial class TextureFactory : SubViewport
         int height,
         int width,
         int minSize,
-        int maxSize
+        int maxSize,
+        bool wrap = false
     )
     {
-        var size = minSize;
+        float targetHeight = height * 0.9f;
+        float targetWidth  = width  * 0.9f;
 
-        float targetWidth = width * 0.8f;
-        float targetHeight = height * 0.8f;
-
-        while (true)
+        int last = minSize;
+        for (int size = minSize; size <= maxSize; size++)
         {
-            var fontSize = font.GetStringSize(caption, fontSize: size);
+            Vector2 measured = wrap
+                ? font.GetMultilineStringSize(caption, width: (int)targetWidth, fontSize: size)
+                : font.GetStringSize(caption, fontSize: size);
 
-            if (fontSize.X > targetWidth || fontSize.Y > targetHeight)
-            {
-                return Math.Max(size, minSize);
-            }
+            bool tooBig = wrap
+                ? measured.Y > targetHeight
+                : measured.X > targetWidth || measured.Y > targetHeight;
 
-            size++;
+            if (tooBig)
+                return last;
 
-            if (size > maxSize)
-                return maxSize;
+            last = size;
         }
+        return maxSize;
     }
 
     public enum TextureObjectType

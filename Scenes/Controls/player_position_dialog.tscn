@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://68jpjvwbs6tn"]
+
+[ext_resource type="Script" uid="uid://bi2woamb4vmn8" path="res://Scripts/Multiplayer/PlayerPositionDialog.cs" id="1_gr3lj"]
+
+[node name="PlayerPositionDialog" type="ConfirmationDialog" unique_id=164540114]
+oversampling_override = 1.0
+title = "Choose Your Player Position"
+initial_position = 1
+size = Vector2i(370, 317)
+visible = true
+ok_button_text = "Confirm"
+script = ExtResource("1_gr3lj")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1394390020]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -49.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=831726285]
+layout_mode = 2
+text = "Select the player position you want to play as:"
+
+[node name="SeatList" type="ItemList" parent="VBoxContainer" unique_id=2101166376]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(340, 180)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StatusLabel" type="Label" parent="VBoxContainer" unique_id=558157066]
+unique_name_in_owner = true
+layout_mode = 2
+text = "StatusLabel
+"

@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://s4e3sjhq6cm1"]
+
+[ext_resource type="Script" uid="uid://ublvk3w28xaf" path="res://Scripts/UI/PlayerHandsPanel.cs" id="1_kyexm"]
+
+[node name="PlayerHandsPanel" type="Panel" unique_id=416397088]
+custom_minimum_size = Vector2(100, 200)
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -158.0
+offset_top = -274.0
+offset_bottom = 16.0
+grow_horizontal = 0
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("1_kyexm")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1577772514]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=910219784]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=90835187]
+layout_mode = 2
+
+[node name="ShowHideButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1707400184]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = ">"
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1733820871]
+layout_mode = 2
+text = "Opponents"
+
+[node name="PlayerHands" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1577901107]
+unique_name_in_owner = true
+layout_mode = 2

@@ -1,5 +1,6 @@
-[gd_scene load_steps=6 format=3 uid="uid://8ts0q3rup6h6"]
+[gd_scene format=3 uid="uid://8ts0q3rup6h6"]
 
+[ext_resource type="Script" uid="uid://bqsarkxj7oemw" path="res://Scripts/Table.cs" id="1_4ppvu"]
 [ext_resource type="Texture2D" uid="uid://cw6pgclsp7ody" path="res://Textures/TableSurface/Fabric034_1K-PNG_Color.png" id="1_dil0j"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
@@ -14,13 +15,15 @@ size = Vector2(100, 100)
 
 [sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_at6bq"]
 
-[node name="Table" type="StaticBody3D"]
+[node name="Table" type="StaticBody3D" unique_id=289173676]
 collision_layer = 3
 physics_material_override = SubResource("PhysicsMaterial_b00ve")
+script = ExtResource("1_4ppvu")
 
-[node name="Table" type="MeshInstance3D" parent="."]
+[node name="TableMesh" type="MeshInstance3D" parent="." unique_id=1215840019]
+unique_name_in_owner = true
 mesh = SubResource("PlaneMesh_dyvi7")
 skeleton = NodePath("../..")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=576496294]
 shape = SubResource("WorldBoundaryShape3D_at6bq")

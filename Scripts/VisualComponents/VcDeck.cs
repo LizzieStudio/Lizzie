@@ -169,6 +169,17 @@ public partial class VcDeck : VisualComponentGroup
         return cr.Consumed == false ? base.ProcessCommand(command) : cr;
     }
 
+    public override CommandResponse ProcessCommandWithQuantity(VisualCommand command, int quantity)
+    {
+        // quantity == int.MaxValue means "All"; DrawCards/DealCards clamp to deck size.
+        return command switch
+        {
+            VisualCommand.Draw => DrawCards(quantity),
+            VisualCommand.Deal => DealCards(quantity),
+            _ => base.ProcessCommandWithQuantity(command, quantity),
+        };
+    }
+
     private CommandResponse PerformShuffle()
     {
         Shuffle();
@@ -187,6 +198,8 @@ public partial class VcDeck : VisualComponentGroup
 
         l.Add(new MenuCommand(VisualCommand.Flip));
         l.Add(new MenuCommand(VisualCommand.Shuffle));
+        l.Add(new MenuCommand(VisualCommand.Draw){ AddQtySubmenu = true, SingleOnly = true});
+        l.Add(new MenuCommand(VisualCommand.Deal) { AddQtySubmenu = true, SingleOnly = true });
         return l;
     }
 
@@ -261,50 +274,69 @@ public partial class VcDeck : VisualComponentGroup
             cards = cards.Reverse().ToArray();
         }
 
-        //splay
-        var basePos = Position;
+        var cl = new List<VcToken>();
 
         for (int i = 0; i < cards.Length; i++)
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
-
-            if (comp == null)
-                continue;
-
-            if (comp is VcToken vcf)
-            {
-                if (_showFace)
-                {
-                    vcf.ForceBack();
-                }
-                else
-                {
-                    vcf.ForceFace();
-                }
-            }
-
-            //tween to handle movement
-            //var cardTween = GetTree().CreateTween();
-
-            comp.Location = ComponentLocation.Board;
-
-            float deltaX = Position.X + (_width * (1.5f + i));
-
-            /*
-            cardTween.TweenProperty(cards[i], "visible", true, 0.01);
-            cardTween.TweenProperty(
-                cards[i],
-                "position",
-                new Vector3(deltaX, Position.Y, Position.Z),
-                0.2f
-            );
-            */
-            comp.SetPosition(new Vector3(deltaX, Position.Y, Position.Z));
-
-            comp.ZOrder = ZOrder + i + 1;
+            if (comp is VcToken token) cl.Add(token);
         }
 
-        var c = new Change
+        //if there are player hands, draw to that. Otherwise draw to the table.
+        if (ProjectService.Instance.CurrentProject.GameSettings.EnablePlayerHands)
+
+        {
+            // SeatIndex -2 resolves to the local player's seat inside PlayerHandService.
+            EventBus.Instance.Publish(new AddToHandEvent { Cards = cl, SeatIndex = -2 });
+        }
+        else
+        {
+            //splay
+            var basePos = Position;
+
+            for (int i = 0; i < cards.Length; i++)
+            {
+                var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
+
+                if (comp == null)
+                    continue;
+
+                if (comp is VcToken vcf)
+                {
+                    if (_showFace)
+                    {
+                        vcf.ForceBack();
+                    }
+                    else
+                    {
+                        vcf.ForceFace();
+                    }
+                }
+
+                //tween to handle movement
+                //var cardTween = GetTree().CreateTween();
+
+                comp.Location = ComponentLocation.Board;
+
+                float deltaX = Position.X + (_width * (1.5f + i));
+
+                /*
+                cardTween.TweenProperty(cards[i], "visible", true, 0.01);
+                cardTween.TweenProperty(
+                    cards[i],
+                    "position",
+                    new Vector3(deltaX, Position.Y, Position.Z),
+                    0.2f
+                );
+                */
+                comp.SetPosition(new Vector3(deltaX, Position.Y, Position.Z));
+
+                comp.ZOrder = ZOrder + i + 1;
+            }
+
+        }
+
+        var change = new Change
         {
             Action = Change.ChangeType.Transform,
             Begin = Transform,
@@ -314,7 +346,63 @@ public partial class VcDeck : VisualComponentGroup
 
         UpdateDeckSprites();
 
-        return new CommandResponse(true, c);
+        return new CommandResponse(true, change);
+
+        
+    }
+
+    /// <summary>
+    /// Deals <paramref name="countPerPlayer"/> cards to every active player seat in turn,
+    /// like a real deal (seat 0 gets a card, seat 1 gets a card, …, repeat).
+    /// If the deck runs out before all rounds are complete the remaining seats get fewer cards.
+    /// </summary>
+    private CommandResponse DealCards(int countPerPlayer)
+    {
+        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
+        if (settings == null || settings.Players.Count == 0)
+            return DrawCards(countPerPlayer); // fall back to draw if no seats defined
+
+        int seatCount = settings.Players.Count;
+
+        // Collect all cards in dealing order: round-robin across seats
+        var handsToAdd = new Dictionary<int, List<VcToken>>();
+        for (int seat = 0; seat < seatCount; seat++)
+            handsToAdd[seat] = new List<VcToken>();
+
+        for (int round = 0; round < countPerPlayer; round++)
+        {
+            for (int seat = 0; seat < seatCount; seat++)
+            {
+                if (Children.Count == 0)
+                    break;
+
+                Guid[] drawn = _showFace ? DrawFromTop(1) : DrawFromBottom(1);
+                if (drawn.Length == 0)
+                    break;
+
+                var comp = ProjectService.Instance.GameObjects.GetComponent(drawn[0]);
+                if (comp is VcToken token)
+                    handsToAdd[seat].Add(token);
+            }
+        }
+
+        // Publish one AddToHandEvent per seat
+        foreach (var kv in handsToAdd)
+        {
+            if (kv.Value.Count > 0)
+                EventBus.Instance.Publish(new AddToHandEvent { Cards = kv.Value, SeatIndex = kv.Key });
+        }
+
+        UpdateDeckSprites();
+
+        var change = new Change
+        {
+            Action = Change.ChangeType.Transform,
+            Begin = Transform,
+            End = Transform,
+            Component = this,
+        };
+        return new CommandResponse(true, change);
     }
 
     public override void SpawnBuild(
