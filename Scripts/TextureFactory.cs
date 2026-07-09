@@ -400,7 +400,7 @@ public partial class TextureFactory : SubViewport
     {
         // Use the font's line height as the icon size so icons match text height.
         float lineHeight = font.GetHeight(fontSize);
-        
+
         int cursor = 0;
         foreach (System.Text.RegularExpressions.Match m in ImgTagRegex.Matches(text))
         {
@@ -409,9 +409,8 @@ public partial class TextureFactory : SubViewport
                 label.AppendText(text.Substring(cursor, m.Index - cursor));
 
             // Group 1 = icon name, Group 2 = optional color value
-            string iconName   = m.Groups[1].Value.Trim();
+            string iconName = m.Groups[1].Value.Trim();
             string colorValue = m.Groups[2].Value.Trim();
-
 
             bool iconMode = false;
 
@@ -421,19 +420,18 @@ public partial class TextureFactory : SubViewport
                 iconMode = true;
                 iconName = iconName.Substring(2, iconName.Length - 2);
             }
-            
-            
+
             if (string.IsNullOrEmpty(colorValue) && !iconMode)
             {
-                colorValue = "white";   //user defined icons with no color defined default to white so the true colors come through
+                colorValue = "white"; //user defined icons with no color defined default to white so the true colors come through
             }
-            
+
             Color iconColor = string.IsNullOrEmpty(colorValue)
                 ? defaultColor
                 : ParseImgColor(colorValue, defaultColor);
 
             Texture2D iconTexture = ResolveIconTexture(iconName);
-            
+
             if (iconTexture != null)
             {
                 var tSize = iconTexture.GetSize();
@@ -497,41 +495,28 @@ public partial class TextureFactory : SubViewport
         return true;
     }
 
-
     private bool IsIconUserDefined(string name)
     {
-        if (ProjectService.Instance.CurrentProject.Images.Any(x => string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)))
+        if (
+            ProjectService.Instance.CurrentProject.Images.Any(x =>
+                string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)
+            )
+        )
             return true;
         return false;
     }
-    
+
     private Texture2D ResolveIconTexture(string name)
     {
-
-
         if (string.IsNullOrWhiteSpace(name))
             return _iconLibrary.TextureFromKey(string.Empty);
-        
-        
+
         if (IsIconUserDefined(name))
         {
             var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.CurrentCultureIgnoreCase));
-            
-            if (asset?.Image != null)
-            {
-               return ImageTexture.CreateFromImage(asset.Image);
-            }
-            
-            return _iconLibrary.TextureFromKey(string.Empty);
-            
-        }
-
-        var uname = name.Replace('_', ' ');
-        if (IsIconUserDefined(uname))
-        {
-            var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a => string.Equals(a.Name, uname, StringComparison.CurrentCultureIgnoreCase));
+            var asset = project?.Images.Values.FirstOrDefault(a =>
+                string.Equals(a.Name, name, StringComparison.CurrentCultureIgnoreCase)
+            );
 
             if (asset?.Image != null)
             {
@@ -539,7 +524,22 @@ public partial class TextureFactory : SubViewport
             }
 
             return _iconLibrary.TextureFromKey(string.Empty);
+        }
 
+        var uname = name.Replace('_', ' ');
+        if (IsIconUserDefined(uname))
+        {
+            var project = ProjectService.Instance.CurrentProject;
+            var asset = project?.Images.Values.FirstOrDefault(a =>
+                string.Equals(a.Name, uname, StringComparison.CurrentCultureIgnoreCase)
+            );
+
+            if (asset?.Image != null)
+            {
+                return ImageTexture.CreateFromImage(asset.Image);
+            }
+
+            return _iconLibrary.TextureFromKey(string.Empty);
         }
 
         // Try exact key first, then case-insensitive search
