@@ -287,14 +287,15 @@ public partial class TextureFactory : SubViewport
 
     private void RenderRectangleText(TextureObject obj, bool wrap = false)
     {
-        // Strip BBCode for measurement: [img]...[/img] -> "M", all other tags removed.
+        // Strip tags for measurement:
+        //   1. Replace icon tags [name] / [name color=...] with "M" (excluding b/i/u BBCode).
+        //   2. Strip all remaining BBCode tags ([b], [/b], etc.) so only plain text remains.
         var plainText = System.Text.RegularExpressions.Regex.Replace(
             System.Text.RegularExpressions.Regex.Replace(
                 obj.Text,
-                @"\[img(?:\s+[^\]]+)?\].*?\[/img\]",
+                @"\[(?!/?(?:b|i|u)\])(\w+)(?:\s+color=[^\]]+)?\]",
                 "M",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase
-                    | System.Text.RegularExpressions.RegexOptions.Singleline
             ),
             @"\[[^\]]+\]",
             string.Empty,
@@ -373,15 +374,18 @@ public partial class TextureFactory : SubViewport
         _viewport.AddChild(label);
     }
 
+    // Matches [iconname] or [iconname color=value], excluding the BBCode tags [b], [/b], [i], [/i], [u], [/u].
+    // Group 1 = icon name, Group 2 = optional color value.
     private static readonly System.Text.RegularExpressions.Regex ImgTagRegex = new(
-        @"\[img(?:\s+color=([^\]]+))?\](.*?)\[/img\]",
+        @"\[(?!/?(?:b|i|u)\])(\w+)(?:\s+color=([^\]]+))?\]",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase
             | System.Text.RegularExpressions.RegexOptions.Compiled
     );
 
     /// <summary>
-    /// Populates a RichTextLabel by splitting text on [img]name[/img] tags.
-    /// Supports an optional color attribute: [img color=red]name[/img] or [img color=#rrggbb]name[/img].
+    /// Populates a RichTextLabel by splitting text on [iconname] tags.
+    /// Supports an optional color attribute: [iconname color=red] or [iconname color=#rrggbb].
+    /// The tags [b][/b], [i][/i], [u][/u] are passed through as BBCode unchanged.
     /// Plain-text segments are appended as BBCode; image segments are resolved
     /// via IconLibrary and inserted with AddImage scaled to the font line height.
     /// The icon is modulated to match the supplied color (or <paramref name="defaultColor"/> if none).
@@ -396,8 +400,7 @@ public partial class TextureFactory : SubViewport
     {
         // Use the font's line height as the icon size so icons match text height.
         float lineHeight = font.GetHeight(fontSize);
-        var iconSize = new Vector2(lineHeight, lineHeight);
-
+        
         int cursor = 0;
         foreach (System.Text.RegularExpressions.Match m in ImgTagRegex.Matches(text))
         {
@@ -405,17 +408,38 @@ public partial class TextureFactory : SubViewport
             if (m.Index > cursor)
                 label.AppendText(text.Substring(cursor, m.Index - cursor));
 
-            // Group 1 = optional color value, Group 2 = icon name
-            string colorValue = m.Groups[1].Value.Trim();
-            string iconName = m.Groups[2].Value.Trim();
+            // Group 1 = icon name, Group 2 = optional color value
+            string iconName   = m.Groups[1].Value.Trim();
+            string colorValue = m.Groups[2].Value.Trim();
 
+
+            bool iconMode = false;
+
+            //check to see if the string has a prefix of "i:" which indicates that the icon is a built in icon - needed in case there is a naming overlap.
+            if (iconName.Length > 2 && iconName.Substring(0, 2) == "i:")
+            {
+                iconMode = true;
+                iconName = iconName.Substring(2, iconName.Length - 2);
+            }
+            
+            
+            if (string.IsNullOrEmpty(colorValue) && !iconMode)
+            {
+                colorValue = "white";   //user defined icons with no color defined default to white so the true colors come through
+            }
+            
             Color iconColor = string.IsNullOrEmpty(colorValue)
                 ? defaultColor
                 : ParseImgColor(colorValue, defaultColor);
 
             Texture2D iconTexture = ResolveIconTexture(iconName);
+            
             if (iconTexture != null)
+            {
+                var tSize = iconTexture.GetSize();
+                var iconSize = new Vector2(lineHeight * tSize.X / tSize.Y, lineHeight);
                 label.AddImage(iconTexture, (int)iconSize.X, (int)iconSize.Y, iconColor);
+            }
 
             cursor = m.Index + m.Length;
         }
@@ -473,10 +497,50 @@ public partial class TextureFactory : SubViewport
         return true;
     }
 
+
+    private bool IsIconUserDefined(string name)
+    {
+        if (ProjectService.Instance.CurrentProject.Images.Any(x => string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)))
+            return true;
+        return false;
+    }
+    
     private Texture2D ResolveIconTexture(string name)
     {
+
+
         if (string.IsNullOrWhiteSpace(name))
             return _iconLibrary.TextureFromKey(string.Empty);
+        
+        
+        if (IsIconUserDefined(name))
+        {
+            var project = ProjectService.Instance.CurrentProject;
+            var asset = project?.Images.Values.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.CurrentCultureIgnoreCase));
+            
+            if (asset?.Image != null)
+            {
+               return ImageTexture.CreateFromImage(asset.Image);
+            }
+            
+            return _iconLibrary.TextureFromKey(string.Empty);
+            
+        }
+
+        var uname = name.Replace('_', ' ');
+        if (IsIconUserDefined(uname))
+        {
+            var project = ProjectService.Instance.CurrentProject;
+            var asset = project?.Images.Values.FirstOrDefault(a => string.Equals(a.Name, uname, StringComparison.CurrentCultureIgnoreCase));
+
+            if (asset?.Image != null)
+            {
+                return ImageTexture.CreateFromImage(asset.Image);
+            }
+
+            return _iconLibrary.TextureFromKey(string.Empty);
+
+        }
 
         // Try exact key first, then case-insensitive search
         if (_iconLibrary.ContainsKey(name))
