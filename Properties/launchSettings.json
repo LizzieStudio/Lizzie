@@ -3,9 +3,9 @@
     "TTSS": {
       "commandName": "Project"
     },
-    "Godot Deubg": {
+    "Godot Debug": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\Godot_v4.6-stable_mono_win64\\Godot_v4.6-stable_mono_win64.exe",
+      "executablePath": "%GODOT4_6%\\Godot_v4.6-stable_mono_win64.exe",
       "commandLineArgs": "--path . --verbose",
       "workingDirectory": ".",
       "nativeDebugging": true
