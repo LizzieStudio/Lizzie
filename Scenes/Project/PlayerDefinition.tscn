@@ -22,3 +22,8 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 0)
 layout_mode = 2
 color = Color(0.5019608, 0.5019608, 0.5019608, 1)
+
+[node name="PlayerAdmin" type="CheckBox" parent="." unique_id=371917178]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Admin"

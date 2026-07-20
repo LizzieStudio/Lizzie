@@ -32,7 +32,7 @@ public class GameStateComponent
     public float Ry { get; set; }
     public float Rz { get; set; }
 
-    public bool Visible { get; set; } = true;
+    public bool LogicalVisible { get; set; } = true;
 
     public int ZOrder { get; set; }
 
@@ -84,7 +84,7 @@ public class GameStateComponent
             ComponentName = component.ComponentName ?? string.Empty,
             Position = component.Position,
             Rotation = component.Rotation,
-            Visible = component.Visible,
+            LogicalVisible = component.LogicalVisible,
             ZOrder = component.ZOrder,
             Layer = component.Layer,
             Location = component.Location,
@@ -105,7 +105,7 @@ public class GameStateComponent
     {
         component.Position = Position;
         component.Rotation = Rotation;
-        component.Visible = Visible;
+        component.LogicalVisible = LogicalVisible;
         component.ZOrder = ZOrder;
         component.Layer = Layer;
         component.Location = Location;

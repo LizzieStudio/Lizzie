@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://bvnucabw77bwn"]
+
+[ext_resource type="Script" uid="uid://nlwraxs4r43x" path="res://Scripts/VisualComponents/VcZone.cs" id="1_bppxl"]
+[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="2_4nule"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_zonefill"]
+transparency = 1
+cull_mode = 2
+albedo_color = Color(0.2, 0.5, 1, 0.3)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_zone"]
+material = SubResource("StandardMaterial3D_zonefill")
+size = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_handle"]
+albedo_color = Color(0.2, 0.5, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_handle"]
+material = SubResource("StandardMaterial3D_handle")
+size = Vector3(0.3, 0.12, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_handle"]
+size = Vector3(0.3, 0.12, 0.3)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_highlight"]
+material = ExtResource("2_4nule")
+size = Vector2(1, 1)
+
+[node name="Zone" type="Area3D"]
+script = ExtResource("1_bppxl")
+
+[node name="ObjectMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_zone")
+skeleton = NodePath("")
+
+[node name="HandleMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
+mesh = SubResource("BoxMesh_handle")
+skeleton = NodePath("")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
+shape = SubResource("BoxShape3D_handle")
+
+[node name="HighlightMesh" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("PlaneMesh_highlight")

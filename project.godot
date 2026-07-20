@@ -15,8 +15,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Lizzie"
-run/main_scene="res://primary_scene.tscn"
-config/features=PackedStringArray("4.6", "C#", "Forward Plus")
+run/main_scene="uid://caj4d7v430lhp"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="uid://dtoajk1ds5abr"
 
 [autoload]

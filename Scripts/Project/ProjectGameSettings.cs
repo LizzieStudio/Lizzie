@@ -73,4 +73,5 @@ public class ProjectPlayerSettings
     public float ColorG { get; set; } = 1f;
     public float ColorB { get; set; } = 1f;
     public float ColorA { get; set; } = 1f;
+    public bool IsAdmin { get; set; } = false;
 }

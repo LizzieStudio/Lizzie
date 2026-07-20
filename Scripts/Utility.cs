@@ -295,6 +295,9 @@ public partial class Utility : Node
             case VisualComponentBase.VisualComponentType.Bag:
                 return "res://Scenes/VisualComponents/VcBag.tscn";
 
+            case VisualComponentBase.VisualComponentType.Zone:
+                return "res://Scenes/VisualComponents/VcZone.tscn";
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(componentType), componentType, null);
         }
