@@ -38,7 +38,7 @@ public partial class VcZone : VisualComponentBase
         // A zone always sits beneath everything.
         NeverHighlight = true;
     }
- 
+
     private void PositionHandle()
     {
         _handleMesh ??= GetNodeOrNull<Node3D>("HandleMesh");
@@ -69,7 +69,7 @@ public partial class VcZone : VisualComponentBase
 
         _width = ReadFloat(parameters, WidthKey, _width);
         _depth = ReadFloat(parameters, DepthKey, _depth);
- 
+
         if (MainMesh != null)
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
 
@@ -154,7 +154,11 @@ public partial class VcZone : VisualComponentBase
             case string s when float.TryParse(s, out var fs):
                 return fs;
         }
-        if (v is JsonElement je && je.ValueKind == JsonValueKind.Number && je.TryGetDouble(out var jd))
+        if (
+            v is JsonElement je
+            && je.ValueKind == JsonValueKind.Number
+            && je.TryGetDouble(out var jd)
+        )
             return (float)jd;
         return def;
     }
