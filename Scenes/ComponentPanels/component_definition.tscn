@@ -10,7 +10,17 @@
 [ext_resource type="Resource" uid="uid://crthu53rha88m" path="res://Scenes/ComponentPanels/MeshPanel.tres" id="9_u0tcw"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="9_w3b7a"]
 [ext_resource type="Resource" uid="uid://bg7ps5kfql3ip" path="res://Scenes/ComponentPanels/MeeplePanel.tres" id="10_1hq20"]
+[ext_resource type="Texture2D" uid="uid://dwo7yx4b16u42" path="res://Textures/UI/top.png" id="10_fr6ym"]
+[ext_resource type="Script" uid="uid://cbj45v7spbeg0" path="res://Scripts/ComponentTemplate.cs" id="11_m15dm"]
 [ext_resource type="StyleBox" uid="uid://h7d22x1q85ky" path="res://Themes/GrayStyleBox.tres" id="11_wm4jy"]
+
+[sub_resource type="Resource" id="Resource_8eegm"]
+script = ExtResource("11_m15dm")
+ComponentName = "Zone"
+Icon = ExtResource("10_fr6ym")
+DefinitionDialogName = "res://Scenes/ComponentPanels/zone_panel.tscn"
+PrototypeName = "res://Scenes/VisualComponents/VcZone.tscn"
+ComponentType = "Zone"
 
 [sub_resource type="Theme" id="Theme_a3w6s"]
 
@@ -20,7 +30,7 @@ title = "Component Creation"
 initial_position = 1
 size = Vector2i(1050, 550)
 script = ExtResource("1_07jbk")
-_components = Array[Resource]([ExtResource("2_iaba6"), ExtResource("3_fr6ym"), ExtResource("4_prntd"), ExtResource("8_y2q7k"), ExtResource("10_1hq20"), ExtResource("7_aoorm"), ExtResource("8_07jbk"), ExtResource("9_u0tcw")])
+_components = Array[Resource]([ExtResource("2_iaba6"), ExtResource("3_fr6ym"), ExtResource("4_prntd"), ExtResource("8_y2q7k"), ExtResource("10_1hq20"), ExtResource("7_aoorm"), ExtResource("8_07jbk"), ExtResource("9_u0tcw"), SubResource("Resource_8eegm")])
 
 [node name="Panel" type="Panel" parent="." unique_id=1842311903]
 anchors_preset = 15
@@ -63,8 +73,8 @@ theme_override_constants/margin_bottom = 6
 
 [node name="ComponentPanel" type="Panel" parent="Panel/VBox/HBoxContainer/MarginContainer2" unique_id=90345725]
 unique_name_in_owner = true
-clip_contents = true
 custom_minimum_size = Vector2(900, 500)
+clip_contents = true
 layout_mode = 2
 theme_override_styles/panel = ExtResource("11_wm4jy")
 

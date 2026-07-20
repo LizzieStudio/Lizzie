@@ -156,6 +156,7 @@ public partial class GameObjects : Node
 
         ProcessSpawnQueue();
         ProcessComponentPropertyQueue();
+        RecomputeZones();
 
         /*
         if (_modalOpen) return;
@@ -565,7 +566,8 @@ public partial class GameObjects : Node
     {
         foreach (var go in GetChildren())
         {
-            if (go is VisualComponentBase vcb)
+            // Zones are not selected by marquee selection.
+            if (go is VisualComponentBase vcb and not VcZone)
             {
                 var screenPos = GetViewport().GetCamera3D().UnprojectPosition(vcb.Position);
                 vcb.IsClickSelected = PointInRect(screenPos, area);
@@ -955,8 +957,31 @@ public partial class GameObjects : Node
     private Vector3 _lastDragPosition;
     private Change _dragChange;
 
+    private static bool HandsEnabled() =>
+        ProjectService.Instance.CurrentProject?.GameSettings?.EnablePlayerHands == true;
+
+    /// <summary>
+    /// Recompute per-viewer zone visibility and control for all components each frame so the
+    /// local render mask tracks moving pieces, moving zones, and seat/admin changes.
+    /// </summary>
+    private void RecomputeZones()
+    {
+        ZoneService.Recompute(
+            GetChildren().OfType<VisualComponentBase>(),
+            PlayerHandService.LocalSeatIndex(),
+            ZoneService.LocalSeatIsAdmin()
+        );
+    }
+
     private void EnterDragMode(VisualComponentBase go)
     {
+        // Zone control gate.
+        if (!go.LocallyMovable)
+        {
+            GD.Print($"Object {go.ComponentName} is not movable by the local player (zone)");
+            return;
+        }
+
         // Check if object is locked by another player in multiplayer
         if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
         {
@@ -1048,12 +1073,12 @@ public partial class GameObjects : Node
         if (Input.IsMouseButtonPressed(MouseButton.Left))
         {
             var mousePosition = GetViewport().GetMousePosition();
-            bool overHand = mousePosition.Y > _gameController.HandY;
 
-            if (overHand)
+            // The bottom "hand" strip only intercepts the drag when player hands are enabled
+            // and at least one dragged object is a printed component.
+            VcToken previewCard = null;
+            if (HandsEnabled() && mousePosition.Y > _gameController.HandY)
             {
-                // Show a 2D preview under the cursor for the first dragging VcToken
-                VcToken previewCard = null;
                 foreach (var go in GetDraggingObjects())
                 {
                     if (go is VcToken vct)
@@ -1062,15 +1087,17 @@ public partial class GameObjects : Node
                         break;
                     }
                 }
+            }
+
+            if (previewCard != null)
+            {
                 _gameController.HandManager.ShowDragPreview(previewCard, mousePosition);
-                previewCard.Visible = false;
+                previewCard.LogicalVisible = false;
                 Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
                 return; // don't move the 3D objects while hovering the hand
             }
-            else
-            {
-                _gameController.HandManager.HideDragPreview();
-            }
+
+            _gameController.HandManager.HideDragPreview();
 
             var newDragPosition = _dragPlane.GetCursorProjection();
             var delta = newDragPosition - _lastDragPosition;
@@ -1082,7 +1109,7 @@ public partial class GameObjects : Node
             {
                 var p = go.Position + delta;
                 go.SetPosition(new Vector3(p.X, _dragHeight + go.YHeight, p.Z));
-                go.Visible = true;
+                go.LogicalVisible = true;
             }
 
             //check to see if we are over a VisualComponentGroup that can accept a drop,
@@ -1234,18 +1261,21 @@ public partial class GameObjects : Node
         _gameController.HandManager.HideDragPreview();
 
         var mousePosition = GetViewport().GetMousePosition();
-        bool droppedOnHand = mousePosition.Y > _gameController.HandY;
 
-        if (droppedOnHand)
+        // Only divert to the hand when hands are enabled, the drop was over the hand strip,
+        // AND there is at least one printed component to hand off.
+        var toHand = new List<VcToken>();
+        if (HandsEnabled() && mousePosition.Y > _gameController.HandY)
         {
-            // Send all dragging VcToken objects to the hand
-            var toHand = new List<VcToken>();
             foreach (var go in GetDraggingObjects())
             {
                 if (go is VcToken vct)
                     toHand.Add(vct);
             }
+        }
 
+        if (toHand.Count > 0)
+        {
             // End dragging state before handing off
             foreach (var go in GetDraggingObjects().ToList())
             {

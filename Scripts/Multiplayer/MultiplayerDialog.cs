@@ -144,6 +144,9 @@ public partial class MultiplayerDialog : Window
         {
             // Request project sync setup
             ProjectSynchronizer.Instance?.RequestProjectSync();
+
+            // Prompt the host to choose a seat right away.
+            EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
         }
     }
 

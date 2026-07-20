@@ -100,10 +100,10 @@ public partial class UndoService : Node
                     ExecuteTransform(c);
                     break;
                 case Change.ChangeType.Creation:
-                    c.Component.Visible = false; //hide, don't delete for now. In case we have a 'redo' function
+                    c.Component.LogicalVisible = false; //hide, don't delete for now. In case we have a 'redo' function
                     break;
                 case Change.ChangeType.Deletion:
-                    c.Component.Visible = true; //do we also want to move this out of GameObjects and into a different list?
+                    c.Component.LogicalVisible = true; //do we also want to move this out of GameObjects and into a different list?
                     //and do we have to adjust z-order?
                     break;
                 case Change.ChangeType.LockStatus:

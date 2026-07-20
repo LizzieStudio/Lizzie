@@ -1,0 +1,106 @@
+[gd_scene format=3 uid="uid://djyhyntgsx2da"]
+
+[ext_resource type="Script" uid="uid://bdq4v2at8uqsn" path="res://Scripts/ComponentPanelResults/ZonePanelDialogResult.cs" id="1_k5dsr"]
+
+[node name="Zone Panel" type="MarginContainer" unique_id=1811252343]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+script = ExtResource("1_k5dsr")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1775790058]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HelpLabel" type="Label" parent="VBoxContainer" unique_id=2108430765]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+text = "A zone controls which players can see and move the components inside its area."
+autowrap_mode = 2
+
+[node name="GridContainer" type="GridContainer" parent="VBoxContainer" unique_id=847771135]
+layout_mode = 2
+columns = 2
+
+[node name="NameLabel" type="Label" parent="VBoxContainer/GridContainer" unique_id=1116945812]
+layout_mode = 2
+mouse_filter = 1
+text = "Name  "
+horizontal_alignment = 2
+
+[node name="ItemName" type="LineEdit" parent="VBoxContainer/GridContainer" unique_id=1178683595]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="WidthLabel" type="Label" parent="VBoxContainer/GridContainer" unique_id=1200045039]
+layout_mode = 2
+mouse_filter = 1
+text = "Width  "
+horizontal_alignment = 2
+
+[node name="Width" type="LineEdit" parent="VBoxContainer/GridContainer" unique_id=1525174296]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "10"
+alignment = 2
+
+[node name="DepthLabel" type="Label" parent="VBoxContainer/GridContainer" unique_id=2042149363]
+layout_mode = 2
+mouse_filter = 1
+text = "Depth  "
+horizontal_alignment = 2
+
+[node name="Depth" type="LineEdit" parent="VBoxContainer/GridContainer" unique_id=1186049332]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "10"
+alignment = 2
+
+[node name="DefaultIncludedLabel" type="Label" parent="VBoxContainer/GridContainer" unique_id=912974354]
+layout_mode = 2
+tooltip_text = "When checked, players may move components inside the zone by default.
+Use the seat list below to override individual players."
+mouse_filter = 1
+text = "Allow by default  "
+horizontal_alignment = 2
+
+[node name="DefaultIncluded" type="CheckBox" parent="VBoxContainer/GridContainer" unique_id=1929055009]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "When checked, players may move components inside the zone by default.
+Use the seat list below to override individual players."
+
+[node name="HiddenLabel" type="Label" parent="VBoxContainer/GridContainer" unique_id=500268587]
+layout_mode = 2
+tooltip_text = "By default, blocked players can still see inside the zone.
+When checked, blocked players will not be able to see inside the zone."
+mouse_filter = 1
+text = "Hide contents  "
+horizontal_alignment = 2
+
+[node name="HiddenWhenExcluded" type="CheckBox" parent="VBoxContainer/GridContainer" unique_id=1856377103]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "By default, blocked players can still see inside the zone.
+When checked, blocked players will not be able to see inside the zone."
+
+[node name="SeatHeader" type="Label" parent="VBoxContainer" unique_id=465663726]
+layout_mode = 2
+tooltip_text = "Override the default for individual seats."
+mouse_filter = 1
+text = "Seat permissions"
+
+[node name="SeatList" type="VBoxContainer" parent="VBoxContainer" unique_id=1054472010]
+unique_name_in_owner = true
+layout_mode = 2

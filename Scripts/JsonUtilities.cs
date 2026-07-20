@@ -37,6 +37,9 @@ public static class JsonUtilities
             case VisualComponentBase.VisualComponentType.Bag:
                 return ParseBag(d);
 
+            case VisualComponentBase.VisualComponentType.Zone:
+                return ParseZone(d);
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(vcType), vcType, null);
         }
@@ -81,6 +84,22 @@ public static class JsonUtilities
         p.Add("Diameter", TryGetFloat(d, "Diameter"));
         p.Add("Color", TryGetColor(d, "Color"));
         p.Add("ShowCount", TryGetBool(d, "ShowCount"));
+
+        return p;
+    }
+
+    private static Dictionary<string, object> ParseZone(Dictionary<string, object> d)
+    {
+        var p = new Dictionary<string, object>();
+
+        p.Add("ComponentName", TryGetString(d, "ComponentName"));
+        p.Add("BaseName", TryGetString(d, "BaseName"));
+        p.Add(VcZone.WidthKey, TryGetFloat(d, VcZone.WidthKey));
+        p.Add(VcZone.DepthKey, TryGetFloat(d, VcZone.DepthKey));
+        p.Add(VcZone.DefaultIncludedKey, TryGetBool(d, VcZone.DefaultIncludedKey));
+        p.Add(VcZone.HiddenWhenExcludedKey, TryGetBool(d, VcZone.HiddenWhenExcludedKey));
+        p.Add(VcZone.IncludedSeatsKey, TryGetIntList(d, VcZone.IncludedSeatsKey));
+        p.Add(VcZone.ExcludedSeatsKey, TryGetIntList(d, VcZone.ExcludedSeatsKey));
 
         return p;
     }
@@ -245,6 +264,28 @@ public static class JsonUtilities
                 return parsed;
         }
         return false;
+    }
+
+    private static List<object> TryGetIntList(Dictionary<string, object> d, string key)
+    {
+        var result = new List<object>();
+        if (!d.TryGetValue(key, out var value) || value == null)
+            return result;
+
+        if (value is JsonElement je && je.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var el in je.EnumerateArray())
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var i))
+                    result.Add(i);
+        }
+        else if (value is System.Collections.IEnumerable e && value is not string)
+        {
+            foreach (var item in e)
+                if (int.TryParse(item?.ToString(), out var i))
+                    result.Add(i);
+        }
+
+        return result;
     }
 
     private static Color TryGetColor(Dictionary<string, object> d, string key)

@@ -15,6 +15,7 @@ public abstract partial class VisualComponentBase : Area3D
         Meeple = 9,
         Tray = 10,
         Bag = 11,
+        Zone = 12,
     }
 
     public bool TextureReady { get; set; }
@@ -710,10 +711,55 @@ public abstract partial class VisualComponentBase : Area3D
 
     public void SetVisibility(bool visible)
     {
-        if (visible == Visible)
+        if (visible == LogicalVisible)
             return;
-        Visible = visible;
+        LogicalVisible = visible;
         SyncRequired = true;
+    }
+
+    private bool _logicalVisible = true;
+
+    /// <summary>
+    /// Whether or not the component is visible for all players, unrelated to zones.
+    /// This is the value that syncs across the network.
+    /// </summary>
+    public bool LogicalVisible
+    {
+        get => _logicalVisible;
+        set
+        {
+            _logicalVisible = value;
+            ApplyEffectiveVisibility();
+        }
+    }
+
+    private bool _zoneHidden;
+
+    /// <summary>
+    /// Local-only, non-synced mask set by <see cref="ZoneService"/> when the local
+    /// player is not permitted to see this component inside a hiding zone.
+    /// </summary>
+    public bool ZoneHidden
+    {
+        get => _zoneHidden;
+        set
+        {
+            if (_zoneHidden == value)
+                return;
+            _zoneHidden = value;
+            ApplyEffectiveVisibility();
+        }
+    }
+
+    /// <summary>
+    /// Local-only flag set by <see cref="ZoneService"/>. false when the local player may
+    /// see but not move this component (or cannot see it at all). Blocks drag start.
+    /// </summary>
+    public bool LocallyMovable { get; set; } = true;
+
+    public void ApplyEffectiveVisibility()
+    {
+        Visible = _logicalVisible && !_zoneHidden;
     }
 
     public bool SuppressSync { get; set; }

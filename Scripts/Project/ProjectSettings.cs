@@ -246,6 +246,7 @@ public partial class ProjectSettings : Window
                         ColorG = i.Item2.G,
                         ColorB = i.Item2.B,
                         ColorA = i.Item2.A,
+                        IsAdmin = i.Item3,
                     }
                 );
             }

@@ -72,8 +72,15 @@ public partial class PlayerSeatManager : Node
             return;
         }
 
-        // Ask the server (peer 1) to validate and broadcast.
-        RpcId(1, nameof(ServerReceiveClaimRequest), mm.LocalPlayerId, seatIndex);
+        if (mm.IsServer)
+        {
+            ServerReceiveClaimRequest(mm.LocalPlayerId, seatIndex);
+        }
+        else
+        {
+            // Ask the server (peer 1) to validate and broadcast.
+            RpcId(1, nameof(ServerReceiveClaimRequest), mm.LocalPlayerId, seatIndex);
+        }
     }
 
     /// <summary>

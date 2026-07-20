@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://ckab8ho5kibhq"]
+
+[ext_resource type="Texture2D" uid="uid://dwo7yx4b16u42" path="res://Textures/UI/top.png" id="1_dch2g"]
+[ext_resource type="Script" uid="uid://cbj45v7spbeg0" path="res://Scripts/ComponentTemplate.cs" id="2_f0ykd"]
+
+[resource]
+script = ExtResource("2_f0ykd")
+ComponentName = "Zone"
+Icon = ExtResource("1_dch2g")
+DefinitionDialogName = "res://Scenes/ComponentPanels/zone_panel.tscn"
+PrototypeName = "res://Scenes/VisualComponents/VcZone.tscn"
+ComponentType = "Zone"
