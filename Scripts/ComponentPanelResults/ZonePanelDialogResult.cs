@@ -64,10 +64,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
             };
             row.AddChild(label);
 
-            var option = new OptionButton
-            {
-                TooltipText = "Sets the permissions for this seat."
-            };
+            var option = new OptionButton { TooltipText = "Sets the permissions for this seat." };
             option.AddItem("Default", OptDefault);
             option.SetItemTooltip(OptDefault, "Follow the zone's 'Allow by default' setting.");
             option.AddItem("Allowed", OptIncluded);

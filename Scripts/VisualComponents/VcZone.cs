@@ -37,7 +37,7 @@ public partial class VcZone : VisualComponentBase
         // A zone always sits beneath everything.
         NeverHighlight = true;
     }
- 
+
     private void PositionHandle()
     {
         _handleMesh ??= GetNodeOrNull<Node3D>("HandleMesh");
