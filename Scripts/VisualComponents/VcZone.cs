@@ -68,7 +68,7 @@ public partial class VcZone : VisualComponentBase
 
         _width = JsonUtilities.TryGetFloat(parameters, WidthKey, _width);
         _depth = JsonUtilities.TryGetFloat(parameters, DepthKey, _depth);
- 
+
         if (MainMesh != null)
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
 

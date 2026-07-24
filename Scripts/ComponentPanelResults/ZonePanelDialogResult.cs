@@ -128,7 +128,10 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         _widthInput.Text = JsonUtilities.TryGetString(p, VcZone.WidthKey, "2");
         _depthInput.Text = JsonUtilities.TryGetString(p, VcZone.DepthKey, "2");
         _defaultIncluded.ButtonPressed = JsonUtilities.TryGetBool(p, VcZone.DefaultIncludedKey);
-        _hiddenWhenExcluded.ButtonPressed = JsonUtilities.TryGetBool(p, VcZone.HiddenWhenExcludedKey);
+        _hiddenWhenExcluded.ButtonPressed = JsonUtilities.TryGetBool(
+            p,
+            VcZone.HiddenWhenExcludedKey
+        );
 
         var included = VcZone.SeatSetFor(p, VcZone.IncludedSeatsKey);
         var excluded = VcZone.SeatSetFor(p, VcZone.ExcludedSeatsKey);
