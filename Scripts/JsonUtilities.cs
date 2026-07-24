@@ -219,16 +219,16 @@ public static class JsonUtilities
         return p;
     }
 
-    private static string TryGetString(Dictionary<string, object> d, string key)
+    public static string TryGetString(Dictionary<string, object> d, string key, string def = "")
     {
         if (d.TryGetValue(key, out var value) && value != null)
         {
             return value.ToString();
         }
-        return string.Empty;
+        return def;
     }
 
-    private static float TryGetFloat(Dictionary<string, object> d, string key)
+    public static float TryGetFloat(Dictionary<string, object> d, string key, float def = 0)
     {
         if (d.TryGetValue(key, out var value))
         {
@@ -243,7 +243,7 @@ public static class JsonUtilities
             if (float.TryParse(value.ToString(), out var parsed))
                 return parsed;
         }
-        return 0;
+        return def;
     }
 
     private static int TryGetInt(Dictionary<string, object> d, string key)
@@ -256,14 +256,36 @@ public static class JsonUtilities
         return 0;
     }
 
-    private static bool TryGetBool(Dictionary<string, object> d, string key)
+    public static bool TryGetBool(Dictionary<string, object> d, string key, bool def = false)
     {
         if (d.TryGetValue(key, out var value))
         {
             if (bool.TryParse(value.ToString(), out var parsed))
                 return parsed;
         }
-        return false;
+        return def;
+    }
+
+    public static HashSet<int> TryGetIntSet(Dictionary<string, object> d, string key)
+    {
+        var set = new HashSet<int>();
+        if (d == null || !d.TryGetValue(key, out var value) || value == null)
+            return set;
+
+        if (value is JsonElement je && je.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var el in je.EnumerateArray())
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var i))
+                    set.Add(i);
+        }
+        else if (value is System.Collections.IEnumerable e && value is not string)
+        {
+            foreach (var item in e)
+                if (int.TryParse(item?.ToString(), out var i))
+                    set.Add(i);
+        }
+
+        return set;
     }
 
     private static List<object> TryGetIntList(Dictionary<string, object> d, string key)

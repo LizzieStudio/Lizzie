@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using Godot;
 
 /// <summary>
@@ -67,8 +66,8 @@ public partial class VcZone : VisualComponentBase
         MainMesh = GetNodeOrNull<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNodeOrNull<MeshInstance3D>("HighlightMesh");
 
-        _width = ReadFloat(parameters, WidthKey, _width);
-        _depth = ReadFloat(parameters, DepthKey, _depth);
+        _width = JsonUtilities.TryGetFloat(parameters, WidthKey, _width);
+        _depth = JsonUtilities.TryGetFloat(parameters, DepthKey, _depth);
  
         if (MainMesh != null)
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
@@ -92,9 +91,9 @@ public partial class VcZone : VisualComponentBase
             ret.Add("Instance Name not included");
         }
 
-        if (ReadFloat(parameters, WidthKey, 0f) <= 0f)
+        if (JsonUtilities.TryGetFloat(parameters, WidthKey) <= 0f)
             ret.Add("Width must be > 0");
-        if (ReadFloat(parameters, DepthKey, 0f) <= 0f)
+        if (JsonUtilities.TryGetFloat(parameters, DepthKey) <= 0f)
             ret.Add("Depth must be > 0");
 
         return ret;
@@ -120,8 +119,8 @@ public partial class VcZone : VisualComponentBase
         return Mathf.Abs(local.X) <= _width / 2f && Mathf.Abs(local.Z) <= _depth / 2f;
     }
 
-    public bool DefaultIncluded => ReadBool(Parameters, DefaultIncludedKey, false);
-    public bool HiddenWhenExcluded => ReadBool(Parameters, HiddenWhenExcludedKey, false);
+    public bool DefaultIncluded => JsonUtilities.TryGetBool(Parameters, DefaultIncludedKey);
+    public bool HiddenWhenExcluded => JsonUtilities.TryGetBool(Parameters, HiddenWhenExcludedKey);
     public HashSet<int> IncludedSeats => SeatSetFor(Parameters, IncludedSeatsKey);
     public HashSet<int> ExcludedSeats => SeatSetFor(Parameters, ExcludedSeatsKey);
 
@@ -137,102 +136,6 @@ public partial class VcZone : VisualComponentBase
         return DefaultIncluded;
     }
 
-    private static float ReadFloat(Dictionary<string, object> p, string key, float def)
-    {
-        if (p == null || !p.TryGetValue(key, out var v) || v == null)
-            return def;
-        switch (v)
-        {
-            case float f:
-                return f;
-            case double d:
-                return (float)d;
-            case int i:
-                return i;
-            case long l:
-                return l;
-            case string s when float.TryParse(s, out var fs):
-                return fs;
-        }
-        if (v is JsonElement je && je.ValueKind == JsonValueKind.Number && je.TryGetDouble(out var jd))
-            return (float)jd;
-        return def;
-    }
-
-    private static bool ReadBool(Dictionary<string, object> p, string key, bool def)
-    {
-        if (p == null || !p.TryGetValue(key, out var v) || v == null)
-            return def;
-        if (v is bool b)
-            return b;
-        if (v is string s && bool.TryParse(s, out var bs))
-            return bs;
-        if (v is JsonElement je)
-        {
-            if (je.ValueKind == JsonValueKind.True)
-                return true;
-            if (je.ValueKind == JsonValueKind.False)
-                return false;
-        }
-        return def;
-    }
-
-    /// <summary>
-    /// Parse a seat-index list from a Parameters dictionary, tolerant of the JSON round-trip.
-    /// </summary>
-    public static HashSet<int> SeatSetFor(Dictionary<string, object> p, string key)
-    {
-        var set = new HashSet<int>();
-        if (p == null || !p.TryGetValue(key, out var v) || v == null)
-            return set;
-
-        if (v is JsonElement je && je.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var el in je.EnumerateArray())
-                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var ji))
-                    set.Add(ji);
-            return set;
-        }
-
-        if (v is System.Collections.IEnumerable e && v is not string)
-        {
-            foreach (var item in e)
-                if (TryToInt(item, out var i))
-                    set.Add(i);
-        }
-        return set;
-    }
-
-    private static bool TryToInt(object o, out int result)
-    {
-        result = 0;
-        switch (o)
-        {
-            case int i:
-                result = i;
-                return true;
-            case long l:
-                result = (int)l;
-                return true;
-            case double d:
-                result = (int)d;
-                return true;
-            case float f:
-                result = (int)f;
-                return true;
-            case string s when int.TryParse(s, out var si):
-                result = si;
-                return true;
-        }
-        if (
-            o is JsonElement je
-            && je.ValueKind == JsonValueKind.Number
-            && je.TryGetInt32(out var ji)
-        )
-        {
-            result = ji;
-            return true;
-        }
-        return false;
-    }
+    public static HashSet<int> SeatSetFor(Dictionary<string, object> p, string key) =>
+        JsonUtilities.TryGetIntSet(p, key);
 }

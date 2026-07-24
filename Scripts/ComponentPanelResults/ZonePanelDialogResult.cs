@@ -128,10 +128,10 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
         var p = prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _widthInput.Text = ReadString(p, VcZone.WidthKey, "2");
-        _depthInput.Text = ReadString(p, VcZone.DepthKey, "2");
-        _defaultIncluded.ButtonPressed = ReadBool(p, VcZone.DefaultIncludedKey);
-        _hiddenWhenExcluded.ButtonPressed = ReadBool(p, VcZone.HiddenWhenExcludedKey);
+        _widthInput.Text = JsonUtilities.TryGetString(p, VcZone.WidthKey, "2");
+        _depthInput.Text = JsonUtilities.TryGetString(p, VcZone.DepthKey, "2");
+        _defaultIncluded.ButtonPressed = JsonUtilities.TryGetBool(p, VcZone.DefaultIncludedKey);
+        _hiddenWhenExcluded.ButtonPressed = JsonUtilities.TryGetBool(p, VcZone.HiddenWhenExcludedKey);
 
         var included = VcZone.SeatSetFor(p, VcZone.IncludedSeatsKey);
         var excluded = VcZone.SeatSetFor(p, VcZone.ExcludedSeatsKey);
@@ -164,10 +164,4 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
         return ret;
     }
-
-    private static string ReadString(Dictionary<string, object> p, string key, string def) =>
-        p != null && p.TryGetValue(key, out var v) && v != null ? v.ToString() : def;
-
-    private static bool ReadBool(Dictionary<string, object> p, string key) =>
-        p != null && p.TryGetValue(key, out var v) && v is bool b && b;
 }
