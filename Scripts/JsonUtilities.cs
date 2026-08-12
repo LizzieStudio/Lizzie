@@ -34,6 +34,9 @@ public static class JsonUtilities
             case VisualComponentBase.VisualComponentType.Meeple:
                 return ParseMeeple(d);
 
+            case VisualComponentBase.VisualComponentType.Tray:
+                return ParseTray(d);
+
             case VisualComponentBase.VisualComponentType.Bag:
                 return ParseBag(d);
 
@@ -70,6 +73,21 @@ public static class JsonUtilities
         p.Add("Height", TryGetFloat(d, "Height"));
         p.Add("Diameter", TryGetFloat(d, "Diameter"));
         p.Add("Color", TryGetColor(d, "Color"));
+
+        return p;
+    }
+
+    private static Dictionary<string, object> ParseTray(Dictionary<string, object> d)
+    {
+        var p = new Dictionary<string, object>();
+
+        p.Add("ComponentName", TryGetString(d, "ComponentName"));
+        p.Add("BaseName", TryGetString(d, "BaseName"));
+        p.Add("Height", TryGetFloat(d, "Height"));
+        p.Add("Width", TryGetFloat(d, "Width"));
+        p.Add("Length", TryGetFloat(d, "Length"));
+        p.Add("Color", TryGetColor(d, "Color"));
+        p.Add("Prototype", TryGetString(d, "Prototype"));
 
         return p;
     }
