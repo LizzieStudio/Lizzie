@@ -24,6 +24,8 @@ public partial class VcBag : VisualComponentGroup
 
     private void UpdateComponentCount()
     {
+        if (_componentCount == null)
+            return;
         _componentCount.Text = Children.Count().ToString();
     }
 
