@@ -36,6 +36,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         component.Location = ComponentLocation.Container;
         Children.Add(component.Reference);
         OnChildrenChanged();
+        SyncRequired = true;
     }
 
     public virtual void AddChildComponents(
@@ -54,6 +55,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         }
 
         OnChildrenChanged();
+        SyncRequired = true;
     }
 
     public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
@@ -78,6 +80,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
         Children.RemoveRange(0, quantity);
         OnChildrenChanged();
+        SyncRequired = true;
 
         return res;
     }
@@ -97,6 +100,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
         Children.RemoveRange(Children.Count - quantity, quantity);
         OnChildrenChanged();
+        SyncRequired = true;
 
         return res;
     }
@@ -112,6 +116,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
         Children.RemoveAt(r);
         OnChildrenChanged();
+        SyncRequired = true;
 
         return c;
     }
@@ -150,6 +155,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         }
 
         OnChildrenChanged();
+        SyncRequired = true;
     }
 
     /// <summary>
@@ -160,6 +166,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     {
         Children.Reverse();
         OnChildrenChanged();
+        SyncRequired = true;
     }
 
     public Guid[] GetContainerChildren()
