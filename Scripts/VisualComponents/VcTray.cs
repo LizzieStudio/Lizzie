@@ -38,44 +38,29 @@ public partial class VcTray : VisualComponentGroup
         }
     }
 
+    private TextureFactory _textureFactory;
+
     public override bool Setup(
-        Dictionary<string, object> parameters,
+        ComponentParameters parameters,
         string dataSetRow,
         TextureFactory textureFactory
     )
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    private TextureFactory _textureFactory;
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
         _textureFactory = textureFactory;
 
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, dataSetRow, textureFactory);
+        var p = (TrayParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                return false;
-            Height = h / 10f;
+        if (p.Height <= 0)
+            return false;
 
-            var w = Utility.GetParam<float>(parameters, "Width");
-            Width = w / 10f;
-
-            var l = Utility.GetParam<float>(parameters, "Length");
-            Length = l / 10f;
-
-            if (parameters["Color"] is Color color)
-            {
-                CubeColor = color;
-            }
-        }
+        Height = p.Height / 10f;
+        Width = p.Width / 10f;
+        Length = p.Length / 10f;
+        CubeColor = p.Color;
 
         //create cube
         if (Width <= 0 || Length <= 0)
@@ -96,8 +81,7 @@ public partial class VcTray : VisualComponentGroup
 
         ShapeProfiles.Add(new OffsetShape2D(r));
 
-        var pKey = Utility.GetParam<string>(parameters, "Prototype");
-        if (Guid.TryParse(pKey, out var gKey))
+        if (Guid.TryParse(p.Prototype, out var gKey))
         {
             ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(gKey, out _prototype);
         }
@@ -106,35 +90,6 @@ public partial class VcTray : VisualComponentGroup
         CreateTrayPrototype(textureFactory);
 
         return true;
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                ret.Add("Height must be > 0");
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        return ret;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
@@ -22,15 +21,11 @@ public class GameStateComponent
     /// <summary>Display name at the time of capture.</summary>
     public string ComponentName { get; set; } = string.Empty;
 
-    // Position stored as individual floats — Vector3 is not JSON-serialisable.
-    public float Px { get; set; }
-    public float Py { get; set; }
-    public float Pz { get; set; }
+    /// <summary>World position.</summary>
+    public Vector3 Position { get; set; }
 
-    // Rotation (radians) stored as individual floats.
-    public float Rx { get; set; }
-    public float Ry { get; set; }
-    public float Rz { get; set; }
+    /// <summary>Rotation in radians.</summary>
+    public Vector3 Rotation { get; set; }
 
     public bool LogicalVisible { get; set; } = true;
 
@@ -44,32 +39,6 @@ public class GameStateComponent
     /// References to child components held inside a container/group (e.g. deck cards).
     /// </summary>
     public Guid[] ContainedComponents { get; set; } = Array.Empty<Guid>();
-
-    // ── Convenience accessors (ignored by JSON serialiser) ──────────────────
-
-    [JsonIgnore]
-    public Vector3 Position
-    {
-        get => new(Px, Py, Pz);
-        set
-        {
-            Px = value.X;
-            Py = value.Y;
-            Pz = value.Z;
-        }
-    }
-
-    [JsonIgnore]
-    public Vector3 Rotation
-    {
-        get => new(Rx, Ry, Rz);
-        set
-        {
-            Rx = value.X;
-            Ry = value.Y;
-            Rz = value.Z;
-        }
-    }
 
     /// <summary>
     /// Populate this record from a live VisualComponent.

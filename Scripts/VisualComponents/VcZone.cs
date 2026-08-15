@@ -19,6 +19,11 @@ public partial class VcZone : VisualComponentBase
     private float _width = 2f;
     private float _depth = 2f;
 
+    private bool _defaultIncluded;
+    private bool _hiddenWhenExcluded;
+    private HashSet<int> _includedSeats = new();
+    private HashSet<int> _excludedSeats = new();
+
     private const float HandleLift = 0.08f;
 
     private Node3D _handleMesh;
@@ -51,23 +56,24 @@ public partial class VcZone : VisualComponentBase
     }
 
     public override bool Setup(
-        Dictionary<string, object> parameters,
+        ComponentParameters parameters,
         string dataSetRow,
         TextureFactory textureFactory
     )
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, dataSetRow, textureFactory);
+        var p = (ZoneParameters)parameters;
 
         MainMesh = GetNodeOrNull<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNodeOrNull<MeshInstance3D>("HighlightMesh");
 
-        _width = JsonUtilities.TryGetFloat(parameters, WidthKey, _width);
-        _depth = JsonUtilities.TryGetFloat(parameters, DepthKey, _depth);
+        _width = p.Width;
+        _depth = p.Depth;
+
+        _defaultIncluded = p.DefaultIncluded;
+        _hiddenWhenExcluded = p.HiddenWhenExcluded;
+        _includedSeats = new HashSet<int>(p.IncludedSeats);
+        _excludedSeats = new HashSet<int>(p.ExcludedSeats);
 
         if (MainMesh != null)
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
@@ -75,28 +81,6 @@ public partial class VcZone : VisualComponentBase
         PositionHandle();
 
         return true;
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (JsonUtilities.TryGetFloat(parameters, WidthKey) <= 0f)
-            ret.Add("Width must be > 0");
-        if (JsonUtilities.TryGetFloat(parameters, DepthKey) <= 0f)
-            ret.Add("Depth must be > 0");
-
-        return ret;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;
@@ -119,10 +103,10 @@ public partial class VcZone : VisualComponentBase
         return Mathf.Abs(local.X) <= _width / 2f && Mathf.Abs(local.Z) <= _depth / 2f;
     }
 
-    public bool DefaultIncluded => JsonUtilities.TryGetBool(Parameters, DefaultIncludedKey);
-    public bool HiddenWhenExcluded => JsonUtilities.TryGetBool(Parameters, HiddenWhenExcludedKey);
-    public HashSet<int> IncludedSeats => SeatSetFor(Parameters, IncludedSeatsKey);
-    public HashSet<int> ExcludedSeats => SeatSetFor(Parameters, ExcludedSeatsKey);
+    public bool DefaultIncluded => _defaultIncluded;
+    public bool HiddenWhenExcluded => _hiddenWhenExcluded;
+    public HashSet<int> IncludedSeats => new(_includedSeats);
+    public HashSet<int> ExcludedSeats => new(_excludedSeats);
 
     /// <summary>
     /// Whether the given seat is considered "included" by this zone's rules.
@@ -135,7 +119,4 @@ public partial class VcZone : VisualComponentBase
             return true;
         return DefaultIncluded;
     }
-
-    public static HashSet<int> SeatSetFor(Dictionary<string, object> p, string key) =>
-        JsonUtilities.TryGetIntSet(p, key);
 }

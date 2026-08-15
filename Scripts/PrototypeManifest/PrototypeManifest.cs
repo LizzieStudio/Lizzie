@@ -259,10 +259,9 @@ public partial class PrototypeManifest : Window
         {
             PrototypeRef = Guid.NewGuid(),
             Name = newName,
-            Type = original.Type,
-            Parameters = new Dictionary<string, object>(original.Parameters),
+            Parameters = original.Parameters.Clone(),
         };
-        duplicate.Parameters["ComponentName"] = newName;
+        duplicate.Parameters.ComponentName = newName;
 
         ProjectService.Instance.UpdatePrototype(duplicate);
         Refresh(_prototypeCounts);
@@ -392,7 +391,16 @@ public partial class PrototypeManifest : Window
 
         string row = "0";
 
-        var datasetParam = Utility.GetParam<string>(SelectedPrototype.Parameters, "Dataset");
+        string datasetParam = null;
+        if (SelectedPrototype.Parameters is PrintedParameters pp)
+        {
+            datasetParam = pp.Dataset;
+        }
+        else if (SelectedPrototype.Parameters is DieParameters dp)
+        {
+            datasetParam = dp.Dataset;
+        }
+
         if (!string.IsNullOrEmpty(datasetParam))
         {
             ProjectService.Instance.CurrentProject.Datasets.TryGetValue(

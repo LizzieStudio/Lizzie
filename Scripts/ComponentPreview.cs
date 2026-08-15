@@ -103,7 +103,11 @@ public partial class ComponentPreview : Panel
 
         if (_buildNeeded && _component != null && _component.IsNodeReady())
         {
-            Build(_component.Parameters, _row, _textureFactory);
+            var proto = ProjectService.Instance.CurrentProject?.Prototypes.GetValueOrDefault(
+                _component.PrototypeRef
+            );
+            if (proto?.Parameters != null)
+                Build(proto.Parameters, _row, _textureFactory);
             _buildNeeded = false;
             AutoZoomComponent(_component);
         }
@@ -237,16 +241,10 @@ public partial class ComponentPreview : Panel
         }
     }
 
-    public void Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
+    public void Build(ComponentParameters parameters, TextureFactory textureFactory) =>
         Build(parameters, string.Empty, textureFactory);
-    }
 
-    public void Build(
-        Dictionary<string, object> parameters,
-        string row,
-        TextureFactory textureFactory
-    )
+    public void Build(ComponentParameters parameters, string row, TextureFactory textureFactory)
     {
         if (_component != null)
         {

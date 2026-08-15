@@ -75,13 +75,4 @@ public class Project
             return d;
         }
     }
-
-    public void MapPrototypeJson()
-    {
-        foreach (var p in Prototypes)
-        {
-            var d = JsonUtilities.ParseJsonToDictionary(p.Value.Type, p.Value.Parameters);
-            p.Value.Parameters = d;
-        }
-    }
 }

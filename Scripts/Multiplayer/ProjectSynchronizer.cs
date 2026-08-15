@@ -77,9 +77,7 @@ public partial class ProjectSynchronizer : Node
 
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[evt.PrototypeId];
 
-        var pDto = new PrototypeDto(prototype);
-
-        var prototypeJson = JsonSerializer.Serialize(pDto);
+        var prototypeJson = JsonSerializer.Serialize(prototype, LizzieJson.Options);
 
         GD.Print($"Prototype change sync: {evt.PrototypeId}");
 
@@ -94,7 +92,7 @@ public partial class ProjectSynchronizer : Node
         if (!ShouldSync())
             return;
 
-        var templateJson = JsonSerializer.Serialize(evt.Template);
+        var templateJson = JsonSerializer.Serialize(evt.Template, LizzieJson.Options);
 
         if (MultiplayerManager.Instance.IsServer)
             Rpc(nameof(ReceiveTemplate), evt.TemplateName, templateJson);
@@ -209,9 +207,10 @@ public partial class ProjectSynchronizer : Node
         _isSyncing = true;
         try
         {
-            var prototypeDto = JsonSerializer.Deserialize<PrototypeDto>(prototypeJson);
-
-            var prototype = new Prototype(prototypeDto);
+            var prototype = JsonSerializer.Deserialize<Prototype>(
+                prototypeJson,
+                LizzieJson.Options
+            );
 
             ProjectService.Instance.UpdatePrototype(prototype);
         }
@@ -249,7 +248,7 @@ public partial class ProjectSynchronizer : Node
         _isSyncing = true;
         try
         {
-            var template = JsonSerializer.Deserialize<Template>(templateJson);
+            var template = JsonSerializer.Deserialize<Template>(templateJson, LizzieJson.Options);
 
             if (ProjectService.Instance.CurrentProject.Templates.ContainsKey(templateName))
             {

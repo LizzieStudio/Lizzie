@@ -356,23 +356,20 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     #endregion
 
-    public override Dictionary<string, object> GetParams()
+    public override ComponentParameters GetParams()
     {
-        var d = new Dictionary<string, object>();
-
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", ParamToFloat(_heightInput.Text));
-        d.Add("Thickness", ParamToFloat(_thicknessInput.Text));
-        d.Add("Color", _colorPicker.Color);
-        d.Add("Grid", _gridState);
-
-        return d;
+        return new MeepleParameters
+        {
+            ComponentName = _nameInput.Text,
+            Height = ParamToFloat(_heightInput.Text),
+            Thickness = ParamToFloat(_thicknessInput.Text),
+            Color = _colorPicker.Color,
+            Grid = _gridState,
+        };
     }
 
     private void UpdatePreview()
     {
-        var d = new Dictionary<string, object>();
-
         //normalize the size
         var h = ParamToFloat(_heightInput.Text);
         var t = ParamToFloat(_thicknessInput.Text);
@@ -388,13 +385,16 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         //normalize dimensions to 10x10x10 outer extants
         var scale = 10f / h;
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", 10f);
-        d.Add("Thickness", t * scale);
-        d.Add("Color", _colorPicker.Color);
-        d.Add("Grid", _gridState);
+        var p = new MeepleParameters
+        {
+            ComponentName = _nameInput.Text,
+            Height = 10f,
+            Thickness = t * scale,
+            Color = _colorPicker.Color,
+            Grid = _gridState,
+        };
 
-        _preview.Build(d, TextureFactory);
+        _preview.Build(p, TextureFactory);
     }
 
     public override void DisplayPrototype(Guid prototypeId)
@@ -405,49 +405,30 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     public override void DisplayPrototype(Prototype prototype)
     {
+        var p = (MeepleParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
-            ? prototype.Parameters["Height"].ToString()
-            : "";
-        _thicknessInput.Text = prototype.Parameters.ContainsKey("Thickness")
-            ? prototype.Parameters["Thickness"].ToString()
-            : "";
-        _colorPicker.Color = prototype.Parameters.ContainsKey("Color")
-            ? (Color)prototype.Parameters["Color"]
-            : Colors.Red;
+        _heightInput.Text = p.Height.ToString();
+        _thicknessInput.Text = p.Thickness.ToString();
+        _colorPicker.Color = p.Color;
 
-        if (
-            prototype.Parameters.ContainsKey("Grid")
-            && prototype.Parameters["Grid"] is bool[][] grid
-        )
+        if (p.Grid != null && p.Grid.Length > 0)
         {
-            SetGridState(grid);
+            SetGridState(p.Grid);
         }
 
         Activate();
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as MeepleParameters;
 
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey("ComponentName"))
-        {
-            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
-                ret.Add("Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
+        if (string.IsNullOrEmpty(p?.ComponentName))
+            ret.Add("Name may not be blank");
+        if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
-
-        var w = Utility.GetParam<float>(parameters, "Thickness");
-        if (w <= 0)
+        if ((p?.Thickness ?? 0) <= 0)
             ret.Add("Thickness must be > 0");
 
         //check grid

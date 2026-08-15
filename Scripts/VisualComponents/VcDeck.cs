@@ -424,21 +424,25 @@ public partial class VcDeck : VisualComponentGroup
         }
 
         syncDto.ApplyToComponent(this);
-        BuildInternal(proto.Parameters, textureFactory, false);
+        BuildInternal((PrintedParameters)proto.Parameters, textureFactory, false);
     }
 
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    public override bool Setup(
+        ComponentParameters parameters,
+        string dataSetRow,
+        TextureFactory textureFactory
+    )
     {
-        return BuildInternal(parameters, textureFactory, true);
+        return BuildInternal((PrintedParameters)parameters, textureFactory, true);
     }
 
     private bool BuildInternal(
-        Dictionary<string, object> parameters,
+        PrintedParameters parameters,
         TextureFactory textureFactory,
         bool spawnCards
     )
     {
-        base.Setup(parameters, textureFactory);
+        base.Setup(parameters, DataSetRow, textureFactory);
 
         _frontSprite = GetNode<Sprite3D>("%FrontSprite");
         _backSprite = GetNode<Sprite3D>("%BackSprite");
@@ -534,22 +538,6 @@ public partial class VcDeck : VisualComponentGroup
 
     public override bool Refresh(TextureFactory textureFactory)
     {
-        /*
-        var fTemplateParam = Utility.GetParam<string>(parameters, "FrontTemplate");
-        var bTemplateParam = Utility.GetParam<string>(parameters, "BackTemplate");
-
-        var datasetParam = Utility.GetParam<string>(parameters, "Dataset");
-        var dataset = ProjectService.Instance.CurrentProject.Datasets[datasetParam];
-
-        RefreshTemplateCards(
-            fTemplateParam,
-            bTemplateParam,
-            datasetParam,
-            dataset.Rows.Count,
-            textureFactory
-        );
-        */
-
         foreach (var c in Children)
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(c);
@@ -603,21 +591,18 @@ public partial class VcDeck : VisualComponentGroup
         return arr;
     }
 
-    private void BuildQuick(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    private void BuildQuick(PrintedParameters parameters, TextureFactory textureFactory)
     {
-        _quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
-
-        if (_quickCardList == null)
-            _quickCardList = new();
+        _quickCardList = parameters.QuickCardData ?? new();
 
         CreateQuickCards(textureFactory);
     }
 
-    private void BuildTemplate(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    private void BuildTemplate(PrintedParameters parameters, TextureFactory textureFactory)
     {
-        var fTemplateParam = Utility.GetParam<string>(parameters, "FrontTemplate");
-        var bTemplateParam = Utility.GetParam<string>(parameters, "BackTemplate");
-        var datasetParam = Utility.GetParam<string>(parameters, "Dataset");
+        var fTemplateParam = parameters.FrontTemplate;
+        var bTemplateParam = parameters.BackTemplate;
+        var datasetParam = parameters.Dataset;
 
         var dataset = ProjectService.Instance.CurrentProject.Datasets[datasetParam];
 
@@ -714,19 +699,15 @@ public partial class VcDeck : VisualComponentGroup
         _backSprite.Texture = _backView.GetTexture();
     }
 
-    private bool InitializeParameters(
-        System.Collections.Generic.Dictionary<string, object> parameters
-    )
+    private bool InitializeParameters(PrintedParameters parameters)
     {
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
+        if (parameters.Height <= 0)
             return false;
-        _height = h / 10f;
+        _height = parameters.Height / 10f;
 
-        var w = Utility.GetParam<float>(parameters, "Width");
-        _width = w / 10f;
+        _width = parameters.Width / 10f;
 
-        _mode = Utility.GetParam<VcToken.TokenBuildMode>(parameters, "Mode");
+        _mode = parameters.Mode;
 
         var scene = ResourceLoader.Load<PackedScene>(_templateCardPath).Instantiate();
 
@@ -783,16 +764,16 @@ public partial class VcDeck : VisualComponentGroup
     private int _gridCount;
     private bool _gridSingleBack;
 
-    private void BuildGrid(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    private void BuildGrid(PrintedParameters parameters, TextureFactory textureFactory)
     {
-        //Grid Parameters
-        _frontMasterSprite = Utility.GetParam<Texture2D>(parameters, "FrontMasterSprite");
-        _backMasterSprite = Utility.GetParam<Texture2D>(parameters, "BackMasterSprite");
+        // Master sprites are runtime-only textures (never persisted on the parameters).
+        _frontMasterSprite = null;
+        _backMasterSprite = null;
 
-        _gridRows = Utility.GetParam<int>(parameters, "GridRows");
-        _gridCols = Utility.GetParam<int>(parameters, "GridCols");
-        _gridCount = Utility.GetParam<int>(parameters, "GridCount");
-        _gridSingleBack = Utility.GetParam<bool>(parameters, "GridSingleBack");
+        _gridRows = parameters.GridRows;
+        _gridCols = parameters.GridCols;
+        _gridCount = parameters.GridCount;
+        _gridSingleBack = parameters.GridSingleBack;
 
         CreateGridCards(textureFactory);
     }
@@ -811,22 +792,6 @@ public partial class VcDeck : VisualComponentGroup
     private VcToken CreateGridCard(int index, TextureFactory textureFactory)
     {
         var card = (VcToken)_templateCard.Duplicate();
-        var p = new System.Collections.Generic.Dictionary<string, object>();
-
-        p.Add("Height", _height * 10);
-        p.Add("Width", _width * 10);
-        p.Add("Thickness", 0.03f * 10);
-        p.Add("ComponentName", string.Empty); //TODO add card name
-
-        p.Add("Shape", 0);
-        p.Add("Mode", VcToken.TokenBuildMode.Grid);
-
-        p.Add("FrontMasterSprite", _frontMasterSprite);
-        p.Add("GridRows", _gridRows);
-        p.Add("GridCols", _gridCols);
-        p.Add("GridIndex", index);
-
-        p.Add("DifferentBack", false);
 
         card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
@@ -837,60 +802,6 @@ public partial class VcDeck : VisualComponentGroup
     }
 
     #endregion
-
-    public override List<string> ValidateParameters(
-        System.Collections.Generic.Dictionary<string, object> parameters
-    )
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(_height)))
-        {
-            if (parameters[nameof(_height)] is float h)
-            {
-                if (h <= 0)
-                    ret.Add("Height must be > 0");
-            }
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        if (parameters.TryGetValue(nameof(_width), out var w))
-        {
-            if (w is float d)
-            {
-                if (d <= 0)
-                    ret.Add("Width must be > 0");
-            }
-        }
-        else
-        {
-            ret.Add("Width not included");
-        }
-
-        if (parameters.TryGetValue(nameof(_frontImage), out var parameter))
-        {
-            if (string.IsNullOrEmpty(parameter.ToString()))
-            {
-                ret.Add("Front Image must be included");
-            }
-        }
-
-        return ret;
-    }
 
     private int _spriteUpdateCountdown;
 

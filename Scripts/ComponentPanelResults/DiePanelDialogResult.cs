@@ -267,44 +267,45 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
     }
 
-    public override Dictionary<string, object> GetParams()
+    public override ComponentParameters GetParams()
     {
-        var d = new Dictionary<string, object>();
-
         MultipleCreateMode = false;
         DataSet = null;
 
-        d.Add("ComponentName", _nameInput.Text);
-
         var dia = ParamToFloat(_diameterInput.Text);
-        d.Add("Size", dia);
-        d.Add("Color", _dieColor.Color);
+
+        var p = new DieParameters
+        {
+            ComponentName = _nameInput.Text,
+            Size = dia,
+            Color = _dieColor.Color,
+        };
+
         if (int.TryParse(_sidesInput.Text, out var sides))
         {
-            d.Add("SideCount", sides);
+            p.SideCount = sides;
         }
 
         switch (_tabContainer.CurrentTab)
         {
             case 0:
-                d.Add("Mode", VcToken.TokenBuildMode.Quick);
-                d.Add("Sides", PackageSides());
+                p.Mode = VcToken.TokenBuildMode.Quick;
+                p.Sides = PackageSides();
                 break;
 
             case 1: //Custom
-                d.Add("Mode", VcToken.TokenBuildMode.Custom);
-
+                p.Mode = VcToken.TokenBuildMode.Custom;
                 break;
 
             case 2:
-                d.Add("Mode", VcToken.TokenBuildMode.Template);
+                p.Mode = VcToken.TokenBuildMode.Template;
 
                 if (_frontTemplate != null)
                 {
-                    d.Add("FrontTemplate", _frontTemplate.Name);
+                    p.FrontTemplate = _frontTemplate.Name;
                 }
 
-                d.Add("Dataset", _textureContext.DataSet?.Name);
+                p.Dataset = _textureContext.DataSet?.Name ?? string.Empty;
 
                 DataSet = ProjectService.Instance.GetDataSetByName(_textureContext.DataSet?.Name);
                 MultipleCreateMode = (DataSet != null);
@@ -314,7 +315,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 break;
         }
 
-        return d;
+        return p;
     }
 
     private QuickTextureField[] PackageSides()
@@ -346,9 +347,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var d = GetParams();
-
-        _preview.Build(d, GetRow(_curDie), TextureFactory);
+        _preview.Build(GetParams(), GetRow(_curDie), TextureFactory);
     }
 
     private string GetRow(int rowNum)
@@ -368,19 +367,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(Prototype prototype)
     {
+        var p = (DieParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _diameterInput.Text = prototype.Parameters.ContainsKey("Size")
-            ? prototype.Parameters["Size"].ToString()
-            : "";
-        _dieColor.Color = prototype.Parameters.ContainsKey("Color")
-            ? (Color)prototype.Parameters["Color"]
-            : Colors.Black;
+        _diameterInput.Text = p.Size.ToString();
+        _dieColor.Color = p.Color;
 
-        if (
-            prototype.Parameters.ContainsKey("Sides")
-            && prototype.Parameters["Sides"] is QuickTextureField[] sides
-        )
+        if (p.Sides != null && p.Sides.Length > 0)
         {
+            var sides = p.Sides;
             for (int i = 0; i < sides.Length && i < _quickSideEntries.Length; i++)
             {
                 _quickSideEntries[i].SetQuickTextureField(sides[i]);
@@ -400,9 +394,9 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             _sidesInput.Select(sideIndex);
             SidesInputOnItemSelected(sideIndex);
         }
-        else if (prototype.Parameters.ContainsKey("SideCount"))
+        else if (p.SideCount > 0)
         {
-            int sideCount = (int)prototype.Parameters["SideCount"];
+            int sideCount = p.SideCount;
             int sideIndex = sideCount switch
             {
                 4 => 0,
@@ -418,28 +412,20 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
 
         // Restore tab/mode
-        if (prototype.Parameters.ContainsKey("Mode"))
+        _tabContainer.CurrentTab = p.Mode switch
         {
-            var mode = (VcToken.TokenBuildMode)prototype.Parameters["Mode"];
-            _tabContainer.CurrentTab = mode switch
-            {
-                VcToken.TokenBuildMode.Quick => 0,
-                VcToken.TokenBuildMode.Custom => 1,
-                VcToken.TokenBuildMode.Template => 2,
-                _ => 0,
-            };
-        }
-        else
-        {
-            _tabContainer.CurrentTab = 0;
-        }
+            VcToken.TokenBuildMode.Quick => 0,
+            VcToken.TokenBuildMode.Custom => 1,
+            VcToken.TokenBuildMode.Template => 2,
+            _ => 0,
+        };
 
         // Restore template
         _frontTemplatePicker.Select(0);
         _frontTemplate = null;
-        if (prototype.Parameters.ContainsKey("FrontTemplate"))
+        if (!string.IsNullOrEmpty(p.FrontTemplate))
         {
-            string frontTemplateName = prototype.Parameters["FrontTemplate"].ToString();
+            string frontTemplateName = p.FrontTemplate;
             for (int i = 0; i < _frontTemplatePicker.ItemCount; i++)
             {
                 if (_frontTemplatePicker.GetItemText(i) == frontTemplateName)
@@ -458,10 +444,9 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _datasetPicker.Select(0);
         _textureContext.DataSet = null;
         _textureContext.CurrentRowName = null;
-        if (prototype.Parameters.ContainsKey("Dataset"))
+        if (!string.IsNullOrEmpty(p.Dataset))
         {
-            string datasetName = prototype.Parameters["Dataset"]?.ToString();
-            if (!string.IsNullOrEmpty(datasetName))
+            string datasetName = p.Dataset;
             {
                 for (int i = 0; i < _datasetPicker.ItemCount; i++)
                 {
@@ -479,23 +464,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as DieParameters;
 
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey("ComponentName"))
-        {
-            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
-                ret.Add("Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        var w = Utility.GetParam<float>(parameters, "Size");
-        if (w <= 0)
+        if (string.IsNullOrEmpty(p?.ComponentName))
+            ret.Add("Name may not be blank");
+        if ((p?.Size ?? 0) <= 0)
             ret.Add("Diameter must be > 0");
 
         return ret;

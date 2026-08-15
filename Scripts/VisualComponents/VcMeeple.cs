@@ -14,17 +14,13 @@ public partial class VcMeeple : VisualComponentBase
     }
 
     public override bool Setup(
-        Dictionary<string, object> parameters,
+        ComponentParameters parameters,
         string dataSetRow,
         TextureFactory textureFactory
     )
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, dataSetRow, textureFactory);
+        var p = (MeepleParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
 
@@ -35,10 +31,10 @@ public partial class VcMeeple : VisualComponentBase
 
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
-        var h = Utility.GetParam<float>(parameters, "Height") / 10;
-        var t = Utility.GetParam<float>(parameters, "Thickness") / 10;
-        var c = Utility.GetParam<Color>(parameters, "Color");
-        var g = Utility.GetParam<bool[][]>(parameters, "Grid");
+        var h = p.Height / 10;
+        var t = p.Thickness / 10;
+        var c = p.Color;
+        var g = p.Grid;
 
         Height = h;
 
@@ -147,37 +143,6 @@ public partial class VcMeeple : VisualComponentBase
                 mesh.MaterialOverride = mat;
             }
         }
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            if (parameters[nameof(Height)] is int h)
-            {
-                if (h <= 0)
-                    ret.Add("Height must be > 0");
-            }
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        return ret;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

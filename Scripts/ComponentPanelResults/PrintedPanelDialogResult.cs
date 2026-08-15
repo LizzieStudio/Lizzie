@@ -606,71 +606,70 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             }
         );
 
-    public override Dictionary<string, object> GetParams()
+    public override ComponentParameters GetParams()
     {
         MultipleCreateMode = false;
         DataSet = null;
-
-        var d = new Dictionary<string, object>();
 
         int shape = GetEffectiveShape();
 
         float height = ParamToFloat(_heightInput.Text);
         float width = shape == 0 ? ParamToFloat(_widthInput.Text) : height;
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", height);
-        d.Add("Width", width);
-        d.Add("Thickness", ParamToFloat(_thicknessInput.Text));
-        d.Add("FrontImage", _frontImage.Text);
-        d.Add("BackImage", _backImage.Text);
-        d.Add("Shape", shape);
-        d.Add("FrontBgColor", _quickBackgroundColor.Color);
-
-        VcToken.TokenType tokenType = _typePicker.Selected switch
+        var d = new DeckParameters
         {
-            0 => VcToken.TokenType.Card,
-            2 => VcToken.TokenType.Board,
-            _ => VcToken.TokenType.Token,
+            ComponentName = _nameInput.Text,
+            Height = height,
+            Width = width,
+            Thickness = ParamToFloat(_thicknessInput.Text),
+            FrontImage = _frontImage.Text,
+            BackImage = _backImage.Text,
+            Shape = shape,
+            FrontBgColor = _quickBackgroundColor.Color,
+            Type = _typePicker.Selected switch
+            {
+                0 => VcToken.TokenType.Card,
+                2 => VcToken.TokenType.Board,
+                _ => VcToken.TokenType.Token,
+            },
+            FrontFontSize = 24,
         };
-        d.Add("Type", tokenType);
-        d.Add("FrontFontSize", 24);
 
         bool spawnAsDeck = false;
 
         switch (_tabs.CurrentTab)
         {
             case 0:
-                d.Add("Mode", VcToken.TokenBuildMode.Quick);
-                d.Add("QuickFront", _frontField.GetQuickTextureField());
-                d.Add("QuickBack", _backField.GetQuickTextureField());
-                d.Add("DifferentBack", _quickBackCheckbox.ButtonPressed);
+                d.Mode = VcToken.TokenBuildMode.Quick;
+                d.QuickFront = _frontField.GetQuickTextureField();
+                d.QuickBack = _backField.GetQuickTextureField();
+                d.DifferentBack = _quickBackCheckbox.ButtonPressed;
                 break;
 
             case 1:
                 LoadQuickSuits();
-                d.Add("QuickCardData", _quickSuits);
-                d.Add("DifferentBack", true);
-                d.Add("Mode", VcToken.TokenBuildMode.QuickDeck);
+                d.QuickCardData = _quickSuits;
+                d.DifferentBack = true;
+                d.Mode = VcToken.TokenBuildMode.QuickDeck;
                 spawnAsDeck = true;
                 WidthHint = width / 10f;
                 HeightHint = height / 10f;
                 break;
 
             case 2:
-                d.Add("Mode", VcToken.TokenBuildMode.Custom);
-                d.Add("DifferentBack", _customBackCheckbox.ButtonPressed);
+                d.Mode = VcToken.TokenBuildMode.Custom;
+                d.DifferentBack = _customBackCheckbox.ButtonPressed;
                 break;
 
             case 3:
-                d.Add("FrontGridImageKey", _frontGridImage);
-                d.Add("BackGridImageKey", _backGridImage);
-                d.Add("GridRows", _gridRows);
-                d.Add("GridCols", _gridCols);
-                d.Add("GridCount", _gridCount);
-                d.Add("Mode", VcToken.TokenBuildMode.Grid);
-                d.Add("DifferentBack", true);
-                d.Add("GridSingleBack", _gridSingleBack.ButtonPressed);
+                d.FrontGridImageKey = _frontGridImage;
+                d.BackGridImageKey = _backGridImage;
+                d.GridRows = _gridRows;
+                d.GridCols = _gridCols;
+                d.GridCount = _gridCount;
+                d.Mode = VcToken.TokenBuildMode.Grid;
+                d.DifferentBack = true;
+                d.GridSingleBack = _gridSingleBack.ButtonPressed;
                 if (_gridCount > 1)
                 {
                     spawnAsDeck = true;
@@ -680,12 +679,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 break;
 
             case 4:
-                d.Add("Mode", VcToken.TokenBuildMode.Template);
+                d.Mode = VcToken.TokenBuildMode.Template;
                 if (_frontTemplate != null)
-                    d.Add("FrontTemplate", _frontTemplate.Name);
+                    d.FrontTemplate = _frontTemplate.Name;
                 if (_backTemplate != null)
-                    d.Add("BackTemplate", _backTemplate.Name);
-                d.Add("Dataset", _textureContext.DataSet?.Name);
+                    d.BackTemplate = _backTemplate.Name;
+                d.Dataset = _textureContext.DataSet?.Name ?? string.Empty;
                 if (_textureContext.DataSet != null)
                 {
                     spawnAsDeck = true;
@@ -698,21 +697,19 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 break;
         }
 
-        d.Add("BackBgColor", _quickBackgroundColor2.Color);
-        d.Add("BackFontSize", 24);
+        d.BackBgColor = _quickBackgroundColor2.Color;
+        d.BackFontSize = 24;
 
         if (spawnAsDeck)
         {
             PrototypeIndex = 4;
             ComponentType = VisualComponentBase.VisualComponentType.Deck;
-        }
-        else
-        {
-            PrototypeIndex = shape;
-            ComponentType = VisualComponentBase.VisualComponentType.Token;
+            return d;
         }
 
-        return d;
+        PrototypeIndex = shape;
+        ComponentType = VisualComponentBase.VisualComponentType.Token;
+        return d.CloneAs<TokenParameters>();
     }
 
     private void UpdatePreview()
@@ -728,8 +725,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var d = GetParams();
-        _preview.Build(d, GetRow(_curToken), TextureFactory);
+        // GetParams() also updates ComponentType (Token vs Deck) based on the active tab.
+        _preview.Build(GetParams(), GetRow(_curToken), TextureFactory);
     }
 
     private string GetRow(int rowNum)
@@ -762,17 +759,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(Prototype prototype)
     {
+        var p = (PrintedParameters)prototype.Parameters;
         _suppressShapeReset = true;
 
-        var storedType =
-            prototype.Parameters.TryGetValue("Type", out var typeObj)
-            && typeObj is VcToken.TokenType tt
-                ? tt
-                : VcToken.TokenType.Token;
+        var storedType = p.Type;
 
-        int storedShape = prototype.Parameters.ContainsKey("Shape")
-            ? Convert.ToInt32(prototype.Parameters["Shape"])
-            : 0;
+        int storedShape = p.Shape;
 
         if (storedType == VcToken.TokenType.Card)
         {
@@ -807,51 +799,36 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _suppressShapeReset = false;
 
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.GetValueOrDefault("Height", "")?.ToString() ?? "";
-        _widthInput.Text = prototype.Parameters.GetValueOrDefault("Width", "")?.ToString() ?? "";
-        if (prototype.Parameters.ContainsKey("Thickness"))
-            _thicknessInput.Text = prototype.Parameters["Thickness"].ToString();
-        if (prototype.Parameters.ContainsKey("FrontImage"))
-            _frontImage.Text = prototype.Parameters["FrontImage"].ToString();
-        if (prototype.Parameters.ContainsKey("BackImage"))
-            _backImage.Text = prototype.Parameters["BackImage"].ToString();
+        _heightInput.Text = p.Height > 0 ? p.Height.ToString() : "";
+        _widthInput.Text = p.Width > 0 ? p.Width.ToString() : "";
+        _thicknessInput.Text = p.Thickness.ToString();
+        _frontImage.Text = p.FrontImage;
+        _backImage.Text = p.BackImage;
 
-        if (prototype.Parameters.ContainsKey("FrontBgColor"))
-            _quickBackgroundColor.Color = (Color)prototype.Parameters["FrontBgColor"];
-        if (prototype.Parameters.ContainsKey("BackBgColor"))
-            _quickBackgroundColor2.Color = (Color)prototype.Parameters["BackBgColor"];
+        _quickBackgroundColor.Color = p.FrontBgColor;
+        _quickBackgroundColor2.Color = p.BackBgColor;
 
-        if (prototype.Parameters.ContainsKey("QuickFront"))
-            _frontField.SetQuickTextureField((QuickTextureField)prototype.Parameters["QuickFront"]);
-        if (prototype.Parameters.ContainsKey("QuickBack"))
-            _backField.SetQuickTextureField((QuickTextureField)prototype.Parameters["QuickBack"]);
+        _frontField.SetQuickTextureField(p.QuickFront);
+        _backField.SetQuickTextureField(p.QuickBack);
 
-        if (prototype.Parameters.ContainsKey("DifferentBack"))
         {
-            bool differentBack = (bool)prototype.Parameters["DifferentBack"];
+            bool differentBack = p.DifferentBack;
             _quickBackCheckbox.ButtonPressed = differentBack;
             _customBackCheckbox.ButtonPressed = differentBack;
             ShowQuickBack();
         }
 
-        if (prototype.Parameters.ContainsKey("Mode"))
+        _tabs.CurrentTab = p.Mode switch
         {
-            var mode = (VcToken.TokenBuildMode)prototype.Parameters["Mode"];
-            _tabs.CurrentTab = mode switch
-            {
-                VcToken.TokenBuildMode.Quick => 0,
-                VcToken.TokenBuildMode.QuickDeck => 1,
-                VcToken.TokenBuildMode.Custom => 2,
-                VcToken.TokenBuildMode.Grid => 3,
-                VcToken.TokenBuildMode.Template => 4,
-                _ => 0,
-            };
-        }
+            VcToken.TokenBuildMode.Quick => 0,
+            VcToken.TokenBuildMode.QuickDeck => 1,
+            VcToken.TokenBuildMode.Custom => 2,
+            VcToken.TokenBuildMode.Grid => 3,
+            VcToken.TokenBuildMode.Template => 4,
+            _ => 0,
+        };
 
-        if (
-            prototype.Parameters.ContainsKey("QuickCardData")
-            && prototype.Parameters["QuickCardData"] is List<QuickCardData> quickData
-        )
+        if (p.QuickCardData is { Count: > 0 } quickData)
         {
             _quickSuitCount.Select(Math.Min(quickData.Count - 1, MaxQuickSuitCount - 1));
             QuickSuitCountChanged(_quickSuitCount.Selected);
@@ -867,44 +844,32 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             }
         }
 
-        _gridRowCount.Text = prototype.Parameters.ContainsKey("GridRows")
-            ? prototype.Parameters["GridRows"].ToString()
-            : "";
-        _gridColCount.Text = prototype.Parameters.ContainsKey("GridCols")
-            ? prototype.Parameters["GridCols"].ToString()
-            : "";
-        _gridCardCount.Text = prototype.Parameters.ContainsKey("GridCount")
-            ? prototype.Parameters["GridCount"].ToString()
-            : "";
+        _gridRowCount.Text = p.GridRows > 0 ? p.GridRows.ToString() : "";
+        _gridColCount.Text = p.GridCols > 0 ? p.GridCols.ToString() : "";
+        _gridCardCount.Text = p.GridCount > 0 ? p.GridCount.ToString() : "";
         int.TryParse(_gridRowCount.Text, out _gridRows);
         int.TryParse(_gridColCount.Text, out _gridCols);
         int.TryParse(_gridCardCount.Text, out _gridCount);
         _preview.ItemCount = _gridCount;
 
-        _frontGridImage = prototype.Parameters.ContainsKey("FrontGridImageKey")
-            ? prototype.Parameters["FrontGridImageKey"].ToString()
-            : string.Empty;
+        _frontGridImage = p.FrontGridImageKey;
         var frontGridAsset = _currentProject?.Images.Values.FirstOrDefault(a =>
             a.AssetId.ToString() == _frontGridImage
         );
         _gridFrontImageSelector.SelectedImage = frontGridAsset;
 
-        _backGridImage = prototype.Parameters.ContainsKey("BackGridImageKey")
-            ? prototype.Parameters["BackGridImageKey"].ToString()
-            : string.Empty;
+        _backGridImage = p.BackGridImageKey;
         var backGridAsset = _currentProject?.Images.Values.FirstOrDefault(a =>
             a.AssetId.ToString() == _backGridImage
         );
         _gridBackImageSelector.SelectedImage = backGridAsset;
 
-        if (prototype.Parameters.ContainsKey("GridSingleBack"))
-            _gridSingleBack.ButtonPressed = (bool)prototype.Parameters["GridSingleBack"];
+        _gridSingleBack.ButtonPressed = p.GridSingleBack;
 
         _frontTemplatePicker.Select(0);
         _frontTemplate = null;
-        if (prototype.Parameters.ContainsKey("FrontTemplate"))
         {
-            string frontTemplateName = prototype.Parameters["FrontTemplate"]?.ToString();
+            string frontTemplateName = p.FrontTemplate;
             if (!string.IsNullOrEmpty(frontTemplateName))
             {
                 for (int i = 0; i < _frontTemplatePicker.ItemCount; i++)
@@ -923,9 +888,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _backTemplatePicker.Select(0);
         _backTemplate = null;
-        if (prototype.Parameters.ContainsKey("BackTemplate"))
         {
-            string backTemplateName = prototype.Parameters["BackTemplate"]?.ToString();
+            string backTemplateName = p.BackTemplate;
             if (!string.IsNullOrEmpty(backTemplateName))
             {
                 for (int i = 0; i < _backTemplatePicker.ItemCount; i++)
@@ -945,9 +909,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _datasetPicker.Select(0);
         _textureContext.DataSet = null;
         _textureContext.CurrentRowName = null;
-        if (prototype.Parameters.ContainsKey("Dataset"))
         {
-            string datasetName = prototype.Parameters["Dataset"]?.ToString();
+            string datasetName = p.Dataset;
             if (!string.IsNullOrEmpty(datasetName))
             {
                 for (int i = 0; i < _datasetPicker.ItemCount; i++)
@@ -968,27 +931,16 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         Activate();
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as PrintedParameters;
 
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey("ComponentName"))
-        {
-            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
-                ret.Add("Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
+        if (string.IsNullOrEmpty(p?.ComponentName))
+            ret.Add("Name may not be blank");
+        if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
-
-        var w = Utility.GetParam<float>(parameters, "Width");
-        if (w <= 0)
+        if ((p?.Width ?? 0) <= 0)
             ret.Add("Width must be > 0");
 
         return ret;

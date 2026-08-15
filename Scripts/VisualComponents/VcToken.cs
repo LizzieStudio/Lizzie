@@ -195,46 +195,45 @@ public partial class VcToken : VisualComponentBase
     private bool _buildRequired;
 
     public override bool Setup(
-        Dictionary<string, object> parameters,
+        ComponentParameters parameters,
         string dataSetRow,
         TextureFactory textureFactory
     )
     {
         base.Setup(parameters, dataSetRow, textureFactory);
 
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
+        // VcToken renders both standalone tokens and the cards inside a deck, so the
+        // parameters may be either TokenParameters or DeckParameters — both derive from
+        // PrintedParameters.
+        var p = (PrintedParameters)parameters;
+
+        if (p.Height <= 0)
             return false;
-        _height = h / 10f;
+        _height = p.Height / 10f;
 
-        var w = Utility.GetParam<float>(parameters, "Width");
-        _width = w / 10;
+        _width = p.Width / 10;
 
-        var t = Utility.GetParam<float>(parameters, "Thickness");
-        _thickness = Math.Max(t / 10f, 0.03f);
+        _thickness = Math.Max(p.Thickness / 10f, 0.03f);
 
-        _frontImage = Utility.GetParam<string>(parameters, "FrontImage");
-        _backImage = Utility.GetParam<string>(parameters, "BackImage");
+        _frontImage = p.FrontImage;
+        _backImage = p.BackImage;
 
-        _shape = Utility.GetParam<int>(parameters, "Shape");
-        _mode = Utility.GetParam<TokenBuildMode>(parameters, "Mode");
+        _shape = p.Shape;
+        _mode = p.Mode;
 
         // Quick parameters
-        _frontBgColor = Utility.GetParam<Color>(parameters, "FrontBgColor");
+        _frontBgColor = p.FrontBgColor;
+        _frontField = p.QuickFront;
+        _backField = p.QuickBack;
 
-        //_frontCaption = Utility.GetParam<string>(parameters, "FrontCaption");
-        //_frontCaptionColor = Utility.GetParam<Color>(parameters, "FrontCaptionColor");
-        _frontField = Utility.GetParam<QuickTextureField>(parameters, "QuickFront");
-        _backField = Utility.GetParam<QuickTextureField>(parameters, "QuickBack");
+        _frontFontSize = p.FrontFontSize;
+        _differentBack = p.DifferentBack;
 
-        _frontFontSize = Utility.GetParam<int>(parameters, "FrontFontSize");
-        _differentBack = Utility.GetParam<bool>(parameters, "DifferentBack");
-
-        _backBgColor = Utility.GetParam<Color>(parameters, "BackBgColor");
-        _backFontSize = Utility.GetParam<int>(parameters, "BackFontSize");
+        _backBgColor = p.BackBgColor;
+        _backFontSize = p.BackFontSize;
 
         //Grid Parameters
-        _frontGridImageKey = Utility.GetParam<string>(parameters, "FrontGridImageKey");
+        _frontGridImageKey = p.FrontGridImageKey;
         if (string.IsNullOrEmpty(_frontGridImageKey))
         {
             _frontMasterAsset = null;
@@ -248,7 +247,7 @@ public partial class VcToken : VisualComponentBase
             );
         }
 
-        _backGridImageKey = Utility.GetParam<string>(parameters, "BackGridImageKey");
+        _backGridImageKey = p.BackGridImageKey;
         if (string.IsNullOrEmpty(_backGridImageKey))
         {
             _backMasterAsset = null;
@@ -262,40 +261,31 @@ public partial class VcToken : VisualComponentBase
             );
         }
 
-        _gridRows = Utility.GetParam<int>(parameters, "GridRows");
-        _gridCols = Utility.GetParam<int>(parameters, "GridCols");
-        _gridCount = Utility.GetParam<int>(parameters, "GridCount");
-        _gridSingleBack = Utility.GetParam<bool>(parameters, "GridSingleBack");
-        //_gridIndex = Utility.GetParam<int>(parameters, "GridIndex");
+        _gridRows = p.GridRows;
+        _gridCols = p.GridCols;
+        _gridCount = p.GridCount;
+        _gridSingleBack = p.GridSingleBack;
 
-        if (parameters.TryGetValue("Type", out var tokenType))
-        {
-            _tokenType = (TokenType)tokenType;
-        }
-        else
-        {
-            _tokenType = TokenType.Token; //default
-        }
+        _tokenType = p.Type;
 
-        _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
-        _backTemplateName = Utility.GetParam<string>(parameters, "BackTemplate");
-        _datasetName = Utility.GetParam<string>(parameters, "Dataset");
+        _frontTemplateName = p.FrontTemplate;
+        _backTemplateName = p.BackTemplate;
+        _datasetName = p.Dataset;
         if (string.IsNullOrWhiteSpace(DataSetRow))
-            DataSetRow = Utility.GetParam<string>(parameters, "CardReference");
+            DataSetRow = p.CardReference;
 
-        _quickCardList = Utility.GetParam<List<QuickCardData>>(parameters, "QuickCardData");
+        _quickCardList = p.QuickCardData ?? new();
 
-        if (_quickCardList == null)
-            _quickCardList = new();
+        // Face-frame indices are render-time state (never persisted); default them and, in
+        // grid mode, derive them from the grid dimensions and the current row index.
+        _faceHframes = 1;
+        _faceVframes = 1;
+        _faceFrame = 0;
+        _backHframes = 1;
+        _backVframes = 1;
+        _backFrame = 0;
 
-        _faceHframes = ReadIntParam(parameters, "FaceHframes", 1, min: 1);
-        _faceVframes = ReadIntParam(parameters, "FaceVframes", 1, min: 1);
-        _faceFrame = ReadIntParam(parameters, "FaceFrame", 0, min: 0);
-        _backHframes = ReadIntParam(parameters, "BackHframes", 1, min: 1);
-        _backVframes = ReadIntParam(parameters, "BackVframes", 1, min: 1);
-        _backFrame = ReadIntParam(parameters, "BackFrame", 0, min: 0);
-
-        if (_mode == TokenBuildMode.Grid && !parameters.ContainsKey("FaceHframes"))
+        if (_mode == TokenBuildMode.Grid)
         {
             int cols = Math.Max(_gridCols, 1);
             int rows = Math.Max(_gridRows, 1);
@@ -321,18 +311,6 @@ public partial class VcToken : VisualComponentBase
         Build();
 
         return true;
-    }
-
-    private static int ReadIntParam(
-        Dictionary<string, object> parameters,
-        string key,
-        int defaultValue,
-        int min = int.MinValue
-    )
-    {
-        if (!parameters.TryGetValue(key, out var raw) || raw is not int v)
-            return defaultValue;
-        return v < min ? min : v;
     }
 
     public override void Build()
@@ -374,11 +352,6 @@ public partial class VcToken : VisualComponentBase
                 BuildQuickDeck(TextureFactory);
                 break;
         }
-    }
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        return Setup(parameters, DataSetRow, textureFactory);
     }
 
     private void BuildToken()
@@ -1354,58 +1327,6 @@ public partial class VcToken : VisualComponentBase
         TextureChanged = true;
 
         MapBackTexture();
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.TryGetValue(nameof(_height), out var height))
-        {
-            if (height is float h)
-            {
-                if (h <= 0)
-                    ret.Add("Height must be > 0");
-            }
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        if (parameters.TryGetValue(nameof(_width), out var w))
-        {
-            if (w is float d)
-            {
-                if (d <= 0)
-                    ret.Add("Diameter must be > 0");
-            }
-        }
-        else
-        {
-            ret.Add("Diameter not included");
-        }
-
-        if (parameters.TryGetValue(nameof(_frontImage), out var parameter))
-        {
-            if (string.IsNullOrEmpty(parameter.ToString()))
-            {
-                ret.Add("Front Image must be included");
-            }
-        }
-
-        return ret;
     }
 
     private float _height;

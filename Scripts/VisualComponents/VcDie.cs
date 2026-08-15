@@ -217,7 +217,7 @@ public partial class VcDie : VisualComponentBase
     private TokenBuildMode _mode;
 
     public override bool Setup(
-        Dictionary<string, object> parameters,
+        ComponentParameters parameters,
         string datasetRow,
         TextureFactory textureFactory
     )
@@ -225,37 +225,28 @@ public partial class VcDie : VisualComponentBase
         DataSetRow = datasetRow;
 
         base.Setup(parameters, datasetRow, textureFactory);
+        var p = (DieParameters)parameters;
 
         _textureFactory = textureFactory;
 
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
-        _sideData = Utility.GetParam<QuickTextureField[]>(parameters, "Sides");
+        _sideData = p.Sides;
 
-        _frontTemplateName = Utility.GetParam<string>(parameters, "FrontTemplate");
-        _datasetName = Utility.GetParam<string>(parameters, "Dataset");
+        _frontTemplateName = p.FrontTemplate;
+        _datasetName = p.Dataset;
 
-        _mode = Utility.GetParam<TokenBuildMode>(parameters, "Mode");
+        _mode = p.Mode;
 
-        _sides = Utility.GetParam<int>(parameters, "SideCount");
+        _sides = p.SideCount;
 
         var dieColor = Colors.White;
-        if (parameters["Color"] is Color color)
-        {
-            _dieColor = color;
-        }
+        _dieColor = p.Color;
 
-        float size = 0;
+        if (p.Size <= 0)
+            return false;
 
-        if (parameters.ContainsKey("Size"))
-        {
-            if (parameters["Size"] is float h)
-            {
-                if (h <= 0)
-                    return false;
-                size = h / 10f;
-            }
-        }
+        float size = p.Size / 10f;
 
         YHeight = size;
 
@@ -275,12 +266,9 @@ public partial class VcDie : VisualComponentBase
                 return false;
         }
 
-        if (parameters.ContainsKey("Color"))
+        if (_mainMesh.GetSurfaceOverrideMaterial(0) is StandardMaterial3D material)
         {
-            if (_mainMesh.GetSurfaceOverrideMaterial(0) is StandardMaterial3D material)
-            {
-                material.AlbedoColor = dieColor;
-            }
+            material.AlbedoColor = dieColor;
         }
 
         return true;
@@ -366,11 +354,6 @@ public partial class VcDie : VisualComponentBase
 
         var d = texture.GetImage();
         //d.SavePng(@"c:\winwam5\d8.png");
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        return new List<string>();
     }
 
     private TextureFactory.TextureDefinition D6TextureDefinition(

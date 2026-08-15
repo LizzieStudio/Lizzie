@@ -54,7 +54,7 @@ public partial class GameController : Node3D
 
         if (args.MultipleCreateMode)
         {
-            var mode = Utility.GetParam<VcToken.TokenBuildMode>(args.Params, "Mode");
+            var mode = args.Params is PrintedParameters pp ? pp.Mode : VcToken.TokenBuildMode.Quick;
             if (mode == VcToken.TokenBuildMode.Grid)
             {
                 SpawnGridMultiples(args, components);
@@ -97,7 +97,7 @@ public partial class GameController : Node3D
         var args = new CreateObjectEventArgs
         {
             ComponentType = prototype.Type,
-            Params = new Dictionary<string, object>(prototype.Parameters),
+            Params = prototype.Parameters.Clone(),
             PrototypeRef = prototype.PrototypeRef,
             PrototypeName = scenePath,
         };
@@ -117,9 +117,10 @@ public partial class GameController : Node3D
         List<VisualComponentBase> components
     )
     {
-        var gridRows = Utility.GetParam<int>(args.Params, "GridRows");
-        var gridCols = Utility.GetParam<int>(args.Params, "GridCols");
-        var cardCount = Utility.GetParam<int>(args.Params, "GridCount");
+        var printed = args.Params as PrintedParameters;
+        var gridRows = printed?.GridRows ?? 0;
+        var gridCols = printed?.GridCols ?? 0;
+        var cardCount = printed?.GridCount ?? 0;
 
         float w = args.WidthHint * 1.5f;
         float h = args.HeightHint * 1.5f;
@@ -201,14 +202,15 @@ public partial class GameController : Node3D
         component.ExcludeFromSync = true;
 
         //if the name is blank in the parameters, set it
-        if (args.Params.ContainsKey("ComponentName") && args.Params.ContainsKey("BaseName"))
+        if (
+            args.Params != null
+            && !string.IsNullOrEmpty(args.Params.BaseName)
+            && string.IsNullOrWhiteSpace(args.Params.ComponentName)
+        )
         {
-            if (string.IsNullOrWhiteSpace(args.Params["ComponentName"].ToString()))
-            {
-                args.Params["ComponentName"] = _mainScene.GameObjects.CreateUniqueName(
-                    args.Params["BaseName"].ToString()
-                );
-            }
+            args.Params.ComponentName = _mainScene.GameObjects.CreateUniqueName(
+                args.Params.BaseName
+            );
         }
 
         if (component.Setup(args.PrototypeRef, row, _textureFactory))

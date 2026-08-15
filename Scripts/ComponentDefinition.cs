@@ -129,7 +129,9 @@ public partial class ComponentDefinition : Window
     {
         if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
         {
-            var errors = r.ValidateParameters(r.GetParams());
+            var result = r.GetParams();
+
+            var errors = r.ValidateParameters(result);
             if (errors != null && errors.Count > 0)
             {
                 _errorDialog.DialogText = string.Join("\n", errors);
@@ -137,21 +139,19 @@ public partial class ComponentDefinition : Window
                 return;
             }
 
+            if (string.IsNullOrEmpty(result.BaseName))
+                result.BaseName = CurName;
+
             CreateObjectEventArgs e = new()
             {
                 ComponentType = r.ComponentType,
-                Params = r.GetParams(),
+                Params = result,
                 PrototypeRef = Guid.NewGuid(),
                 DataSet = r.DataSet,
                 MultipleCreateMode = r.MultipleCreateMode,
                 WidthHint = r.WidthHint,
                 HeightHint = r.HeightHint,
             };
-
-            if (!e.Params.ContainsKey("BaseName"))
-            {
-                e.Params.Add("BaseName", CurName);
-            }
 
             var cd = _components.First(x => x.ComponentName == CurName);
 
@@ -202,10 +202,9 @@ public partial class ComponentDefinition : Window
         )
             return;
 
-        prototype.Parameters = (
-            _panelDictionary[CurName] as ComponentPanelDialogResult
-        )?.GetParams();
-        prototype.Name = Utility.GetParam<string>(prototype.Parameters, "ComponentName");
+        var editResult = _panelDictionary[CurName] as ComponentPanelDialogResult;
+        prototype.Parameters = editResult?.GetParams();
+        prototype.Name = prototype.Parameters?.ComponentName;
         prototype.IsDirty = true;
 
         EventBus.Instance.Publish(
@@ -368,7 +367,7 @@ public partial class ComponentDefinition : Window
 
 public class CreateObjectEventArgs : EventArgs
 {
-    public Dictionary<string, object> Params { get; set; }
+    public ComponentParameters Params { get; set; }
     public VisualComponentBase.VisualComponentType ComponentType { get; set; }
 
     public string PrototypeName { get; set; }

@@ -45,27 +45,6 @@ public abstract partial class VisualComponentBase : Area3D
     public const int TooltipTime = 1000;
     private float _curScale = 1;
 
-    //original creation parameters
-    public Dictionary<string, object> Parameters
-    {
-        get
-        {
-            if (ProjectService.Instance.CurrentProject == null)
-                return new();
-            if (
-                !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                    PrototypeRef,
-                    out var proto
-                )
-            )
-            {
-                return new();
-            }
-
-            return proto.Parameters;
-        }
-    }
-
     public override void _Ready()
     {
         _curScale = 1;
@@ -113,13 +92,13 @@ public abstract partial class VisualComponentBase : Area3D
         tween.TweenProperty(this, "position", newPos, 0.2f);
     }
 
-    public virtual bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    public virtual bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
         return Setup(parameters, DataSetRow, textureFactory);
     }
 
     public virtual bool Setup(
-        Dictionary<string, object> parameters,
+        ComponentParameters parameters,
         string dataSetRow,
         TextureFactory textureFactory
     )
@@ -127,10 +106,8 @@ public abstract partial class VisualComponentBase : Area3D
         TextureFactory = textureFactory;
         TextureReady = false;
 
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            ComponentName = parameters[nameof(ComponentName)].ToString();
-        }
+        if (parameters != null && !string.IsNullOrEmpty(parameters.ComponentName))
+            ComponentName = parameters.ComponentName;
 
         if (!string.IsNullOrEmpty(dataSetRow))
             DataSetRow = dataSetRow;
@@ -200,14 +177,6 @@ public abstract partial class VisualComponentBase : Area3D
     {
         QueueFree();
     }
-
-    /// <summary>
-    /// Checks the parameter dictionary to make sure that everything required for this
-    /// component type is included.
-    /// </summary>
-    /// <param name="parameters"></param>
-    /// <returns>List of error messages. If all OK, return zero-element list</returns>
-    public abstract List<string> ValidateParameters(Dictionary<string, object> parameters);
 
     /// <summary>
     /// Process a Command object

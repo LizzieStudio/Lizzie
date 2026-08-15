@@ -83,16 +83,7 @@ public partial class ProjectService : Node
 
         loadFile.Close();
 
-        /*
-        var p = JsonSerializer.Deserialize<Project>(s);
-
-        p.FixDatasetName();
-        p?.MapPrototypeJson();    //map the generic JSON objects to what we actually need
-        */
-
-        var p = DeserializeProject(s);
-
-        return p;
+        return DeserializeProject(s);
     }
 
     public bool SaveProject(Project project)
@@ -102,7 +93,7 @@ public partial class ProjectService : Node
             FileAccess.ModeFlags.Write
         );
 
-        var s = JsonSerializer.Serialize<Project>(project);
+        var s = JsonSerializer.Serialize<Project>(project, LizzieJson.Options);
 
         saveFile.StoreString(s);
         saveFile.Close();
@@ -124,7 +115,7 @@ public partial class ProjectService : Node
     {
         if (project == null)
             return "{}";
-        return JsonSerializer.Serialize(project);
+        return JsonSerializer.Serialize(project, LizzieJson.Options);
     }
 
     /// <summary>
@@ -134,9 +125,8 @@ public partial class ProjectService : Node
     {
         if (string.IsNullOrEmpty(json))
             return null;
-        var project = JsonSerializer.Deserialize<Project>(json);
+        var project = JsonSerializer.Deserialize<Project>(json, LizzieJson.Options);
         project?.FixDatasetName();
-        project?.MapPrototypeJson(); //map the generic JSON objects to what we actually need
 
         return project;
     }
@@ -145,14 +135,14 @@ public partial class ProjectService : Node
     {
         if (dataset == null)
             return "{}";
-        return JsonSerializer.Serialize(dataset);
+        return JsonSerializer.Serialize(dataset, LizzieJson.Options);
     }
 
     public DataSet DeserializeDataSet(string json)
     {
         if (string.IsNullOrEmpty(json))
             return null;
-        var dataset = JsonSerializer.Deserialize<DataSet>(json);
+        var dataset = JsonSerializer.Deserialize<DataSet>(json, LizzieJson.Options);
         return dataset;
     }
 
@@ -218,13 +208,12 @@ public partial class ProjectService : Node
             var newProto = new Prototype
             {
                 PrototypeRef = args.PrototypeRef,
-                Type = args.ComponentType,
                 Parameters = args.Params,
             };
 
-            if (args.Params.ContainsKey("ComponentName"))
+            if (!string.IsNullOrEmpty(args.Params?.ComponentName))
             {
-                newProto.Name = args.Params["ComponentName"].ToString();
+                newProto.Name = args.Params.ComponentName;
             }
             else
             {
@@ -350,14 +339,11 @@ public partial class ProjectService : Node
 
         //if the name is blank in the parameters, set it
         if (
-            prototype.Parameters.ContainsKey("ComponentName")
-            && prototype.Parameters.ContainsKey("BaseName")
+            !string.IsNullOrEmpty(prototype.Parameters.BaseName)
+            && string.IsNullOrWhiteSpace(prototype.Parameters.ComponentName)
         )
         {
-            if (string.IsNullOrWhiteSpace(prototype.Parameters["ComponentName"].ToString()))
-            {
-                prototype.Parameters["ComponentName"] = "unbound";
-            }
+            prototype.Parameters.ComponentName = "unbound";
         }
 
         if (component.Setup(prototype.PrototypeRef, row, textureFactory))

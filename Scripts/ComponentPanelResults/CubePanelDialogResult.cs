@@ -54,23 +54,20 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-    public override Dictionary<string, object> GetParams()
+    public override ComponentParameters GetParams()
     {
-        var d = new Dictionary<string, object>();
-
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", ParamToFloat(_heightInput.Text));
-        d.Add("Width", ParamToFloat(_widthInput.Text));
-        d.Add("Length", ParamToFloat(_lengthInput.Text));
-        d.Add("Color", _colorPicker.Color);
-
-        return d;
+        return new CubeParameters
+        {
+            ComponentName = _nameInput.Text,
+            Height = ParamToFloat(_heightInput.Text),
+            Width = ParamToFloat(_widthInput.Text),
+            Length = ParamToFloat(_lengthInput.Text),
+            Color = _colorPicker.Color,
+        };
     }
 
     private void UpdatePreview()
     {
-        var d = new Dictionary<string, object>();
-
         //normalize the size
         var h = ParamToFloat(_heightInput.Text);
         var w = ParamToFloat(_widthInput.Text);
@@ -84,17 +81,16 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        //normalize dimensions to 10x10x10 outer extants
-        //var scale = 10f / Math.Max(h, Math.Max(w, l));
-        var scale = 1;
+        var p = new CubeParameters
+        {
+            ComponentName = _nameInput.Text,
+            Height = h,
+            Width = w,
+            Length = l,
+            Color = _colorPicker.Color,
+        };
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", h * scale);
-        d.Add("Width", w * scale);
-        d.Add("Length", l * scale);
-        d.Add("Color", _colorPicker.Color);
-
-        _preview.Build(d, TextureFactory);
+        _preview.Build(p, TextureFactory);
     }
 
     public override void DisplayPrototype(Guid prototypeId)
@@ -105,48 +101,28 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(Prototype prototype)
     {
+        var p = (CubeParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
-            ? prototype.Parameters["Height"].ToString()
-            : "";
-        _widthInput.Text = prototype.Parameters.ContainsKey("Width")
-            ? prototype.Parameters["Width"].ToString()
-            : "";
-        _lengthInput.Text = prototype.Parameters.ContainsKey("Length")
-            ? prototype.Parameters["Length"].ToString()
-            : "";
-        _colorPicker.Color = prototype.Parameters.ContainsKey("Color")
-            ? (Color)prototype.Parameters["Color"]
-            : Colors.Red;
+        _heightInput.Text = p.Height.ToString();
+        _widthInput.Text = p.Width.ToString();
+        _lengthInput.Text = p.Length.ToString();
+        _colorPicker.Color = p.Color;
 
         Activate();
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as CubeParameters;
 
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey("ComponentName"))
-        {
-            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
-                ret.Add("Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
+        if (string.IsNullOrEmpty(p?.ComponentName))
+            ret.Add("Name may not be blank");
+        if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
-
-        var w = Utility.GetParam<float>(parameters, "Width");
-        if (w <= 0)
+        if ((p?.Width ?? 0) <= 0)
             ret.Add("Width must be > 0");
-
-        var l = Utility.GetParam<float>(parameters, "Length");
-        if (l <= 0)
+        if ((p?.Length ?? 0) <= 0)
             ret.Add("Length must be > 0");
 
         return ret;

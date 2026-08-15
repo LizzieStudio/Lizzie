@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
@@ -29,38 +28,11 @@ public class VcSyncDto
         }
     }
 
-    [JsonIgnore]
-    public Vector3 Position
-    {
-        get => new(Px, Py, Pz);
-        set
-        {
-            Px = value.X;
-            Py = value.Y;
-            Pz = value.Z;
-        }
-    }
+    // Uses Godot native Vector3 serialization
+    public Vector3 Position { get; set; }
 
-    [JsonIgnore]
-    public Vector3 Rotation
-    {
-        get => new(Rx, Ry, Rz);
-        set
-        {
-            Rx = value.X;
-            Ry = value.Y;
-            Rz = value.Z;
-        }
-    }
-
-    // We need to split the position and rotation into individual float properties for JSON serialization, because Vector3 is not directly serializable by System.Text.Json. By splitting them into individual floats, we can easily serialize and deserialize the position and rotation data without needing custom converters.
-    public float Px { get; set; }
-    public float Py { get; set; }
-    public float Pz { get; set; }
-
-    public float Rx { get; set; }
-    public float Ry { get; set; }
-    public float Rz { get; set; }
+    // Uses Godot native Vector3 serialization
+    public Vector3 Rotation { get; set; }
 
     public bool LogicalVisible { get; set; }
 

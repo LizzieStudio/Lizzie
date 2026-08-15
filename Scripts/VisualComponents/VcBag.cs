@@ -29,41 +29,28 @@ public partial class VcBag : VisualComponentGroup
         _componentCount.Text = Children.Count().ToString();
     }
 
+    private TextureFactory _textureFactory;
+
     public override bool Setup(
-        Dictionary<string, object> parameters,
+        ComponentParameters parameters,
         string dataSetRow,
         TextureFactory textureFactory
     )
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    private TextureFactory _textureFactory;
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
         _textureFactory = textureFactory;
 
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, dataSetRow, textureFactory);
+        var p = (BagParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                return false;
-            Height = h / 10f;
+        if (p.Height <= 0)
+            return false;
 
-            var d = Utility.GetParam<float>(parameters, "Diameter");
-            Diameter = d / 10f;
-
-            if (parameters["Color"] is Color color)
-            {
-                BagColor = color;
-            }
-        }
+        Height = p.Height / 10f;
+        Diameter = p.Diameter / 10f;
+        BagColor = p.Color;
 
         //create cube
         if (Diameter <= 0)
@@ -79,8 +66,7 @@ public partial class VcBag : VisualComponentGroup
 
         SetColor(BagColor);
         _componentCount = GetNode<Label3D>("ComponentCount");
-        var _showCount = Utility.GetParam<bool>(parameters, "ShowCount");
-        _componentCount.Visible = _showCount;
+        _componentCount.Visible = p.ShowCount;
 
         var c = new CircleShape2D();
         c.Radius = Diameter / 2;
@@ -88,35 +74,6 @@ public partial class VcBag : VisualComponentGroup
         ShapeProfiles.Add(new OffsetShape2D(c));
 
         return true;
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                ret.Add("Height must be > 0");
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        return ret;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

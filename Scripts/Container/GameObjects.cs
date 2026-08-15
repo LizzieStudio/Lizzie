@@ -848,6 +848,9 @@ public partial class GameObjects : Node
 
     public void EnterSpawnMode(List<VisualComponentBase> components, bool startInDragMode)
     {
+        if (_spawnComponents != null)
+            ExitSpawnMode();
+
         if (startInDragMode)
         {
             CursorMode = CursorMode.Drag;
@@ -1420,93 +1423,6 @@ public partial class GameObjects : Node
     #region Multiplayer
 
     /// <summary>
-    /// Serialize Parameters dictionary to JSON string
-    /// </summary>
-    private static string SerializeParameters(Dictionary<string, object> parameters)
-    {
-        if (parameters == null)
-            return "{}";
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = false,
-            PropertyNameCaseInsensitive = true,
-        };
-
-        return JsonSerializer.Serialize(parameters, options);
-    }
-
-    /// <summary>
-    /// Deserialize JSON string to Parameters dictionary with proper type conversion
-    /// </summary>
-    private static Dictionary<string, object> DeserializeParameters(string json)
-    {
-        if (string.IsNullOrEmpty(json))
-            return new Dictionary<string, object>();
-
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-        var rawDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, options);
-        if (rawDict == null)
-            return new Dictionary<string, object>();
-
-        var result = new Dictionary<string, object>();
-
-        foreach (var kvp in rawDict)
-        {
-            result[kvp.Key] = ConvertJsonElement(kvp.Value);
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Convert JsonElement to appropriate .NET type
-    /// </summary>
-    private static object ConvertJsonElement(JsonElement element)
-    {
-        return element.ValueKind switch
-        {
-            JsonValueKind.String => element.GetString(),
-            JsonValueKind.Number => element.TryGetSingle(out float floatValue)
-                ? floatValue
-                : element.GetDouble(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Null => null,
-            JsonValueKind.Array => ConvertJsonArray(element),
-            JsonValueKind.Object => ConvertJsonObject(element),
-            _ => element.ToString(),
-        };
-    }
-
-    /// <summary>
-    /// Convert JsonElement array to List
-    /// </summary>
-    private static object ConvertJsonArray(JsonElement element)
-    {
-        var list = new List<object>();
-        foreach (var item in element.EnumerateArray())
-        {
-            list.Add(ConvertJsonElement(item));
-        }
-        return list;
-    }
-
-    /// <summary>
-    /// Convert JsonElement object to Dictionary
-    /// </summary>
-    private static object ConvertJsonObject(JsonElement element)
-    {
-        var dict = new Dictionary<string, object>();
-        foreach (var property in element.EnumerateObject())
-        {
-            dict[property.Name] = ConvertJsonElement(property.Value);
-        }
-        return dict;
-    }
-
-    /// <summary>
     /// Sync object creation across network
     /// </summary>
     public void SyncCreation(VisualComponentBase component)
@@ -1547,7 +1463,7 @@ public partial class GameObjects : Node
             var componentRef = component.Reference.ToString();
             var parentRef = component.Parent.ToString();
             var syncDto = new VcSyncDto(component);
-            var syncDtoJson = JsonSerializer.Serialize(syncDto);
+            var syncDtoJson = JsonSerializer.Serialize(syncDto, LizzieJson.Options);
 
             if (MultiplayerManager.Instance.IsServer)
                 Rpc(nameof(ClientSpawnObject), prototypeRef, componentRef, parentRef, syncDtoJson);
@@ -1655,7 +1571,7 @@ public partial class GameObjects : Node
         )
             return false;
 
-        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson);
+        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson, LizzieJson.Options);
 
         var path = Utility.ComponentTypeToScenePath(
             proto.Type,
@@ -1915,7 +1831,7 @@ public partial class GameObjects : Node
                 continue;
 
             var syncDto = new VcSyncDto(component);
-            var syncDtoJson = JsonSerializer.Serialize(syncDto);
+            var syncDtoJson = JsonSerializer.Serialize(syncDto, LizzieJson.Options);
             var componentRef = component.Reference.ToString();
 
             if (MultiplayerManager.Instance.IsServer)
@@ -1972,7 +1888,7 @@ public partial class GameObjects : Node
             return;
         }
 
-        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson);
+        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson, LizzieJson.Options);
         component.SuppressSync = true;
         try
         {

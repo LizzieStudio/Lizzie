@@ -81,37 +81,31 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         }
     }
 
-    public override Dictionary<string, object> GetParams()
+    public override ComponentParameters GetParams()
     {
-        var d = new Dictionary<string, object>
+        var p = new ZoneParameters
         {
-            { "ComponentName", _nameInput.Text },
-            { VcZone.WidthKey, ParamToFloat(_widthInput.Text) },
-            { VcZone.DepthKey, ParamToFloat(_depthInput.Text) },
-            { VcZone.DefaultIncludedKey, _defaultIncluded.ButtonPressed },
-            { VcZone.HiddenWhenExcludedKey, _hiddenWhenExcluded.ButtonPressed },
+            ComponentName = _nameInput.Text,
+            Width = ParamToFloat(_widthInput.Text),
+            Depth = ParamToFloat(_depthInput.Text),
+            DefaultIncluded = _defaultIncluded.ButtonPressed,
+            HiddenWhenExcluded = _hiddenWhenExcluded.ButtonPressed,
         };
 
-        // List<object> (not int[]) so the values survive the JSON round-trip as a plain array.
-        var included = new List<object>();
-        var excluded = new List<object>();
         foreach (var kv in _seatOptions)
         {
             switch (kv.Value.GetSelectedId())
             {
                 case OptIncluded:
-                    included.Add(kv.Key);
+                    p.IncludedSeats.Add(kv.Key);
                     break;
                 case OptExcluded:
-                    excluded.Add(kv.Key);
+                    p.ExcludedSeats.Add(kv.Key);
                     break;
             }
         }
 
-        d.Add(VcZone.IncludedSeatsKey, included);
-        d.Add(VcZone.ExcludedSeatsKey, excluded);
-
-        return d;
+        return p;
     }
 
     public override void DisplayPrototype(Guid prototypeId)
@@ -123,18 +117,15 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
     {
         RebuildSeatList();
 
-        var p = prototype.Parameters;
+        var p = (ZoneParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _widthInput.Text = JsonUtilities.TryGetString(p, VcZone.WidthKey, "2");
-        _depthInput.Text = JsonUtilities.TryGetString(p, VcZone.DepthKey, "2");
-        _defaultIncluded.ButtonPressed = JsonUtilities.TryGetBool(p, VcZone.DefaultIncludedKey);
-        _hiddenWhenExcluded.ButtonPressed = JsonUtilities.TryGetBool(
-            p,
-            VcZone.HiddenWhenExcludedKey
-        );
+        _widthInput.Text = p.Width.ToString();
+        _depthInput.Text = p.Depth.ToString();
+        _defaultIncluded.ButtonPressed = p.DefaultIncluded;
+        _hiddenWhenExcluded.ButtonPressed = p.HiddenWhenExcluded;
 
-        var included = VcZone.SeatSetFor(p, VcZone.IncludedSeatsKey);
-        var excluded = VcZone.SeatSetFor(p, VcZone.ExcludedSeatsKey);
+        var included = new HashSet<int>(p.IncludedSeats);
+        var excluded = new HashSet<int>(p.ExcludedSeats);
 
         foreach (var kv in _seatOptions)
         {
@@ -147,19 +138,16 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         }
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as ZoneParameters;
 
-        if (
-            !parameters.ContainsKey("ComponentName")
-            || string.IsNullOrEmpty(parameters["ComponentName"].ToString())
-        )
+        if (string.IsNullOrEmpty(p?.ComponentName))
             ret.Add("Name may not be blank");
-
-        if (Utility.GetParam<float>(parameters, VcZone.WidthKey) <= 0)
+        if ((p?.Width ?? 0) <= 0)
             ret.Add("Width must be > 0");
-        if (Utility.GetParam<float>(parameters, VcZone.DepthKey) <= 0)
+        if ((p?.Depth ?? 0) <= 0)
             ret.Add("Depth must be > 0");
 
         return ret;
