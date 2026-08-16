@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Godot;
 
 public partial class VcBag : VisualComponentGroup
@@ -109,4 +110,16 @@ public partial class VcBag : VisualComponentGroup
 
         EventBus.Instance.Publish(new ShowAndDragComponentEvent { ComponentList = gList });
     }
+}
+
+public sealed class BagParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Bag;
+
+    public float Height { get; set; }
+    public float Diameter { get; set; }
+    public Color Color { get; set; } = Colors.Black;
+    public bool ShowCount { get; set; }
 }

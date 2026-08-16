@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using Godot;
 using Lizzie.AssetManagement;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
@@ -1388,4 +1389,49 @@ public class TokenSize
 {
     public float Height { get; set; }
     public float Width { get; set; }
+}
+
+public abstract class PrintedParameters : ComponentParameters
+{
+    public float Height { get; set; }
+    public float Width { get; set; }
+    public float Thickness { get; set; }
+    public int Shape { get; set; }
+    public VcToken.TokenBuildMode Mode { get; set; }
+    public bool DifferentBack { get; set; }
+
+    public string FrontImage { get; set; } = "";
+    public string BackImage { get; set; } = "";
+
+    public Color FrontBgColor { get; set; } = Colors.Black;
+    public Color BackBgColor { get; set; } = Colors.Black;
+
+    public QuickTextureField QuickFront { get; set; } = new();
+    public QuickTextureField QuickBack { get; set; } = new();
+
+    public int FrontFontSize { get; set; }
+    public int BackFontSize { get; set; }
+
+    public VcToken.TokenType Type { get; set; }
+
+    public List<QuickCardData> QuickCardData { get; set; } = new();
+
+    public string FrontGridImageKey { get; set; } = "";
+    public string BackGridImageKey { get; set; } = "";
+    public int GridRows { get; set; }
+    public int GridCols { get; set; }
+    public int GridCount { get; set; }
+    public bool GridSingleBack { get; set; }
+
+    public string FrontTemplate { get; set; } = "";
+    public string BackTemplate { get; set; } = "";
+    public string Dataset { get; set; } = "";
+    public string CardReference { get; set; } = "";
+}
+
+public sealed class TokenParameters : PrintedParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Token;
 }

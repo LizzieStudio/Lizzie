@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
 
 public partial class VcTray : VisualComponentGroup
@@ -169,4 +170,18 @@ public partial class VcTray : VisualComponentGroup
             }
         );
     }
+}
+
+public sealed class TrayParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Tray;
+
+    public float Height { get; set; }
+    public float Width { get; set; }
+    public float Length { get; set; }
+    public Color Color { get; set; } = Colors.Black;
+
+    public string Prototype { get; set; } = "";
 }

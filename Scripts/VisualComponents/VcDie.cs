@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
 using static VcToken;
 
@@ -629,4 +630,19 @@ public partial class VcDie : VisualComponentBase
 
         return tx;
     }
+}
+
+public sealed class DieParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Die;
+
+    public float Size { get; set; }
+    public Color Color { get; set; } = Colors.White;
+    public QuickTextureField[] Sides { get; set; } = Array.Empty<QuickTextureField>();
+    public int SideCount { get; set; }
+    public VcToken.TokenBuildMode Mode { get; set; }
+    public string FrontTemplate { get; set; } = "";
+    public string Dataset { get; set; } = "";
 }

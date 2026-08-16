@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
 
 public partial class VcDisc : VisualComponentBase
@@ -52,4 +53,15 @@ public partial class VcDisc : VisualComponentBase
     private float Height;
     private float Diameter;
     private Color DiscColor;
+}
+
+public sealed class DiscParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Disc;
+
+    public float Height { get; set; }
+    public float Diameter { get; set; }
+    public Color Color { get; set; } = Colors.Black;
 }

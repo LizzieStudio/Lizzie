@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
@@ -119,4 +120,18 @@ public partial class VcZone : VisualComponentBase
             return true;
         return DefaultIncluded;
     }
+}
+
+public sealed class ZoneParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Zone;
+
+    public float Width { get; set; } = 2f;
+    public float Depth { get; set; } = 2f;
+    public bool DefaultIncluded { get; set; }
+    public bool HiddenWhenExcluded { get; set; }
+    public List<int> IncludedSeats { get; set; } = new();
+    public List<int> ExcludedSeats { get; set; } = new();
 }

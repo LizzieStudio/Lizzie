@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
 
 public partial class VcCube : VisualComponentBase
@@ -63,4 +64,16 @@ public partial class VcCube : VisualComponentBase
     private float Width;
     private float Length;
     private Color CubeColor;
+}
+
+public sealed class CubeParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Cube;
+
+    public float Height { get; set; }
+    public float Width { get; set; }
+    public float Length { get; set; }
+    public Color Color { get; set; } = Colors.Black;
 }

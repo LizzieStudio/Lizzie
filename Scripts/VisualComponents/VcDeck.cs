@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using Godot;
 
 public partial class VcDeck : VisualComponentGroup
@@ -1081,4 +1082,11 @@ public partial class VcDeck : VisualComponentGroup
     }
 
     #endregion
+}
+
+public sealed class DeckParameters : PrintedParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Deck;
 }
