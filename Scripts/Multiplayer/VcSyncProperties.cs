@@ -16,7 +16,6 @@ public class VcSyncDto
         Position = component.Position;
         Rotation = component.Rotation;
         LogicalVisible = component.LogicalVisible;
-        //Deleted = component.Deleted;
         ZOrder = component.ZOrder;
         DataSetRow = component.DataSetRow;
         Location = component.Location;
@@ -36,8 +35,6 @@ public class VcSyncDto
 
     public bool LogicalVisible { get; set; }
 
-    public bool Deleted { get; set; }
-
     public int ZOrder { get; set; }
 
     public string DataSetRow { get; set; }
@@ -52,7 +49,6 @@ public class VcSyncDto
         component.Position = Position;
         component.Rotation = Rotation;
         component.LogicalVisible = LogicalVisible;
-        //component.Deleted = Deleted;
         component.ZOrder = ZOrder;
         component.DataSetRow = DataSetRow;
         component.Location = Location;
