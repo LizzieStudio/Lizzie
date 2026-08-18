@@ -846,10 +846,14 @@ public partial class GameObjects : Node
     #region Spawn
     private List<VisualComponentBase> _spawnComponents;
 
+    private bool _dragSpawnMode;
+
     public void EnterSpawnMode(List<VisualComponentBase> components, bool startInDragMode)
     {
         if (_spawnComponents != null)
             ExitSpawnMode();
+
+        _dragSpawnMode = startInDragMode;
 
         if (startInDragMode)
         {
@@ -914,6 +918,7 @@ public partial class GameObjects : Node
             c.Delete();
         }
         _spawnComponents = null;
+        _dragSpawnMode = false;
         CursorMode = CursorMode.Normal;
     }
 
@@ -1293,6 +1298,7 @@ public partial class GameObjects : Node
             _gameController.HandManager.AddToHand(toHand);
             Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
             CursorMode = CursorMode.Normal;
+            ReleaseDragSpawn();
             QueueStackingUpdate();
             EndDragUndo();
             return;
@@ -1340,8 +1346,18 @@ public partial class GameObjects : Node
 
         CursorMode = CursorMode.Normal;
 
+        ReleaseDragSpawn();
         QueueStackingUpdate();
         EndDragUndo();
+    }
+
+    private void ReleaseDragSpawn()
+    {
+        if (!_dragSpawnMode)
+            return;
+
+        _dragSpawnMode = false;
+        _spawnComponents = null;
     }
 
     private void StartDragUndo(VisualComponentBase go)
