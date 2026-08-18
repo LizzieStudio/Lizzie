@@ -265,16 +265,6 @@ public partial class ComponentPreview : Panel
         }
     }
 
-    private Dictionary<string, object> ShallowClone(Dictionary<string, object> d)
-    {
-        var o = new Dictionary<string, object>();
-        foreach (var kv in d)
-        {
-            o.Add(kv.Key, kv.Value);
-        }
-        return o;
-    }
-
     public void Build(Prototype prototype, TextureFactory textureFactory)
     {
         Build(prototype, string.Empty, textureFactory);

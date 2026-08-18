@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -125,58 +123,6 @@ public partial class GridEntry : MarginContainer
     }
 
     public int CardCount => _gridCount;
-
-    public void AddGridParameters(Dictionary<string, object> d)
-    {
-        d.Add("FrontGridImageKey", _frontGridImage);
-        d.Add("BackGridImageKey", _backGridImage);
-        d.Add("GridRows", _gridRows);
-        d.Add("GridCols", _gridCols);
-        d.Add("GridCount", _gridCount);
-
-        d.Add("GridSingleBack", _gridSingleBack.ButtonPressed);
-        d.Add("Mode", VcToken.TokenBuildMode.Grid);
-        d.Add("DifferentBack", true);
-    }
-
-    public void UpdateGridControls(Dictionary<string, object> parameters)
-    {
-        _gridRowCount.Text = parameters.ContainsKey("GridRows")
-            ? parameters["GridRows"].ToString()
-            : "";
-        _gridColCount.Text = parameters.ContainsKey("GridCols")
-            ? parameters["GridCols"].ToString()
-            : "";
-        _gridCardCount.Text = parameters.ContainsKey("GridCount")
-            ? parameters["GridCount"].ToString()
-            : "";
-
-        if (parameters.ContainsKey("FrontGridImageKey"))
-        {
-            string frontKey = parameters["FrontGridImageKey"].ToString();
-            var asset = ProjectService.Instance.CurrentProject?.Images.Values.FirstOrDefault(a =>
-                a.AssetId.ToString() == frontKey
-            );
-            _gridFrontImageSelector.SelectedImage = asset;
-        }
-        else
-        {
-            _gridFrontImageSelector.SelectedImage = null;
-        }
-
-        if (parameters.ContainsKey("BackGridImageKey"))
-        {
-            string backKey = parameters["BackGridImageKey"].ToString();
-            var asset = ProjectService.Instance.CurrentProject?.Images.Values.FirstOrDefault(a =>
-                a.AssetId.ToString() == backKey
-            );
-            _gridBackImageSelector.SelectedImage = asset;
-        }
-        else
-        {
-            _gridBackImageSelector.SelectedImage = null;
-        }
-    }
 
     public event EventHandler GridUpdated;
 
