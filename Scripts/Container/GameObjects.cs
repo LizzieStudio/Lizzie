@@ -34,7 +34,6 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
         EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
-        EventBus.Instance.Subscribe<SyncTransformEvent>(SyncTransform);
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
         EventBus.Instance.Subscribe<AddComponentToSceneEvent>(OnAddComponentToScene);
@@ -1710,115 +1709,6 @@ public partial class GameObjects : Node
                 continue;
             RpcId(player.Key, nameof(ClientDeleteObject), componentRef);
         }
-    }
-
-    private void SyncTransform(SyncTransformEvent obj)
-    {
-        return; //for testing
-
-        var component = obj.Component;
-        if (component == null)
-            return;
-
-        var pos = component.Position;
-        var rot = component.Rotation;
-
-        GD.Print(
-            $"Syncing transform for component {component.Reference} - Pos: {pos}, Rot: {rot}, Z: {component.ZOrder}"
-        );
-
-        Rpc(
-            nameof(ServerSyncTransform),
-            component.Reference.ToString(),
-            pos,
-            rot,
-            component.ZOrder
-        );
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
-    )]
-    private void ServerSyncTransform(
-        string componentRef,
-        Vector3 position,
-        Vector3 rotation,
-        int zOrder
-    )
-    {
-        GD.Print(
-            $"Server transform sync for component {componentRef} - Pos: {position}, Rot: {rotation}, Z: {zOrder}"
-        );
-        if (!Guid.TryParse(componentRef, out var compGuid))
-            return;
-        var component = GetComponent(compGuid);
-        if (component == null)
-            return;
-
-        component.Position = position;
-        component.Rotation = rotation;
-        component.ZOrder = zOrder;
-
-        NetworkedObject networkedChild = null;
-        foreach (var n in component.GetChildren())
-        {
-            if (n is NetworkedObject nwc)
-            {
-                networkedChild = nwc;
-                break;
-            }
-        }
-
-        if (!MultiplayerManager.Instance?.IsServer == true)
-            return;
-
-        var senderId = Multiplayer.GetRemoteSenderId();
-        if (networkedChild != null && networkedChild.LockedByPlayer != senderId)
-            return; // Only locked player can update
-
-        // Broadcast to all clients except sender
-        foreach (var player in MultiplayerManager.Instance.Players)
-        {
-            if (player.Key != senderId)
-            {
-                RpcId(
-                    player.Key,
-                    nameof(ClientReceiveTransform),
-                    componentRef,
-                    position,
-                    rotation,
-                    zOrder
-                );
-            }
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
-    )]
-    private void ClientReceiveTransform(
-        string componentRef,
-        Vector3 position,
-        Vector3 rotation,
-        int zOrder
-    )
-    {
-        GD.Print(
-            $"Client transform update for component {componentRef} - Pos: {position}, Rot: {rotation}, Z: {zOrder}"
-        );
-        if (!Guid.TryParse(componentRef, out var compGuid))
-            return;
-        var component = GetComponent(compGuid);
-        if (component == null || component.IsDragging)
-            return;
-
-        component.Position = position;
-        component.Rotation = rotation;
-        component.ZOrder = zOrder;
     }
 
     private void OnComponentPropertyChanged(ComponentPropertyChangedEvent e)

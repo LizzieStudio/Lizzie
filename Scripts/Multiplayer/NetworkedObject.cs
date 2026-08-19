@@ -11,10 +11,6 @@ public partial class NetworkedObject : Node
     public VisualComponentBase Component { get; set; }
 
     private int _lockedByPlayer = 0; // 0 = unlocked, otherwise player ID
-    private Vector3 _lastSyncedPosition;
-    private Vector3 _lastSyncedRotation;
-    private int _syncFrameCounter = 0;
-    private const int SyncInterval = 3; // Sync every N frames when dragging
 
     public bool IsLockedByAnotherPlayer =>
         _lockedByPlayer > 0 && _lockedByPlayer != MultiplayerManager.Instance?.LocalPlayerId;
@@ -38,34 +34,6 @@ public partial class NetworkedObject : Node
         if (MultiplayerManager.Instance?.IsServer == true)
         {
             SetMultiplayerAuthority(1); // Server has authority
-        }
-    }
-
-    public override void _Process(double delta)
-    {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
-            return;
-        if (Component == null)
-            return;
-
-        // If this object is being dragged by local player, sync periodically
-        if (Component.IsDragging) //&& _lockedByPlayer == MultiplayerManager.Instance.LocalPlayerId)
-        {
-            _syncFrameCounter++;
-            if (_syncFrameCounter >= SyncInterval)
-            {
-                if (
-                    Component.Position.DistanceTo(_lastSyncedPosition) > 0.01f
-                    || Component.Rotation.DistanceTo(_lastSyncedRotation) > 0.01f
-                )
-                {
-                    _lastSyncedPosition = Component.Position;
-                    _lastSyncedRotation = Component.Rotation;
-                    EventBus.Instance.Publish(new SyncTransformEvent { Component = Component });
-                }
-
-                _syncFrameCounter = 0;
-            }
         }
     }
 

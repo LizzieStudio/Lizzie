@@ -324,11 +324,6 @@ public class MakePrototypeUniqueEvent : IEvent
     public Guid PrototypeId { get; set; }
 }
 
-public class SyncTransformEvent : IEvent
-{
-    public VisualComponentBase Component { get; set; }
-}
-
 /// <summary>
 /// When a dialog is opened, this event is published to disable inputs
 /// </summary>
