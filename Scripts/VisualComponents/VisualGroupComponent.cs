@@ -109,7 +109,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// Draws a single random item from the group, and removes it.
     /// </summary>
     /// <returns>A random item, which is removed from the group</returns>
-    public virtual Guid DrawRandom()
+    protected virtual Guid DrawRandom()
     {
         var r = Rnd.RandiRange(0, Children.Count - 1);
         var c = Children[r];
@@ -122,16 +122,14 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     }
 
     /// <summary>
-    /// Draws a random number of items from the group
+    /// Draws a specific number of random items from the group, or fewer if items run out.
     /// </summary>
-    /// <param name="quantity">Qty to pull. If greater than the numberr of items
+    /// <param name="quantity">Number to pull. If greater than the number of items
     /// in the group, pulls all of them (in a random order)</param>
     /// <returns>Components in a random order</returns>
     public virtual IEnumerable<Guid> DrawRandom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
-        if (quantity == 0)
-            yield return Guid.Empty;
 
         for (int i = 0; i < quantity; i++)
         {

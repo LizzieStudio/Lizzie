@@ -6,7 +6,10 @@ using Godot;
 /// </summary>
 public class Snowport
 {
-    private ulong _useLogicClock = 0;
+    public static Snowport Clock;
+
+    // start at 1 since 0 is used to mean Empty
+    private ulong _useLogicClock = 1;
     private ulong _localOffsetMsec = 0;
     private ulong _globalOffsetMsec = 0;
     public readonly byte source;
@@ -54,6 +57,8 @@ public class Snowport
 public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<SnowportId>
 {
     private readonly ulong ID;
+
+    public readonly static SnowportId Empty = new(0);
 
     public SnowportId(ulong ID)
     {

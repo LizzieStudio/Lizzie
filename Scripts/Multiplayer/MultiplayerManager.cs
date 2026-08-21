@@ -76,12 +76,16 @@ public partial class MultiplayerManager : Node
         _isActive = true;
         _localPlayerId = Multiplayer.GetUniqueId();
 
+        // Use source 0 by default.
+        Snowport.Clock = new Snowport(0);
+
         // Add server as first player
         _players[_localPlayerId] = new PlayerInfo
         {
             PlayerId = _localPlayerId,
             PlayerName = "Host",
             IsLocal = true,
+            Source = 0,
         };
 
         GD.Print($"Server started on port {port}. Server ID: {_localPlayerId}");
@@ -129,6 +133,9 @@ public partial class MultiplayerManager : Node
         _isActive = false;
         _players.Clear();
         _localPlayerId = 0;
+
+        // Start using the host source again.
+        Snowport.Clock = new Snowport(0);
 
         GD.Print("Disconnected from multiplayer");
     }
@@ -205,8 +212,48 @@ public partial class MultiplayerManager : Node
             player.PlayerName = playerName;
         }
 
+        var source = GetSnowportSource();
+        if (player != null)
+            player.Source = source;
+        RpcId(playerId, nameof(AssignSource), source);
+
         // Notify all other players
         Rpc(nameof(UpdatePlayerList), playerId, playerName);
+    }
+
+    /// <summary>
+    /// Get the lowest unclaimed source number for a SnowportId.
+    /// </summary>
+    private byte GetSnowportSource()
+    {
+        var used = new HashSet<byte>();
+        foreach (var p in _players.Values)
+            used.Add(p.Source);
+
+        for (int candidate = 1; candidate <= byte.MaxValue; candidate++)
+        {
+            if (!used.Contains((byte)candidate))
+                return (byte)candidate;
+        }
+
+        GD.PrintErr("No free Snowport source ids remain; table is full.");
+        return 1;
+    }
+
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void AssignSource(int source)
+    {
+        var assigned = (byte)source;
+        Snowport.Clock = new Snowport(assigned);
+
+        if (_players.TryGetValue(_localPlayerId, out var self))
+            self.Source = assigned;
+
+        GD.Print($"Assigned Snowport source {assigned}");
     }
 
     [Rpc(
@@ -253,6 +300,9 @@ public class PlayerInfo
     public int PlayerId { get; set; }
     public string PlayerName { get; set; }
     public bool IsLocal { get; set; }
+
+    /// <summary>The Snowport source id assigned to this player.</summary>
+    public byte Source { get; set; }
 
     /// <summary>0-based index into GameSettings.Players, -1 = observer, -2 = unclaimed.</summary>
     public int PlayerPosition { get; set; } = -2;
