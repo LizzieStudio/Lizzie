@@ -51,7 +51,7 @@ public class Snowport
     }
 }
 
-public struct SnowportId
+public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<SnowportId>
 {
     private readonly ulong ID;
 
@@ -60,7 +60,7 @@ public struct SnowportId
         this.ID = ID;
     }
 
-    public readonly ulong logicClock
+    public ulong logicClock
     {
         get
         {
@@ -69,7 +69,7 @@ public struct SnowportId
         }
     }
 
-    public readonly byte source
+    public byte source
     {
         get
         {
@@ -77,4 +77,20 @@ public struct SnowportId
             return (byte)ID;
         }
     }
+
+    public bool Equals(SnowportId other) => ID == other.ID;
+
+    public override bool Equals(object other) => other is SnowportId Id && Equals(Id);
+
+    public override int GetHashCode() => ID.GetHashCode();
+
+    public int CompareTo(SnowportId other) => ID.CompareTo(other.ID);
+
+    public static bool operator ==(SnowportId left, SnowportId right) => left.Equals(right);
+
+    public static bool operator !=(SnowportId left, SnowportId right) => !left.Equals(right);
+
+    public override string ToString() => ID.ToString();
+
+    public static SnowportId Parse(string s) => new SnowportId(ulong.Parse(s));
 }
