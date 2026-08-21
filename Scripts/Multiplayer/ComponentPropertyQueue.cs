@@ -33,4 +33,13 @@ public class ComponentPropertyQueue
         }
         return false;
     }
+
+    /// <summary>
+    /// Removes all queued References.
+    /// </summary>
+    public void Clear()
+    {
+        _set.Clear();
+        _queue.Clear();
+    }
 }

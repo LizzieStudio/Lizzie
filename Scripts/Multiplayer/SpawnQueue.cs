@@ -29,4 +29,13 @@ public class SpawnQueue
         }
         return false;
     }
+
+    /// <summary>
+    /// Removes all queued references.
+    /// </summary>
+    public void Clear()
+    {
+        _set.Clear();
+        _queue.Clear();
+    }
 }

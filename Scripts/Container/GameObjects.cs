@@ -26,10 +26,22 @@ public partial class GameObjects : Node
 
     private GameController _gameController;
 
+    /// <summary>
+    /// Container which contains all components for the current game.
+    /// </summary>
+    private Node _table;
+
+    /// <summary>The current game's components.</summary>
+    private Godot.Collections.Array<Node> ComponentNodes => _table.GetChildren();
+
     public CursorMode CursorMode { get; private set; }
 
     public override void _Ready()
     {
+        _table = new Node { Name = "Table" };
+        AddChild(_table);
+
+        EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
         EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
@@ -81,7 +93,7 @@ public partial class GameObjects : Node
     private void OnDataSetChanged(DataSetChangedEvent obj)
     {
         //naive approach for now
-        foreach (var c in this.GetChildren())
+        foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vc)
             {
@@ -93,7 +105,7 @@ public partial class GameObjects : Node
     private void OnProjectChanged(ProjectChangedEvent obj)
     {
         //naive approach for now
-        foreach (var c in this.GetChildren())
+        foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vc)
             {
@@ -106,7 +118,7 @@ public partial class GameObjects : Node
     private void OnTemplateChanged(TemplateChangedEvent obj)
     {
         //naive approach for now
-        foreach (var c in this.GetChildren())
+        foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vc)
             {
@@ -117,7 +129,7 @@ public partial class GameObjects : Node
 
     private void OnPrototypeChanged(PrototypeChangedEvent e)
     {
-        foreach (var c in this.GetChildren())
+        foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vc && vc.PrototypeRef == e.PrototypeId)
             {
@@ -129,7 +141,7 @@ public partial class GameObjects : Node
 
     public VisualComponentBase GetComponent(Guid reference)
     {
-        return GetChildren()
+        return ComponentNodes
             .OfType<VisualComponentBase>()
             .FirstOrDefault(vc => vc.Reference == reference);
     }
@@ -188,7 +200,7 @@ public partial class GameObjects : Node
 
     private void UpdateHoveredComponent()
     {
-        foreach (var c in GetChildren())
+        foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vcb && vcb.IsHovered)
             {
@@ -289,7 +301,7 @@ public partial class GameObjects : Node
 
         GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
 
-        AddChild(component);
+        _table.AddChild(component);
         component.Build();
         component.AddComponentToObjects += ComponentOnAddComponentToObjects;
 
@@ -336,7 +348,7 @@ public partial class GameObjects : Node
     public Dictionary<Guid, int> PrototypeCounts()
     {
         Dictionary<Guid, int> counts = new();
-        foreach (var c in GetChildren())
+        foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vcb && vcb.PrototypeRef != Guid.Empty && vcb.Visible)
             {
@@ -367,7 +379,7 @@ public partial class GameObjects : Node
             Description = description,
         };
 
-        foreach (var child in GetChildren())
+        foreach (var child in ComponentNodes)
         {
             if (child is VisualComponentBase vcb)
             {
@@ -417,7 +429,7 @@ public partial class GameObjects : Node
         var saved = state.Components.ToDictionary(c => c.ComponentRef);
 
         // Build a lookup of live components.
-        var live = GetChildren().OfType<VisualComponentBase>().ToDictionary(c => c.Reference);
+        var live = ComponentNodes.OfType<VisualComponentBase>().ToDictionary(c => c.Reference);
 
         // Update or delete live components.
         foreach (var (refId, component) in live)
@@ -506,27 +518,20 @@ public partial class GameObjects : Node
     #region Hover
     public bool IsAnyObjectHovered()
     {
-        return GetChildren().Any(n => n is VisualComponentBase { IsHovered: true });
+        return ComponentNodes.Any(n => n is VisualComponentBase { IsHovered: true });
     }
 
     public VisualComponentBase GetHoveredObject()
     {
-        return GetChildren().FirstOrDefault(n => n is VisualComponentBase { IsHovered: true })
+        return ComponentNodes.FirstOrDefault(n => n is VisualComponentBase { IsHovered: true })
             as VisualComponentBase;
     }
 
     public VisualComponentBase GetHoveredDropTarget()
     {
-        return GetChildren()
-                .FirstOrDefault(x =>
-                    x
-                        is VisualComponentBase
-                        {
-                            IsHovered: true,
-                            CanAcceptDrop: true,
-                            IsDragging: false
-                        }
-                ) as VisualComponentBase;
+        return ComponentNodes.FirstOrDefault(x =>
+                x is VisualComponentBase { IsHovered: true, CanAcceptDrop: true, IsDragging: false }
+            ) as VisualComponentBase;
     }
 
     #endregion
@@ -534,36 +539,37 @@ public partial class GameObjects : Node
     #region Selection
     public bool IsAnyObjectSelected()
     {
-        return GetChildren().Any(n => n is VisualComponentBase { IsSelected: true });
+        return ComponentNodes.Any(n => n is VisualComponentBase { IsSelected: true });
     }
 
     public bool IsAnyObjectMouseSelected()
     {
-        return GetChildren().Any(n => n is VisualComponentBase { IsMouseSelected: true });
+        return ComponentNodes.Any(n => n is VisualComponentBase { IsMouseSelected: true });
     }
 
     public VisualComponentBase GetSelectedObject()
     {
-        return GetChildren().FirstOrDefault(n => n is VisualComponentBase { IsSelected: true })
+        return ComponentNodes.FirstOrDefault(n => n is VisualComponentBase { IsSelected: true })
             as VisualComponentBase;
     }
 
     public IEnumerable<VisualComponentBase> GetSelectedObjects()
     {
-        return GetChildren()
+        return ComponentNodes
             .Where(n => n is VisualComponentBase { IsSelected: true })
             .Cast<VisualComponentBase>();
     }
 
     public VisualComponentBase GetMouseSelectedObject()
     {
-        return GetChildren().FirstOrDefault(n => n is VisualComponentBase { IsMouseSelected: true })
-            as VisualComponentBase;
+        return ComponentNodes.FirstOrDefault(n =>
+                n is VisualComponentBase { IsMouseSelected: true }
+            ) as VisualComponentBase;
     }
 
     public void SelectComponents(Rect2 area)
     {
-        foreach (var go in GetChildren())
+        foreach (var go in ComponentNodes)
         {
             // Zones are not selected by marquee selection.
             if (go is VisualComponentBase vcb and not VcZone)
@@ -576,7 +582,7 @@ public partial class GameObjects : Node
 
     public void DeselectComponents()
     {
-        foreach (var go in GetChildren())
+        foreach (var go in ComponentNodes)
         {
             if (go is VisualComponentBase v)
             {
@@ -602,7 +608,7 @@ public partial class GameObjects : Node
         var maxZ = GetMaxComponentZ();
 
         //move everything above the selected object one lower
-        foreach (var g in GetChildren())
+        foreach (var g in ComponentNodes)
         {
             if (g is VisualComponentBase vcb && vcb.ZOrder > curZ)
             {
@@ -628,7 +634,7 @@ public partial class GameObjects : Node
         var curZ = go.ZOrder;
 
         //move everything below the selected object one higher
-        foreach (var g in GetChildren())
+        foreach (var g in ComponentNodes)
         {
             if (g is VisualComponentBase vcb && vcb.ZOrder < curZ)
             {
@@ -650,7 +656,7 @@ public partial class GameObjects : Node
         if (!_dragObjects.Any())
             return 0;
 
-        var children = GetChildren();
+        var children = ComponentNodes;
 
         //make a list of all the objects that are 'in line' with the shapes of the moving objects
         float maxFloor = 0;
@@ -677,7 +683,7 @@ public partial class GameObjects : Node
 
     private void UpdateStackingHeights()
     {
-        //var children = GetChildren();
+        //var children = ComponentNodes;
         var children = GetNotDraggingObjects().ToArray();
 
         //this dictionary keeps track of objects that are below a certain object. The key is the object id
@@ -771,10 +777,10 @@ public partial class GameObjects : Node
 
     private int GetMaxComponentZ()
     {
-        if (GetChildren().Count == 0)
+        if (ComponentNodes.Count == 0)
             return 0;
 
-        return GetChildren()
+        return ComponentNodes
             .Where(c => c is VisualComponentBase)
             .Cast<VisualComponentBase>()
             .Max(vch => vch.ZOrder);
@@ -935,7 +941,7 @@ public partial class GameObjects : Node
 
         //for simplicity pull all the existing names into a List
         var names = new List<string>();
-        foreach (var c in GetChildren())
+        foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vcb)
                 names.Add(vcb.ComponentName);
@@ -974,7 +980,7 @@ public partial class GameObjects : Node
     private void RecomputeZones()
     {
         ZoneService.Recompute(
-            GetChildren().OfType<VisualComponentBase>(),
+            ComponentNodes.OfType<VisualComponentBase>(),
             PlayerHandService.LocalSeatIndex(),
             ZoneService.LocalSeatIsAdmin()
         );
@@ -1166,7 +1172,7 @@ public partial class GameObjects : Node
         foreach (var dragging in GetDraggingObjects())
             exclude.Add(dragging.GetRid());
 
-        foreach (var o in GetChildren())
+        foreach (var o in ComponentNodes)
         {
             if (o is VisualComponentBase vcb && vcb is not VisualComponentGroup)
             {
@@ -1219,7 +1225,7 @@ public partial class GameObjects : Node
         {
             int hitShapeIndex = result["shape"].AsInt32();
             int dragDropIndex = 0;
-            foreach (var child in group.GetChildren())
+            foreach (var child in group.ComponentNodes)
             {
                 if (child is CollisionShape3D cs)
                 {
@@ -1237,7 +1243,7 @@ public partial class GameObjects : Node
 
     private IEnumerable<VisualComponentBase> GetDraggingObjects()
     {
-        foreach (var n in GetChildren())
+        foreach (var n in ComponentNodes)
         {
             if (n is VisualComponentBase { IsDragging: true } p)
             {
@@ -1248,7 +1254,7 @@ public partial class GameObjects : Node
 
     private IEnumerable<VisualComponentBase> GetNotDraggingObjects()
     {
-        foreach (var n in GetChildren())
+        foreach (var n in ComponentNodes)
         {
             if (
                 n is VisualComponentBase
@@ -1436,6 +1442,32 @@ public partial class GameObjects : Node
     }
 
     #region Multiplayer
+
+    private void OnLocalPlayerJoinedGame() => ReplaceWithNewGame();
+
+    /// <summary>
+    /// Resets the game for joining an existing game.
+    /// </summary>
+    public void ReplaceWithNewGame()
+    {
+        var old = _table;
+        _table = new Node { Name = "Table" };
+        AddChild(_table);
+        old.QueueFree();
+
+        CursorMode = CursorMode.Normal;
+        _spawnComponents = null;
+        _dragSpawnMode = false;
+        _currentDragDropTarget = null;
+        _hoveredComponent = null;
+        _stackingUpdateRequired = 0;
+
+        _pendingSpawns.Clear();
+        _spawnQueue.Clear();
+        _componentPropertyQueue.Clear();
+
+        PlayerHandService.Instance?.ClearAll();
+    }
 
     /// <summary>
     /// Sync object creation across network

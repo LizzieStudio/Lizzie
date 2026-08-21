@@ -419,6 +419,11 @@ public class HandChangedEvent : IEvent
 public class ProjectSettingsChangedEvent : IEvent { }
 
 /// <summary>
+/// Published on a client when it has connected to an existing game.
+/// </summary>
+public class LocalPlayerJoinedGameEvent : IEvent { }
+
+/// <summary>
 /// Published when the local player should be prompted to pick a player position.
 /// </summary>
 public class RequestPlayerPositionEvent : IEvent { }

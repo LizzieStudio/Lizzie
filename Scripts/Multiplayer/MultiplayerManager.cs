@@ -180,6 +180,8 @@ public partial class MultiplayerManager : Node
 
         // Register with server
         RpcId(1, nameof(RegisterPlayer), _localPlayerId, _players[_localPlayerId].PlayerName);
+
+        EventBus.Instance?.Publish<LocalPlayerJoinedGameEvent>();
     }
 
     private void OnConnectionFailed()

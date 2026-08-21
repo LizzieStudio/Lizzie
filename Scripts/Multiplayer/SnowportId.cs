@@ -58,7 +58,7 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
 {
     private readonly ulong ID;
 
-    public readonly static SnowportId Empty = new(0);
+    public static readonly SnowportId Empty = new(0);
 
     public SnowportId(ulong ID)
     {
