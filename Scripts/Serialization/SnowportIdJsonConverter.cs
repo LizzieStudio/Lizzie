@@ -1,16 +1,13 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Godot;
 
 public sealed class SnowportIdJsonConverter : JsonConverter<SnowportId>
 {
-    public override void Write(
-        Utf8JsonWriter writer,
-        SnowportId value,
-        JsonSerializerOptions options
-    )
+    public override void Write(Utf8JsonWriter writer, SnowportId id, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(value.ToString());
+        writer.WriteNumberValue(id.Value);
     }
 
     public override SnowportId Read(
@@ -19,6 +16,11 @@ public sealed class SnowportIdJsonConverter : JsonConverter<SnowportId>
         JsonSerializerOptions options
     )
     {
-        return SnowportId.Parse(reader.GetString());
+        if (!reader.TryGetUInt64(out var value))
+        {
+            GD.PrintErr("SnowportId from json could not be parsed");
+            return SnowportId.Empty;
+        }
+        return new SnowportId(value);
     }
 }

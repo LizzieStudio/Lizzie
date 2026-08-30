@@ -137,6 +137,9 @@ public partial class MultiplayerManager : Node
         // Start using the host source again.
         Snowport.Clock = new Snowport(0);
 
+        // Drop any event history accumulated during the session.
+        EventSynchronizer.Instance?.Clear();
+
         GD.Print("Disconnected from multiplayer");
     }
 

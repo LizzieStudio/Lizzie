@@ -263,7 +263,7 @@ public partial class VcDeck : VisualComponentGroup
     {
         count = Math.Min(count, Children.Count);
 
-        Guid[] cards;
+        SnowportId[] cards;
         //draw cards
         if (_showFace)
         {
@@ -374,7 +374,7 @@ public partial class VcDeck : VisualComponentGroup
                 if (Children.Count == 0)
                     break;
 
-                Guid[] drawn = _showFace ? DrawFromTop(1) : DrawFromBottom(1);
+                SnowportId[] drawn = _showFace ? DrawFromTop(1) : DrawFromBottom(1);
                 if (drawn.Length == 0)
                     break;
 
@@ -623,7 +623,6 @@ public partial class VcDeck : VisualComponentGroup
         {
             var card = (VcToken)_templateCard.Duplicate();
             card.ComponentType = VisualComponentType.Token;
-            card.Parent = Reference;
             card.PrototypeRef = PrototypeRef;
             card.Setup(PrototypeRef, kv.Key, textureFactory);
             CreateAndAddChildComponent(card);
@@ -731,7 +730,6 @@ public partial class VcDeck : VisualComponentGroup
             {
                 var c = (VcToken)_templateCard.Duplicate();
                 c.ComponentType = VisualComponentType.Token;
-                c.Parent = Reference;
                 c.PrototypeRef = PrototypeRef;
                 c.Setup(PrototypeRef, cardNum.ToString(), textureFactory);
                 CreateAndAddChildComponent(c);
@@ -751,7 +749,6 @@ public partial class VcDeck : VisualComponentGroup
     {
         card.PrototypeRef = PrototypeRef;
         card.DataSetRow = cardRef;
-        card.Parent = Reference;
 
         card.Setup(PrototypeRef, cardRef, textureFactory);
     }
@@ -794,7 +791,6 @@ public partial class VcDeck : VisualComponentGroup
     {
         var card = (VcToken)_templateCard.Duplicate();
 
-        card.Parent = Reference;
         card.PrototypeRef = PrototypeRef;
 
         card.Setup(PrototypeRef, index.ToString(), textureFactory);
@@ -1004,7 +1000,7 @@ public partial class VcDeck : VisualComponentGroup
     {
         count = Math.Min(count, Children.Count);
 
-        Guid[] cards;
+        SnowportId[] cards;
         //draw cards
         if (_showFace)
         {

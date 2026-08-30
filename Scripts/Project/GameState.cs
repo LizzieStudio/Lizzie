@@ -19,7 +19,7 @@ public class GameStateComponent : VcSyncDto
     }
 
     /// <summary>Unique identity of this component instance.</summary>
-    public Guid ComponentRef { get; set; }
+    public SnowportId ComponentRef { get; set; }
 
     /// <summary>The prototype from which this component was built.</summary>
     public Guid PrototypeRef { get; set; }

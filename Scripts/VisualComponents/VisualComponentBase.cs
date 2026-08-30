@@ -312,13 +312,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual Guid PrototypeRef { get; set; }
 
-    public virtual Guid Reference { get; set; } = Guid.NewGuid();
-
-    /// <summary>
-    /// Guid of the parent that created this object. Primarily used for decks for recovering
-    /// all the cards
-    /// </summary>
-    public virtual Guid Parent { get; set; }
+    public virtual SnowportId Reference { get; set; } = Snowport.Clock.Create();
 
     /// <summary>
     /// Which row in the DataSet supplies the data for templating
@@ -497,15 +491,6 @@ public abstract partial class VisualComponentBase : Area3D
 
         //TODO only call this when necessary
         SetHighlightColor(Colors.White); //reset in case we were a drag target
-    }
-
-    //these two events are used when the component itself is creating / removing
-    //other components. Example: Card being drawn from a deck, token from a tray
-    public event EventHandler<VisualComponentEventArgs> AddComponentToObjects;
-
-    protected void OnComponentAdded(VisualComponentBase component)
-    {
-        AddComponentToObjects?.Invoke(this, new VisualComponentEventArgs(component));
     }
 
     private bool _neverHighlight = false;
@@ -771,16 +756,6 @@ public abstract partial class VisualComponentBase : Area3D
     public Vector3 SpawnDelta { get; set; } = Vector3.Zero;
 
     #endregion
-}
-
-public class VisualComponentEventArgs : EventArgs
-{
-    public VisualComponentEventArgs(VisualComponentBase component)
-    {
-        Component = component;
-    }
-
-    public VisualComponentBase Component { get; set; }
 }
 
 public class OffsetShape2D(Shape2D shape, Vector2 offset)

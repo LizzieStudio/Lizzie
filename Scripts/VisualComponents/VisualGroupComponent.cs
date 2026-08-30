@@ -5,7 +5,7 @@ using Godot;
 
 public abstract partial class VisualComponentGroup : VisualComponentBase
 {
-    protected readonly List<Guid> Children = new();
+    protected readonly List<SnowportId> Children = new();
 
     protected RandomNumberGenerator Rnd = new();
 
@@ -70,11 +70,11 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// </summary>
     /// <param name="quantity"></param>
     /// <returns></returns>
-    public virtual Guid[] DrawFromTop(int quantity)
+    public virtual SnowportId[] DrawFromTop(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
         if (quantity == 0)
-            return Array.Empty<Guid>();
+            return Array.Empty<SnowportId>();
 
         var res = Children.Take(quantity).ToArray();
 
@@ -90,11 +90,11 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// </summary>
     /// <param name="quantity"></param>
     /// <returns></returns>
-    public virtual Guid[] DrawFromBottom(int quantity)
+    public virtual SnowportId[] DrawFromBottom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
         if (quantity == 0)
-            return Array.Empty<Guid>();
+            return Array.Empty<SnowportId>();
 
         var res = Children.TakeLast(quantity).ToArray();
 
@@ -109,7 +109,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// Draws a single random item from the group, and removes it.
     /// </summary>
     /// <returns>A random item, which is removed from the group</returns>
-    protected virtual Guid DrawRandom()
+    protected virtual SnowportId DrawRandom()
     {
         var r = Rnd.RandiRange(0, Children.Count - 1);
         var c = Children[r];
@@ -127,7 +127,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <param name="quantity">Number to pull. If greater than the number of items
     /// in the group, pulls all of them (in a random order)</param>
     /// <returns>Components in a random order</returns>
-    public virtual IEnumerable<Guid> DrawRandom(int quantity)
+    public virtual IEnumerable<SnowportId> DrawRandom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
 
@@ -167,12 +167,12 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         SyncRequired = true;
     }
 
-    public Guid[] GetContainerChildren()
+    public SnowportId[] GetContainerChildren()
     {
         return Children.ToArray();
     }
 
-    public void SetContainerChildren(Guid[] children)
+    public void SetContainerChildren(SnowportId[] children)
     {
         Children.Clear();
         Children.AddRange(children);

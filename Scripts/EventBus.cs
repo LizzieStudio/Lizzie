@@ -120,7 +120,7 @@ public partial class EventBus : Node
     /// </summary>
     private static bool IsTargetValid(Delegate d)
     {
-        return d.Target is not GodotObject obj || GodotObject.IsInstanceValid(obj);
+        return d.Target is not GodotObject obj || IsInstanceValid(obj);
     }
 
     /// <summary>
@@ -358,7 +358,7 @@ public class SpawnPrototypeEvent : IEvent
 
 public class ShowAndDragComponentEvent : IEvent
 {
-    public List<Guid> ComponentList { get; set; } = new();
+    public List<SnowportId> ComponentList { get; set; } = new();
 }
 
 public class DeletePrototypeEvent : IEvent

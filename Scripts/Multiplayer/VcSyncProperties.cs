@@ -42,7 +42,7 @@ public class VcSyncDto
 
     public VisualComponentBase.LayerType Layer { get; set; }
 
-    public Guid[] ContainedComponents { get; set; } = Array.Empty<Guid>();
+    public SnowportId[] ContainedComponents { get; set; } = Array.Empty<SnowportId>();
 
     public void ApplyToComponent(VisualComponentBase component)
     {

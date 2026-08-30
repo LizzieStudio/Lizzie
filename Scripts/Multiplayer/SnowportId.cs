@@ -6,7 +6,9 @@ using Godot;
 /// </summary>
 public class Snowport
 {
-    public static Snowport Clock;
+    // Default to 0, the host.
+    // Different source codes will be used when joining games.
+    public static Snowport Clock = new Snowport(0);
 
     // start at 1 since 0 is used to mean Empty
     private ulong _useLogicClock = 1;
@@ -58,6 +60,11 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
 {
     private readonly ulong ID;
 
+    public ulong Value
+    {
+        get { return ID; }
+    }
+
     public static readonly SnowportId Empty = new(0);
 
     public SnowportId(ulong ID)
@@ -78,7 +85,7 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
     {
         get
         {
-            // get the last 8 bits
+            // get 8 bits from 0 to 7
             return (byte)ID;
         }
     }
@@ -98,4 +105,15 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
     public override string ToString() => ID.ToString();
 
     public static SnowportId Parse(string s) => new SnowportId(ulong.Parse(s));
+
+    public static bool TryParse(string s, out SnowportId id)
+    {
+        if (ulong.TryParse(s, out var value))
+        {
+            id = new SnowportId(value);
+            return true;
+        }
+        id = Empty;
+        return false;
+    }
 }

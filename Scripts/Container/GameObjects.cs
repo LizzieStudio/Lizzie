@@ -19,7 +19,6 @@ public partial class GameObjects : Node
     public delegate void CameraActivationEventHandler(bool cameraActivated);
 
     private int _stackingUpdateRequired;
-    private readonly SpawnQueue _spawnQueue = new();
     private readonly ComponentPropertyQueue _componentPropertyQueue = new();
     private const int MaxPropertySyncsPerFrame = 3;
     private readonly List<PendingSpawnRequest> _pendingSpawns = new();
@@ -53,6 +52,8 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
         EventBus.Instance.Subscribe<ReturnFromHandEvent>(OnReturnFromHand);
+
+        EventSynchronizer.Instance?.Subscribe<ComponentCreatedEvent>(ApplyComponentCreated);
     }
 
     private void OnReturnFromHand(ReturnFromHandEvent obj)
@@ -139,7 +140,7 @@ public partial class GameObjects : Node
         RetryPendingSpawns();
     }
 
-    public VisualComponentBase GetComponent(Guid reference)
+    public VisualComponentBase GetComponent(SnowportId reference)
     {
         return ComponentNodes
             .OfType<VisualComponentBase>()
@@ -165,7 +166,6 @@ public partial class GameObjects : Node
     {
         base._Process(delta);
 
-        ProcessSpawnQueue();
         ProcessComponentPropertyQueue();
         RecomputeZones();
 
@@ -296,6 +296,12 @@ public partial class GameObjects : Node
 
     public void AddComponentToScene(VisualComponentBase component, bool syncCreation = true)
     {
+        if (component.Reference == SnowportId.Empty)
+        {
+            GD.PrintErr("component somehow lost its SnowportId");
+            return;
+        }
+
         component.ZOrder = GetMaxComponentZ() + 1;
         var vv = component.Position;
 
@@ -303,7 +309,6 @@ public partial class GameObjects : Node
 
         _table.AddChild(component);
         component.Build();
-        component.AddComponentToObjects += ComponentOnAddComponentToObjects;
 
         // Add networked object for multiplayer sync
         if (MultiplayerManager.Instance?.IsMultiplayerActive == true && !component.ExcludeFromSync)
@@ -319,11 +324,6 @@ public partial class GameObjects : Node
         }
 
         QueueStackingUpdate();
-    }
-
-    private void ComponentOnAddComponentToObjects(object sender, VisualComponentEventArgs e)
-    {
-        AddComponentToScene(e.Component);
     }
 
     private void DeleteComponents()
@@ -1054,7 +1054,7 @@ public partial class GameObjects : Node
             return;
 
         var fg = obj.ComponentList.First();
-        if (fg == Guid.Empty)
+        if (fg == SnowportId.Empty)
             return;
 
         var first = GetComponent(fg);
@@ -1463,8 +1463,8 @@ public partial class GameObjects : Node
         _stackingUpdateRequired = 0;
 
         _pendingSpawns.Clear();
-        _spawnQueue.Clear();
         _componentPropertyQueue.Clear();
+        EventSynchronizer.Instance?.Clear();
 
         PlayerHandService.Instance?.ClearAll();
     }
@@ -1483,142 +1483,48 @@ public partial class GameObjects : Node
             $"Syncing creation for component {component.Reference}. Prototype {component.PrototypeRef}"
         );
 
-        _spawnQueue.Enqueue(component.Reference);
+        var evt = new ComponentCreatedEvent
+        {
+            Id = component.Reference,
+            PrototypeRef = component.PrototypeRef,
+            ComponentName = component.ComponentName ?? string.Empty,
+            State = new VcSyncDto(component),
+        };
+
+        EventSynchronizer.Instance?.Submit(evt);
     }
 
-    private const int MaxSpawnProcess = 3;
-
-    private void ProcessSpawnQueue()
+    private void ApplyComponentCreated(TableEvent e)
     {
-        if (_spawnQueue.Count == 0)
-            return;
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
+        if (e is not ComponentCreatedEvent evt)
             return;
 
-        int cnt = 0;
-
-        while (_spawnQueue.TryDequeue(out var reference))
-        {
-            var component = GetComponent(reference);
-            if (component == null)
-            {
-                GD.PrintErr($"ProcessSpawnQueue: Component with reference {reference} not found.");
-                continue;
-            }
-
-            var prototypeRef = component.PrototypeRef.ToString();
-            var componentRef = component.Reference.ToString();
-            var parentRef = component.Parent.ToString();
-            var syncDto = new VcSyncDto(component);
-            var syncDtoJson = JsonSerializer.Serialize(syncDto, LizzieJson.Options);
-
-            if (MultiplayerManager.Instance.IsServer)
-                Rpc(nameof(ClientSpawnObject), prototypeRef, componentRef, parentRef, syncDtoJson);
-            else
-                RpcId(
-                    1,
-                    nameof(ServerSpawnObject),
-                    prototypeRef,
-                    componentRef,
-                    parentRef,
-                    syncDtoJson
-                );
-
-            cnt++;
-            if (cnt >= MaxSpawnProcess)
-                break;
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClientSpawnObject(
-        string prototypeRefStr,
-        string componentRefStr,
-        string parentRefStr,
-        string syncDtoJson
-    )
-    {
-        GD.Print($"Received spawn for {componentRefStr}");
-        if (!TryExecuteSpawn(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson))
-        {
-            GD.Print(
-                $"Prototype {prototypeRefStr} not yet available, queuing spawn for {componentRefStr}"
-            );
-            _pendingSpawns.Add(
-                new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson)
-            );
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ServerSpawnObject(
-        string prototypeRefStr,
-        string componentRefStr,
-        string parentRefStr,
-        string syncDtoJson
-    )
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
+        if (GetComponent(evt.Id) != null)
             return;
 
-        var senderId = Multiplayer.GetRemoteSenderId();
-        GD.Print($"Server received spawn request for {componentRefStr} from {senderId}");
-
-        if (!TryExecuteSpawn(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson))
+        if (!TryExecuteSpawn(evt))
         {
-            GD.Print(
-                $"Prototype {prototypeRefStr} not yet available on server, queuing spawn for {componentRefStr}"
-            );
-            _pendingSpawns.Add(
-                new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson)
-            );
-        }
-
-        foreach (var player in MultiplayerManager.Instance.Players)
-        {
-            if (player.Key == senderId || player.Key == 1)
-                continue;
-            RpcId(
-                player.Key,
-                nameof(ClientSpawnObject),
-                prototypeRefStr,
-                componentRefStr,
-                parentRefStr,
-                syncDtoJson
-            );
+            GD.Print($"Prototype {evt.PrototypeRef} not yet available, queuing spawn for {evt.Id}");
+            _pendingSpawns.Add(new PendingSpawnRequest(evt));
         }
     }
 
     /// <summary>
-    /// Attempts to instantiate and add a spawned component to the scene.
-    /// Returns false if the prototype is not yet present — caller should defer the request.
+    /// Attempts to instantiate and add a component from a ComponentCreatedEvent.
+    /// Returns false if the prototype is not yet present — caller should defer the event.
     /// Returns true when the spawn was executed (even on a fatal data error that should not be retried).
     /// </summary>
-    private bool TryExecuteSpawn(
-        string prototypeRefStr,
-        string componentRefStr,
-        string parentRefStr,
-        string syncDtoJson
-    )
+    private bool TryExecuteSpawn(ComponentCreatedEvent evt)
     {
-        var prototypeRef = Guid.Parse(prototypeRefStr);
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
+                evt.PrototypeRef,
                 out var proto
             )
         )
             return false;
 
-        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson, LizzieJson.Options);
+        var syncDto = evt.State ?? new VcSyncDto();
 
         var path = Utility.ComponentTypeToScenePath(
             proto.Type,
@@ -1629,22 +1535,21 @@ public partial class GameObjects : Node
 
         if (scene is not VisualComponentBase vcb)
         {
-            GD.PrintErr($"Spawned scene for {prototypeRefStr} is not a VisualComponentBase");
+            GD.PrintErr($"Spawned scene for {evt.PrototypeRef} is not a VisualComponentBase");
             return true; // Fatal data error — do not retry
         }
 
-        vcb.Reference = Guid.Parse(componentRefStr);
-        vcb.PrototypeRef = prototypeRef;
-        vcb.Parent = Guid.Parse(parentRefStr);
+        vcb.Reference = evt.Id;
+        vcb.PrototypeRef = evt.PrototypeRef;
 
-        vcb.SpawnBuild(prototypeRef, syncDto, TextureFactory);
+        vcb.SpawnBuild(evt.PrototypeRef, syncDto, TextureFactory);
 
         AddComponentToScene(vcb, false);
         return true;
     }
 
     /// <summary>
-    /// Re-attempts any spawn requests that were deferred because their prototype
+    /// Re-attempts any component-created events that were deferred because their prototype
     /// was not yet available on this client. Re-queues any that still cannot be resolved.
     /// </summary>
     private void RetryPendingSpawns()
@@ -1657,30 +1562,18 @@ public partial class GameObjects : Node
 
         foreach (var r in pending)
         {
-            GD.Print($"Retrying spawn for {r.ComponentRefStr}");
-            if (
-                !TryExecuteSpawn(
-                    r.PrototypeRefStr,
-                    r.ComponentRefStr,
-                    r.ParentRefStr,
-                    r.SyncDtoJson
-                )
-            )
+            GD.Print($"Retrying spawn for {r.Event.Id}");
+            if (!TryExecuteSpawn(r.Event))
             {
                 GD.PrintErr(
-                    $"Still cannot spawn {r.ComponentRefStr} because prototype {r.PrototypeRefStr} is not available"
+                    $"Still cannot spawn {r.Event.Id} because prototype {r.Event.PrototypeRef} is not available"
                 );
                 _pendingSpawns.Add(r); // Prototype still not available — keep in list
             }
         }
     }
 
-    private record PendingSpawnRequest(
-        string PrototypeRefStr,
-        string ComponentRefStr,
-        string ParentRefStr,
-        string SyncDtoJson
-    );
+    private record PendingSpawnRequest(ComponentCreatedEvent Event);
 
     /// <summary>
     /// Sync object deletion across network
@@ -1709,10 +1602,10 @@ public partial class GameObjects : Node
     {
         GD.Print($"Received delete for: {componentRef}");
 
-        if (!Guid.TryParse(componentRef, out var compGuid))
+        if (!SnowportId.TryParse(componentRef, out var compId))
             return;
 
-        var component = GetComponent(compGuid);
+        var component = GetComponent(compId);
         component?.Delete();
     }
 
@@ -1726,13 +1619,13 @@ public partial class GameObjects : Node
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        if (!Guid.TryParse(componentRef, out var compGuid))
+        if (!SnowportId.TryParse(componentRef, out var compId))
             return;
 
         var senderId = Multiplayer.GetRemoteSenderId();
         GD.Print($"Server received delete request for {componentRef} from {senderId}");
 
-        var component = GetComponent(compGuid);
+        var component = GetComponent(compId);
         component?.Delete();
 
         foreach (var player in MultiplayerManager.Instance.Players)
@@ -1811,13 +1704,13 @@ public partial class GameObjects : Node
     private void ApplyPropertySyncToComponent(string componentRef, string syncDtoJson)
     {
         //apply it to the server.
-        if (!Guid.TryParse(componentRef, out var compGuid))
+        if (!SnowportId.TryParse(componentRef, out var compId))
         {
-            GD.PrintErr("ClientReceiveProperties: Can't parse GUID");
+            GD.PrintErr("ClientReceiveProperties: Can't parse SnowportId");
             return;
         }
 
-        var component = GetComponent(compGuid);
+        var component = GetComponent(compId);
         if (component == null || component.IsDragging)
         {
             GD.PrintErr(

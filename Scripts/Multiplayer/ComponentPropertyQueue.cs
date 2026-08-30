@@ -7,15 +7,15 @@ using System.Collections.Generic;
 /// </summary>
 public class ComponentPropertyQueue
 {
-    private readonly HashSet<Guid> _set = new();
-    private readonly Queue<Guid> _queue = new();
+    private readonly HashSet<SnowportId> _set = new();
+    private readonly Queue<SnowportId> _queue = new();
 
     public int Count => _queue.Count;
 
     /// <summary>
     /// Queues a component Reference for sync. Silently ignores duplicates.
     /// </summary>
-    public void Enqueue(Guid reference)
+    public void Enqueue(SnowportId reference)
     {
         if (_set.Add(reference))
             _queue.Enqueue(reference);
@@ -24,7 +24,7 @@ public class ComponentPropertyQueue
     /// <summary>
     /// Removes and returns the next Reference. Returns false when the queue is empty.
     /// </summary>
-    public bool TryDequeue(out Guid reference)
+    public bool TryDequeue(out SnowportId reference)
     {
         if (_queue.TryDequeue(out reference))
         {

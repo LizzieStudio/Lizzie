@@ -15,7 +15,7 @@ public class MoveToBottom : CommandBase
     public override Update Execute(IEnumerable<VisualComponentBase> components, GameObjects context)
     {
         int minZ = int.MaxValue;
-        Dictionary<Guid, int> oldZOrder = new Dictionary<Guid, int>();
+        Dictionary<SnowportId, int> oldZOrder = new Dictionary<SnowportId, int>();
         List<VisualComponentBase> childrenList = new();
 
         foreach (var o in context.GetChildren())
@@ -78,7 +78,7 @@ public class MoveToBottom : CommandBase
         )
         {
             int maxZ = 0;
-            Dictionary<Guid, int> oldZOrder = new Dictionary<Guid, int>();
+            Dictionary<SnowportId, int> oldZOrder = new Dictionary<SnowportId, int>();
             List<VisualComponentBase> childrenList = new();
 
             foreach (var o in context.GetChildren())
