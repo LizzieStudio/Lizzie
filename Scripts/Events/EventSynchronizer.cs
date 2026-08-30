@@ -32,6 +32,8 @@ public partial class EventSynchronizer : Node
 
     public void Submit(TableEvent e)
     {
+        GD.Print($"{Snowport.Clock.source} Submitted event {e.GetType().Name}");
+
         _log.TryRecord(e);
 
         if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
@@ -78,6 +80,8 @@ public partial class EventSynchronizer : Node
 
     private void ReceiveEvent(string json)
     {
+        GD.Print($"{Snowport.Clock.source} Received event {json}");
+
         var e = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.Options);
         if (e == null)
             return;

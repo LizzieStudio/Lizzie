@@ -54,6 +54,7 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ReturnFromHandEvent>(OnReturnFromHand);
 
         EventSynchronizer.Instance?.Subscribe<ComponentCreatedEvent>(ApplyComponentCreated);
+        EventSynchronizer.Instance?.Subscribe<ComponentDeletedEvent>(ApplyComponentDeleted);
     }
 
     private void OnReturnFromHand(ReturnFromHandEvent obj)
@@ -1494,18 +1495,15 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Submit(evt);
     }
 
-    private void ApplyComponentCreated(TableEvent e)
+    private void ApplyComponentCreated(ComponentCreatedEvent e)
     {
-        if (e is not ComponentCreatedEvent evt)
+        if (GetComponent(e.Id) != null)
             return;
 
-        if (GetComponent(evt.Id) != null)
-            return;
-
-        if (!TryExecuteSpawn(evt))
+        if (!TryExecuteSpawn(e))
         {
-            GD.Print($"Prototype {evt.PrototypeRef} not yet available, queuing spawn for {evt.Id}");
-            _pendingSpawns.Add(new PendingSpawnRequest(evt));
+            GD.Print($"Prototype {e.PrototypeRef} not yet available, queuing spawn for {e.Id}");
+            _pendingSpawns.Add(new PendingSpawnRequest(e));
         }
     }
 
@@ -1585,55 +1583,18 @@ public partial class GameObjects : Node
         if (component == null)
             return;
 
-        var componentRef = component.Reference.ToString();
-
-        if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ClientDeleteObject), componentRef);
-        else
-            RpcId(1, nameof(ServerDeleteObject), componentRef);
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClientDeleteObject(string componentRef)
-    {
-        GD.Print($"Received delete for: {componentRef}");
-
-        if (!SnowportId.TryParse(componentRef, out var compId))
-            return;
-
-        var component = GetComponent(compId);
-        component?.Delete();
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ServerDeleteObject(string componentRef)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-
-        if (!SnowportId.TryParse(componentRef, out var compId))
-            return;
-
-        var senderId = Multiplayer.GetRemoteSenderId();
-        GD.Print($"Server received delete request for {componentRef} from {senderId}");
-
-        var component = GetComponent(compId);
-        component?.Delete();
-
-        foreach (var player in MultiplayerManager.Instance.Players)
+        var evt = new ComponentDeletedEvent
         {
-            if (player.Key == senderId || player.Key == 1)
-                continue;
-            RpcId(player.Key, nameof(ClientDeleteObject), componentRef);
-        }
+            Id = Snowport.Clock.Create(),
+            ComponentRef = component.Reference,
+        };
+
+        EventSynchronizer.Instance?.Submit(evt);
+    }
+
+    private void ApplyComponentDeleted(ComponentDeletedEvent e)
+    {
+        GetComponent(e.ComponentRef)?.Delete();
     }
 
     private void OnComponentPropertyChanged(ComponentPropertyChangedEvent e)

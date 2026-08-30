@@ -129,6 +129,10 @@ public partial class SceneController : Node3D
 
         foreach (var c in components)
         {
+            // Deletion uses the new system.
+            if (command == VisualCommand.Delete)
+                _gameObjects.SyncDeletion(c);
+
             var change = c.ProcessCommand(command);
             if (!change.Consumed)
                 continue;
