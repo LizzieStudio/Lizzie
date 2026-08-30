@@ -202,7 +202,7 @@ public abstract partial class VisualComponentBase : Area3D
             };
 
             float rotation = ProjectService.Instance.RotationStep;
-            SetRotation(RotationDegrees + new Vector3(0, rotation, 0));
+            SetRotationDegrees(RotationDegrees + new Vector3(0, rotation, 0));
             c.End = Transform;
 
             return new CommandResponse(true, c);
@@ -218,7 +218,7 @@ public abstract partial class VisualComponentBase : Area3D
             };
 
             float rotation = -1 * ProjectService.Instance.RotationStep;
-            SetRotation(RotationDegrees + new Vector3(0, rotation, 0));
+            SetRotationDegrees(RotationDegrees + new Vector3(0, rotation, 0));
             c.End = Transform;
 
             return new CommandResponse(true, c);
@@ -626,29 +626,11 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    //public Vector3 TargetPosition { get; set; }
-    //public Vector3 TargetRotationDegrees { get; set; }
-
-    public void SetPositionAndRotation(Vector3 position, Vector3 rotation)
-    {
-        Position = position;
-        RotationDegrees = rotation;
-        SyncRequired = true;
-    }
-
     public void SetPosition(Vector3 position)
     {
         if (position == Position)
             return;
         Position = position;
-        SyncRequired = true;
-    }
-
-    public void SetRotation(Vector3 rotation)
-    {
-        if (rotation == RotationDegrees)
-            return;
-        RotationDegrees = rotation;
         SyncRequired = true;
     }
 
