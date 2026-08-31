@@ -34,7 +34,8 @@ public partial class EventSynchronizer : Node
     {
         GD.Print($"{Snowport.Clock.source} Submitted event {e.GetType().Name}");
 
-        _log.TryRecord(e);
+        if (_log.TryRecord(e))
+            Dispatch(e);
 
         if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
             return;
@@ -92,6 +93,11 @@ public partial class EventSynchronizer : Node
         if (!_log.TryRecord(e))
             return;
 
+        Dispatch(e);
+    }
+
+    private void Dispatch(TableEvent e)
+    {
         if (_handlers.TryGetValue(e.GetType(), out var handler))
             handler(e);
     }

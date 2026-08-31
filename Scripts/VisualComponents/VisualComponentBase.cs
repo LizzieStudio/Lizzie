@@ -160,6 +160,11 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
+    /// Emit the ComponentCreatedEvent for any contained components.
+    /// </summary>
+    public virtual void SpawnChildEvents() { }
+
+    /// <summary>
     /// Updates the textures, size, etc, without recreating any child objects.
     /// </summary>
     /// <param name="parameters"></param>
@@ -226,13 +231,8 @@ public abstract partial class VisualComponentBase : Area3D
 
         if (command == VisualCommand.Delete)
         {
-            Delete();
-            IsMouseSelected = false;
-            IsClickSelected = false;
-            IsDragging = false;
-            IsHovered = false;
-
-            return new CommandResponse(true, null);
+            // Deletion is now handled by ComponentDeletedEvent
+            return new CommandResponse(false, null);
         }
 
         if (command == VisualCommand.Refresh)

@@ -71,7 +71,7 @@ public partial class GameController : Node3D
                 components.Add(sc);
         }
 
-        _mainScene.EnterSpawnMode(components, false);
+        _mainScene.EnterSpawnMode(components);
     }
 
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
@@ -105,10 +105,10 @@ public partial class GameController : Node3D
         var component = SingleComponentSpawn(args, string.Empty);
         if (component != null)
         {
-            _mainScene.EnterSpawnMode(
-                new List<VisualComponentBase> { component },
-                e.StartInDragMode
-            );
+            if (e.StartInDragMode)
+                _mainScene.BeginDragSpawn(component);
+            else
+                _mainScene.EnterSpawnMode(new List<VisualComponentBase> { component });
         }
     }
 

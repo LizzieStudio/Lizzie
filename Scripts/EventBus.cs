@@ -334,16 +334,6 @@ public class ModalDialogOpenedEvent : IEvent { }
 /// </summary>
 public class ModalDialogClosedEvent : IEvent { }
 
-public class AddComponentToSceneEvent : IEvent
-{
-    public AddComponentToSceneEvent(VisualComponentBase component)
-    {
-        Component = component;
-    }
-
-    public VisualComponentBase Component { get; set; }
-}
-
 public class AssetChangedEvent : IEvent
 {
     public Asset Asset { get; set; }

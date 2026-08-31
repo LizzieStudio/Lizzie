@@ -86,9 +86,14 @@ public partial class SceneController : Node3D
         //d.SavePng(@"c:\winwam5\tfTest.png");
     }
 
-    public void EnterSpawnMode(List<VisualComponentBase> components, bool startInDragMode)
+    public void EnterSpawnMode(List<VisualComponentBase> components)
     {
-        _gameObjects.EnterSpawnMode(components, startInDragMode);
+        _gameObjects.EnterSpawnMode(components);
+    }
+
+    public void BeginDragSpawn(VisualComponentBase component)
+    {
+        _gameObjects.BeginDragSpawn(component);
     }
 
     public void PopupClosed()
@@ -129,9 +134,12 @@ public partial class SceneController : Node3D
 
         foreach (var c in components)
         {
-            // Deletion uses the new system.
             if (command == VisualCommand.Delete)
+            {
                 _gameObjects.SyncDeletion(c);
+                result = true;
+                continue;
+            }
 
             var change = c.ProcessCommand(command);
             if (!change.Consumed)

@@ -52,21 +52,6 @@ public partial class UndoService : Node
             {
                 stack.Push(arr[i - 1]);
             }
-            else
-            {
-                Finalize(arr[i - 1]); //mainly permanently deleting objects
-            }
-        }
-    }
-
-    private void Finalize(Update update)
-    {
-        foreach (var c in update)
-        {
-            if (c.Action == Change.ChangeType.Deletion)
-            {
-                c.Component.QueueFree();
-            }
         }
     }
 
@@ -98,13 +83,6 @@ public partial class UndoService : Node
             {
                 case Change.ChangeType.Transform:
                     ExecuteTransform(c);
-                    break;
-                case Change.ChangeType.Creation:
-                    c.Component.LogicalVisible = false; //hide, don't delete for now. In case we have a 'redo' function
-                    break;
-                case Change.ChangeType.Deletion:
-                    c.Component.LogicalVisible = true; //do we also want to move this out of GameObjects and into a different list?
-                    //and do we have to adjust z-order?
                     break;
                 case Change.ChangeType.LockStatus:
                     break;

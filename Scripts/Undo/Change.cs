@@ -8,8 +8,6 @@ public class Change
     public enum ChangeType
     {
         Transform,
-        Creation,
-        Deletion,
         LockStatus,
         ZOrder,
         Layer,

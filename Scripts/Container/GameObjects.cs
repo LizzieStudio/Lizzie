@@ -47,7 +47,6 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
-        EventBus.Instance.Subscribe<AddComponentToSceneEvent>(OnAddComponentToScene);
         EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
         EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
@@ -290,12 +289,7 @@ public partial class GameObjects : Node
     #region Components
 
 
-    private void OnAddComponentToScene(AddComponentToSceneEvent e)
-    {
-        AddComponentToScene(e.Component, true);
-    }
-
-    public void AddComponentToScene(VisualComponentBase component, bool syncCreation = true)
+    public void AddComponentToScene(VisualComponentBase component)
     {
         if (component.Reference == SnowportId.Empty)
         {
@@ -304,7 +298,6 @@ public partial class GameObjects : Node
         }
 
         component.ZOrder = GetMaxComponentZ() + 1;
-        var vv = component.Position;
 
         GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
 
@@ -317,30 +310,43 @@ public partial class GameObjects : Node
             var networkedObject = new NetworkedObject();
             networkedObject.Component = component;
             component.AddChild(networkedObject);
-
-            if (syncCreation)
-            {
-                SyncCreation(component);
-            }
         }
 
         QueueStackingUpdate();
     }
 
-    private void DeleteComponents()
+    public void PublishComponentCreation(VisualComponentBase component)
     {
-        Update update = new();
-        foreach (var go in GetSelectedObjects())
+        if (component == null)
+            return;
+        if (component.Reference == SnowportId.Empty)
         {
-            go.Hide();
-            SyncDeletion(go);
-            var change = new Change { Component = go, Action = Change.ChangeType.Deletion };
-            update.Add(change);
+            GD.PrintErr("component did not have a SnowportId");
+            return;
         }
 
-        if (update.Count > 0)
+        component.GetParent()?.RemoveChild(component);
+
+        component.SpawnChildEvents();
+
+        var evt = new ComponentCreatedEvent
         {
-            UndoService.Instance.Add(update);
+            Id = component.Reference,
+            PrototypeRef = component.PrototypeRef,
+            ComponentName = component.ComponentName ?? string.Empty,
+            State = new VcSyncDto(component),
+        };
+
+        EventSynchronizer.Instance?.Submit(evt);
+
+        component.QueueFree();
+    }
+
+    private void DeleteComponents()
+    {
+        foreach (var go in GetSelectedObjects())
+        {
+            SyncDeletion(go);
         }
 
         QueueStackingUpdate();
@@ -490,7 +496,7 @@ public partial class GameObjects : Node
             entry.ApplyToComponent(newComponent);
             newComponent.Setup(entry.PrototypeRef, entry.DataSetRow, TextureFactory);
 
-            AddComponentToScene(newComponent, false);
+            AddComponentToScene(newComponent);
         }
 
         GD.Print($"GameState '{state.Name}' restored ({state.Components.Count} entries).");
@@ -852,36 +858,22 @@ public partial class GameObjects : Node
     #region Spawn
     private List<VisualComponentBase> _spawnComponents;
 
-    private bool _dragSpawnMode;
-
-    public void EnterSpawnMode(List<VisualComponentBase> components, bool startInDragMode)
+    public void EnterSpawnMode(List<VisualComponentBase> components)
     {
         if (_spawnComponents != null)
             ExitSpawnMode();
 
-        _dragSpawnMode = startInDragMode;
-
-        if (startInDragMode)
-        {
-            CursorMode = CursorMode.Drag;
-        }
-        else
-        {
-            CursorMode = CursorMode.Spawn;
-        }
+        CursorMode = CursorMode.Spawn;
 
         _spawnComponents = components;
 
         foreach (var c in components)
         {
-            c.DimMode(!startInDragMode);
-            c.NeverHighlight = !startInDragMode;
-            c.ExcludeFromSync = !startInDragMode;
-            AddComponentToScene(c, startInDragMode);
+            c.DimMode(true);
+            c.NeverHighlight = true;
+            c.ExcludeFromSync = true;
+            AddComponentToScene(c);
         }
-
-        if (startInDragMode)
-            EnterDragSpawnMode();
     }
 
     private void HandleSpawnMode()
@@ -913,7 +905,7 @@ public partial class GameObjects : Node
             newComp.DimMode(false);
             newComp.NeverHighlight = false;
 
-            AddComponentToScene(newComp);
+            PublishComponentCreation(newComp);
         }
     }
 
@@ -924,7 +916,6 @@ public partial class GameObjects : Node
             c.Delete();
         }
         _spawnComponents = null;
-        _dragSpawnMode = false;
         CursorMode = CursorMode.Normal;
     }
 
@@ -1028,21 +1019,26 @@ public partial class GameObjects : Node
         QueueStackingUpdate();
     }
 
-    /// <summary>
-    /// Handles when a component is being created as it is dragged away from a tray
-    /// </summary>
-    private void EnterDragSpawnMode()
+    public void BeginDragSpawn(VisualComponentBase component)
     {
-        CursorMode = CursorMode.Drag;
+        var reference = component.Reference;
 
-        StartDragUndo(_spawnComponents.First());
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        foreach (var gameObject in _spawnComponents)
+        var spawnPos = _dragPlane.GetCursorProjection();
+        component.Position = new Vector3(spawnPos.X, component.YHeight / 2f, spawnPos.Z);
+
+        PublishComponentCreation(component);
+
+        var spawned = GetComponent(reference);
+        if (spawned == null)
         {
-            gameObject.IsDragging = true;
-            gameObject.Position = _lastDragPosition + gameObject.SpawnDelta;
+            CursorMode = CursorMode.Normal;
+            return;
         }
 
+        CursorMode = CursorMode.Drag;
+        _dragChange = null;
+        _lastDragPosition = spawnPos;
+        spawned.IsDragging = true;
         QueueStackingUpdate();
     }
 
@@ -1304,7 +1300,6 @@ public partial class GameObjects : Node
             _gameController.HandManager.AddToHand(toHand);
             Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
             CursorMode = CursorMode.Normal;
-            ReleaseDragSpawn();
             QueueStackingUpdate();
             EndDragUndo();
             return;
@@ -1352,18 +1347,8 @@ public partial class GameObjects : Node
 
         CursorMode = CursorMode.Normal;
 
-        ReleaseDragSpawn();
         QueueStackingUpdate();
         EndDragUndo();
-    }
-
-    private void ReleaseDragSpawn()
-    {
-        if (!_dragSpawnMode)
-            return;
-
-        _dragSpawnMode = false;
-        _spawnComponents = null;
     }
 
     private void StartDragUndo(VisualComponentBase go)
@@ -1373,6 +1358,9 @@ public partial class GameObjects : Node
 
     private void EndDragUndo()
     {
+        if (_dragChange == null)
+            return;
+
         _dragChange.End = _dragChange.Component.Transform;
         UndoService.Instance.Add(_dragChange);
         _dragChange = null;
@@ -1458,7 +1446,6 @@ public partial class GameObjects : Node
 
         CursorMode = CursorMode.Normal;
         _spawnComponents = null;
-        _dragSpawnMode = false;
         _currentDragDropTarget = null;
         _hoveredComponent = null;
         _stackingUpdateRequired = 0;
@@ -1468,31 +1455,6 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Clear();
 
         PlayerHandService.Instance?.ClearAll();
-    }
-
-    /// <summary>
-    /// Sync object creation across network
-    /// </summary>
-    public void SyncCreation(VisualComponentBase component)
-    {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
-            return;
-        if (component == null)
-            return;
-
-        GD.Print(
-            $"Syncing creation for component {component.Reference}. Prototype {component.PrototypeRef}"
-        );
-
-        var evt = new ComponentCreatedEvent
-        {
-            Id = component.Reference,
-            PrototypeRef = component.PrototypeRef,
-            ComponentName = component.ComponentName ?? string.Empty,
-            State = new VcSyncDto(component),
-        };
-
-        EventSynchronizer.Instance?.Submit(evt);
     }
 
     private void ApplyComponentCreated(ComponentCreatedEvent e)
@@ -1507,11 +1469,6 @@ public partial class GameObjects : Node
         }
     }
 
-    /// <summary>
-    /// Attempts to instantiate and add a component from a ComponentCreatedEvent.
-    /// Returns false if the prototype is not yet present — caller should defer the event.
-    /// Returns true when the spawn was executed (even on a fatal data error that should not be retried).
-    /// </summary>
     private bool TryExecuteSpawn(ComponentCreatedEvent evt)
     {
         if (
@@ -1542,7 +1499,7 @@ public partial class GameObjects : Node
 
         vcb.SpawnBuild(evt.PrototypeRef, syncDto, TextureFactory);
 
-        AddComponentToScene(vcb, false);
+        AddComponentToScene(vcb);
         return true;
     }
 
@@ -1578,8 +1535,6 @@ public partial class GameObjects : Node
     /// </summary>
     public void SyncDeletion(VisualComponentBase component)
     {
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
         if (component == null)
             return;
 

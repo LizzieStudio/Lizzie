@@ -17,9 +17,6 @@ public partial class VcDeck : VisualComponentGroup
 
     private Label3D _componentCount;
 
-    private VcToken _templateCard;
-    private string _templateCardPath = "res://Scenes/VisualComponents/VcToken.tscn";
-
     private Node3D _spinnyBits;
     private Label3D _blankLabel;
 
@@ -425,7 +422,80 @@ public partial class VcDeck : VisualComponentGroup
         }
 
         syncDto.ApplyToComponent(this);
-        BuildInternal((PrintedParameters)proto.Parameters, textureFactory, false);
+        BuildInternal((PrintedParameters)proto.Parameters, textureFactory);
+    }
+
+    public override void SpawnChildEvents()
+    {
+        var project = ProjectService.Instance.CurrentProject;
+        if (project == null)
+            return;
+        if (!project.Prototypes.TryGetValue(PrototypeRef, out var proto))
+            return;
+        if (proto.Parameters is not PrintedParameters parameters)
+            return;
+
+        Children.Clear();
+
+        foreach (var row in EnumerateCardRows(parameters, project))
+            SubmitCardCreation(row);
+
+        OnChildrenChanged();
+    }
+
+    private IEnumerable<string> EnumerateCardRows(PrintedParameters parameters, Project project)
+    {
+        switch (parameters.Mode)
+        {
+            case VcToken.TokenBuildMode.QuickDeck:
+            {
+                int cardNum = 1;
+                foreach (var q in parameters.QuickCardData ?? new())
+                {
+                    foreach (var _ in Utility.ParseValueRanges(q.Caption))
+                    {
+                        yield return cardNum.ToString();
+                        cardNum++;
+                    }
+                }
+                break;
+            }
+
+            case VcToken.TokenBuildMode.Template:
+            {
+                var dataset = project.Datasets[parameters.Dataset];
+                foreach (var kv in dataset.Rows)
+                    yield return kv.Key;
+                break;
+            }
+
+            case VcToken.TokenBuildMode.Grid:
+            {
+                for (int i = 0; i < parameters.GridCount; i++)
+                    yield return i.ToString();
+                break;
+            }
+        }
+    }
+
+    private void SubmitCardCreation(string dataSetRow)
+    {
+        var id = Snowport.Clock.Create();
+        EventSynchronizer.Instance?.Submit(
+            new ComponentCreatedEvent
+            {
+                Id = id,
+                PrototypeRef = PrototypeRef,
+                ComponentName = ComponentName,
+                State = new VcSyncDto
+                {
+                    DataSetRow = dataSetRow,
+                    Location = ComponentLocation.Container,
+                    LogicalVisible = false,
+                },
+            }
+        );
+        Children.Add(id);
     }
 
     public override bool Setup(
@@ -434,14 +504,10 @@ public partial class VcDeck : VisualComponentGroup
         TextureFactory textureFactory
     )
     {
-        return BuildInternal((PrintedParameters)parameters, textureFactory, true);
+        return BuildInternal((PrintedParameters)parameters, textureFactory);
     }
 
-    private bool BuildInternal(
-        PrintedParameters parameters,
-        TextureFactory textureFactory,
-        bool spawnCards
-    )
+    private bool BuildInternal(PrintedParameters parameters, TextureFactory textureFactory)
     {
         base.Setup(parameters, DataSetRow, textureFactory);
 
@@ -457,24 +523,6 @@ public partial class VcDeck : VisualComponentGroup
             return false;
 
         _blankLabel.Text = ComponentName;
-
-        if (spawnCards)
-        {
-            switch (_mode)
-            {
-                case VcToken.TokenBuildMode.QuickDeck:
-                    BuildQuick(parameters, textureFactory);
-                    break;
-
-                case VcToken.TokenBuildMode.Template:
-                    BuildTemplate(parameters, textureFactory);
-                    break;
-
-                case VcToken.TokenBuildMode.Grid:
-                    BuildGrid(parameters, textureFactory);
-                    break;
-            }
-        }
 
         UpdateThickness();
 
@@ -592,69 +640,6 @@ public partial class VcDeck : VisualComponentGroup
         return arr;
     }
 
-    private void BuildQuick(PrintedParameters parameters, TextureFactory textureFactory)
-    {
-        _quickCardList = parameters.QuickCardData ?? new();
-
-        CreateQuickCards(textureFactory);
-    }
-
-    private void BuildTemplate(PrintedParameters parameters, TextureFactory textureFactory)
-    {
-        var fTemplateParam = parameters.FrontTemplate;
-        var bTemplateParam = parameters.BackTemplate;
-        var datasetParam = parameters.Dataset;
-
-        var dataset = ProjectService.Instance.CurrentProject.Datasets[datasetParam];
-
-        CreateTemplateCards(fTemplateParam, bTemplateParam, dataset, textureFactory);
-    }
-
-    private void CreateTemplateCards(
-        string frontTemplate,
-        string backTemplate,
-        DataSet dataset,
-        TextureFactory textureFactory
-    )
-    {
-        Clear();
-
-        foreach (var kv in dataset.Rows)
-        {
-            var card = (VcToken)_templateCard.Duplicate();
-            card.ComponentType = VisualComponentType.Token;
-            card.PrototypeRef = PrototypeRef;
-            card.Setup(PrototypeRef, kv.Key, textureFactory);
-            CreateAndAddChildComponent(card);
-        }
-    }
-
-    private void RefreshTemplateCards(
-        string frontTemplate,
-        string backTemplate,
-        string dataset,
-        int cardCount,
-        TextureFactory textureFactory
-    )
-    {
-        for (int i = 0; i < Children.Count; i++)
-        {
-            var c = Children.ElementAt(i);
-            var comp = ProjectService.Instance.GameObjects.GetComponent(c);
-            if (comp is VcToken card)
-            {
-                CreateTemplateCard(
-                    frontTemplate,
-                    backTemplate,
-                    dataset,
-                    card,
-                    comp.DataSetRow,
-                    textureFactory
-                );
-            }
-        }
-    }
-
     private void CreateCustomFrontTexture()
     {
         if (!File.Exists(_frontImage))
@@ -707,98 +692,8 @@ public partial class VcDeck : VisualComponentGroup
 
         _width = parameters.Width / 10f;
 
-        _mode = parameters.Mode;
-
-        var scene = ResourceLoader.Load<PackedScene>(_templateCardPath).Instantiate();
-
-        if (scene is not VcToken token)
-            return false;
-
-        _templateCard = token;
-
         return true;
     }
-
-    private void CreateQuickCards(TextureFactory textureFactory)
-    {
-        Clear();
-
-        int cardNum = 1;
-        foreach (var q in _quickCardList)
-        {
-            foreach (var _ in Utility.ParseValueRanges(q.Caption))
-            {
-                var c = (VcToken)_templateCard.Duplicate();
-                c.ComponentType = VisualComponentType.Token;
-                c.PrototypeRef = PrototypeRef;
-                c.Setup(PrototypeRef, cardNum.ToString(), textureFactory);
-                CreateAndAddChildComponent(c);
-                cardNum++;
-            }
-        }
-    }
-
-    private void CreateTemplateCard(
-        string frontTemplate,
-        string backTemplate,
-        string dataset,
-        VcToken card,
-        string cardRef,
-        TextureFactory textureFactory
-    )
-    {
-        card.PrototypeRef = PrototypeRef;
-        card.DataSetRow = cardRef;
-
-        card.Setup(PrototypeRef, cardRef, textureFactory);
-    }
-
-    #region Grid Cards
-
-    private Texture2D _frontMasterSprite;
-    private Texture2D _backMasterSprite;
-    private int _gridRows;
-    private int _gridCols;
-    private int _gridCount;
-    private bool _gridSingleBack;
-
-    private void BuildGrid(PrintedParameters parameters, TextureFactory textureFactory)
-    {
-        // Master sprites are runtime-only textures (never persisted on the parameters).
-        _frontMasterSprite = null;
-        _backMasterSprite = null;
-
-        _gridRows = parameters.GridRows;
-        _gridCols = parameters.GridCols;
-        _gridCount = parameters.GridCount;
-        _gridSingleBack = parameters.GridSingleBack;
-
-        CreateGridCards(textureFactory);
-    }
-
-    private void CreateGridCards(TextureFactory textureFactory)
-    {
-        Clear();
-
-        for (int i = 0; i < _gridCount; i++)
-        {
-            var c = CreateGridCard(i, textureFactory);
-            CreateAndAddChildComponent(c);
-        }
-    }
-
-    private VcToken CreateGridCard(int index, TextureFactory textureFactory)
-    {
-        var card = (VcToken)_templateCard.Duplicate();
-
-        card.PrototypeRef = PrototypeRef;
-
-        card.Setup(PrototypeRef, index.ToString(), textureFactory);
-
-        return card;
-    }
-
-    #endregion
 
     private int _spriteUpdateCountdown;
 
@@ -874,14 +769,6 @@ public partial class VcDeck : VisualComponentGroup
         var ts = tex.GetSize();
         var cellSize = new Vector2(ts.X / cols, ts.Y / rows);
         sprite.PixelSize = PixelSize(cellSize);
-    }
-
-    private void CreateAndAddChildComponent(VisualComponentBase component)
-    {
-        component.Location = ComponentLocation.Container;
-        component.ExcludeFromSync = ExcludeFromSync;
-        AddChildComponent(component);
-        EventBus.Instance.Publish(new AddComponentToSceneEvent(component));
     }
 
     private float PixelSize(Vector2 size)
@@ -963,7 +850,6 @@ public partial class VcDeck : VisualComponentGroup
     private string _frontImage;
     private string _backImage;
     private int _shape;
-    private VcToken.TokenBuildMode _mode;
     private Color _frontBgColor;
     private string _frontCaption;
     private Color _frontCaptionColor;
@@ -971,7 +857,6 @@ public partial class VcDeck : VisualComponentGroup
     private Color _backBgColor;
     private string _backCaption;
     private Color _backCaptionColor;
-    private List<QuickCardData> _quickCardList = new();
 
     protected override void OnChildrenChanged()
     {
@@ -987,10 +872,13 @@ public partial class VcDeck : VisualComponentGroup
         _componentCount.Text = Children.Count().ToString();
     }
 
+    private const float MinimumThickness = 0.15f;
+
     private void UpdateThickness()
     {
-        _thickness = 0.03f * Children.Count;
-        YHeight = _thickness;
+        // The empty deck thickness fixes a bug where you couldn't interact with an empty deck
+        _thickness = Math.Max(MinimumThickness, 0.03f * Children.Count);
+        YHeight = _thickness + 0.03f;
 
         Scale = new Vector3(_width, _thickness, _height);
         EventBus.Instance.Publish(new QueueStackingUpdateEvent());
