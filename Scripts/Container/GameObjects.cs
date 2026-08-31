@@ -333,6 +333,10 @@ public partial class GameObjects : Node
         };
 
         EventSynchronizer.Instance?.Submit(evt);
+
+        // prevent the components from being cleared when the spawn is over
+        if (component is VisualComponentGroup group)
+            group.SetContainerChildren(Array.Empty<SnowportId>());
     }
 
     private void DeleteComponents()
