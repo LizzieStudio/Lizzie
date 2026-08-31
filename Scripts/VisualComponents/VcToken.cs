@@ -150,24 +150,24 @@ public partial class VcToken : VisualComponentBase
 
     private CommandResponse StartFlip()
     {
+        bool targetFaceUp = RotationDegrees.Z >= 90;
+
+        EventSynchronizer.Instance?.Submit(
+            new ComponentFlippedEvent
+            {
+                Id = Snowport.Clock.Create(),
+                ComponentRef = Reference,
+                FaceUp = targetFaceUp,
+            }
+        );
+
+        return new CommandResponse(true, null);
+    }
+
+    public override void AnimateFlip(bool faceUp)
+    {
         _flipInProcess = true;
-        _targetZ = RotationDegrees.Z < 90 ? 180 : 0;
-
-        var c = new Change
-        {
-            Action = Change.ChangeType.Transform,
-            Begin = Transform,
-            Component = this,
-        };
-
-        float rot = (float)Math.PI;
-
-        if (_targetZ == 0)
-            rot *= -1;
-
-        c.End = Transform.RotatedLocal(new Vector3(0, 0, 1), rot);
-
-        return new CommandResponse(true, c);
+        _targetZ = faceUp ? 0 : 180;
     }
 
     private void ProcessFlip(double delta)
@@ -180,7 +180,7 @@ public partial class VcToken : VisualComponentBase
             _flipInProcess = false;
         }
 
-        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
+        RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
     }
 
     public enum TokenBuildMode

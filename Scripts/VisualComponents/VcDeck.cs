@@ -209,26 +209,24 @@ public partial class VcDeck : VisualComponentGroup
 
     private CommandResponse StartFlip()
     {
+        EventSynchronizer.Instance?.Submit(
+            new ComponentFlippedEvent
+            {
+                Id = Snowport.Clock.Create(),
+                ComponentRef = Reference,
+                FaceUp = !_showFace,
+            }
+        );
+
+        return new CommandResponse(true, null);
+    }
+
+    public override void AnimateFlip(bool faceUp)
+    {
         _flipInProcess = true;
-        _showFace = !_showFace;
+        _showFace = faceUp;
         _rotMult = _showFace ? -1 : 1;
         _targetZ = _showFace ? 0 : 180;
-
-        var c = new Change
-        {
-            Action = Change.ChangeType.Transform,
-            Begin = Transform,
-            Component = this,
-        };
-
-        float rot = (float)Math.PI;
-
-        if (_targetZ == 0)
-            rot *= -1;
-
-        c.End = Transform.RotatedLocal(new Vector3(0, 0, 1), rot);
-
-        return new CommandResponse(true, c);
     }
 
     private void ProcessFlip(double delta)

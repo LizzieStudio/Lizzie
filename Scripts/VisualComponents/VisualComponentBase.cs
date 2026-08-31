@@ -272,6 +272,11 @@ public abstract partial class VisualComponentBase : Area3D
         return new CommandResponse(false, null);
     }
 
+    /// <summary>
+    /// Implemented by flippable components.
+    /// </summary>
+    public virtual void AnimateFlip(bool faceUp) { }
+
     protected TextureFactory TextureFactory;
 
     public virtual List<MenuCommand> GetMenuCommands()

@@ -55,6 +55,7 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Subscribe<ComponentCreatedEvent>(ApplyComponentCreated);
         EventSynchronizer.Instance?.Subscribe<ComponentDeletedEvent>(ApplyComponentDeleted);
         EventSynchronizer.Instance?.Subscribe<ComponentRolledEvent>(ApplyComponentRolled);
+        EventSynchronizer.Instance?.Subscribe<ComponentFlippedEvent>(ApplyComponentFlipped);
     }
 
     private void OnReturnFromHand(ReturnFromHandEvent obj)
@@ -1512,6 +1513,11 @@ public partial class GameObjects : Node
     {
         if (GetComponent(e.ComponentRef) is VcDie die)
             die.AnimateRoll(e.Side);
+    }
+
+    private void ApplyComponentFlipped(ComponentFlippedEvent e)
+    {
+        GetComponent(e.ComponentRef)?.AnimateFlip(e.FaceUp);
     }
 
     private void OnComponentPropertyChanged(ComponentPropertyChangedEvent e)
