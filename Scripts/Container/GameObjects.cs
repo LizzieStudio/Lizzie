@@ -56,6 +56,7 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Subscribe<ComponentDeletedEvent>(ApplyComponentDeleted);
         EventSynchronizer.Instance?.Subscribe<ComponentRolledEvent>(ApplyComponentRolled);
         EventSynchronizer.Instance?.Subscribe<ComponentFlippedEvent>(ApplyComponentFlipped);
+        EventSynchronizer.Instance?.Subscribe<ComponentShuffledEvent>(ApplyComponentShuffled);
     }
 
     private void OnReturnFromHand(ReturnFromHandEvent obj)
@@ -1522,6 +1523,12 @@ public partial class GameObjects : Node
     private void ApplyComponentFlipped(ComponentFlippedEvent e)
     {
         GetComponent(e.ComponentRef)?.AnimateFlip(e.FaceUp);
+    }
+
+    private void ApplyComponentShuffled(ComponentShuffledEvent e)
+    {
+        if (GetComponent(e.ComponentRef) is VisualComponentGroup group)
+            group.Shuffle(e.Seed);
     }
 
     private void OnComponentPropertyChanged(ComponentPropertyChangedEvent e)

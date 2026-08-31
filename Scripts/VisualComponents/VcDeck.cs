@@ -180,9 +180,16 @@ public partial class VcDeck : VisualComponentGroup
 
     private CommandResponse PerformShuffle()
     {
-        Shuffle();
-        UpdateDeckSprites();
-        return new CommandResponse(false, null);
+        EventSynchronizer.Instance?.Submit(
+            new ComponentShuffledEvent
+            {
+                Id = Snowport.Clock.Create(),
+                ComponentRef = Reference,
+                Seed = Rnd.Randi(),
+            }
+        );
+
+        return new CommandResponse(true, null);
     }
 
     public override List<MenuCommand> GetMenuCommands()

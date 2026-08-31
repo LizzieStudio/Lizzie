@@ -138,22 +138,25 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     }
 
     /// <summary>
-    /// Shuffles the group using the Fisher-Yates algorithm
+    /// Shuffles the group using a seed and the Fisher-Yates algorithm
     /// </summary>
-    public virtual void Shuffle()
+    public virtual void Shuffle(ulong seed)
     {
+        Children.Sort();
+
+        var rng = new RandomNumberGenerator { Seed = seed };
+
         int n = Children.Count - 1;
 
         while (n > 0)
         {
-            var r = Rnd.RandiRange(0, n);
+            var r = rng.RandiRange(0, n);
 
             (Children[r], Children[n]) = (Children[n], Children[r]);
             n--;
         }
 
         OnChildrenChanged();
-        SyncRequired = true;
     }
 
     /// <summary>

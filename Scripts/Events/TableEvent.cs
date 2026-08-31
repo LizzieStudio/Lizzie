@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(ComponentDeletedEvent), "ComponentDeleted")]
 [JsonDerivedType(typeof(ComponentRolledEvent), "ComponentRolled")]
 [JsonDerivedType(typeof(ComponentFlippedEvent), "ComponentFlipped")]
+[JsonDerivedType(typeof(ComponentShuffledEvent), "ComponentShuffled")]
 public abstract class TableEvent
 {
     public SnowportId Id { get; set; }
@@ -37,4 +38,11 @@ public class ComponentFlippedEvent : TableEvent
     public SnowportId ComponentRef { get; set; }
 
     public bool FaceUp { get; set; }
+}
+
+public class ComponentShuffledEvent : TableEvent
+{
+    public SnowportId ComponentRef { get; set; }
+
+    public ulong Seed { get; set; }
 }
