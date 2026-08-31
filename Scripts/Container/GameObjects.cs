@@ -315,31 +315,22 @@ public partial class GameObjects : Node
         QueueStackingUpdate();
     }
 
-    public void PublishComponentCreation(VisualComponentBase component)
+    private void PublishComponentCreation(VisualComponentBase component)
     {
         if (component == null)
             return;
-        if (component.Reference == SnowportId.Empty)
-        {
-            GD.PrintErr("component did not have a SnowportId");
-            return;
-        }
-
-        component.GetParent()?.RemoveChild(component);
 
         component.SpawnChildEvents();
 
         var evt = new ComponentCreatedEvent
         {
-            Id = component.Reference,
+            Id = Snowport.Clock.Create(),
             PrototypeRef = component.PrototypeRef,
             ComponentName = component.ComponentName ?? string.Empty,
             State = new VcSyncDto(component),
         };
 
         EventSynchronizer.Instance?.Submit(evt);
-
-        component.QueueFree();
     }
 
     private void DeleteComponents()
@@ -882,7 +873,7 @@ public partial class GameObjects : Node
 
         foreach (var c in _spawnComponents)
         {
-            c.Position = p + c.SpawnDelta;
+            c.Position = new Vector3(p.X, c.YHeight / 2f, p.Z) + c.SpawnDelta;
         }
     }
 
@@ -892,20 +883,7 @@ public partial class GameObjects : Node
     {
         foreach (var c in _spawnComponents)
         {
-            var newComp = (VisualComponentBase)c.Duplicate();
-            newComp.ExcludeFromSync = false;
-            newComp.PrototypeRef = c.PrototypeRef;
-
-            var spawnPosition = _dragPlane.GetCursorProjection();
-
-            newComp.Setup(c.PrototypeRef, c.DataSetRow, TextureFactory);
-            newComp.Position =
-                new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z) + c.SpawnDelta;
-
-            newComp.DimMode(false);
-            newComp.NeverHighlight = false;
-
-            PublishComponentCreation(newComp);
+            PublishComponentCreation(c);
         }
     }
 
@@ -1016,29 +994,6 @@ public partial class GameObjects : Node
             gameObject.IsDragging = true;
         }
 
-        QueueStackingUpdate();
-    }
-
-    public void BeginDragSpawn(VisualComponentBase component)
-    {
-        var reference = component.Reference;
-
-        var spawnPos = _dragPlane.GetCursorProjection();
-        component.Position = new Vector3(spawnPos.X, component.YHeight / 2f, spawnPos.Z);
-
-        PublishComponentCreation(component);
-
-        var spawned = GetComponent(reference);
-        if (spawned == null)
-        {
-            CursorMode = CursorMode.Normal;
-            return;
-        }
-
-        CursorMode = CursorMode.Drag;
-        _dragChange = null;
-        _lastDragPosition = spawnPos;
-        spawned.IsDragging = true;
         QueueStackingUpdate();
     }
 

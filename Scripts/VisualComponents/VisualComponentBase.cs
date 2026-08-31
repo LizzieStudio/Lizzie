@@ -715,26 +715,10 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public bool ExcludeFromSync { get; set; }
 
-    #region Spawn
-
-    public virtual List<VisualComponentBase> SpawnComponents(
-        Guid prototypeRef,
-        TextureFactory textureFactory
-    )
-    {
-        var l = new List<VisualComponentBase>();
-
-        var c = Setup(prototypeRef, textureFactory);
-
-        return [];
-    }
-
     /// <summary>
-    /// The delta from trh cursoe prosition for this object in spawn mode
+    /// The delta from the cursor prosition for this object in spawn mode
     /// </summary>
     public Vector3 SpawnDelta { get; set; } = Vector3.Zero;
-
-    #endregion
 }
 
 public class OffsetShape2D(Shape2D shape, Vector2 offset)

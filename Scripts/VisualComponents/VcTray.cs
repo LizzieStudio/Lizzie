@@ -162,12 +162,23 @@ public partial class VcTray : VisualComponentGroup
 
     public override void DragDraw(int quantity)
     {
-        EventBus.Instance.Publish(
-            new SpawnPrototypeEvent
+        if (_prototype == null)
+            return;
+
+        var id = Snowport.Clock.Create();
+
+        EventSynchronizer.Instance?.Submit(
+            new ComponentCreatedEvent
             {
+                Id = id,
                 PrototypeRef = _prototype.PrototypeRef,
-                StartInDragMode = true,
+                ComponentName = _prototype.Name ?? string.Empty,
+                State = new VcSyncDto { Location = ComponentLocation.Board },
             }
+        );
+
+        EventBus.Instance.Publish(
+            new ShowAndDragComponentEvent { ComponentList = new List<SnowportId> { id } }
         );
     }
 }

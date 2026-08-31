@@ -104,12 +104,7 @@ public partial class GameController : Node3D
 
         var component = SingleComponentSpawn(args, string.Empty);
         if (component != null)
-        {
-            if (e.StartInDragMode)
-                _mainScene.BeginDragSpawn(component);
-            else
-                _mainScene.EnterSpawnMode(new List<VisualComponentBase> { component });
-        }
+            _mainScene.EnterSpawnMode(new List<VisualComponentBase> { component });
     }
 
     private void SpawnGridMultiples(

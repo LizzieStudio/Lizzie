@@ -91,11 +91,6 @@ public partial class SceneController : Node3D
         _gameObjects.EnterSpawnMode(components);
     }
 
-    public void BeginDragSpawn(VisualComponentBase component)
-    {
-        _gameObjects.BeginDragSpawn(component);
-    }
-
     public void PopupClosed()
     {
         _gameObjects.PopupClosed();
