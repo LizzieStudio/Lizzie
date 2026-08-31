@@ -951,15 +951,15 @@ public partial class VcDeck : VisualComponentGroup
 
     public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
     {
-        //Add to the top or bottom of deck depending on orientation
+        // Add to the top or bottom of deck depending on orientation
 
         if (_showFace)
         {
-            AddChildComponents(dragObjects, false);
+            AddChildComponents(dragObjects, true);
         }
         else
         {
-            AddChildComponents(dragObjects, true);
+            AddChildComponents(dragObjects, false);
         }
     }
 
