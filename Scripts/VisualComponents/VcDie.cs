@@ -174,27 +174,26 @@ public partial class VcDie : VisualComponentBase
 
     private CommandResponse Roll()
     {
-        _rollTarget = (int)(GD.Randi() % _sides + 1);
+        // The rolling client picks the target face
+        var side = (int)(GD.Randi() % _sides + 1);
+
+        EventSynchronizer.Instance?.Submit(
+            new ComponentRolledEvent
+            {
+                Id = Snowport.Clock.Create(),
+                ComponentRef = Reference,
+                Side = side,
+            }
+        );
+
+        return new CommandResponse(true, null);
+    }
+
+    public void AnimateRoll(int side)
+    {
+        _rollTarget = side;
         _rollInProcess = true;
         _rollTime = 0;
-
-        var c = new Change
-        {
-            Action = Change.ChangeType.Transform,
-            Begin = Transform,
-            Component = this,
-        };
-
-        //we are cheating to extract the end Transform from the current object.
-        var oldRotation = Rotation;
-
-        Rotation = _sideRotations[_rollTarget - 1] * (3.14159f / 180f); //convert to radians
-
-        c.End = Transform;
-
-        Rotation = oldRotation; //restore the current rotation;
-
-        return new CommandResponse(true, c);
     }
 
     private CommandResponse ShowSide(int side)
