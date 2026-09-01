@@ -48,9 +48,7 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
         EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
-        EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
-        EventBus.Instance.Subscribe<ReturnFromHandEvent>(OnReturnFromHand);
 
         EventSynchronizer.Instance?.Subscribe<ComponentCreatedEvent>(ApplyComponentCreated);
         EventSynchronizer.Instance?.Subscribe<ComponentDeletedEvent>(ApplyComponentDeleted);
@@ -59,23 +57,9 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Subscribe<ComponentShuffledEvent>(ApplyComponentShuffled);
         EventSynchronizer.Instance?.Subscribe<ComponentsDraggedEvent>(ApplyComponentsDragged);
         EventSynchronizer.Instance?.Subscribe<ComponentsDroppedEvent>(ApplyComponentsDropped);
-    }
-
-    private void OnReturnFromHand(ReturnFromHandEvent obj)
-    {
-        var card = obj.Card;
-        if (card == null)
-            return;
-
-        card.Location = VisualComponentBase.ComponentLocation.Board;
-
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        card.SetPosition(new Vector3(_lastDragPosition.X, card.YHeight, _lastDragPosition.Z));
-
-        CursorMode = CursorMode.Drag;
-        card.IsDragging = true;
-
-        QueueStackingUpdate();
+        EventSynchronizer.Instance?.Subscribe<ComponentsTransformedEvent>(
+            ApplyComponentsTransformed
+        );
     }
 
     public void SetGameController(GameController gameController)
@@ -301,8 +285,6 @@ public partial class GameObjects : Node
             GD.PrintErr("component somehow lost its SnowportId");
             return;
         }
-
-        component.ZOrder = GetMaxComponentZ() + 1;
 
         GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
 
@@ -593,55 +575,41 @@ public partial class GameObjects : Node
 
     #region Stacking
 
-    private void MoveToTop()
+    /// <summary>
+    /// Sends the components to the top or bottom of the ZOrder.
+    /// </summary>
+    private void SubmitReorder(IEnumerable<VisualComponentBase> components, ZTarget target)
     {
-        var go = GetSelectedObject();
-        if (go == null)
+        if (target == ZTarget.Unset)
             return;
-        MoveToTop(go);
-    }
 
-    private void MoveToTop(VisualComponentBase go)
-    {
-        var curZ = go.ZOrder;
-        var maxZ = GetMaxComponentZ();
+        var ordered = components.Where(c => c is not VcZone).OrderBy(c => c.ZOrder).ToList();
+        if (ordered.Count == 0)
+            return;
 
-        //move everything above the selected object one lower
-        foreach (var g in ComponentNodes)
+        var arr = new TransformedComponent[ordered.Count];
+        for (int i = 0; i < ordered.Count; i++)
         {
-            if (g is VisualComponentBase vcb && vcb.ZOrder > curZ)
-            {
-                vcb.ZOrder--;
-            }
+            var t = TransformedComponent.Capture(ordered[i]);
+            t.ZTarget = target;
+            t.ZSuborder = i;
+            arr[i] = t;
         }
 
-        go.ZOrder = maxZ;
+        EventSynchronizer.Instance?.Submit(
+            new ComponentsTransformedEvent { Id = Snowport.Clock.Create(), Components = arr }
+        );
+    }
+
+    private void MoveToTop()
+    {
+        SubmitReorder(GetSelectedObjects(), ZTarget.Top);
         QueueStackingUpdate();
     }
 
     private void MoveToBottom()
     {
-        var go = GetSelectedObject();
-        if (go == null)
-            return;
-
-        MoveToBottom(go);
-    }
-
-    private void MoveToBottom(VisualComponentBase go)
-    {
-        var curZ = go.ZOrder;
-
-        //move everything below the selected object one higher
-        foreach (var g in ComponentNodes)
-        {
-            if (g is VisualComponentBase vcb && vcb.ZOrder < curZ)
-            {
-                vcb.ZOrder++;
-            }
-        }
-
-        go.ZOrder = 1;
+        SubmitReorder(GetSelectedObjects(), ZTarget.Bottom);
         QueueStackingUpdate();
     }
 
@@ -772,17 +740,6 @@ public partial class GameObjects : Node
             ci.MoveToTargetY(floor + (ci.YHeight / 2f));
             //ci.Position = new Vector3(ci.Position.X, floor + (ci.YHeight / 2f), ci.Position.Z);
         }
-    }
-
-    private int GetMaxComponentZ()
-    {
-        if (ComponentNodes.Count == 0)
-            return 0;
-
-        return ComponentNodes
-            .Where(c => c is VisualComponentBase)
-            .Cast<VisualComponentBase>()
-            .Max(vch => vch.ZOrder);
     }
 
     private void QueueStackingUpdate()
@@ -938,7 +895,6 @@ public partial class GameObjects : Node
     #endregion
 
     #region Drag
-    private Vector3 _lastDragPosition;
 
     private static bool HandsEnabled() =>
         ProjectService.Instance.CurrentProject?.GameSettings?.EnablePlayerHands == true;
@@ -969,12 +925,58 @@ public partial class GameObjects : Node
 
         // The starting client sets each component's offset from its cursor.
         // Every client positions the components identically during the drag.
-        var dragged = GetSelectedObjects()
-            .Where(o => o.CanDrag)
+        BeginDrag(GetSelectedObjects().Where(o => o.CanDrag), startCursor);
+
+        QueueStackingUpdate();
+    }
+
+    public void ShowAndDrag(IReadOnlyList<SnowportId> componentRefs)
+    {
+        if (componentRefs.Count == 0)
+            return;
+
+        var cursor = _dragPlane.GetCursorProjection();
+
+        var transformed = new List<TransformedComponent>();
+        foreach (var r in componentRefs)
+        {
+            var c = GetComponent(r);
+            if (c == null)
+                continue;
+
+            var t = TransformedComponent.Capture(c);
+            t.Location = VisualComponentBase.ComponentLocation.Board;
+            t.Position = cursor + c.SpawnDelta;
+            // Bring the drawn components to the top, in draw order.
+            t.ZTarget = ZTarget.Top;
+            t.ZSuborder = transformed.Count;
+            transformed.Add(t);
+        }
+
+        if (transformed.Count == 0)
+            return;
+
+        EventSynchronizer.Instance?.Submit(
+            new ComponentsTransformedEvent
+            {
+                Id = Snowport.Clock.Create(),
+                Components = transformed.ToArray(),
+            }
+        );
+
+        BeginDrag(transformed.Select(t => GetComponent(t.ComponentRef)), cursor);
+
+        QueueStackingUpdate();
+    }
+
+    private void BeginDrag(IEnumerable<VisualComponentBase> components, Vector3 cursor)
+    {
+        var dragged = components
+            .Where(o => o != null)
             .Select(o => new DraggedComponent
             {
                 ComponentRef = o.Reference,
-                Offset = new Vector2(o.Position.X - startCursor.X, o.Position.Z - startCursor.Z),
+                Offset = new Vector2(o.Position.X - cursor.X, o.Position.Z - cursor.Z),
             })
             .ToArray();
         if (dragged.Length == 0)
@@ -986,41 +988,6 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Submit(
             new ComponentsDraggedEvent { Id = Snowport.Clock.Create(), Components = dragged }
         );
-
-        QueueStackingUpdate();
-    }
-
-    /// <summary>
-    /// Handles when a component is being unhidden as it is dragged away from a deck, or bag
-    /// </summary>
-    private void EnterDragUnhideMode(ShowAndDragComponentEvent obj)
-    {
-        if (!obj.ComponentList.Any())
-            return;
-
-        var fg = obj.ComponentList.First();
-        if (fg == SnowportId.Empty)
-            return;
-
-        var first = GetComponent(fg);
-        if (first == null)
-            return;
-
-        CursorMode = CursorMode.Drag;
-
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        foreach (var g in obj.ComponentList)
-        {
-            var gameObject = GetComponent(g);
-            if (gameObject == null)
-                continue;
-
-            gameObject.Location = VisualComponentBase.ComponentLocation.Board;
-            gameObject.IsDragging = true;
-            gameObject.Position = _lastDragPosition + gameObject.SpawnDelta;
-        }
-
-        QueueStackingUpdate();
     }
 
     private VisualComponentGroup _currentDragDropTarget;
@@ -1256,13 +1223,10 @@ public partial class GameObjects : Node
             }
         }
 
-        //move all the dragged items to the top of the stack
-
-        var dropped = GetDraggingObjects().OrderBy(x => x.ZOrder).ToList();
-        foreach (var gameObject in dropped)
-        {
-            MoveToTop(gameObject);
-        }
+        //move all the dragged items to the top of the stack, as one Transform event
+        var dropped = GetDraggingObjects().ToList();
+        // Submit before the drop event so the drop's newer id wins on position.
+        SubmitReorder(dropped, ZTarget.Top);
 
         Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
 
@@ -1420,6 +1384,9 @@ public partial class GameObjects : Node
 
         vcb.SpawnBuild(evt.PrototypeRef, syncDto, TextureFactory);
 
+        // A newly created component starts on top, anchored to its creation event.
+        vcb.ZOrder = new ZOrder(ZTarget.Top, 0, evt.Id);
+
         AddComponentToScene(vcb);
         return true;
     }
@@ -1545,6 +1512,30 @@ public partial class GameObjects : Node
             c.LastMoveId = e.Id;
             c.Position = d.Position;
             c.LogicalVisible = true;
+        }
+
+        QueueStackingUpdate();
+    }
+
+    private void ApplyComponentsTransformed(ComponentsTransformedEvent e)
+    {
+        foreach (var t in e.Components)
+        {
+            var c = GetComponent(t.ComponentRef);
+
+            // this happens when an outdated event arrives
+            if (c == null || e.Id.CompareTo(c.LastMoveId) < 0)
+                continue;
+
+            c.LastMoveId = e.Id;
+
+            c.Location = t.Location;
+            c.Position = t.Position;
+            c.Rotation = t.Rotation;
+
+            // Only reorder when the event asks to; otherwise leave the stacking order alone.
+            if (t.ZTarget != ZTarget.Unset)
+                c.ZOrder = new ZOrder(t.ZTarget, t.ZSuborder, e.Id);
         }
 
         QueueStackingUpdate();

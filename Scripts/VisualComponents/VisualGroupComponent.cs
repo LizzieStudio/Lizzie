@@ -31,14 +31,6 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         base.Delete();
     }
 
-    public virtual void AddChildComponent(VisualComponentBase component)
-    {
-        component.Location = ComponentLocation.Container;
-        Children.Add(component.Reference);
-        OnChildrenChanged();
-        SyncRequired = true;
-    }
-
     public virtual void AddChildComponents(
         IEnumerable<VisualComponentBase> components,
         bool addToTop = false
@@ -47,7 +39,6 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         var compArr = components as VisualComponentBase[] ?? components.ToArray(); //avoid multiple iterations
         foreach (var c in compArr)
         {
-            c.Location = ComponentLocation.Container;
             if (addToTop)
                 Children.Insert(0, c.Reference);
             else
@@ -56,6 +47,25 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
         OnChildrenChanged();
         SyncRequired = true;
+
+        var transformed = compArr
+            .Select(c =>
+            {
+                var t = TransformedComponent.Capture(c);
+                t.Location = ComponentLocation.Container;
+                return t;
+            })
+            .ToArray();
+        if (transformed.Length > 0)
+        {
+            EventSynchronizer.Instance?.Submit(
+                new ComponentsTransformedEvent
+                {
+                    Id = Snowport.Clock.Create(),
+                    Components = transformed,
+                }
+            );
+        }
     }
 
     public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)

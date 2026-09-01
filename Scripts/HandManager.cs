@@ -278,8 +278,7 @@ public partial class HandManager : Panel
     public void RemoveFromHand(VcToken card)
     {
         PlayerHandService.Instance?.RemoveCard(card);
-        card.Location = VisualComponentBase.ComponentLocation.Board;
-        EventBus.Instance.Publish(new ReturnFromHandEvent { Card = card });
+        ProjectService.Instance.GameObjects.ShowAndDrag(new List<SnowportId> { card.Reference });
         // RefreshDisplay triggered by HandChangedEvent
     }
 
@@ -334,7 +333,8 @@ public partial class HandManager : Panel
         if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left } mb && mb.Pressed)
         {
             // Remove from hand immediately and hand off to the 3D drag system.
-            // OnReturnFromHand will set IsDragging = true so the normal HandleDrag loop takes over.
+            // RemoveFromHand places the card on the board and starts a drag so the normal
+            // HandleDrag loop takes over.
             _handDragCard = card;
             RemoveFromHand(card);
             GetViewport().SetInputAsHandled();

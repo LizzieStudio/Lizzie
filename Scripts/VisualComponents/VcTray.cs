@@ -177,9 +177,7 @@ public partial class VcTray : VisualComponentGroup
             }
         );
 
-        EventBus.Instance.Publish(
-            new ShowAndDragComponentEvent { ComponentList = new List<SnowportId> { id } }
-        );
+        ProjectService.Instance.GameObjects.ShowAndDrag(new List<SnowportId> { id });
     }
 }
 

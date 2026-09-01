@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Lizzie.Scripts.Commands
 {
     [Command(VisualCommand.Tuck)]
-    public class TuckCommand : BasicCommand
+    public class TuckCommand : CommandBase
     {
         public TuckCommand()
         {
@@ -17,7 +17,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Untuck)]
-    public class UntuckCommand : BasicCommand
+    public class UntuckCommand : CommandBase
     {
         public UntuckCommand()
         {
@@ -37,7 +37,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Unfreeze)]
-    public class UnfreezeCommand : BasicCommand
+    public class UnfreezeCommand : CommandBase
     {
         public UnfreezeCommand()
         {
@@ -47,7 +47,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Refresh)]
-    public class RefreshCommand : BasicCommand
+    public class RefreshCommand : CommandBase
     {
         public RefreshCommand()
         {
@@ -57,7 +57,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Duplicate)]
-    public class DuplicateCommand : BasicCommand
+    public class DuplicateCommand : CommandBase
     {
         public DuplicateCommand()
         {
@@ -67,7 +67,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Edit)]
-    public class EditCommand : BasicCommand
+    public class EditCommand : CommandBase
     {
         public EditCommand()
         {
@@ -78,7 +78,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.MakeUnique)]
-    public class MakeUniqueCommand : BasicCommand
+    public class MakeUniqueCommand : CommandBase
     {
         public MakeUniqueCommand()
         {
@@ -89,7 +89,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Delete)]
-    public class DeleteCommand : BasicCommand
+    public class DeleteCommand : CommandBase
     {
         public DeleteCommand()
         {
@@ -100,7 +100,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Draw)]
-    public class DrawCommand : BasicCommand
+    public class DrawCommand : CommandBase
     {
         public DrawCommand()
         {
@@ -112,7 +112,7 @@ namespace Lizzie.Scripts.Commands
     }
 
     [Command(VisualCommand.Deal)]
-    public class DealCommand : BasicCommand
+    public class DealCommand : CommandBase
     {
         public DealCommand()
         {

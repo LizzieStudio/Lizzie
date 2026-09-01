@@ -345,11 +345,6 @@ public class SpawnPrototypeEvent : IEvent
     public string DataSetRow { get; set; } = string.Empty;
 }
 
-public class ShowAndDragComponentEvent : IEvent
-{
-    public List<SnowportId> ComponentList { get; set; } = new();
-}
-
 public class DeletePrototypeEvent : IEvent
 {
     public Guid PrototypeRef { get; set; }
@@ -389,11 +384,6 @@ public class AddToHandEvent : IEvent
     /// Use -2 to direct to the local player's current seat.
     /// </summary>
     public int SeatIndex { get; set; } = -2;
-}
-
-public class ReturnFromHandEvent : IEvent
-{
-    public VcToken Card { get; set; }
 }
 
 /// <summary>

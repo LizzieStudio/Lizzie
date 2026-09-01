@@ -1,5 +1,5 @@
 ﻿[Command(VisualCommand.Shuffle)]
-public class ShuffleCommand : BasicCommand
+public class ShuffleCommand : CommandBase
 {
     public ShuffleCommand()
     {

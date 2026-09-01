@@ -1,5 +1,5 @@
 [Command(VisualCommand.Flip)]
-public class FlipCommand : BasicCommand
+public class FlipCommand : CommandBase
 {
     public FlipCommand()
     {

@@ -108,7 +108,7 @@ public partial class VcBag : VisualComponentGroup
         if (!gList.Any())
             return;
 
-        EventBus.Instance.Publish(new ShowAndDragComponentEvent { ComponentList = gList });
+        ProjectService.Instance.GameObjects.ShowAndDrag(gList);
     }
 }
 

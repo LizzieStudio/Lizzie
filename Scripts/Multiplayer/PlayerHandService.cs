@@ -80,10 +80,29 @@ public partial class PlayerHandService : Node
         if (!_hands.ContainsKey(seatIndex))
             _hands[seatIndex] = new List<VcToken>();
 
-        foreach (var card in cards)
+        var cardList = cards as IList<VcToken> ?? cards.ToList();
+        foreach (var card in cardList)
         {
-            card.Location = VisualComponentBase.ComponentLocation.Hand;
             _hands[seatIndex].Add(card);
+        }
+
+        var transformed = cardList
+            .Select(card =>
+            {
+                var t = TransformedComponent.Capture(card);
+                t.Location = VisualComponentBase.ComponentLocation.Hand;
+                return t;
+            })
+            .ToArray();
+        if (transformed.Length > 0)
+        {
+            EventSynchronizer.Instance?.Submit(
+                new ComponentsTransformedEvent
+                {
+                    Id = Snowport.Clock.Create(),
+                    Components = transformed,
+                }
+            );
         }
 
         EventBus.Instance.Publish(new HandChangedEvent { SeatIndex = seatIndex });
@@ -98,7 +117,6 @@ public partial class PlayerHandService : Node
         {
             if (kv.Value.Remove(card))
             {
-                card.Location = VisualComponentBase.ComponentLocation.Board;
                 EventBus.Instance.Publish(new HandChangedEvent { SeatIndex = kv.Key });
                 return;
             }

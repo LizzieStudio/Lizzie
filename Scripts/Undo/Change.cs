@@ -9,7 +9,6 @@ public class Change
     {
         Transform,
         LockStatus,
-        ZOrder,
         Layer,
     }
 

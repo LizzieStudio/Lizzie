@@ -10,6 +10,7 @@ using Godot;
 [JsonDerivedType(typeof(ComponentShuffledEvent), "ComponentShuffled")]
 [JsonDerivedType(typeof(ComponentsDraggedEvent), "ComponentsDragged")]
 [JsonDerivedType(typeof(ComponentsDroppedEvent), "ComponentsDropped")]
+[JsonDerivedType(typeof(ComponentsTransformedEvent), "ComponentsTransformed")]
 public abstract class TableEvent
 {
     public SnowportId Id { get; set; }
@@ -76,4 +77,48 @@ public struct DroppedComponent
     public SnowportId ComponentRef { get; set; }
 
     public Vector3 Position { get; set; }
+}
+
+/// <summary>
+/// Instant move, reorientation, relocation, or reordering of one or more components. Carries the target
+/// position, location, rotation, and ZOrder for each component. Fired whenever a component's transform
+/// suddenly changes, like when it is drawn from or dropped into a container, added or removed
+/// from a hand, or rotated with the rotate buttons.
+/// </summary>
+public class ComponentsTransformedEvent : TableEvent
+{
+    public TransformedComponent[] Components { get; set; } = Array.Empty<TransformedComponent>();
+}
+
+public struct TransformedComponent
+{
+    public SnowportId ComponentRef { get; set; }
+
+    public VisualComponentBase.ComponentLocation Location { get; set; }
+
+    public Vector3 Position { get; set; }
+
+    /// <summary>Target rotation in radians.</summary>
+    public Vector3 Rotation { get; set; }
+
+    /// <summary>
+    /// Where the event sends the component in the ZOrder, or Unset.
+    /// </summary>
+    public ZTarget ZTarget { get; set; }
+
+    /// <summary>Separates components reordered by the same event. Higher ends up on top.</summary>
+    public int ZSuborder { get; set; }
+
+    /// <summary>
+    /// Captures a component's current transform state so a caller can override only the fields it
+    /// intends to change without clobbering the others.
+    /// </summary>
+    public static TransformedComponent Capture(VisualComponentBase component) =>
+        new()
+        {
+            ComponentRef = component.Reference,
+            Location = component.Location,
+            Position = component.Position,
+            Rotation = component.Rotation,
+        };
 }

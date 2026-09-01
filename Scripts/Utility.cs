@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Godot;
 
 public partial class Utility : Node
@@ -154,17 +153,6 @@ public partial class Utility : Node
         }
 
         return new ImageTexture();
-    }
-
-    static IEnumerable<Type> GetCommands(Assembly assembly)
-    {
-        foreach (Type type in assembly.GetTypes())
-        {
-            if (type.GetCustomAttributes(typeof(CommandAttribute), true).Length > 0)
-            {
-                yield return type;
-            }
-        }
     }
 
     public static string ComponentTypeToScenePath(

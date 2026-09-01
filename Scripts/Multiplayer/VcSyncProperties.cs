@@ -35,7 +35,7 @@ public class VcSyncDto
 
     public bool LogicalVisible { get; set; }
 
-    public int ZOrder { get; set; }
+    public ZOrder ZOrder { get; set; }
 
     public string DataSetRow { get; set; }
     public VisualComponentBase.ComponentLocation Location { get; set; }

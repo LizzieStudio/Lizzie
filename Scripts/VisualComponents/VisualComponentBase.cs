@@ -199,34 +199,34 @@ public abstract partial class VisualComponentBase : Area3D
 
         if (command == VisualCommand.RotateCcw)
         {
-            var c = new Change
-            {
-                Component = this,
-                Action = Change.ChangeType.Transform,
-                Begin = this.Transform,
-            };
-
-            float rotation = ProjectService.Instance.RotationStep;
-            SetRotationDegrees(RotationDegrees + new Vector3(0, rotation, 0));
-            c.End = Transform;
-
-            return new CommandResponse(true, c);
+            var begin = Transform;
+            SubmitRotation(ProjectService.Instance.RotationStep);
+            return new CommandResponse(
+                true,
+                new Change
+                {
+                    Component = this,
+                    Action = Change.ChangeType.Transform,
+                    Begin = begin,
+                    End = Transform,
+                }
+            );
         }
 
         if (command == VisualCommand.RotateCw)
         {
-            var c = new Change
-            {
-                Component = this,
-                Action = Change.ChangeType.Transform,
-                Begin = this.Transform,
-            };
-
-            float rotation = -1 * ProjectService.Instance.RotationStep;
-            SetRotationDegrees(RotationDegrees + new Vector3(0, rotation, 0));
-            c.End = Transform;
-
-            return new CommandResponse(true, c);
+            var begin = Transform;
+            SubmitRotation(-1 * ProjectService.Instance.RotationStep);
+            return new CommandResponse(
+                true,
+                new Change
+                {
+                    Component = this,
+                    Action = Change.ChangeType.Transform,
+                    Begin = begin,
+                    End = Transform,
+                }
+            );
         }
 
         if (command == VisualCommand.Delete)
@@ -365,23 +365,16 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// Sets the Z-order for stacking. A "0" is the lowest - on the table.
-    /// If two items have the same Z-Order (should never happen), then
-    /// there is no guarantee which will go first.
+    /// The component's stacking order. Computed from a <see cref="global::ZOrder"/> rather than a
+    /// dense integer; components are created on top (their creation event id) and reordered by
+    /// transform events. Higher sits physically on top.
     /// </summary>
-    private int _zOrder;
+    private ZOrder _zOrder = new(ZTarget.Top, 0, SnowportId.Empty);
 
-    public virtual int ZOrder
+    public virtual ZOrder ZOrder
     {
         get => _zOrder;
-        set
-        {
-            if (_zOrder == value)
-                return;
-
-            _zOrder = value;
-            SyncRequired = true;
-        }
+        set => _zOrder = value;
     }
 
     /// <summary>
@@ -629,36 +622,22 @@ public abstract partial class VisualComponentBase : Area3D
         get => _location;
         set
         {
-            if (_location == value)
-                return;
-            SyncRequired = true;
             _location = value;
-            SetVisibility(value == ComponentLocation.Board);
+            LogicalVisible = value == ComponentLocation.Board;
         }
     }
 
-    public void SetPosition(Vector3 position)
+    private void SubmitRotation(float degreesAboutY)
     {
-        if (position == Position)
-            return;
-        Position = position;
-        SyncRequired = true;
-    }
-
-    public void SetRotationDegrees(Vector3 rotationDegrees)
-    {
-        if (rotationDegrees == RotationDegrees)
-            return;
-        RotationDegrees = rotationDegrees;
-        SyncRequired = true;
-    }
-
-    public void SetVisibility(bool visible)
-    {
-        if (visible == LogicalVisible)
-            return;
-        LogicalVisible = visible;
-        SyncRequired = true;
+        var t = TransformedComponent.Capture(this);
+        t.Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
+        EventSynchronizer.Instance?.Submit(
+            new ComponentsTransformedEvent
+            {
+                Id = Snowport.Clock.Create(),
+                Components = new[] { t },
+            }
+        );
     }
 
     private bool _logicalVisible = true;

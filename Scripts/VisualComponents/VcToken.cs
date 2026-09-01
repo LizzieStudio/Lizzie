@@ -65,16 +65,6 @@ public partial class VcToken : VisualComponentBase
 
     public Image BackSprite => BackTexture.GetImage();
 
-    public void ForceFace()
-    {
-        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, 0));
-    }
-
-    public void ForceBack()
-    {
-        SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, 180));
-    }
-
     private TokenTextureSubViewport _frontView;
     private TokenTextureSubViewport _backView;
 

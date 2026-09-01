@@ -88,10 +88,10 @@ public partial class VcZone : VisualComponentBase
 
     public override float MaxAxisSize => Math.Max(_width, _depth);
 
-    //Zones are always ZOrder -1
-    public override int ZOrder
+    //Zones always sit below everything else.
+    public override ZOrder ZOrder
     {
-        get => -1;
+        get => global::ZOrder.Floor;
         set { }
     }
 

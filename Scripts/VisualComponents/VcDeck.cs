@@ -258,7 +258,18 @@ public partial class VcDeck : VisualComponentGroup
         }
 
         _spinnyBits.RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
-        //SetRotationDegrees(new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ));
+    }
+
+    /// <summary>
+    /// The orientation a card takes as it is drawn off this deck.
+    /// </summary>
+    private Vector3 DrawnRotation(VisualComponentBase comp)
+    {
+        if (comp is not VcToken)
+            return comp.Rotation;
+
+        var z = Mathf.DegToRad(_showFace ? 180f : 0f);
+        return new Vector3(comp.Rotation.X, comp.Rotation.Y, z);
     }
 
     private CommandResponse DrawCards(int count)
@@ -294,8 +305,8 @@ public partial class VcDeck : VisualComponentGroup
         }
         else
         {
-            //splay
-            var basePos = Position;
+            //splay onto the board via a Transform event
+            var transformed = new List<TransformedComponent>();
 
             for (int i = 0; i < cards.Length; i++)
             {
@@ -304,37 +315,27 @@ public partial class VcDeck : VisualComponentGroup
                 if (comp == null)
                     continue;
 
-                if (comp is VcToken vcf)
-                {
-                    if (_showFace)
-                    {
-                        vcf.ForceBack();
-                    }
-                    else
-                    {
-                        vcf.ForceFace();
-                    }
-                }
-
-                //tween to handle movement
-                //var cardTween = GetTree().CreateTween();
-
-                comp.Location = ComponentLocation.Board;
-
                 float deltaX = Position.X + (_width * (1.5f + i));
 
-                /*
-                cardTween.TweenProperty(cards[i], "visible", true, 0.01);
-                cardTween.TweenProperty(
-                    cards[i],
-                    "position",
-                    new Vector3(deltaX, Position.Y, Position.Z),
-                    0.2f
-                );
-                */
-                comp.SetPosition(new Vector3(deltaX, Position.Y, Position.Z));
+                var t = TransformedComponent.Capture(comp);
+                t.Location = ComponentLocation.Board;
+                t.Position = new Vector3(deltaX, Position.Y, Position.Z);
+                t.Rotation = DrawnRotation(comp);
+                // Splayed cards land on top, in draw order.
+                t.ZTarget = ZTarget.Top;
+                t.ZSuborder = i;
+                transformed.Add(t);
+            }
 
-                comp.ZOrder = ZOrder + i + 1;
+            if (transformed.Count > 0)
+            {
+                EventSynchronizer.Instance?.Submit(
+                    new ComponentsTransformedEvent
+                    {
+                        Id = Snowport.Clock.Create(),
+                        Components = transformed.ToArray(),
+                    }
+                );
             }
         }
 
@@ -912,17 +913,7 @@ public partial class VcDeck : VisualComponentGroup
             if (comp == null)
                 continue;
 
-            if (comp is VcToken vcf)
-            {
-                if (_showFace)
-                {
-                    vcf.ForceBack();
-                }
-                else
-                {
-                    vcf.ForceFace();
-                }
-            }
+            comp.Rotation = DrawnRotation(comp);
         }
 
         UpdateDeckSprites();
@@ -930,7 +921,7 @@ public partial class VcDeck : VisualComponentGroup
         if (!cards.Any())
             return;
 
-        EventBus.Instance.Publish(new ShowAndDragComponentEvent { ComponentList = cards.ToList() });
+        ProjectService.Instance.GameObjects.ShowAndDrag(cards.ToList());
     }
 
     #region Drop Processing
