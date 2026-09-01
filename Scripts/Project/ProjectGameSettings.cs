@@ -30,30 +30,30 @@ public class ProjectGameSettings
             new ProjectPlayerSettings
             {
                 Name = "Seat 1",
-                ColorR = 0f,
-                ColorG = 0f,
-                ColorB = 1f,
+                ColorR = 39f / 255f,
+                ColorG = 174f / 255f,
+                ColorB = 254f / 255f,
             },
             new ProjectPlayerSettings
             {
                 Name = "Seat 2",
-                ColorR = 1f,
-                ColorG = 0f,
-                ColorB = 0f,
+                ColorR = 242f / 255f,
+                ColorG = 140f / 255f,
+                ColorB = 36f / 255f,
             },
             new ProjectPlayerSettings
             {
                 Name = "Seat 3",
-                ColorR = 0f,
-                ColorG = 1f,
-                ColorB = 0f,
+                ColorR = 243f / 255f,
+                ColorG = 117f / 255f,
+                ColorB = 236f / 255f,
             },
             new ProjectPlayerSettings
             {
                 Name = "Seat 4",
-                ColorR = 1f,
-                ColorG = 1f,
-                ColorB = 0f,
+                ColorR = 28f / 255f,
+                ColorG = 190f / 255f,
+                ColorB = 91f / 255f,
             },
         };
 
