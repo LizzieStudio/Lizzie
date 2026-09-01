@@ -317,6 +317,12 @@ public abstract partial class VisualComponentBase : Area3D
     public virtual SnowportId Reference { get; set; } = Snowport.Clock.Create();
 
     /// <summary>
+    /// The id of the most recent event that moved this component.
+    /// When an outdated move event arrives, it will be ignored.
+    /// </summary>
+    public SnowportId LastMoveId { get; set; } = SnowportId.Empty;
+
+    /// <summary>
     /// Which row in the DataSet supplies the data for templating
     /// </summary>
     public virtual string DataSetRow { get; set; }

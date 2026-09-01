@@ -9,6 +9,7 @@ public static class LizzieJson
         Converters =
         {
             new GodotNativeJsonConverter<Color>(),
+            new GodotNativeJsonConverter<Vector2>(),
             new GodotNativeJsonConverter<Vector3>(),
             new SnowportIdJsonConverter(),
         },

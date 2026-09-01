@@ -13,14 +13,11 @@ public partial class CursorSynchronizer : Node
 
     private const double SendInterval = 1.0 / 30.0;
 
-    /// <summary>Minimum world-space movement before a new position is sent.</summary>
     private const float MoveEpsilon = 0.1f;
 
-    /// <summary>Height above the table (drag plane) at which cursor sprites float.</summary>
     private const float CursorLift = 0.2f;
 
-    /// <summary>The value returned by DragPlane.GetCursorProjection() on a ray miss.</summary>
-    private static readonly Vector3 Miss = new(-99, -99, -99);
+    private static Vector3 Miss => DragPlane.Miss;
 
     private static readonly Color FallbackColor = new(0.8f, 0.8f, 0.8f);
 
@@ -31,7 +28,12 @@ public partial class CursorSynchronizer : Node
     private Vector3 _lastSentPosition = Miss;
 
     private Texture2D _cursorTexture;
-    private readonly Dictionary<int, Sprite3D> _cursors = new();
+
+    private readonly Dictionary<byte, Sprite3D> _cursors = new();
+
+    private readonly Dictionary<byte, Vector3> _positions = new();
+
+    public bool TryGetCursor(byte source, out Vector3 pos) => _positions.TryGetValue(source, out pos);
 
     public override void _Ready()
     {
@@ -60,8 +62,16 @@ public partial class CursorSynchronizer : Node
 
     public override void _Process(double delta)
     {
+        if (_dragPlane == null)
+            return;
+
         var mm = MultiplayerManager.Instance;
-        if (_dragPlane == null || mm?.IsMultiplayerActive != true)
+
+        var pos = _dragPlane.GetCursorProjection();
+        if (pos != Miss)
+            _positions[Snowport.Clock.source] = pos;
+
+        if (mm?.IsMultiplayerActive != true)
             return;
 
         RemoveStaleCursors(mm);
@@ -71,7 +81,6 @@ public partial class CursorSynchronizer : Node
             return;
         _sendAccumulator = 0;
 
-        var pos = _dragPlane.GetCursorProjection();
         if (pos == Miss)
             return;
         if (_lastSentPosition != Miss && pos.DistanceTo(_lastSentPosition) < MoveEpsilon)
@@ -79,9 +88,9 @@ public partial class CursorSynchronizer : Node
         _lastSentPosition = pos;
 
         if (mm.IsServer)
-            Rpc(nameof(ClientReceiveCursor), mm.LocalPlayerId, pos);
+            Rpc(nameof(ClientReceiveCursor), (int)Snowport.Clock.source, pos);
         else
-            RpcId(1, nameof(ServerReceiveCursor), pos);
+            RpcId(1, nameof(ServerReceiveCursor), (int)Snowport.Clock.source, pos);
     }
 
     [Rpc(
@@ -89,20 +98,20 @@ public partial class CursorSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
     )]
-    private void ServerReceiveCursor(Vector3 pos)
+    private void ServerReceiveCursor(int source, Vector3 pos)
     {
         var mm = MultiplayerManager.Instance;
         if (mm?.IsServer != true)
             return;
 
         var senderId = Multiplayer.GetRemoteSenderId();
-        UpdateCursor(senderId, pos);
+        UpdateCursor((byte)source, pos);
 
         foreach (var player in mm.Players)
         {
             if (player.Key == senderId || player.Key == 1)
                 continue;
-            RpcId(player.Key, nameof(ClientReceiveCursor), senderId, pos);
+            RpcId(player.Key, nameof(ClientReceiveCursor), source, pos);
         }
     }
 
@@ -111,27 +120,29 @@ public partial class CursorSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
     )]
-    private void ClientReceiveCursor(int peerId, Vector3 pos)
+    private void ClientReceiveCursor(int source, Vector3 pos)
     {
-        UpdateCursor(peerId, pos);
+        UpdateCursor((byte)source, pos);
     }
 
-    private void UpdateCursor(int peerId, Vector3 pos)
+    private void UpdateCursor(byte source, Vector3 pos)
     {
         if (_cursorParent == null)
             return;
-        if (peerId == MultiplayerManager.Instance?.LocalPlayerId)
+        if (source == Snowport.Clock.source)
             return;
 
-        if (!_cursors.TryGetValue(peerId, out var sprite))
+        if (!_cursors.TryGetValue(source, out var sprite))
         {
             sprite = CreateCursorSprite();
             _cursorParent.AddChild(sprite);
-            _cursors[peerId] = sprite;
+            _cursors[source] = sprite;
         }
 
-        sprite.Modulate = GetSeatColor(peerId);
+        sprite.Modulate = GetSeatColor(source);
         sprite.Position = pos + Vector3.Up * CursorLift;
+
+        _positions[source] = pos;
     }
 
     private Sprite3D CreateCursorSprite()
@@ -154,9 +165,10 @@ public partial class CursorSynchronizer : Node
         return sprite;
     }
 
-    private static Color GetSeatColor(int peerId)
+    private static Color GetSeatColor(byte source)
     {
-        var seat = PlayerSeatManager.Instance?.GetSeat(peerId) ?? -2;
+        var peerId = PeerForSource(source);
+        var seat = peerId >= 0 ? (PlayerSeatManager.Instance?.GetSeat(peerId) ?? -2) : -2;
         var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
         if (settings == null || seat < 0 || seat >= settings.Players.Count)
             return FallbackColor;
@@ -165,26 +177,55 @@ public partial class CursorSynchronizer : Node
         return new Color(p.ColorR, p.ColorG, p.ColorB, p.ColorA);
     }
 
+    private static int PeerForSource(byte source)
+    {
+        // this should be removed later
+        // ultimately, the peer id should wind up being the source id
+        var mm = MultiplayerManager.Instance;
+        if (mm != null)
+        {
+            foreach (var p in mm.Players.Values)
+            {
+                if (p.Source == source)
+                    return p.PlayerId;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool IsSourceConnected(MultiplayerManager mm, byte source)
+    {
+        foreach (var p in mm.Players.Values)
+        {
+            if (p.Source == source)
+                return true;
+        }
+
+        return false;
+    }
+
     private void RemoveStaleCursors(MultiplayerManager mm)
     {
         if (_cursors.Count == 0)
             return;
 
-        List<int> stale = null;
-        foreach (var peerId in _cursors.Keys)
+        List<byte> stale = null;
+        foreach (var source in _cursors.Keys)
         {
-            if (!mm.Players.ContainsKey(peerId))
-                (stale ??= new List<int>()).Add(peerId);
+            if (!IsSourceConnected(mm, source))
+                (stale ??= new List<byte>()).Add(source);
         }
 
         if (stale == null)
             return;
 
-        foreach (var peerId in stale)
+        foreach (var source in stale)
         {
-            if (_cursors.TryGetValue(peerId, out var sprite))
+            if (_cursors.TryGetValue(source, out var sprite))
                 sprite.QueueFree();
-            _cursors.Remove(peerId);
+            _cursors.Remove(source);
+            _positions.Remove(source);
         }
     }
 
@@ -193,5 +234,6 @@ public partial class CursorSynchronizer : Node
         foreach (var sprite in _cursors.Values)
             sprite.QueueFree();
         _cursors.Clear();
+        _positions.Clear();
     }
 }

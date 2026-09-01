@@ -57,6 +57,8 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Subscribe<ComponentRolledEvent>(ApplyComponentRolled);
         EventSynchronizer.Instance?.Subscribe<ComponentFlippedEvent>(ApplyComponentFlipped);
         EventSynchronizer.Instance?.Subscribe<ComponentShuffledEvent>(ApplyComponentShuffled);
+        EventSynchronizer.Instance?.Subscribe<ComponentsDraggedEvent>(ApplyComponentsDragged);
+        EventSynchronizer.Instance?.Subscribe<ComponentsDroppedEvent>(ApplyComponentsDropped);
     }
 
     private void OnReturnFromHand(ReturnFromHandEvent obj)
@@ -71,7 +73,6 @@ public partial class GameObjects : Node
         card.SetPosition(new Vector3(_lastDragPosition.X, card.YHeight, _lastDragPosition.Z));
 
         CursorMode = CursorMode.Drag;
-        StartDragUndo(card);
         card.IsDragging = true;
 
         QueueStackingUpdate();
@@ -170,6 +171,7 @@ public partial class GameObjects : Node
         base._Process(delta);
 
         ProcessComponentPropertyQueue();
+        ProcessActiveDrags();
         RecomputeZones();
 
         /*
@@ -306,14 +308,6 @@ public partial class GameObjects : Node
 
         _table.AddChild(component);
         component.Build();
-
-        // Add networked object for multiplayer sync
-        if (MultiplayerManager.Instance?.IsMultiplayerActive == true && !component.ExcludeFromSync)
-        {
-            var networkedObject = new NetworkedObject();
-            networkedObject.Component = component;
-            component.AddChild(networkedObject);
-        }
 
         QueueStackingUpdate();
     }
@@ -945,7 +939,6 @@ public partial class GameObjects : Node
 
     #region Drag
     private Vector3 _lastDragPosition;
-    private Change _dragChange;
 
     private static bool HandsEnabled() =>
         ProjectService.Instance.CurrentProject?.GameSettings?.EnablePlayerHands == true;
@@ -972,34 +965,27 @@ public partial class GameObjects : Node
             return;
         }
 
-        // Check if object is locked by another player in multiplayer
-        if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
-        {
-            var networkedObject = go.GetNodeOrNull<NetworkedObject>("NetworkedObject");
-            if (networkedObject != null)
-            {
-                if (networkedObject.IsLockedByAnotherPlayer)
-                {
-                    GD.Print($"Object {go.ComponentName} is locked by another player");
-                    return;
-                }
+        var startCursor = _dragPlane.GetCursorProjection();
 
-                // Try to acquire lock
-                if (!networkedObject.TryLock())
-                {
-                    GD.Print($"Failed to lock object {go.ComponentName}");
-                    return;
-                }
-            }
-        }
+        // The starting client sets each component's offset from its cursor.
+        // Every client positions the components identically during the drag.
+        var dragged = GetSelectedObjects()
+            .Where(o => o.CanDrag)
+            .Select(o => new DraggedComponent
+            {
+                ComponentRef = o.Reference,
+                Offset = new Vector2(o.Position.X - startCursor.X, o.Position.Z - startCursor.Z),
+            })
+            .ToArray();
+        if (dragged.Length == 0)
+            return;
 
         CursorMode = CursorMode.Drag;
-        StartDragUndo(go);
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        foreach (var gameObject in GetSelectedObjects())
-        {
-            gameObject.IsDragging = true;
-        }
+        _localDragOverHand = false;
+
+        EventSynchronizer.Instance?.Submit(
+            new ComponentsDraggedEvent { Id = Snowport.Clock.Create(), Components = dragged }
+        );
 
         QueueStackingUpdate();
     }
@@ -1022,7 +1008,6 @@ public partial class GameObjects : Node
 
         CursorMode = CursorMode.Drag;
 
-        StartDragUndo(first); //undo should also put it back into where it came from
         _lastDragPosition = _dragPlane.GetCursorProjection();
         foreach (var g in obj.ComponentList)
         {
@@ -1066,23 +1051,12 @@ public partial class GameObjects : Node
                 _gameController.HandManager.ShowDragPreview(previewCard, mousePosition);
                 previewCard.LogicalVisible = false;
                 Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
+                _localDragOverHand = true;
                 return; // don't move the 3D objects while hovering the hand
             }
 
+            _localDragOverHand = false;
             _gameController.HandManager.HideDragPreview();
-
-            var newDragPosition = _dragPlane.GetCursorProjection();
-            var delta = newDragPosition - _lastDragPosition;
-            _lastDragPosition = newDragPosition;
-
-            var _dragHeight = GetDragHeight();
-
-            foreach (var go in GetDraggingObjects())
-            {
-                var p = go.Position + delta;
-                go.SetPosition(new Vector3(p.X, _dragHeight + go.YHeight, p.Z));
-                go.LogicalVisible = true;
-            }
 
             //check to see if we are over a VisualComponentGroup that can accept a drop,
             var dragTarget = GetGroupDropTargetUnderDrag();
@@ -1248,22 +1222,14 @@ public partial class GameObjects : Node
 
         if (toHand.Count > 0)
         {
-            // End dragging state before handing off
-            foreach (var go in GetDraggingObjects().ToList())
-            {
-                go.IsDragging = false;
-                if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
-                {
-                    var networkedObject = go.GetNodeOrNull<NetworkedObject>("NetworkedObject");
-                    networkedObject?.Unlock();
-                }
-            }
+            var dragged = GetDraggingObjects().ToList();
+
+            SubmitDrop(dragged);
 
             _gameController.HandManager.AddToHand(toHand);
             Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
             CursorMode = CursorMode.Normal;
             QueueStackingUpdate();
-            EndDragUndo();
             return;
         }
 
@@ -1292,17 +1258,10 @@ public partial class GameObjects : Node
 
         //move all the dragged items to the top of the stack
 
-        foreach (var gameObject in GetDraggingObjects().OrderBy(x => x.ZOrder))
+        var dropped = GetDraggingObjects().OrderBy(x => x.ZOrder).ToList();
+        foreach (var gameObject in dropped)
         {
             MoveToTop(gameObject);
-            gameObject.IsDragging = false;
-
-            // Release multiplayer lock
-            if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
-            {
-                var networkedObject = gameObject.GetNodeOrNull<NetworkedObject>("NetworkedObject");
-                networkedObject?.Unlock();
-            }
         }
 
         Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
@@ -1310,23 +1269,23 @@ public partial class GameObjects : Node
         CursorMode = CursorMode.Normal;
 
         QueueStackingUpdate();
-        EndDragUndo();
+
+        SubmitDrop(dropped);
     }
 
-    private void StartDragUndo(VisualComponentBase go)
+    private void SubmitDrop(IEnumerable<VisualComponentBase> dragged)
     {
-        _dragChange = new() { Component = go, Begin = go.Transform };
+        _localDragOverHand = false;
+
+        var dropped = dragged
+            .Select(o => new DroppedComponent { ComponentRef = o.Reference, Position = o.Position })
+            .ToArray();
+
+        EventSynchronizer.Instance?.Submit(
+            new ComponentsDroppedEvent { Id = Snowport.Clock.Create(), Components = dropped }
+        );
     }
 
-    private void EndDragUndo()
-    {
-        if (_dragChange == null)
-            return;
-
-        _dragChange.End = _dragChange.Component.Transform;
-        UndoService.Instance.Add(_dragChange);
-        _dragChange = null;
-    }
     #endregion
 
     #region Drag Selection
@@ -1529,6 +1488,102 @@ public partial class GameObjects : Node
     {
         if (GetComponent(e.ComponentRef) is VisualComponentGroup group)
             group.Shuffle(e.Seed);
+    }
+
+    private class ActiveDrag
+    {
+        public byte Source;
+        public readonly List<(SnowportId Id, Vector2 PlanarOffset)> Items = new();
+    }
+
+    private readonly Dictionary<byte, ActiveDrag> _activeDrags = new();
+
+    private bool _localDragOverHand;
+
+    private void ApplyComponentsDragged(ComponentsDraggedEvent e)
+    {
+        var isLocal = e.Id.source == Snowport.Clock.source;
+        var drag = new ActiveDrag { Source = e.Id.source };
+
+        foreach (var d in e.Components)
+        {
+            var c = GetComponent(d.ComponentRef);
+            // if the incoming event is older, ignore it in this case
+            if (c == null || e.Id.CompareTo(c.LastMoveId) <= 0)
+                continue;
+
+            // the newest drag wins
+            RemoveFromActiveDrags(d.ComponentRef);
+
+            c.IsDragging = isLocal;
+            c.LastMoveId = e.Id;
+            drag.Items.Add((d.ComponentRef, d.Offset));
+        }
+
+        _activeDrags[e.Id.source] = drag;
+    }
+
+    private void RemoveFromActiveDrags(SnowportId id)
+    {
+        foreach (var drag in _activeDrags.Values)
+            drag.Items.RemoveAll(item => item.Id == id);
+    }
+
+    private void ApplyComponentsDropped(ComponentsDroppedEvent e)
+    {
+        _activeDrags.Remove(e.Id.source);
+
+        foreach (var d in e.Components)
+        {
+            var c = GetComponent(d.ComponentRef);
+
+            // this happens when an outdated event arrives
+            if (c == null || e.Id.CompareTo(c.LastMoveId) < 0)
+                continue;
+
+            c.IsDragging = false;
+            c.LastMoveId = e.Id;
+            c.Position = d.Position;
+            c.LogicalVisible = true;
+        }
+
+        QueueStackingUpdate();
+    }
+
+    private void ProcessActiveDrags()
+    {
+        var dragHeight = GetDragHeight();
+
+        foreach (var drag in _activeDrags.Values)
+        {
+            var isLocal = drag.Source == Snowport.Clock.source;
+            if (isLocal && _localDragOverHand)
+                continue;
+
+            if (!TryGetDragCursor(drag, out var cursor))
+                continue;
+
+            foreach (var (id, off) in drag.Items)
+            {
+                var c = GetComponent(id);
+                if (c == null)
+                    continue;
+
+                c.Position = new Vector3(
+                    cursor.X + off.X,
+                    dragHeight + c.YHeight,
+                    cursor.Z + off.Y
+                );
+                c.LogicalVisible = true;
+            }
+        }
+    }
+
+    private static bool TryGetDragCursor(ActiveDrag drag, out Vector3 cursor)
+    {
+        cursor = default;
+        return CursorSynchronizer.Instance != null
+            && CursorSynchronizer.Instance.TryGetCursor(drag.Source, out cursor);
     }
 
     private void OnComponentPropertyChanged(ComponentPropertyChangedEvent e)

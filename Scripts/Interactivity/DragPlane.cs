@@ -3,6 +3,9 @@ using Godot;
 
 public partial class DragPlane : StaticBody3D
 {
+    /// <summary>The value returned by <see cref="GetCursorProjection"/> on a ray miss.</summary>
+    public static readonly Vector3 Miss = new(-99, -99, -99);
+
     public Vector3 GetCursorProjection()
     {
         var mousePosition = GetViewport().GetMousePosition();
@@ -19,6 +22,6 @@ public partial class DragPlane : StaticBody3D
         var res = GetWorld3D().DirectSpaceState.IntersectRay(ray);
         InputRayPickable = false;
 
-        return (Vector3)res.GetValueOrDefault("position", new Vector3(-99, -99, -99));
+        return (Vector3)res.GetValueOrDefault("position", Miss);
     }
 }

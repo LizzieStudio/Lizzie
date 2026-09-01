@@ -7,11 +7,11 @@ This document describes the multiplayer networking system for collaborative game
 The multiplayer system allows multiple users to work on the same project simultaneously. It synchronizes:
 - **Project data** (datasets, prototypes, templates)
 - **Game objects** (position, rotation, z-order)
-- **Drag locking** (prevents multiple players from moving the same object)
+- **Drag ownership** (each drag is replicated as a Drag/Drop event; the most recent grab of a component wins, so players can take a component from one another)
 
 ## Architecture
 
-The system consists of five main components:
+The system consists of four main components:
 
 ### 1. MultiplayerManager (`Scripts/Multiplayer/MultiplayerManager.cs`)
 Central manager for network connections and player state.
@@ -43,22 +43,7 @@ Synchronizes project-level data across the network.
 - Server broadcasts to all clients
 - Clients apply changes without re-triggering sync events
 
-### 3. NetworkedObject (`Scripts/Multiplayer/NetworkedObject.cs`)
-Attached to each `VisualComponentBase` to synchronize its state.
-
-**Features:**
-- Transform synchronization (position, rotation, z-order)
-- Drag locking (only one player can drag an object at a time)
-- Object creation/deletion sync
-- Throttled updates (every 3 frames during drag to reduce network traffic)
-
-**Key Methods:**
-- `TryLock()` - Request exclusive drag lock
-- `Unlock()` - Release drag lock
-- `SyncCreation()` - Notify other clients of new object
-- `SyncDeletion()` - Notify other clients of deleted object
-
-### 4. MultiplayerDialog (`Scripts/Multiplayer/MultiplayerDialog.cs`)
+### 3. MultiplayerDialog (`Scripts/Multiplayer/MultiplayerDialog.cs`)
 UI window for hosting/joining multiplayer sessions.
 
 **Features:**
@@ -68,7 +53,7 @@ UI window for hosting/joining multiplayer sessions.
 - Connection status display
 - Disconnect button
 
-### 5. MultiplayerDialogManager (`Scripts/Multiplayer/MultiplayerDialogManager.cs`)
+### 4. MultiplayerDialogManager (`Scripts/Multiplayer/MultiplayerDialogManager.cs`)
 Helper to spawn and manage the multiplayer dialog.
 
 **Usage:**
@@ -120,11 +105,11 @@ The `GameObjects` node should be part of your main game scene (already integrate
 
 ### Working in Multiplayer
 
-**Object Locking:**
-- When you click and drag an object, you automatically request a lock
-- If another player is already dragging it, you'll see a message in the console
-- Release the mouse button to unlock the object
-- Only one player can drag an object at a time
+**Drag Ownership:**
+- When you click and drag one or more objects, a Drag event is broadcast carrying each object's offset from your cursor. Every client then positions those objects at your cursor plus the offsets.
+- Grabbing an object another player is already dragging simply takes it from them.
+- Releasing the mouse broadcasts a Drop event with the final world positions, ending the drag on every client.
+- Ownership is resolved entirely from the replicated events by their SnowportId order. The most recent drag of a component always wins.
 
 **Project Sync:**
 - Any changes to datasets, prototypes, or templates are automatically synchronized
@@ -163,25 +148,6 @@ foreach (var player in MultiplayerManager.Instance.Players.Values)
 }
 ```
 
-### Manually Syncing Objects
-
-Objects added via `GameObjects.AddComponentToScene()` are automatically synced. If you need manual control:
-
-```csharp
-var networkedObject = component.GetNodeOrNull<NetworkedObject>("NetworkedObject");
-if (networkedObject != null)
-{
-    // Manually trigger creation sync (usually automatic)
-    networkedObject.SyncCreation();
-    
-    // Check lock state
-    if (networkedObject.IsLockedByAnotherPlayer)
-    {
-        GD.Print("This object is being used by another player");
-    }
-}
-```
-
 ### Custom RPC Methods
 
 If you need custom networking for your own features:
@@ -213,12 +179,11 @@ public partial class MyCustomNode : Node
 - Clients send requests to the server
 - Server validates and broadcasts approved changes
 
-**Lock Flow:**
-1. Client requests lock via `TryLock()`
-2. Request sent to server via RPC
-3. Server checks if object is already locked
-4. Server broadcasts lock grant or sends denial
-5. Clients update their lock state
+**Drag Flow:**
+1. Client broadcasts a Drag event via the EventSynchronizer, listing each component and its offset from the dragging player's cursor.
+2. Every client repositions those components each frame at the source player's synchronized cursor plus their offsets. Because the offsets travel in the event, all clients agree on the positions during the drag.
+3. Grabbing a component takes it from the previous source. This is set up as a natural byproduct of the newer snowport id of the second drag.
+4. On release, the client broadcasts a Drop event with the final world positions, which every client applies.
 
 **Transform Sync Flow:**
 1. Client drags object (after acquiring lock)
@@ -264,10 +229,9 @@ public partial class MyCustomNode : Node
 - Try disconnecting and reconnecting
 - Restart server if project sync fails
 
-**Lock Issues:**
-- If an object stays locked after a player disconnects, restart the session
-- Check console for "lock denied" messages
-- Only one player can drag at a time (this is intentional)
+**Drag Issues:**
+- Only one player owns a given component's drag at a time; grabbing a component another player is dragging takes it from them.
+- If a dragging player disconnects mid-drag, another player can select the components to correct their state.
 
 ## Future Enhancements
 
@@ -296,20 +260,6 @@ Potential improvements for future versions:
 | `IsServer` | `bool` | True if this instance is the server |
 | `LocalPlayerId` | `int` | This player's unique ID |
 | `Players` | `IReadOnlyDictionary<int, PlayerInfo>` | All connected players |
-
-### NetworkedObject
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `TryLock()` | `bool` | Request exclusive lock (returns false if already locked) |
-| `Unlock()` | `void` | Release lock |
-| `SyncCreation()` | `void` | Notify network of object creation |
-| `SyncDeletion()` | `void` | Notify network of object deletion |
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `IsLockedByAnotherPlayer` | `bool` | True if another player has the lock |
-| `Component` | `VisualComponentBase` | The component this NetworkedObject manages |
 
 ### ProjectSynchronizer
 
