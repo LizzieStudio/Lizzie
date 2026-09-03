@@ -23,6 +23,11 @@ public partial class GameObjects : Node
     private const int MaxPropertySyncsPerFrame = 3;
     private readonly List<PendingSpawnRequest> _pendingSpawns = new();
 
+    /// <summary>
+    /// Components that have been deleted.
+    /// </summary>
+    private readonly HashSet<SnowportId> _tombstones = new();
+
     private GameController _gameController;
 
     /// <summary>
@@ -315,11 +320,9 @@ public partial class GameObjects : Node
 
     public void DeleteComponents(IEnumerable<VisualComponentBase> components)
     {
-        var effects = components.Select(c => new DeleteEffect { ComponentRef = c.Reference });
+        var effects = components.SelectMany(c => c.GetDespawnEffects());
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
-
-        QueueStackingUpdate();
     }
 
     public Dictionary<Guid, int> PrototypeCounts()
@@ -823,7 +826,7 @@ public partial class GameObjects : Node
     {
         foreach (var c in _spawnComponents)
         {
-            c.Delete();
+            c.QueueFree();
         }
         _spawnComponents = null;
         CursorMode = CursorMode.Normal;
@@ -1301,6 +1304,7 @@ public partial class GameObjects : Node
         _stackingUpdateRequired = 0;
 
         _pendingSpawns.Clear();
+        _tombstones.Clear();
         _componentPropertyQueue.Clear();
         EventSynchronizer.Instance?.Clear();
 
@@ -1356,6 +1360,10 @@ public partial class GameObjects : Node
 
     private void ApplyCreate(SnowportId eventId, CreateEffect c)
     {
+        // A delete wins over a create for the same ref, even if it arrived first.
+        if (_tombstones.Contains(c.ComponentRef))
+            return;
+
         if (GetComponent(c.ComponentRef) != null)
             return;
 
@@ -1419,6 +1427,9 @@ public partial class GameObjects : Node
 
         foreach (var r in pending)
         {
+            if (_tombstones.Contains(r.Effect.ComponentRef))
+                continue;
+
             GD.Print($"Retrying spawn for {r.Effect.ComponentRef}");
             if (!TryExecuteSpawn(r.EventId, r.Effect))
             {
@@ -1434,7 +1445,9 @@ public partial class GameObjects : Node
 
     private void ApplyDelete(DeleteEffect d)
     {
-        GetComponent(d.ComponentRef)?.Delete();
+        _tombstones.Add(d.ComponentRef);
+        _pendingSpawns.RemoveAll(r => r.Effect.ComponentRef == d.ComponentRef);
+        GetComponent(d.ComponentRef)?.QueueFree();
     }
 
     private void ApplyTransform(SnowportId eventId, TransformEffect t, bool animated)

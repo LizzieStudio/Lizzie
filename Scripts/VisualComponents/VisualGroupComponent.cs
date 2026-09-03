@@ -22,26 +22,6 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, RestructureEffect.Capture(this)));
     }
 
-    /// <summary>
-    /// Deletes all contained visual objects
-    /// </summary>
-    protected void Clear()
-    {
-        foreach (var c in Children)
-        {
-            var comp = ProjectService.Instance.GameObjects.GetComponent(c);
-            comp?.QueueFree();
-        }
-        Children.Clear();
-        OnChildrenChanged();
-    }
-
-    public override void Delete()
-    {
-        Clear();
-        base.Delete();
-    }
-
     public virtual void AddChildComponents(
         IEnumerable<VisualComponentBase> components,
         bool addToTop = false
@@ -79,6 +59,15 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     }
 
     protected abstract void OnChildrenChanged();
+
+    public override IEnumerable<DeleteEffect> GetDespawnEffects()
+    {
+        foreach (var effect in base.GetDespawnEffects())
+            yield return effect;
+
+        foreach (var child in Children)
+            yield return new DeleteEffect { ComponentRef = child };
+    }
 
     /// <summary>
     /// Returns the first item in the group, and removes it.

@@ -168,6 +168,14 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
+    /// Produce the effects to delete this component.
+    /// </summary>
+    public virtual IEnumerable<DeleteEffect> GetDespawnEffects()
+    {
+        yield return new DeleteEffect { ComponentRef = Reference };
+    }
+
+    /// <summary>
     /// Updates the textures, size, etc, without recreating any child objects.
     /// </summary>
     /// <param name="parameters"></param>
@@ -179,11 +187,6 @@ public abstract partial class VisualComponentBase : Area3D
         if (result)
             Build();
         return result;
-    }
-
-    public virtual void Delete()
-    {
-        QueueFree();
     }
 
     /// <summary>
@@ -202,22 +205,14 @@ public abstract partial class VisualComponentBase : Area3D
 
         if (command == VisualCommand.RotateCcw)
         {
-            var begin = Transform;
             SubmitRotation(ProjectService.Instance.RotationStep);
             return true;
         }
 
         if (command == VisualCommand.RotateCw)
         {
-            var begin = Transform;
             SubmitRotation(-1 * ProjectService.Instance.RotationStep);
             return true;
-        }
-
-        if (command == VisualCommand.Delete)
-        {
-            // Deletion is now handled by a DeleteEffect event
-            return false;
         }
 
         if (command == VisualCommand.Refresh)

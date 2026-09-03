@@ -103,9 +103,12 @@ public partial class VcDeck : VisualComponentGroup
                 break;
         }
 
-        // this range is the number commands
-        if ((int)command >= 18 && (int)command <= 37)
-            DrawCards((int)command - 17);
+        // this will work as long as the number command remain in order
+        if ((int)command >= (int)VisualCommand.Num1 && (int)command <= (int)VisualCommand.Num20)
+        {
+            DrawCards((int)command + 1 - (int)VisualCommand.Num1);
+            cr = true;
+        }
 
         return cr == false ? base.ProcessCommand(command) : cr;
     }
