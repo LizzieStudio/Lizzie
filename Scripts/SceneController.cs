@@ -59,7 +59,7 @@ public partial class SceneController : Node3D
         {
             CheckForCommands();
             if (Input.IsActionJustPressed("ui_undo"))
-                UndoService.Instance.Undo();
+                GD.PrintErr("Undo not implemented yet.");
         }
     }
 
@@ -120,43 +120,26 @@ public partial class SceneController : Node3D
     #endregion
 
     #region Commands
-    public bool SendCommandToSelected(VisualCommand command)
+    public void SendCommandToSelected(VisualCommand command)
     {
-        return SendCommandToComponents(command, _gameObjects.GetSelectedObjects());
+        SendCommandToComponents(command, _gameObjects.GetSelectedObjects());
     }
 
-    public bool SendCommandToComponents(
+    public void SendCommandToComponents(
         VisualCommand command,
         IEnumerable<VisualComponentBase> components
     )
     {
-        bool result = false;
-
-        Update update = new();
+        if (command == VisualCommand.Delete)
+        {
+            _gameObjects.DeleteComponents(components);
+            return;
+        }
 
         foreach (var c in components)
         {
-            if (command == VisualCommand.Delete)
-            {
-                _gameObjects.SyncDeletion(c);
-                result = true;
-                continue;
-            }
-
-            var change = c.ProcessCommand(command);
-            if (!change.Consumed)
-                continue;
-            if (change.UndoAction != null)
-                update.Add(change.UndoAction);
-            result = true;
+            c.ProcessCommand(command);
         }
-
-        if (update.Count > 0)
-        {
-            UndoService.Instance.Add(update);
-        }
-
-        return result;
     }
 
     /// <summary>
@@ -165,32 +148,16 @@ public partial class SceneController : Node3D
     /// we fall back to the Num1–Num5 VisualCommands for quantities 1–5, or the
     /// base command for quantities > 5 (treated as "all" by the component).
     /// </summary>
-    public bool SendCommandToComponentsWithQuantity(
+    public void SendCommandToComponentsWithQuantity(
         VisualCommand command,
         IEnumerable<VisualComponentBase> components,
         int quantity
     )
     {
-        bool result = false;
-
-        Update update = new();
-
         foreach (var c in components)
         {
-            var change = c.ProcessCommandWithQuantity(command, quantity);
-            if (!change.Consumed)
-                continue;
-            if (change.UndoAction != null)
-                update.Add(change.UndoAction);
-            result = true;
+            c.ProcessCommandWithQuantity(command, quantity);
         }
-
-        if (update.Count > 0)
-        {
-            UndoService.Instance.Add(update);
-        }
-
-        return result;
     }
 
     private void CheckForCommands()

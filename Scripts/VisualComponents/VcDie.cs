@@ -53,9 +53,9 @@ public partial class VcDie : VisualComponentBase
     public override float MaxAxisSize => Scale.X;
     public override GeometryInstance3D DragMesh => _mainMesh;
 
-    public override CommandResponse ProcessCommand(VisualCommand command)
+    public override bool ProcessCommand(VisualCommand command)
     {
-        var cr = new CommandResponse(false, null);
+        var cr = false;
 
         switch (command)
         {
@@ -155,7 +155,7 @@ public partial class VcDie : VisualComponentBase
             //throw new ArgumentOutOfRangeException(nameof(command), command, null);
         }
 
-        return cr.Consumed == false ? base.ProcessCommand(command) : cr;
+        return cr == false ? base.ProcessCommand(command) : cr;
     }
 
     public override List<MenuCommand> GetMenuCommands()
@@ -172,21 +172,20 @@ public partial class VcDie : VisualComponentBase
         return l;
     }
 
-    private CommandResponse Roll()
+    private bool Roll()
     {
         // The rolling client picks the target face
         var side = (int)(GD.Randi() % _sides + 1);
 
+        var t = TransformEffect.Capture(this);
+        if (side <= _sideRotations.Length)
+            t.Rotation = _sideRotations[side - 1] * (3.14159f / 180f); // degrees to radians
+
         EventSynchronizer.Instance?.Submit(
-            new ComponentRolledEvent
-            {
-                Id = Snowport.Clock.Create(),
-                ComponentRef = Reference,
-                Side = side,
-            }
+            TableEvent.Now(new RollAction { ComponentRef = Reference, Side = side }, t)
         );
 
-        return new CommandResponse(true, null);
+        return true;
     }
 
     public void AnimateRoll(int side)
@@ -196,22 +195,14 @@ public partial class VcDie : VisualComponentBase
         _rollTime = 0;
     }
 
-    private CommandResponse ShowSide(int side)
+    private bool ShowSide(int side)
     {
         if (side > _sideRotations.Length)
-            return new CommandResponse(false, null);
-
-        var c = new Change
-        {
-            Action = Change.ChangeType.Transform,
-            Begin = Transform,
-            Component = this,
-        };
+            return false;
 
         Rotation = _sideRotations[side - 1] * (3.14159f / 180f); //convert to radians
-        c.End = Transform;
 
-        return new CommandResponse(true, c);
+        return true;
     }
 
     private TokenBuildMode _mode;

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using Godot;
 
@@ -12,27 +11,24 @@ public partial class EventSynchronizer : Node
     public static EventSynchronizer Instance => _instance;
 
     private readonly EventLog _log = new();
-    private readonly Dictionary<Type, Action<TableEvent>> _handlers = new();
+
+    /// <summary>
+    /// Represents a player action and its subsequent effects.
+    /// </summary>
+    public event Action<TableEvent> Applied;
 
     public override void _Ready()
     {
         _instance = this;
     }
 
-    public void Subscribe<TEvent>(Action<TEvent> handler)
-        where TEvent : TableEvent
-    {
-        Action<TableEvent> wrapped = e => handler((TEvent)e);
-        _handlers[typeof(TEvent)] = _handlers.TryGetValue(typeof(TEvent), out var existing)
-            ? existing + wrapped
-            : wrapped;
-    }
-
     public void Clear() => _log.Clear();
 
     public void Submit(TableEvent e)
     {
-        GD.Print($"{Snowport.Clock.source} Submitted event {e.GetType().Name}");
+        GD.Print(
+            $"{Snowport.Clock.source} Submitted event action={e.Action?.GetType().Name ?? "none"} effects={e.Effects.Length}"
+        );
 
         if (_log.TryRecord(e))
             Dispatch(e);
@@ -98,7 +94,6 @@ public partial class EventSynchronizer : Node
 
     private void Dispatch(TableEvent e)
     {
-        if (_handlers.TryGetValue(e.GetType(), out var handler))
-            handler(e);
+        Applied?.Invoke(e);
     }
 }

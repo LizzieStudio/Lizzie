@@ -64,9 +64,9 @@ public partial class VcDeck : VisualComponentGroup
 
     public override float MaxAxisSize => Math.Max(_height, _width);
 
-    public override CommandResponse ProcessCommand(VisualCommand command)
+    public override bool ProcessCommand(VisualCommand command)
     {
-        var cr = new CommandResponse(false, null);
+        var cr = false;
 
         switch (command)
         {
@@ -98,98 +98,35 @@ public partial class VcDeck : VisualComponentGroup
             case VisualCommand.MoveToTop:
                 break;
 
-            case VisualCommand.Num1:
-                cr = DrawCards(1);
-                break;
-            case VisualCommand.Num2:
-                cr = DrawCards(2);
-                break;
-            case VisualCommand.Num3:
-                cr = DrawCards(3);
-                break;
-            case VisualCommand.Num4:
-                cr = DrawCards(4);
-                break;
-            case VisualCommand.Num5:
-                cr = DrawCards(5);
-                break;
-            case VisualCommand.Num6:
-                cr = DrawCards(6);
-                break;
-            case VisualCommand.Num7:
-                cr = DrawCards(7);
-                break;
-            case VisualCommand.Num8:
-                cr = DrawCards(8);
-                break;
-            case VisualCommand.Num9:
-                cr = DrawCards(9);
-                break;
-            case VisualCommand.Num10:
-                cr = DrawCards(10);
-                break;
-            case VisualCommand.Num11:
-                cr = DrawCards(11);
-                break;
-            case VisualCommand.Num12:
-                cr = DrawCards(12);
-                break;
-            case VisualCommand.Num13:
-                cr = DrawCards(13);
-                break;
-            case VisualCommand.Num14:
-                cr = DrawCards(14);
-                break;
-            case VisualCommand.Num15:
-                cr = DrawCards(15);
-                break;
-            case VisualCommand.Num16:
-                cr = DrawCards(16);
-                break;
-            case VisualCommand.Num17:
-                cr = DrawCards(17);
-                break;
-            case VisualCommand.Num18:
-                cr = DrawCards(18);
-                break;
-            case VisualCommand.Num19:
-                cr = DrawCards(19);
-                break;
-            case VisualCommand.Num20:
-                cr = DrawCards(20);
-                break;
-
             case VisualCommand.Shuffle:
                 cr = PerformShuffle();
                 break;
         }
 
-        return cr.Consumed == false ? base.ProcessCommand(command) : cr;
+        // this range is the number commands
+        if ((int)command >= 18 && (int)command <= 37)
+            DrawCards((int)command - 17);
+
+        return cr == false ? base.ProcessCommand(command) : cr;
     }
 
-    public override CommandResponse ProcessCommandWithQuantity(VisualCommand command, int quantity)
+    public override void ProcessCommandWithQuantity(VisualCommand command, int quantity)
     {
         // quantity == int.MaxValue means "All"; DrawCards/DealCards clamp to deck size.
-        return command switch
-        {
-            VisualCommand.Draw => DrawCards(quantity),
-            VisualCommand.Deal => DealCards(quantity),
-            _ => base.ProcessCommandWithQuantity(command, quantity),
-        };
+        if (command is VisualCommand.Draw)
+            DrawCards(quantity);
+        else if (command is VisualCommand.Deal)
+            DealCards(quantity);
+        else
+            base.ProcessCommandWithQuantity(command, quantity);
     }
 
-    private CommandResponse PerformShuffle()
+    private bool PerformShuffle()
     {
-        EventSynchronizer.Instance?.Submit(
-            new ComponentShuffledEvent
-            {
-                Id = Snowport.Clock.Create(),
-                ComponentRef = Reference,
-                Seed = Rnd.Randi(),
-            }
-        );
+        // TODO implement this once the children are migrated to the new system
+        GD.PrintErr("Shuffle is not implemented yet (pending RestructureEffect).");
 
-        return new CommandResponse(true, null);
+        return true;
     }
 
     public override List<MenuCommand> GetMenuCommands()
@@ -214,18 +151,13 @@ public partial class VcDeck : VisualComponentGroup
     private float _targetZ;
     private bool _flipInProcess;
 
-    private CommandResponse StartFlip()
+    private bool StartFlip()
     {
         EventSynchronizer.Instance?.Submit(
-            new ComponentFlippedEvent
-            {
-                Id = Snowport.Clock.Create(),
-                ComponentRef = Reference,
-                FaceUp = !_showFace,
-            }
+            TableEvent.Now(new FlipAction { ComponentRef = Reference, FaceUp = !_showFace })
         );
 
-        return new CommandResponse(true, null);
+        return true;
     }
 
     public override void AnimateFlip(bool faceUp)
@@ -272,7 +204,7 @@ public partial class VcDeck : VisualComponentGroup
         return new Vector3(comp.Rotation.X, comp.Rotation.Y, z);
     }
 
-    private CommandResponse DrawCards(int count)
+    private void DrawCards(int count)
     {
         count = Math.Min(count, Children.Count);
 
@@ -306,7 +238,7 @@ public partial class VcDeck : VisualComponentGroup
         else
         {
             //splay onto the board via a Transform event
-            var transformed = new List<TransformedComponent>();
+            var transformed = new List<Effect>();
 
             for (int i = 0; i < cards.Length; i++)
             {
@@ -317,7 +249,7 @@ public partial class VcDeck : VisualComponentGroup
 
                 float deltaX = Position.X + (_width * (1.5f + i));
 
-                var t = TransformedComponent.Capture(comp);
+                var t = TransformEffect.Capture(comp);
                 t.Location = ComponentLocation.Board;
                 t.Position = new Vector3(deltaX, Position.Y, Position.Z);
                 t.Rotation = DrawnRotation(comp);
@@ -330,26 +262,12 @@ public partial class VcDeck : VisualComponentGroup
             if (transformed.Count > 0)
             {
                 EventSynchronizer.Instance?.Submit(
-                    new ComponentsTransformedEvent
-                    {
-                        Id = Snowport.Clock.Create(),
-                        Components = transformed.ToArray(),
-                    }
+                    TableEvent.Now(new DrawAction(), transformed.ToArray())
                 );
             }
         }
 
-        var change = new Change
-        {
-            Action = Change.ChangeType.Transform,
-            Begin = Transform,
-            End = Transform,
-            Component = this,
-        };
-
         UpdateDeckSprites();
-
-        return new CommandResponse(true, change);
     }
 
     /// <summary>
@@ -357,11 +275,11 @@ public partial class VcDeck : VisualComponentGroup
     /// like a real deal (seat 0 gets a card, seat 1 gets a card, …, repeat).
     /// If the deck runs out before all rounds are complete the remaining seats get fewer cards.
     /// </summary>
-    private CommandResponse DealCards(int countPerPlayer)
+    private void DealCards(int countPerPlayer)
     {
         var settings = ProjectService.Instance.CurrentProject?.GameSettings;
         if (settings == null || settings.Players.Count == 0)
-            return DrawCards(countPerPlayer); // fall back to draw if no seats defined
+            DrawCards(countPerPlayer); // fall back to draw if no seats defined
 
         int seatCount = settings.Players.Count;
 
@@ -397,15 +315,6 @@ public partial class VcDeck : VisualComponentGroup
         }
 
         UpdateDeckSprites();
-
-        var change = new Change
-        {
-            Action = Change.ChangeType.Transform,
-            Begin = Transform,
-            End = Transform,
-            Component = this,
-        };
-        return new CommandResponse(true, change);
     }
 
     public override void SpawnBuild(
@@ -431,22 +340,18 @@ public partial class VcDeck : VisualComponentGroup
         BuildInternal((PrintedParameters)proto.Parameters, textureFactory);
     }
 
-    public override void SpawnChildEvents()
+    public override IEnumerable<CreateEffect> GetSpawnChildEffects()
     {
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
-            return;
+            yield break;
         if (!project.Prototypes.TryGetValue(PrototypeRef, out var proto))
-            return;
+            yield break;
         if (proto.Parameters is not PrintedParameters parameters)
-            return;
-
-        Children.Clear();
+            yield break;
 
         foreach (var row in EnumerateCardRows(parameters, project))
-            SubmitCardCreation(row);
-
-        OnChildrenChanged();
+            yield return CreateCardEffect(row);
     }
 
     private IEnumerable<string> EnumerateCardRows(PrintedParameters parameters, Project project)
@@ -484,24 +389,21 @@ public partial class VcDeck : VisualComponentGroup
         }
     }
 
-    private void SubmitCardCreation(string dataSetRow)
+    private CreateEffect CreateCardEffect(string dataSetRow)
     {
         var id = Snowport.Clock.Create();
-        EventSynchronizer.Instance?.Submit(
-            new ComponentCreatedEvent
+        return new CreateEffect
+        {
+            ComponentRef = id,
+            PrototypeRef = PrototypeRef,
+            ComponentName = ComponentName,
+            State = new VcSyncDto
             {
-                Id = id,
-                PrototypeRef = PrototypeRef,
-                ComponentName = ComponentName,
-                State = new VcSyncDto
-                {
-                    DataSetRow = dataSetRow,
-                    Location = ComponentLocation.Container,
-                    LogicalVisible = false,
-                },
-            }
-        );
-        Children.Add(id);
+                DataSetRow = dataSetRow,
+                Location = ComponentLocation.Container,
+                LogicalVisible = false,
+            },
+        };
     }
 
     public override bool Setup(

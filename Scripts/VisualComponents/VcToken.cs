@@ -110,7 +110,7 @@ public partial class VcToken : VisualComponentBase
     public override GeometryInstance3D DragMesh => _mainMesh;
     public override float MaxAxisSize => Math.Max(_height, _width);
 
-    public override CommandResponse ProcessCommand(VisualCommand command)
+    public override bool ProcessCommand(VisualCommand command)
     {
         if (command == VisualCommand.Flip)
         {
@@ -138,20 +138,22 @@ public partial class VcToken : VisualComponentBase
     private float _targetZ;
     private bool _flipInProcess;
 
-    private CommandResponse StartFlip()
+    private bool StartFlip()
     {
         bool targetFaceUp = RotationDegrees.Z >= 90;
 
-        EventSynchronizer.Instance?.Submit(
-            new ComponentFlippedEvent
-            {
-                Id = Snowport.Clock.Create(),
-                ComponentRef = Reference,
-                FaceUp = targetFaceUp,
-            }
+        var t = TransformEffect.Capture(this);
+        t.Rotation = new Vector3(
+            t.Rotation.X,
+            t.Rotation.Y,
+            Mathf.DegToRad(targetFaceUp ? 0f : 180f)
         );
 
-        return new CommandResponse(true, null);
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(new FlipAction { ComponentRef = Reference, FaceUp = targetFaceUp }, t)
+        );
+
+        return true;
     }
 
     public override void AnimateFlip(bool faceUp)

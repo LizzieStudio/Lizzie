@@ -50,16 +50,8 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
 
-        EventSynchronizer.Instance?.Subscribe<ComponentCreatedEvent>(ApplyComponentCreated);
-        EventSynchronizer.Instance?.Subscribe<ComponentDeletedEvent>(ApplyComponentDeleted);
-        EventSynchronizer.Instance?.Subscribe<ComponentRolledEvent>(ApplyComponentRolled);
-        EventSynchronizer.Instance?.Subscribe<ComponentFlippedEvent>(ApplyComponentFlipped);
-        EventSynchronizer.Instance?.Subscribe<ComponentShuffledEvent>(ApplyComponentShuffled);
-        EventSynchronizer.Instance?.Subscribe<ComponentsDraggedEvent>(ApplyComponentsDragged);
-        EventSynchronizer.Instance?.Subscribe<ComponentsDroppedEvent>(ApplyComponentsDropped);
-        EventSynchronizer.Instance?.Subscribe<ComponentsTransformedEvent>(
-            ApplyComponentsTransformed
-        );
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied += ApplyEvent;
     }
 
     public void SetGameController(GameController gameController)
@@ -223,7 +215,7 @@ public partial class GameObjects : Node
         {
             if (@event.IsActionPressed("spawn_component"))
             {
-                SpawnComponents();
+                CreateComponents(_spawnComponents);
                 QueueStackingUpdate();
                 GetViewport().SetInputAsHandled();
             }
@@ -294,34 +286,38 @@ public partial class GameObjects : Node
         QueueStackingUpdate();
     }
 
-    private void PublishComponentCreation(VisualComponentBase component)
+    public void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
-        if (component == null)
-            return;
+        var effects = new List<Effect>();
 
-        component.SpawnChildEvents();
-
-        var evt = new ComponentCreatedEvent
+        foreach (var component in components)
         {
-            Id = Snowport.Clock.Create(),
-            PrototypeRef = component.PrototypeRef,
-            ComponentName = component.ComponentName ?? string.Empty,
-            State = new VcSyncDto(component),
-        };
+            var childEffects = component.GetSpawnChildEffects().ToList();
 
-        EventSynchronizer.Instance?.Submit(evt);
+            var state = new VcSyncDto(component);
+            if (childEffects.Count > 0)
+                state.ContainedComponents = childEffects.Select(e => e.ComponentRef).ToArray();
 
-        // prevent the components from being cleared when the spawn is over
-        if (component is VisualComponentGroup group)
-            group.SetContainerChildren(Array.Empty<SnowportId>());
+            effects.AddRange(childEffects);
+            effects.Add(
+                new CreateEffect
+                {
+                    ComponentRef = Snowport.Clock.Create(),
+                    PrototypeRef = component.PrototypeRef,
+                    ComponentName = component.ComponentName ?? string.Empty,
+                    State = state,
+                }
+            );
+        }
+
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
     }
 
-    private void DeleteComponents()
+    public void DeleteComponents(IEnumerable<VisualComponentBase> components)
     {
-        foreach (var go in GetSelectedObjects())
-        {
-            SyncDeletion(go);
-        }
+        var effects = components.Select(c => new DeleteEffect { ComponentRef = c.Reference });
+
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
 
         QueueStackingUpdate();
     }
@@ -578,7 +574,7 @@ public partial class GameObjects : Node
     /// <summary>
     /// Sends the components to the top or bottom of the ZOrder.
     /// </summary>
-    private void SubmitReorder(IEnumerable<VisualComponentBase> components, ZTarget target)
+    private void Reorder(IEnumerable<VisualComponentBase> components, ZTarget target)
     {
         if (target == ZTarget.Unset)
             return;
@@ -587,30 +583,16 @@ public partial class GameObjects : Node
         if (ordered.Count == 0)
             return;
 
-        var arr = new TransformedComponent[ordered.Count];
+        var arr = new Effect[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
         {
-            var t = TransformedComponent.Capture(ordered[i]);
+            var t = TransformEffect.Capture(ordered[i]);
             t.ZTarget = target;
             t.ZSuborder = i;
             arr[i] = t;
         }
 
-        EventSynchronizer.Instance?.Submit(
-            new ComponentsTransformedEvent { Id = Snowport.Clock.Create(), Components = arr }
-        );
-    }
-
-    private void MoveToTop()
-    {
-        SubmitReorder(GetSelectedObjects(), ZTarget.Top);
-        QueueStackingUpdate();
-    }
-
-    private void MoveToBottom()
-    {
-        SubmitReorder(GetSelectedObjects(), ZTarget.Bottom);
-        QueueStackingUpdate();
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, arr));
     }
 
     /// <summary>
@@ -671,7 +653,7 @@ public partial class GameObjects : Node
 
             for (int j = 0; j < children.Length; j++)
             {
-                var cj = children[j] as VisualComponentBase;
+                var cj = children[j];
 
                 if (cj == null)
                 {
@@ -763,11 +745,11 @@ public partial class GameObjects : Node
             Input.SetDefaultCursorShape(Input.CursorShape.PointingHand);
         }
         if (Input.IsActionJustPressed("move_to_top"))
-            MoveToTop();
+            Reorder(GetSelectedObjects(), ZTarget.Top);
         if (Input.IsActionJustPressed("move_to_bottom"))
-            MoveToBottom();
+            Reorder(GetSelectedObjects(), ZTarget.Bottom);
         if (Input.IsActionJustPressed("component_delete"))
-            DeleteComponents();
+            DeleteComponents(GetSelectedObjects());
     }
     #endregion
 
@@ -836,14 +818,6 @@ public partial class GameObjects : Node
     }
 
     public TextureFactory TextureFactory { get; set; }
-
-    private void SpawnComponents()
-    {
-        foreach (var c in _spawnComponents)
-        {
-            PublishComponentCreation(c);
-        }
-    }
 
     private void ExitSpawnMode()
     {
@@ -937,14 +911,14 @@ public partial class GameObjects : Node
 
         var cursor = _dragPlane.GetCursorProjection();
 
-        var transformed = new List<TransformedComponent>();
+        var transformed = new List<TransformEffect>();
         foreach (var r in componentRefs)
         {
             var c = GetComponent(r);
             if (c == null)
                 continue;
 
-            var t = TransformedComponent.Capture(c);
+            var t = TransformEffect.Capture(c);
             t.Location = VisualComponentBase.ComponentLocation.Board;
             t.Position = cursor + c.SpawnDelta;
             // Bring the drawn components to the top, in draw order.
@@ -956,13 +930,7 @@ public partial class GameObjects : Node
         if (transformed.Count == 0)
             return;
 
-        EventSynchronizer.Instance?.Submit(
-            new ComponentsTransformedEvent
-            {
-                Id = Snowport.Clock.Create(),
-                Components = transformed.ToArray(),
-            }
-        );
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DrawAction(), transformed.ToArray()));
 
         BeginDrag(transformed.Select(t => GetComponent(t.ComponentRef)), cursor);
 
@@ -985,9 +953,7 @@ public partial class GameObjects : Node
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
 
-        EventSynchronizer.Instance?.Submit(
-            new ComponentsDraggedEvent { Id = Snowport.Clock.Create(), Components = dragged }
-        );
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DragAction { Components = dragged }));
     }
 
     private VisualComponentGroup _currentDragDropTarget;
@@ -1223,18 +1189,11 @@ public partial class GameObjects : Node
             }
         }
 
-        //move all the dragged items to the top of the stack, as one Transform event
-        var dropped = GetDraggingObjects().ToList();
-        // Submit before the drop event so the drop's newer id wins on position.
-        SubmitReorder(dropped, ZTarget.Top);
-
         Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
 
         CursorMode = CursorMode.Normal;
 
-        QueueStackingUpdate();
-
-        SubmitDrop(dropped);
+        SubmitDrop(GetDraggingObjects());
     }
 
     private void SubmitDrop(IEnumerable<VisualComponentBase> dragged)
@@ -1242,12 +1201,18 @@ public partial class GameObjects : Node
         _localDragOverHand = false;
 
         var dropped = dragged
-            .Select(o => new DroppedComponent { ComponentRef = o.Reference, Position = o.Position })
+            .Select(
+                (o, i) =>
+                {
+                    var effect = TransformEffect.Capture(o);
+                    effect.ZTarget = ZTarget.Top;
+                    effect.ZSuborder = i;
+                    return effect;
+                }
+            )
             .ToArray();
 
-        EventSynchronizer.Instance?.Submit(
-            new ComponentsDroppedEvent { Id = Snowport.Clock.Create(), Components = dropped }
-        );
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DropAction(), dropped));
     }
 
     #endregion
@@ -1342,29 +1307,78 @@ public partial class GameObjects : Node
         PlayerHandService.Instance?.ClearAll();
     }
 
-    private void ApplyComponentCreated(ComponentCreatedEvent e)
+    /// <summary>
+    /// The single entry point for the events.
+    /// </summary>
+    private void ApplyEvent(TableEvent e)
     {
-        if (GetComponent(e.Id) != null)
+        // Roll and flip animate, so don't snap to their transform.
+        var animated = e.Action is RollAction or FlipAction;
+
+        foreach (var effect in e.Effects)
+        {
+            switch (effect)
+            {
+                case CreateEffect c:
+                    ApplyCreate(e.Id, c);
+                    break;
+                case DeleteEffect d:
+                    ApplyDelete(d);
+                    break;
+                case TransformEffect t:
+                    ApplyTransform(e.Id, t, animated);
+                    break;
+                case RestructureEffect r:
+                    ApplyRestructure(e.Id, r);
+                    break;
+            }
+        }
+
+        switch (e.Action)
+        {
+            case RollAction roll:
+                if (GetComponent(roll.ComponentRef) is VcDie die)
+                    die.AnimateRoll(roll.Side);
+                break;
+            case FlipAction flip:
+                GetComponent(flip.ComponentRef)?.AnimateFlip(flip.FaceUp);
+                break;
+            case DragAction drag:
+                StartActiveDrag(e, drag);
+                break;
+            case DropAction:
+                EndActiveDrag(e);
+                break;
+        }
+
+        QueueStackingUpdate();
+    }
+
+    private void ApplyCreate(SnowportId eventId, CreateEffect c)
+    {
+        if (GetComponent(c.ComponentRef) != null)
             return;
 
-        if (!TryExecuteSpawn(e))
+        if (!TryExecuteSpawn(eventId, c))
         {
-            GD.Print($"Prototype {e.PrototypeRef} not yet available, queuing spawn for {e.Id}");
-            _pendingSpawns.Add(new PendingSpawnRequest(e));
+            GD.Print(
+                $"Prototype {c.PrototypeRef} not yet available, queuing spawn for {c.ComponentRef}"
+            );
+            _pendingSpawns.Add(new PendingSpawnRequest(eventId, c));
         }
     }
 
-    private bool TryExecuteSpawn(ComponentCreatedEvent evt)
+    private bool TryExecuteSpawn(SnowportId eventId, CreateEffect effect)
     {
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                evt.PrototypeRef,
+                effect.PrototypeRef,
                 out var proto
             )
         )
             return false;
 
-        var syncDto = evt.State ?? new VcSyncDto();
+        var syncDto = effect.State ?? new VcSyncDto();
 
         var path = Utility.ComponentTypeToScenePath(
             proto.Type,
@@ -1375,25 +1389,25 @@ public partial class GameObjects : Node
 
         if (scene is not VisualComponentBase vcb)
         {
-            GD.PrintErr($"Spawned scene for {evt.PrototypeRef} is not a VisualComponentBase");
+            GD.PrintErr($"Spawned scene for {effect.PrototypeRef} is not a VisualComponentBase");
             return true; // Fatal data error — do not retry
         }
 
-        vcb.Reference = evt.Id;
-        vcb.PrototypeRef = evt.PrototypeRef;
+        vcb.Reference = effect.ComponentRef;
+        vcb.PrototypeRef = effect.PrototypeRef;
 
-        vcb.SpawnBuild(evt.PrototypeRef, syncDto, TextureFactory);
+        vcb.SpawnBuild(effect.PrototypeRef, syncDto, TextureFactory);
 
         // A newly created component starts on top, anchored to its creation event.
-        vcb.ZOrder = new ZOrder(ZTarget.Top, 0, evt.Id);
+        vcb.ZOrder = new ZOrder(ZTarget.Top, 0, eventId);
 
         AddComponentToScene(vcb);
         return true;
     }
 
     /// <summary>
-    /// Re-attempts any component-created events that were deferred because their prototype
-    /// was not yet available on this client. Re-queues any that still cannot be resolved.
+    /// Re-attempts any create effects that were deferred because their prototype was not yet
+    /// available on this client. Re-queues any that still cannot be resolved.
     /// </summary>
     private void RetryPendingSpawns()
     {
@@ -1405,56 +1419,55 @@ public partial class GameObjects : Node
 
         foreach (var r in pending)
         {
-            GD.Print($"Retrying spawn for {r.Event.Id}");
-            if (!TryExecuteSpawn(r.Event))
+            GD.Print($"Retrying spawn for {r.Effect.ComponentRef}");
+            if (!TryExecuteSpawn(r.EventId, r.Effect))
             {
                 GD.PrintErr(
-                    $"Still cannot spawn {r.Event.Id} because prototype {r.Event.PrototypeRef} is not available"
+                    $"Still cannot spawn {r.Effect.ComponentRef} because prototype {r.Effect.PrototypeRef} is not available"
                 );
                 _pendingSpawns.Add(r); // Prototype still not available — keep in list
             }
         }
     }
 
-    private record PendingSpawnRequest(ComponentCreatedEvent Event);
+    private record PendingSpawnRequest(SnowportId EventId, CreateEffect Effect);
 
-    /// <summary>
-    /// Sync object deletion across network
-    /// </summary>
-    public void SyncDeletion(VisualComponentBase component)
+    private void ApplyDelete(DeleteEffect d)
     {
-        if (component == null)
+        GetComponent(d.ComponentRef)?.Delete();
+    }
+
+    private void ApplyTransform(SnowportId eventId, TransformEffect t, bool animated)
+    {
+        var c = GetComponent(t.ComponentRef);
+
+        // this happens when an outdated event arrives
+        if (c == null || eventId.CompareTo(c.LastMoveId) < 0)
             return;
 
-        var evt = new ComponentDeletedEvent
-        {
-            Id = Snowport.Clock.Create(),
-            ComponentRef = component.Reference,
-        };
+        c.LastMoveId = eventId;
 
-        EventSynchronizer.Instance?.Submit(evt);
+        c.Location = t.Location;
+        c.Position = t.Position;
+        if (!animated)
+            c.Rotation = t.Rotation;
+
+        // Only reorder when the effect asks to.
+        if (t.ZTarget != ZTarget.Unset)
+            c.ZOrder = new ZOrder(t.ZTarget, t.ZSuborder, eventId);
     }
 
-    private void ApplyComponentDeleted(ComponentDeletedEvent e)
+    private void ApplyRestructure(SnowportId eventId, RestructureEffect r)
     {
-        GetComponent(e.ComponentRef)?.Delete();
-    }
+        if (GetComponent(r.ComponentRef) is not VisualComponentGroup container)
+            return;
 
-    private void ApplyComponentRolled(ComponentRolledEvent e)
-    {
-        if (GetComponent(e.ComponentRef) is VcDie die)
-            die.AnimateRoll(e.Side);
-    }
+        // Ignore restructures older than the container's most recent one.
+        if (eventId.CompareTo(container.LastRestructureId) < 0)
+            return;
 
-    private void ApplyComponentFlipped(ComponentFlippedEvent e)
-    {
-        GetComponent(e.ComponentRef)?.AnimateFlip(e.FaceUp);
-    }
-
-    private void ApplyComponentShuffled(ComponentShuffledEvent e)
-    {
-        if (GetComponent(e.ComponentRef) is VisualComponentGroup group)
-            group.Shuffle(e.Seed);
+        container.LastRestructureId = eventId;
+        container.SetContainerChildren(r.Children);
     }
 
     private class ActiveDrag
@@ -1467,12 +1480,12 @@ public partial class GameObjects : Node
 
     private bool _localDragOverHand;
 
-    private void ApplyComponentsDragged(ComponentsDraggedEvent e)
+    private void StartActiveDrag(TableEvent e, DragAction action)
     {
         var isLocal = e.Id.source == Snowport.Clock.source;
         var drag = new ActiveDrag { Source = e.Id.source };
 
-        foreach (var d in e.Components)
+        foreach (var d in action.Components)
         {
             var c = GetComponent(d.ComponentRef);
             // if the incoming event is older, ignore it in this case
@@ -1496,49 +1509,20 @@ public partial class GameObjects : Node
             drag.Items.RemoveAll(item => item.Id == id);
     }
 
-    private void ApplyComponentsDropped(ComponentsDroppedEvent e)
+    private void EndActiveDrag(TableEvent e)
     {
         _activeDrags.Remove(e.Id.source);
 
-        foreach (var d in e.Components)
+        foreach (var effect in e.Effects)
         {
-            var c = GetComponent(d.ComponentRef);
-
-            // this happens when an outdated event arrives
-            if (c == null || e.Id.CompareTo(c.LastMoveId) < 0)
+            if (effect is not TransformEffect t)
                 continue;
 
-            c.IsDragging = false;
-            c.LastMoveId = e.Id;
-            c.Position = d.Position;
-            c.LogicalVisible = true;
-        }
-
-        QueueStackingUpdate();
-    }
-
-    private void ApplyComponentsTransformed(ComponentsTransformedEvent e)
-    {
-        foreach (var t in e.Components)
-        {
             var c = GetComponent(t.ComponentRef);
-
-            // this happens when an outdated event arrives
-            if (c == null || e.Id.CompareTo(c.LastMoveId) < 0)
-                continue;
-
-            c.LastMoveId = e.Id;
-
-            c.Location = t.Location;
-            c.Position = t.Position;
-            c.Rotation = t.Rotation;
-
-            // Only reorder when the event asks to; otherwise leave the stacking order alone.
-            if (t.ZTarget != ZTarget.Unset)
-                c.ZOrder = new ZOrder(t.ZTarget, t.ZSuborder, e.Id);
+            // LastMoveId == e.Id means this event was not "stale".
+            if (c != null && c.LastMoveId == e.Id)
+                c.IsDragging = false;
         }
-
-        QueueStackingUpdate();
     }
 
     private void ProcessActiveDrags()

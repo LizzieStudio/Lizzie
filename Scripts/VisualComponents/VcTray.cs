@@ -168,13 +168,16 @@ public partial class VcTray : VisualComponentGroup
         var id = Snowport.Clock.Create();
 
         EventSynchronizer.Instance?.Submit(
-            new ComponentCreatedEvent
-            {
-                Id = id,
-                PrototypeRef = _prototype.PrototypeRef,
-                ComponentName = _prototype.Name ?? string.Empty,
-                State = new VcSyncDto { Location = ComponentLocation.Board },
-            }
+            TableEvent.Now(
+                null,
+                new CreateEffect
+                {
+                    ComponentRef = id,
+                    PrototypeRef = _prototype.PrototypeRef,
+                    ComponentName = _prototype.Name ?? string.Empty,
+                    State = new VcSyncDto { Location = ComponentLocation.Board },
+                }
+            )
         );
 
         ProjectService.Instance.GameObjects.ShowAndDrag(new List<SnowportId> { id });

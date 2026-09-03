@@ -33,7 +33,8 @@ public partial class CursorSynchronizer : Node
 
     private readonly Dictionary<byte, Vector3> _positions = new();
 
-    public bool TryGetCursor(byte source, out Vector3 pos) => _positions.TryGetValue(source, out pos);
+    public bool TryGetCursor(byte source, out Vector3 pos) =>
+        _positions.TryGetValue(source, out pos);
 
     public override void _Ready()
     {

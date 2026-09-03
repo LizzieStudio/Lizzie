@@ -160,9 +160,12 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// Emit the ComponentCreatedEvent for any contained components.
+    /// Produce the effects for any contained components.
     /// </summary>
-    public virtual void SpawnChildEvents() { }
+    public virtual IEnumerable<CreateEffect> GetSpawnChildEffects()
+    {
+        yield break;
+    }
 
     /// <summary>
     /// Updates the textures, size, etc, without recreating any child objects.
@@ -188,57 +191,39 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     /// <param name="command"></param>
     /// <returns>true if action consumed by object. Else false</returns>
-    public virtual CommandResponse ProcessCommand(VisualCommand command)
+    public virtual bool ProcessCommand(VisualCommand command)
     {
         if (command == VisualCommand.ToggleLock)
         {
             Locked = !Locked;
 
-            return new CommandResponse(true, null);
+            return true;
         }
 
         if (command == VisualCommand.RotateCcw)
         {
             var begin = Transform;
             SubmitRotation(ProjectService.Instance.RotationStep);
-            return new CommandResponse(
-                true,
-                new Change
-                {
-                    Component = this,
-                    Action = Change.ChangeType.Transform,
-                    Begin = begin,
-                    End = Transform,
-                }
-            );
+            return true;
         }
 
         if (command == VisualCommand.RotateCw)
         {
             var begin = Transform;
             SubmitRotation(-1 * ProjectService.Instance.RotationStep);
-            return new CommandResponse(
-                true,
-                new Change
-                {
-                    Component = this,
-                    Action = Change.ChangeType.Transform,
-                    Begin = begin,
-                    End = Transform,
-                }
-            );
+            return true;
         }
 
         if (command == VisualCommand.Delete)
         {
-            // Deletion is now handled by ComponentDeletedEvent
-            return new CommandResponse(false, null);
+            // Deletion is now handled by a DeleteEffect event
+            return false;
         }
 
         if (command == VisualCommand.Refresh)
         {
             Refresh(TextureFactory);
-            return new CommandResponse(true, null);
+            return true;
         }
 
         if (command == VisualCommand.Duplicate)
@@ -246,7 +231,7 @@ public abstract partial class VisualComponentBase : Area3D
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = PrototypeRef, DataSetRow = DataSetRow }
             );
-            return new CommandResponse(true, null);
+            return true;
         }
 
         if (command == VisualCommand.Edit)
@@ -259,7 +244,7 @@ public abstract partial class VisualComponentBase : Area3D
             EventBus.Instance.Publish(new MakePrototypeUniqueEvent { PrototypeId = PrototypeRef });
         }
 
-        return new CommandResponse(false, null);
+        return false;
     }
 
     /// <summary>
@@ -267,10 +252,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// The base implementation returns an unconsumed response.
     /// <paramref name="quantity"/> is Int32.MaxValue when the user chose "All".
     /// </summary>
-    public virtual CommandResponse ProcessCommandWithQuantity(VisualCommand command, int quantity)
-    {
-        return new CommandResponse(false, null);
-    }
+    public virtual void ProcessCommandWithQuantity(VisualCommand command, int quantity) { }
 
     /// <summary>
     /// Implemented by flippable components.
@@ -629,15 +611,9 @@ public abstract partial class VisualComponentBase : Area3D
 
     private void SubmitRotation(float degreesAboutY)
     {
-        var t = TransformedComponent.Capture(this);
+        var t = TransformEffect.Capture(this);
         t.Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
-        EventSynchronizer.Instance?.Submit(
-            new ComponentsTransformedEvent
-            {
-                Id = Snowport.Clock.Create(),
-                Components = new[] { t },
-            }
-        );
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, t));
     }
 
     private bool _logicalVisible = true;

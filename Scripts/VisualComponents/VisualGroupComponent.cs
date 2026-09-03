@@ -9,7 +9,18 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
     protected RandomNumberGenerator Rnd = new();
 
+    /// <summary>The event that most recently restructured this container's children.</summary>
+    public SnowportId LastRestructureId { get; set; } = SnowportId.Empty;
+
     public CollisionShape3D DragDropCollider { get; set; }
+
+    /// <summary>
+    /// Broadcasts this container's current child list as a RestructureEffect.
+    /// </summary>
+    protected void EmitRestructure()
+    {
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, RestructureEffect.Capture(this)));
+    }
 
     /// <summary>
     /// Deletes all contained visual objects
@@ -46,25 +57,19 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         }
 
         OnChildrenChanged();
-        SyncRequired = true;
 
         var transformed = compArr
             .Select(c =>
             {
-                var t = TransformedComponent.Capture(c);
+                var t = TransformEffect.Capture(c);
                 t.Location = ComponentLocation.Container;
-                return t;
+                return (Effect)t;
             })
+            .Append(RestructureEffect.Capture(this))
             .ToArray();
         if (transformed.Length > 0)
         {
-            EventSynchronizer.Instance?.Submit(
-                new ComponentsTransformedEvent
-                {
-                    Id = Snowport.Clock.Create(),
-                    Components = transformed,
-                }
-            );
+            EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), transformed));
         }
     }
 
@@ -90,7 +95,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
         Children.RemoveRange(0, quantity);
         OnChildrenChanged();
-        SyncRequired = true;
+        EmitRestructure();
 
         return res;
     }
@@ -110,7 +115,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
         Children.RemoveRange(Children.Count - quantity, quantity);
         OnChildrenChanged();
-        SyncRequired = true;
+        EmitRestructure();
 
         return res;
     }
@@ -126,7 +131,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
         Children.RemoveAt(r);
         OnChildrenChanged();
-        SyncRequired = true;
+        EmitRestructure();
 
         return c;
     }
@@ -167,6 +172,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         }
 
         OnChildrenChanged();
+        EmitRestructure();
     }
 
     /// <summary>
@@ -177,7 +183,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     {
         Children.Reverse();
         OnChildrenChanged();
-        SyncRequired = true;
+        EmitRestructure();
     }
 
     public SnowportId[] GetContainerChildren()

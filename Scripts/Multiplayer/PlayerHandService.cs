@@ -89,20 +89,14 @@ public partial class PlayerHandService : Node
         var transformed = cardList
             .Select(card =>
             {
-                var t = TransformedComponent.Capture(card);
+                var t = TransformEffect.Capture(card);
                 t.Location = VisualComponentBase.ComponentLocation.Hand;
-                return t;
+                return (Effect)t;
             })
             .ToArray();
         if (transformed.Length > 0)
         {
-            EventSynchronizer.Instance?.Submit(
-                new ComponentsTransformedEvent
-                {
-                    Id = Snowport.Clock.Create(),
-                    Components = transformed,
-                }
-            );
+            EventSynchronizer.Instance?.Submit(TableEvent.Now(new DealAction(), transformed));
         }
 
         EventBus.Instance.Publish(new HandChangedEvent { SeatIndex = seatIndex });

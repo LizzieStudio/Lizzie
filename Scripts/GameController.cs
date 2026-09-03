@@ -258,11 +258,10 @@ public partial class GameController : Node3D
         _mainScene.PopupClosed();
     }
 
-    public bool ProcessPopupCommand(VisualCommand command, List<VisualComponentBase> components)
+    public void ProcessPopupCommand(VisualCommand command, List<VisualComponentBase> components)
     {
-        var result = _mainScene.SendCommandToComponents(command, components);
+        _mainScene.SendCommandToComponents(command, components);
         ComponentPopupClosed();
-        return result;
     }
 
     /// <summary>
@@ -270,15 +269,14 @@ public partial class GameController : Node3D
     /// The quantity is forwarded to each component via SendCommandToComponents using
     /// the pre-existing Num1–Num5 commands, or the base command with Int32.MaxValue for "All".
     /// </summary>
-    public bool ProcessPopupCommandWithQuantity(
+    public void ProcessPopupCommandWithQuantity(
         VisualCommand command,
         List<VisualComponentBase> components,
         int quantity
     )
     {
-        var result = _mainScene.SendCommandToComponentsWithQuantity(command, components, quantity);
+        _mainScene.SendCommandToComponentsWithQuantity(command, components, quantity);
         ComponentPopupClosed();
-        return result;
     }
 
     public float HandY => _uiController.HandY;
