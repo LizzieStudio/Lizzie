@@ -551,8 +551,8 @@ public partial class GameObjects : Node
     {
         foreach (var go in ComponentNodes)
         {
-            // Zones are not selected by marquee selection.
-            if (go is VisualComponentBase vcb and not VcZone)
+            // Zones and hidden components are not selected by marquee selection.
+            if (go is VisualComponentBase vcb and not VcZone && vcb.Visible)
             {
                 var screenPos = GetViewport().GetCamera3D().UnprojectPosition(vcb.Position);
                 vcb.IsClickSelected = PointInRect(screenPos, area);
