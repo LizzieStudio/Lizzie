@@ -53,7 +53,5 @@ public class VcSyncDto
         {
             container.SetContainerChildren(ContainedComponents);
         }
-
-        component.SyncRequired = false;
     }
 }

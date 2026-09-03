@@ -490,7 +490,6 @@ public partial class VcDeck : VisualComponentGroup
         _backTextureReady = false;
 
         UpdateDeckSprites();
-        SyncRequired = true;
         return true;
     }
 

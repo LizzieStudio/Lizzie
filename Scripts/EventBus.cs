@@ -352,20 +352,6 @@ public class DeletePrototypeEvent : IEvent
 
 public class QueueStackingUpdateEvent : IEvent { }
 
-/// <summary>
-/// Published by a VisualComponentBase when one of its synced properties changes
-/// and the change needs to be broadcast to other multiplayer clients.
-/// </summary>
-public class ComponentPropertyChangedEvent : IEvent
-{
-    public ComponentPropertyChangedEvent(VisualComponentBase component)
-    {
-        Component = component;
-    }
-
-    public VisualComponentBase Component { get; set; }
-}
-
 public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IEvent
 {
     public VisualComponentBase Component { get; set; } = component;

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using Godot;
 
 public partial class GameObjects : Node
@@ -19,8 +18,6 @@ public partial class GameObjects : Node
     public delegate void CameraActivationEventHandler(bool cameraActivated);
 
     private int _stackingUpdateRequired;
-    private readonly ComponentPropertyQueue _componentPropertyQueue = new();
-    private const int MaxPropertySyncsPerFrame = 3;
     private readonly List<PendingSpawnRequest> _pendingSpawns = new();
 
     /// <summary>
@@ -52,7 +49,6 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
-        EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
 
         if (EventSynchronizer.Instance != null)
@@ -151,7 +147,6 @@ public partial class GameObjects : Node
     {
         base._Process(delta);
 
-        ProcessComponentPropertyQueue();
         ProcessActiveDrags();
         RecomputeZones();
 
@@ -464,7 +459,6 @@ public partial class GameObjects : Node
 
             newComponent.Reference = refId;
             newComponent.PrototypeRef = entry.PrototypeRef;
-            newComponent.ExcludeFromSync = true;
 
             entry.ApplyToComponent(newComponent);
             newComponent.Setup(entry.PrototypeRef, entry.DataSetRow, TextureFactory);
@@ -805,7 +799,6 @@ public partial class GameObjects : Node
         {
             c.DimMode(true);
             c.NeverHighlight = true;
-            c.ExcludeFromSync = true;
             AddComponentToScene(c);
         }
     }
@@ -1305,7 +1298,6 @@ public partial class GameObjects : Node
 
         _pendingSpawns.Clear();
         _tombstones.Clear();
-        _componentPropertyQueue.Clear();
         EventSynchronizer.Instance?.Clear();
 
         PlayerHandService.Instance?.ClearAll();
@@ -1574,100 +1566,7 @@ public partial class GameObjects : Node
             && CursorSynchronizer.Instance.TryGetCursor(drag.Source, out cursor);
     }
 
-    private void OnComponentPropertyChanged(ComponentPropertyChangedEvent e)
-    {
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
-        if (e.Component == null || e.Component.ExcludeFromSync)
-            return;
-        _componentPropertyQueue.Enqueue(e.Component.Reference);
-    }
-
-    private void ProcessComponentPropertyQueue()
-    {
-        if (_componentPropertyQueue.Count == 0)
-            return;
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
-
-        int sent = 0;
-        while (
-            sent < MaxPropertySyncsPerFrame && _componentPropertyQueue.TryDequeue(out var reference)
-        )
-        {
-            var component = GetComponent(reference);
-            if (component == null)
-                continue;
-
-            var syncDto = new VcSyncDto(component);
-            var syncDtoJson = JsonSerializer.Serialize(syncDto, LizzieJson.Options);
-            var componentRef = component.Reference.ToString();
-
-            if (MultiplayerManager.Instance.IsServer)
-                Rpc(nameof(ClientReceiveProperties), componentRef, syncDtoJson);
-            else
-                RpcId(1, nameof(ServerReceiveProperties), componentRef, syncDtoJson);
-
-            sent++;
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ServerReceiveProperties(string componentRef, string syncDtoJson)
-    {
-        if (!MultiplayerManager.Instance?.IsServer == true)
-            return;
-
-        ApplyPropertySyncToComponent(componentRef, syncDtoJson);
-
-        Rpc(nameof(ClientReceiveProperties), componentRef, syncDtoJson);
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClientReceiveProperties(string componentRef, string syncDtoJson)
-    {
-        ApplyPropertySyncToComponent(componentRef, syncDtoJson);
-    }
-
     #endregion
-
-    private void ApplyPropertySyncToComponent(string componentRef, string syncDtoJson)
-    {
-        //apply it to the server.
-        if (!SnowportId.TryParse(componentRef, out var compId))
-        {
-            GD.PrintErr("ClientReceiveProperties: Can't parse SnowportId");
-            return;
-        }
-
-        var component = GetComponent(compId);
-        if (component == null || component.IsDragging)
-        {
-            GD.PrintErr(
-                $"Client/ServerReceiveProperties: Component {componentRef} not found or is being dragged"
-            );
-            return;
-        }
-
-        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson, LizzieJson.Options);
-        component.SuppressSync = true;
-        try
-        {
-            syncDto.ApplyToComponent(component);
-        }
-        finally
-        {
-            component.SuppressSync = false;
-        }
-    }
 }
 
 public class ShowComponentPopupEventArgs : EventArgs

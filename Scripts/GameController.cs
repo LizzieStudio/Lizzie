@@ -194,7 +194,6 @@ public partial class GameController : Node3D
         }
 
         component.PrototypeRef = args.PrototypeRef;
-        component.ExcludeFromSync = true;
 
         //if the name is blank in the parameters, set it
         if (

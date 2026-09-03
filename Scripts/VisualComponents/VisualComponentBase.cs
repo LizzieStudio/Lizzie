@@ -584,26 +584,6 @@ public abstract partial class VisualComponentBase : Area3D
         Visible = _logicalVisible && !_zoneHidden;
     }
 
-    public bool SuppressSync { get; set; }
-
-    private bool _syncRequired;
-
-    public bool SyncRequired
-    {
-        get => _syncRequired;
-        set
-        {
-            _syncRequired = value;
-            if (value && !SuppressSync && !ExcludeFromSync)
-                EventBus.Instance.Publish(new ComponentPropertyChangedEvent(this));
-        }
-    }
-
-    /// <summary>
-    /// If true, this component will not be synced to other nodes
-    /// </summary>
-    public bool ExcludeFromSync { get; set; }
-
     /// <summary>
     /// The delta from the cursor prosition for this object in spawn mode
     /// </summary>
