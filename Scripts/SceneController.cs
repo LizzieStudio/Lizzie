@@ -164,8 +164,6 @@ public partial class SceneController : Node3D
     {
         if (Input.IsActionJustPressed("flip"))
             SendCommandToSelected(VisualCommand.Flip);
-        if (Input.IsActionJustPressed("lock"))
-            SendCommandToSelected(VisualCommand.ToggleLock);
 
         if (Input.IsActionJustPressed("num_1"))
             SendCommandToSelected(VisualCommand.Num1);

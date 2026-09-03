@@ -59,8 +59,6 @@ public partial class VcDie : VisualComponentBase
 
         switch (command)
         {
-            case VisualCommand.ToggleLock:
-                break;
             case VisualCommand.Flip:
                 break;
             case VisualCommand.ScaleUp:

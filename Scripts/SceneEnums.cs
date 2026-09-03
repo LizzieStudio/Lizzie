@@ -19,7 +19,6 @@ public enum CursorMode
 public enum VisualCommand
 {
     None,
-    ToggleLock,
     Flip,
     ScaleUp,
     ScaleDown,
@@ -32,10 +31,6 @@ public enum VisualCommand
     MoveToBottom,
     MoveUp,
     MoveToTop,
-    Tuck,
-    Untuck,
-    Freeze,
-    Unfreeze,
     Num1,
     Num2,
     Num3,

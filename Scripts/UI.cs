@@ -802,18 +802,6 @@ public partial class UI : CanvasLayer
 
             switch (command)
             {
-                case VisualCommand.ToggleLock:
-                    AddItemToPopupMenu(
-                        _componentPopup,
-                        command,
-                        "Frozen",
-                        string.Empty, // Icon path, currently empty
-                        true, // Enabled by default, handled by command logic
-                        true, // Checkable
-                        menuCommand.IsChecked
-                    );
-                    break;
-
                 case VisualCommand.Deal:
                 case VisualCommand.Draw:
                     AddItemToPopupMenu(

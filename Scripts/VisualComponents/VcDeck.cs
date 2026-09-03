@@ -70,8 +70,6 @@ public partial class VcDeck : VisualComponentGroup
 
         switch (command)
         {
-            case VisualCommand.ToggleLock:
-                break;
             case VisualCommand.Flip:
                 cr = StartFlip();
                 break;

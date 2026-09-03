@@ -19,7 +19,6 @@ public class VcSyncDto
         ZOrder = component.ZOrder;
         DataSetRow = component.DataSetRow;
         Location = component.Location;
-        Layer = component.Layer;
 
         if (component is VisualComponentGroup container)
         {
@@ -40,8 +39,6 @@ public class VcSyncDto
     public string DataSetRow { get; set; }
     public VisualComponentBase.ComponentLocation Location { get; set; }
 
-    public VisualComponentBase.LayerType Layer { get; set; }
-
     public SnowportId[] ContainedComponents { get; set; } = Array.Empty<SnowportId>();
 
     public void ApplyToComponent(VisualComponentBase component)
@@ -52,7 +49,6 @@ public class VcSyncDto
         component.ZOrder = ZOrder;
         component.DataSetRow = DataSetRow;
         component.Location = Location;
-        component.Layer = Layer;
         if (component is VisualComponentGroup container)
         {
             container.SetContainerChildren(ContainedComponents);

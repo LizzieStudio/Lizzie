@@ -6,46 +6,6 @@ using System.Threading.Tasks;
 
 namespace Lizzie.Scripts.Commands
 {
-    [Command(VisualCommand.Tuck)]
-    public class TuckCommand : CommandBase
-    {
-        public TuckCommand()
-        {
-            Caption = "Tuck";
-            Command = VisualCommand.Tuck;
-        }
-    }
-
-    [Command(VisualCommand.Untuck)]
-    public class UntuckCommand : CommandBase
-    {
-        public UntuckCommand()
-        {
-            Caption = "Untuck";
-            Command = VisualCommand.Untuck;
-        }
-    }
-
-    [Command(VisualCommand.Freeze)]
-    public class FreezeCommand : CommandBase
-    {
-        public FreezeCommand()
-        {
-            Caption = "Freeze";
-            Command = VisualCommand.Freeze;
-        }
-    }
-
-    [Command(VisualCommand.Unfreeze)]
-    public class UnfreezeCommand : CommandBase
-    {
-        public UnfreezeCommand()
-        {
-            Caption = "Unfreeze";
-            Command = VisualCommand.Unfreeze;
-        }
-    }
-
     [Command(VisualCommand.Refresh)]
     public class RefreshCommand : CommandBase
     {

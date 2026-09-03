@@ -6,8 +6,9 @@ public abstract partial class VisualComponentBase : Area3D
 {
     public enum VisualComponentType
     {
-        Cube = 0,
-        Disc = 1,
+        Unset = 0,
+        Cube = 1,
+        Disc = 2,
         Token = 3,
         Deck = 6,
         Die = 7,
@@ -115,11 +116,6 @@ public abstract partial class VisualComponentBase : Area3D
         return true;
     }
 
-    public virtual bool Setup(Guid prototypeRef, TextureFactory textureFactory)
-    {
-        return Setup(prototypeRef, string.Empty, textureFactory);
-    }
-
     public virtual bool Setup(Guid prototypeRef, string dataSetRow, TextureFactory textureFactory)
     {
         TextureFactory = textureFactory;
@@ -196,13 +192,6 @@ public abstract partial class VisualComponentBase : Area3D
     /// <returns>true if action consumed by object. Else false</returns>
     public virtual bool ProcessCommand(VisualCommand command)
     {
-        if (command == VisualCommand.ToggleLock)
-        {
-            Locked = !Locked;
-
-            return true;
-        }
-
         if (command == VisualCommand.RotateCcw)
         {
             SubmitRotation(ProjectService.Instance.RotationStep);
@@ -260,23 +249,6 @@ public abstract partial class VisualComponentBase : Area3D
     {
         var l = new List<MenuCommand>();
 
-        //l.Add(new MenuCommand(VisualCommand.ToggleLock, Locked));
-        switch (Layer)
-        {
-            case LayerType.Normal:
-                l.Add(new MenuCommand(VisualCommand.Freeze));
-                l.Add(new MenuCommand(VisualCommand.Tuck));
-                break;
-            case LayerType.Frozen:
-                l.Add(new MenuCommand(VisualCommand.Unfreeze));
-                break;
-            case LayerType.Tucked:
-                l.Add(new MenuCommand(VisualCommand.Untuck));
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
         l.Add(new MenuCommand(VisualCommand.RotateCw));
         l.Add(new MenuCommand(VisualCommand.RotateCcw));
         l.Add(new MenuCommand(VisualCommand.Delete));
@@ -317,28 +289,6 @@ public abstract partial class VisualComponentBase : Area3D
             return 0;
         }
         protected set => _yHeight = value;
-    }
-
-    public enum LayerType
-    {
-        Normal,
-        Frozen,
-        Tucked,
-    }
-
-    private LayerType _layer = LayerType.Normal;
-
-    public LayerType Layer
-    {
-        get => _layer;
-        set
-        {
-            if (_layer == value)
-                return;
-
-            _layer = value;
-            SyncRequired = true;
-        }
     }
 
     /// <summary>
@@ -388,28 +338,6 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    protected bool _locked;
-
-    public virtual bool Locked
-    {
-        get => Layer == LayerType.Frozen;
-        set
-        {
-            if (_locked != value)
-            {
-                _locked = value;
-                SyncRequired = true;
-                LockChanged();
-            }
-        }
-    }
-
-    protected void LockChanged()
-    {
-        UpdateHighlight();
-        IsClickSelected = false;
-    }
-
     public virtual bool IsHovered { get; set; }
 
     private bool _isClickSelected;
@@ -422,7 +350,7 @@ public abstract partial class VisualComponentBase : Area3D
             if (_isClickSelected == value)
                 return;
 
-            _isClickSelected = !Locked && value;
+            _isClickSelected = value;
 
             UpdateHighlight();
         }
@@ -435,7 +363,7 @@ public abstract partial class VisualComponentBase : Area3D
         if (HighlightMesh == null)
             return;
 
-        HighlightMesh.Visible = IsSelected && !NeverHighlight && !Locked;
+        HighlightMesh.Visible = IsSelected && !NeverHighlight;
     }
 
     public Aabb Aabb
