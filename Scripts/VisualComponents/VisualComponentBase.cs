@@ -157,8 +157,9 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// Produce the effects for any contained components.
+    /// <param name="containerRef">the id of the container to these children</param>
     /// </summary>
-    public virtual IEnumerable<CreateEffect> GetSpawnChildEffects()
+    public virtual IEnumerable<CreateEffect> GetSpawnChildEffects(SnowportId containerRef)
     {
         yield break;
     }
@@ -270,6 +271,12 @@ public abstract partial class VisualComponentBase : Area3D
     /// When an outdated move event arrives, it will be ignored.
     /// </summary>
     public SnowportId LastMoveId { get; set; } = SnowportId.Empty;
+
+    /// <summary>
+    /// The container that holds this component or
+    /// <see cref="SnowportId.Empty"/>.
+    /// </summary>
+    public SnowportId ContainerRef { get; set; } = SnowportId.Empty;
 
     /// <summary>
     /// Which row in the DataSet supplies the data for templating

@@ -9,7 +9,6 @@ using Godot;
 [JsonDerivedType(typeof(CreateEffect), "Create")]
 [JsonDerivedType(typeof(DeleteEffect), "Delete")]
 [JsonDerivedType(typeof(TransformEffect), "Transform")]
-[JsonDerivedType(typeof(RestructureEffect), "Restructure")]
 public abstract class Effect
 {
     /// <summary>The component this effect applies to.</summary>
@@ -38,6 +37,11 @@ public class TransformEffect : Effect
 {
     public VisualComponentBase.ComponentLocation Location { get; set; }
 
+    /// <summary>
+    /// The container that holds the component or <see cref="SnowportId.Empty"/>.
+    /// </summary>
+    public SnowportId ContainerRef { get; set; }
+
     public Vector3 Position { get; set; }
 
     /// <summary>Target rotation in radians.</summary>
@@ -57,21 +61,8 @@ public class TransformEffect : Effect
         {
             ComponentRef = component.Reference,
             Location = component.Location,
+            ContainerRef = component.ContainerRef,
             Position = component.Position,
             Rotation = component.Rotation,
         };
-}
-
-/// <summary>
-/// Replaces a container's ordered child list.
-/// </summary>
-public class RestructureEffect : Effect
-{
-    public SnowportId[] Children { get; set; } = Array.Empty<SnowportId>();
-
-    /// <summary>
-    /// Captures a container's current ordered children.
-    /// </summary>
-    public static RestructureEffect Capture(VisualComponentGroup container) =>
-        new() { ComponentRef = container.Reference, Children = container.GetContainerChildren() };
 }

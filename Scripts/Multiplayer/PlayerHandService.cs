@@ -91,6 +91,7 @@ public partial class PlayerHandService : Node
             {
                 var t = TransformEffect.Capture(card);
                 t.Location = VisualComponentBase.ComponentLocation.Hand;
+                t.ContainerRef = SnowportId.Empty; // a hand is not a container (yet)
                 return (Effect)t;
             })
             .ToArray();

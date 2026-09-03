@@ -5,21 +5,32 @@ using Godot;
 
 public abstract partial class VisualComponentGroup : VisualComponentBase
 {
+    /// <summary>
+    /// A cache of this container's contents.
+    /// The source-of-truth is <see cref="VisualComponentBase.ContainerRef"/>.
+    /// </summary>
     protected readonly List<SnowportId> Children = new();
 
     protected RandomNumberGenerator Rnd = new();
 
-    /// <summary>The event that most recently restructured this container's children.</summary>
-    public SnowportId LastRestructureId { get; set; } = SnowportId.Empty;
-
     public CollisionShape3D DragDropCollider { get; set; }
 
     /// <summary>
-    /// Broadcasts this container's current child list as a RestructureEffect.
+    /// Recomputes the child cache from the <see cref="VisualComponentBase.ContainerRef"/> of children.
     /// </summary>
-    protected void EmitRestructure()
+    public void RebuildCache(IEnumerable<VisualComponentBase> all)
     {
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, RestructureEffect.Capture(this)));
+        var ordered = all.Where(c => c.ContainerRef == Reference)
+            .OrderByDescending(c => c.ZOrder)
+            .Select(c => c.Reference)
+            .ToList();
+
+        if (ordered.Count == Children.Count && ordered.SequenceEqual(Children))
+            return;
+
+        Children.Clear();
+        Children.AddRange(ordered);
+        OnChildrenChanged();
     }
 
     public virtual void AddChildComponents(
@@ -28,29 +39,26 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     )
     {
         var compArr = components as VisualComponentBase[] ?? components.ToArray(); //avoid multiple iterations
-        foreach (var c in compArr)
-        {
-            if (addToTop)
-                Children.Insert(0, c.Reference);
-            else
-                Children.Add(c.Reference);
-        }
+        if (compArr.Length == 0)
+            return;
 
-        OnChildrenChanged();
+        var target = addToTop ? ZTarget.Top : ZTarget.Bottom;
 
         var transformed = compArr
-            .Select(c =>
-            {
-                var t = TransformEffect.Capture(c);
-                t.Location = ComponentLocation.Container;
-                return (Effect)t;
-            })
-            .Append(RestructureEffect.Capture(this))
+            .Select(
+                (c, i) =>
+                {
+                    var t = TransformEffect.Capture(c);
+                    t.Location = ComponentLocation.Container;
+                    t.ContainerRef = Reference;
+                    t.ZTarget = target;
+                    t.ZSuborder = i;
+                    return (Effect)t;
+                }
+            )
             .ToArray();
-        if (transformed.Length > 0)
-        {
-            EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), transformed));
-        }
+
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), transformed));
     }
 
     public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
@@ -70,121 +78,88 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     }
 
     /// <summary>
-    /// Returns the first item in the group, and removes it.
+    /// Returns the top <paramref name="quantity"/> child ids, but does not remove them.
     /// </summary>
-    /// <param name="quantity"></param>
-    /// <returns></returns>
     public virtual SnowportId[] DrawFromTop(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
-        if (quantity == 0)
-            return Array.Empty<SnowportId>();
-
-        var res = Children.Take(quantity).ToArray();
-
-        Children.RemoveRange(0, quantity);
-        OnChildrenChanged();
-        EmitRestructure();
-
-        return res;
+        return quantity <= 0 ? Array.Empty<SnowportId>() : Children.Take(quantity).ToArray();
     }
 
     /// <summary>
-    /// Returns the last item in the group, and removes it
+    /// Returns the bottom <paramref name="quantity"/> child ids, but does not remove them.
     /// </summary>
-    /// <param name="quantity"></param>
-    /// <returns></returns>
     public virtual SnowportId[] DrawFromBottom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
-        if (quantity == 0)
-            return Array.Empty<SnowportId>();
-
-        var res = Children.TakeLast(quantity).ToArray();
-
-        Children.RemoveRange(Children.Count - quantity, quantity);
-        OnChildrenChanged();
-        EmitRestructure();
-
-        return res;
+        return quantity <= 0
+            ? Array.Empty<SnowportId>()
+            : Children.TakeLast(quantity).Reverse().ToArray();
     }
 
     /// <summary>
-    /// Draws a single random item from the group, and removes it.
+    /// Picks <paramref name="quantity"/> random child ids, but does not remove them.
     /// </summary>
-    /// <returns>A random item, which is removed from the group</returns>
-    protected virtual SnowportId DrawRandom()
-    {
-        var r = Rnd.RandiRange(0, Children.Count - 1);
-        var c = Children[r];
-
-        Children.RemoveAt(r);
-        OnChildrenChanged();
-        EmitRestructure();
-
-        return c;
-    }
-
-    /// <summary>
-    /// Draws a specific number of random items from the group, or fewer if items run out.
-    /// </summary>
-    /// <param name="quantity">Number to pull. If greater than the number of items
-    /// in the group, pulls all of them (in a random order)</param>
-    /// <returns>Components in a random order</returns>
     public virtual IEnumerable<SnowportId> DrawRandom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
 
+        var pool = Children.ToList();
+        var result = new List<SnowportId>(quantity);
         for (int i = 0; i < quantity; i++)
         {
-            yield return DrawRandom();
+            int r = Rnd.RandiRange(0, pool.Count - 1);
+            result.Add(pool[r]);
+            pool.RemoveAt(r);
         }
+
+        return result;
     }
 
     /// <summary>
-    /// Shuffles the group using a seed and the Fisher-Yates algorithm
+    /// Shuffles the container using a seed and the Fisher-Yates algorithm.
     /// </summary>
     public virtual void Shuffle(ulong seed)
     {
-        Children.Sort();
+        var ids = Children.ToList();
+        ids.Sort(); // deterministic starting order
 
         var rng = new RandomNumberGenerator { Seed = seed };
-
-        int n = Children.Count - 1;
-
+        int n = ids.Count - 1;
         while (n > 0)
         {
             var r = rng.RandiRange(0, n);
-
-            (Children[r], Children[n]) = (Children[n], Children[r]);
+            (ids[r], ids[n]) = (ids[n], ids[r]);
             n--;
         }
 
-        OnChildrenChanged();
-        EmitRestructure();
+        EmitReorder(ids, new ShuffleAction());
     }
 
     /// <summary>
-    /// Reverses the order of the items in the group.
-    /// Primary use is for when a deck or stack flips over
+    /// Emits an event to reorder the child list.
+    /// Should not be used in conjunction with other events.
     /// </summary>
-    public virtual void Reverse()
+    protected void EmitReorder(IReadOnlyList<SnowportId> orderedIds, TableAction action)
     {
-        Children.Reverse();
-        OnChildrenChanged();
-        EmitRestructure();
-    }
+        if (orderedIds.Count == 0)
+            return;
 
-    public SnowportId[] GetContainerChildren()
-    {
-        return Children.ToArray();
-    }
+        var effects = new List<Effect>(orderedIds.Count);
+        for (int i = 0; i < orderedIds.Count; i++)
+        {
+            var comp = ProjectService.Instance.GameObjects.GetComponent(orderedIds[i]);
+            if (comp == null)
+                continue;
 
-    public void SetContainerChildren(SnowportId[] children)
-    {
-        Children.Clear();
-        Children.AddRange(children);
-        OnChildrenChanged();
+            var t = TransformEffect.Capture(comp);
+            t.ZTarget = ZTarget.Top;
+            t.ZSuborder = orderedIds.Count - 1 - i;
+            effects.Add(t);
+        }
+
+        if (effects.Count > 0)
+            EventSynchronizer.Instance?.Submit(TableEvent.Now(action, effects.ToArray()));
     }
 
     /// <summary>

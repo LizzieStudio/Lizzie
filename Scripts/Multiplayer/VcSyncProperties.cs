@@ -19,11 +19,7 @@ public class VcSyncDto
         ZOrder = component.ZOrder;
         DataSetRow = component.DataSetRow;
         Location = component.Location;
-
-        if (component is VisualComponentGroup container)
-        {
-            ContainedComponents = container.GetContainerChildren();
-        }
+        ContainerRef = component.ContainerRef;
     }
 
     // Uses Godot native Vector3 serialization
@@ -39,7 +35,10 @@ public class VcSyncDto
     public string DataSetRow { get; set; }
     public VisualComponentBase.ComponentLocation Location { get; set; }
 
-    public SnowportId[] ContainedComponents { get; set; } = Array.Empty<SnowportId>();
+    /// <summary>
+    /// The container that holds this component or <see cref="SnowportId.Empty"/>.
+    /// </summary>
+    public SnowportId ContainerRef { get; set; } = SnowportId.Empty;
 
     public void ApplyToComponent(VisualComponentBase component)
     {
@@ -49,9 +48,6 @@ public class VcSyncDto
         component.ZOrder = ZOrder;
         component.DataSetRow = DataSetRow;
         component.Location = Location;
-        if (component is VisualComponentGroup container)
-        {
-            container.SetContainerChildren(ContainedComponents);
-        }
+        component.ContainerRef = ContainerRef;
     }
 }

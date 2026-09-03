@@ -13,6 +13,7 @@ using Godot;
 [JsonDerivedType(typeof(DrawAction), "Draw")]
 [JsonDerivedType(typeof(DealAction), "Deal")]
 [JsonDerivedType(typeof(MoveAction), "Move")]
+[JsonDerivedType(typeof(ShuffleAction), "Shuffle")]
 public abstract class TableAction { }
 
 /// <summary>Flips a token or deck.</summary>
@@ -61,3 +62,6 @@ public class DealAction : TableAction { }
 
 /// <summary>Relocates components between table, container, and hand.</summary>
 public class MoveAction : TableAction { }
+
+/// <summary>Reorders a container's contents. The new order is carried by the event's transforms.</summary>
+public class ShuffleAction : TableAction { }

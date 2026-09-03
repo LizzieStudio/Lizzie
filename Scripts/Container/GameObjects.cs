@@ -292,17 +292,17 @@ public partial class GameObjects : Node
 
         foreach (var component in components)
         {
-            var childEffects = component.GetSpawnChildEffects().ToList();
+            var containerRef = Snowport.Clock.Create();
+
+            var childEffects = component.GetSpawnChildEffects(containerRef).ToList();
 
             var state = new VcSyncDto(component);
-            if (childEffects.Count > 0)
-                state.ContainedComponents = childEffects.Select(e => e.ComponentRef).ToArray();
 
             effects.AddRange(childEffects);
             effects.Add(
                 new CreateEffect
                 {
-                    ComponentRef = Snowport.Clock.Create(),
+                    ComponentRef = containerRef,
                     PrototypeRef = component.PrototypeRef,
                     ComponentName = component.ComponentName ?? string.Empty,
                     State = state,
@@ -465,6 +465,8 @@ public partial class GameObjects : Node
 
             AddComponentToScene(newComponent);
         }
+
+        RebuildContainerCaches();
 
         GD.Print($"GameState '{state.Name}' restored ({state.Components.Count} entries).");
     }
@@ -916,6 +918,7 @@ public partial class GameObjects : Node
 
             var t = TransformEffect.Capture(c);
             t.Location = VisualComponentBase.ComponentLocation.Board;
+            t.ContainerRef = SnowportId.Empty;
             t.Position = cursor + c.SpawnDelta;
             // Bring the drawn components to the top, in draw order.
             t.ZTarget = ZTarget.Top;
@@ -1198,11 +1201,14 @@ public partial class GameObjects : Node
 
         var dropped = dragged
             .Select(
-                (o, i) =>
+                (component, index) =>
                 {
-                    var effect = TransformEffect.Capture(o);
-                    effect.ZTarget = ZTarget.Top;
-                    effect.ZSuborder = i;
+                    var effect = TransformEffect.Capture(component);
+                    if (component.ContainerRef == SnowportId.Empty)
+                    {
+                        effect.ZTarget = ZTarget.Top;
+                        effect.ZSuborder = index;
+                    }
                     return effect;
                 }
             )
@@ -1324,11 +1330,10 @@ public partial class GameObjects : Node
                 case TransformEffect t:
                     ApplyTransform(e.Id, t, animated);
                     break;
-                case RestructureEffect r:
-                    ApplyRestructure(e.Id, r);
-                    break;
             }
         }
+
+        RebuildContainerCaches();
 
         switch (e.Action)
         {
@@ -1398,8 +1403,9 @@ public partial class GameObjects : Node
 
         vcb.SpawnBuild(effect.PrototypeRef, syncDto, TextureFactory);
 
-        // A newly created component starts on top, anchored to its creation event.
-        vcb.ZOrder = new ZOrder(ZTarget.Top, 0, eventId);
+        // A newly created board component starts on top
+        if (vcb.ContainerRef == SnowportId.Empty)
+            vcb.ZOrder = new ZOrder(ZTarget.Top, 0, eventId);
 
         AddComponentToScene(vcb);
         return true;
@@ -1453,6 +1459,7 @@ public partial class GameObjects : Node
         c.LastMoveId = eventId;
 
         c.Location = t.Location;
+        c.ContainerRef = t.ContainerRef;
         c.Position = t.Position;
         if (!animated)
             c.Rotation = t.Rotation;
@@ -1462,17 +1469,15 @@ public partial class GameObjects : Node
             c.ZOrder = new ZOrder(t.ZTarget, t.ZSuborder, eventId);
     }
 
-    private void ApplyRestructure(SnowportId eventId, RestructureEffect r)
+    /// <summary>
+    /// Refreshes every container's child cache from the source-of-truth,
+    /// <see cref="VisualComponentBase.ContainerRef"/>.
+    /// </summary>
+    private void RebuildContainerCaches()
     {
-        if (GetComponent(r.ComponentRef) is not VisualComponentGroup container)
-            return;
-
-        // Ignore restructures older than the container's most recent one.
-        if (eventId.CompareTo(container.LastRestructureId) < 0)
-            return;
-
-        container.LastRestructureId = eventId;
-        container.SetContainerChildren(r.Children);
+        var all = ComponentNodes.OfType<VisualComponentBase>().ToList();
+        foreach (var group in all.OfType<VisualComponentGroup>())
+            group.RebuildCache(all);
     }
 
     private class ActiveDrag

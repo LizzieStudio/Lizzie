@@ -124,9 +124,8 @@ public partial class VcDeck : VisualComponentGroup
 
     private bool PerformShuffle()
     {
-        // TODO implement this once the children are migrated to the new system
-        GD.PrintErr("Shuffle is not implemented yet (pending RestructureEffect).");
-
+        var seed = ((ulong)Rnd.Randi() << 32) | Rnd.Randi();
+        Shuffle(seed);
         return true;
     }
 
@@ -218,7 +217,6 @@ public partial class VcDeck : VisualComponentGroup
         else
         {
             cards = DrawFromBottom(count);
-            cards = cards.Reverse().ToArray();
         }
 
         var cl = new List<VcToken>();
@@ -252,6 +250,7 @@ public partial class VcDeck : VisualComponentGroup
 
                 var t = TransformEffect.Capture(comp);
                 t.Location = ComponentLocation.Board;
+                t.ContainerRef = SnowportId.Empty;
                 t.Position = new Vector3(deltaX, Position.Y, Position.Z);
                 t.Rotation = DrawnRotation(comp);
                 // Splayed cards land on top, in draw order.
@@ -284,26 +283,21 @@ public partial class VcDeck : VisualComponentGroup
 
         int seatCount = settings.Players.Count;
 
-        // Collect all cards in dealing order: round-robin across seats
+        var order = Children.ToList();
+        if (!_showFace)
+            order.Reverse(); // deal from the bottom when the deck is face-down
+
         var handsToAdd = new Dictionary<int, List<VcToken>>();
         for (int seat = 0; seat < seatCount; seat++)
             handsToAdd[seat] = new List<VcToken>();
 
-        for (int round = 0; round < countPerPlayer; round++)
+        int total = Math.Min(countPerPlayer * seatCount, order.Count);
+        for (int i = 0; i < total; i++)
         {
-            for (int seat = 0; seat < seatCount; seat++)
-            {
-                if (Children.Count == 0)
-                    break;
-
-                SnowportId[] drawn = _showFace ? DrawFromTop(1) : DrawFromBottom(1);
-                if (drawn.Length == 0)
-                    break;
-
-                var comp = ProjectService.Instance.GameObjects.GetComponent(drawn[0]);
-                if (comp is VcToken token)
-                    handsToAdd[seat].Add(token);
-            }
+            int seat = i % seatCount;
+            var comp = ProjectService.Instance.GameObjects.GetComponent(order[i]);
+            if (comp is VcToken token)
+                handsToAdd[seat].Add(token);
         }
 
         // Publish one AddToHandEvent per seat
@@ -341,7 +335,7 @@ public partial class VcDeck : VisualComponentGroup
         BuildInternal((PrintedParameters)proto.Parameters, textureFactory);
     }
 
-    public override IEnumerable<CreateEffect> GetSpawnChildEffects()
+    public override IEnumerable<CreateEffect> GetSpawnChildEffects(SnowportId containerRef)
     {
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
@@ -351,8 +345,12 @@ public partial class VcDeck : VisualComponentGroup
         if (proto.Parameters is not PrintedParameters parameters)
             yield break;
 
+        int index = 0;
         foreach (var row in EnumerateCardRows(parameters, project))
-            yield return CreateCardEffect(row);
+        {
+            yield return CreateCardEffect(row, containerRef, index);
+            index++;
+        }
     }
 
     private IEnumerable<string> EnumerateCardRows(PrintedParameters parameters, Project project)
@@ -390,7 +388,7 @@ public partial class VcDeck : VisualComponentGroup
         }
     }
 
-    private CreateEffect CreateCardEffect(string dataSetRow)
+    private CreateEffect CreateCardEffect(string dataSetRow, SnowportId containerRef, int index)
     {
         var id = Snowport.Clock.Create();
         return new CreateEffect
@@ -402,7 +400,10 @@ public partial class VcDeck : VisualComponentGroup
             {
                 DataSetRow = dataSetRow,
                 Location = ComponentLocation.Container,
+                ContainerRef = containerRef,
                 LogicalVisible = false,
+                // First enumerated card are at the top.
+                ZOrder = new ZOrder(ZTarget.Top, -index, SnowportId.Empty),
             },
         };
     }
@@ -805,7 +806,6 @@ public partial class VcDeck : VisualComponentGroup
         else
         {
             cards = DrawFromBottom(count);
-            cards = cards.Reverse().ToArray();
         }
 
         for (int i = 0; i < cards.Length; i++)
