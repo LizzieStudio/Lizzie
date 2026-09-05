@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using Godot;
 
@@ -11,6 +12,12 @@ public partial class EventSynchronizer : Node
     public static EventSynchronizer Instance => _instance;
 
     private readonly EventLog _log = new();
+
+    /// <summary>
+    /// Peers still receiving their catchup events.
+    /// They are excluded from live event delivery until caught up.
+    /// </summary>
+    private readonly HashSet<int> _syncingPeers = new();
 
     /// <summary>
     /// Represents a player action and its subsequent effects.
@@ -39,7 +46,7 @@ public partial class EventSynchronizer : Node
         var json = JsonSerializer.Serialize(e, LizzieJson.Options);
 
         if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ClientReceiveEvent), json);
+            BroadcastEvent(json);
         else
             RpcId(1, nameof(ServerSubmitEvent), json);
     }
@@ -56,12 +63,21 @@ public partial class EventSynchronizer : Node
 
         var senderId = Multiplayer.GetRemoteSenderId();
         ReceiveEvent(json);
+        BroadcastEvent(json, senderId);
+    }
 
+    /// <summary>
+    /// Server-only: relay an event to every other live peer, skipping the sender,
+    /// the host itself, and any peer still receiving its initial snapshot.
+    /// </summary>
+    private void BroadcastEvent(string json, int excludeSender = -1)
+    {
         foreach (var player in MultiplayerManager.Instance.Players)
         {
-            if (player.Key == senderId || player.Key == 1)
+            int id = player.Key;
+            if (id == 1 || id == excludeSender || _syncingPeers.Contains(id))
                 continue;
-            RpcId(player.Key, nameof(ClientReceiveEvent), json);
+            RpcId(id, nameof(ClientReceiveEvent), json);
         }
     }
 
@@ -96,4 +112,84 @@ public partial class EventSynchronizer : Node
     {
         Applied?.Invoke(e);
     }
+
+    #region Catchup
+
+    /// <summary>
+    /// Mark a freshly connected peer as syncing so it is excluded from
+    /// live event delivery until it has received its state snapshot.
+    /// </summary>
+    public void BeginSync(int peerId)
+    {
+        if (MultiplayerManager.Instance?.IsServer == true)
+            _syncingPeers.Add(peerId);
+    }
+
+    /// <summary>
+    /// Stop excluding a peer from live event delivery.
+    /// </summary>
+    public void EndSync(int peerId) => _syncingPeers.Remove(peerId);
+
+    /// <summary>
+    /// Replay the non-component events to a joining peer.
+    /// </summary>
+    public void ReplaySeatEventsTo(int peerId)
+    {
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
+
+        foreach (var e in _log.Events)
+            if (e.Action is PlayerJoinAction or PlayerLeaveAction)
+                RpcId(
+                    peerId,
+                    nameof(ReceiveBacklog),
+                    JsonSerializer.Serialize(e, LizzieJson.Options)
+                );
+    }
+
+    /// <summary>
+    /// Stream the current table to a joining peer as fresh creation events.
+    public void SendStateTo(int peerId)
+    {
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
+
+        var gameObjects = ProjectService.Instance?.GameObjects;
+        if (gameObjects == null)
+        {
+            EndSync(peerId);
+            return;
+        }
+
+        // The id for this table event defines where the client will start receiving events later.
+        var snapshot = TableEvent.Now(null, gameObjects.GenerateCatchupEffects());
+        RpcId(
+            peerId,
+            nameof(ReceiveSnapshot),
+            JsonSerializer.Serialize(snapshot, LizzieJson.Options)
+        );
+
+        // Replay anything that landed after the previous event.
+        foreach (var e in _log.EventsAfter(snapshot.Id))
+            RpcId(peerId, nameof(ReceiveBacklog), JsonSerializer.Serialize(e, LizzieJson.Options));
+
+        // The peer is caught up. Resume sending them events.
+        EndSync(peerId);
+    }
+
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ReceiveSnapshot(string json) => ReceiveEvent(json);
+
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ReceiveBacklog(string json) => ReceiveEvent(json);
+
+    #endregion
 }

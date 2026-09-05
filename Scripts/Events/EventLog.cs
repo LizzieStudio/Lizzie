@@ -14,6 +14,17 @@ public class EventLog
 
     public IReadOnlyList<TableEvent> Events => _ordered;
 
+    /// <summary>
+    /// The events newer than <paramref name="t"/>, in order.
+    /// Used to stream the post-catchup backlog to a new player.
+    /// </summary>
+    public IEnumerable<TableEvent> EventsAfter(SnowportId t)
+    {
+        int idx = _keys.BinarySearch(t);
+        idx = idx < 0 ? ~idx : idx + 1;
+        return _ordered.GetRange(idx, _ordered.Count - idx);
+    }
+
     public bool TryRecord(TableEvent e)
     {
         if (!_applied.Add(e.Id))

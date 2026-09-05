@@ -22,6 +22,7 @@ public class VcSyncDto
         DataSetRow = component.DataSetRow;
         Location = component.Location;
         ContainerRef = component.ContainerRef;
+        LastMoveId = component.LastMoveId;
     }
 
     // Uses Godot native Vector3 serialization
@@ -40,6 +41,11 @@ public class VcSyncDto
     /// </summary>
     public SnowportId ContainerRef { get; set; } = SnowportId.Empty;
 
+    /// <summary>
+    /// The last event that moved this component with a transform.
+    /// </summary>
+    public SnowportId LastMoveId { get; set; } = SnowportId.Empty;
+
     public void ApplyToComponent(VisualComponentBase component)
     {
         // While dragged, Position carries the cursor-relative offset.
@@ -53,5 +59,6 @@ public class VcSyncDto
         component.DataSetRow = DataSetRow;
         component.Location = Location;
         component.ContainerRef = ContainerRef;
+        component.LastMoveId = LastMoveId;
     }
 }

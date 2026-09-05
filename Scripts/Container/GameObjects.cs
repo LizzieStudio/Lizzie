@@ -332,6 +332,25 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
     }
 
+    /// <summary>
+    /// Captures the current table as a set of creation effects for a late joiner.
+    /// </summary>
+    public Effect[] GenerateCatchupEffects()
+    {
+        return ComponentNodes
+            .OfType<VisualComponentBase>()
+            .Select(component => (Effect)
+                new CreateEffect
+                {
+                    ComponentRef = component.Reference,
+                    PrototypeRef = component.PrototypeRef,
+                    ComponentName = component.ComponentName ?? string.Empty,
+                    State = new VcSyncDto(component),
+                }
+            )
+            .ToArray();
+    }
+
     public Dictionary<Guid, int> PrototypeCounts()
     {
         Dictionary<Guid, int> counts = new();
@@ -1449,8 +1468,8 @@ public partial class GameObjects : Node
 
         vcb.SpawnBuild(effect.PrototypeRef, syncDto, TextureFactory);
 
-        // A newly created board component starts on top
-        if (vcb.ContainerRef == SnowportId.Empty)
+        // A newly created table component starts on top
+        if (vcb.ContainerRef == SnowportId.Empty && syncDto.ZOrder.LastEvent == SnowportId.Empty)
             vcb.ZOrder = new ZOrder(ZTarget.Top, 0, eventId);
 
         AddComponentToScene(vcb);
