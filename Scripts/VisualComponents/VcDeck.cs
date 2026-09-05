@@ -273,21 +273,26 @@ public partial class VcDeck : VisualComponentGroup
         if (!_showFace)
             order.Reverse(); // deal from the bottom when the deck is face-down
 
-        int total = Math.Min(countPerPlayer * seatCount, order.Count);
-
         var handService = PlayerHandService.Instance;
-        var containers = new SnowportId[seatCount];
+
+        var activeSeats = new List<int>(seatCount);
         for (int seat = 0; seat < seatCount; seat++)
-            containers[seat] = handService.HandContainer(seat);
+        {
+            if (handService.HandContainer(seat) != SnowportId.Empty)
+                activeSeats.Add(seat);
+        }
+
+        if (activeSeats.Count == 0)
+            return [];
+
+        int total = Math.Min(countPerPlayer * activeSeats.Count, order.Count);
 
         // Deal round-robin.
         var effects = new List<Effect>(total);
         var suborder = new int[seatCount];
         for (int i = 0; i < total; i++)
         {
-            int seat = i % seatCount;
-            if (containers[seat] == SnowportId.Empty)
-                continue;
+            int seat = activeSeats[i % activeSeats.Count];
             var comp = ProjectService.Instance.GameObjects.GetComponent(order[i]);
             if (comp == null)
                 continue;
