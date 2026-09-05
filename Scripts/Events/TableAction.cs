@@ -14,6 +14,8 @@ using Godot;
 [JsonDerivedType(typeof(DealAction), "Deal")]
 [JsonDerivedType(typeof(MoveAction), "Move")]
 [JsonDerivedType(typeof(ShuffleAction), "Shuffle")]
+[JsonDerivedType(typeof(PlayerJoinAction), "PlayerJoin")]
+[JsonDerivedType(typeof(PlayerLeaveAction), "PlayerLeave")]
 public abstract class TableAction { }
 
 /// <summary>Flips a token or deck.</summary>
@@ -65,3 +67,27 @@ public class MoveAction : TableAction { }
 
 /// <summary>Reorders a container's contents. The new order is carried by the event's transforms.</summary>
 public class ShuffleAction : TableAction { }
+
+/// <summary>
+/// Fired when a player claims a seat.
+/// </summary>
+public class PlayerJoinAction : TableAction
+{
+    public int Seat { get; set; }
+
+    public int PeerId { get; set; }
+
+    /// <summary>The container id for this player's hand.</summary>
+    public SnowportId HandRef { get; set; }
+}
+
+/// <summary>
+/// Fired when a player leaves a seat.
+/// TODO Hands are orphaned. A new solution is necessary.
+/// </summary>
+public class PlayerLeaveAction : TableAction
+{
+    public int Seat { get; set; }
+
+    public int PeerId { get; set; }
+}

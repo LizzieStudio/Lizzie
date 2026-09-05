@@ -139,6 +139,7 @@ public partial class MultiplayerManager : Node
 
         // Drop any event history accumulated during the session.
         EventSynchronizer.Instance?.Clear();
+        PlayerHandService.Instance?.Clear();
 
         GD.Print("Disconnected from multiplayer");
     }

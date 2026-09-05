@@ -219,20 +219,26 @@ public partial class VcDeck : VisualComponentGroup
             cards = DrawFromBottom(count);
         }
 
-        var cl = new List<VcToken>();
-
-        for (int i = 0; i < cards.Length; i++)
-        {
-            var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
-            if (comp is VcToken token)
-                cl.Add(token);
-        }
-
         //if there are player hands, draw to that. Otherwise draw to the table.
         if (ProjectService.Instance.CurrentProject.GameSettings.EnablePlayerHands)
         {
-            // SeatIndex -2 resolves to the local player's seat inside PlayerHandService.
-            EventBus.Instance.Publish(new AddToHandEvent { Cards = cl, SeatIndex = -2 });
+            int seat = PlayerHandService.LocalSeatIndex();
+            var toHand = new List<Effect>(cards.Length);
+
+            for (int i = 0; i < cards.Length; i++)
+            {
+                var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
+                if (comp == null)
+                    continue;
+                toHand.Add(PlayerHandService.Instance.MoveEffect(comp, seat, i));
+            }
+
+            if (toHand.Count > 0)
+            {
+                EventSynchronizer.Instance?.Submit(
+                    TableEvent.Now(new DrawAction(), toHand.ToArray())
+                );
+            }
         }
         else
         {
@@ -279,7 +285,10 @@ public partial class VcDeck : VisualComponentGroup
     {
         var settings = ProjectService.Instance.CurrentProject?.GameSettings;
         if (settings == null || settings.Players.Count == 0)
+        {
             DrawCards(countPerPlayer); // fall back to draw if no seats defined
+            return;
+        }
 
         int seatCount = settings.Players.Count;
 
@@ -287,27 +296,29 @@ public partial class VcDeck : VisualComponentGroup
         if (!_showFace)
             order.Reverse(); // deal from the bottom when the deck is face-down
 
-        var handsToAdd = new Dictionary<int, List<VcToken>>();
-        for (int seat = 0; seat < seatCount; seat++)
-            handsToAdd[seat] = new List<VcToken>();
-
         int total = Math.Min(countPerPlayer * seatCount, order.Count);
+
+        var handService = PlayerHandService.Instance;
+        var containers = new SnowportId[seatCount];
+        for (int seat = 0; seat < seatCount; seat++)
+            containers[seat] = handService.HandContainer(seat);
+
+        // Deal round-robin.
+        var effects = new List<Effect>(total);
+        var suborder = new int[seatCount];
         for (int i = 0; i < total; i++)
         {
             int seat = i % seatCount;
+            if (containers[seat] == SnowportId.Empty)
+                continue;
             var comp = ProjectService.Instance.GameObjects.GetComponent(order[i]);
-            if (comp is VcToken token)
-                handsToAdd[seat].Add(token);
+            if (comp == null)
+                continue;
+            effects.Add(handService.MoveEffect(comp, seat, suborder[seat]++));
         }
 
-        // Publish one AddToHandEvent per seat
-        foreach (var kv in handsToAdd)
-        {
-            if (kv.Value.Count > 0)
-                EventBus.Instance.Publish(
-                    new AddToHandEvent { Cards = kv.Value, SeatIndex = kv.Key }
-                );
-        }
+        if (effects.Count > 0)
+            EventSynchronizer.Instance?.Submit(TableEvent.Now(new DealAction(), effects.ToArray()));
 
         UpdateDeckSprites();
     }

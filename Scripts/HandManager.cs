@@ -39,8 +39,8 @@ public partial class HandManager : Panel
 
         _handContainer = GetNode<HBoxContainer>("%HandContainer");
 
-        EventBus.Instance.Subscribe<AddToHandEvent>(OnAddToHand);
-        EventBus.Instance.Subscribe<HandChangedEvent>(OnHandChanged);
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied += OnEventApplied;
 
         _openIcon = ResourceLoader.Load<Texture2D>(OpenIcon);
         _closeIcon = ResourceLoader.Load<Texture2D>(CloseIcon);
@@ -57,18 +57,17 @@ public partial class HandManager : Panel
         AddChild(_dragPreview);
     }
 
-    private void OnAddToHand(AddToHandEvent obj)
+    public override void _ExitTree()
     {
-        // PlayerHandService handles storage; we just need to refresh our display
-        // if the event targets the local seat.
-        // (PlayerHandService publishes HandChangedEvent which triggers OnHandChanged.)
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied -= OnEventApplied;
     }
 
-    private void OnHandChanged(HandChangedEvent evt)
-    {
-        if (evt.SeatIndex == PlayerHandService.LocalSeatIndex())
-            RefreshDisplay();
-    }
+    /// <summary>
+    /// Subscribe to all events to catch hand changes.
+    /// Deferred to run after GameObjects. (should be changed)
+    /// </summary>
+    private void OnEventApplied(TableEvent e) => Callable.From(RefreshDisplay).CallDeferred();
 
     public override void _Input(InputEvent @event)
     {
@@ -263,23 +262,9 @@ public partial class HandManager : Panel
         MapHandToContainer();
     }
 
-    public void AddToHand(VcToken card)
-    {
-        PlayerHandService.Instance?.AddCards(PlayerHandService.LocalSeatIndex(), new[] { card });
-        // RefreshDisplay triggered by HandChangedEvent
-    }
-
-    public void AddToHand(IEnumerable<VcToken> cards)
-    {
-        PlayerHandService.Instance?.AddCards(PlayerHandService.LocalSeatIndex(), cards);
-        // RefreshDisplay triggered by HandChangedEvent
-    }
-
     public void RemoveFromHand(VcToken card)
     {
-        PlayerHandService.Instance?.RemoveCard(card);
         ProjectService.Instance.GameObjects.ShowAndDrag(new List<SnowportId> { card.Reference });
-        // RefreshDisplay triggered by HandChangedEvent
     }
 
     private static ImageTexture GetCardTexture(VcToken card)

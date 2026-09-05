@@ -128,6 +128,18 @@ public partial class GameObjects : Node
             .FirstOrDefault(vc => vc.Reference == reference);
     }
 
+    /// <summary>
+    /// All components contained in <paramref name="containerRef"/> in ZOrder.
+    /// Works for containers and player hands.
+    /// </summary>
+    public IEnumerable<VisualComponentBase> GetContainedComponents(SnowportId containerRef)
+    {
+        return ComponentNodes
+            .OfType<VisualComponentBase>()
+            .Where(vc => vc.ContainerRef == containerRef)
+            .OrderBy(vc => vc.ZOrder);
+    }
+
     public override void _PhysicsProcess(double delta)
     {
         base._PhysicsProcess(delta);
@@ -1142,27 +1154,20 @@ public partial class GameObjects : Node
 
         // Only divert to the hand when hands are enabled, the drop was over the hand strip,
         // AND there is at least one printed component to hand off.
-        var toHand = new List<VcToken>();
         if (HandsEnabled() && mousePosition.Y > _gameController.HandY)
         {
-            foreach (var go in GetDraggingObjects())
-            {
-                if (go is VcToken vct)
-                    toHand.Add(vct);
-            }
-        }
-
-        if (toHand.Count > 0)
-        {
             var dragged = GetDraggingObjects().ToList();
+            var toHand = dragged.Where(go => go is VcToken).ToList();
 
-            SubmitDrop(dragged);
-
-            _gameController.HandManager.AddToHand(toHand);
-            Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
-            CursorMode = CursorMode.Normal;
-            QueueStackingUpdate();
-            return;
+            if (toHand.Count > 0)
+            {
+                var toBoard = dragged.Where(go => go is not VcToken).ToList();
+                SubmitHandDrop(toHand, toBoard, PlayerHandService.LocalSeatIndex());
+                Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
+                CursorMode = CursorMode.Normal;
+                QueueStackingUpdate();
+                return;
+            }
         }
 
         if (_currentDragDropTarget != null)
@@ -1215,6 +1220,36 @@ public partial class GameObjects : Node
             .ToArray();
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(new DropAction(), dropped));
+    }
+
+    /// <summary>
+    /// Submits the event to send components to the hand.
+    /// </summary>
+    private void SubmitHandDrop(
+        List<VisualComponentBase> toHand,
+        List<VisualComponentBase> toBoard,
+        int seat
+    )
+    {
+        _localDragOverHand = false;
+
+        var effects = new List<Effect>(toHand.Count + toBoard.Count);
+
+        for (int i = 0; i < toHand.Count; i++)
+            effects.Add(PlayerHandService.Instance.MoveEffect(toHand[i], seat, i));
+
+        for (int i = 0; i < toBoard.Count; i++)
+        {
+            var effect = TransformEffect.Capture(toBoard[i]);
+            if (toBoard[i].ContainerRef == SnowportId.Empty)
+            {
+                effect.ZTarget = ZTarget.Top;
+                effect.ZSuborder = i;
+            }
+            effects.Add(effect);
+        }
+
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DropAction(), effects.ToArray()));
     }
 
     #endregion
@@ -1305,8 +1340,7 @@ public partial class GameObjects : Node
         _pendingSpawns.Clear();
         _tombstones.Clear();
         EventSynchronizer.Instance?.Clear();
-
-        PlayerHandService.Instance?.ClearAll();
+        PlayerHandService.Instance?.Clear();
     }
 
     /// <summary>

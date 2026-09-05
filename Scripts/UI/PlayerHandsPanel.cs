@@ -22,7 +22,8 @@ public partial class PlayerHandsPanel : Panel
 
         _playerHandsContainer = GetNode<VBoxContainer>("%PlayerHands");
 
-        EventBus.Instance.Subscribe<HandChangedEvent>(OnHandChanged);
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied += OnEventApplied;
         EventBus.Instance.Subscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
 
@@ -31,7 +32,8 @@ public partial class PlayerHandsPanel : Panel
 
     public override void _ExitTree()
     {
-        EventBus.Instance.Unsubscribe<HandChangedEvent>(OnHandChanged);
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied -= OnEventApplied;
         EventBus.Instance.Unsubscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
         EventBus.Instance.Unsubscribe<ProjectChangedEvent>(OnProjectChanged);
     }
@@ -40,12 +42,7 @@ public partial class PlayerHandsPanel : Panel
     // Event handlers
     // -------------------------------------------------------------------------
 
-    private void OnHandChanged(HandChangedEvent evt)
-    {
-        // Only need to update if it is an opponent's seat
-        if (evt.SeatIndex != PlayerHandService.LocalSeatIndex())
-            RebuildOpponentHands();
-    }
+    private void OnEventApplied(TableEvent _) => Callable.From(RebuildOpponentHands).CallDeferred();
 
     private void OnSeatClaimed(PlayerSeatClaimedEvent _) => RebuildOpponentHands();
 
@@ -91,7 +88,7 @@ public partial class PlayerHandsPanel : Panel
 
             var playerSettings = settings.Players[seatIndex];
             var hand =
-                PlayerHandService.Instance?.GetHand(seatIndex) ?? System.Array.Empty<VcToken>();
+                PlayerHandService.Instance?.GetHand(seatIndex) ?? Array.Empty<VcToken>();
 
             // Row container for this opponent
             var row = new VBoxContainer();

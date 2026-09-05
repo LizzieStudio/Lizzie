@@ -88,10 +88,17 @@ public partial class PlayerSeatManager : Node
     /// </summary>
     public void ReleaseSeat(int peerId)
     {
-        if (!_claims.ContainsKey(peerId))
+        if (!_claims.TryGetValue(peerId, out var seat))
             return;
 
         _claims.Remove(peerId);
+
+        if (seat >= 0 && MultiplayerManager.Instance?.IsServer == true)
+        {
+            EventSynchronizer.Instance?.Submit(
+                TableEvent.Now(new PlayerLeaveAction { Seat = seat, PeerId = peerId })
+            );
+        }
 
         // Update PlayerInfo if available
         if (MultiplayerManager.Instance?.Players.TryGetValue(peerId, out var pi) == true)
@@ -208,6 +215,22 @@ public partial class PlayerSeatManager : Node
 
             if (MultiplayerManager.Instance?.Players.TryGetValue(peerId, out var pi) == true)
                 pi.PlayerPosition = seatIndex;
+
+            var mm = MultiplayerManager.Instance;
+            bool localOwnsClaim = mm == null || !mm.IsMultiplayerActive || peerId == mm.LocalPlayerId;
+            if (seatIndex >= 0 && localOwnsClaim)
+            {
+                EventSynchronizer.Instance?.Submit(
+                    TableEvent.Now(
+                        new PlayerJoinAction
+                        {
+                            Seat = seatIndex,
+                            PeerId = peerId,
+                            HandRef = Snowport.Clock.Create(),
+                        }
+                    )
+                );
+            }
         }
 
         EventBus.Instance?.Publish(
