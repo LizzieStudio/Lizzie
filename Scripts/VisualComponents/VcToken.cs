@@ -110,12 +110,10 @@ public partial class VcToken : VisualComponentBase
     public override GeometryInstance3D DragMesh => _mainMesh;
     public override float MaxAxisSize => Math.Max(_height, _width);
 
-    public override bool ProcessCommand(VisualCommand command)
+    public override Effect[] ProcessCommand(VisualCommand command)
     {
         if (command == VisualCommand.Flip)
-        {
-            return StartFlip();
-        }
+            return [BuildFlip()];
 
         return base.ProcessCommand(command);
     }
@@ -138,7 +136,7 @@ public partial class VcToken : VisualComponentBase
     private float _targetZ;
     private bool _flipInProcess;
 
-    private bool StartFlip()
+    private TransformEffect BuildFlip()
     {
         bool targetFaceUp = RotationDegrees.Z >= 90;
 
@@ -149,17 +147,13 @@ public partial class VcToken : VisualComponentBase
             Mathf.DegToRad(targetFaceUp ? 0f : 180f)
         );
 
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(new FlipAction { ComponentRef = Reference, FaceUp = targetFaceUp }, t)
-        );
-
-        return true;
+        return t;
     }
 
-    public override void AnimateFlip(bool faceUp)
+    public override void AnimateFlip(Vector3 targetRotation)
     {
         _flipInProcess = true;
-        _targetZ = faceUp ? 0 : 180;
+        _targetZ = Mathf.RadToDeg(targetRotation.Z);
     }
 
     private void ProcessFlip(double delta)

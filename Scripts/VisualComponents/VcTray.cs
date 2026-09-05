@@ -160,27 +160,30 @@ public partial class VcTray : VisualComponentGroup
 
     protected override void OnChildrenChanged() { }
 
-    public override void DragDraw(int quantity)
+    public override TableEvent DragDraw(int quantity)
     {
         if (_prototype == null)
-            return;
+            return null;
+
+        if (CursorSynchronizer.Instance is not { } cursors)
+            return null;
 
         var id = Snowport.Clock.Create();
 
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new CreateEffect
+        return TableEvent.Now(
+            null,
+            new CreateEffect
+            {
+                ComponentRef = id,
+                PrototypeRef = _prototype.PrototypeRef,
+                ComponentName = _prototype.Name ?? string.Empty,
+                State = new VcSyncDto
                 {
-                    ComponentRef = id,
-                    PrototypeRef = _prototype.PrototypeRef,
-                    ComponentName = _prototype.Name ?? string.Empty,
-                    State = new VcSyncDto { Location = ComponentLocation.Board },
-                }
-            )
+                    Location = ComponentLocation.Cursor,
+                    ContainerRef = cursors.LocalCursorRef,
+                },
+            }
         );
-
-        ProjectService.Instance.GameObjects.ShowAndDrag(new List<SnowportId> { id });
     }
 }
 

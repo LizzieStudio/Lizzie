@@ -29,7 +29,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     private bool _rollInProcess;
-    private int _rollTarget;
+    private Vector3 _rollTargetRotation;
     private double _rollDuration = 0.5;
     private double _rollTime;
 
@@ -40,7 +40,7 @@ public partial class VcDie : VisualComponentBase
             _rollTime += delta;
             if (_rollTime > _rollDuration)
             {
-                ShowSide(_rollTarget);
+                Rotation = _rollTargetRotation;
                 _rollInProcess = false;
             }
             else
@@ -53,107 +53,20 @@ public partial class VcDie : VisualComponentBase
     public override float MaxAxisSize => Scale.X;
     public override GeometryInstance3D DragMesh => _mainMesh;
 
-    public override bool ProcessCommand(VisualCommand command)
+    public override Effect[] ProcessCommand(VisualCommand command)
     {
-        var cr = false;
-
-        switch (command)
+        // As long as the commands stay in order, this will work.
+        if ((int)command >= (int)VisualCommand.Num1 && (int)command <= (int)VisualCommand.Num20)
         {
-            case VisualCommand.Flip:
-                break;
-            case VisualCommand.ScaleUp:
-                break;
-            case VisualCommand.ScaleDown:
-                break;
-            case VisualCommand.RotateCw:
-                break;
-            case VisualCommand.RotateCcw:
-                break;
-            case VisualCommand.Delete:
-                break;
-            case VisualCommand.Duplicate:
-                break;
-            case VisualCommand.Edit:
-                break;
-            case VisualCommand.MoveDown:
-                break;
-            case VisualCommand.MoveToBottom:
-                break;
-            case VisualCommand.MoveUp:
-                break;
-            case VisualCommand.MoveToTop:
-                break;
-
-            case VisualCommand.Num1:
-                cr = ShowSide(1);
-                break;
-            case VisualCommand.Num2:
-                cr = ShowSide(2);
-                break;
-            case VisualCommand.Num3:
-                cr = ShowSide(3);
-                break;
-            case VisualCommand.Num4:
-                cr = ShowSide(4);
-                break;
-            case VisualCommand.Num5:
-                cr = ShowSide(5);
-                break;
-            case VisualCommand.Num6:
-                cr = ShowSide(6);
-                break;
-            case VisualCommand.Num7:
-                cr = ShowSide(7);
-                break;
-            case VisualCommand.Num8:
-                cr = ShowSide(8);
-                break;
-            case VisualCommand.Num9:
-                cr = ShowSide(9);
-                break;
-            case VisualCommand.Num10:
-                cr = ShowSide(10);
-                break;
-            case VisualCommand.Num11:
-                cr = ShowSide(11);
-                break;
-            case VisualCommand.Num12:
-                cr = ShowSide(12);
-                break;
-            case VisualCommand.Num13:
-                cr = ShowSide(13);
-                break;
-            case VisualCommand.Num14:
-                cr = ShowSide(14);
-                break;
-            case VisualCommand.Num15:
-                cr = ShowSide(15);
-                break;
-            case VisualCommand.Num16:
-                cr = ShowSide(16);
-                break;
-            case VisualCommand.Num17:
-                cr = ShowSide(17);
-                break;
-            case VisualCommand.Num18:
-                cr = ShowSide(18);
-                break;
-            case VisualCommand.Num19:
-                cr = ShowSide(19);
-                break;
-            case VisualCommand.Num20:
-                cr = ShowSide(20);
-                break;
-
-            case VisualCommand.Roll:
-                cr = Roll();
-                break;
-
-            //default:
-            //throw new ArgumentOutOfRangeException(nameof(command), command, null);
+            int side = (int)command + 1 - (int)VisualCommand.Num1;
+            var t = ShowSide(side);
+            return t != null ? [t] : base.ProcessCommand(command);
         }
 
-        return cr == false ? base.ProcessCommand(command) : cr;
+        if (command == VisualCommand.Roll)
+            return [BuildRoll()];
+
+        return base.ProcessCommand(command);
     }
 
     public override List<MenuCommand> GetMenuCommands()
@@ -170,7 +83,7 @@ public partial class VcDie : VisualComponentBase
         return l;
     }
 
-    private bool Roll()
+    private TransformEffect BuildRoll()
     {
         // The rolling client picks the target face
         var side = (int)(GD.Randi() % _sides + 1);
@@ -179,28 +92,24 @@ public partial class VcDie : VisualComponentBase
         if (side <= _sideRotations.Length)
             t.Rotation = _sideRotations[side - 1] * (3.14159f / 180f); // degrees to radians
 
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(new RollAction { ComponentRef = Reference, Side = side }, t)
-        );
-
-        return true;
+        return t;
     }
 
-    public void AnimateRoll(int side)
+    public void AnimateRoll(Vector3 targetRotation)
     {
-        _rollTarget = side;
+        _rollTargetRotation = targetRotation;
         _rollInProcess = true;
         _rollTime = 0;
     }
 
-    private bool ShowSide(int side)
+    private TransformEffect ShowSide(int side)
     {
         if (side > _sideRotations.Length)
-            return false;
+            return null;
 
-        Rotation = _sideRotations[side - 1] * (3.14159f / 180f); //convert to radians
-
-        return true;
+        var t = TransformEffect.Capture(this);
+        t.Rotation = _sideRotations[side - 1] * (3.14159f / 180f); //convert to radians
+        return t;
     }
 
     private TokenBuildMode _mode;

@@ -130,16 +130,11 @@ public partial class SceneController : Node3D
         IEnumerable<VisualComponentBase> components
     )
     {
-        if (command == VisualCommand.Delete)
-        {
-            _gameObjects.DeleteComponents(components);
-            return;
-        }
-
+        var effects = new List<Effect>();
         foreach (var c in components)
-        {
-            c.ProcessCommand(command);
-        }
+            effects.AddRange(c.ProcessCommand(command));
+
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(ActionFor(command), effects.ToArray()));
     }
 
     /// <summary>
@@ -154,10 +149,29 @@ public partial class SceneController : Node3D
         int quantity
     )
     {
+        var effects = new List<Effect>();
         foreach (var c in components)
+            effects.AddRange(c.ProcessCommandWithQuantity(command, quantity));
+
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(ActionFor(command), effects.ToArray()));
+    }
+
+    private static TableAction ActionFor(VisualCommand command)
+    {
+        // Number keys draw that many cards off a deck, which still works.
+        // TODO We need to decouple drawing cards from setting the die face somehow.
+        if ((int)command >= (int)VisualCommand.Num1 && (int)command <= (int)VisualCommand.Num20)
+            return new DrawAction();
+
+        return command switch
         {
-            c.ProcessCommandWithQuantity(command, quantity);
-        }
+            VisualCommand.Flip => new FlipAction(),
+            VisualCommand.Roll => new RollAction(),
+            VisualCommand.Shuffle => new ShuffleAction(),
+            VisualCommand.Draw => new DrawAction(),
+            VisualCommand.Deal => new DealAction(),
+            _ => null,
+        };
     }
 
     private void CheckForCommands()

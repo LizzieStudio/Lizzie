@@ -264,7 +264,8 @@ public partial class HandManager : Panel
 
     public void RemoveFromHand(VcToken card)
     {
-        ProjectService.Instance.GameObjects.ShowAndDrag(new List<SnowportId> { card.Reference });
+        var go = ProjectService.Instance.GameObjects;
+        go.StartDraw(go.BuildDrawEvent([card.Reference]));
     }
 
     private static ImageTexture GetCardTexture(VcToken card)

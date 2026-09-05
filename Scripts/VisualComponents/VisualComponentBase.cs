@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 public abstract partial class VisualComponentBase : Area3D
@@ -24,6 +25,15 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual VisualComponentType ComponentType { get; set; }
     protected GeometryInstance3D MainMesh;
+
+    /// <summary>
+    /// The component's Rotation.
+    /// </summary>
+    public new virtual Vector3 Rotation
+    {
+        get => base.Rotation;
+        set => base.Rotation = value;
+    }
 
     private MeshInstance3D _highlightMesh;
 
@@ -66,7 +76,7 @@ public abstract partial class VisualComponentBase : Area3D
         int shapeIdx
     )
     {
-        if (@event is InputEventMouseMotion mouse && !IsDragging)
+        if (@event is InputEventMouseMotion mouse && !IsHeldByLocal)
         {
             if (shapeIdx == 0)
             {
@@ -187,28 +197,23 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// Process a Command object
+    /// Processes legacy events and returns effects for everything else.
     /// </summary>
-    /// <param name="command"></param>
-    /// <returns>true if action consumed by object. Else false</returns>
-    public virtual bool ProcessCommand(VisualCommand command)
+    public virtual Effect[] ProcessCommand(VisualCommand command)
     {
+        if (command == VisualCommand.Delete)
+            return GetDespawnEffects().ToArray();
+
         if (command == VisualCommand.RotateCcw)
-        {
-            SubmitRotation(ProjectService.Instance.RotationStep);
-            return true;
-        }
+            return [BuildRotation(ProjectService.Instance.RotationStep)];
 
         if (command == VisualCommand.RotateCw)
-        {
-            SubmitRotation(-1 * ProjectService.Instance.RotationStep);
-            return true;
-        }
+            return [BuildRotation(-1 * ProjectService.Instance.RotationStep)];
 
         if (command == VisualCommand.Refresh)
         {
             Refresh(TextureFactory);
-            return true;
+            return [];
         }
 
         if (command == VisualCommand.Duplicate)
@@ -216,7 +221,7 @@ public abstract partial class VisualComponentBase : Area3D
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = PrototypeRef, DataSetRow = DataSetRow }
             );
-            return true;
+            return [];
         }
 
         if (command == VisualCommand.Edit)
@@ -229,20 +234,20 @@ public abstract partial class VisualComponentBase : Area3D
             EventBus.Instance.Publish(new MakePrototypeUniqueEvent { PrototypeId = PrototypeRef });
         }
 
-        return false;
+        return [];
     }
 
     /// <summary>
     /// Override in subclasses that support quantity-based commands (e.g. Draw N, Deal N).
-    /// The base implementation returns an unconsumed response.
+    /// The base implementation produces no effects.
     /// <paramref name="quantity"/> is Int32.MaxValue when the user chose "All".
     /// </summary>
-    public virtual void ProcessCommandWithQuantity(VisualCommand command, int quantity) { }
+    public virtual Effect[] ProcessCommandWithQuantity(VisualCommand command, int quantity) => [];
 
     /// <summary>
     /// Implemented by flippable components.
     /// </summary>
-    public virtual void AnimateFlip(bool faceUp) { }
+    public virtual void AnimateFlip(Vector3 targetRotation) { }
 
     protected TextureFactory TextureFactory;
 
@@ -396,7 +401,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     private void _on_mouse_exited()
     {
-        if (!IsDragging)
+        if (!IsHeldByLocal)
         {
             IsMouseSelected = false;
             IsHovered = false;
@@ -418,26 +423,7 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    private bool _isDragging;
-
     public abstract GeometryInstance3D DragMesh { get; }
-
-    public bool IsDragging
-    {
-        get => _isDragging;
-        set
-        {
-            if (!CanDrag)
-                return;
-            if (_isDragging == value)
-                return;
-            _isDragging = value;
-            if (!value)
-            {
-                IsMouseSelected = false;
-            }
-        }
-    }
 
     public bool CanDrag { get; set; } = true;
 
@@ -464,7 +450,11 @@ public abstract partial class VisualComponentBase : Area3D
         return true;
     }
 
-    public virtual void DropObjects(IEnumerable<VisualComponentBase> dragObjects) { }
+    /// <summary>
+    /// Builds the event for dropping the given components onto this one, or null if the
+    /// drop produces no change.
+    /// </summary>
+    public virtual TableEvent DropObjects(IEnumerable<VisualComponentBase> dragObjects) => null;
 
     public virtual string GetPreviewComponentScene() => string.Empty;
 
@@ -522,9 +512,10 @@ public abstract partial class VisualComponentBase : Area3D
 
     public enum ComponentLocation
     {
-        Board,
+        Table,
         Container,
         Hand,
+        Cursor,
     }
 
     private ComponentLocation _location;
@@ -534,16 +525,34 @@ public abstract partial class VisualComponentBase : Area3D
         get => _location;
         set
         {
+            var leavingCursor =
+                _location == ComponentLocation.Cursor && value != ComponentLocation.Cursor;
             _location = value;
-            LogicalVisible = value == ComponentLocation.Board;
+            LogicalVisible = value is ComponentLocation.Table or ComponentLocation.Cursor;
+            if (leavingCursor)
+                IsMouseSelected = false;
         }
     }
 
-    private void SubmitRotation(float degreesAboutY)
+    /// <summary>
+    /// While this component is being dragged, the relative position to the cursor.
+    /// </summary>
+    public Vector3 CursorOffset { get; set; }
+
+    /// <summary>True while this component is being dragged by any player's cursor.</summary>
+    public bool IsDragging => Location == ComponentLocation.Cursor;
+
+    /// <summary>True while this component is being held by the local player's cursor.</summary>
+    public bool IsHeldByLocal =>
+        IsDragging
+        && CursorSynchronizer.Instance is { } cursors
+        && ContainerRef == cursors.LocalCursorRef;
+
+    private TransformEffect BuildRotation(float degreesAboutY)
     {
         var t = TransformEffect.Capture(this);
         t.Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, t));
+        return t;
     }
 
     private bool _logicalVisible = true;

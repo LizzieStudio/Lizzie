@@ -20,6 +20,24 @@ public partial class VcDeck : VisualComponentGroup
     private Node3D _spinnyBits;
     private Label3D _blankLabel;
 
+    /// <summary>
+    /// A deck's orientation is split across two nodes.
+    /// X and Y rotate the whole thing, but Z only spins the deck model.
+    /// </summary>
+    public override Vector3 Rotation
+    {
+        get
+        {
+            var node = base.Rotation;
+            return new Vector3(node.X, node.Y, _spinnyBits.Rotation.Z);
+        }
+        set
+        {
+            base.Rotation = new Vector3(value.X, value.Y, 0f);
+            _spinnyBits.Rotation = new Vector3(0f, 0f, value.Z);
+        }
+    }
+
     public override void _Ready()
     {
         base._Ready();
@@ -64,69 +82,36 @@ public partial class VcDeck : VisualComponentGroup
 
     public override float MaxAxisSize => Math.Max(_height, _width);
 
-    public override bool ProcessCommand(VisualCommand command)
+    public override Effect[] ProcessCommand(VisualCommand command)
     {
-        var cr = false;
+        if (command == VisualCommand.Flip)
+            return new Effect[] { BuildFlip() };
 
-        switch (command)
-        {
-            case VisualCommand.Flip:
-                cr = StartFlip();
-                break;
-            case VisualCommand.ScaleUp:
-                break;
-            case VisualCommand.ScaleDown:
-                break;
-            case VisualCommand.RotateCw:
-                break;
-            case VisualCommand.RotateCcw:
-                break;
-            case VisualCommand.Delete:
-                break;
-            case VisualCommand.Duplicate:
-                break;
-            case VisualCommand.Edit:
-                break;
-            case VisualCommand.MoveDown:
-                break;
-            case VisualCommand.MoveToBottom:
-                break;
-            case VisualCommand.MoveUp:
-                break;
-            case VisualCommand.MoveToTop:
-                break;
+        if (command == VisualCommand.Shuffle)
+            return BuildShuffle();
 
-            case VisualCommand.Shuffle:
-                cr = PerformShuffle();
-                break;
-        }
-
-        // this will work as long as the number command remain in order
+        // this will work as long as the number commands remain in order
         if ((int)command >= (int)VisualCommand.Num1 && (int)command <= (int)VisualCommand.Num20)
-        {
-            DrawCards((int)command + 1 - (int)VisualCommand.Num1);
-            cr = true;
-        }
+            return BuildDraw((int)command + 1 - (int)VisualCommand.Num1);
 
-        return cr == false ? base.ProcessCommand(command) : cr;
+        return base.ProcessCommand(command);
     }
 
-    public override void ProcessCommandWithQuantity(VisualCommand command, int quantity)
+    public override Effect[] ProcessCommandWithQuantity(VisualCommand command, int quantity)
     {
-        // quantity == int.MaxValue means "All"; DrawCards/DealCards clamp to deck size.
+        // quantity == int.MaxValue means "All"; BuildDraw/BuildDeal clamp to deck size.
         if (command is VisualCommand.Draw)
-            DrawCards(quantity);
-        else if (command is VisualCommand.Deal)
-            DealCards(quantity);
-        else
-            base.ProcessCommandWithQuantity(command, quantity);
+            return BuildDraw(quantity);
+        if (command is VisualCommand.Deal)
+            return BuildDeal(quantity);
+
+        return base.ProcessCommandWithQuantity(command, quantity);
     }
 
-    private bool PerformShuffle()
+    private Effect[] BuildShuffle()
     {
         var seed = ((ulong)Rnd.Randi() << 32) | Rnd.Randi();
-        Shuffle(seed);
-        return true;
+        return Shuffle(seed);
     }
 
     public override List<MenuCommand> GetMenuCommands()
@@ -151,22 +136,23 @@ public partial class VcDeck : VisualComponentGroup
     private float _targetZ;
     private bool _flipInProcess;
 
-    private bool StartFlip()
+    private TransformEffect BuildFlip()
     {
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(new FlipAction { ComponentRef = Reference, FaceUp = !_showFace })
-        );
-
-        return true;
+        var t = TransformEffect.Capture(this);
+        t.Rotation = new Vector3(t.Rotation.X, t.Rotation.Y, _showFace ? Mathf.Pi : 0f);
+        return t;
     }
 
-    public override void AnimateFlip(bool faceUp)
+    public override void AnimateFlip(Vector3 targetRotation)
     {
         _flipInProcess = true;
-        _showFace = faceUp;
+        _showFace = IsFaceUp(targetRotation);
         _rotMult = _showFace ? -1 : 1;
         _targetZ = _showFace ? 0 : 180;
     }
+
+    private static bool IsFaceUp(Vector3 rotation) =>
+        Mathf.Abs(Mathf.Wrap(rotation.Z, -Mathf.Pi, Mathf.Pi)) < Mathf.Pi / 2f;
 
     private void ProcessFlip(double delta)
     {
@@ -189,7 +175,7 @@ public partial class VcDeck : VisualComponentGroup
             }
         }
 
-        _spinnyBits.RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
+        _spinnyBits.RotationDegrees = new Vector3(0f, 0f, newZ);
     }
 
     /// <summary>
@@ -204,7 +190,7 @@ public partial class VcDeck : VisualComponentGroup
         return new Vector3(comp.Rotation.X, comp.Rotation.Y, z);
     }
 
-    private void DrawCards(int count)
+    private Effect[] BuildDraw(int count)
     {
         count = Math.Min(count, Children.Count);
 
@@ -218,6 +204,8 @@ public partial class VcDeck : VisualComponentGroup
         {
             cards = DrawFromBottom(count);
         }
+
+        Effect[] result;
 
         //if there are player hands, draw to that. Otherwise draw to the table.
         if (ProjectService.Instance.CurrentProject.GameSettings.EnablePlayerHands)
@@ -233,12 +221,7 @@ public partial class VcDeck : VisualComponentGroup
                 toHand.Add(PlayerHandService.Instance.MoveEffect(comp, seat, i));
             }
 
-            if (toHand.Count > 0)
-            {
-                EventSynchronizer.Instance?.Submit(
-                    TableEvent.Now(new DrawAction(), toHand.ToArray())
-                );
-            }
+            result = toHand.ToArray();
         }
         else
         {
@@ -255,7 +238,7 @@ public partial class VcDeck : VisualComponentGroup
                 float deltaX = Position.X + (_width * (1.5f + i));
 
                 var t = TransformEffect.Capture(comp);
-                t.Location = ComponentLocation.Board;
+                t.Location = ComponentLocation.Table;
                 t.ContainerRef = SnowportId.Empty;
                 t.Position = new Vector3(deltaX, Position.Y, Position.Z);
                 t.Rotation = DrawnRotation(comp);
@@ -265,15 +248,10 @@ public partial class VcDeck : VisualComponentGroup
                 transformed.Add(t);
             }
 
-            if (transformed.Count > 0)
-            {
-                EventSynchronizer.Instance?.Submit(
-                    TableEvent.Now(new DrawAction(), transformed.ToArray())
-                );
-            }
+            result = transformed.ToArray();
         }
 
-        UpdateDeckSprites();
+        return result;
     }
 
     /// <summary>
@@ -281,14 +259,11 @@ public partial class VcDeck : VisualComponentGroup
     /// like a real deal (seat 0 gets a card, seat 1 gets a card, …, repeat).
     /// If the deck runs out before all rounds are complete the remaining seats get fewer cards.
     /// </summary>
-    private void DealCards(int countPerPlayer)
+    private Effect[] BuildDeal(int countPerPlayer)
     {
         var settings = ProjectService.Instance.CurrentProject?.GameSettings;
         if (settings == null || settings.Players.Count == 0)
-        {
-            DrawCards(countPerPlayer); // fall back to draw if no seats defined
-            return;
-        }
+            return BuildDraw(countPerPlayer); // fall back to draw if no seats defined
 
         int seatCount = settings.Players.Count;
 
@@ -317,10 +292,7 @@ public partial class VcDeck : VisualComponentGroup
             effects.Add(handService.MoveEffect(comp, seat, suborder[seat]++));
         }
 
-        if (effects.Count > 0)
-            EventSynchronizer.Instance?.Submit(TableEvent.Now(new DealAction(), effects.ToArray()));
-
-        UpdateDeckSprites();
+        return effects.ToArray();
     }
 
     public override void SpawnBuild(
@@ -500,6 +472,8 @@ public partial class VcDeck : VisualComponentGroup
 
         _frontTextureReady = false;
         _backTextureReady = false;
+
+        _showFace = IsFaceUp(Rotation);
 
         UpdateDeckSprites();
         return true;
@@ -804,37 +778,13 @@ public partial class VcDeck : VisualComponentGroup
         EventBus.Instance.Publish(new QueueStackingUpdateEvent());
     }
 
-    public override void DragDraw(int count)
+    public override TableEvent DragDraw(int count)
     {
         count = Math.Min(count, Children.Count);
 
-        SnowportId[] cards;
-        //draw cards
-        if (_showFace)
-        {
-            cards = DrawFromTop(count);
-        }
-        else
-        {
-            cards = DrawFromBottom(count);
-        }
+        var cards = _showFace ? DrawFromTop(count) : DrawFromBottom(count);
 
-        for (int i = 0; i < cards.Length; i++)
-        {
-            var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
-
-            if (comp == null)
-                continue;
-
-            comp.Rotation = DrawnRotation(comp);
-        }
-
-        UpdateDeckSprites();
-
-        if (!cards.Any())
-            return;
-
-        ProjectService.Instance.GameObjects.ShowAndDrag(cards.ToList());
+        return ProjectService.Instance.GameObjects.BuildDrawEvent(cards, DrawnRotation);
     }
 
     #region Drop Processing
@@ -860,19 +810,8 @@ public partial class VcDeck : VisualComponentGroup
         return true;
     }
 
-    public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
-    {
-        // Add to the top or bottom of deck depending on orientation
-
-        if (_showFace)
-        {
-            AddChildComponents(dragObjects, true);
-        }
-        else
-        {
-            AddChildComponents(dragObjects, false);
-        }
-    }
+    public override TableEvent DropObjects(IEnumerable<VisualComponentBase> dragObjects) =>
+        AddChildComponents(dragObjects, _showFace);
 
     #endregion
 }

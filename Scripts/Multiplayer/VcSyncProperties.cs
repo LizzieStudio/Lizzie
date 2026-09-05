@@ -42,7 +42,12 @@ public class VcSyncDto
 
     public void ApplyToComponent(VisualComponentBase component)
     {
-        component.Position = Position;
+        // While dragged, Position carries the cursor-relative offset.
+        // This might be a bad idea if it becomes hard to keep in-sync.
+        if (Location == VisualComponentBase.ComponentLocation.Cursor)
+            component.CursorOffset = Position;
+        else
+            component.Position = Position;
         component.Rotation = Rotation;
         component.LogicalVisible = LogicalVisible;
         component.ZOrder = ZOrder;

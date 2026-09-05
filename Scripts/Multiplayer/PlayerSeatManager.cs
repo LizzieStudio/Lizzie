@@ -217,7 +217,8 @@ public partial class PlayerSeatManager : Node
                 pi.PlayerPosition = seatIndex;
 
             var mm = MultiplayerManager.Instance;
-            bool localOwnsClaim = mm == null || !mm.IsMultiplayerActive || peerId == mm.LocalPlayerId;
+            bool localOwnsClaim =
+                mm == null || !mm.IsMultiplayerActive || peerId == mm.LocalPlayerId;
             if (seatIndex >= 0 && localOwnsClaim)
             {
                 EventSynchronizer.Instance?.Submit(
@@ -227,6 +228,7 @@ public partial class PlayerSeatManager : Node
                             Seat = seatIndex,
                             PeerId = peerId,
                             HandRef = Snowport.Clock.Create(),
+                            CursorRef = Snowport.Clock.Create(),
                         }
                     )
                 );

@@ -33,14 +33,18 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         OnChildrenChanged();
     }
 
-    public virtual void AddChildComponents(
+    /// <summary>
+    /// Builds the event that moves the given components into this container,
+    /// or null if there are none.
+    /// </summary>
+    public virtual TableEvent AddChildComponents(
         IEnumerable<VisualComponentBase> components,
         bool addToTop = false
     )
     {
         var compArr = components as VisualComponentBase[] ?? components.ToArray(); //avoid multiple iterations
         if (compArr.Length == 0)
-            return;
+            return null;
 
         var target = addToTop ? ZTarget.Top : ZTarget.Bottom;
 
@@ -58,13 +62,11 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             )
             .ToArray();
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), transformed));
+        return TableEvent.Now(new MoveAction(), transformed);
     }
 
-    public override void DropObjects(IEnumerable<VisualComponentBase> dragObjects)
-    {
+    public override TableEvent DropObjects(IEnumerable<VisualComponentBase> dragObjects) =>
         AddChildComponents(dragObjects);
-    }
 
     protected abstract void OnChildrenChanged();
 
@@ -119,7 +121,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <summary>
     /// Shuffles the container using a seed and the Fisher-Yates algorithm.
     /// </summary>
-    public virtual void Shuffle(ulong seed)
+    public virtual Effect[] Shuffle(ulong seed)
     {
         var ids = Children.ToList();
         ids.Sort(); // deterministic starting order
@@ -133,18 +135,14 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             n--;
         }
 
-        EmitReorder(ids, new ShuffleAction());
+        return BuildReorder(ids);
     }
 
     /// <summary>
-    /// Emits an event to reorder the child list.
-    /// Should not be used in conjunction with other events.
+    /// Builds the transform effects that reorder the child list
     /// </summary>
-    protected void EmitReorder(IReadOnlyList<SnowportId> orderedIds, TableAction action)
+    protected Effect[] BuildReorder(IReadOnlyList<SnowportId> orderedIds)
     {
-        if (orderedIds.Count == 0)
-            return;
-
         var effects = new List<Effect>(orderedIds.Count);
         for (int i = 0; i < orderedIds.Count; i++)
         {
@@ -158,13 +156,13 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             effects.Add(t);
         }
 
-        if (effects.Count > 0)
-            EventSynchronizer.Instance?.Submit(TableEvent.Now(action, effects.ToArray()));
+        return effects.ToArray();
     }
 
     /// <summary>
-    /// Called when the user drags on a container to draw components, or uses a key command to draw multiples
+    /// Called when the user drags on a container to draw components, or uses a key command to
+    /// draw multiples. Builds the event the draw should fire, or null if it fires none.
     /// </summary>
     /// <param name="quantity"></param>
-    public virtual void DragDraw(int quantity) { }
+    public virtual TableEvent DragDraw(int quantity) => null;
 }

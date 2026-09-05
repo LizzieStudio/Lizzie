@@ -36,15 +36,43 @@ public partial class CursorSynchronizer : Node
     public bool TryGetCursor(byte source, out Vector3 pos) =>
         _positions.TryGetValue(source, out pos);
 
+    private SnowportId _localCursorRef;
+
+    public SnowportId LocalCursorRef
+    {
+        get
+        {
+            if (_localCursorRef == SnowportId.Empty)
+                _localCursorRef = Snowport.Clock.Create();
+            return _localCursorRef;
+        }
+    }
+
     public override void _Ready()
     {
         _instance = this;
+
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied += OnEventApplied;
     }
 
     public override void _ExitTree()
     {
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied -= OnEventApplied;
+
         if (_instance == this)
             _instance = null;
+    }
+
+    private void OnEventApplied(TableEvent e)
+    {
+        if (
+            e.Action is PlayerJoinAction { CursorRef: var cursorRef }
+            && cursorRef != SnowportId.Empty
+            && cursorRef.source == Snowport.Clock.source
+        )
+            _localCursorRef = cursorRef;
     }
 
     public void SetContext(DragPlane dragPlane, Node3D cursorParent)
@@ -58,6 +86,7 @@ public partial class CursorSynchronizer : Node
         _dragPlane = null;
         _cursorParent = null;
         _lastSentPosition = Miss;
+        _localCursorRef = SnowportId.Empty;
         ClearCursors();
     }
 

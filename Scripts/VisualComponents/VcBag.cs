@@ -102,13 +102,9 @@ public partial class VcBag : VisualComponentGroup
         UpdateComponentCount();
     }
 
-    public override void DragDraw(int quantity)
+    public override TableEvent DragDraw(int quantity)
     {
-        var gList = DrawRandom(quantity).ToList();
-        if (!gList.Any())
-            return;
-
-        ProjectService.Instance.GameObjects.ShowAndDrag(gList);
+        return ProjectService.Instance.GameObjects.BuildDrawEvent(DrawRandom(quantity));
     }
 }
 

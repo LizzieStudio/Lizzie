@@ -87,8 +87,7 @@ public partial class PlayerHandsPanel : Panel
                 continue; // local player is shown in HandManager, not here
 
             var playerSettings = settings.Players[seatIndex];
-            var hand =
-                PlayerHandService.Instance?.GetHand(seatIndex) ?? Array.Empty<VcToken>();
+            var hand = PlayerHandService.Instance?.GetHand(seatIndex) ?? Array.Empty<VcToken>();
 
             // Row container for this opponent
             var row = new VBoxContainer();

@@ -260,7 +260,7 @@ public partial class GameObjects : Node
                 {
                     if (go.IsDrawSelected && go is VisualComponentGroup vcg)
                     {
-                        vcg.DragDraw(1);
+                        StartDraw(vcg.DragDraw(1));
                     }
                     else
                     {
@@ -907,21 +907,22 @@ public partial class GameObjects : Node
 
         var startCursor = _dragPlane.GetCursorProjection();
 
-        // The starting client sets each component's offset from its cursor.
-        // Every client positions the components identically during the drag.
         BeginDrag(GetSelectedObjects().Where(o => o.CanDrag), startCursor);
-
-        QueueStackingUpdate();
     }
 
-    public void ShowAndDrag(IReadOnlyList<SnowportId> componentRefs)
+    /// <summary>
+    /// Builds the event that draws the given components into the local cursor container.
+    /// </summary>
+    public TableEvent BuildDrawEvent(
+        IEnumerable<SnowportId> componentRefs,
+        Func<VisualComponentBase, Vector3> rotation = null
+    )
     {
-        if (componentRefs.Count == 0)
-            return;
+        if (CursorSynchronizer.Instance == null)
+            return null;
+        var cursorContainer = CursorSynchronizer.Instance.LocalCursorRef;
 
-        var cursor = _dragPlane.GetCursorProjection();
-
-        var transformed = new List<TransformEffect>();
+        var effects = new List<Effect>();
         foreach (var r in componentRefs)
         {
             var c = GetComponent(r);
@@ -929,33 +930,47 @@ public partial class GameObjects : Node
                 continue;
 
             var t = TransformEffect.Capture(c);
-            t.Location = VisualComponentBase.ComponentLocation.Board;
-            t.ContainerRef = SnowportId.Empty;
-            t.Position = cursor + c.SpawnDelta;
-            // Bring the drawn components to the top, in draw order.
+            t.Location = VisualComponentBase.ComponentLocation.Cursor;
+            t.ContainerRef = cursorContainer;
+            // Position is the cursor-relative offset while held.
+            t.Position = c.SpawnDelta;
+            if (rotation != null)
+                t.Rotation = rotation(c);
             t.ZTarget = ZTarget.Top;
-            t.ZSuborder = transformed.Count;
-            transformed.Add(t);
+            t.ZSuborder = effects.Count;
+            effects.Add(t);
         }
 
-        if (transformed.Count == 0)
+        return effects.Count == 0 ? null : TableEvent.Now(new MoveAction(), effects.ToArray());
+    }
+
+    public void StartDraw(TableEvent drawEvent)
+    {
+        if (drawEvent == null)
             return;
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DrawAction(), transformed.ToArray()));
+        EventSynchronizer.Instance?.Submit(drawEvent);
 
-        BeginDrag(transformed.Select(t => GetComponent(t.ComponentRef)), cursor);
-
-        QueueStackingUpdate();
+        CursorMode = CursorMode.Drag;
+        _localDragOverHand = false;
     }
 
     private void BeginDrag(IEnumerable<VisualComponentBase> components, Vector3 cursor)
     {
+        if (CursorSynchronizer.Instance == null)
+            return;
+        var cursorContainer = CursorSynchronizer.Instance.LocalCursorRef;
+
         var dragged = components
             .Where(o => o != null)
-            .Select(o => new DraggedComponent
+            .Select(o =>
             {
-                ComponentRef = o.Reference,
-                Offset = new Vector2(o.Position.X - cursor.X, o.Position.Z - cursor.Z),
+                var t = TransformEffect.Capture(o);
+                t.Location = VisualComponentBase.ComponentLocation.Cursor;
+                t.ContainerRef = cursorContainer;
+                // Position with a cursor container is relative to the cursor.
+                t.Position = o.Position - cursor;
+                return t;
             })
             .ToArray();
         if (dragged.Length == 0)
@@ -964,7 +979,7 @@ public partial class GameObjects : Node
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DragAction { Components = dragged }));
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), dragged));
     }
 
     private VisualComponentGroup _currentDragDropTarget;
@@ -1134,11 +1149,7 @@ public partial class GameObjects : Node
         foreach (var n in ComponentNodes)
         {
             if (
-                n is VisualComponentBase
-                {
-                    Location: VisualComponentBase.ComponentLocation.Board,
-                    IsDragging: false
-                } p
+                n is VisualComponentBase { Location: VisualComponentBase.ComponentLocation.Table } p
             )
             {
                 yield return p;
@@ -1165,7 +1176,6 @@ public partial class GameObjects : Node
                 SubmitHandDrop(toHand, toBoard, PlayerHandService.LocalSeatIndex());
                 Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
                 CursorMode = CursorMode.Normal;
-                QueueStackingUpdate();
                 return;
             }
         }
@@ -1173,7 +1183,11 @@ public partial class GameObjects : Node
         if (_currentDragDropTarget != null)
         {
             if (_currentDragDropTarget.CanObjectsBeDropped(GetDraggingObjects()))
-                _currentDragDropTarget.DropObjects(GetDraggingObjects());
+            {
+                var dropEvent = _currentDragDropTarget.DropObjects(GetDraggingObjects());
+                if (dropEvent != null)
+                    EventSynchronizer.Instance?.Submit(dropEvent);
+            }
 
             _currentDragDropTarget.DragOverExit();
             _currentDragDropTarget.IsHovered = false;
@@ -1189,7 +1203,9 @@ public partial class GameObjects : Node
                 && hover.CanObjectsBeDropped(GetDraggingObjects())
             )
             {
-                hover.DropObjects(GetDraggingObjects());
+                var dropEvent = hover.DropObjects(GetDraggingObjects());
+                if (dropEvent != null)
+                    EventSynchronizer.Instance?.Submit(dropEvent);
             }
         }
 
@@ -1209,17 +1225,16 @@ public partial class GameObjects : Node
                 (component, index) =>
                 {
                     var effect = TransformEffect.Capture(component);
-                    if (component.ContainerRef == SnowportId.Empty)
-                    {
-                        effect.ZTarget = ZTarget.Top;
-                        effect.ZSuborder = index;
-                    }
+                    effect.Location = VisualComponentBase.ComponentLocation.Table;
+                    effect.ContainerRef = SnowportId.Empty;
+                    effect.ZTarget = ZTarget.Top;
+                    effect.ZSuborder = index;
                     return effect;
                 }
             )
             .ToArray();
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DropAction(), dropped));
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), dropped));
     }
 
     /// <summary>
@@ -1241,15 +1256,14 @@ public partial class GameObjects : Node
         for (int i = 0; i < toBoard.Count; i++)
         {
             var effect = TransformEffect.Capture(toBoard[i]);
-            if (toBoard[i].ContainerRef == SnowportId.Empty)
-            {
-                effect.ZTarget = ZTarget.Top;
-                effect.ZSuborder = i;
-            }
+            effect.Location = VisualComponentBase.ComponentLocation.Table;
+            effect.ContainerRef = SnowportId.Empty;
+            effect.ZTarget = ZTarget.Top;
+            effect.ZSuborder = i;
             effects.Add(effect);
         }
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new DropAction(), effects.ToArray()));
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), effects.ToArray()));
     }
 
     #endregion
@@ -1371,18 +1385,14 @@ public partial class GameObjects : Node
 
         switch (e.Action)
         {
-            case RollAction roll:
-                if (GetComponent(roll.ComponentRef) is VcDie die)
-                    die.AnimateRoll(roll.Side);
+            case RollAction:
+                foreach (var t in e.Effects.OfType<TransformEffect>())
+                    if (GetComponent(t.ComponentRef) is VcDie die)
+                        die.AnimateRoll(t.Rotation);
                 break;
-            case FlipAction flip:
-                GetComponent(flip.ComponentRef)?.AnimateFlip(flip.FaceUp);
-                break;
-            case DragAction drag:
-                StartActiveDrag(e, drag);
-                break;
-            case DropAction:
-                EndActiveDrag(e);
+            case FlipAction:
+                foreach (var t in e.Effects.OfType<TransformEffect>())
+                    GetComponent(t.ComponentRef)?.AnimateFlip(t.Rotation);
                 break;
         }
 
@@ -1494,7 +1504,11 @@ public partial class GameObjects : Node
 
         c.Location = t.Location;
         c.ContainerRef = t.ContainerRef;
-        c.Position = t.Position;
+        // While held, Position carries the cursor-relative offset.
+        if (t.Location == VisualComponentBase.ComponentLocation.Cursor)
+            c.CursorOffset = t.Position;
+        else
+            c.Position = t.Position;
         if (!animated)
             c.Rotation = t.Rotation;
 
@@ -1514,95 +1528,37 @@ public partial class GameObjects : Node
             group.RebuildCache(all);
     }
 
-    private class ActiveDrag
-    {
-        public byte Source;
-        public readonly List<(SnowportId Id, Vector2 PlanarOffset)> Items = new();
-    }
-
-    private readonly Dictionary<byte, ActiveDrag> _activeDrags = new();
-
     private bool _localDragOverHand;
-
-    private void StartActiveDrag(TableEvent e, DragAction action)
-    {
-        var isLocal = e.Id.source == Snowport.Clock.source;
-        var drag = new ActiveDrag { Source = e.Id.source };
-
-        foreach (var d in action.Components)
-        {
-            var c = GetComponent(d.ComponentRef);
-            // if the incoming event is older, ignore it in this case
-            if (c == null || e.Id.CompareTo(c.LastMoveId) <= 0)
-                continue;
-
-            // the newest drag wins
-            RemoveFromActiveDrags(d.ComponentRef);
-
-            c.IsDragging = isLocal;
-            c.LastMoveId = e.Id;
-            drag.Items.Add((d.ComponentRef, d.Offset));
-        }
-
-        _activeDrags[e.Id.source] = drag;
-    }
-
-    private void RemoveFromActiveDrags(SnowportId id)
-    {
-        foreach (var drag in _activeDrags.Values)
-            drag.Items.RemoveAll(item => item.Id == id);
-    }
-
-    private void EndActiveDrag(TableEvent e)
-    {
-        _activeDrags.Remove(e.Id.source);
-
-        foreach (var effect in e.Effects)
-        {
-            if (effect is not TransformEffect t)
-                continue;
-
-            var c = GetComponent(t.ComponentRef);
-            // LastMoveId == e.Id means this event was not "stale".
-            if (c != null && c.LastMoveId == e.Id)
-                c.IsDragging = false;
-        }
-    }
 
     private void ProcessActiveDrags()
     {
         var dragHeight = GetDragHeight();
+        var cursors = CursorSynchronizer.Instance;
+        if (cursors == null)
+            return;
 
-        foreach (var drag in _activeDrags.Values)
+        var localSource = Snowport.Clock.source;
+
+        foreach (var n in ComponentNodes)
         {
-            var isLocal = drag.Source == Snowport.Clock.source;
-            if (isLocal && _localDragOverHand)
+            if (n is not VisualComponentBase { IsDragging: true } c)
                 continue;
 
-            if (!TryGetDragCursor(drag, out var cursor))
+            var source = c.ContainerRef.source;
+
+            if (source == localSource && _localDragOverHand)
                 continue;
 
-            foreach (var (id, off) in drag.Items)
-            {
-                var c = GetComponent(id);
-                if (c == null)
-                    continue;
+            if (!cursors.TryGetCursor(source, out var cursor))
+                continue;
 
-                c.Position = new Vector3(
-                    cursor.X + off.X,
-                    dragHeight + c.YHeight,
-                    cursor.Z + off.Y
-                );
-                c.LogicalVisible = true;
-            }
+            c.Position = new Vector3(
+                cursor.X + c.CursorOffset.X,
+                dragHeight + c.YHeight,
+                cursor.Z + c.CursorOffset.Z
+            );
+            c.LogicalVisible = true;
         }
-    }
-
-    private static bool TryGetDragCursor(ActiveDrag drag, out Vector3 cursor)
-    {
-        cursor = default;
-        return CursorSynchronizer.Instance != null
-            && CursorSynchronizer.Instance.TryGetCursor(drag.Source, out cursor);
     }
 
     #endregion
