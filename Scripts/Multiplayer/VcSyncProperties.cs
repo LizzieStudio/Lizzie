@@ -13,7 +13,10 @@ public class VcSyncDto
 
     public VcSyncDto(VisualComponentBase component)
     {
-        Position = component.Position;
+        Position =
+            component.Location == VisualComponentBase.ComponentLocation.Cursor
+                ? component.CursorOffset
+                : component.Position;
         Rotation = component.Rotation;
         ZOrder = component.ZOrder;
         DataSetRow = component.DataSetRow;

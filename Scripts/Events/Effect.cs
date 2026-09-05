@@ -62,7 +62,10 @@ public class TransformEffect : Effect
             ComponentRef = component.Reference,
             Location = component.Location,
             ContainerRef = component.ContainerRef,
-            Position = component.Position,
+            Position =
+                component.Location == VisualComponentBase.ComponentLocation.Cursor
+                    ? component.CursorOffset
+                    : component.Position,
             Rotation = component.Rotation,
         };
 }

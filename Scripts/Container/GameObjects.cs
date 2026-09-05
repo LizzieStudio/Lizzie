@@ -1227,6 +1227,7 @@ public partial class GameObjects : Node
                     var effect = TransformEffect.Capture(component);
                     effect.Location = VisualComponentBase.ComponentLocation.Table;
                     effect.ContainerRef = SnowportId.Empty;
+                    effect.Position = component.Position;
                     effect.ZTarget = ZTarget.Top;
                     effect.ZSuborder = index;
                     return effect;
@@ -1258,6 +1259,7 @@ public partial class GameObjects : Node
             var effect = TransformEffect.Capture(toBoard[i]);
             effect.Location = VisualComponentBase.ComponentLocation.Table;
             effect.ContainerRef = SnowportId.Empty;
+            effect.Position = toBoard[i].Position;
             effect.ZTarget = ZTarget.Top;
             effect.ZSuborder = i;
             effects.Add(effect);

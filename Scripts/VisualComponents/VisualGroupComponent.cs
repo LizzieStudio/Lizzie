@@ -55,6 +55,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
                     var t = TransformEffect.Capture(c);
                     t.Location = ComponentLocation.Container;
                     t.ContainerRef = Reference;
+                    t.Position = c.Position;
                     t.ZTarget = target;
                     t.ZSuborder = i;
                     return (Effect)t;
