@@ -558,8 +558,7 @@ public abstract partial class VisualComponentBase : Area3D
     private bool _logicalVisible = true;
 
     /// <summary>
-    /// Whether or not the component is visible for all players, unrelated to zones.
-    /// This is the value that syncs across the network.
+    /// Visibility of this component, but overriden by zones.
     /// </summary>
     public bool LogicalVisible
     {

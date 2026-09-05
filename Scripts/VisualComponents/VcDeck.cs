@@ -384,7 +384,6 @@ public partial class VcDeck : VisualComponentGroup
                 DataSetRow = dataSetRow,
                 Location = ComponentLocation.Container,
                 ContainerRef = containerRef,
-                LogicalVisible = false,
                 // First enumerated card are at the top.
                 ZOrder = new ZOrder(ZTarget.Top, -index, SnowportId.Empty),
             },

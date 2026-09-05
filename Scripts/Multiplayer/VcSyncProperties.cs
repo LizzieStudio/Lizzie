@@ -15,7 +15,6 @@ public class VcSyncDto
     {
         Position = component.Position;
         Rotation = component.Rotation;
-        LogicalVisible = component.LogicalVisible;
         ZOrder = component.ZOrder;
         DataSetRow = component.DataSetRow;
         Location = component.Location;
@@ -27,8 +26,6 @@ public class VcSyncDto
 
     // Uses Godot native Vector3 serialization
     public Vector3 Rotation { get; set; }
-
-    public bool LogicalVisible { get; set; }
 
     public ZOrder ZOrder { get; set; }
 
@@ -49,7 +46,6 @@ public class VcSyncDto
         else
             component.Position = Position;
         component.Rotation = Rotation;
-        component.LogicalVisible = LogicalVisible;
         component.ZOrder = ZOrder;
         component.DataSetRow = DataSetRow;
         component.Location = Location;
