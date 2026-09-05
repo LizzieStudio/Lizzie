@@ -45,7 +45,9 @@ public partial class VcDie : VisualComponentBase
             }
             else
             {
-                ShowSide((int)(GD.Randi() % _sides + 1));
+                int side = (int)(GD.Randi() % _sides + 1);
+                if (side <= _sideRotations.Length)
+                    Rotation = _sideRotations[side - 1] * (3.14159f / 180f); //convert to radians
             }
         }
     }
