@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 
 /// <summary>
+/// Append-only log of table events in arrival order.
 /// </summary>
 public class EventLog
 {
@@ -10,31 +10,24 @@ public class EventLog
     // later we may need to make this a large array with a rolling index,
     // but that would require handling events that are too old.
     private readonly List<TableEvent> _ordered = new(10000);
-    private readonly List<SnowportId> _keys = new(10000);
 
     public IReadOnlyList<TableEvent> Events => _ordered;
 
+    public int Count => _ordered.Count;
+
     /// <summary>
-    /// The events newer than <paramref name="t"/>, in order.
+    /// The events at or after <paramref name="index"/>, in order.
     /// Used to stream the post-catchup backlog to a new player.
     /// </summary>
-    public IEnumerable<TableEvent> EventsAfter(SnowportId t)
-    {
-        int idx = _keys.BinarySearch(t);
-        idx = idx < 0 ? ~idx : idx + 1;
-        return _ordered.GetRange(idx, _ordered.Count - idx);
-    }
+    public IEnumerable<TableEvent> EventsFrom(int index) =>
+        _ordered.GetRange(index, _ordered.Count - index);
 
     public bool TryRecord(TableEvent e)
     {
         if (!_applied.Add(e.Id))
             return false;
 
-        int idx = _keys.BinarySearch(e.Id);
-        Debug.Assert(idx < 0);
-        idx = ~idx;
-        _keys.Insert(idx, e.Id);
-        _ordered.Insert(idx, e);
+        _ordered.Add(e);
         return true;
     }
 
@@ -42,6 +35,5 @@ public class EventLog
     {
         _applied.Clear();
         _ordered.Clear();
-        _keys.Clear();
     }
 }

@@ -21,6 +21,15 @@ public partial class GameObjects : Node
     private readonly List<PendingSpawnRequest> _pendingSpawns = new();
 
     /// <summary>
+    /// Transforms that arrived before their component's create effect. Drained
+    /// when the component is spawned. Keyed by component reference.
+    /// </summary>
+    private readonly Dictionary<
+        SnowportId,
+        List<PendingTransform>
+    > _pendingTransforms = new();
+
+    /// <summary>
     /// Components that have been deleted.
     /// </summary>
     private readonly HashSet<SnowportId> _tombstones = new();
@@ -1369,6 +1378,7 @@ public partial class GameObjects : Node
         _stackingUpdateRequired = 0;
 
         _pendingSpawns.Clear();
+        _pendingTransforms.Clear();
         _tombstones.Clear();
         EventSynchronizer.Instance?.Clear();
         PlayerHandService.Instance?.Clear();
@@ -1475,6 +1485,9 @@ public partial class GameObjects : Node
             vcb.ZOrder = new ZOrder(ZTarget.Top, 0, eventId);
 
         AddComponentToScene(vcb);
+
+        // Apply any transforms that arrived before this component existed.
+        DrainPendingTransforms(effect.Id);
         return true;
     }
 
@@ -1544,6 +1557,7 @@ public partial class GameObjects : Node
     {
         _tombstones.Add(d.Id);
         _pendingSpawns.RemoveAll(r => r.Effect.Id == d.Id);
+        _pendingTransforms.Remove(d.Id);
         GetComponent(d.Id)?.QueueFree();
     }
 
@@ -1551,8 +1565,15 @@ public partial class GameObjects : Node
     {
         var c = GetComponent(t.Id);
 
+        if (c == null)
+        {
+            if (!_tombstones.Contains(t.Id))
+                BufferPendingTransform(eventId, t, animated);
+            return;
+        }
+
         // this happens when an outdated event arrives
-        if (c == null || eventId.CompareTo(c.LastMoveId) < 0)
+        if (eventId.CompareTo(c.LastMoveId) < 0)
             return;
 
         c.LastMoveId = eventId;
@@ -1570,6 +1591,31 @@ public partial class GameObjects : Node
         // Only reorder when the effect asks to.
         if (t.ZTarget != ZTarget.Unset)
             c.ZOrder = new ZOrder(t.ZTarget, t.ZSuborder, eventId);
+    }
+
+    private record PendingTransform(SnowportId EventId, TransformEffect Effect, bool Animated);
+
+    private void BufferPendingTransform(SnowportId eventId, TransformEffect t, bool animated)
+    {
+        if (!_pendingTransforms.TryGetValue(t.Id, out var list))
+        {
+            list = new List<PendingTransform>();
+            _pendingTransforms[t.Id] = list;
+        }
+        list.Add(new PendingTransform(eventId, t, animated));
+    }
+
+    /// <summary>
+    /// Applies any transforms that arrived before this component was created in order.
+    /// </summary>
+    private void DrainPendingTransforms(SnowportId id)
+    {
+        if (!_pendingTransforms.Remove(id, out var list))
+            return;
+
+        list.Sort((a, b) => a.EventId.CompareTo(b.EventId));
+        foreach (var p in list)
+            ApplyTransform(p.EventId, p.Effect, p.Animated);
     }
 
     /// <summary>

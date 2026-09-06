@@ -161,7 +161,7 @@ public partial class EventSynchronizer : Node
             return;
         }
 
-        // The id for this table event defines where the client will start receiving events later.
+        int cutoff = _log.Count;
         var snapshot = TableEvent.Now(null, gameObjects.GenerateCatchupEffects());
         RpcId(
             peerId,
@@ -169,8 +169,8 @@ public partial class EventSynchronizer : Node
             JsonSerializer.Serialize(snapshot, LizzieJson.EventOptions)
         );
 
-        // Replay anything that landed after the previous event.
-        foreach (var e in _log.EventsAfter(snapshot.Id))
+        // Replay anything that landed after the cutoff.
+        foreach (var e in _log.EventsFrom(cutoff))
             RpcId(
                 peerId,
                 nameof(ReceiveBacklog),
