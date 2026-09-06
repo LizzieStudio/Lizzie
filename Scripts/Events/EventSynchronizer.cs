@@ -43,7 +43,7 @@ public partial class EventSynchronizer : Node
         if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
             return;
 
-        var json = JsonSerializer.Serialize(e, LizzieJson.Options);
+        var json = JsonSerializer.Serialize(e, LizzieJson.EventOptions);
 
         if (MultiplayerManager.Instance.IsServer)
             BroadcastEvent(json);
@@ -95,7 +95,7 @@ public partial class EventSynchronizer : Node
     {
         GD.Print($"{Snowport.Clock.source} Received event {json}");
 
-        var e = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.Options);
+        var e = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
         if (e == null)
             return;
 
@@ -143,7 +143,7 @@ public partial class EventSynchronizer : Node
                 RpcId(
                     peerId,
                     nameof(ReceiveBacklog),
-                    JsonSerializer.Serialize(e, LizzieJson.Options)
+                    JsonSerializer.Serialize(e, LizzieJson.EventOptions)
                 );
     }
 
@@ -166,12 +166,16 @@ public partial class EventSynchronizer : Node
         RpcId(
             peerId,
             nameof(ReceiveSnapshot),
-            JsonSerializer.Serialize(snapshot, LizzieJson.Options)
+            JsonSerializer.Serialize(snapshot, LizzieJson.EventOptions)
         );
 
         // Replay anything that landed after the previous event.
         foreach (var e in _log.EventsAfter(snapshot.Id))
-            RpcId(peerId, nameof(ReceiveBacklog), JsonSerializer.Serialize(e, LizzieJson.Options));
+            RpcId(
+                peerId,
+                nameof(ReceiveBacklog),
+                JsonSerializer.Serialize(e, LizzieJson.EventOptions)
+            );
 
         // The peer is caught up. Resume sending them events.
         EndSync(peerId);

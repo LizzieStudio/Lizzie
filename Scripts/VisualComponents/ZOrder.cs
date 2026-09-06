@@ -21,12 +21,15 @@ public enum ZTarget
 /// </summary>
 public readonly struct ZOrder : IComparable<ZOrder>, IEquatable<ZOrder>
 {
+    [JsonPropertyName("t")]
     public ZTarget Target { get; }
 
     /// <summary>Separates components that share the same <see cref="LastEvent"/>. Higher is on top.</summary>
+    [JsonPropertyName("s")]
     public int Suborder { get; }
 
     /// <summary>The id of the last event that reordered this component.</summary>
+    [JsonPropertyName("e")]
     public SnowportId LastEvent { get; }
 
     [JsonConstructor]

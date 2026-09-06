@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
@@ -25,25 +26,31 @@ public class VcSyncDto
         LastMoveId = component.LastMoveId;
     }
 
-    // Uses Godot native Vector3 serialization
+    [JsonPropertyName("p")]
     public Vector3 Position { get; set; }
 
-    // Uses Godot native Vector3 serialization
+    [JsonPropertyName("r")]
     public Vector3 Rotation { get; set; }
 
+    [JsonPropertyName("z")]
     public ZOrder ZOrder { get; set; }
 
+    [JsonPropertyName("d")]
     public string DataSetRow { get; set; }
+
+    [JsonPropertyName("l")]
     public VisualComponentBase.ComponentLocation Location { get; set; }
 
     /// <summary>
     /// The container that holds this component or <see cref="SnowportId.Empty"/>.
     /// </summary>
+    [JsonPropertyName("c")]
     public SnowportId ContainerRef { get; set; } = SnowportId.Empty;
 
     /// <summary>
     /// The last event that moved this component with a transform.
     /// </summary>
+    [JsonPropertyName("m")]
     public SnowportId LastMoveId { get; set; } = SnowportId.Empty;
 
     public void ApplyToComponent(VisualComponentBase component)

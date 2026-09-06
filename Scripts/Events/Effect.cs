@@ -5,15 +5,16 @@ using Godot;
 /// <summary>
 /// The effects of a TableAction.
 /// </summary>
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
-[JsonDerivedType(typeof(CreateEffect), "Create")]
-[JsonDerivedType(typeof(DeleteEffect), "Delete")]
-[JsonDerivedType(typeof(TransformEffect), "Transform")]
-[JsonDerivedType(typeof(PrototypeEffect), "Prototype")]
-[JsonDerivedType(typeof(PrototypeDeleteEffect), "PrototypeDelete")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
+[JsonDerivedType(typeof(CreateEffect), "c")]
+[JsonDerivedType(typeof(DeleteEffect), "d")]
+[JsonDerivedType(typeof(TransformEffect), "t")]
+[JsonDerivedType(typeof(PrototypeEffect), "p")]
+[JsonDerivedType(typeof(PrototypeDeleteEffect), "pd")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
+    [JsonPropertyName("i")]
     public SnowportId Id { get; set; }
 }
 
@@ -22,10 +23,10 @@ public abstract class Effect
 /// </summary>
 public class CreateEffect : Effect
 {
+    [JsonPropertyName("p")]
     public SnowportId PrototypeRef { get; set; }
 
-    public string ComponentName { get; set; } = string.Empty;
-
+    [JsonPropertyName("s")]
     public VcSyncDto State { get; set; }
 }
 
@@ -37,6 +38,7 @@ public class DeleteEffect : Effect { }
 /// </summary>
 public class PrototypeEffect : Effect
 {
+    [JsonPropertyName("p")]
     public Prototype Prototype { get; set; }
 }
 
@@ -48,22 +50,28 @@ public class PrototypeDeleteEffect : Effect { }
 /// </summary>
 public class TransformEffect : Effect
 {
+    [JsonPropertyName("l")]
     public VisualComponentBase.ComponentLocation Location { get; set; }
 
     /// <summary>
     /// The container that holds the component or <see cref="SnowportId.Empty"/>.
     /// </summary>
+    [JsonPropertyName("c")]
     public SnowportId ContainerRef { get; set; }
 
+    [JsonPropertyName("p")]
     public Vector3 Position { get; set; }
 
     /// <summary>Target rotation in radians.</summary>
+    [JsonPropertyName("r")]
     public Vector3 Rotation { get; set; }
 
     /// <summary>Where the effect sends the component in the ZOrder, or Unset to leave it.</summary>
+    [JsonPropertyName("z")]
     public ZTarget ZTarget { get; set; }
 
     /// <summary>Separates components reordered by the same event. Higher ends up on top.</summary>
+    [JsonPropertyName("zs")]
     public int ZSuborder { get; set; }
 
     /// <summary>

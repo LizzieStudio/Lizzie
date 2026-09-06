@@ -15,7 +15,6 @@ public class GameStateComponent : VcSyncDto
     {
         ComponentRef = component.Reference;
         PrototypeRef = component.PrototypeRef;
-        ComponentName = component.ComponentName ?? string.Empty;
     }
 
     /// <summary>Unique identity of this component instance.</summary>
@@ -23,9 +22,6 @@ public class GameStateComponent : VcSyncDto
 
     /// <summary>The prototype from which this component was built.</summary>
     public SnowportId PrototypeRef { get; set; }
-
-    /// <summary>Display name at the time of capture.</summary>
-    public string ComponentName { get; set; } = string.Empty;
 
     /// <summary>
     /// Populate this record from a live VisualComponent.

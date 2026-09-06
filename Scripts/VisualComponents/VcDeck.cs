@@ -385,7 +385,6 @@ public partial class VcDeck : VisualComponentGroup
         {
             Id = id,
             PrototypeRef = PrototypeRef,
-            ComponentName = ComponentName,
             State = new VcSyncDto
             {
                 DataSetRow = dataSetRow,

@@ -176,7 +176,6 @@ public partial class VcTray : VisualComponentGroup
             {
                 Id = id,
                 PrototypeRef = _prototype.PrototypeRef,
-                ComponentName = _prototype.Name ?? string.Empty,
                 State = new VcSyncDto
                 {
                     Location = ComponentLocation.Cursor,

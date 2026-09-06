@@ -5,15 +5,15 @@ using Godot;
 /// <summary>
 /// The cause of a TableEvent.
 /// </summary>
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
-[JsonDerivedType(typeof(FlipAction), "Flip")]
-[JsonDerivedType(typeof(RollAction), "Roll")]
-[JsonDerivedType(typeof(DrawAction), "Draw")]
-[JsonDerivedType(typeof(DealAction), "Deal")]
-[JsonDerivedType(typeof(MoveAction), "Move")]
-[JsonDerivedType(typeof(ShuffleAction), "Shuffle")]
-[JsonDerivedType(typeof(PlayerJoinAction), "PlayerJoin")]
-[JsonDerivedType(typeof(PlayerLeaveAction), "PlayerLeave")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
+[JsonDerivedType(typeof(FlipAction), "f")]
+[JsonDerivedType(typeof(RollAction), "r")]
+[JsonDerivedType(typeof(DrawAction), "dr")]
+[JsonDerivedType(typeof(DealAction), "dl")]
+[JsonDerivedType(typeof(MoveAction), "m")]
+[JsonDerivedType(typeof(ShuffleAction), "s")]
+[JsonDerivedType(typeof(PlayerJoinAction), "pj")]
+[JsonDerivedType(typeof(PlayerLeaveAction), "pl")]
 public abstract class TableAction { }
 
 /// <summary>Flips a token or deck.</summary>
@@ -39,16 +39,20 @@ public class ShuffleAction : TableAction { }
 /// </summary>
 public class PlayerJoinAction : TableAction
 {
+    [JsonPropertyName("s")]
     public int Seat { get; set; }
 
+    [JsonPropertyName("p")]
     public int PeerId { get; set; }
 
     /// <summary>The container id for this player's hand.</summary>
+    [JsonPropertyName("h")]
     public SnowportId HandRef { get; set; }
 
     /// <summary>
     /// The container id for this player's cursor.
     /// </summary>
+    [JsonPropertyName("c")]
     public SnowportId CursorRef { get; set; }
 }
 
@@ -58,7 +62,9 @@ public class PlayerJoinAction : TableAction
 /// </summary>
 public class PlayerLeaveAction : TableAction
 {
+    [JsonPropertyName("s")]
     public int Seat { get; set; }
 
+    [JsonPropertyName("p")]
     public int PeerId { get; set; }
 }

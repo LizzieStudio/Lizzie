@@ -303,7 +303,6 @@ public partial class GameObjects : Node
                 {
                     Id = containerRef,
                     PrototypeRef = component.PrototypeRef,
-                    ComponentName = component.ComponentName ?? string.Empty,
                     State = state,
                 }
             );
@@ -340,7 +339,6 @@ public partial class GameObjects : Node
                         {
                             Id = component.Reference,
                             PrototypeRef = component.PrototypeRef,
-                            ComponentName = component.ComponentName ?? string.Empty,
                             State = new VcSyncDto(component),
                         }
                 )

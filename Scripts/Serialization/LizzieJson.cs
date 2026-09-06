@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Godot;
 
 public static class LizzieJson
@@ -10,8 +11,13 @@ public static class LizzieJson
         {
             new GodotNativeJsonConverter<Color>(),
             new GodotNativeJsonConverter<Vector2>(),
-            new GodotNativeJsonConverter<Vector3>(),
+            new CompactVector3JsonConverter(),
             new SnowportIdJsonConverter(),
         },
+    };
+
+    public static readonly JsonSerializerOptions EventOptions = new(Options)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
     };
 }
