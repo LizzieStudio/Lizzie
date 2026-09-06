@@ -146,7 +146,7 @@ public partial class ComponentDefinition : Window
             {
                 ComponentType = r.ComponentType,
                 Params = result,
-                PrototypeRef = Guid.NewGuid(),
+                PrototypeRef = Snowport.Clock.Create(),
                 DataSet = r.DataSet,
                 MultipleCreateMode = r.MultipleCreateMode,
                 WidthHint = r.WidthHint,
@@ -207,9 +207,7 @@ public partial class ComponentDefinition : Window
         prototype.Name = prototype.Parameters?.ComponentName;
         prototype.IsDirty = true;
 
-        EventBus.Instance.Publish(
-            new PrototypeChangedEvent { PrototypeId = prototype.PrototypeRef }
-        );
+        ProjectService.Instance.UpdatePrototype(prototype);
 
         CloseDialog?.Invoke(this, EventArgs.Empty);
     }
@@ -372,7 +370,7 @@ public class CreateObjectEventArgs : EventArgs
 
     public string PrototypeName { get; set; }
 
-    public Guid PrototypeRef { get; set; }
+    public SnowportId PrototypeRef { get; set; }
 
     public DataSet DataSet { get; set; }
 

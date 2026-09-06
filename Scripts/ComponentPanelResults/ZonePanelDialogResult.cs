@@ -108,7 +108,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         return p;
     }
 
-    public override void DisplayPrototype(Guid prototypeId)
+    public override void DisplayPrototype(SnowportId prototypeId)
     {
         DisplayPrototype(ProjectService.Instance.CurrentProject.Prototypes[prototypeId]);
     }

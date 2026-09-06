@@ -9,10 +9,12 @@ using Godot;
 [JsonDerivedType(typeof(CreateEffect), "Create")]
 [JsonDerivedType(typeof(DeleteEffect), "Delete")]
 [JsonDerivedType(typeof(TransformEffect), "Transform")]
+[JsonDerivedType(typeof(PrototypeEffect), "Prototype")]
+[JsonDerivedType(typeof(PrototypeDeleteEffect), "PrototypeDelete")]
 public abstract class Effect
 {
-    /// <summary>The component this effect applies to.</summary>
-    public SnowportId ComponentRef { get; set; }
+    /// <summary>The component or prototype this effect applies to.</summary>
+    public SnowportId Id { get; set; }
 }
 
 /// <summary>
@@ -20,7 +22,7 @@ public abstract class Effect
 /// </summary>
 public class CreateEffect : Effect
 {
-    public Guid PrototypeRef { get; set; }
+    public SnowportId PrototypeRef { get; set; }
 
     public string ComponentName { get; set; } = string.Empty;
 
@@ -29,6 +31,17 @@ public class CreateEffect : Effect
 
 /// <summary>Removes a component. Self-explanatory, so its parent event carries no action.</summary>
 public class DeleteEffect : Effect { }
+
+/// <summary>
+/// Creates or updates a prototype definition.
+/// </summary>
+public class PrototypeEffect : Effect
+{
+    public Prototype Prototype { get; set; }
+}
+
+/// <summary>Deletes a prototype definition.</summary>
+public class PrototypeDeleteEffect : Effect { }
 
 /// <summary>
 /// Instant move, reorientation, relocation, or reordering of a component.
@@ -59,7 +72,7 @@ public class TransformEffect : Effect
     public static TransformEffect Capture(VisualComponentBase component) =>
         new()
         {
-            ComponentRef = component.Reference,
+            Id = component.Reference,
             Location = component.Location,
             ContainerRef = component.ContainerRef,
             Position =

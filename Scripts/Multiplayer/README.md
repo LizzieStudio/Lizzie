@@ -32,13 +32,14 @@ Central manager for network connections and player state.
 Synchronizes project-level data across the network.
 
 **What it syncs:**
-- Entire project structure
+- Entire project structure (but not prototypes*)
 - Individual datasets
-- Individual prototypes
 - Individual templates
 
+*Prototypes are now synced through `EventSynchronizer`.
+
 **How it works:**
-- Listens to EventBus for local changes (DataSetChangedEvent, PrototypeChangedEvent, TemplateChangedEvent)
+- Listens to EventBus for local changes (DataSetChangedEvent, TemplateChangedEvent)
 - Sends changes to server via RPC
 - Server broadcasts to all clients
 - Clients apply changes without re-triggering sync events

@@ -397,7 +397,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         _preview.Build(p, TextureFactory);
     }
 
-    public override void DisplayPrototype(Guid prototypeId)
+    public override void DisplayPrototype(SnowportId prototypeId)
     {
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
         DisplayPrototype(prototype);

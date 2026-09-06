@@ -359,7 +359,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         return _textureContext.DataSet.Rows.ElementAt(rowNum).Key;
     }
 
-    public override void DisplayPrototype(Guid prototypeId)
+    public override void DisplayPrototype(SnowportId prototypeId)
     {
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
         DisplayPrototype(prototype);

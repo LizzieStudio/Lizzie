@@ -303,7 +303,7 @@ public partial class VcDeck : VisualComponentGroup
     }
 
     public override void SpawnBuild(
-        Guid prototypeRef,
+        SnowportId prototypeRef,
         VcSyncDto syncDto,
         TextureFactory textureFactory
     )
@@ -383,7 +383,7 @@ public partial class VcDeck : VisualComponentGroup
         var id = Snowport.Clock.Create();
         return new CreateEffect
         {
-            ComponentRef = id,
+            Id = id,
             PrototypeRef = PrototypeRef,
             ComponentName = ComponentName,
             State = new VcSyncDto

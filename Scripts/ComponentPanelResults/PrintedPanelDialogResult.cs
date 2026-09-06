@@ -751,7 +751,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    public override void DisplayPrototype(Guid prototypeId)
+    public override void DisplayPrototype(SnowportId prototypeId)
     {
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
         DisplayPrototype(prototype);

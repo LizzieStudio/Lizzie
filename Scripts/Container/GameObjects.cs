@@ -46,7 +46,6 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
         EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
-        EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
@@ -107,18 +106,6 @@ public partial class GameObjects : Node
                 vc.ProcessCommand(VisualCommand.Refresh);
             }
         }
-    }
-
-    private void OnPrototypeChanged(PrototypeChangedEvent e)
-    {
-        foreach (var c in ComponentNodes)
-        {
-            if (c is VisualComponentBase vc && vc.PrototypeRef == e.PrototypeId)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-        RetryPendingSpawns();
     }
 
     public VisualComponentBase GetComponent(SnowportId reference)
@@ -314,7 +301,7 @@ public partial class GameObjects : Node
             effects.Add(
                 new CreateEffect
                 {
-                    ComponentRef = containerRef,
+                    Id = containerRef,
                     PrototypeRef = component.PrototypeRef,
                     ComponentName = component.ComponentName ?? string.Empty,
                     State = state,
@@ -337,26 +324,37 @@ public partial class GameObjects : Node
     /// </summary>
     public Effect[] GenerateCatchupEffects()
     {
-        return ComponentNodes
-            .OfType<VisualComponentBase>()
-            .Select(component => (Effect)
-                new CreateEffect
-                {
-                    ComponentRef = component.Reference,
-                    PrototypeRef = component.PrototypeRef,
-                    ComponentName = component.ComponentName ?? string.Empty,
-                    State = new VcSyncDto(component),
-                }
-            )
-            .ToArray();
+        var effects = new List<Effect>();
+
+        var project = ProjectService.Instance.CurrentProject;
+        if (project != null)
+            foreach (var proto in project.Prototypes.Values)
+                effects.Add(new PrototypeEffect { Id = proto.PrototypeRef, Prototype = proto });
+
+        effects.AddRange(
+            ComponentNodes
+                .OfType<VisualComponentBase>()
+                .Select(component =>
+                    (Effect)
+                        new CreateEffect
+                        {
+                            Id = component.Reference,
+                            PrototypeRef = component.PrototypeRef,
+                            ComponentName = component.ComponentName ?? string.Empty,
+                            State = new VcSyncDto(component),
+                        }
+                )
+        );
+
+        return effects.ToArray();
     }
 
-    public Dictionary<Guid, int> PrototypeCounts()
+    public Dictionary<SnowportId, int> PrototypeCounts()
     {
-        Dictionary<Guid, int> counts = new();
+        Dictionary<SnowportId, int> counts = new();
         foreach (var c in ComponentNodes)
         {
-            if (c is VisualComponentBase vcb && vcb.PrototypeRef != Guid.Empty && vcb.Visible)
+            if (c is VisualComponentBase vcb && vcb.PrototypeRef != SnowportId.Empty && vcb.Visible)
             {
                 if (!counts.TryAdd(vcb.PrototypeRef, 1))
                 {
@@ -1376,6 +1374,8 @@ public partial class GameObjects : Node
         _tombstones.Clear();
         EventSynchronizer.Instance?.Clear();
         PlayerHandService.Instance?.Clear();
+
+        ProjectService.Instance.CurrentProject?.Prototypes.Clear();
     }
 
     /// <summary>
@@ -1399,6 +1399,12 @@ public partial class GameObjects : Node
                 case TransformEffect t:
                     ApplyTransform(e.Id, t, animated);
                     break;
+                case PrototypeEffect p:
+                    ApplyPrototype(p);
+                    break;
+                case PrototypeDeleteEffect pd:
+                    ApplyPrototypeDelete(pd);
+                    break;
             }
         }
 
@@ -1408,12 +1414,12 @@ public partial class GameObjects : Node
         {
             case RollAction:
                 foreach (var t in e.Effects.OfType<TransformEffect>())
-                    if (GetComponent(t.ComponentRef) is VcDie die)
+                    if (GetComponent(t.Id) is VcDie die)
                         die.AnimateRoll(t.Rotation);
                 break;
             case FlipAction:
                 foreach (var t in e.Effects.OfType<TransformEffect>())
-                    GetComponent(t.ComponentRef)?.AnimateFlip(t.Rotation);
+                    GetComponent(t.Id)?.AnimateFlip(t.Rotation);
                 break;
         }
 
@@ -1423,17 +1429,15 @@ public partial class GameObjects : Node
     private void ApplyCreate(SnowportId eventId, CreateEffect c)
     {
         // A delete wins over a create for the same ref, even if it arrived first.
-        if (_tombstones.Contains(c.ComponentRef))
+        if (_tombstones.Contains(c.Id))
             return;
 
-        if (GetComponent(c.ComponentRef) != null)
+        if (GetComponent(c.Id) != null)
             return;
 
         if (!TryExecuteSpawn(eventId, c))
         {
-            GD.Print(
-                $"Prototype {c.PrototypeRef} not yet available, queuing spawn for {c.ComponentRef}"
-            );
+            GD.Print($"Prototype {c.PrototypeRef} not yet available, queuing spawn for {c.Id}");
             _pendingSpawns.Add(new PendingSpawnRequest(eventId, c));
         }
     }
@@ -1463,7 +1467,7 @@ public partial class GameObjects : Node
             return true; // Fatal data error — do not retry
         }
 
-        vcb.Reference = effect.ComponentRef;
+        vcb.Reference = effect.Id;
         vcb.PrototypeRef = effect.PrototypeRef;
 
         vcb.SpawnBuild(effect.PrototypeRef, syncDto, TextureFactory);
@@ -1490,14 +1494,14 @@ public partial class GameObjects : Node
 
         foreach (var r in pending)
         {
-            if (_tombstones.Contains(r.Effect.ComponentRef))
+            if (_tombstones.Contains(r.Effect.Id))
                 continue;
 
-            GD.Print($"Retrying spawn for {r.Effect.ComponentRef}");
+            GD.Print($"Retrying spawn for {r.Effect.Id}");
             if (!TryExecuteSpawn(r.EventId, r.Effect))
             {
                 GD.PrintErr(
-                    $"Still cannot spawn {r.Effect.ComponentRef} because prototype {r.Effect.PrototypeRef} is not available"
+                    $"Still cannot spawn {r.Effect.Id} because prototype {r.Effect.PrototypeRef} is not available"
                 );
                 _pendingSpawns.Add(r); // Prototype still not available — keep in list
             }
@@ -1506,16 +1510,48 @@ public partial class GameObjects : Node
 
     private record PendingSpawnRequest(SnowportId EventId, CreateEffect Effect);
 
+    /// <summary>
+    /// Upserts a prototype definition, refreshes any live components built from it,
+    /// and retries spawns that were waiting on it.
+    /// </summary>
+    private void ApplyPrototype(PrototypeEffect p)
+    {
+        if (p.Prototype == null)
+            return;
+
+        var project = ProjectService.Instance.CurrentProject;
+        if (project == null)
+            return;
+
+        project.Prototypes[p.Id] = p.Prototype;
+
+        foreach (var c in ComponentNodes)
+            if (c is VisualComponentBase vc && vc.PrototypeRef == p.Id)
+                vc.ProcessCommand(VisualCommand.Refresh);
+
+        RetryPendingSpawns();
+
+        EventBus.Instance.Publish(new PrototypeChangedEvent { PrototypeId = p.Id });
+    }
+
+    /// <summary>
+    /// Removes a prototype definition.
+    /// </summary>
+    private void ApplyPrototypeDelete(PrototypeDeleteEffect d)
+    {
+        ProjectService.Instance.CurrentProject?.Prototypes.Remove(d.Id);
+    }
+
     private void ApplyDelete(DeleteEffect d)
     {
-        _tombstones.Add(d.ComponentRef);
-        _pendingSpawns.RemoveAll(r => r.Effect.ComponentRef == d.ComponentRef);
-        GetComponent(d.ComponentRef)?.QueueFree();
+        _tombstones.Add(d.Id);
+        _pendingSpawns.RemoveAll(r => r.Effect.Id == d.Id);
+        GetComponent(d.Id)?.QueueFree();
     }
 
     private void ApplyTransform(SnowportId eventId, TransformEffect t, bool animated)
     {
-        var c = GetComponent(t.ComponentRef);
+        var c = GetComponent(t.Id);
 
         // this happens when an outdated event arrives
         if (c == null || eventId.CompareTo(c.LastMoveId) < 0)

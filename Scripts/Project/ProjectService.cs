@@ -172,20 +172,24 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || prototype == null)
             return;
-        CurrentProject.Prototypes.TryAdd(prototype.PrototypeRef, prototype);
         CurrentProject.Prototypes[prototype.PrototypeRef] = prototype;
-        EventBus.Instance.Publish(
-            new PrototypeChangedEvent { PrototypeId = prototype.PrototypeRef }
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new PrototypeEffect { Id = prototype.PrototypeRef, Prototype = prototype }
+            )
         );
     }
 
-    public void DeletePrototype(Guid prototypeRef)
+    public void DeletePrototype(SnowportId prototypeRef)
     {
         if (CurrentProject == null)
             return;
         CurrentProject.Prototypes.Remove(prototypeRef);
         SaveProject(CurrentProject);
-        EventBus.Instance.Publish(new DeletePrototypeEvent { PrototypeRef = prototypeRef });
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(null, new PrototypeDeleteEffect { Id = prototypeRef })
+        );
     }
 
     public void UpdateImage(Asset image)

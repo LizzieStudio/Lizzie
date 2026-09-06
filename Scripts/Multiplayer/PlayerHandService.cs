@@ -75,7 +75,7 @@ public partial class PlayerHandService : Node
     public TransformEffect MoveEffect(VisualComponentBase card, int seatIndex, int suborder) =>
         new()
         {
-            ComponentRef = card.Reference,
+            Id = card.Reference,
             Location = VisualComponentBase.ComponentLocation.Hand,
             ContainerRef = HandContainer(seatIndex),
             Position = card.Position,

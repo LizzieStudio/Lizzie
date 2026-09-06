@@ -22,7 +22,7 @@ public class GameStateComponent : VcSyncDto
     public SnowportId ComponentRef { get; set; }
 
     /// <summary>The prototype from which this component was built.</summary>
-    public Guid PrototypeRef { get; set; }
+    public SnowportId PrototypeRef { get; set; }
 
     /// <summary>Display name at the time of capture.</summary>
     public string ComponentName { get; set; } = string.Empty;

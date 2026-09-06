@@ -311,17 +311,17 @@ public class ShowImageManagerEvent : IEvent
 
 public class PrototypeChangedEvent : IEvent
 {
-    public Guid PrototypeId { get; set; }
+    public SnowportId PrototypeId { get; set; }
 }
 
 public class EditPrototypeEvent : IEvent
 {
-    public Guid PrototypeId { get; set; }
+    public SnowportId PrototypeId { get; set; }
 }
 
 public class MakePrototypeUniqueEvent : IEvent
 {
-    public Guid PrototypeId { get; set; }
+    public SnowportId PrototypeId { get; set; }
 }
 
 /// <summary>
@@ -341,13 +341,8 @@ public class AssetChangedEvent : IEvent
 
 public class SpawnPrototypeEvent : IEvent
 {
-    public Guid PrototypeRef { get; set; }
+    public SnowportId PrototypeRef { get; set; }
     public string DataSetRow { get; set; } = string.Empty;
-}
-
-public class DeletePrototypeEvent : IEvent
-{
-    public Guid PrototypeRef { get; set; }
 }
 
 public class QueueStackingUpdateEvent : IEvent { }

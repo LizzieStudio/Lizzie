@@ -99,7 +99,7 @@ public partial class PrototypeManifest : Window
         if (selectedItem == null)
             return;
 
-        var prototypeRef = Guid.Parse(selectedItem.GetMetadata(0).AsString());
+        var prototypeRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
         if (prototypeRef == SelectedPrototype.PrototypeRef)
         {
             selectedItem.SetText(0, p.Name);
@@ -147,7 +147,7 @@ public partial class PrototypeManifest : Window
 
     private void PrototypeEditClicked(TreeItem item, long column, long id, long mouseButtonIndex)
     {
-        var prototypeRef = Guid.Parse(item.GetMetadata(0).AsString());
+        var prototypeRef = new SnowportId(item.GetMetadata(0).AsUInt64());
 
         switch (id)
         {
@@ -177,7 +177,7 @@ public partial class PrototypeManifest : Window
         }
     }
 
-    private void SpawnPrototype(Guid prototypeRef)
+    private void SpawnPrototype(SnowportId prototypeRef)
     {
         OnClose();
         EventBus.Instance.Publish(new SpawnPrototypeEvent { PrototypeRef = prototypeRef });
@@ -191,7 +191,7 @@ public partial class PrototypeManifest : Window
         }
     }
 
-    private void DeletePrototype(Guid prototypeRef)
+    private void DeletePrototype(SnowportId prototypeRef)
     {
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
@@ -226,7 +226,7 @@ public partial class PrototypeManifest : Window
         }
     }
 
-    private void DuplicatePrototype(Guid prototypeRef)
+    private void DuplicatePrototype(SnowportId prototypeRef)
     {
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
@@ -257,7 +257,7 @@ public partial class PrototypeManifest : Window
 
         var duplicate = new Prototype
         {
-            PrototypeRef = Guid.NewGuid(),
+            PrototypeRef = Snowport.Clock.Create(),
             Name = newName,
             Parameters = original.Parameters.Clone(),
         };
@@ -269,7 +269,7 @@ public partial class PrototypeManifest : Window
 
     private bool _refreshRequired;
 
-    public void Refresh(Dictionary<Guid, int> prototypeCounts)
+    public void Refresh(Dictionary<SnowportId, int> prototypeCounts)
     {
         _prototypeCounts = prototypeCounts;
 
@@ -284,9 +284,9 @@ public partial class PrototypeManifest : Window
         _refreshRequired = false;
     }
 
-    private Dictionary<Guid, int> _prototypeCounts;
+    private Dictionary<SnowportId, int> _prototypeCounts;
 
-    private void LoadPrototypes(Dictionary<Guid, int> prototypeCounts)
+    private void LoadPrototypes(Dictionary<SnowportId, int> prototypeCounts)
     {
         if (ProjectService.Instance?.CurrentProject == null)
             return;
@@ -336,7 +336,7 @@ public partial class PrototypeManifest : Window
             }
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
-            item.SetMetadata(0, prototype.PrototypeRef.ToString());
+            item.SetMetadata(0, prototype.PrototypeRef.Value);
 
             /*
             item.AddButton(2, pencil);
@@ -371,7 +371,7 @@ public partial class PrototypeManifest : Window
         if (selectedItem == null)
             return;
 
-        var prototypeRef = Guid.Parse(selectedItem.GetMetadata(0).AsString());
+        var prototypeRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
 
         if (
             ProjectService.Instance?.CurrentProject?.Prototypes.TryGetValue(

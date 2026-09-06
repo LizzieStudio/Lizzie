@@ -77,7 +77,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             yield return effect;
 
         foreach (var child in Children)
-            yield return new DeleteEffect { ComponentRef = child };
+            yield return new DeleteEffect { Id = child };
     }
 
     /// <summary>

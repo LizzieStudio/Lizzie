@@ -76,7 +76,7 @@ public abstract partial class ComponentPanelDialogResult : Control
     public float WidthHint { get; set; }
     public float HeightHint { get; set; }
 
-    public virtual void DisplayPrototype(Guid prototypeId) { }
+    public virtual void DisplayPrototype(SnowportId prototypeId) { }
 
     public virtual void DisplayPrototype(Prototype prototype) { }
 

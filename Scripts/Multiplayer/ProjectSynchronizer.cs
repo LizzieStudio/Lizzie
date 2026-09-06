@@ -26,7 +26,6 @@ public partial class ProjectSynchronizer : Node
         // Subscribe to project changes
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
-        EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
         EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
     }
 
@@ -68,23 +67,6 @@ public partial class ProjectSynchronizer : Node
             Rpc(nameof(ReceiveDataSetChange), json);
         else
             RpcId(1, nameof(SyncDataSet), json);
-    }
-
-    private void OnPrototypeChanged(PrototypeChangedEvent evt)
-    {
-        if (!ShouldSync())
-            return;
-
-        var prototype = ProjectService.Instance.CurrentProject.Prototypes[evt.PrototypeId];
-
-        var prototypeJson = JsonSerializer.Serialize(prototype, LizzieJson.Options);
-
-        GD.Print($"Prototype change sync: {evt.PrototypeId}");
-
-        if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ReceivePrototype), prototypeJson);
-        else
-            RpcId(1, nameof(SyncPrototype), prototypeJson);
     }
 
     private void OnTemplateChanged(TemplateChangedEvent evt)
@@ -131,6 +113,13 @@ public partial class ProjectSynchronizer : Node
         try
         {
             var project = ProjectService.Instance.DeserializeProject(projectJson);
+
+            // Prototypes are event-sourced now.
+            // Keep whatever this peer already has.
+            if (project != null)
+                project.Prototypes =
+                    ProjectService.Instance.CurrentProject?.Prototypes ?? project.Prototypes;
+
             ProjectService.Instance.SetProjectSilent(project);
             EventBus.Instance.Publish<ProjectChangedEvent>();
         }
@@ -176,47 +165,6 @@ public partial class ProjectSynchronizer : Node
         try
         {
             EventBus.Instance.Publish(new DataSetChangedEvent { DataSetName = dataSet.Name });
-        }
-        finally
-        {
-            _isSyncing = false;
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void SyncPrototype(string prototypeJson)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-
-        ReceivePrototype(prototypeJson);
-        Rpc(nameof(ReceivePrototype), prototypeJson);
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ReceivePrototype(string prototypeJson)
-    {
-        _isSyncing = true;
-        try
-        {
-            var prototype = JsonSerializer.Deserialize<Prototype>(
-                prototypeJson,
-                LizzieJson.Options
-            );
-
-            ProjectService.Instance.UpdatePrototype(prototype);
-        }
-        catch (Exception ex)
-        {
-            GD.PrintErr($"Failed to sync prototype: {ex.Message}");
         }
         finally
         {
@@ -304,9 +252,9 @@ public partial class ProjectSynchronizer : Node
         PlayerSeatManager.Instance?.PushSeatMapToClient(senderId);
         EventSynchronizer.Instance?.ReplaySeatEventsTo(senderId);
 
-        // Stream the live table. Prototypes have already been sent above, so the
-        // joiner can spawn from the snapshot's creation effects. Then prompt the
-        // client to choose its position.
+        // Stream the live table. The snapshot leads with prototype-definition effects,
+        // so the joiner registers every prototype before its creation effects, then can spawn.
+        // Finally prompt the client to choose its position.
         EventSynchronizer.Instance?.SendStateTo(senderId);
         RpcId(senderId, nameof(NotifyClientProjectReady));
     }

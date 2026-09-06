@@ -23,4 +23,22 @@ public sealed class SnowportIdJsonConverter : JsonConverter<SnowportId>
         }
         return new SnowportId(value);
     }
+
+    public override void WriteAsPropertyName(
+        Utf8JsonWriter writer,
+        SnowportId id,
+        JsonSerializerOptions options
+    )
+    {
+        writer.WritePropertyName(id.Value.ToString());
+    }
+
+    public override SnowportId ReadAsPropertyName(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
+    {
+        return SnowportId.TryParse(reader.GetString(), out var id) ? id : SnowportId.Empty;
+    }
 }

@@ -11,7 +11,7 @@ public class Project
     public int Version { get; set; }
     public Dictionary<string, Template> Templates { get; set; } = new();
     public Dictionary<string, DataSet> Datasets { get; set; } = new();
-    public Dictionary<Guid, Prototype> Prototypes { get; set; } = new();
+    public Dictionary<SnowportId, Prototype> Prototypes { get; set; } = new();
 
     public Dictionary<string, Asset> Images { get; set; } = new();
 

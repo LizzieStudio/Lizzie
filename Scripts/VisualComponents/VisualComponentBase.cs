@@ -126,7 +126,11 @@ public abstract partial class VisualComponentBase : Area3D
         return true;
     }
 
-    public virtual bool Setup(Guid prototypeRef, string dataSetRow, TextureFactory textureFactory)
+    public virtual bool Setup(
+        SnowportId prototypeRef,
+        string dataSetRow,
+        TextureFactory textureFactory
+    )
     {
         TextureFactory = textureFactory;
         TextureReady = false;
@@ -156,7 +160,7 @@ public abstract partial class VisualComponentBase : Area3D
     public virtual void Build() { }
 
     public virtual void SpawnBuild(
-        Guid prototypeRef,
+        SnowportId prototypeRef,
         VcSyncDto syncDto,
         TextureFactory textureFactory
     )
@@ -179,7 +183,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public virtual IEnumerable<DeleteEffect> GetDespawnEffects()
     {
-        yield return new DeleteEffect { ComponentRef = Reference };
+        yield return new DeleteEffect { Id = Reference };
     }
 
     /// <summary>
@@ -267,7 +271,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual string ComponentName { get; set; }
 
-    public virtual Guid PrototypeRef { get; set; }
+    public virtual SnowportId PrototypeRef { get; set; }
 
     public virtual SnowportId Reference { get; set; } = Snowport.Clock.Create();
 

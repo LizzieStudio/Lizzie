@@ -593,7 +593,7 @@ public partial class UI : CanvasLayer
     }
 
     private ComponentDefinition _editPanel;
-    private Guid _editingPrototypeId;
+    private SnowportId _editingPrototypeId;
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
@@ -615,27 +615,16 @@ public partial class UI : CanvasLayer
         _editPanel.DisplayPrototype(p);
         _editPanel.Initialize(ProjectService.Instance.CurrentProject);
 
-        _editPanel.CancelDialog += ComponentEditDialogCancel;
-        _editPanel.CloseDialog += ComponentEditDialogClose;
+        _editPanel.CancelDialog += CloseComponentEditDialog;
+        _editPanel.CloseDialog += CloseComponentEditDialog;
         _modalDialogs.AddChild(_editPanel);
     }
 
-    private void ComponentEditDialogCancel(object sender, EventArgs e)
-    {
-        CloseComponentEditDialog();
-    }
-
-    private void ComponentEditDialogClose(object sender, EventArgs e)
-    {
-        EventBus.Instance.Publish(new PrototypeChangedEvent { PrototypeId = _editingPrototypeId });
-        CloseComponentEditDialog();
-    }
-
-    private void CloseComponentEditDialog()
+    private void CloseComponentEditDialog(object sender, EventArgs e)
     {
         _editPanel.Hide();
         _editPanel.QueueFree();
-        _editingPrototypeId = Guid.Empty;
+        _editingPrototypeId = SnowportId.Empty;
     }
 
     public override void _Process(double delta)

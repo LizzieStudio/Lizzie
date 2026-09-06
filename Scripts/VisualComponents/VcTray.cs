@@ -82,7 +82,7 @@ public partial class VcTray : VisualComponentGroup
 
         ShapeProfiles.Add(new OffsetShape2D(r));
 
-        if (Guid.TryParse(p.Prototype, out var gKey))
+        if (SnowportId.TryParse(p.Prototype, out var gKey))
         {
             ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(gKey, out _prototype);
         }
@@ -174,7 +174,7 @@ public partial class VcTray : VisualComponentGroup
             null,
             new CreateEffect
             {
-                ComponentRef = id,
+                Id = id,
                 PrototypeRef = _prototype.PrototypeRef,
                 ComponentName = _prototype.Name ?? string.Empty,
                 State = new VcSyncDto
