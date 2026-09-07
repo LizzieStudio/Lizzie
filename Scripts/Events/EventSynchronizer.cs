@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Godot;
 
@@ -131,23 +132,6 @@ public partial class EventSynchronizer : Node
     public void EndSync(int peerId) => _syncingPeers.Remove(peerId);
 
     /// <summary>
-    /// Replay the non-component events to a joining peer.
-    /// </summary>
-    public void ReplaySeatEventsTo(int peerId)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-
-        foreach (var e in _log.Events)
-            if (e.Action is PlayerJoinAction or PlayerLeaveAction)
-                RpcId(
-                    peerId,
-                    nameof(ReceiveBacklog),
-                    JsonSerializer.Serialize(e, LizzieJson.EventOptions)
-                );
-    }
-
-    /// <summary>
     /// Stream the current table to a joining peer as fresh creation events.
     public void SendStateTo(int peerId)
     {
@@ -162,7 +146,11 @@ public partial class EventSynchronizer : Node
         }
 
         int cutoff = _log.Count;
-        var snapshot = TableEvent.Now(null, gameObjects.GenerateCatchupEffects());
+        var effects = gameObjects
+            .GenerateCatchupEffects()
+            .Concat(PlayerSeatManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .ToArray();
+        var snapshot = TableEvent.Now(null, effects);
         RpcId(
             peerId,
             nameof(ReceiveSnapshot),

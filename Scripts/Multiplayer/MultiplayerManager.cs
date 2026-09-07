@@ -12,7 +12,7 @@ public partial class MultiplayerManager : Node
 
     private ENetMultiplayerPeer _peer;
     private bool _isServer;
-    private bool _isActive;
+    private bool _isNetworked;
     private int _localPlayerId;
     private Dictionary<int, PlayerInfo> _players = new();
 
@@ -28,7 +28,13 @@ public partial class MultiplayerManager : Node
     [Signal]
     public delegate void ServerStartedEventHandler();
 
-    public bool IsMultiplayerActive => _isActive;
+    [Signal]
+    public delegate void PlayersChangedEventHandler();
+
+    /// <summary>
+    /// True when a network session is active.
+    /// </summary>
+    public bool IsMultiplayerActive => _isNetworked;
     public bool IsServer => _isServer;
     public int LocalPlayerId => _localPlayerId;
     public IReadOnlyDictionary<int, PlayerInfo> Players => _players;
@@ -73,7 +79,7 @@ public partial class MultiplayerManager : Node
 
         Multiplayer.MultiplayerPeer = _peer;
         _isServer = true;
-        _isActive = true;
+        _isNetworked = true;
         _localPlayerId = Multiplayer.GetUniqueId();
 
         // Use source 0 by default.
@@ -83,7 +89,6 @@ public partial class MultiplayerManager : Node
         _players[_localPlayerId] = new PlayerInfo
         {
             PlayerId = _localPlayerId,
-            PlayerName = "Host",
             IsLocal = true,
             Source = 0,
         };
@@ -110,7 +115,7 @@ public partial class MultiplayerManager : Node
 
         Multiplayer.MultiplayerPeer = _peer;
         _isServer = false;
-        _isActive = true;
+        _isNetworked = true;
 
         GD.Print($"Connecting to server at {address}:{port}");
 
@@ -130,7 +135,7 @@ public partial class MultiplayerManager : Node
 
         Multiplayer.MultiplayerPeer = null;
         _isServer = false;
-        _isActive = false;
+        _isNetworked = false;
         _players.Clear();
         _localPlayerId = 0;
 
@@ -139,7 +144,10 @@ public partial class MultiplayerManager : Node
 
         // Drop any event history accumulated during the session.
         EventSynchronizer.Instance?.Clear();
-        PlayerHandService.Instance?.Clear();
+        PlayerSeatManager.Instance?.Clear();
+
+        // Back to solo.
+        PlayerSeatManager.Instance?.EnsureLocalSeat();
 
         GD.Print("Disconnected from multiplayer");
     }
@@ -149,12 +157,7 @@ public partial class MultiplayerManager : Node
         GD.Print($"Peer connected: {id}");
 
         var playerId = (int)id;
-        _players[playerId] = new PlayerInfo
-        {
-            PlayerId = playerId,
-            PlayerName = $"Player {playerId}",
-            IsLocal = false,
-        };
+        _players[playerId] = new PlayerInfo { PlayerId = playerId, IsLocal = false };
 
         // Withhold live events from the newcomer until it's caught up.
         EventSynchronizer.Instance?.BeginSync(playerId);
@@ -179,15 +182,12 @@ public partial class MultiplayerManager : Node
         _localPlayerId = Multiplayer.GetUniqueId();
         GD.Print($"Connected to server. Local player ID: {_localPlayerId}");
 
-        _players[_localPlayerId] = new PlayerInfo
-        {
-            PlayerId = _localPlayerId,
-            PlayerName = "You",
-            IsLocal = true,
-        };
+        _players[_localPlayerId] = new PlayerInfo { PlayerId = _localPlayerId, IsLocal = true };
 
-        // Register with server
-        RpcId(1, nameof(RegisterPlayer), _localPlayerId, _players[_localPlayerId].PlayerName);
+        // Register with the server so it can assign us a Snowport source.
+        RpcId(1, nameof(RegisterPlayer), _localPlayerId);
+
+        EmitSignal(SignalName.PlayersChanged);
 
         EventBus.Instance?.Publish<LocalPlayerJoinedGameEvent>();
     }
@@ -210,25 +210,27 @@ public partial class MultiplayerManager : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void RegisterPlayer(int playerId, string playerName)
+    private void RegisterPlayer(int playerId)
     {
         if (!IsServer)
             return;
 
-        GD.Print($"Player registered: {playerId} - {playerName}");
-
-        if (_players.TryGetValue(playerId, out var player))
-        {
-            player.PlayerName = playerName;
-        }
-
         var source = GetSnowportSource();
-        if (player != null)
+        if (_players.TryGetValue(playerId, out var player))
             player.Source = source;
+
+        GD.Print($"Player registered: peer {playerId} -> source {source}");
+
+        // Give the newcomer its Snowport source.
         RpcId(playerId, nameof(AssignSource), source);
 
-        // Notify all other players
-        Rpc(nameof(UpdatePlayerList), playerId, playerName);
+        // Give the newcomer the peer to source map of everyone already here.
+        foreach (var kv in _players)
+            if (kv.Key != playerId)
+                RpcId(playerId, nameof(ReceivePlayerPresence), kv.Key, (int)kv.Value.Source);
+
+        // Announce the newcomer to everyone.
+        Rpc(nameof(ReceivePlayerPresence), playerId, (int)source);
     }
 
     /// <summary>
@@ -271,21 +273,17 @@ public partial class MultiplayerManager : Node
         CallLocal = true,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void UpdatePlayerList(int playerId, string playerName)
+    private void ReceivePlayerPresence(int playerId, int source)
     {
-        if (!_players.ContainsKey(playerId))
+        if (!_players.TryGetValue(playerId, out var player))
         {
-            _players[playerId] = new PlayerInfo
-            {
-                PlayerId = playerId,
-                PlayerName = playerName,
-                IsLocal = playerId == _localPlayerId,
-            };
+            player = new PlayerInfo { PlayerId = playerId, IsLocal = playerId == _localPlayerId };
+            _players[playerId] = player;
         }
-        else
-        {
-            _players[playerId].PlayerName = playerName;
-        }
+
+        player.Source = (byte)source;
+
+        EmitSignal(SignalName.PlayersChanged);
     }
 
     /// <summary>
@@ -308,12 +306,8 @@ public partial class MultiplayerManager : Node
 public class PlayerInfo
 {
     public int PlayerId { get; set; }
-    public string PlayerName { get; set; }
     public bool IsLocal { get; set; }
 
-    /// <summary>The Snowport source id assigned to this player.</summary>
+    /// <summary>The Snowport source id assigned to this player by the server.</summary>
     public byte Source { get; set; }
-
-    /// <summary>0-based index into GameSettings.Players, -1 = observer, -2 = unclaimed.</summary>
-    public int PlayerPosition { get; set; } = -2;
 }

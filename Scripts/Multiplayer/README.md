@@ -128,7 +128,7 @@ The `GameObjects` node should be part of your main game scene (already integrate
 
 ```csharp
 // Check if multiplayer is active
-if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+if (MultiplayerManager.Instance?.IsNetworked == true)
 {
     // Multiplayer logic here
 }
@@ -165,7 +165,7 @@ public partial class MyCustomNode : Node
     
     public void SendData()
     {
-        if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+        if (MultiplayerManager.Instance?.IsNetworked == true)
         {
             Rpc(nameof(MyRpcMethod), "Hello from " + MultiplayerManager.Instance.LocalPlayerId);
         }
@@ -257,7 +257,7 @@ Potential improvements for future versions:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `IsMultiplayerActive` | `bool` | True if connected to a session |
+| `IsNetworked` | `bool` | True if connected to a session |
 | `IsServer` | `bool` | True if this instance is the server |
 | `LocalPlayerId` | `int` | This player's unique ID |
 | `Players` | `IReadOnlyDictionary<int, PlayerInfo>` | All connected players |

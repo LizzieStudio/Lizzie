@@ -17,6 +17,13 @@ public partial class GameObjects : Node
     [Signal]
     public delegate void CameraActivationEventHandler(bool cameraActivated);
 
+    /// <summary>
+    /// Raised after an event has been fully applied to the table.
+    /// Signals to views to update their state.
+    /// </summary>
+    [Signal]
+    public delegate void TableChangedEventHandler();
+
     private int _stackingUpdateRequired;
     private readonly List<PendingSpawnRequest> _pendingSpawns = new();
 
@@ -1381,7 +1388,7 @@ public partial class GameObjects : Node
         _pendingTransforms.Clear();
         _tombstones.Clear();
         EventSynchronizer.Instance?.Clear();
-        PlayerHandService.Instance?.Clear();
+        PlayerSeatManager.Instance?.Clear();
 
         ProjectService.Instance.CurrentProject?.Prototypes.Clear();
     }
@@ -1432,6 +1439,8 @@ public partial class GameObjects : Node
         }
 
         QueueStackingUpdate();
+
+        EmitSignal(SignalName.TableChanged);
     }
 
     private void ApplyCreate(SnowportId eventId, CreateEffect c)

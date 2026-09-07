@@ -67,12 +67,13 @@ public partial class CursorSynchronizer : Node
 
     private void OnEventApplied(TableEvent e)
     {
-        if (
-            e.Action is PlayerJoinAction { CursorRef: var cursorRef }
-            && cursorRef != SnowportId.Empty
-            && cursorRef.source == Snowport.Clock.source
-        )
-            _localCursorRef = cursorRef;
+        foreach (var effect in e.Effects)
+            if (
+                effect is UpdatePlayerEffect { HasLeft: false, CursorRef: var cursorRef }
+                && cursorRef != SnowportId.Empty
+                && cursorRef.source == Snowport.Clock.source
+            )
+                _localCursorRef = cursorRef;
     }
 
     public void SetContext(DragPlane dragPlane, Node3D cursorParent)
@@ -197,31 +198,13 @@ public partial class CursorSynchronizer : Node
 
     private static Color GetSeatColor(byte source)
     {
-        var peerId = PeerForSource(source);
-        var seat = peerId >= 0 ? (PlayerSeatManager.Instance?.GetSeat(peerId) ?? -2) : -2;
+        var seat = PlayerSeatManager.Instance?.GetSeatBySource(source) ?? -2;
         var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
         if (settings == null || seat < 0 || seat >= settings.Players.Count)
             return FallbackColor;
 
         var p = settings.Players[seat];
         return new Color(p.ColorR, p.ColorG, p.ColorB, p.ColorA);
-    }
-
-    private static int PeerForSource(byte source)
-    {
-        // this should be removed later
-        // ultimately, the peer id should wind up being the source id
-        var mm = MultiplayerManager.Instance;
-        if (mm != null)
-        {
-            foreach (var p in mm.Players.Values)
-            {
-                if (p.Source == source)
-                    return p.PlayerId;
-            }
-        }
-
-        return -1;
     }
 
     private static bool IsSourceConnected(MultiplayerManager mm, byte source)

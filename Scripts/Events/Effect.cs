@@ -11,6 +11,7 @@ using Godot;
 [JsonDerivedType(typeof(TransformEffect), "t")]
 [JsonDerivedType(typeof(PrototypeEffect), "p")]
 [JsonDerivedType(typeof(PrototypeDeleteEffect), "pd")]
+[JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -44,6 +45,28 @@ public class PrototypeEffect : Effect
 
 /// <summary>Deletes a prototype definition.</summary>
 public class PrototypeDeleteEffect : Effect { }
+
+/// <summary>
+/// Announces or updates a player.
+/// </summary>
+public class UpdatePlayerEffect : Effect
+{
+    /// <summary>The seat this player occupies.</summary>
+    [JsonPropertyName("s")]
+    public int Seat { get; set; }
+
+    /// <summary>The container id for this player's hand.</summary>
+    [JsonPropertyName("h")]
+    public SnowportId HandRef { get; set; }
+
+    /// <summary>The container id for this player's cursor.</summary>
+    [JsonPropertyName("c")]
+    public SnowportId CursorRef { get; set; }
+
+    /// <summary>True once the player has left.</summary>
+    [JsonPropertyName("l")]
+    public bool HasLeft { get; set; }
+}
 
 /// <summary>
 /// Instant move, reorientation, relocation, or reordering of a component.

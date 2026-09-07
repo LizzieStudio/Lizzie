@@ -34,7 +34,8 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         Confirmed += OnConfirmed;
         Canceled += OnCanceled;
 
-        EventBus.Instance?.Subscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
+        if (PlayerSeatManager.Instance != null)
+            PlayerSeatManager.Instance.SeatsChanged += OnSeatsChanged;
         EventBus.Instance?.Subscribe<RequestPlayerPositionEvent>(OnReprompt);
 
         PopulateList();
@@ -42,7 +43,8 @@ public partial class PlayerPositionDialog : ConfirmationDialog
 
     public override void _ExitTree()
     {
-        EventBus.Instance?.Unsubscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
+        if (PlayerSeatManager.Instance != null)
+            PlayerSeatManager.Instance.SeatsChanged -= OnSeatsChanged;
         EventBus.Instance?.Unsubscribe<RequestPlayerPositionEvent>(OnReprompt);
     }
 
@@ -127,16 +129,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         QueueFree();
     }
 
-    private void OnSeatClaimed(PlayerSeatClaimedEvent evt)
-    {
-        if (!evt.Accepted)
-        {
-            // Seat was taken between listing and confirmation; refresh.
-            ShowStatus($"That seat was just taken. Please choose another.");
-            PopulateList();
-            // Don't free — let the player pick again (OnReprompt handles re-showing).
-        }
-    }
+    private void OnSeatsChanged() => PopulateList();
 
     private void OnReprompt(RequestPlayerPositionEvent _)
     {

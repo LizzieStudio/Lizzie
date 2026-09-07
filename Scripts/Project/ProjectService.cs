@@ -9,14 +9,6 @@ public partial class ProjectService : Node
 {
     public const string SampleProjectName = "Test Project";
 
-    public enum ProjectElement
-    {
-        Dataset,
-        Template,
-        Component,
-        Image,
-    }
-
     private static ProjectService _instance;
 
     public static ProjectService Instance

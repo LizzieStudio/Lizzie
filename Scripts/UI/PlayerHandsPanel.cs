@@ -9,6 +9,8 @@ public partial class PlayerHandsPanel : Panel
 
     private VBoxContainer _playerHandsContainer;
 
+    private GameObjects _gameObjects;
+
     /// <summary>
     /// Fired when the show/hide button is pressed.
     /// The bool argument is <c>true</c> when the panel is now hidden, <c>false</c> when shown.
@@ -22,19 +24,19 @@ public partial class PlayerHandsPanel : Panel
 
         _playerHandsContainer = GetNode<VBoxContainer>("%PlayerHands");
 
-        if (EventSynchronizer.Instance != null)
-            EventSynchronizer.Instance.Applied += OnEventApplied;
-        EventBus.Instance.Subscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
+        if (PlayerSeatManager.Instance != null)
+            PlayerSeatManager.Instance.SeatsChanged += OnModelChanged;
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
 
-        RebuildOpponentHands();
+        Callable.From(ConnectTable).CallDeferred();
     }
 
     public override void _ExitTree()
     {
-        if (EventSynchronizer.Instance != null)
-            EventSynchronizer.Instance.Applied -= OnEventApplied;
-        EventBus.Instance.Unsubscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
+        if (PlayerSeatManager.Instance != null)
+            PlayerSeatManager.Instance.SeatsChanged -= OnModelChanged;
+        if (_gameObjects != null && IsInstanceValid(_gameObjects))
+            _gameObjects.TableChanged -= OnModelChanged;
         EventBus.Instance.Unsubscribe<ProjectChangedEvent>(OnProjectChanged);
     }
 
@@ -42,9 +44,15 @@ public partial class PlayerHandsPanel : Panel
     // Event handlers
     // -------------------------------------------------------------------------
 
-    private void OnEventApplied(TableEvent _) => Callable.From(RebuildOpponentHands).CallDeferred();
+    private void ConnectTable()
+    {
+        _gameObjects = ProjectService.Instance?.GameObjects;
+        if (_gameObjects != null)
+            _gameObjects.TableChanged += OnModelChanged;
+        RebuildOpponentHands();
+    }
 
-    private void OnSeatClaimed(PlayerSeatClaimedEvent _) => RebuildOpponentHands();
+    private void OnModelChanged() => RebuildOpponentHands();
 
     private void OnProjectChanged(ProjectChangedEvent _) => RebuildOpponentHands();
 

@@ -246,15 +246,6 @@ public partial class ProjectSynchronizer : Node
 
         RpcId(senderId, nameof(ReceiveProject), projectJson);
 
-        // Push existing seat assignments so the new client sees who is seated, then
-        // replay the player join and leave events so it rebuilds each seat's hand and
-        // cursor refs.
-        PlayerSeatManager.Instance?.PushSeatMapToClient(senderId);
-        EventSynchronizer.Instance?.ReplaySeatEventsTo(senderId);
-
-        // Stream the live table. The snapshot leads with prototype-definition effects,
-        // so the joiner registers every prototype before its creation effects, then can spawn.
-        // Finally prompt the client to choose its position.
         EventSynchronizer.Instance?.SendStateTo(senderId);
         RpcId(senderId, nameof(NotifyClientProjectReady));
     }

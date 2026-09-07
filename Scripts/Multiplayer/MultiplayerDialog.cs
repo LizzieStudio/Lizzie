@@ -33,12 +33,14 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.ServerStarted += OnServerStarted;
             MultiplayerManager.Instance.PlayerConnected += OnPlayerConnected;
             MultiplayerManager.Instance.PlayerDisconnected += OnPlayerDisconnected;
+            MultiplayerManager.Instance.PlayersChanged += OnPlayersChanged;
             MultiplayerManager.Instance.ConnectionFailed += OnConnectionFailed;
         }
 
-        UpdateUI();
+        if (PlayerSeatManager.Instance != null)
+            PlayerSeatManager.Instance.SeatsChanged += OnSeatsChanged;
 
-        OnDisconnectPressed(); // Ensure we start in a disconnected state
+        UpdateUI();
     }
 
     public override void _ExitTree()
@@ -49,8 +51,12 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.ServerStarted -= OnServerStarted;
             MultiplayerManager.Instance.PlayerConnected -= OnPlayerConnected;
             MultiplayerManager.Instance.PlayerDisconnected -= OnPlayerDisconnected;
+            MultiplayerManager.Instance.PlayersChanged -= OnPlayersChanged;
             MultiplayerManager.Instance.ConnectionFailed -= OnConnectionFailed;
         }
+
+        if (PlayerSeatManager.Instance != null)
+            PlayerSeatManager.Instance.SeatsChanged -= OnSeatsChanged;
     }
 
     private void BuildUI()
@@ -116,14 +122,38 @@ public partial class MultiplayerDialog : Window
     {
         _playerList.Clear();
 
-        if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+        var mm = MultiplayerManager.Instance;
+        if (mm?.IsMultiplayerActive != true)
+            return;
+
+        var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
+
+        foreach (var player in mm.Players.Values)
         {
-            foreach (var player in MultiplayerManager.Instance.Players.Values)
+            int seat = PlayerSeatManager.Instance?.GetSeatBySource(player.Source) ?? -2;
+
+            var label = SeatLabel(seat, settings);
+            if (player.IsLocal)
+                label += " (you)";
+
+            int idx = _playerList.AddItem(label);
+
+            if (settings != null && seat >= 0 && seat < settings.Players.Count)
             {
-                var displayName = player.IsLocal ? $"{player.PlayerName} (You)" : player.PlayerName;
-                _playerList.AddItem(displayName);
+                var p = settings.Players[seat];
+                _playerList.SetItemCustomFgColor(idx, new Color(p.ColorR, p.ColorG, p.ColorB, p.ColorA));
             }
         }
+    }
+
+    private static string SeatLabel(int seat, ProjectGameSettings settings)
+    {
+        if (seat == -1)
+            return "Observer";
+        if (seat < 0 || settings == null || seat >= settings.Players.Count)
+            return "Choosing a seat";
+        var name = settings.Players[seat].Name;
+        return string.IsNullOrWhiteSpace(name) ? $"Seat {seat + 1}" : name;
     }
 
     private void OnHostPressed()
@@ -208,6 +238,13 @@ public partial class MultiplayerDialog : Window
         GD.Print($"Player disconnected: {playerId}");
         CallDeferred(nameof(UpdateUI));
     }
+
+    private void OnPlayersChanged()
+    {
+        CallDeferred(nameof(UpdateUI));
+    }
+
+    private void OnSeatsChanged() => UpdateUI();
 
     private void OnConnectionFailed()
     {

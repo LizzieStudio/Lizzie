@@ -2,25 +2,32 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-/// <summary>
-/// Tracks which connection owns which player position.
-/// The server is the authority: ClaimSeat sends an RPC to the server which
-/// validates exclusivity and then broadcasts the result to all peers.
-///
-/// SeatIndex values:
-///   0..N-1  — named player slots from GameSettings.Players
-///   -1      — observer (unlimited, only when GameSettings.AllowObservers is true)
-///   -2      — unclaimed (default before a seat is chosen)
-/// </summary>
+/// <summary>Tracks which connection owns which player position.</summary>
 public partial class PlayerSeatManager : Node
 {
     private static PlayerSeatManager _instance;
     public static PlayerSeatManager Instance => _instance;
 
-    // peerId -> seatIndex
-    private readonly Dictionary<int, int> _claims = new();
+    /// <summary>Raised after the seat registry has been updated for an event.</summary>
+    [Signal]
+    public delegate void SeatsChangedEventHandler();
 
-    public IReadOnlyDictionary<int, int> Claims => _claims;
+    /// <summary>The current state of a player, keyed by the player's own SnowportId.</summary>
+    private sealed class PlayerRecord
+    {
+        public SnowportId Id;
+        public int Seat;
+        public SnowportId HandRef;
+        public SnowportId CursorRef;
+        public bool HasLeft;
+
+        /// <summary>The id of the event that last wrote this record.</summary>
+        public SnowportId LastUpdateId;
+    }
+
+    private readonly Dictionary<SnowportId, PlayerRecord> _players = new();
+
+    private SnowportId _localPlayerId = SnowportId.Empty;
 
     public override void _Ready()
     {
@@ -30,243 +37,196 @@ public partial class PlayerSeatManager : Node
             return;
         }
         _instance = this;
+
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied += OnEventApplied;
     }
 
     public override void _ExitTree()
     {
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied -= OnEventApplied;
+
         if (_instance == this)
             _instance = null;
     }
 
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Returns true if the given seat index is not yet claimed by any connection.
-    /// Always returns true for observer seats (-1).
-    /// </summary>
-    public bool IsAvailable(int seatIndex)
+    public void Clear()
     {
-        if (seatIndex == -1) // observers are unlimited
-            return true;
-        return !_claims.Values.Contains(seatIndex);
+        _players.Clear();
+        _localPlayerId = SnowportId.Empty;
     }
 
-    /// <summary>
-    /// Returns the seat index for a given peer, or -2 if unknown.
-    /// </summary>
-    public int GetSeat(int peerId) => _claims.TryGetValue(peerId, out var seat) ? seat : -2;
+    /// <summary>Returns true if the seat is not owned by anyone.</summary>
+    public bool IsAvailable(int seatIndex) => seatIndex == -1 || SeatOwner(seatIndex) == null;
 
     /// <summary>
-    /// Request to claim a seat for the local player.
-    /// In multiplayer the request is forwarded to the server; locally it is applied immediately.
+    /// Returns the effective seat occupied by the client with the given Snowport source,
+    /// or -2 if it is unseated or was displaced from its chosen seat.
     /// </summary>
+    public int GetSeatBySource(byte source)
+    {
+        var r = ActiveForSource(source);
+        if (r == null)
+            return -2;
+        if (r.Seat < 0)
+            return r.Seat;
+        return SeatOwner(r.Seat)?.Id == r.Id ? r.Seat : -2;
+    }
+
+    /// <summary>The hand container id owned by the current occupant of a seat.</summary>
+    public SnowportId HandRefForSeat(int seatIndex) =>
+        SeatOwner(seatIndex)?.HandRef ?? SnowportId.Empty;
+
+    /// <summary>Claim a seat for the local player.</summary>
     public void ClaimSeat(int seatIndex)
     {
-        var mm = MultiplayerManager.Instance;
-        if (mm == null || !mm.IsMultiplayerActive)
-        {
-            // Local-only mode: just record and broadcast the event locally.
-            ApplyClaim(mm?.LocalPlayerId ?? 1, seatIndex, accepted: true);
-            return;
-        }
+        if (_localPlayerId == SnowportId.Empty)
+            _localPlayerId = Snowport.Clock.Create();
 
-        if (mm.IsServer)
-        {
-            ServerReceiveClaimRequest(mm.LocalPlayerId, seatIndex);
-        }
-        else
-        {
-            // Ask the server (peer 1) to validate and broadcast.
-            RpcId(1, nameof(ServerReceiveClaimRequest), mm.LocalPlayerId, seatIndex);
-        }
+        _players.TryGetValue(_localPlayerId, out var mine);
+
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdatePlayerEffect
+                {
+                    Id = _localPlayerId,
+                    Seat = seatIndex,
+                    HandRef =
+                        mine != null && mine.HandRef != SnowportId.Empty
+                            ? mine.HandRef
+                            : Snowport.Clock.Create(),
+                    CursorRef =
+                        mine != null && mine.CursorRef != SnowportId.Empty
+                            ? mine.CursorRef
+                            : Snowport.Clock.Create(),
+                    HasLeft = false,
+                }
+            )
+        );
     }
 
     /// <summary>
-    /// Release the seat held by a given peer (called on disconnect or voluntary leave).
+    /// Seats the local participant in solo play.
+    /// No-op in multiplayer or if the local participant is already seated.
     /// </summary>
+    public void EnsureLocalSeat(int seatIndex = 0)
+    {
+        if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+            return;
+        if (GetSeatBySource(Snowport.Clock.source) != -2)
+            return; // already seated
+        ClaimSeat(seatIndex);
+    }
+
+    /// <summary>Announce that a peer has left (server-only, on disconnect).</summary>
     public void ReleaseSeat(int peerId)
     {
-        if (!_claims.TryGetValue(peerId, out var seat))
+        if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        _claims.Remove(peerId);
+        if (MultiplayerManager.Instance.Players.TryGetValue(peerId, out var pi) != true)
+            return;
 
-        if (seat >= 0 && MultiplayerManager.Instance?.IsServer == true)
-        {
-            EventSynchronizer.Instance?.Submit(
-                TableEvent.Now(new PlayerLeaveAction { Seat = seat, PeerId = peerId })
-            );
-        }
+        var r = ActiveForSource(pi.Source);
+        if (r == null)
+            return;
 
-        // Update PlayerInfo if available
-        if (MultiplayerManager.Instance?.Players.TryGetValue(peerId, out var pi) == true)
-            pi.PlayerPosition = -2;
-
-        EventBus.Instance?.Publish(
-            new PlayerSeatClaimedEvent
-            {
-                PeerId = peerId,
-                SeatIndex = -2,
-                Accepted = true,
-            }
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdatePlayerEffect
+                {
+                    Id = r.Id,
+                    Seat = r.Seat,
+                    HandRef = r.HandRef,
+                    CursorRef = r.CursorRef,
+                    HasLeft = true,
+                }
+            )
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Server-side RPC: receives claim request, validates, broadcasts result
-    // -------------------------------------------------------------------------
+    /// <summary>Captures the active players as upsert effects for a late joiner.</summary>
+    public Effect[] GenerateCatchupEffects() =>
+        _players
+            .Values.Where(r => !r.HasLeft)
+            .Select(r =>
+                (Effect)
+                    new UpdatePlayerEffect
+                    {
+                        Id = r.Id,
+                        Seat = GetSeatBySource(r.Id.source),
+                        HandRef = r.HandRef,
+                        CursorRef = r.CursorRef,
+                        HasLeft = false,
+                    }
+            )
+            .ToArray();
 
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ServerReceiveClaimRequest(int requestingPeerId, int requestedSeat)
+    private void OnEventApplied(TableEvent e)
     {
-        if (!MultiplayerManager.Instance.IsServer)
-            return;
+        bool changed = false;
 
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
-        if (settings == null)
+        foreach (var effect in e.Effects)
         {
-            RpcId(
-                requestingPeerId,
-                nameof(ClientReceiveClaimResult),
-                requestingPeerId,
-                requestedSeat,
-                false
-            );
-            return;
-        }
+            if (effect is not UpdatePlayerEffect up)
+                continue;
 
-        bool accepted;
-        if (requestedSeat == -1)
-        {
-            // Observer – allowed only if the project permits it
-            accepted = settings.AllowObservers;
-        }
-        else if (requestedSeat < 0 || requestedSeat >= settings.Players.Count)
-        {
-            accepted = false;
-        }
-        else
-        {
-            // Accept if not already taken by someone else
-            accepted = !_claims.TryGetValue(requestingPeerId, out _)
-                ? IsAvailable(requestedSeat)
-                : IsAvailableExcluding(requestedSeat, requestingPeerId);
-        }
+            if (
+                _players.TryGetValue(up.Id, out var current)
+                && e.Id.CompareTo(current.LastUpdateId) < 0
+            )
+                continue;
 
-        if (accepted)
-        {
-            // Release any previous seat this peer held
-            _claims.Remove(requestingPeerId);
-            _claims[requestingPeerId] = requestedSeat;
+            byte localSource = Snowport.Clock.source;
+            int localSeatBefore = GetSeatBySource(localSource);
 
-            // Broadcast the accepted result to every peer (including the requester)
-            Rpc(nameof(ClientReceiveClaimResult), requestingPeerId, requestedSeat, true);
-        }
-        else
-        {
-            // Inform only the requester that the seat was rejected
-            RpcId(
-                requestingPeerId,
-                nameof(ClientReceiveClaimResult),
-                requestingPeerId,
-                requestedSeat,
-                false
-            );
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Client-side RPC: receives result from server
-    // -------------------------------------------------------------------------
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = true,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClientReceiveClaimResult(int peerId, int seatIndex, bool accepted)
-    {
-        ApplyClaim(peerId, seatIndex, accepted);
-
-        var mm = MultiplayerManager.Instance;
-        // If rejected AND it was our request, re-open the dialog
-        if (!accepted && mm != null && peerId == mm.LocalPlayerId)
-        {
-            GD.Print($"[PlayerSeatManager] Seat {seatIndex} rejected – prompting again");
-            EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    private void ApplyClaim(int peerId, int seatIndex, bool accepted)
-    {
-        if (accepted)
-        {
-            _claims[peerId] = seatIndex;
-
-            if (MultiplayerManager.Instance?.Players.TryGetValue(peerId, out var pi) == true)
-                pi.PlayerPosition = seatIndex;
-
-            var mm = MultiplayerManager.Instance;
-            bool localOwnsClaim =
-                mm == null || !mm.IsMultiplayerActive || peerId == mm.LocalPlayerId;
-            if (seatIndex >= 0 && localOwnsClaim)
+            _players[up.Id] = new PlayerRecord
             {
-                EventSynchronizer.Instance?.Submit(
-                    TableEvent.Now(
-                        new PlayerJoinAction
-                        {
-                            Seat = seatIndex,
-                            PeerId = peerId,
-                            HandRef = Snowport.Clock.Create(),
-                            CursorRef = Snowport.Clock.Create(),
-                        }
-                    )
-                );
+                Id = up.Id,
+                Seat = up.Seat,
+                HandRef = up.HandRef,
+                CursorRef = up.CursorRef,
+                HasLeft = up.HasLeft,
+                LastUpdateId = e.Id,
+            };
+            changed = true;
+
+            if (up.Id != _localPlayerId && localSeatBefore >= 0 && GetSeatBySource(localSource) == -2)
+            {
+                GD.Print("[PlayerSeatManager] Displaced from seat by a newer claim – prompting again");
+                EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
             }
         }
 
-        EventBus.Instance?.Publish(
-            new PlayerSeatClaimedEvent
-            {
-                PeerId = peerId,
-                SeatIndex = seatIndex,
-                Accepted = accepted,
-            }
-        );
+        if (changed)
+            EmitSignal(SignalName.SeatsChanged);
     }
 
-    private bool IsAvailableExcluding(int seatIndex, int excludePeerId)
+    /// <summary>The most recent active claimant of a seat, or null.</summary>
+    private PlayerRecord SeatOwner(int seat)
     {
-        if (seatIndex == -1)
-            return true;
-        return !_claims
-            .Where(kv => kv.Key != excludePeerId)
-            .Select(kv => kv.Value)
-            .Contains(seatIndex);
-    }
+        if (seat < 0)
+            return null;
 
-    /// <summary>
-    /// Called by the server after a full project sync to push the current seat map
-    /// to a newly-joined client so they see who is already seated.
-    /// </summary>
-    public void PushSeatMapToClient(int clientPeerId)
-    {
-        if (!MultiplayerManager.Instance.IsServer)
-            return;
-
-        foreach (var kv in _claims)
+        PlayerRecord best = null;
+        foreach (var r in _players.Values)
         {
-            RpcId(clientPeerId, nameof(ClientReceiveClaimResult), kv.Key, kv.Value, true);
+            if (r.HasLeft || r.Seat != seat)
+                continue;
+            if (best == null || r.LastUpdateId.CompareTo(best.LastUpdateId) > 0)
+                best = r;
         }
+        return best;
+    }
+
+    private PlayerRecord ActiveForSource(byte source)
+    {
+        foreach (var r in _players.Values)
+            if (!r.HasLeft && r.Id.source == source)
+                return r;
+        return null;
     }
 }
