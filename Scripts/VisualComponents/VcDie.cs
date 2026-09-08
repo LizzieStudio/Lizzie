@@ -133,7 +133,7 @@ public partial class VcDie : VisualComponentBase
 
         _sideData = p.Sides;
 
-        _frontTemplateName = p.FrontTemplate;
+        _frontTemplateRef = p.FrontTemplate;
         _datasetName = p.Dataset;
 
         _mode = p.Mode;
@@ -233,7 +233,7 @@ public partial class VcDie : VisualComponentBase
         var ds = ProjectService.Instance.GetDataSetByName(_datasetName);
         tc.DataSet = ds;
 
-        var template = ProjectService.Instance.GetTemplateByName(_frontTemplateName);
+        var template = ProjectService.Instance.GetTemplate(_frontTemplateRef);
         if (template == null)
             return;
 
@@ -241,7 +241,7 @@ public partial class VcDie : VisualComponentBase
         _textureFactory.GenerateTexture(tx, TextureDone);
     }
 
-    private string _frontTemplateName;
+    private SnowportId _frontTemplateRef;
     private string _datasetName;
 
     private void TextureDone(ImageTexture texture)
@@ -542,6 +542,6 @@ public sealed class DieParameters : ComponentParameters
     public QuickTextureField[] Sides { get; set; } = Array.Empty<QuickTextureField>();
     public int SideCount { get; set; }
     public VcToken.TokenBuildMode Mode { get; set; }
-    public string FrontTemplate { get; set; } = "";
+    public SnowportId FrontTemplate { get; set; }
     public string Dataset { get; set; } = "";
 }

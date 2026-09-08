@@ -149,6 +149,7 @@ public partial class EventSynchronizer : Node
         var effects = gameObjects
             .GenerateCatchupEffects()
             .Concat(PlayerSeatManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(TemplateManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .ToArray();
         var snapshot = TableEvent.Now(null, effects);
         RpcId(

@@ -35,36 +35,6 @@ public class TextureCache
         return tex;
     }
 
-    public Texture2D GetOrCreateSheetTexture(string sheetKey, Func<Image> builder)
-    {
-        if (string.IsNullOrEmpty(sheetKey))
-            return null;
-
-        if (_derivedCache.TryGetValue(sheetKey, out var cached))
-            return cached;
-
-        var image = builder();
-        if (image == null)
-            return null;
-
-        var tex = BuildCompressedTexture(image);
-        _derivedCache[sheetKey] = tex;
-        return tex;
-    }
-
-    public Texture2D GetOrCreateSingleTexture(string singleKey, Func<Image> builder)
-    {
-        return GetOrCreateSheetTexture(singleKey, builder);
-    }
-
-    public Texture2D TryGetDerived(string key)
-    {
-        if (string.IsNullOrEmpty(key))
-            return null;
-        _derivedCache.TryGetValue(key, out var tex);
-        return tex;
-    }
-
     public void PutDerived(string key, Texture2D tex)
     {
         if (string.IsNullOrEmpty(key) || tex == null)
@@ -103,18 +73,6 @@ public class TextureCache
         return true;
     }
 
-    public void Invalidate(string key)
-    {
-        if (string.IsNullOrEmpty(key))
-            return;
-        _derivedCache.Remove(key);
-    }
-
-    public void InvalidateAsset(Guid assetId)
-    {
-        _assetCache.Remove(assetId);
-    }
-
     public void Clear()
     {
         _assetCache.Clear();
@@ -126,8 +84,6 @@ public class TextureCache
         }
         _pending.Clear();
     }
-
-    public int Count => _assetCache.Count + _derivedCache.Count;
 
     private static Texture2D BuildCompressedTexture(Image source)
     {

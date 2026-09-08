@@ -26,7 +26,6 @@ public partial class ProjectSynchronizer : Node
         // Subscribe to project changes
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
-        EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
     }
 
     public override void _ExitTree()
@@ -69,18 +68,6 @@ public partial class ProjectSynchronizer : Node
             RpcId(1, nameof(SyncDataSet), json);
     }
 
-    private void OnTemplateChanged(TemplateChangedEvent evt)
-    {
-        if (!ShouldSync())
-            return;
-
-        var templateJson = JsonSerializer.Serialize(evt.Template, LizzieJson.Options);
-
-        if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ReceiveTemplate), evt.TemplateName, templateJson);
-        else
-            RpcId(1, nameof(SyncTemplate), evt.TemplateName, templateJson);
-    }
 
     private bool ShouldSync()
     {
@@ -114,11 +101,15 @@ public partial class ProjectSynchronizer : Node
         {
             var project = ProjectService.Instance.DeserializeProject(projectJson);
 
-            // Prototypes are event-sourced now.
+            // Prototypes and templates are event-sourced now.
             // Keep whatever this peer already has.
             if (project != null)
+            {
                 project.Prototypes =
                     ProjectService.Instance.CurrentProject?.Prototypes ?? project.Prototypes;
+                project.Templates =
+                    ProjectService.Instance.CurrentProject?.Templates ?? project.Templates;
+            }
 
             ProjectService.Instance.SetProjectSilent(project);
             EventBus.Instance.Publish<ProjectChangedEvent>();
@@ -165,50 +156,6 @@ public partial class ProjectSynchronizer : Node
         try
         {
             EventBus.Instance.Publish(new DataSetChangedEvent { DataSetName = dataSet.Name });
-        }
-        finally
-        {
-            _isSyncing = false;
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void SyncTemplate(string templateName, string templateJson)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-
-        ReceiveTemplate(templateName, templateJson);
-        Rpc(nameof(ReceiveTemplate), templateName, templateJson);
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ReceiveTemplate(string templateName, string templateJson)
-    {
-        _isSyncing = true;
-        try
-        {
-            var template = JsonSerializer.Deserialize<Template>(templateJson, LizzieJson.Options);
-
-            if (ProjectService.Instance.CurrentProject.Templates.ContainsKey(templateName))
-            {
-                ProjectService.Instance.CurrentProject.Templates[templateName] = template;
-                EventBus.Instance.Publish(
-                    new TemplateChangedEvent { TemplateName = templateName, Template = template }
-                );
-            }
-        }
-        catch (Exception ex)
-        {
-            GD.PrintErr($"Failed to sync template: {ex.Message}");
         }
         finally
         {

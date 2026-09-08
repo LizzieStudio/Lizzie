@@ -66,6 +66,10 @@ public partial class TemplateCreator : Window
     private TextureContext _textureContext = new();
 
     private OptionButton _templateNameSelector;
+
+    /// <summary>SnowportId for each template, index-aligned with _templateNameSelector's items.</summary>
+    private readonly List<SnowportId> _templateRefs = new();
+
     private OptionButton _cardSizes;
     private LineEdit _heightInput;
     private LineEdit _widthInput;
@@ -111,9 +115,9 @@ public partial class TemplateCreator : Window
 
         UpdateProject();
 
-        if (!string.IsNullOrWhiteSpace(_tempTemplateName))
+        if (_tempTemplateRef != SnowportId.Empty)
         {
-            SetTemplateByName(_tempTemplateName);
+            SetTemplateById(_tempTemplateRef);
         }
     }
 
@@ -232,29 +236,26 @@ public partial class TemplateCreator : Window
         }
     }
 
-    private string _tempTemplateName = string.Empty;
+    private SnowportId _tempTemplateRef = SnowportId.Empty;
 
-    public void SetTemplateByName(string name)
+    public void SetTemplateById(SnowportId id)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (id == SnowportId.Empty)
             return;
 
         if (!IsNodeReady())
         {
-            _tempTemplateName = name;
+            _tempTemplateRef = id;
             return;
         }
 
-        if (Templates.TryGetValue(name, out var template))
+        for (int i = 0; i < _templateRefs.Count; i++)
         {
-            for (int i = 0; i < _templateNameSelector.ItemCount; i++)
+            if (_templateRefs[i] == id)
             {
-                var n = _templateNameSelector.GetItemText(i);
-                if (n == name)
-                {
-                    _templateNameSelector.Selected = i;
-                    ChangeTemplate(i);
-                }
+                _templateNameSelector.Selected = i;
+                ChangeTemplate(i);
+                return;
             }
         }
     }
@@ -351,14 +352,17 @@ public partial class TemplateCreator : Window
 
     private void ChangeTemplate(long index)
     {
-        string name = _templateNameSelector.GetItemText((int)index);
+        if (index < 0 || index >= _templateRefs.Count)
+            return;
+
         if (CurrentTemplate != null)
             UpdateTemplate(CurrentTemplate);
 
-        if (Templates.ContainsKey(name))
+        var switched = ProjectService.Instance.GetTemplate(_templateRefs[(int)index]);
+        if (switched != null)
         {
             SaveTemplate(); //save current template before switching
-            CurrentTemplate = Templates[name];
+            CurrentTemplate = switched;
         }
     }
 
@@ -370,14 +374,8 @@ public partial class TemplateCreator : Window
         CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(
             _hierarchicalElements
         );
+        ProjectService.Instance.UpdateTemplate(_currentTemplate);
         ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject);
-        EventBus.Instance.Publish(
-            new TemplateChangedEvent
-            {
-                TemplateName = _currentTemplate.Name,
-                Template = _currentTemplate,
-            }
-        );
 
         EventBus.Instance.Publish<ProjectChangedEvent>();
     }
@@ -1173,10 +1171,7 @@ public partial class TemplateCreator : Window
         float.TryParse(_newTemplateHeight.Text, out var h);
 
         _newTemplateOk.Disabled =
-            string.IsNullOrWhiteSpace(_newTemplateName.Text)
-            || Templates.ContainsKey(_newTemplateName.Text)
-            || h <= 0
-            || w <= 0;
+            string.IsNullOrWhiteSpace(_newTemplateName.Text) || h <= 0 || w <= 0;
     }
 
     private void OnNewTemplateOkPressed()
@@ -1193,8 +1188,9 @@ public partial class TemplateCreator : Window
         t.Width = w;
         t.Height = h;
 
-        Templates.Add(t.Name, t);
+        ProjectService.Instance.UpdateTemplate(t);
         _templateNameSelector.AddItem(t.Name);
+        _templateRefs.Add(t.TemplateRef);
         _templateNameSelector.Select(_templateNameSelector.GetItemCount() - 1);
 
         CurrentTemplate = t;
@@ -1208,9 +1204,7 @@ public partial class TemplateCreator : Window
 
     #region Template management
 
-    private Dictionary<string, Template> _templates = new();
-
-    public Dictionary<string, Template> Templates
+    public Dictionary<SnowportId, Template> Templates
     {
         get
         {
@@ -1227,10 +1221,12 @@ public partial class TemplateCreator : Window
             return;
 
         _templateNameSelector.Clear();
+        _templateRefs.Clear();
 
-        foreach (var kv in Templates.OrderBy(x => x.Key))
+        foreach (var t in Templates.Values.Where(v => !v.Deleted).OrderBy(v => v.Name))
         {
-            _templateNameSelector.AddItem(kv.Key);
+            _templateNameSelector.AddItem(t.Name);
+            _templateRefs.Add(t.TemplateRef);
         }
     }
 
@@ -1325,24 +1321,18 @@ public partial class TemplateCreator : Window
 
     private void UpdateProject()
     {
-        _templateNameSelector.Clear();
-        foreach (var kv in ProjectService.Instance.CurrentProject.Templates)
-        {
-            _templateNameSelector.AddItem(kv.Key);
-        }
+        LoadTemplateNameSelector();
 
         InitializeDataSets();
 
-        if (_templateNameSelector.GetItemCount() == 0)
+        if (_templateRefs.Count == 0)
         {
             CurrentTemplate = null;
             return;
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = ProjectService.Instance.CurrentProject.Templates[
-            _templateNameSelector.GetItemText(0)
-        ];
+        CurrentTemplate = ProjectService.Instance.GetTemplate(_templateRefs[0]);
 
         MapDataset();
     }

@@ -14,6 +14,9 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private ComponentPreview _preview;
 
     private OptionButton _frontTemplatePicker;
+
+    /// <summary>SnowportId for each template, index-aligned with _frontTemplatePicker.</summary>
+    private readonly List<SnowportId> _frontTemplateRefs = new();
     private Button _editFrontTemplateButton;
 
     private OptionButton _datasetPicker;
@@ -103,15 +106,22 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             return;
 
         _frontTemplatePicker.Clear();
+        _frontTemplateRefs.Clear();
 
         _frontTemplatePicker.AddItem("(none)");
+        _frontTemplateRefs.Add(SnowportId.Empty);
 
         int.TryParse(_sidesInput.Text, out var sides);
         var target = SidesToTarget(sides);
 
-        foreach (var t in CurrentProject.Templates.Where(x => x.Value.Target == target))
+        foreach (
+            var t in CurrentProject.Templates.Where(x =>
+                !x.Value.Deleted && x.Value.Target == target
+            )
+        )
         {
-            _frontTemplatePicker.AddItem(t.Key);
+            _frontTemplatePicker.AddItem(t.Value.Name);
+            _frontTemplateRefs.Add(t.Key);
         }
 
         _datasetPicker.Clear();
@@ -166,7 +176,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     }
 
     private Template _frontTemplate;
-    private Template _backTemplate;
 
     private void OnFrontTemplateChanged(long index)
     {
@@ -176,9 +185,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
         else
         {
-            _frontTemplate = ProjectService.Instance.CurrentProject.Templates[
-                _frontTemplatePicker.GetItemText((int)index)
-            ];
+            _frontTemplate = ProjectService.Instance.GetTemplate(_frontTemplateRefs[(int)index]);
         }
 
         UpdatePreview();
@@ -186,7 +193,9 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private void EditFrontTemplate()
     {
-        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _frontTemplate?.Name });
+        EventBus.Instance.Publish(
+            new ShowTemplateEditor { TemplateRef = _frontTemplate?.TemplateRef ?? SnowportId.Empty }
+        );
     }
 
     private void EditDataset()
@@ -293,7 +302,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 p.Sides = PackageSides();
                 break;
 
-            case 1: //Custom
+            case 1:
                 p.Mode = VcToken.TokenBuildMode.Custom;
                 break;
 
@@ -302,7 +311,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
                 if (_frontTemplate != null)
                 {
-                    p.FrontTemplate = _frontTemplate.Name;
+                    p.FrontTemplate = _frontTemplate.TemplateRef;
                 }
 
                 p.Dataset = _textureContext.DataSet?.Name ?? string.Empty;
@@ -423,18 +432,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         // Restore template
         _frontTemplatePicker.Select(0);
         _frontTemplate = null;
-        if (!string.IsNullOrEmpty(p.FrontTemplate))
+        if (p.FrontTemplate != SnowportId.Empty)
         {
-            string frontTemplateName = p.FrontTemplate;
-            for (int i = 0; i < _frontTemplatePicker.ItemCount; i++)
+            for (int i = 0; i < _frontTemplateRefs.Count; i++)
             {
-                if (_frontTemplatePicker.GetItemText(i) == frontTemplateName)
+                if (_frontTemplateRefs[i] == p.FrontTemplate)
                 {
                     _frontTemplatePicker.Select(i);
-                    _frontTemplate =
-                        ProjectService.Instance.CurrentProject.Templates.GetValueOrDefault(
-                            frontTemplateName
-                        );
+                    _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
                     break;
                 }
             }

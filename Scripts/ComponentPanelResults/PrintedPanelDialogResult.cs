@@ -62,6 +62,11 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private Button _editFrontTemplateButton;
     private OptionButton _backTemplatePicker;
     private Button _editBackTemplateButton;
+
+    /// <summary>SnowportId for each front template, index-aligned with _frontTemplatePicker.</summary>
+    private readonly List<SnowportId> _frontTemplateRefs = new();
+    /// <summary>SnowportId for each back template, index-aligned with _backTemplatePicker.</summary>
+    private readonly List<SnowportId> _backTemplateRefs = new();
     private OptionButton _datasetPicker;
     private Button _datasetEditorButton;
 
@@ -457,10 +462,14 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     }
 
     private void EditFrontTemplate() =>
-        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _frontTemplate?.Name });
+        EventBus.Instance.Publish(
+            new ShowTemplateEditor { TemplateRef = _frontTemplate?.TemplateRef ?? SnowportId.Empty }
+        );
 
     private void EditBackTemplate() =>
-        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateName = _backTemplate?.Name });
+        EventBus.Instance.Publish(
+            new ShowTemplateEditor { TemplateRef = _backTemplate?.TemplateRef ?? SnowportId.Empty }
+        );
 
     private void EditDataset() =>
         EventBus.Instance.Publish(
@@ -498,7 +507,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _frontTemplate =
             _frontTemplatePicker.Selected == 0
                 ? null
-                : _currentProject.Templates[_frontTemplatePicker.GetItemText((int)index)];
+                : ProjectService.Instance.GetTemplate(_frontTemplateRefs[(int)index]);
         UpdatePreview();
     }
 
@@ -507,7 +516,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _backTemplate =
             _backTemplatePicker.Selected == 0
                 ? null
-                : _currentProject.Templates[_backTemplatePicker.GetItemText((int)index)];
+                : ProjectService.Instance.GetTemplate(_backTemplateRefs[(int)index]);
         UpdatePreview();
     }
 
@@ -518,16 +527,22 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _frontTemplatePicker.Clear();
         _backTemplatePicker.Clear();
+        _frontTemplateRefs.Clear();
+        _backTemplateRefs.Clear();
         _frontTemplatePicker.AddItem("(none)");
         _backTemplatePicker.AddItem("(none)");
+        _frontTemplateRefs.Add(SnowportId.Empty);
+        _backTemplateRefs.Add(SnowportId.Empty);
         foreach (
             var t in CurrentProject.Templates.Where(x =>
-                x.Value.Target == Template.TemplateTarget.Flat
+                !x.Value.Deleted && x.Value.Target == Template.TemplateTarget.Flat
             )
         )
         {
-            _frontTemplatePicker.AddItem(t.Key);
-            _backTemplatePicker.AddItem(t.Key);
+            _frontTemplatePicker.AddItem(t.Value.Name);
+            _backTemplatePicker.AddItem(t.Value.Name);
+            _frontTemplateRefs.Add(t.Key);
+            _backTemplateRefs.Add(t.Key);
         }
 
         _datasetPicker.Clear();
@@ -681,9 +696,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             case 4:
                 d.Mode = VcToken.TokenBuildMode.Template;
                 if (_frontTemplate != null)
-                    d.FrontTemplate = _frontTemplate.Name;
+                    d.FrontTemplate = _frontTemplate.TemplateRef;
                 if (_backTemplate != null)
-                    d.BackTemplate = _backTemplate.Name;
+                    d.BackTemplate = _backTemplate.TemplateRef;
                 d.Dataset = _textureContext.DataSet?.Name ?? string.Empty;
                 if (_textureContext.DataSet != null)
                 {
@@ -868,40 +883,30 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _frontTemplatePicker.Select(0);
         _frontTemplate = null;
+        if (p.FrontTemplate != SnowportId.Empty)
         {
-            string frontTemplateName = p.FrontTemplate;
-            if (!string.IsNullOrEmpty(frontTemplateName))
+            for (int i = 0; i < _frontTemplateRefs.Count; i++)
             {
-                for (int i = 0; i < _frontTemplatePicker.ItemCount; i++)
+                if (_frontTemplateRefs[i] == p.FrontTemplate)
                 {
-                    if (_frontTemplatePicker.GetItemText(i) == frontTemplateName)
-                    {
-                        _frontTemplatePicker.Select(i);
-                        _frontTemplate = _currentProject.Templates.GetValueOrDefault(
-                            frontTemplateName
-                        );
-                        break;
-                    }
+                    _frontTemplatePicker.Select(i);
+                    _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
+                    break;
                 }
             }
         }
 
         _backTemplatePicker.Select(0);
         _backTemplate = null;
+        if (p.BackTemplate != SnowportId.Empty)
         {
-            string backTemplateName = p.BackTemplate;
-            if (!string.IsNullOrEmpty(backTemplateName))
+            for (int i = 0; i < _backTemplateRefs.Count; i++)
             {
-                for (int i = 0; i < _backTemplatePicker.ItemCount; i++)
+                if (_backTemplateRefs[i] == p.BackTemplate)
                 {
-                    if (_backTemplatePicker.GetItemText(i) == backTemplateName)
-                    {
-                        _backTemplatePicker.Select(i);
-                        _backTemplate = _currentProject.Templates.GetValueOrDefault(
-                            backTemplateName
-                        );
-                        break;
-                    }
+                    _backTemplatePicker.Select(i);
+                    _backTemplate = ProjectService.Instance.GetTemplate(p.BackTemplate);
+                    break;
                 }
             }
         }

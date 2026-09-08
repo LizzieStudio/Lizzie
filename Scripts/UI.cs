@@ -318,7 +318,7 @@ public partial class UI : CanvasLayer
 
     private void ShowTemplateEditor()
     {
-        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateName = null });
+        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = SnowportId.Empty });
     }
 
     private void ShowTemplateEditorFromEvent(ShowTemplateEditor e)
@@ -327,7 +327,7 @@ public partial class UI : CanvasLayer
         _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
         _templateCreator.TextureFactory = _textureFactory;
         _templateCreator.Closed += TemplateCreatorOnClosed;
-        _templateCreator.SetTemplateByName(e.TemplateName);
+        _templateCreator.SetTemplateById(e.TemplateRef);
         _modalDialogs.AddChild(_templateCreator);
     }
 

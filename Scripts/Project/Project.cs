@@ -9,7 +9,7 @@ public class Project
 {
     public string Name { get; set; }
     public int Version { get; set; }
-    public Dictionary<string, Template> Templates { get; set; } = new();
+    public Dictionary<SnowportId, Template> Templates { get; set; } = new();
     public Dictionary<string, DataSet> Datasets { get; set; } = new();
     public Dictionary<SnowportId, Prototype> Prototypes { get; set; } = new();
 
@@ -39,21 +39,21 @@ public class Project
         }
     }
 
-    public Template GetTemplate(string name)
+    public Template GetTemplate(SnowportId templateRef)
     {
         var t = new Template();
-        if (string.IsNullOrEmpty(name))
+        if (templateRef == SnowportId.Empty)
         {
             return t;
         }
 
-        if (Templates.TryGetValue(name, out var template))
+        if (Templates.TryGetValue(templateRef, out var template) && !template.Deleted)
         {
             return template;
         }
         else
         {
-            GD.PrintErr($"Template '{name}' not found in project.");
+            GD.PrintErr($"Template '{templateRef}' not found in project.");
             return t;
         }
     }

@@ -295,7 +295,7 @@ public class GameStateChangedEvent : IEvent { }
 
 public class ShowTemplateEditor : IEvent
 {
-    public string TemplateName { get; set; }
+    public SnowportId TemplateRef { get; set; }
 }
 
 public class ShowDatasetEditor : IEvent

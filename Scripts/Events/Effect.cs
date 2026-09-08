@@ -12,6 +12,7 @@ using Godot;
 [JsonDerivedType(typeof(PrototypeEffect), "p")]
 [JsonDerivedType(typeof(PrototypeDeleteEffect), "pd")]
 [JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
+[JsonDerivedType(typeof(UpdateTemplateEffect), "tu")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -66,6 +67,15 @@ public class UpdatePlayerEffect : Effect
     /// <summary>True once the player has left.</summary>
     [JsonPropertyName("l")]
     public bool HasLeft { get; set; }
+}
+
+/// <summary>
+/// Creates, updates, or reversibly deletes a template definition.
+/// </summary>
+public class UpdateTemplateEffect : Effect
+{
+    [JsonPropertyName("t")]
+    public Template Template { get; set; }
 }
 
 /// <summary>

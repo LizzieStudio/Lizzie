@@ -17,6 +17,16 @@ public class Template
         D20,
     }
 
+    public SnowportId TemplateRef { get; set; }
+
+    /// <summary>
+    /// Reversible soft-delete flag.
+    /// </summary>
+    public bool Deleted { get; set; }
+
+    /// <summary>The id of the last event that updated this template.</summary>
+    public SnowportId LastUpdateId { get; set; }
+
     public string Name { get; set; }
     public string Description { get; set; }
 
@@ -51,4 +61,9 @@ public class Template
     }
 
     public string DataSet { get; set; } = string.Empty;
+
+    public string SheetKey()
+    {
+        return $"{TemplateRef.Value:X16}{LastUpdateId:X16}";
+    }
 }

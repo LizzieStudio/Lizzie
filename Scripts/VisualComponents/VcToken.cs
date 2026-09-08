@@ -255,8 +255,8 @@ public partial class VcToken : VisualComponentBase
 
         _tokenType = p.Type;
 
-        _frontTemplateName = p.FrontTemplate;
-        _backTemplateName = p.BackTemplate;
+        _frontTemplateRef = p.FrontTemplate;
+        _backTemplateRef = p.BackTemplate;
         _datasetName = p.Dataset;
         if (string.IsNullOrWhiteSpace(DataSetRow))
             DataSetRow = p.CardReference;
@@ -601,8 +601,8 @@ public partial class VcToken : VisualComponentBase
         MapBackTexture();
     }
 
-    private string _frontTemplateName;
-    private string _backTemplateName;
+    private SnowportId _frontTemplateRef;
+    private SnowportId _backTemplateRef;
     private string _datasetName;
 
     private void BuildTemplate(TextureFactory textureFactory)
@@ -612,12 +612,12 @@ public partial class VcToken : VisualComponentBase
         if (_height <= 0 || _width <= 0)
             return;
 
-        if (string.IsNullOrWhiteSpace(_frontTemplateName))
+        if (_frontTemplateRef == SnowportId.Empty)
             return;
 
         var curProj = ProjectService.Instance.CurrentProject;
-        var ft = curProj.GetTemplate(_frontTemplateName);
-        var bt = curProj.GetTemplate(_backTemplateName);
+        var ft = curProj.GetTemplate(_frontTemplateRef);
+        var bt = curProj.GetTemplate(_backTemplateRef);
         var ds = curProj.GetDataset(_datasetName);
 
         if (ft is null || ds is null)
@@ -637,29 +637,14 @@ public partial class VcToken : VisualComponentBase
         if (cellW <= 0 || cellH <= 0)
             return;
 
+        int backCellW = bt != null ? (int)(bt.Width * 10 * BASE_DPI) : cellW;
+        int backCellH = bt != null ? (int)(bt.Height * 10 * BASE_DPI) : cellH;
+
         int hframes = (int)Math.Ceiling(Math.Sqrt(n));
         int vframes = (int)Math.Ceiling((double)n / hframes);
 
-        string frontKey = TemplateSheetKey(
-            _frontTemplateName,
-            _datasetName,
-            rows,
-            cellW,
-            cellH,
-            hframes,
-            vframes,
-            "f"
-        );
-        string backKey = TemplateSheetKey(
-            _backTemplateName,
-            _datasetName,
-            rows,
-            cellW,
-            cellH,
-            hframes,
-            vframes,
-            "b"
-        );
+        string frontKey = $"tpl:{ft.SheetKey()}:{_datasetName}";
+        string backKey = bt != null ? $"tpl:{bt.SheetKey()}:{_datasetName}" : null;
 
         Texture2D front = null;
         Texture2D back = null;
@@ -732,8 +717,8 @@ public partial class VcToken : VisualComponentBase
                 bt,
                 ds,
                 rows,
-                cellW,
-                cellH,
+                backCellW,
+                backCellH,
                 hframes,
                 vframes,
                 backKey
@@ -775,28 +760,6 @@ public partial class VcToken : VisualComponentBase
             vframes,
             tex => TextureCache.Instance.PutDerived(cacheKey, tex)
         ).Start();
-    }
-
-    public static string TemplateSheetKey(
-        string templateName,
-        string datasetName,
-        List<string> rows,
-        int cellW,
-        int cellH,
-        int hframes,
-        int vframes,
-        string side
-    )
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.Append("tpl-").Append(side).Append(':');
-        sb.Append(templateName ?? "").Append(':');
-        sb.Append(datasetName ?? "").Append(':');
-        sb.Append(cellW).Append('x').Append(cellH).Append(':');
-        sb.Append(hframes).Append('x').Append(vframes).Append(':');
-        foreach (var r in rows)
-            sb.Append(r).Append(';');
-        return sb.ToString();
     }
 
     private List<QuickCardData> _quickCardList = new();
@@ -1409,8 +1372,8 @@ public abstract class PrintedParameters : ComponentParameters
     public int GridCount { get; set; }
     public bool GridSingleBack { get; set; }
 
-    public string FrontTemplate { get; set; } = "";
-    public string BackTemplate { get; set; } = "";
+    public SnowportId FrontTemplate { get; set; }
+    public SnowportId BackTemplate { get; set; }
     public string Dataset { get; set; } = "";
     public string CardReference { get; set; } = "";
 }

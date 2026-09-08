@@ -56,6 +56,7 @@ public partial class ProjectManager : Panel
 
         var t = new Template
         {
+            TemplateRef = Snowport.Clock.Create(),
             Name = "Issue Face",
             Description = "A face with an issue",
             Height = 350,
@@ -90,7 +91,7 @@ public partial class ProjectManager : Panel
         t.Elements.Add(d1);
         t.Elements.Add(d2);
 
-        p.Templates.Add("Issue Face", t);
+        p.Templates.Add(t.TemplateRef, t);
 
         p.Datasets.Add("Test Data", DataSet.TestDataSet());
 

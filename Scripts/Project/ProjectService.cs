@@ -153,10 +153,18 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || template == null)
             return;
-        CurrentProject.Templates.TryAdd(template.Name, template);
-        CurrentProject.Templates[template.Name] = template;
-        EventBus.Instance.Publish(
-            new TemplateChangedEvent { Template = template, TemplateName = template.Name }
+        if (template.TemplateRef == SnowportId.Empty)
+            template.TemplateRef = Snowport.Clock.Create();
+        CurrentProject.Templates[template.TemplateRef] = template;
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdateTemplateEffect
+                {
+                    Id = template.TemplateRef,
+                    Template = template,
+                }
+            )
         );
     }
 
@@ -229,13 +237,13 @@ public partial class ProjectService : Node
         return CurrentProject.Datasets.GetValueOrDefault(name);
     }
 
-    public Template GetTemplateByName(string name)
+    public Template GetTemplate(SnowportId templateRef)
     {
-        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null)
+        if (templateRef == SnowportId.Empty || CurrentProject == null)
             return null;
-        if (CurrentProject.Templates == null)
-            return null;
-        return CurrentProject.Templates.GetValueOrDefault(name);
+        if (CurrentProject.Templates.TryGetValue(templateRef, out var t) && !t.Deleted)
+            return t;
+        return null;
     }
 
     private readonly Dictionary<Guid, Task> _inFlightFetches = new();
