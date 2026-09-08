@@ -9,6 +9,15 @@ public class Prototype
     //Called "PrototypeRef" to distinguish it from the "Ref" property of VisualComponentBase, which is a reference to the visual component that represents this component in the current project.
     //(The same component may be represented by multiple visual components in different projects, but it will only have one PrototypeRef.)
     public SnowportId PrototypeRef { get; set; }
+
+    /// <summary>
+    /// Reversible soft-delete flag.
+    /// </summary>
+    public bool Deleted { get; set; }
+
+    /// <summary>The id of the last event that updated this prototype.</summary>
+    public SnowportId LastUpdateId { get; set; }
+
     public string Name { get; set; }
 
     public ComponentParameters Parameters { get; set; }

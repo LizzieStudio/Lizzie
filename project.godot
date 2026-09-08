@@ -33,6 +33,7 @@ PlayerSeatManager="*res://Scripts/Multiplayer/PlayerSeatManager.cs"
 PlayerHandService="*res://Scripts/Multiplayer/PlayerHandService.cs"
 TemplateManager="*uid://dm4lrrivwlf6n"
 DataSetManager="*uid://cblb6r36a0ejg"
+PrototypeManager="*uid://b2b5wnutaihe7"
 
 [display]
 

@@ -10,7 +10,6 @@ using Godot;
 [JsonDerivedType(typeof(DeleteEffect), "d")]
 [JsonDerivedType(typeof(TransformEffect), "t")]
 [JsonDerivedType(typeof(PrototypeEffect), "p")]
-[JsonDerivedType(typeof(PrototypeDeleteEffect), "pd")]
 [JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
 [JsonDerivedType(typeof(UpdateTemplateEffect), "tu")]
 [JsonDerivedType(typeof(UpdateDataSetEffect), "du")]
@@ -37,16 +36,13 @@ public class CreateEffect : Effect
 public class DeleteEffect : Effect { }
 
 /// <summary>
-/// Creates or updates a prototype definition.
+/// Creates, updates, or reversibly deletes a prototype definition.
 /// </summary>
 public class PrototypeEffect : Effect
 {
     [JsonPropertyName("p")]
     public Prototype Prototype { get; set; }
 }
-
-/// <summary>Deletes a prototype definition.</summary>
-public class PrototypeDeleteEffect : Effect { }
 
 /// <summary>
 /// Announces or updates a player.

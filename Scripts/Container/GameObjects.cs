@@ -58,6 +58,7 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
         EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
         EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
+        EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
@@ -119,6 +120,15 @@ public partial class GameObjects : Node
                 vc.ProcessCommand(VisualCommand.Refresh);
             }
         }
+    }
+
+    private void OnPrototypeChanged(PrototypeChangedEvent e)
+    {
+        foreach (var c in ComponentNodes)
+            if (c is VisualComponentBase vc && vc.PrototypeRef == e.PrototypeId)
+                vc.ProcessCommand(VisualCommand.Refresh);
+
+        RetryPendingSpawns();
     }
 
     public VisualComponentBase GetComponent(SnowportId reference)
@@ -337,11 +347,6 @@ public partial class GameObjects : Node
     public Effect[] GenerateCatchupEffects()
     {
         var effects = new List<Effect>();
-
-        var project = ProjectService.Instance.CurrentProject;
-        if (project != null)
-            foreach (var proto in project.Prototypes.Values)
-                effects.Add(new PrototypeEffect { Id = proto.PrototypeRef, Prototype = proto });
 
         effects.AddRange(
             ComponentNodes
@@ -1411,12 +1416,6 @@ public partial class GameObjects : Node
                 case TransformEffect t:
                     ApplyTransform(e.Id, t, animated);
                     break;
-                case PrototypeEffect p:
-                    ApplyPrototype(p);
-                    break;
-                case PrototypeDeleteEffect pd:
-                    ApplyPrototypeDelete(pd);
-                    break;
             }
         }
 
@@ -1531,34 +1530,6 @@ public partial class GameObjects : Node
     /// Upserts a prototype definition, refreshes any live components built from it,
     /// and retries spawns that were waiting on it.
     /// </summary>
-    private void ApplyPrototype(PrototypeEffect p)
-    {
-        if (p.Prototype == null)
-            return;
-
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null)
-            return;
-
-        project.Prototypes[p.Id] = p.Prototype;
-
-        foreach (var c in ComponentNodes)
-            if (c is VisualComponentBase vc && vc.PrototypeRef == p.Id)
-                vc.ProcessCommand(VisualCommand.Refresh);
-
-        RetryPendingSpawns();
-
-        EventBus.Instance.Publish(new PrototypeChangedEvent { PrototypeId = p.Id });
-    }
-
-    /// <summary>
-    /// Removes a prototype definition.
-    /// </summary>
-    private void ApplyPrototypeDelete(PrototypeDeleteEffect d)
-    {
-        ProjectService.Instance.CurrentProject?.Prototypes.Remove(d.Id);
-    }
-
     private void ApplyDelete(DeleteEffect d)
     {
         _tombstones.Add(d.Id);

@@ -302,7 +302,9 @@ public partial class PrototypeManifest : Window
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
 
-        var prototypes = ProjectService.Instance.CurrentProject.Prototypes.Values.ToList();
+        var prototypes = ProjectService
+            .Instance.CurrentProject.Prototypes.Values.Where(p => !p.Deleted)
+            .ToList();
 
         if (_sortColumn == 0)
         {

@@ -191,11 +191,11 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null)
             return;
-        CurrentProject.Prototypes.Remove(prototypeRef);
+        if (!CurrentProject.Prototypes.TryGetValue(prototypeRef, out var prototype))
+            return;
+        prototype.Deleted = true;
+        UpdatePrototype(prototype);
         SaveProject(CurrentProject);
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(null, new PrototypeDeleteEffect { Id = prototypeRef })
-        );
     }
 
     public void UpdateImage(Asset image)
