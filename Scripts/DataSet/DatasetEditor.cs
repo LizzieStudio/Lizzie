@@ -14,6 +14,10 @@ public partial class DatasetEditor : Window
     private Button _cancelButton;
     private Button _newButton;
     private OptionButton _datasetList;
+
+    /// <summary>SnowportId for each dataset, index-aligned with _datasetList's items.</summary>
+    private readonly List<SnowportId> _datasetRefs = new();
+    private SnowportId _pendingDatasetRef = SnowportId.Empty;
     private Button _linkButton;
     private Button _addColumnButton;
     private Button _deleteColumnButton;
@@ -86,6 +90,37 @@ public partial class DatasetEditor : Window
 
         InitializeNewDatasetDialog();
         LoadDatasetList();
+
+        if (_pendingDatasetRef != SnowportId.Empty)
+            SelectDatasetById(_pendingDatasetRef);
+    }
+
+    /// <summary>Opens the editor on a specific dataset once the node is ready.</summary>
+    public void SetDatasetById(SnowportId id)
+    {
+        if (id == SnowportId.Empty)
+            return;
+        if (!IsNodeReady())
+        {
+            _pendingDatasetRef = id;
+            return;
+        }
+        SelectDatasetById(id);
+    }
+
+    private void SelectDatasetById(SnowportId id)
+    {
+        for (int i = 0; i < _datasetRefs.Count; i++)
+        {
+            if (_datasetRefs[i] == id)
+            {
+                _datasetList.Select(i);
+                var ds = ProjectService.Instance.GetDataSet(id);
+                if (ds != null)
+                    MapDataSet(ds);
+                return;
+            }
+        }
     }
 
     private void LoadDatasetList()
@@ -94,23 +129,27 @@ public partial class DatasetEditor : Window
             return;
 
         _datasetList.Clear();
-        foreach (var kv in _project.Datasets)
-            _datasetList.AddItem(kv.Key);
+        _datasetRefs.Clear();
+        foreach (var d in _project.Datasets.Values.Where(v => !v.Deleted))
+        {
+            _datasetList.AddItem(d.Name);
+            _datasetRefs.Add(d.DatasetRef);
+        }
 
-        if (_datasetList.ItemCount > 0)
+        if (_datasetRefs.Count > 0)
         {
             _datasetList.Select(0);
-            MapDataSet(_project.Datasets.Values.First());
+            MapDataSet(ProjectService.Instance.GetDataSet(_datasetRefs[0]));
         }
     }
 
     private void OnDatasetSelected(long index)
     {
-        if (_project == null)
+        if (_project == null || index < 0 || index >= _datasetRefs.Count)
             return;
 
-        var name = _datasetList.GetItemText((int)index);
-        if (_project.Datasets.TryGetValue(name, out var ds))
+        var ds = ProjectService.Instance.GetDataSet(_datasetRefs[(int)index]);
+        if (ds != null)
             MapDataSet(ds);
     }
 
@@ -151,16 +190,9 @@ public partial class DatasetEditor : Window
 
     private void OnNewDatasetNameChanged(string text)
     {
-        var trimmed = text.Trim();
-        var isDuplicate = _project != null && _project.Datasets.ContainsKey(trimmed);
-        var isEmpty = string.IsNullOrWhiteSpace(trimmed);
-
-        if (isDuplicate)
-            _newDatasetErrorLabel.Text = "A dataset with that name already exists.";
-        else
-            _newDatasetErrorLabel.Text = string.Empty;
-
-        _newDatasetDialog.GetOkButton().Disabled = isEmpty || isDuplicate;
+        var isEmpty = string.IsNullOrWhiteSpace(text);
+        _newDatasetErrorLabel.Text = string.Empty;
+        _newDatasetDialog.GetOkButton().Disabled = isEmpty;
     }
 
     private void OnNewDatasetConfirmed()
@@ -169,24 +201,14 @@ public partial class DatasetEditor : Window
             return;
 
         var name = _newDatasetNameInput.Text.Trim();
-        if (string.IsNullOrWhiteSpace(name) || _project.Datasets.ContainsKey(name))
+        if (string.IsNullOrWhiteSpace(name))
             return;
 
         var ds = new DataSet { Name = name };
-        _project.Datasets[name] = ds;
+        ProjectService.Instance.UpdateDataSet(ds);
 
         LoadDatasetList();
-
-        // Select the newly created dataset
-        for (int i = 0; i < _datasetList.ItemCount; i++)
-        {
-            if (_datasetList.GetItemText(i) == name)
-            {
-                _datasetList.Select(i);
-                MapDataSet(ds);
-                break;
-            }
-        }
+        SelectDatasetById(ds.DatasetRef);
     }
 
     public event EventHandler Closed;
@@ -204,14 +226,13 @@ public partial class DatasetEditor : Window
 
         CommitGridToDataSet();
 
+        ProjectService.Instance.UpdateDataSet(_currentDataSet);
+
         if (_project != null)
             ProjectService.Instance.SaveProject(_project);
 
         GD.Print("Dataset saved successfully");
 
-        EventBus.Instance.Publish<DataSetChangedEvent>(
-            new DataSetChangedEvent { DataSetName = _currentDataSet.Name }
-        );
         CloseDialog();
     }
 

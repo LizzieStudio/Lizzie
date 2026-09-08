@@ -10,7 +10,7 @@ public class Project
     public string Name { get; set; }
     public int Version { get; set; }
     public Dictionary<SnowportId, Template> Templates { get; set; } = new();
-    public Dictionary<string, DataSet> Datasets { get; set; } = new();
+    public Dictionary<SnowportId, DataSet> Datasets { get; set; } = new();
     public Dictionary<SnowportId, Prototype> Prototypes { get; set; } = new();
 
     public Dictionary<string, Asset> Images { get; set; } = new();
@@ -31,14 +31,6 @@ public class Project
     /// </summary>
     public List<Asset> Assets { get; set; } = new();
 
-    public void FixDatasetName()
-    {
-        foreach (var kv in Datasets)
-        {
-            kv.Value.Name = kv.Key;
-        }
-    }
-
     public Template GetTemplate(SnowportId templateRef)
     {
         var t = new Template();
@@ -58,20 +50,20 @@ public class Project
         }
     }
 
-    public DataSet GetDataset(string name)
+    public DataSet GetDataset(SnowportId datasetRef)
     {
         var d = new DataSet();
-        if (string.IsNullOrEmpty(name))
+        if (datasetRef == SnowportId.Empty)
         {
             return d;
         }
-        if (Datasets.TryGetValue(name, out var dataset))
+        if (Datasets.TryGetValue(datasetRef, out var dataset) && !dataset.Deleted)
         {
             return dataset;
         }
         else
         {
-            GD.PrintErr($"Dataset '{name}' not found in project.");
+            GD.PrintErr($"Dataset '{datasetRef}' not found in project.");
             return d;
         }
     }

@@ -20,6 +20,9 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private Button _editFrontTemplateButton;
 
     private OptionButton _datasetPicker;
+
+    /// <summary>SnowportId for each dataset, index-aligned with _datasetPicker.</summary>
+    private readonly List<SnowportId> _datasetRefs = new();
     private Button _datasetEditorButton;
 
     [Export]
@@ -125,10 +128,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
 
         _datasetPicker.Clear();
+        _datasetRefs.Clear();
         _datasetPicker.AddItem("(none)");
-        foreach (var d in CurrentProject.Datasets)
+        _datasetRefs.Add(SnowportId.Empty);
+        foreach (var d in CurrentProject.Datasets.Where(x => !x.Value.Deleted))
         {
-            _datasetPicker.AddItem(d.Key);
+            _datasetPicker.AddItem(d.Value.Name);
+            _datasetRefs.Add(d.Key);
         }
     }
 
@@ -165,9 +171,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
         else
         {
-            _textureContext.DataSet = ProjectService.Instance.CurrentProject.Datasets[
-                _datasetPicker.GetItemText((int)index)
-            ];
+            _textureContext.DataSet = ProjectService.Instance.GetDataSet(_datasetRefs[(int)index]);
             _preview.MultiItemMode = true;
             _preview.SetItemLabels(_textureContext.DataSet.Rows.Keys.ToList());
         }
@@ -201,7 +205,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private void EditDataset()
     {
         EventBus.Instance.Publish(
-            new ShowDatasetEditor { DatasetName = _textureContext.DataSet?.Name }
+            new ShowDatasetEditor
+            {
+                DatasetRef = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty,
+            }
         );
     }
 
@@ -314,9 +321,11 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                     p.FrontTemplate = _frontTemplate.TemplateRef;
                 }
 
-                p.Dataset = _textureContext.DataSet?.Name ?? string.Empty;
+                p.Dataset = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty;
 
-                DataSet = ProjectService.Instance.GetDataSetByName(_textureContext.DataSet?.Name);
+                DataSet = ProjectService.Instance.GetDataSet(
+                    _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty
+                );
                 MultipleCreateMode = (DataSet != null);
                 WidthHint = dia / 10;
                 HeightHint = dia / 10;
@@ -449,21 +458,15 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _datasetPicker.Select(0);
         _textureContext.DataSet = null;
         _textureContext.CurrentRowName = null;
-        if (!string.IsNullOrEmpty(p.Dataset))
+        if (p.Dataset != SnowportId.Empty)
         {
-            string datasetName = p.Dataset;
+            for (int i = 0; i < _datasetRefs.Count; i++)
             {
-                for (int i = 0; i < _datasetPicker.ItemCount; i++)
+                if (_datasetRefs[i] == p.Dataset)
                 {
-                    if (_datasetPicker.GetItemText(i) == datasetName)
-                    {
-                        _datasetPicker.Select(i);
-                        _textureContext.DataSet =
-                            ProjectService.Instance.CurrentProject.Datasets.GetValueOrDefault(
-                                datasetName
-                            );
-                        break;
-                    }
+                    _datasetPicker.Select(i);
+                    _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
+                    break;
                 }
             }
         }

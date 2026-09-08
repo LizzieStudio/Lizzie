@@ -68,6 +68,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     /// <summary>SnowportId for each back template, index-aligned with _backTemplatePicker.</summary>
     private readonly List<SnowportId> _backTemplateRefs = new();
     private OptionButton _datasetPicker;
+
+    /// <summary>SnowportId for each dataset, index-aligned with _datasetPicker.</summary>
+    private readonly List<SnowportId> _datasetRefs = new();
     private Button _datasetEditorButton;
 
     private ImageSelector _gridFrontImageSelector;
@@ -473,7 +476,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void EditDataset() =>
         EventBus.Instance.Publish(
-            new ShowDatasetEditor { DatasetName = _textureContext.DataSet?.Name }
+            new ShowDatasetEditor
+            {
+                DatasetRef = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty,
+            }
         );
 
     private TextureContext _textureContext = new();
@@ -489,9 +495,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         }
         else
         {
-            _textureContext.DataSet = _currentProject.Datasets[
-                _datasetPicker.GetItemText((int)index)
-            ];
+            _textureContext.DataSet = ProjectService.Instance.GetDataSet(_datasetRefs[(int)index]);
             _preview.MultiItemMode = true;
             _preview.SetItemLabels(_textureContext.DataSet.Rows.Keys.ToList());
         }
@@ -546,9 +550,14 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         }
 
         _datasetPicker.Clear();
+        _datasetRefs.Clear();
         _datasetPicker.AddItem("(none)");
-        foreach (var d in CurrentProject.Datasets)
-            _datasetPicker.AddItem(d.Key);
+        _datasetRefs.Add(SnowportId.Empty);
+        foreach (var d in CurrentProject.Datasets.Where(x => !x.Value.Deleted))
+        {
+            _datasetPicker.AddItem(d.Value.Name);
+            _datasetRefs.Add(d.Key);
+        }
     }
 
     public override void Activate()
@@ -699,12 +708,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                     d.FrontTemplate = _frontTemplate.TemplateRef;
                 if (_backTemplate != null)
                     d.BackTemplate = _backTemplate.TemplateRef;
-                d.Dataset = _textureContext.DataSet?.Name ?? string.Empty;
+                d.Dataset = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty;
                 if (_textureContext.DataSet != null)
                 {
                     spawnAsDeck = true;
-                    DataSet = ProjectService.Instance.GetDataSetByName(
-                        _textureContext.DataSet?.Name
+                    DataSet = ProjectService.Instance.GetDataSet(
+                        _textureContext.DataSet.DatasetRef
                     );
                     WidthHint = width / 10f;
                     HeightHint = height / 10f;
@@ -914,20 +923,15 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _datasetPicker.Select(0);
         _textureContext.DataSet = null;
         _textureContext.CurrentRowName = null;
+        if (p.Dataset != SnowportId.Empty)
         {
-            string datasetName = p.Dataset;
-            if (!string.IsNullOrEmpty(datasetName))
+            for (int i = 0; i < _datasetRefs.Count; i++)
             {
-                for (int i = 0; i < _datasetPicker.ItemCount; i++)
+                if (_datasetRefs[i] == p.Dataset)
                 {
-                    if (_datasetPicker.GetItemText(i) == datasetName)
-                    {
-                        _datasetPicker.Select(i);
-                        _textureContext.DataSet = _currentProject.Datasets.GetValueOrDefault(
-                            datasetName
-                        );
-                        break;
-                    }
+                    _datasetPicker.Select(i);
+                    _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
+                    break;
                 }
             }
         }

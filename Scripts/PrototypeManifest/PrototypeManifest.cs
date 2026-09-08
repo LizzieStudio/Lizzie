@@ -391,7 +391,7 @@ public partial class PrototypeManifest : Window
 
         string row = "0";
 
-        string datasetParam = null;
+        SnowportId datasetParam = SnowportId.Empty;
         if (SelectedPrototype.Parameters is PrintedParameters pp)
         {
             datasetParam = pp.Dataset;
@@ -401,14 +401,11 @@ public partial class PrototypeManifest : Window
             datasetParam = dp.Dataset;
         }
 
-        if (!string.IsNullOrEmpty(datasetParam))
+        if (datasetParam != SnowportId.Empty)
         {
-            ProjectService.Instance.CurrentProject.Datasets.TryGetValue(
-                datasetParam,
-                out var dataset
-            );
+            var dataset = ProjectService.Instance.GetDataSet(datasetParam);
 
-            if (dataset != null)
+            if (dataset != null && dataset.Rows.Count > 0)
                 row = dataset.Rows.First().Key;
         }
 

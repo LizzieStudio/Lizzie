@@ -13,6 +13,7 @@ using Godot;
 [JsonDerivedType(typeof(PrototypeDeleteEffect), "pd")]
 [JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
 [JsonDerivedType(typeof(UpdateTemplateEffect), "tu")]
+[JsonDerivedType(typeof(UpdateDataSetEffect), "du")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -76,6 +77,15 @@ public class UpdateTemplateEffect : Effect
 {
     [JsonPropertyName("t")]
     public Template Template { get; set; }
+}
+
+/// <summary>
+/// Creates, updates, or reversibly deletes a dataset definition.
+/// </summary>
+public class UpdateDataSetEffect : Effect
+{
+    [JsonPropertyName("d")]
+    public DataSet DataSet { get; set; }
 }
 
 /// <summary>

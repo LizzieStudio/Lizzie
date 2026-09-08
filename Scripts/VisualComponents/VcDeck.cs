@@ -363,7 +363,7 @@ public partial class VcDeck : VisualComponentGroup
 
             case VcToken.TokenBuildMode.Template:
             {
-                var dataset = project.Datasets[parameters.Dataset];
+                var dataset = project.GetDataset(parameters.Dataset);
                 foreach (var kv in dataset.Rows)
                     yield return kv.Key;
                 break;

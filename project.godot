@@ -32,6 +32,7 @@ Config="*uid://diprp4p2jdstg"
 PlayerSeatManager="*res://Scripts/Multiplayer/PlayerSeatManager.cs"
 PlayerHandService="*res://Scripts/Multiplayer/PlayerHandService.cs"
 TemplateManager="*uid://dm4lrrivwlf6n"
+DataSetManager="*uid://cblb6r36a0ejg"
 
 [display]
 

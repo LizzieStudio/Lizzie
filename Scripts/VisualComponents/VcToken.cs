@@ -257,7 +257,7 @@ public partial class VcToken : VisualComponentBase
 
         _frontTemplateRef = p.FrontTemplate;
         _backTemplateRef = p.BackTemplate;
-        _datasetName = p.Dataset;
+        _datasetRef = p.Dataset;
         if (string.IsNullOrWhiteSpace(DataSetRow))
             DataSetRow = p.CardReference;
 
@@ -603,7 +603,7 @@ public partial class VcToken : VisualComponentBase
 
     private SnowportId _frontTemplateRef;
     private SnowportId _backTemplateRef;
-    private string _datasetName;
+    private SnowportId _datasetRef;
 
     private void BuildTemplate(TextureFactory textureFactory)
     {
@@ -617,8 +617,11 @@ public partial class VcToken : VisualComponentBase
 
         var curProj = ProjectService.Instance.CurrentProject;
         var ft = curProj.GetTemplate(_frontTemplateRef);
+        var ds = curProj.GetDataset(_datasetRef);
+
         var bt = curProj.GetTemplate(_backTemplateRef);
-        var ds = curProj.GetDataset(_datasetName);
+        if (bt is null || bt.TemplateRef == SnowportId.Empty)
+            bt = null;
 
         if (ft is null || ds is null)
             return;
@@ -643,8 +646,8 @@ public partial class VcToken : VisualComponentBase
         int hframes = (int)Math.Ceiling(Math.Sqrt(n));
         int vframes = (int)Math.Ceiling((double)n / hframes);
 
-        string frontKey = $"tpl:{ft.SheetKey()}:{_datasetName}";
-        string backKey = bt != null ? $"tpl:{bt.SheetKey()}:{_datasetName}" : null;
+        string frontKey = $"tpl:{ft.SheetKey()}:{ds.SheetKey()}";
+        string backKey = bt != null ? $"tpl:{bt.SheetKey()}:{ds.SheetKey()}" : null;
 
         Texture2D front = null;
         Texture2D back = null;
@@ -743,7 +746,7 @@ public partial class VcToken : VisualComponentBase
         var ctx = new TextureContext
         {
             DataSet = dataset,
-            Dpi = BASE_DPI,
+            Dpi = 10 * BASE_DPI,
             ParentSize = new Vector2(cellW, cellH),
         };
         foreach (var row in rows)
@@ -1374,7 +1377,7 @@ public abstract class PrintedParameters : ComponentParameters
 
     public SnowportId FrontTemplate { get; set; }
     public SnowportId BackTemplate { get; set; }
-    public string Dataset { get; set; } = "";
+    public SnowportId Dataset { get; set; }
     public string CardReference { get; set; } = "";
 }
 

@@ -60,10 +60,10 @@ public class Template
         }
     }
 
-    public string DataSet { get; set; } = string.Empty;
+    public SnowportId DataSet { get; set; }
 
     public string SheetKey()
     {
-        return $"{TemplateRef.Value:X16}{LastUpdateId:X16}";
+        return $"{TemplateRef.Value:X16}{LastUpdateId.Value:X16}";
     }
 }

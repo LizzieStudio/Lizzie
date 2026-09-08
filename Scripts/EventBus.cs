@@ -300,7 +300,7 @@ public class ShowTemplateEditor : IEvent
 
 public class ShowDatasetEditor : IEvent
 {
-    public string DatasetName { get; set; }
+    public SnowportId DatasetRef { get; set; }
 }
 
 public class ShowImageManagerEvent : IEvent

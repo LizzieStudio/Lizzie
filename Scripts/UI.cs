@@ -340,7 +340,7 @@ public partial class UI : CanvasLayer
 
     private void ShowDatasetEditor()
     {
-        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetName = null });
+        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = SnowportId.Empty });
     }
 
     private void ShowDatasetEditorFromEvent(ShowDatasetEditor e)
@@ -348,6 +348,7 @@ public partial class UI : CanvasLayer
         string s = "res://Scenes/DataSet/DatasetEditor.tscn";
         _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
         _datasetEditor.Closed += DatasetEditorOnClosed;
+        _datasetEditor.SetDatasetById(e.DatasetRef);
 
         _modalDialogs.AddChild(_datasetEditor);
     }

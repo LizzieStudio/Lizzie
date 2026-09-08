@@ -93,7 +93,8 @@ public partial class ProjectManager : Panel
 
         p.Templates.Add(t.TemplateRef, t);
 
-        p.Datasets.Add("Test Data", DataSet.TestDataSet());
+        var testDataset = DataSet.TestDataSet();
+        p.Datasets.Add(testDataset.DatasetRef, testDataset);
 
         return p;
     }

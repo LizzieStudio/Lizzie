@@ -25,7 +25,6 @@ public partial class ProjectSynchronizer : Node
 
         // Subscribe to project changes
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
-        EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
     }
 
     public override void _ExitTree()
@@ -50,24 +49,6 @@ public partial class ProjectSynchronizer : Node
         else
             RpcId(1, nameof(SyncProject), projectJson);
     }
-
-    private void OnDataSetChanged(DataSetChangedEvent evt)
-    {
-        if (!ShouldSync())
-            return;
-
-        GD.Print($"Dataset changed: {evt.DataSetName}");
-
-        var json = ProjectService.Instance.SerializeDataSet(
-            ProjectService.Instance.CurrentProject.Datasets[evt.DataSetName]
-        );
-
-        if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ReceiveDataSetChange), json);
-        else
-            RpcId(1, nameof(SyncDataSet), json);
-    }
-
 
     private bool ShouldSync()
     {
@@ -109,6 +90,8 @@ public partial class ProjectSynchronizer : Node
                     ProjectService.Instance.CurrentProject?.Prototypes ?? project.Prototypes;
                 project.Templates =
                     ProjectService.Instance.CurrentProject?.Templates ?? project.Templates;
+                project.Datasets =
+                    ProjectService.Instance.CurrentProject?.Datasets ?? project.Datasets;
             }
 
             ProjectService.Instance.SetProjectSilent(project);
@@ -117,45 +100,6 @@ public partial class ProjectSynchronizer : Node
         catch (Exception ex)
         {
             GD.PrintErr($"Failed to deserialize project: {ex.Message}");
-        }
-        finally
-        {
-            _isSyncing = false;
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void SyncDataSet(string dataSetJson)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-
-        ReceiveDataSetChange(dataSetJson);
-        Rpc(nameof(ReceiveDataSetChange), dataSetJson);
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ReceiveDataSetChange(string dataSetJson)
-    {
-        var dataSet = ProjectService.Instance.DeserializeDataSet(dataSetJson);
-
-        GD.Print($"Receiving dataset change: {dataSet.Name}");
-        _isSyncing = true;
-
-        //If the dataset exists, replace it. Otherwise add it.
-        ProjectService.Instance.UpdateDataSet(dataSet);
-
-        try
-        {
-            EventBus.Instance.Publish(new DataSetChangedEvent { DataSetName = dataSet.Name });
         }
         finally
         {

@@ -84,10 +84,16 @@ public partial class TemplateCreator : Window
     private Panel _previewWindow;
     private OptionButton _dataSetSelector;
 
+    /// <summary>SnowportId for each dataset, index-aligned with _dataSetSelector. index 0 is "(none)".</summary>
+    private readonly List<SnowportId> _dataSetRefs = new();
+
     private PageControl _pageControl;
 
     private AcceptDialog _acceptDialog;
     private ConfirmationDialog _saveBeforeCloseDialog;
+
+    /// <summary>True when the current template has edits that haven't been saved.</summary>
+    private bool _hasUnsavedChanges;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -111,7 +117,7 @@ public partial class TemplateCreator : Window
         InitializeSaveBeforeCloseDialog();
 
         this.VisibilityChanged += UpdateScrollBarVisibility;
-        this.CloseRequested += OnCloseRequested;
+        this.CloseRequested += RequestClose;
 
         UpdateProject();
 
@@ -144,13 +150,15 @@ public partial class TemplateCreator : Window
         _duplicateButton = GetNode<Button>("%DuplicateButton");
 
         _closeButton = GetNode<Button>("%CloseButton");
-        _closeButton.Pressed += OnClose;
+        _closeButton.Pressed += RequestClose;
 
         _heightInput = GetNode<LineEdit>("%Height");
         _heightInput.TextChanged += HeightWidthChange;
+        _heightInput.TextChanged += _ => SetHasUnsavedChanges();
 
         _widthInput = GetNode<LineEdit>("%Width");
         _widthInput.TextChanged += HeightWidthChange;
+        _widthInput.TextChanged += _ => SetHasUnsavedChanges();
 
         _sizeControls = GetNode<HBoxContainer>("%SizeControls");
         _overlayControls = GetNode<HBoxContainer>("%OverlayControls");
@@ -159,11 +167,13 @@ public partial class TemplateCreator : Window
 
         _cardSizes = GetNode<OptionButton>("%StandardSize");
         _cardSizes.ItemSelected += OnStandardSizeChanged;
+        _cardSizes.ItemSelected += _ => SetHasUnsavedChanges();
         InitializeStandardSizes();
         OnStandardSizeChanged(0);
 
         _dataSetSelector = GetNode<OptionButton>("%Dataset");
         _dataSetSelector.ItemSelected += OnDatasetChanged;
+        _dataSetSelector.ItemSelected += _ => SetHasUnsavedChanges();
         InitializeDataSets();
 
         _pageControl = GetNode<PageControl>("%PageControl");
@@ -171,16 +181,24 @@ public partial class TemplateCreator : Window
         _pageControl.ItemSelected += ChangePage;
     }
 
-    private void OnClose()
+    private void RequestClose()
     {
-        // Show save confirmation dialog
+        if (!_hasUnsavedChanges)
+        {
+            Closed?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         _saveBeforeCloseDialog.PopupCentered();
     }
 
-    private void OnCloseRequested()
+    /// <summary>Flags the current template as having unsaved edits.</summary>
+    private void SetHasUnsavedChanges()
     {
-        // When user clicks X button, show save confirmation instead of closing immediately
-        _saveBeforeCloseDialog.PopupCentered();
+        if (CurrentTemplate == null)
+            return;
+
+        _hasUnsavedChanges = true;
     }
 
     private void InitializeSaveBeforeCloseDialog()
@@ -261,6 +279,18 @@ public partial class TemplateCreator : Window
     }
 
     private void MapTemplate()
+    {
+        try
+        {
+            MapTemplateInternal();
+        }
+        finally
+        {
+            _hasUnsavedChanges = false;
+        }
+    }
+
+    private void MapTemplateInternal()
     {
         if (CurrentTemplate == null)
         {
@@ -371,6 +401,10 @@ public partial class TemplateCreator : Window
         if (CurrentTemplate == null)
             return;
 
+        CurrentTemplate.SizeTemplate = _curSizeType;
+        CurrentTemplate.Width = _curWidth;
+        CurrentTemplate.Height = _curHeight;
+
         CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(
             _hierarchicalElements
         );
@@ -378,6 +412,8 @@ public partial class TemplateCreator : Window
         ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject);
 
         EventBus.Instance.Publish<ProjectChangedEvent>();
+
+        _hasUnsavedChanges = false;
     }
 
     private ScrollBar _previewHScroll;
@@ -482,6 +518,8 @@ public partial class TemplateCreator : Window
         if (_textureContext.ParentSize.X == 0 || _textureContext.ParentSize.Y == 0)
             return;
 
+        SetHasUnsavedChanges();
+
         var m = _boundsRect.GetBounds();
 
         int w = (int)_textureContext.ParentSize.X - m.l - m.r;
@@ -581,6 +619,7 @@ public partial class TemplateCreator : Window
         ClearParameterBox();
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
         _updateRequired = true;
     }
 
@@ -590,6 +629,7 @@ public partial class TemplateCreator : Window
             return;
         var ti = _elementTree.GetSelected();
         ti.SetEditable(0, true);
+        SetHasUnsavedChanges();
     }
 
     private void DuplicateCurrentElement()
@@ -656,6 +696,7 @@ public partial class TemplateCreator : Window
         _elementTree.SetSelected(ni, 0);
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
     }
 
     #endregion
@@ -741,6 +782,7 @@ public partial class TemplateCreator : Window
         _elementTree.SetSelected(ni, 0);
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
     }
 
     /// <summary>
@@ -830,6 +872,7 @@ public partial class TemplateCreator : Window
 
     private void OnTextureUpdate(object sender, EventArgs e)
     {
+        SetHasUnsavedChanges();
         UpdateTexture(true, false);
     }
 
@@ -1111,13 +1154,16 @@ public partial class TemplateCreator : Window
     private void InitializeDataSets()
     {
         _dataSetSelector.Clear();
+        _dataSetRefs.Clear();
         _dataSetSelector.AddItem("(none)", 0);
+        _dataSetRefs.Add(SnowportId.Empty);
 
         var i = 1;
 
-        foreach (var d in ProjectService.Instance.CurrentProject.Datasets)
+        foreach (var d in ProjectService.Instance.CurrentProject.Datasets.Values.Where(v => !v.Deleted))
         {
-            _dataSetSelector.AddItem(d.Key, i);
+            _dataSetSelector.AddItem(d.Name, i);
+            _dataSetRefs.Add(d.DatasetRef);
             i++;
         }
 
@@ -1476,6 +1522,7 @@ public partial class TemplateCreator : Window
         _elementTree.SetSelected(newItem, 0);
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
         _updateRequired = true;
     }
 
@@ -1719,12 +1766,11 @@ public partial class TemplateCreator : Window
             _textureContext.DataSet = null;
             _textureContext.CurrentRowName = string.Empty;
             _pageControl.Hide();
-            CurrentTemplate.DataSet = string.Empty;
+            CurrentTemplate.DataSet = SnowportId.Empty;
         }
-        else
+        else if (index < _dataSetRefs.Count)
         {
-            var n = _dataSetSelector.GetItemText((int)index);
-            CurrentTemplate.DataSet = n;
+            CurrentTemplate.DataSet = _dataSetRefs[(int)index];
         }
 
         UpdateTextureContext(CurrentTemplate.DataSet);
@@ -1732,12 +1778,13 @@ public partial class TemplateCreator : Window
         _updateRequired = true;
     }
 
-    private void UpdateTextureContext(string datasetName)
+    private void UpdateTextureContext(SnowportId datasetRef)
     {
-        if (ProjectService.Instance.CurrentProject.Datasets.ContainsKey(datasetName))
+        var dataset = ProjectService.Instance.GetDataSet(datasetRef);
+        if (dataset != null)
         {
-            CurrentTemplate.DataSet = datasetName;
-            _textureContext.DataSet = ProjectService.Instance.CurrentProject.Datasets[datasetName];
+            CurrentTemplate.DataSet = datasetRef;
+            _textureContext.DataSet = dataset;
             _textureContext.CurrentRowName =
                 _textureContext.DataSet.Rows.Count > 0
                     ? _textureContext.DataSet.Rows.First().Key
@@ -1747,10 +1794,9 @@ public partial class TemplateCreator : Window
 
     private void MapDataset()
     {
-        var datasetName = CurrentTemplate.DataSet;
-        var datasets = ProjectService.Instance.CurrentProject.Datasets;
+        var datasetRef = CurrentTemplate.DataSet;
 
-        if (string.IsNullOrEmpty(datasetName) || !datasets.ContainsKey(datasetName))
+        if (datasetRef == SnowportId.Empty || ProjectService.Instance.GetDataSet(datasetRef) == null)
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRowName = string.Empty;
@@ -1762,9 +1808,9 @@ public partial class TemplateCreator : Window
 
         int index = 0;
 
-        for (var i = 0; i < _dataSetSelector.GetItemCount(); i++)
+        for (var i = 0; i < _dataSetRefs.Count; i++)
         {
-            if (_dataSetSelector.GetItemText(i) == datasetName)
+            if (_dataSetRefs[i] == datasetRef)
             {
                 index = i;
                 break;
@@ -1773,7 +1819,7 @@ public partial class TemplateCreator : Window
 
         _dataSetSelector.Select(index);
 
-        UpdateTextureContext(datasetName);
+        UpdateTextureContext(datasetRef);
 
         _pageControl.SetItemLabels(_textureContext.DataSet.Rows.Select(x => x.Key).ToArray());
         _pageControl.Show();

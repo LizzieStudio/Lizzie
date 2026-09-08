@@ -5,6 +5,16 @@ using Godot;
 
 public class DataSet
 {
+    public SnowportId DatasetRef { get; set; }
+
+    /// <summary>
+    /// Reversible soft-delete flag.
+    /// </summary>
+    public bool Deleted { get; set; }
+
+    /// <summary>The id of the last event that updated this dataset.</summary>
+    public SnowportId LastUpdateId { get; set; }
+
     public string Name { get; set; }
 
     //Columns except Name and Qty
@@ -59,9 +69,14 @@ public class DataSet
         return clonedDataSet;
     }
 
+    public string SheetKey()
+    {
+        return $"{DatasetRef.Value:X16}{LastUpdateId.Value:X16}";
+    }
+
     public static DataSet TestDataSet()
     {
-        var ds = new DataSet();
+        var ds = new DataSet { DatasetRef = Snowport.Clock.Create(), Name = "Test Data" };
         var c = new List<string> { "Title", "Cost", "Image", "Effect" };
 
         var r1 = new DataRow

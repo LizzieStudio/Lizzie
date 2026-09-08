@@ -117,10 +117,16 @@ public partial class ProjectService : Node
     {
         if (string.IsNullOrEmpty(json))
             return null;
-        var project = JsonSerializer.Deserialize<Project>(json, LizzieJson.Options);
-        project?.FixDatasetName();
-
-        return project;
+        try
+        {
+            return JsonSerializer.Deserialize<Project>(json, LizzieJson.Options);
+        }
+        catch (Exception ex)
+        {
+            // The project will fail to load whenever we introduce breaking changes on the format.
+            GD.PrintErr($"Failed to deserialize project: {ex.Message}");
+            return null;
+        }
     }
 
     public string SerializeDataSet(DataSet dataset)
@@ -142,10 +148,18 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || dataset == null)
             return;
-        CurrentProject.Datasets.TryAdd(dataset.Name, dataset);
-        CurrentProject.Datasets[dataset.Name] = dataset;
-        EventBus.Instance.Publish(
-            new DataSetChangedEvent { DataSet = dataset, DataSetName = dataset.Name }
+        if (dataset.DatasetRef == SnowportId.Empty)
+            dataset.DatasetRef = Snowport.Clock.Create();
+        CurrentProject.Datasets[dataset.DatasetRef] = dataset;
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdateDataSetEffect
+                {
+                    Id = dataset.DatasetRef,
+                    DataSet = dataset,
+                }
+            )
         );
     }
 
@@ -228,13 +242,13 @@ public partial class ProjectService : Node
         }
     }
 
-    public DataSet GetDataSetByName(string name)
+    public DataSet GetDataSet(SnowportId datasetRef)
     {
-        if (string.IsNullOrWhiteSpace(name) || CurrentProject == null)
+        if (datasetRef == SnowportId.Empty || CurrentProject == null)
             return null;
-        if (CurrentProject.Datasets == null)
-            return null;
-        return CurrentProject.Datasets.GetValueOrDefault(name);
+        if (CurrentProject.Datasets.TryGetValue(datasetRef, out var d) && !d.Deleted)
+            return d;
+        return null;
     }
 
     public Template GetTemplate(SnowportId templateRef)
