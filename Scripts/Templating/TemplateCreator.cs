@@ -261,6 +261,15 @@ public partial class TemplateCreator : Window
 
     private void MapTemplate()
     {
+        if (CurrentTemplate == null)
+        {
+            _elementTree.Clear();
+            _rootItem = _elementTree.CreateItem();
+            _templateElements.Clear();
+            ClearParameterBox();
+            return;
+        }
+
         //change sizes
         var size = CurrentTemplate.SizeTemplate;
 
@@ -343,7 +352,8 @@ public partial class TemplateCreator : Window
     private void ChangeTemplate(long index)
     {
         string name = _templateNameSelector.GetItemText((int)index);
-        UpdateTemplate(CurrentTemplate);
+        if (CurrentTemplate != null)
+            UpdateTemplate(CurrentTemplate);
 
         if (Templates.ContainsKey(name))
         {
@@ -354,6 +364,9 @@ public partial class TemplateCreator : Window
 
     private void SaveTemplate()
     {
+        if (CurrentTemplate == null)
+            return;
+
         CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(
             _hierarchicalElements
         );
@@ -1169,7 +1182,8 @@ public partial class TemplateCreator : Window
     private void OnNewTemplateOkPressed()
     {
         //save current template
-        UpdateTemplate(CurrentTemplate);
+        if (CurrentTemplate != null)
+            UpdateTemplate(CurrentTemplate);
 
         var t = new Template { Name = _newTemplateName.Text, SizeTemplate = _newTemplateSize.Text };
 
@@ -1237,6 +1251,8 @@ public partial class TemplateCreator : Window
 
         _newTemplateHeight.Text = (h * conversion).ToString("f1");
         _newTemplateWidth.Text = (w * conversion).ToString("f1");
+
+        UpdateNewTemplateOkButton();
 
         HeightWidthChange(string.Empty);
     }
@@ -1315,12 +1331,19 @@ public partial class TemplateCreator : Window
             _templateNameSelector.AddItem(kv.Key);
         }
 
+        InitializeDataSets();
+
+        if (_templateNameSelector.GetItemCount() == 0)
+        {
+            CurrentTemplate = null;
+            return;
+        }
+
         _templateNameSelector.Select(0);
         CurrentTemplate = ProjectService.Instance.CurrentProject.Templates[
             _templateNameSelector.GetItemText(0)
         ];
 
-        InitializeDataSets();
         MapDataset();
     }
 
@@ -1725,17 +1748,33 @@ public partial class TemplateCreator : Window
         {
             CurrentTemplate.DataSet = datasetName;
             _textureContext.DataSet = ProjectService.Instance.CurrentProject.Datasets[datasetName];
-            _textureContext.CurrentRowName = _textureContext.DataSet.Rows.First().Key;
+            _textureContext.CurrentRowName =
+                _textureContext.DataSet.Rows.Count > 0
+                    ? _textureContext.DataSet.Rows.First().Key
+                    : string.Empty;
         }
     }
 
     private void MapDataset()
     {
+        var datasetName = CurrentTemplate.DataSet;
+        var datasets = ProjectService.Instance.CurrentProject.Datasets;
+
+        if (string.IsNullOrEmpty(datasetName) || !datasets.ContainsKey(datasetName))
+        {
+            _textureContext.DataSet = null;
+            _textureContext.CurrentRowName = string.Empty;
+            _dataSetSelector.Select(0);
+            _pageControl.Hide();
+            _updateRequired = true;
+            return;
+        }
+
         int index = 0;
 
         for (var i = 0; i < _dataSetSelector.GetItemCount(); i++)
         {
-            if (_dataSetSelector.GetItemText(i) == CurrentTemplate.DataSet)
+            if (_dataSetSelector.GetItemText(i) == datasetName)
             {
                 index = i;
                 break;
@@ -1744,7 +1783,7 @@ public partial class TemplateCreator : Window
 
         _dataSetSelector.Select(index);
 
-        UpdateTextureContext(CurrentTemplate.DataSet);
+        UpdateTextureContext(datasetName);
 
         _pageControl.SetItemLabels(_textureContext.DataSet.Rows.Select(x => x.Key).ToArray());
         _pageControl.Show();

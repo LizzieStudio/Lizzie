@@ -9,18 +9,18 @@ public partial class DatasetEditor : Window
     private DataSet _currentDataSet;
 
     private VBoxContainer _mainContainer;
-    private HBoxContainer _toolbarContainer;
     private Button _deleteButton;
     private Button _saveButton;
     private Button _cancelButton;
     private Button _newButton;
     private OptionButton _datasetList;
     private Button _linkButton;
+    private Button _addColumnButton;
+    private Button _deleteColumnButton;
 
     private HBoxContainer _headerContainer;
     private ScrollContainer _dataScrollContainer;
     private VBoxContainer _dataContainer;
-    private Panel _toolSpacer;
 
     private List<float> _columnWidths = new();
     private List<CheckBox> _rowCheckboxes = new();
@@ -64,6 +64,15 @@ public partial class DatasetEditor : Window
 
         _deleteButton = GetNode<Button>("%DeleteRow");
         _deleteButton.Pressed += OnDeleteButtonPressed;
+
+        _addColumnButton = GetNode<Button>("%AddColumn");
+        _addColumnButton.Pressed += OnAddColumnPressed;
+
+        _deleteColumnButton = GetNode<Button>("%DeleteColumn");
+        _deleteColumnButton.Pressed += OnDeleteColumnPressed;
+
+        _linkButton = GetNode<Button>("%Link");
+        _linkButton.Pressed += OnImportPressed;
 
         _saveButton = GetNode<Button>("%Save");
         _saveButton.Pressed += SaveDataSet;
@@ -193,6 +202,24 @@ public partial class DatasetEditor : Window
         if (_currentDataSet == null)
             return;
 
+        CommitGridToDataSet();
+
+        if (_project != null)
+            ProjectService.Instance.SaveProject(_project);
+
+        GD.Print("Dataset saved successfully");
+
+        EventBus.Instance.Publish<DataSetChangedEvent>(
+            new DataSetChangedEvent { DataSetName = _currentDataSet.Name }
+        );
+        CloseDialog();
+    }
+
+    private void CommitGridToDataSet()
+    {
+        if (_currentDataSet == null)
+            return;
+
         // Update column headers from HeaderCell controls
         _currentDataSet.Columns.Clear();
         var headerChildren = _headerContainer.GetChildren();
@@ -261,16 +288,123 @@ public partial class DatasetEditor : Window
                 }
             }
         }
+    }
 
-        // Refresh the display to show updated data
-        //MapDataSet(_currentDataSet);
+    private void OnAddColumnPressed()
+    {
+        if (_currentDataSet == null)
+            return;
 
-        GD.Print("Dataset saved successfully");
+        CommitGridToDataSet();
 
-        EventBus.Instance.Publish<DataSetChangedEvent>(
-            new DataSetChangedEvent { DataSetName = _currentDataSet.Name }
-        );
-        CloseDialog();
+        _currentDataSet.Columns.Add($"Column {_currentDataSet.Columns.Count + 1}");
+
+        foreach (var row in _currentDataSet.Rows.Values)
+        {
+            while (row.Data.Count < _currentDataSet.Columns.Count)
+                row.Data.Add(string.Empty);
+        }
+
+        MapDataSet(_currentDataSet);
+    }
+
+    private void OnDeleteColumnPressed()
+    {
+        if (_currentDataSet == null || _currentDataSet.Columns.Count == 0)
+            return;
+
+        CommitGridToDataSet();
+
+        int lastIndex = _currentDataSet.Columns.Count - 1;
+        _currentDataSet.Columns.RemoveAt(lastIndex);
+
+        foreach (var row in _currentDataSet.Rows.Values)
+        {
+            if (row.Data.Count > lastIndex)
+                row.Data.RemoveAt(lastIndex);
+        }
+
+        MapDataSet(_currentDataSet);
+    }
+
+    private void OnImportPressed()
+    {
+        if (_currentDataSet == null)
+            return;
+
+        var dialog = new FileDialog
+        {
+            FileMode = FileDialog.FileModeEnum.OpenFile,
+            Access = FileDialog.AccessEnum.Filesystem,
+            Title = "Import CSV",
+            Filters = new[] { "*.csv ; CSV Files", "*.txt ; Text Files" },
+            Unresizable = false,
+        };
+
+        dialog.FileSelected += path =>
+        {
+            ImportCsv(path);
+            dialog.QueueFree();
+        };
+        dialog.Canceled += dialog.QueueFree;
+
+        AddChild(dialog);
+        dialog.PopupCentered(new Vector2I(700, 450));
+    }
+
+    private void ImportCsv(string path)
+    {
+        if (_currentDataSet == null)
+            return;
+
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+        if (file == null)
+        {
+            GD.PrintErr($"Could not open CSV file '{path}': {FileAccess.GetOpenError()}");
+            return;
+        }
+
+        var lines = new List<string[]>();
+        while (!file.EofReached())
+        {
+            var cells = file.GetCsvLine();
+            if (cells.Length == 1 && string.IsNullOrEmpty(cells[0]))
+                continue;
+            lines.Add(cells);
+        }
+
+        if (lines.Count == 0)
+        {
+            GD.PrintErr($"CSV file '{path}' contained no data.");
+            return;
+        }
+
+        var header = lines[0];
+        _currentDataSet.Columns = header.ToList();
+        _currentDataSet.Rows.Clear();
+        _nextRowId = 0;
+
+        for (int i = 1; i < lines.Count; i++)
+        {
+            var rowKey = _nextRowId.ToString();
+            _nextRowId++;
+            _currentDataSet.Rows[rowKey] = new DataRow
+            {
+                Data = NormalizeRowWidth(lines[i], header.Length),
+            };
+        }
+
+        MapDataSet(_currentDataSet);
+    }
+
+    private static List<string> NormalizeRowWidth(string[] cells, int width)
+    {
+        var list = new List<string>(cells);
+        while (list.Count < width)
+            list.Add(string.Empty);
+        if (list.Count > width)
+            list.RemoveRange(width, list.Count - width);
+        return list;
     }
 
     private void MapDataSet(DataSet ds)
@@ -354,40 +488,20 @@ public partial class DatasetEditor : Window
             checkboxCell.AddChild(checkbox);
             rowContainer.AddChild(checkboxCell);
 
-            for (int i = 0; i < kv.Value.Data.Count; i++)
+            for (int i = 0; i < ds.Columns.Count; i++)
             {
                 var cell = new LineEdit();
-                cell.Text = kv.Value.Data[i];
+                cell.Text = i < kv.Value.Data.Count ? kv.Value.Data[i] : string.Empty;
                 cell.CustomMinimumSize = new Vector2(_columnWidths[i], RowHeight);
                 cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
                 cell.SizeFlagsVertical = Control.SizeFlags.Fill;
 
                 // We are changing this to just save when the user clicks the button rather than as we go.
 
-                // Capture the row key and column index in the lambda
-                //var rowKey = kv.Key;
-                //var colIndex = i;
-                //cell.TextChanged += (newText) => OnCellTextChanged(newText, rowKey, colIndex);
-
                 rowContainer.AddChild(cell);
             }
 
             _dataContainer.AddChild(rowContainer);
-        }
-    }
-
-    private void OnCellTextChanged(string newText, string rowKey, int columnIndex)
-    {
-        if (_currentDataSet == null)
-            return;
-
-        // Update the dataset with the new value
-        if (_currentDataSet.Rows.TryGetValue(rowKey, out var dataRow))
-        {
-            if (columnIndex >= 0 && columnIndex < dataRow.Data.Count)
-            {
-                dataRow.Data[columnIndex] = newText;
-            }
         }
     }
 
@@ -415,7 +529,7 @@ public partial class DatasetEditor : Window
 
             // Store column index in metadata for easy retrieval
             cell.SetMeta("column_index", i);
-            cell.TextChanged += OnNewRowTextChanged;
+            cell.TextSubmitted += _ => CommitNewRow();
 
             _newRowContainer.AddChild(cell);
         }
@@ -423,12 +537,11 @@ public partial class DatasetEditor : Window
         _dataContainer.AddChild(_newRowContainer);
     }
 
-    private void OnNewRowTextChanged(string newText)
+    private void CommitNewRow()
     {
-        if (_currentDataSet == null || string.IsNullOrWhiteSpace(newText))
+        if (_currentDataSet == null || _newRowContainer == null)
             return;
 
-        // Check if any cell in the new row has data
         bool hasData = false;
         var rowData = new List<string>();
 
@@ -444,19 +557,14 @@ public partial class DatasetEditor : Window
             }
         }
 
-        if (hasData)
-        {
-            // Add the row to the dataset
-            var rowKey = _nextRowId.ToString();
-            _nextRowId++;
+        if (!hasData)
+            return;
 
-            var newRow = new DataRow();
-            newRow.Data = rowData;
-            _currentDataSet.Rows[rowKey] = newRow;
+        var rowKey = _nextRowId.ToString();
+        _nextRowId++;
+        _currentDataSet.Rows[rowKey] = new DataRow { Data = rowData };
 
-            // Refresh the display to show the new row and create a new blank row
-            MapDataSet(_currentDataSet);
-        }
+        MapDataSet(_currentDataSet);
     }
 
     private void OnColumnResized(int columnIndex, float newWidth)
