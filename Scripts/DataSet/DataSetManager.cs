@@ -44,14 +44,7 @@ public partial class DataSetManager : Node
 
         return project
             .Datasets.Values.Where(d => !d.Deleted)
-            .Select(d =>
-                (Effect)
-                    new UpdateDataSetEffect
-                    {
-                        Id = d.DatasetRef,
-                        DataSet = d,
-                    }
-            )
+            .Select(d => (Effect)new UpdateDataSetEffect { Id = d.DatasetRef, DataSet = d })
             .ToArray();
     }
 

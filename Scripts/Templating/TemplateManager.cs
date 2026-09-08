@@ -46,14 +46,7 @@ public partial class TemplateManager : Node
 
         return project
             .Templates.Values.Where(t => !t.Deleted)
-            .Select(t =>
-                (Effect)
-                    new UpdateTemplateEffect
-                    {
-                        Id = t.TemplateRef,
-                        Template = t,
-                    }
-            )
+            .Select(t => (Effect)new UpdateTemplateEffect { Id = t.TemplateRef, Template = t })
             .ToArray();
     }
 

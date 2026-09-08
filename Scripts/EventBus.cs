@@ -287,9 +287,7 @@ public class CommandExecutedEvent : IEvent
     public bool Success { get; set; }
 }
 
-public class ProjectChangedEvent : IEvent
-{
-}
+public class ProjectChangedEvent : IEvent { }
 
 public class GameStateChangedEvent : IEvent { }
 

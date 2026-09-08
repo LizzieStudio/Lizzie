@@ -1160,7 +1160,9 @@ public partial class TemplateCreator : Window
 
         var i = 1;
 
-        foreach (var d in ProjectService.Instance.CurrentProject.Datasets.Values.Where(v => !v.Deleted))
+        foreach (
+            var d in ProjectService.Instance.CurrentProject.Datasets.Values.Where(v => !v.Deleted)
+        )
         {
             _dataSetSelector.AddItem(d.Name, i);
             _dataSetRefs.Add(d.DatasetRef);
@@ -1796,7 +1798,10 @@ public partial class TemplateCreator : Window
     {
         var datasetRef = CurrentTemplate.DataSet;
 
-        if (datasetRef == SnowportId.Empty || ProjectService.Instance.GetDataSet(datasetRef) == null)
+        if (
+            datasetRef == SnowportId.Empty
+            || ProjectService.Instance.GetDataSet(datasetRef) == null
+        )
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRowName = string.Empty;

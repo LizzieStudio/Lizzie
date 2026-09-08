@@ -65,6 +65,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     /// <summary>SnowportId for each front template, index-aligned with _frontTemplatePicker.</summary>
     private readonly List<SnowportId> _frontTemplateRefs = new();
+
     /// <summary>SnowportId for each back template, index-aligned with _backTemplatePicker.</summary>
     private readonly List<SnowportId> _backTemplateRefs = new();
     private OptionButton _datasetPicker;

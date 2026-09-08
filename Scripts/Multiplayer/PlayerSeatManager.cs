@@ -194,9 +194,15 @@ public partial class PlayerSeatManager : Node
             };
             changed = true;
 
-            if (up.Id != _localPlayerId && localSeatBefore >= 0 && GetSeatBySource(localSource) == -2)
+            if (
+                up.Id != _localPlayerId
+                && localSeatBefore >= 0
+                && GetSeatBySource(localSource) == -2
+            )
             {
-                GD.Print("[PlayerSeatManager] Displaced from seat by a newer claim – prompting again");
+                GD.Print(
+                    "[PlayerSeatManager] Displaced from seat by a newer claim – prompting again"
+                );
                 EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
             }
         }

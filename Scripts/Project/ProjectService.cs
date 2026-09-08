@@ -154,11 +154,7 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
-                new UpdateDataSetEffect
-                {
-                    Id = dataset.DatasetRef,
-                    DataSet = dataset,
-                }
+                new UpdateDataSetEffect { Id = dataset.DatasetRef, DataSet = dataset }
             )
         );
     }
@@ -173,11 +169,7 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
-                new UpdateTemplateEffect
-                {
-                    Id = template.TemplateRef,
-                    Template = template,
-                }
+                new UpdateTemplateEffect { Id = template.TemplateRef, Template = template }
             )
         );
     }

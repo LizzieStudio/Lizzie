@@ -141,7 +141,10 @@ public partial class MultiplayerDialog : Window
             if (settings != null && seat >= 0 && seat < settings.Players.Count)
             {
                 var p = settings.Players[seat];
-                _playerList.SetItemCustomFgColor(idx, new Color(p.ColorR, p.ColorG, p.ColorB, p.ColorA));
+                _playerList.SetItemCustomFgColor(
+                    idx,
+                    new Color(p.ColorR, p.ColorG, p.ColorB, p.ColorA)
+                );
             }
         }
     }

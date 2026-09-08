@@ -31,10 +31,7 @@ public partial class GameObjects : Node
     /// Transforms that arrived before their component's create effect. Drained
     /// when the component is spawned. Keyed by component reference.
     /// </summary>
-    private readonly Dictionary<
-        SnowportId,
-        List<PendingTransform>
-    > _pendingTransforms = new();
+    private readonly Dictionary<SnowportId, List<PendingTransform>> _pendingTransforms = new();
 
     /// <summary>
     /// Components that have been deleted.
