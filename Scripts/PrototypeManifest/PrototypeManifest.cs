@@ -89,22 +89,22 @@ public partial class PrototypeManifest : Window
 
     private void RefreshSelectedPrototype(long[] ids)
     {
-        foreach (var raw in ids)
+        SnowportId selectedRef = SnowportId.Empty;
+        var selectedItem = _prototypeTree.GetSelected();
+        if (selectedItem != null)
+            selectedRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
+
+        LoadPrototypes(_prototypeCounts);
+
+        if (selectedRef != SnowportId.Empty)
         {
-            var id = SnowportId.FromLong(raw);
-            if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(id, out var p))
-                continue;
-
-            SelectedPrototype = p;
-
-            var selectedItem = _prototypeTree.GetSelected();
-            if (selectedItem == null)
-                continue;
-
-            var prototypeRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
-            if (prototypeRef == SelectedPrototype.Id)
+            for (var item = _root.GetFirstChild(); item != null; item = item.GetNext())
             {
-                selectedItem.SetText(0, p.Name);
+                if (new SnowportId(item.GetMetadata(0).AsUInt64()) == selectedRef)
+                {
+                    item.Select(0);
+                    break;
+                }
             }
         }
     }
