@@ -72,6 +72,12 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
         this.ID = ID;
     }
 
+    /// <summary>The raw id reinterpreted as a signed long. Necessary for Godot Signals</summary>
+    public long AsLong => unchecked((long)ID);
+
+    /// <summary>Rebuilds a SnowportId from the signed long produced by <see cref="AsLong"/>.</summary>
+    public static SnowportId FromLong(long value) => new(unchecked((ulong)value));
+
     public ulong logicClock
     {
         get

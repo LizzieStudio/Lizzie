@@ -620,7 +620,7 @@ public partial class VcToken : VisualComponentBase
         var ds = curProj.GetDataset(_datasetRef);
 
         var bt = curProj.GetTemplate(_backTemplateRef);
-        if (bt is null || bt.TemplateRef == SnowportId.Empty)
+        if (bt is null || bt.Id == SnowportId.Empty)
             bt = null;
 
         if (ft is null || ds is null)

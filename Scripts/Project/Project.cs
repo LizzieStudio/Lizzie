@@ -7,8 +7,7 @@ using TTSS.Scripts.Templating;
 
 public class Project
 {
-    public string Name { get; set; }
-    public int Version { get; set; }
+    public string Filename { get; set; }
     public Dictionary<SnowportId, Template> Templates { get; set; } = new();
     public Dictionary<SnowportId, DataSet> Datasets { get; set; } = new();
     public Dictionary<SnowportId, Prototype> Prototypes { get; set; } = new();

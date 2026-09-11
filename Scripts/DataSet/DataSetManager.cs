@@ -1,17 +1,17 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
 /// <summary>
-/// Tracks <see cref="UpdateDataSetEffect"/>s as a dataset collection.
+/// Tracks dataset definitions as a last-write-wins register.
 /// </summary>
-public partial class DataSetManager : Node
+public partial class DataSetManager : ReplicatedStore<DataSet>
 {
     private static DataSetManager _instance;
     public static DataSetManager Instance => _instance;
 
     [Signal]
-    public delegate void DataSetsChangedEventHandler();
+    public delegate void DataSetsChangedEventHandler(long[] ids);
 
     public override void _Ready()
     {
@@ -35,50 +35,9 @@ public partial class DataSetManager : Node
             _instance = null;
     }
 
-    /// <summary>Captures the live datasets as upsert effects for a late joiner.</summary>
-    public Effect[] GenerateCatchupEffects()
-    {
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project == null)
-            return Array.Empty<Effect>();
+    protected override IDictionary<SnowportId, DataSet> Store =>
+        ProjectService.Instance?.CurrentProject?.Datasets;
 
-        return project
-            .Datasets.Values.Where(d => !d.Deleted)
-            .Select(d => (Effect)new UpdateDataSetEffect { Id = d.DatasetRef, DataSet = d })
-            .ToArray();
-    }
-
-    private void OnEventApplied(TableEvent e)
-    {
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project == null)
-            return;
-
-        bool changed = false;
-
-        foreach (var effect in e.Effects)
-        {
-            if (effect is not UpdateDataSetEffect ud || ud.DataSet == null)
-                continue;
-
-            if (
-                project.Datasets.TryGetValue(ud.Id, out var current)
-                && e.Id.CompareTo(current.LastUpdateId) < 0
-            )
-                continue;
-
-            var dataset = ud.DataSet;
-            dataset.DatasetRef = ud.Id;
-            dataset.LastUpdateId = e.Id;
-            project.Datasets[ud.Id] = dataset;
-            changed = true;
-        }
-
-        if (!changed)
-            return;
-
-        // Drive local re-render of any components built from these datasets.
-        EventBus.Instance?.Publish<DataSetChangedEvent>();
-        EmitSignal(SignalName.DataSetsChanged);
-    }
+    protected override void NotifyChanged(IReadOnlyList<SnowportId> ids) =>
+        EmitSignal(SignalName.DataSetsChanged, ids.Select(i => i.AsLong).ToArray());
 }

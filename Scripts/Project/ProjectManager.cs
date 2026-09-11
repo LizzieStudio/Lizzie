@@ -52,11 +52,11 @@ public partial class ProjectManager : Panel
 
     public Project CreateTestProject()
     {
-        var p = new Project { Name = "Test Project" };
+        var p = new Project { Filename = "Test Project" };
 
         var t = new Template
         {
-            TemplateRef = Snowport.Clock.Create(),
+            Id = Snowport.Clock.Create(),
             Name = "Issue Face",
             Description = "A face with an issue",
             Height = 350,
@@ -91,10 +91,10 @@ public partial class ProjectManager : Panel
         t.Elements.Add(d1);
         t.Elements.Add(d2);
 
-        p.Templates.Add(t.TemplateRef, t);
+        p.Templates.Add(t.Id, t);
 
         var testDataset = DataSet.TestDataSet();
-        p.Datasets.Add(testDataset.DatasetRef, testDataset);
+        p.Datasets.Add(testDataset.Id, testDataset);
 
         return p;
     }

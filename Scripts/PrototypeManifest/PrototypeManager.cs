@@ -1,18 +1,17 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
 /// <summary>
-/// Tracks <see cref="PrototypeEffect"/>s as a prototype collection.
+/// Tracks prototype definitions as a last-write-wins register.
 /// </summary>
-public partial class PrototypeManager : Node
+public partial class PrototypeManager : ReplicatedStore<Prototype>
 {
     private static PrototypeManager _instance;
     public static PrototypeManager Instance => _instance;
 
     [Signal]
-    public delegate void PrototypesChangedEventHandler();
+    public delegate void PrototypesChangedEventHandler(long[] ids);
 
     public override void _Ready()
     {
@@ -36,52 +35,9 @@ public partial class PrototypeManager : Node
             _instance = null;
     }
 
-    /// <summary>Captures the live prototypes as upsert effects for a late joiner.</summary>
-    public Effect[] GenerateCatchupEffects()
-    {
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project == null)
-            return Array.Empty<Effect>();
+    protected override IDictionary<SnowportId, Prototype> Store =>
+        ProjectService.Instance?.CurrentProject?.Prototypes;
 
-        return project
-            .Prototypes.Values.Where(p => !p.Deleted)
-            .Select(p => (Effect)new PrototypeEffect { Id = p.PrototypeRef, Prototype = p })
-            .ToArray();
-    }
-
-    private void OnEventApplied(TableEvent e)
-    {
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project == null)
-            return;
-
-        var changedIds = new List<SnowportId>();
-
-        foreach (var effect in e.Effects)
-        {
-            if (effect is not PrototypeEffect p || p.Prototype == null)
-                continue;
-
-            if (
-                project.Prototypes.TryGetValue(p.Id, out var current)
-                && e.Id.CompareTo(current.LastUpdateId) < 0
-            )
-                continue;
-
-            var prototype = p.Prototype;
-            prototype.PrototypeRef = p.Id;
-            prototype.LastUpdateId = e.Id;
-            project.Prototypes[p.Id] = prototype;
-            changedIds.Add(p.Id);
-        }
-
-        if (changedIds.Count == 0)
-            return;
-
-        // Drive local re-render of any components built from these prototypes.
-        foreach (var id in changedIds)
-            EventBus.Instance?.Publish(new PrototypeChangedEvent { PrototypeId = id });
-
-        EmitSignal(SignalName.PrototypesChanged);
-    }
+    protected override void NotifyChanged(IReadOnlyList<SnowportId> ids) =>
+        EmitSignal(SignalName.PrototypesChanged, ids.Select(i => i.AsLong).ToArray());
 }

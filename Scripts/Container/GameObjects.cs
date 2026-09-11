@@ -56,10 +56,14 @@ public partial class GameObjects : Node
         AddChild(_table);
 
         EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
-        EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
-        EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
-        EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
+
+        if (DataSetManager.Instance != null)
+            DataSetManager.Instance.DataSetsChanged += OnDataSetsChanged;
+        if (TemplateManager.Instance != null)
+            TemplateManager.Instance.TemplatesChanged += OnTemplatesChanged;
+        if (PrototypeManager.Instance != null)
+            PrototypeManager.Instance.PrototypesChanged += OnPrototypesChanged;
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
@@ -85,7 +89,7 @@ public partial class GameObjects : Node
         _modalOpen = true;
     }
 
-    private void OnDataSetChanged(DataSetChangedEvent obj)
+    private void OnDataSetsChanged(long[] ids)
     {
         //naive approach for now
         foreach (var c in ComponentNodes)
@@ -110,7 +114,7 @@ public partial class GameObjects : Node
         RetryPendingSpawns();
     }
 
-    private void OnTemplateChanged(TemplateChangedEvent obj)
+    private void OnTemplatesChanged(long[] ids)
     {
         //naive approach for now
         foreach (var c in ComponentNodes)
@@ -122,11 +126,15 @@ public partial class GameObjects : Node
         }
     }
 
-    private void OnPrototypeChanged(PrototypeChangedEvent e)
+    private void OnPrototypesChanged(long[] ids)
     {
-        foreach (var c in ComponentNodes)
-            if (c is VisualComponentBase vc && vc.PrototypeRef == e.PrototypeId)
-                vc.ProcessCommand(VisualCommand.Refresh);
+        foreach (var raw in ids)
+        {
+            var prototypeId = SnowportId.FromLong(raw);
+            foreach (var c in ComponentNodes)
+                if (c is VisualComponentBase vc && vc.PrototypeRef == prototypeId)
+                    vc.ProcessCommand(VisualCommand.Refresh);
+        }
 
         RetryPendingSpawns();
     }

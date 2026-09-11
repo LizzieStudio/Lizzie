@@ -81,7 +81,7 @@ public partial class ProjectService : Node
     public bool SaveProject(Project project)
     {
         using var saveFile = FileAccess.Open(
-            $"user://{project.Name}.proj",
+            $"user://{project.Filename}.proj",
             FileAccess.ModeFlags.Write
         );
 
@@ -148,13 +148,13 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || dataset == null)
             return;
-        if (dataset.DatasetRef == SnowportId.Empty)
-            dataset.DatasetRef = Snowport.Clock.Create();
-        CurrentProject.Datasets[dataset.DatasetRef] = dataset;
+        if (dataset.Id == SnowportId.Empty)
+            dataset.Id = Snowport.Clock.Create();
+        CurrentProject.Datasets[dataset.Id] = dataset;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
-                new UpdateDataSetEffect { Id = dataset.DatasetRef, DataSet = dataset }
+                new UpdateReplicatedEffect<DataSet> { Id = dataset.Id, Payload = dataset }
             )
         );
     }
@@ -163,13 +163,13 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || template == null)
             return;
-        if (template.TemplateRef == SnowportId.Empty)
-            template.TemplateRef = Snowport.Clock.Create();
-        CurrentProject.Templates[template.TemplateRef] = template;
+        if (template.Id == SnowportId.Empty)
+            template.Id = Snowport.Clock.Create();
+        CurrentProject.Templates[template.Id] = template;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
-                new UpdateTemplateEffect { Id = template.TemplateRef, Template = template }
+                new UpdateReplicatedEffect<Template> { Id = template.Id, Payload = template }
             )
         );
     }
@@ -178,11 +178,11 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || prototype == null)
             return;
-        CurrentProject.Prototypes[prototype.PrototypeRef] = prototype;
+        CurrentProject.Prototypes[prototype.Id] = prototype;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
-                new PrototypeEffect { Id = prototype.PrototypeRef, Prototype = prototype }
+                new UpdateReplicatedEffect<Prototype> { Id = prototype.Id, Payload = prototype }
             )
         );
     }
@@ -217,7 +217,7 @@ public partial class ProjectService : Node
         {
             var newProto = new Prototype
             {
-                PrototypeRef = args.PrototypeRef,
+                Id = args.PrototypeRef,
                 Parameters = args.Params,
             };
 
@@ -345,7 +345,7 @@ public partial class ProjectService : Node
 
         component.NeverHighlight = true;
 
-        component.PrototypeRef = prototype.PrototypeRef;
+        component.PrototypeRef = prototype.Id;
 
         //if the name is blank in the parameters, set it
         if (
@@ -356,7 +356,7 @@ public partial class ProjectService : Node
             prototype.Parameters.ComponentName = "unbound";
         }
 
-        if (component.Setup(prototype.PrototypeRef, row, textureFactory))
+        if (component.Setup(prototype.Id, row, textureFactory))
         {
             return component;
         }

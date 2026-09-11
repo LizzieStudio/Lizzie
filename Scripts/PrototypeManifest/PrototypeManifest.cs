@@ -51,7 +51,7 @@ public partial class PrototypeManifest : Window
             if (SelectedPrototype != null)
             {
                 EventBus.Instance.Publish(
-                    new EditPrototypeEvent { PrototypeId = SelectedPrototype.PrototypeRef }
+                    new EditPrototypeEvent { PrototypeId = SelectedPrototype.Id }
                 );
             }
         };
@@ -75,7 +75,8 @@ public partial class PrototypeManifest : Window
             Refresh(_prototypeCounts);
         }
 
-        EventBus.Instance.Subscribe<PrototypeChangedEvent>(RefreshSelectedPrototype);
+        if (PrototypeManager.Instance != null)
+            PrototypeManager.Instance.PrototypesChanged += RefreshSelectedPrototype;
     }
 
     public event EventHandler Closed;
@@ -86,23 +87,25 @@ public partial class PrototypeManifest : Window
         Closed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void RefreshSelectedPrototype(PrototypeChangedEvent e)
+    private void RefreshSelectedPrototype(long[] ids)
     {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(e.PrototypeId, out var p)
-        )
-            return;
-
-        SelectedPrototype = p;
-
-        var selectedItem = _prototypeTree.GetSelected();
-        if (selectedItem == null)
-            return;
-
-        var prototypeRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
-        if (prototypeRef == SelectedPrototype.PrototypeRef)
+        foreach (var raw in ids)
         {
-            selectedItem.SetText(0, p.Name);
+            var id = SnowportId.FromLong(raw);
+            if (!ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(id, out var p))
+                continue;
+
+            SelectedPrototype = p;
+
+            var selectedItem = _prototypeTree.GetSelected();
+            if (selectedItem == null)
+                continue;
+
+            var prototypeRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
+            if (prototypeRef == SelectedPrototype.Id)
+            {
+                selectedItem.SetText(0, p.Name);
+            }
         }
     }
 
@@ -173,7 +176,7 @@ public partial class PrototypeManifest : Window
     {
         if (_selectedPrototype != null)
         {
-            SpawnPrototype(_selectedPrototype.PrototypeRef);
+            SpawnPrototype(_selectedPrototype.Id);
         }
     }
 
@@ -187,7 +190,7 @@ public partial class PrototypeManifest : Window
     {
         if (_selectedPrototype != null)
         {
-            DeletePrototype(_selectedPrototype.PrototypeRef);
+            DeletePrototype(_selectedPrototype.Id);
         }
     }
 
@@ -222,7 +225,7 @@ public partial class PrototypeManifest : Window
     {
         if (_selectedPrototype != null)
         {
-            DuplicatePrototype(_selectedPrototype.PrototypeRef);
+            DuplicatePrototype(_selectedPrototype.Id);
         }
     }
 
@@ -257,7 +260,7 @@ public partial class PrototypeManifest : Window
 
         var duplicate = new Prototype
         {
-            PrototypeRef = Snowport.Clock.Create(),
+            Id = Snowport.Clock.Create(),
             Name = newName,
             Parameters = original.Parameters.Clone(),
         };
@@ -327,7 +330,7 @@ public partial class PrototypeManifest : Window
 
             if (
                 prototypeCounts != null
-                && prototypeCounts.TryGetValue(prototype.PrototypeRef, out var count)
+                && prototypeCounts.TryGetValue(prototype.Id, out var count)
             )
             {
                 item.SetText(2, count.ToString());
@@ -338,7 +341,7 @@ public partial class PrototypeManifest : Window
             }
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
-            item.SetMetadata(0, prototype.PrototypeRef.Value);
+            item.SetMetadata(0, prototype.Id.Value);
 
             /*
             item.AddButton(2, pencil);

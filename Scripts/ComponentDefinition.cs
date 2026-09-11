@@ -196,7 +196,7 @@ public partial class ComponentDefinition : Window
 
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                _mapPrototype.PrototypeRef,
+                _mapPrototype.Id,
                 out var prototype
             )
         )
@@ -205,7 +205,6 @@ public partial class ComponentDefinition : Window
         var editResult = _panelDictionary[CurName] as ComponentPanelDialogResult;
         prototype.Parameters = editResult?.GetParams();
         prototype.Name = prototype.Parameters?.ComponentName;
-        prototype.IsDirty = true;
 
         ProjectService.Instance.UpdatePrototype(prototype);
 

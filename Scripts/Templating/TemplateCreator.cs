@@ -1165,7 +1165,7 @@ public partial class TemplateCreator : Window
         )
         {
             _dataSetSelector.AddItem(d.Name, i);
-            _dataSetRefs.Add(d.DatasetRef);
+            _dataSetRefs.Add(d.Id);
             i++;
         }
 
@@ -1238,7 +1238,7 @@ public partial class TemplateCreator : Window
 
         ProjectService.Instance.UpdateTemplate(t);
         _templateNameSelector.AddItem(t.Name);
-        _templateRefs.Add(t.TemplateRef);
+        _templateRefs.Add(t.Id);
         _templateNameSelector.Select(_templateNameSelector.GetItemCount() - 1);
 
         CurrentTemplate = t;
@@ -1274,7 +1274,7 @@ public partial class TemplateCreator : Window
         foreach (var t in Templates.Values.Where(v => !v.Deleted).OrderBy(v => v.Name))
         {
             _templateNameSelector.AddItem(t.Name);
-            _templateRefs.Add(t.TemplateRef);
+            _templateRefs.Add(t.Id);
         }
     }
 

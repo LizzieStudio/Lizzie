@@ -133,7 +133,7 @@ public partial class DatasetEditor : Window
         foreach (var d in _project.Datasets.Values.Where(v => !v.Deleted))
         {
             _datasetList.AddItem(d.Name);
-            _datasetRefs.Add(d.DatasetRef);
+            _datasetRefs.Add(d.Id);
         }
 
         if (_datasetRefs.Count > 0)
@@ -208,7 +208,7 @@ public partial class DatasetEditor : Window
         ProjectService.Instance.UpdateDataSet(ds);
 
         LoadDatasetList();
-        SelectDatasetById(ds.DatasetRef);
+        SelectDatasetById(ds.Id);
     }
 
     public event EventHandler Closed;

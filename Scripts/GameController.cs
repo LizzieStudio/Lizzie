@@ -31,7 +31,7 @@ public partial class GameController : Node3D
 
         ProjectService.Instance.CurrentProject =
             ProjectService.Instance.LoadProject(ProjectService.SampleProjectName)
-            ?? new Project { Name = ProjectService.SampleProjectName };
+            ?? new Project { Filename = ProjectService.SampleProjectName };
         ProjectService.Instance.GameObjects = _mainScene.GameObjects;
 
         PlayerSeatManager.Instance?.EnsureLocalSeat();
@@ -100,7 +100,7 @@ public partial class GameController : Node3D
         {
             ComponentType = prototype.Type,
             Params = prototype.Parameters.Clone(),
-            PrototypeRef = prototype.PrototypeRef,
+            PrototypeRef = prototype.Id,
             PrototypeName = scenePath,
         };
 

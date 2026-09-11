@@ -467,19 +467,19 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void EditFrontTemplate() =>
         EventBus.Instance.Publish(
-            new ShowTemplateEditor { TemplateRef = _frontTemplate?.TemplateRef ?? SnowportId.Empty }
+            new ShowTemplateEditor { TemplateRef = _frontTemplate?.Id ?? SnowportId.Empty }
         );
 
     private void EditBackTemplate() =>
         EventBus.Instance.Publish(
-            new ShowTemplateEditor { TemplateRef = _backTemplate?.TemplateRef ?? SnowportId.Empty }
+            new ShowTemplateEditor { TemplateRef = _backTemplate?.Id ?? SnowportId.Empty }
         );
 
     private void EditDataset() =>
         EventBus.Instance.Publish(
             new ShowDatasetEditor
             {
-                DatasetRef = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty,
+                DatasetRef = _textureContext.DataSet?.Id ?? SnowportId.Empty,
             }
         );
 
@@ -706,15 +706,15 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             case 4:
                 d.Mode = VcToken.TokenBuildMode.Template;
                 if (_frontTemplate != null)
-                    d.FrontTemplate = _frontTemplate.TemplateRef;
+                    d.FrontTemplate = _frontTemplate.Id;
                 if (_backTemplate != null)
-                    d.BackTemplate = _backTemplate.TemplateRef;
-                d.Dataset = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty;
+                    d.BackTemplate = _backTemplate.Id;
+                d.Dataset = _textureContext.DataSet?.Id ?? SnowportId.Empty;
                 if (_textureContext.DataSet != null)
                 {
                     spawnAsDeck = true;
                     DataSet = ProjectService.Instance.GetDataSet(
-                        _textureContext.DataSet.DatasetRef
+                        _textureContext.DataSet.Id
                     );
                     WidthHint = width / 10f;
                     HeightHint = height / 10f;

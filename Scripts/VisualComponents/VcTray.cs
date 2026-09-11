@@ -175,7 +175,7 @@ public partial class VcTray : VisualComponentGroup
             new CreateEffect
             {
                 Id = id,
-                PrototypeRef = _prototype.PrototypeRef,
+                PrototypeRef = _prototype.Id,
                 State = new VcSyncDto
                 {
                     Location = ComponentLocation.Cursor,

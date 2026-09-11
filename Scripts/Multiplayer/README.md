@@ -39,7 +39,7 @@ Synchronizes project-level data across the network.
 *Prototypes are now synced through `EventSynchronizer`.
 
 **How it works:**
-- Listens to EventBus for local changes (DataSetChangedEvent, TemplateChangedEvent)
+- Listens for local changes via the definition-manager signals
 - Sends changes to server via RPC
 - Server broadcasts to all clients
 - Clients apply changes without re-triggering sync events

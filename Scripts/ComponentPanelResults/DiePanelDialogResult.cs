@@ -65,8 +65,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdateQuickSidesVisibility();
 
         //register for events
-        EventBus.Instance.Subscribe<TemplateChangedEvent>(TemplateChanged);
-        EventBus.Instance.Subscribe<DataSetChangedEvent>(DataSetChanged);
+        if (TemplateManager.Instance != null)
+            TemplateManager.Instance.TemplatesChanged += TemplatesChanged;
+        if (DataSetManager.Instance != null)
+            DataSetManager.Instance.DataSetsChanged += DataSetsChanged;
     }
 
     private int _curDie;
@@ -77,12 +79,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void TemplateChanged(TemplateChangedEvent obj)
+    private void TemplatesChanged(long[] ids)
     {
         UpdatePreview();
     }
 
-    private void DataSetChanged(DataSetChangedEvent obj)
+    private void DataSetsChanged(long[] ids)
     {
         UpdatePreview();
     }
@@ -198,7 +200,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private void EditFrontTemplate()
     {
         EventBus.Instance.Publish(
-            new ShowTemplateEditor { TemplateRef = _frontTemplate?.TemplateRef ?? SnowportId.Empty }
+            new ShowTemplateEditor { TemplateRef = _frontTemplate?.Id ?? SnowportId.Empty }
         );
     }
 
@@ -207,7 +209,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         EventBus.Instance.Publish(
             new ShowDatasetEditor
             {
-                DatasetRef = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty,
+                DatasetRef = _textureContext.DataSet?.Id ?? SnowportId.Empty,
             }
         );
     }
@@ -318,13 +320,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
                 if (_frontTemplate != null)
                 {
-                    p.FrontTemplate = _frontTemplate.TemplateRef;
+                    p.FrontTemplate = _frontTemplate.Id;
                 }
 
-                p.Dataset = _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty;
+                p.Dataset = _textureContext.DataSet?.Id ?? SnowportId.Empty;
 
                 DataSet = ProjectService.Instance.GetDataSet(
-                    _textureContext.DataSet?.DatasetRef ?? SnowportId.Empty
+                    _textureContext.DataSet?.Id ?? SnowportId.Empty
                 );
                 MultipleCreateMode = (DataSet != null);
                 WidthHint = dia / 10;

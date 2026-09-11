@@ -9,10 +9,10 @@ using Godot;
 [JsonDerivedType(typeof(CreateEffect), "c")]
 [JsonDerivedType(typeof(DeleteEffect), "d")]
 [JsonDerivedType(typeof(TransformEffect), "t")]
-[JsonDerivedType(typeof(PrototypeEffect), "p")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "p")]
 [JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
-[JsonDerivedType(typeof(UpdateTemplateEffect), "tu")]
-[JsonDerivedType(typeof(UpdateDataSetEffect), "du")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -36,12 +36,13 @@ public class CreateEffect : Effect
 public class DeleteEffect : Effect { }
 
 /// <summary>
-/// Creates, updates, or reversibly deletes a prototype definition.
+/// Creates, updates, or reversibly deletes a replicated definition.
 /// </summary>
-public class PrototypeEffect : Effect
+public class UpdateReplicatedEffect<T> : Effect
+    where T : class, IReplicated
 {
-    [JsonPropertyName("p")]
-    public Prototype Prototype { get; set; }
+    [JsonPropertyName("v")]
+    public T Payload { get; set; }
 }
 
 /// <summary>
@@ -64,24 +65,6 @@ public class UpdatePlayerEffect : Effect
     /// <summary>True once the player has left.</summary>
     [JsonPropertyName("l")]
     public bool HasLeft { get; set; }
-}
-
-/// <summary>
-/// Creates, updates, or reversibly deletes a template definition.
-/// </summary>
-public class UpdateTemplateEffect : Effect
-{
-    [JsonPropertyName("t")]
-    public Template Template { get; set; }
-}
-
-/// <summary>
-/// Creates, updates, or reversibly deletes a dataset definition.
-/// </summary>
-public class UpdateDataSetEffect : Effect
-{
-    [JsonPropertyName("d")]
-    public DataSet DataSet { get; set; }
 }
 
 /// <summary>

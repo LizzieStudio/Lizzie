@@ -252,24 +252,6 @@ public class TokenMovedEvent : IEvent
 }
 
 /// <summary>
-/// Example: Event with data
-/// </summary>
-public class DataSetChangedEvent : IEvent
-{
-    public string DataSetName { get; set; } //use ID if item deleted
-    public DataSet DataSet { get; set; }
-}
-
-/// <summary>
-/// Named template has been updated
-/// </summary>
-public class TemplateChangedEvent : IEvent
-{
-    public string TemplateName { get; set; } //use ID if item deleted
-    public Template Template { get; set; }
-}
-
-/// <summary>
 /// Named Image has been added/removed/updated
 /// </summary>
 public class ImageChangedEvent : IEvent
@@ -304,11 +286,6 @@ public class ShowDatasetEditor : IEvent
 public class ShowImageManagerEvent : IEvent
 {
     public Guid ImageReference { get; set; }
-}
-
-public class PrototypeChangedEvent : IEvent
-{
-    public SnowportId PrototypeId { get; set; }
 }
 
 public class EditPrototypeEvent : IEvent

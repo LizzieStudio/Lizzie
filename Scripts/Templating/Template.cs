@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using Godot;
 using TTSS.Scripts.Templating;
 
-public class Template
+public class Template : IReplicated
 {
     public enum TemplateTarget
     {
@@ -17,7 +17,7 @@ public class Template
         D20,
     }
 
-    public SnowportId TemplateRef { get; set; }
+    public SnowportId Id { get; set; }
 
     /// <summary>
     /// Reversible soft-delete flag.
@@ -64,6 +64,6 @@ public class Template
 
     public string SheetKey()
     {
-        return $"{TemplateRef.Value:X16}{LastUpdateId.Value:X16}";
+        return $"{Id.Value:X16}{LastUpdateId.Value:X16}";
     }
 }

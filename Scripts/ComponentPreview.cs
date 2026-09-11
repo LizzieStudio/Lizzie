@@ -285,7 +285,7 @@ public partial class ComponentPreview : Panel
         var s = Utility.ComponentTypeToScenePath(prototype.Type, prototype.Parameters, row, true);
         var scene = GD.Load<PackedScene>(s);
         var c = scene.Instantiate<VisualComponentBase>();
-        c.PrototypeRef = prototype.PrototypeRef;
+        c.PrototypeRef = prototype.Id;
         return c;
     }
 

@@ -93,6 +93,8 @@ public partial class MultiplayerManager : Node
             Source = 0,
         };
 
+        PlayerSeatManager.Instance?.Clear();
+
         GD.Print($"Server started on port {port}. Server ID: {_localPlayerId}");
         EmitSignal("ServerStarted");
 

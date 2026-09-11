@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-public class DataSet
+public class DataSet : IReplicated
 {
-    public SnowportId DatasetRef { get; set; }
+    public SnowportId Id { get; set; }
 
     /// <summary>
     /// Reversible soft-delete flag.
@@ -71,12 +71,12 @@ public class DataSet
 
     public string SheetKey()
     {
-        return $"{DatasetRef.Value:X16}{LastUpdateId.Value:X16}";
+        return $"{Id.Value:X16}{LastUpdateId.Value:X16}";
     }
 
     public static DataSet TestDataSet()
     {
-        var ds = new DataSet { DatasetRef = Snowport.Clock.Create(), Name = "Test Data" };
+        var ds = new DataSet { Id = Snowport.Clock.Create(), Name = "Test Data" };
         var c = new List<string> { "Title", "Cost", "Image", "Effect" };
 
         var r1 = new DataRow
