@@ -174,6 +174,16 @@ public partial class ProjectService : Node
         );
     }
 
+    public void UpdateGameSettings(ProjectGameSettings settings)
+    {
+        if (CurrentProject == null || settings == null)
+            return;
+        CurrentProject.GameSettings = settings;
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(null, new UpdateSettingsEffect { Payload = settings })
+        );
+    }
+
     public void UpdatePrototype(Prototype prototype)
     {
         if (CurrentProject == null || prototype == null)

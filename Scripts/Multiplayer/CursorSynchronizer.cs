@@ -200,11 +200,10 @@ public partial class CursorSynchronizer : Node
     {
         var seat = PlayerSeatManager.Instance?.GetSeatBySource(source) ?? -2;
         var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
-        if (settings == null || seat < 0 || seat >= settings.Players.Count)
+        if (settings == null || seat < 0 || seat >= settings.Players.Length)
             return FallbackColor;
 
-        var p = settings.Players[seat];
-        return new Color(p.ColorR, p.ColorG, p.ColorB, p.ColorA);
+        return settings.Players[seat].Color;
     }
 
     private static bool IsSourceConnected(MultiplayerManager mm, byte source)

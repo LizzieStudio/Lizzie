@@ -69,7 +69,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         if (settings == null)
             return;
 
-        for (int i = 0; i < settings.Players.Count; i++)
+        for (int i = 0; i < settings.Players.Length; i++)
         {
             var player = settings.Players[i];
             bool available = PlayerSeatManager.Instance?.IsAvailable(i) ?? true;
@@ -82,8 +82,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
             _seatList.SetItemDisabled(_seatList.ItemCount - 1, !available);
 
             // Colour the icon using the player's configured colour
-            var colour = new Color(player.ColorR, player.ColorG, player.ColorB, player.ColorA);
-            _seatList.SetItemCustomFgColor(_seatList.ItemCount - 1, colour);
+            _seatList.SetItemCustomFgColor(_seatList.ItemCount - 1, player.Color);
 
             _seatIndexMap.Add(i);
         }

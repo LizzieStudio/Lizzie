@@ -28,7 +28,7 @@ public partial class Table : StaticBody3D
             SetTableSize(new Vector2(s.TableWidth, s.TableHeight) * 100f); //table is in cm
         }
 
-        var color = new Color(s.TableColorR, s.TableColorG, s.TableColorB, s.TableColorA);
+        var color = s.TableColor;
         if (_mesh.Material is StandardMaterial3D mat)
         {
             mat.AlbedoColor = color;

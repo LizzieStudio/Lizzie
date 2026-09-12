@@ -45,13 +45,12 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
             child.QueueFree();
         _seatOptions.Clear();
 
-        var players = (CurrentProject ?? ProjectService.Instance.CurrentProject)
-            ?.GameSettings
-            ?.Players;
-        if (players == null)
+        var settings = (CurrentProject ?? ProjectService.Instance.CurrentProject)?.GameSettings;
+        if (settings == null)
             return;
+        var players = settings.Players;
 
-        for (int i = 0; i < players.Count; i++)
+        for (int i = 0; i < players.Length; i++)
         {
             var row = new HBoxContainer();
 

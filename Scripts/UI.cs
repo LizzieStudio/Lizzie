@@ -200,7 +200,7 @@ public partial class UI : CanvasLayer
             return;
 
         // Don't open if there are no player slots and observers are not allowed.
-        if (settings.Players.Count == 0 && !settings.AllowObservers)
+        if (settings.Players.Length == 0 && !settings.AllowObservers)
             return;
 
         string s = "res://Scenes/Controls/player_position_dialog.tscn";

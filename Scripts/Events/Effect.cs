@@ -13,6 +13,7 @@ using Godot;
 [JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
+[JsonDerivedType(typeof(UpdateSettingsEffect), "gs")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -43,6 +44,15 @@ public class UpdateReplicatedEffect<T> : Effect
 {
     [JsonPropertyName("v")]
     public T Payload { get; set; }
+}
+
+/// <summary>
+/// Creates or updates the project settings.
+/// </summary>
+public class UpdateSettingsEffect : Effect
+{
+    [JsonPropertyName("v")]
+    public ProjectGameSettings Payload { get; set; }
 }
 
 /// <summary>

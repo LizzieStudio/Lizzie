@@ -89,7 +89,7 @@ public partial class PlayerHandsPanel : Panel
 
         int localSeat = PlayerHandService.LocalSeatIndex();
 
-        for (int seatIndex = 0; seatIndex < settings.Players.Count; seatIndex++)
+        for (int seatIndex = 0; seatIndex < settings.Players.Length; seatIndex++)
         {
             if (seatIndex == localSeat)
                 continue; // local player is shown in HandManager, not here
@@ -104,15 +104,7 @@ public partial class PlayerHandsPanel : Panel
             // Player name label  e.g. "Player 2 (3 cards)"
             var label = new Label();
             label.Text = $"{playerSettings.Name}  ({hand.Count})";
-            label.AddThemeColorOverride(
-                "font_color",
-                new Color(
-                    playerSettings.ColorR,
-                    playerSettings.ColorG,
-                    playerSettings.ColorB,
-                    playerSettings.ColorA
-                )
-            );
+            label.AddThemeColorOverride("font_color", playerSettings.Color);
             row.AddChild(label);
 
             // HBoxContainer holding card backs

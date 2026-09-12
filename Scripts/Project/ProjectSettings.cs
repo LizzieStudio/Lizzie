@@ -1,9 +1,17 @@
 using System;
-using System.ComponentModel.Design;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using Godot;
 
 public partial class ProjectSettings : Window
 {
+    /// <summary>
+    /// The settings when the window was opened.
+    /// Used to detect which fields were edited.
+    /// </summary>
+    private ProjectGameSettings _baseline;
+
     // Setup tab
     private CheckButton _2dToggle;
     private CheckButton _playerHandsToggle;
@@ -67,6 +75,35 @@ public partial class ProjectSettings : Window
         CloseRequested += OnClosePressed;
 
         LoadFromProject();
+
+        EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance.Unsubscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+    }
+
+    /// <summary>
+    /// Reconcile the dialog when settings change beneath it.
+    /// Edited fields are preserved, while others update to the incoming value.
+    /// </summary>
+    private void OnProjectSettingsChanged()
+    {
+        var next = ProjectService.Instance.CurrentProject?.GameSettings;
+        if (next == null)
+            return;
+
+        if (_baseline == null)
+        {
+            LoadFromProject();
+            return;
+        }
+
+        var ui = ReadUi();
+        var merged = MergeSettings(_baseline, ui, next);
+        WriteUiDiff(ui, merged);
+        _baseline = next; // safe: immutable, no clone
     }
 
     public const int MAX_PLAYERS = 16;
@@ -128,14 +165,7 @@ public partial class ProjectSettings : Window
                     .Instantiate<PlayerDefinition>();
                 newPd.SetPlayerInfo(
                     i + 1,
-                    new ProjectPlayerSettings
-                    {
-                        Name = $"Player {i + 1}",
-                        ColorA = _playerColors[i].A,
-                        ColorR = _playerColors[i].R,
-                        ColorG = _playerColors[i].G,
-                        ColorB = _playerColors[i].B,
-                    }
+                    new ProjectPlayerSettings { Name = $"Player {i + 1}", Color = _playerColors[i] }
                 );
                 _playerDefinitionContainer.AddChild(newPd);
             }
@@ -172,7 +202,7 @@ public partial class ProjectSettings : Window
         _tableWidth.Text = s.TableWidth.ToString();
         _tableHeight.Text = s.TableHeight.ToString();
         _tableUnits.Selected = s.TableUnits;
-        _tableColor.Color = new Color(s.TableColorR, s.TableColorG, s.TableColorB, s.TableColorA);
+        _tableColor.Color = s.TableColor;
         _rotationStep.Selected = s.RotationStepIndex;
 
         _observerToggle.ButtonPressed = s.AllowObservers;
@@ -187,6 +217,8 @@ public partial class ProjectSettings : Window
         _visionStatement.Text = s.VisionStatement;
 
         SetPlayers(s);
+
+        _baseline = s;
     }
 
     private void SetPlayers(ProjectGameSettings gameSettings)
@@ -198,7 +230,7 @@ public partial class ProjectSettings : Window
             {
                 var index = _playerDefinitionContainer.GetChildren().IndexOf(c);
                 var settings =
-                    gameSettings.Players.Count > index
+                    gameSettings.Players.Length > index
                         ? gameSettings.Players[index]
                         : new ProjectPlayerSettings();
                 pd.SetPlayerInfo(index + 1, settings);
@@ -215,54 +247,151 @@ public partial class ProjectSettings : Window
             return;
         }
 
-        var s = project.GameSettings;
+        ProjectService.Instance.UpdateGameSettings(ReadUi());
+        ProjectService.Instance.SaveProject(project);
+        OnClosePressed();
+    }
 
-        s.StartIn2D = _2dToggle.ButtonPressed;
-        s.EnablePlayerHands = _playerHandsToggle.ButtonPressed;
-        s.TableWidth = ParseFloat(_tableWidth.Text, s.TableWidth);
-        s.TableHeight = ParseFloat(_tableHeight.Text, s.TableHeight);
-        s.TableUnits = _tableUnits.Selected;
-        s.TableColorR = _tableColor.Color.R;
-        s.TableColorG = _tableColor.Color.G;
-        s.TableColorB = _tableColor.Color.B;
-        s.TableColorA = _tableColor.Color.A;
-        s.RotationStepIndex = _rotationStep.Selected;
+    /// <summary>
+    /// Reads every widget into a fresh settings record.
+    /// </summary>
+    private ProjectGameSettings ReadUi()
+    {
+        var current = ProjectService.Instance.CurrentProject?.GameSettings ?? new ProjectGameSettings();
+        return current with
+        {
+            StartIn2D = _2dToggle.ButtonPressed,
+            EnablePlayerHands = _playerHandsToggle.ButtonPressed,
+            TableWidth = ParseFloat(_tableWidth.Text, current.TableWidth),
+            TableHeight = ParseFloat(_tableHeight.Text, current.TableHeight),
+            TableUnits = _tableUnits.Selected,
+            TableColor = _tableColor.Color,
+            RotationStepIndex = _rotationStep.Selected,
+            AllowObservers = _observerToggle.ButtonPressed,
+            MaxPlayers = ParseInt(_maxPlayers.Text, current.MaxPlayers),
+            Players = ReadPlayersFromUi(),
+            GameTitle = _gameTitle.Text,
+            Designers = _designers.Text,
+            GraphicDesign = _graphicDesign.Text,
+            Artists = _artists.Text,
+            ContactInfo = _contactInfo.Text,
+            VisionStatement = _visionStatement.Text,
+        };
+    }
 
-        s.AllowObservers = _observerToggle.ButtonPressed;
-        s.MaxPlayers = ParseInt(_maxPlayers.Text, s.MaxPlayers);
-
-        s.Players.Clear();
-
+    private ImmutableArray<ProjectPlayerSettings> ReadPlayersFromUi()
+    {
+        var builder = ImmutableArray.CreateBuilder<ProjectPlayerSettings>();
         foreach (var c in _playerDefinitionContainer.GetChildren())
         {
             if (c is PlayerDefinition pd)
             {
-                var i = pd.GetPlayerInfo();
-                s.Players.Add(
+                var (name, color, isAdmin) = pd.GetPlayerInfo();
+                builder.Add(
                     new ProjectPlayerSettings
                     {
-                        Name = i.Item1,
-                        ColorR = i.Item2.R,
-                        ColorG = i.Item2.G,
-                        ColorB = i.Item2.B,
-                        ColorA = i.Item2.A,
-                        IsAdmin = i.Item3,
+                        Name = name,
+                        Color = color,
+                        IsAdmin = isAdmin,
                     }
                 );
             }
         }
+        return builder.ToImmutable();
+    }
 
-        // Game Info tab
-        s.GameTitle = _gameTitle.Text;
-        s.Designers = _designers.Text;
-        s.GraphicDesign = _graphicDesign.Text;
-        s.Artists = _artists.Text;
-        s.ContactInfo = _contactInfo.Text;
-        s.VisionStatement = _visionStatement.Text;
+    private static T Pick<T>(T ui, T baseline, T next) =>
+        EqualityComparer<T>.Default.Equals(ui, baseline) ? next : ui;
 
-        ProjectService.Instance.SaveProject(project);
-        EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
-        OnClosePressed();
+    /// <summary>
+    /// Three-way merge
+    /// For each field, keep the UI value if the user edited it.
+    /// Otherwise take the incoming value.
+    /// </summary>
+    public static ProjectGameSettings MergeSettings(
+        ProjectGameSettings baseline,
+        ProjectGameSettings ui,
+        ProjectGameSettings next
+    )
+    {
+        bool playersEdited =
+            ui.MaxPlayers != baseline.MaxPlayers || !ui.Players.SequenceEqual(baseline.Players);
+
+        return next with
+        {
+            StartIn2D = Pick(ui.StartIn2D, baseline.StartIn2D, next.StartIn2D),
+            EnablePlayerHands = Pick(
+                ui.EnablePlayerHands,
+                baseline.EnablePlayerHands,
+                next.EnablePlayerHands
+            ),
+            TableWidth = Pick(ui.TableWidth, baseline.TableWidth, next.TableWidth),
+            TableHeight = Pick(ui.TableHeight, baseline.TableHeight, next.TableHeight),
+            TableUnits = Pick(ui.TableUnits, baseline.TableUnits, next.TableUnits),
+            TableColor = Pick(ui.TableColor, baseline.TableColor, next.TableColor),
+            RotationStepIndex = Pick(
+                ui.RotationStepIndex,
+                baseline.RotationStepIndex,
+                next.RotationStepIndex
+            ),
+            AllowObservers = Pick(ui.AllowObservers, baseline.AllowObservers, next.AllowObservers),
+            GameTitle = Pick(ui.GameTitle, baseline.GameTitle, next.GameTitle),
+            Designers = Pick(ui.Designers, baseline.Designers, next.Designers),
+            GraphicDesign = Pick(ui.GraphicDesign, baseline.GraphicDesign, next.GraphicDesign),
+            Artists = Pick(ui.Artists, baseline.Artists, next.Artists),
+            ContactInfo = Pick(ui.ContactInfo, baseline.ContactInfo, next.ContactInfo),
+            VisionStatement = Pick(
+                ui.VisionStatement,
+                baseline.VisionStatement,
+                next.VisionStatement
+            ),
+            MaxPlayers = playersEdited ? ui.MaxPlayers : next.MaxPlayers,
+            Players = playersEdited ? ui.Players : next.Players,
+        };
+    }
+
+    /// <summary>
+    /// Writes only the widgets whose target value differs from what they currently show.
+    /// </summary>
+    private void WriteUiDiff(ProjectGameSettings current, ProjectGameSettings target)
+    {
+        if (target.StartIn2D != current.StartIn2D)
+            _2dToggle.ButtonPressed = target.StartIn2D;
+        if (target.EnablePlayerHands != current.EnablePlayerHands)
+            _playerHandsToggle.ButtonPressed = target.EnablePlayerHands;
+        if (target.TableWidth != current.TableWidth)
+            _tableWidth.Text = target.TableWidth.ToString();
+        if (target.TableHeight != current.TableHeight)
+            _tableHeight.Text = target.TableHeight.ToString();
+        if (target.TableUnits != current.TableUnits)
+            _tableUnits.Selected = target.TableUnits;
+        if (target.TableColor != current.TableColor)
+            _tableColor.Color = target.TableColor;
+        if (target.RotationStepIndex != current.RotationStepIndex)
+            _rotationStep.Selected = target.RotationStepIndex;
+        if (target.AllowObservers != current.AllowObservers)
+            _observerToggle.ButtonPressed = target.AllowObservers;
+        if (target.GameTitle != current.GameTitle)
+            _gameTitle.Text = target.GameTitle;
+        if (target.Designers != current.Designers)
+            _designers.Text = target.Designers;
+        if (target.GraphicDesign != current.GraphicDesign)
+            _graphicDesign.Text = target.GraphicDesign;
+        if (target.Artists != current.Artists)
+            _artists.Text = target.Artists;
+        if (target.ContactInfo != current.ContactInfo)
+            _contactInfo.Text = target.ContactInfo;
+        if (target.VisionStatement != current.VisionStatement)
+            _visionStatement.Text = target.VisionStatement;
+
+        if (
+            target.MaxPlayers != current.MaxPlayers
+            || !target.Players.SequenceEqual(current.Players)
+        )
+        {
+            _maxPlayers.Text = target.MaxPlayers.ToString();
+            SetPlayers(target);
+        }
     }
 
     private static float ParseFloat(string text, float fallback) =>

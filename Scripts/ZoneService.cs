@@ -31,7 +31,7 @@ public static class ZoneService
             return false;
 
         int seat = PlayerHandService.LocalSeatIndex();
-        if (seat < 0 || seat >= settings.Players.Count)
+        if (seat < 0 || seat >= settings.Players.Length)
             return false;
 
         return settings.Players[seat].IsAdmin;

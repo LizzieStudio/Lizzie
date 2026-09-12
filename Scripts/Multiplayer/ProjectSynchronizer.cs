@@ -92,6 +92,8 @@ public partial class ProjectSynchronizer : Node
                     ProjectService.Instance.CurrentProject?.Templates ?? project.Templates;
                 project.Datasets =
                     ProjectService.Instance.CurrentProject?.Datasets ?? project.Datasets;
+                project.GameSettings =
+                    ProjectService.Instance.CurrentProject?.GameSettings ?? project.GameSettings;
             }
 
             ProjectService.Instance.SetProjectSilent(project);

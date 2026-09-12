@@ -264,10 +264,10 @@ public partial class VcDeck : VisualComponentGroup
     private Effect[] BuildDeal(int countPerPlayer)
     {
         var settings = ProjectService.Instance.CurrentProject?.GameSettings;
-        if (settings == null || settings.Players.Count == 0)
+        if (settings == null || settings.Players.Length == 0)
             return BuildDraw(countPerPlayer); // fall back to draw if no seats defined
 
-        int seatCount = settings.Players.Count;
+        int seatCount = settings.Players.Length;
 
         var order = Children.ToList();
         if (!_showFace)

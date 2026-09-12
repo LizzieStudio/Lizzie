@@ -31,7 +31,7 @@ public partial class PlayerDefinition : HBoxContainer
     {
         _pNumber = $"Player {playerNumber}";
         _pName = settings.Name;
-        _pColor = new Color(settings.ColorR, settings.ColorG, settings.ColorB, settings.ColorA);
+        _pColor = settings.Color;
         _pAdmin = settings.IsAdmin;
 
         if (IsNodeReady())
