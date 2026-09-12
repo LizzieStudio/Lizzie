@@ -36,14 +36,14 @@ public partial class CursorSynchronizer : Node
     public bool TryGetCursor(byte source, out Vector3 pos) =>
         _positions.TryGetValue(source, out pos);
 
-    private SnowportId _localCursorRef;
+    private SnowTag _localCursorRef;
 
-    public SnowportId LocalCursorRef
+    public SnowTag LocalCursorRef
     {
         get
         {
-            if (_localCursorRef == SnowportId.Empty)
-                _localCursorRef = Snowport.Clock.Create();
+            if (_localCursorRef == SnowTag.Empty)
+                _localCursorRef = Snowport.Clock.CreateTag();
             return _localCursorRef;
         }
     }
@@ -70,7 +70,7 @@ public partial class CursorSynchronizer : Node
         foreach (var effect in e.Effects)
             if (
                 effect is UpdatePlayerEffect { HasLeft: false, CursorRef: var cursorRef }
-                && cursorRef != SnowportId.Empty
+                && cursorRef != SnowTag.Empty
                 && cursorRef.source == Snowport.Clock.source
             )
                 _localCursorRef = cursorRef;
@@ -87,7 +87,7 @@ public partial class CursorSynchronizer : Node
         _dragPlane = null;
         _cursorParent = null;
         _lastSentPosition = Miss;
-        _localCursorRef = SnowportId.Empty;
+        _localCursorRef = SnowTag.Empty;
         ClearCursors();
     }
 

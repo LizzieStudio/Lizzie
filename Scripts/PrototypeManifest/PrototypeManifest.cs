@@ -87,20 +87,20 @@ public partial class PrototypeManifest : Window
         Closed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void RefreshSelectedPrototype(long[] ids)
+    private void RefreshSelectedPrototype(int[] ids)
     {
-        SnowportId selectedRef = SnowportId.Empty;
+        SnowTag selectedRef = SnowTag.Empty;
         var selectedItem = _prototypeTree.GetSelected();
         if (selectedItem != null)
-            selectedRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
+            selectedRef = new SnowTag(selectedItem.GetMetadata(0).AsInt32());
 
         LoadPrototypes(_prototypeCounts);
 
-        if (selectedRef != SnowportId.Empty)
+        if (selectedRef != SnowTag.Empty)
         {
             for (var item = _root.GetFirstChild(); item != null; item = item.GetNext())
             {
-                if (new SnowportId(item.GetMetadata(0).AsUInt64()) == selectedRef)
+                if (new SnowTag(item.GetMetadata(0).AsInt32()) == selectedRef)
                 {
                     item.Select(0);
                     break;
@@ -150,7 +150,7 @@ public partial class PrototypeManifest : Window
 
     private void PrototypeEditClicked(TreeItem item, long column, long id, long mouseButtonIndex)
     {
-        var prototypeRef = new SnowportId(item.GetMetadata(0).AsUInt64());
+        var prototypeRef = new SnowTag(item.GetMetadata(0).AsInt32());
 
         switch (id)
         {
@@ -180,7 +180,7 @@ public partial class PrototypeManifest : Window
         }
     }
 
-    private void SpawnPrototype(SnowportId prototypeRef)
+    private void SpawnPrototype(SnowTag prototypeRef)
     {
         OnClose();
         EventBus.Instance.Publish(new SpawnPrototypeEvent { PrototypeRef = prototypeRef });
@@ -194,7 +194,7 @@ public partial class PrototypeManifest : Window
         }
     }
 
-    private void DeletePrototype(SnowportId prototypeRef)
+    private void DeletePrototype(SnowTag prototypeRef)
     {
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
@@ -229,7 +229,7 @@ public partial class PrototypeManifest : Window
         }
     }
 
-    private void DuplicatePrototype(SnowportId prototypeRef)
+    private void DuplicatePrototype(SnowTag prototypeRef)
     {
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
@@ -260,7 +260,7 @@ public partial class PrototypeManifest : Window
 
         var duplicate = new Prototype
         {
-            Id = Snowport.Clock.Create(),
+            Id = Snowport.Clock.CreateTag(),
             Name = newName,
             Parameters = original.Parameters.Clone(),
         };
@@ -272,7 +272,7 @@ public partial class PrototypeManifest : Window
 
     private bool _refreshRequired;
 
-    public void Refresh(Dictionary<SnowportId, int> prototypeCounts)
+    public void Refresh(Dictionary<SnowTag, int> prototypeCounts)
     {
         _prototypeCounts = prototypeCounts;
 
@@ -287,9 +287,9 @@ public partial class PrototypeManifest : Window
         _refreshRequired = false;
     }
 
-    private Dictionary<SnowportId, int> _prototypeCounts;
+    private Dictionary<SnowTag, int> _prototypeCounts;
 
-    private void LoadPrototypes(Dictionary<SnowportId, int> prototypeCounts)
+    private void LoadPrototypes(Dictionary<SnowTag, int> prototypeCounts)
     {
         if (ProjectService.Instance?.CurrentProject == null)
             return;
@@ -376,7 +376,7 @@ public partial class PrototypeManifest : Window
         if (selectedItem == null)
             return;
 
-        var prototypeRef = new SnowportId(selectedItem.GetMetadata(0).AsUInt64());
+        var prototypeRef = new SnowTag(selectedItem.GetMetadata(0).AsInt32());
 
         if (
             ProjectService.Instance?.CurrentProject?.Prototypes.TryGetValue(
@@ -396,7 +396,7 @@ public partial class PrototypeManifest : Window
 
         string row = "0";
 
-        SnowportId datasetParam = SnowportId.Empty;
+        SnowTag datasetParam = SnowTag.Empty;
         if (SelectedPrototype.Parameters is PrintedParameters pp)
         {
             datasetParam = pp.Dataset;
@@ -406,7 +406,7 @@ public partial class PrototypeManifest : Window
             datasetParam = dp.Dataset;
         }
 
-        if (datasetParam != SnowportId.Empty)
+        if (datasetParam != SnowTag.Empty)
         {
             var dataset = ProjectService.Instance.GetDataSet(datasetParam);
 

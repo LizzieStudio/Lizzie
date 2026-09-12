@@ -241,8 +241,8 @@ public partial class VcDie : VisualComponentBase
         _textureFactory.GenerateTexture(tx, TextureDone);
     }
 
-    private SnowportId _frontTemplateRef;
-    private SnowportId _datasetRef;
+    private SnowTag _frontTemplateRef;
+    private SnowTag _datasetRef;
 
     private void TextureDone(ImageTexture texture)
     {
@@ -542,6 +542,6 @@ public sealed class DieParameters : ComponentParameters
     public QuickTextureField[] Sides { get; set; } = Array.Empty<QuickTextureField>();
     public int SideCount { get; set; }
     public VcToken.TokenBuildMode Mode { get; set; }
-    public SnowportId FrontTemplate { get; set; }
-    public SnowportId Dataset { get; set; }
+    public SnowTag FrontTemplate { get; set; }
+    public SnowTag Dataset { get; set; }
 }

@@ -13,6 +13,7 @@ public static class LizzieJson
             new GodotNativeJsonConverter<Vector2>(),
             new CompactVector3JsonConverter(),
             new SnowportIdJsonConverter(),
+            new SnowTagJsonConverter(),
         },
     };
 

@@ -9,7 +9,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// A cache of this container's contents.
     /// The source-of-truth is <see cref="VisualComponentBase.ContainerRef"/>.
     /// </summary>
-    protected readonly List<SnowportId> Children = new();
+    protected readonly List<SnowTag> Children = new();
 
     protected RandomNumberGenerator Rnd = new();
 
@@ -83,32 +83,32 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <summary>
     /// Returns the top <paramref name="quantity"/> child ids, but does not remove them.
     /// </summary>
-    public virtual SnowportId[] DrawFromTop(int quantity)
+    public virtual SnowTag[] DrawFromTop(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
-        return quantity <= 0 ? Array.Empty<SnowportId>() : Children.Take(quantity).ToArray();
+        return quantity <= 0 ? Array.Empty<SnowTag>() : Children.Take(quantity).ToArray();
     }
 
     /// <summary>
     /// Returns the bottom <paramref name="quantity"/> child ids, but does not remove them.
     /// </summary>
-    public virtual SnowportId[] DrawFromBottom(int quantity)
+    public virtual SnowTag[] DrawFromBottom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
         return quantity <= 0
-            ? Array.Empty<SnowportId>()
+            ? Array.Empty<SnowTag>()
             : Children.TakeLast(quantity).Reverse().ToArray();
     }
 
     /// <summary>
     /// Picks <paramref name="quantity"/> random child ids, but does not remove them.
     /// </summary>
-    public virtual IEnumerable<SnowportId> DrawRandom(int quantity)
+    public virtual IEnumerable<SnowTag> DrawRandom(int quantity)
     {
         quantity = Math.Min(quantity, Children.Count);
 
         var pool = Children.ToList();
-        var result = new List<SnowportId>(quantity);
+        var result = new List<SnowTag>(quantity);
         for (int i = 0; i < quantity; i++)
         {
             int r = Rnd.RandiRange(0, pool.Count - 1);
@@ -142,7 +142,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <summary>
     /// Builds the transform effects that reorder the child list
     /// </summary>
-    protected Effect[] BuildReorder(IReadOnlyList<SnowportId> orderedIds)
+    protected Effect[] BuildReorder(IReadOnlyList<SnowTag> orderedIds)
     {
         var effects = new List<Effect>(orderedIds.Count);
         for (int i = 0; i < orderedIds.Count; i++)

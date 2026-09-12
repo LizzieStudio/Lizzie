@@ -5,7 +5,7 @@ using Godot;
 
 public class DataSet : IReplicated
 {
-    public SnowportId Id { get; set; }
+    public SnowTag Id { get; set; }
 
     /// <summary>
     /// Reversible soft-delete flag.
@@ -71,12 +71,12 @@ public class DataSet : IReplicated
 
     public string SheetKey()
     {
-        return $"{Id.Value:X16}{LastUpdateId.Value:X16}";
+        return $"{Id.Value:X8}{LastUpdateId.Value:X16}";
     }
 
     public static DataSet TestDataSet()
     {
-        var ds = new DataSet { Id = Snowport.Clock.Create(), Name = "Test Data" };
+        var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = "Test Data" };
         var c = new List<string> { "Title", "Cost", "Image", "Effect" };
 
         var r1 = new DataRow

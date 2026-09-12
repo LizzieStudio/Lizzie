@@ -601,9 +601,9 @@ public partial class VcToken : VisualComponentBase
         MapBackTexture();
     }
 
-    private SnowportId _frontTemplateRef;
-    private SnowportId _backTemplateRef;
-    private SnowportId _datasetRef;
+    private SnowTag _frontTemplateRef;
+    private SnowTag _backTemplateRef;
+    private SnowTag _datasetRef;
 
     private void BuildTemplate(TextureFactory textureFactory)
     {
@@ -612,7 +612,7 @@ public partial class VcToken : VisualComponentBase
         if (_height <= 0 || _width <= 0)
             return;
 
-        if (_frontTemplateRef == SnowportId.Empty)
+        if (_frontTemplateRef == SnowTag.Empty)
             return;
 
         var curProj = ProjectService.Instance.CurrentProject;
@@ -620,7 +620,7 @@ public partial class VcToken : VisualComponentBase
         var ds = curProj.GetDataset(_datasetRef);
 
         var bt = curProj.GetTemplate(_backTemplateRef);
-        if (bt is null || bt.Id == SnowportId.Empty)
+        if (bt is null || bt.Id == SnowTag.Empty)
             bt = null;
 
         if (ft is null || ds is null)
@@ -1375,9 +1375,9 @@ public abstract class PrintedParameters : ComponentParameters
     public int GridCount { get; set; }
     public bool GridSingleBack { get; set; }
 
-    public SnowportId FrontTemplate { get; set; }
-    public SnowportId BackTemplate { get; set; }
-    public SnowportId Dataset { get; set; }
+    public SnowTag FrontTemplate { get; set; }
+    public SnowTag BackTemplate { get; set; }
+    public SnowTag Dataset { get; set; }
     public string CardReference { get; set; } = "";
 }
 

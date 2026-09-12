@@ -56,7 +56,7 @@ public partial class ProjectManager : Panel
 
         var t = new Template
         {
-            Id = Snowport.Clock.Create(),
+            Id = Snowport.Clock.CreateTag(),
             Name = "Issue Face",
             Description = "A face with an issue",
             Height = 350,

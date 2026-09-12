@@ -318,7 +318,7 @@ public partial class UI : CanvasLayer
 
     private void ShowTemplateEditor()
     {
-        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = SnowportId.Empty });
+        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = SnowTag.Empty });
     }
 
     private void ShowTemplateEditorFromEvent(ShowTemplateEditor e)
@@ -340,7 +340,7 @@ public partial class UI : CanvasLayer
 
     private void ShowDatasetEditor()
     {
-        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = SnowportId.Empty });
+        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = SnowTag.Empty });
     }
 
     private void ShowDatasetEditorFromEvent(ShowDatasetEditor e)
@@ -594,7 +594,7 @@ public partial class UI : CanvasLayer
     }
 
     private ComponentDefinition _editPanel;
-    private SnowportId _editingPrototypeId;
+    private SnowTag _editingPrototypeId;
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
@@ -625,7 +625,7 @@ public partial class UI : CanvasLayer
     {
         _editPanel.Hide();
         _editPanel.QueueFree();
-        _editingPrototypeId = SnowportId.Empty;
+        _editingPrototypeId = SnowTag.Empty;
     }
 
     public override void _Process(double delta)

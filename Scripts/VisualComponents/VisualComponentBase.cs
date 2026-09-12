@@ -127,7 +127,7 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     public virtual bool Setup(
-        SnowportId prototypeRef,
+        SnowTag prototypeRef,
         string dataSetRow,
         TextureFactory textureFactory
     )
@@ -160,7 +160,7 @@ public abstract partial class VisualComponentBase : Area3D
     public virtual void Build() { }
 
     public virtual void SpawnBuild(
-        SnowportId prototypeRef,
+        SnowTag prototypeRef,
         VcSyncDto syncDto,
         TextureFactory textureFactory
     )
@@ -173,7 +173,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// Produce the effects for any contained components.
     /// <param name="containerRef">the id of the container to these children</param>
     /// </summary>
-    public virtual IEnumerable<CreateEffect> GetSpawnChildEffects(SnowportId containerRef)
+    public virtual IEnumerable<CreateEffect> GetSpawnChildEffects(SnowTag containerRef)
     {
         yield break;
     }
@@ -271,9 +271,9 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual string ComponentName { get; set; }
 
-    public virtual SnowportId PrototypeRef { get; set; }
+    public virtual SnowTag PrototypeRef { get; set; }
 
-    public virtual SnowportId Reference { get; set; } = Snowport.Clock.Create();
+    public virtual SnowTag Reference { get; set; } = Snowport.Clock.CreateTag();
 
     /// <summary>
     /// The id of the most recent event that moved this component.
@@ -283,9 +283,9 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// The container that holds this component or
-    /// <see cref="SnowportId.Empty"/>.
+    /// <see cref="SnowTag.Empty"/>.
     /// </summary>
-    public SnowportId ContainerRef { get; set; } = SnowportId.Empty;
+    public SnowTag ContainerRef { get; set; } = SnowTag.Empty;
 
     /// <summary>
     /// Which row in the DataSet supplies the data for templating

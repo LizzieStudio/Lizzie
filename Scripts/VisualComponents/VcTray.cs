@@ -82,7 +82,7 @@ public partial class VcTray : VisualComponentGroup
 
         ShapeProfiles.Add(new OffsetShape2D(r));
 
-        if (SnowportId.TryParse(p.Prototype, out var gKey))
+        if (SnowTag.TryParse(p.Prototype, out var gKey))
         {
             ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(gKey, out _prototype);
         }
@@ -168,7 +168,7 @@ public partial class VcTray : VisualComponentGroup
         if (CursorSynchronizer.Instance is not { } cursors)
             return null;
 
-        var id = Snowport.Clock.Create();
+        var id = Snowport.Clock.CreateTag();
 
         return TableEvent.Now(
             null,

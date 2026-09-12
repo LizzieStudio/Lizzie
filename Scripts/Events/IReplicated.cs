@@ -3,7 +3,7 @@
 /// </summary>
 public interface IReplicated
 {
-    SnowportId Id { get; set; }
+    SnowTag Id { get; set; }
 
     /// <summary>The id of the event that last wrote this definition.</summary>
     SnowportId LastUpdateId { get; set; }

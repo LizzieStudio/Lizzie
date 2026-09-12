@@ -18,10 +18,10 @@ public class GameStateComponent : VcSyncDto
     }
 
     /// <summary>Unique identity of this component instance.</summary>
-    public SnowportId ComponentRef { get; set; }
+    public SnowTag ComponentRef { get; set; }
 
     /// <summary>The prototype from which this component was built.</summary>
-    public SnowportId PrototypeRef { get; set; }
+    public SnowTag PrototypeRef { get; set; }
 
     /// <summary>
     /// Populate this record from a live VisualComponent.

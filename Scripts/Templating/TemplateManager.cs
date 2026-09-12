@@ -11,7 +11,7 @@ public partial class TemplateManager : ReplicatedStore<Template>
     public static TemplateManager Instance => _instance;
 
     [Signal]
-    public delegate void TemplatesChangedEventHandler(long[] ids);
+    public delegate void TemplatesChangedEventHandler(int[] ids);
 
     public override void _Ready()
     {
@@ -35,9 +35,9 @@ public partial class TemplateManager : ReplicatedStore<Template>
             _instance = null;
     }
 
-    protected override IDictionary<SnowportId, Template> Store =>
+    protected override IDictionary<SnowTag, Template> Store =>
         ProjectService.Instance?.CurrentProject?.Templates;
 
-    protected override void NotifyChanged(IReadOnlyList<SnowportId> ids) =>
-        EmitSignal(SignalName.TemplatesChanged, ids.Select(i => i.AsLong).ToArray());
+    protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
+        EmitSignal(SignalName.TemplatesChanged, ids.Select(i => i.Value).ToArray());
 }

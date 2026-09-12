@@ -9,9 +9,9 @@ using Godot;
 public abstract partial class ReplicatedStore<TEntity> : Node
     where TEntity : class, IReplicated
 {
-    protected abstract IDictionary<SnowportId, TEntity> Store { get; }
+    protected abstract IDictionary<SnowTag, TEntity> Store { get; }
 
-    protected abstract void NotifyChanged(IReadOnlyList<SnowportId> ids);
+    protected abstract void NotifyChanged(IReadOnlyList<SnowTag> ids);
 
     /// <summary>Captures the non-deleted definitions for a joining client.</summary>
     public Effect[] GenerateCatchupEffects()
@@ -33,7 +33,7 @@ public abstract partial class ReplicatedStore<TEntity> : Node
         if (store == null)
             return;
 
-        var changed = new List<SnowportId>();
+        var changed = new List<SnowTag>();
 
         foreach (var fx in e.Effects.OfType<UpdateReplicatedEffect<TEntity>>())
         {

@@ -275,12 +275,12 @@ public class GameStateChangedEvent : IEvent { }
 
 public class ShowTemplateEditor : IEvent
 {
-    public SnowportId TemplateRef { get; set; }
+    public SnowTag TemplateRef { get; set; }
 }
 
 public class ShowDatasetEditor : IEvent
 {
-    public SnowportId DatasetRef { get; set; }
+    public SnowTag DatasetRef { get; set; }
 }
 
 public class ShowImageManagerEvent : IEvent
@@ -290,12 +290,12 @@ public class ShowImageManagerEvent : IEvent
 
 public class EditPrototypeEvent : IEvent
 {
-    public SnowportId PrototypeId { get; set; }
+    public SnowTag PrototypeId { get; set; }
 }
 
 public class MakePrototypeUniqueEvent : IEvent
 {
-    public SnowportId PrototypeId { get; set; }
+    public SnowTag PrototypeId { get; set; }
 }
 
 /// <summary>
@@ -315,7 +315,7 @@ public class AssetChangedEvent : IEvent
 
 public class SpawnPrototypeEvent : IEvent
 {
-    public SnowportId PrototypeRef { get; set; }
+    public SnowTag PrototypeRef { get; set; }
     public string DataSetRow { get; set; } = string.Empty;
 }
 

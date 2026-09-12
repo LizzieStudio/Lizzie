@@ -17,7 +17,7 @@ public class Template : IReplicated
         D20,
     }
 
-    public SnowportId Id { get; set; }
+    public SnowTag Id { get; set; }
 
     /// <summary>
     /// Reversible soft-delete flag.
@@ -60,10 +60,10 @@ public class Template : IReplicated
         }
     }
 
-    public SnowportId DataSet { get; set; }
+    public SnowTag DataSet { get; set; }
 
     public string SheetKey()
     {
-        return $"{Id.Value:X16}{LastUpdateId.Value:X16}";
+        return $"{Id.Value:X8}{LastUpdateId.Value:X16}";
     }
 }

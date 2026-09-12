@@ -29,8 +29,8 @@ public partial class PlayerHandService : Node
     /// <summary>
     /// Gets the container id for a seat's hand.
     /// </summary>
-    public SnowportId HandContainer(int seatIndex) =>
-        PlayerSeatManager.Instance?.HandRefForSeat(seatIndex) ?? SnowportId.Empty;
+    public SnowTag HandContainer(int seatIndex) =>
+        PlayerSeatManager.Instance?.HandRefForSeat(seatIndex) ?? SnowTag.Empty;
 
     /// <summary>
     /// Builds a transform effect that moves a card into a seat's hand at the top of its order.
@@ -61,7 +61,7 @@ public partial class PlayerHandService : Node
             return System.Array.Empty<VcToken>();
 
         var container = HandContainer(seatIndex);
-        if (container == SnowportId.Empty)
+        if (container == SnowTag.Empty)
             return System.Array.Empty<VcToken>();
 
         return gameObjects.GetContainedComponents(container).OfType<VcToken>().ToList();

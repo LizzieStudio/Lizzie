@@ -17,7 +17,7 @@ public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
     [JsonPropertyName("i")]
-    public SnowportId Id { get; set; }
+    public SnowTag Id { get; set; }
 }
 
 /// <summary>
@@ -26,7 +26,7 @@ public abstract class Effect
 public class CreateEffect : Effect
 {
     [JsonPropertyName("p")]
-    public SnowportId PrototypeRef { get; set; }
+    public SnowTag PrototypeRef { get; set; }
 
     [JsonPropertyName("s")]
     public VcSyncDto State { get; set; }
@@ -56,11 +56,11 @@ public class UpdatePlayerEffect : Effect
 
     /// <summary>The container id for this player's hand.</summary>
     [JsonPropertyName("h")]
-    public SnowportId HandRef { get; set; }
+    public SnowTag HandRef { get; set; }
 
     /// <summary>The container id for this player's cursor.</summary>
     [JsonPropertyName("c")]
-    public SnowportId CursorRef { get; set; }
+    public SnowTag CursorRef { get; set; }
 
     /// <summary>True once the player has left.</summary>
     [JsonPropertyName("l")]
@@ -76,10 +76,10 @@ public class TransformEffect : Effect
     public VisualComponentBase.ComponentLocation Location { get; set; }
 
     /// <summary>
-    /// The container that holds the component or <see cref="SnowportId.Empty"/>.
+    /// The container that holds the component or <see cref="SnowTag.Empty"/>.
     /// </summary>
     [JsonPropertyName("c")]
-    public SnowportId ContainerRef { get; set; }
+    public SnowTag ContainerRef { get; set; }
 
     [JsonPropertyName("p")]
     public Vector3 Position { get; set; }

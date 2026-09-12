@@ -14,10 +14,7 @@ public partial class DatasetEditor : Window
     private Button _cancelButton;
     private Button _newButton;
     private OptionButton _datasetList;
-
-    /// <summary>SnowportId for each dataset, index-aligned with _datasetList's items.</summary>
-    private readonly List<SnowportId> _datasetRefs = new();
-    private SnowportId _pendingDatasetRef = SnowportId.Empty;
+    private SnowTag _pendingDatasetRef = SnowTag.Empty;
     private Button _linkButton;
     private Button _addColumnButton;
     private Button _deleteColumnButton;
@@ -91,14 +88,14 @@ public partial class DatasetEditor : Window
         InitializeNewDatasetDialog();
         LoadDatasetList();
 
-        if (_pendingDatasetRef != SnowportId.Empty)
+        if (_pendingDatasetRef != SnowTag.Empty)
             SelectDatasetById(_pendingDatasetRef);
     }
 
     /// <summary>Opens the editor on a specific dataset once the node is ready.</summary>
-    public void SetDatasetById(SnowportId id)
+    public void SetDatasetById(SnowTag id)
     {
-        if (id == SnowportId.Empty)
+        if (id == SnowTag.Empty)
             return;
         if (!IsNodeReady())
         {
@@ -108,19 +105,16 @@ public partial class DatasetEditor : Window
         SelectDatasetById(id);
     }
 
-    private void SelectDatasetById(SnowportId id)
+    private void SelectDatasetById(SnowTag id)
     {
-        for (int i = 0; i < _datasetRefs.Count; i++)
-        {
-            if (_datasetRefs[i] == id)
-            {
-                _datasetList.Select(i);
-                var ds = ProjectService.Instance.GetDataSet(id);
-                if (ds != null)
-                    MapDataSet(ds);
-                return;
-            }
-        }
+        var idx = _datasetList.GetItemIndex(id.Value);
+        if (idx < 0)
+            return;
+
+        _datasetList.Select(idx);
+        var ds = ProjectService.Instance.GetDataSet(id);
+        if (ds != null)
+            MapDataSet(ds);
     }
 
     private void LoadDatasetList()
@@ -129,26 +123,26 @@ public partial class DatasetEditor : Window
             return;
 
         _datasetList.Clear();
-        _datasetRefs.Clear();
         foreach (var d in _project.Datasets.Values.Where(v => !v.Deleted))
         {
-            _datasetList.AddItem(d.Name);
-            _datasetRefs.Add(d.Id);
+            _datasetList.AddItem(d.Name, d.Id.Value);
         }
 
-        if (_datasetRefs.Count > 0)
+        if (_datasetList.ItemCount > 0)
         {
             _datasetList.Select(0);
-            MapDataSet(ProjectService.Instance.GetDataSet(_datasetRefs[0]));
+            MapDataSet(ProjectService.Instance.GetDataSet(new SnowTag(_datasetList.GetItemId(0))));
         }
     }
 
     private void OnDatasetSelected(long index)
     {
-        if (_project == null || index < 0 || index >= _datasetRefs.Count)
+        if (_project == null || index < 0)
             return;
 
-        var ds = ProjectService.Instance.GetDataSet(_datasetRefs[(int)index]);
+        var ds = ProjectService.Instance.GetDataSet(
+            new SnowTag(_datasetList.GetItemId((int)index))
+        );
         if (ds != null)
             MapDataSet(ds);
     }

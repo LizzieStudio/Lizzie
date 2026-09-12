@@ -8,9 +8,9 @@ using TTSS.Scripts.Templating;
 public class Project
 {
     public string Filename { get; set; }
-    public Dictionary<SnowportId, Template> Templates { get; set; } = new();
-    public Dictionary<SnowportId, DataSet> Datasets { get; set; } = new();
-    public Dictionary<SnowportId, Prototype> Prototypes { get; set; } = new();
+    public Dictionary<SnowTag, Template> Templates { get; set; } = new();
+    public Dictionary<SnowTag, DataSet> Datasets { get; set; } = new();
+    public Dictionary<SnowTag, Prototype> Prototypes { get; set; } = new();
 
     public Dictionary<string, Asset> Images { get; set; } = new();
 
@@ -30,10 +30,10 @@ public class Project
     /// </summary>
     public List<Asset> Assets { get; set; } = new();
 
-    public Template GetTemplate(SnowportId templateRef)
+    public Template GetTemplate(SnowTag templateRef)
     {
         var t = new Template();
-        if (templateRef == SnowportId.Empty)
+        if (templateRef == SnowTag.Empty)
         {
             return t;
         }
@@ -49,10 +49,10 @@ public class Project
         }
     }
 
-    public DataSet GetDataset(SnowportId datasetRef)
+    public DataSet GetDataset(SnowTag datasetRef)
     {
         var d = new DataSet();
-        if (datasetRef == SnowportId.Empty)
+        if (datasetRef == SnowTag.Empty)
         {
             return d;
         }

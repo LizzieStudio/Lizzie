@@ -146,7 +146,7 @@ public partial class ComponentDefinition : Window
             {
                 ComponentType = r.ComponentType,
                 Params = result,
-                PrototypeRef = Snowport.Clock.Create(),
+                PrototypeRef = Snowport.Clock.CreateTag(),
                 DataSet = r.DataSet,
                 MultipleCreateMode = r.MultipleCreateMode,
                 WidthHint = r.WidthHint,
@@ -369,7 +369,7 @@ public class CreateObjectEventArgs : EventArgs
 
     public string PrototypeName { get; set; }
 
-    public SnowportId PrototypeRef { get; set; }
+    public SnowTag PrototypeRef { get; set; }
 
     public DataSet DataSet { get; set; }
 

@@ -31,12 +31,12 @@ public partial class GameObjects : Node
     /// Transforms that arrived before their component's create effect. Drained
     /// when the component is spawned. Keyed by component reference.
     /// </summary>
-    private readonly Dictionary<SnowportId, List<PendingTransform>> _pendingTransforms = new();
+    private readonly Dictionary<SnowTag, List<PendingTransform>> _pendingTransforms = new();
 
     /// <summary>
     /// Components that have been deleted.
     /// </summary>
-    private readonly HashSet<SnowportId> _tombstones = new();
+    private readonly HashSet<SnowTag> _tombstones = new();
 
     private GameController _gameController;
 
@@ -89,7 +89,7 @@ public partial class GameObjects : Node
         _modalOpen = true;
     }
 
-    private void OnDataSetsChanged(long[] ids)
+    private void OnDataSetsChanged(int[] ids)
     {
         //naive approach for now
         foreach (var c in ComponentNodes)
@@ -114,7 +114,7 @@ public partial class GameObjects : Node
         RetryPendingSpawns();
     }
 
-    private void OnTemplatesChanged(long[] ids)
+    private void OnTemplatesChanged(int[] ids)
     {
         //naive approach for now
         foreach (var c in ComponentNodes)
@@ -126,11 +126,11 @@ public partial class GameObjects : Node
         }
     }
 
-    private void OnPrototypesChanged(long[] ids)
+    private void OnPrototypesChanged(int[] ids)
     {
         foreach (var raw in ids)
         {
-            var prototypeId = SnowportId.FromLong(raw);
+            var prototypeId = new SnowTag(raw);
             foreach (var c in ComponentNodes)
                 if (c is VisualComponentBase vc && vc.PrototypeRef == prototypeId)
                     vc.ProcessCommand(VisualCommand.Refresh);
@@ -139,7 +139,7 @@ public partial class GameObjects : Node
         RetryPendingSpawns();
     }
 
-    public VisualComponentBase GetComponent(SnowportId reference)
+    public VisualComponentBase GetComponent(SnowTag reference)
     {
         return ComponentNodes
             .OfType<VisualComponentBase>()
@@ -150,7 +150,7 @@ public partial class GameObjects : Node
     /// All components contained in <paramref name="containerRef"/> in ZOrder.
     /// Works for containers and player hands.
     /// </summary>
-    public IEnumerable<VisualComponentBase> GetContainedComponents(SnowportId containerRef)
+    public IEnumerable<VisualComponentBase> GetContainedComponents(SnowTag containerRef)
     {
         return ComponentNodes
             .OfType<VisualComponentBase>()
@@ -302,9 +302,9 @@ public partial class GameObjects : Node
 
     public void AddComponentToScene(VisualComponentBase component)
     {
-        if (component.Reference == SnowportId.Empty)
+        if (component.Reference == SnowTag.Empty)
         {
-            GD.PrintErr("component somehow lost its SnowportId");
+            GD.PrintErr("component somehow lost its SnowTag");
             return;
         }
 
@@ -322,7 +322,7 @@ public partial class GameObjects : Node
 
         foreach (var component in components)
         {
-            var containerRef = Snowport.Clock.Create();
+            var containerRef = Snowport.Clock.CreateTag();
 
             var childEffects = component.GetSpawnChildEffects(containerRef).ToList();
 
@@ -373,12 +373,12 @@ public partial class GameObjects : Node
         return effects.ToArray();
     }
 
-    public Dictionary<SnowportId, int> PrototypeCounts()
+    public Dictionary<SnowTag, int> PrototypeCounts()
     {
-        Dictionary<SnowportId, int> counts = new();
+        Dictionary<SnowTag, int> counts = new();
         foreach (var c in ComponentNodes)
         {
-            if (c is VisualComponentBase vcb && vcb.PrototypeRef != SnowportId.Empty && vcb.Visible)
+            if (c is VisualComponentBase vcb && vcb.PrototypeRef != SnowTag.Empty && vcb.Visible)
             {
                 if (!counts.TryAdd(vcb.PrototypeRef, 1))
                 {
@@ -955,7 +955,7 @@ public partial class GameObjects : Node
     /// Builds the event that draws the given components into the local cursor container.
     /// </summary>
     public TableEvent BuildDrawEvent(
-        IEnumerable<SnowportId> componentRefs,
+        IEnumerable<SnowTag> componentRefs,
         Func<VisualComponentBase, Vector3> rotation = null
     )
     {
@@ -1267,7 +1267,7 @@ public partial class GameObjects : Node
                 {
                     var effect = TransformEffect.Capture(component);
                     effect.Location = VisualComponentBase.ComponentLocation.Table;
-                    effect.ContainerRef = SnowportId.Empty;
+                    effect.ContainerRef = SnowTag.Empty;
                     effect.Position = component.Position;
                     effect.ZTarget = ZTarget.Top;
                     effect.ZSuborder = index;
@@ -1299,7 +1299,7 @@ public partial class GameObjects : Node
         {
             var effect = TransformEffect.Capture(toBoard[i]);
             effect.Location = VisualComponentBase.ComponentLocation.Table;
-            effect.ContainerRef = SnowportId.Empty;
+            effect.ContainerRef = SnowTag.Empty;
             effect.Position = toBoard[i].Position;
             effect.ZTarget = ZTarget.Top;
             effect.ZSuborder = i;
@@ -1494,7 +1494,7 @@ public partial class GameObjects : Node
         vcb.SpawnBuild(effect.PrototypeRef, syncDto, TextureFactory);
 
         // A newly created table component starts on top
-        if (vcb.ContainerRef == SnowportId.Empty && syncDto.ZOrder.LastEvent == SnowportId.Empty)
+        if (vcb.ContainerRef == SnowTag.Empty && syncDto.ZOrder.LastEvent == SnowportId.Empty)
             vcb.ZOrder = new ZOrder(ZTarget.Top, 0, eventId);
 
         AddComponentToScene(vcb);
@@ -1593,7 +1593,7 @@ public partial class GameObjects : Node
     /// <summary>
     /// Applies any transforms that arrived before this component was created in order.
     /// </summary>
-    private void DrainPendingTransforms(SnowportId id)
+    private void DrainPendingTransforms(SnowTag id)
     {
         if (!_pendingTransforms.Remove(id, out var list))
             return;

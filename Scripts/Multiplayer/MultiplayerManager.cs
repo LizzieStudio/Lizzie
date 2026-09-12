@@ -236,7 +236,7 @@ public partial class MultiplayerManager : Node
     }
 
     /// <summary>
-    /// Get the lowest unclaimed source number for a SnowportId.
+    /// Get the lowest unclaimed source number for a SnowportId and SnowTag.
     /// </summary>
     private byte GetSnowportSource()
     {
@@ -244,10 +244,10 @@ public partial class MultiplayerManager : Node
         foreach (var p in _players.Values)
             used.Add(p.Source);
 
-        for (int candidate = 1; candidate <= byte.MaxValue; candidate++)
+        for (byte candidate = 1; candidate <= byte.MaxValue; candidate++)
         {
-            if (!used.Contains((byte)candidate))
-                return (byte)candidate;
+            if (!used.Contains(candidate))
+                return candidate;
         }
 
         GD.PrintErr("No free Snowport source ids remain; table is full.");

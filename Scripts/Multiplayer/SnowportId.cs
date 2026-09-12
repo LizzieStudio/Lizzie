@@ -14,6 +14,10 @@ public class Snowport
     private ulong _useLogicClock = 1;
     private ulong _localOffsetMsec = 0;
     private ulong _globalOffsetMsec = 0;
+
+    // A counter for SnowTag identities.
+    private int _tagCounter = 1;
+
     public readonly byte source;
 
     public Snowport(byte source)
@@ -34,6 +38,16 @@ public class Snowport
         var id = (_useLogicClock << 8) | source;
         _useLogicClock++;
         return new SnowportId(id);
+    }
+
+    /// <summary>
+    /// Create a new <see cref="SnowTag"/>.
+    /// </summary>
+    public SnowTag CreateTag()
+    {
+        var tag = (source << 24) | _tagCounter;
+        _tagCounter++;
+        return new SnowTag(tag);
     }
 
     /// <summary>
@@ -72,18 +86,12 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
         this.ID = ID;
     }
 
-    /// <summary>The raw id reinterpreted as a signed long. Necessary for Godot Signals</summary>
-    public long AsLong => unchecked((long)ID);
-
-    /// <summary>Rebuilds a SnowportId from the signed long produced by <see cref="AsLong"/>.</summary>
-    public static SnowportId FromLong(long value) => new(unchecked((ulong)value));
-
     public ulong logicClock
     {
         get
         {
-            // get 44 bits from 8 to 51
-            return (ID >> 8) & 0xFFFFFFFFFFFUL;
+            // get 45 bits from 8 to 52
+            return (ID >> 8) & 0x1FFFFFFFFFFFUL;
         }
     }
 
@@ -120,6 +128,53 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
             return true;
         }
         id = Empty;
+        return false;
+    }
+}
+
+/// <summary>
+/// A compact, timestamp-free unique ID for an <see cref="IReplicated"/>.
+/// </remarks>
+public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
+{
+    private readonly int ID;
+
+    public int Value => ID;
+
+    public static readonly SnowTag Empty = new(0);
+
+    public SnowTag(int ID)
+    {
+        this.ID = ID;
+    }
+
+    /// <summary>The source that minted this tag. The host is 0, the rest are 1-255.</summary>
+    public byte source => (byte)((ID >> 24) & 0xFF);
+
+    public bool Equals(SnowTag other) => ID == other.ID;
+
+    public override bool Equals(object other) => other is SnowTag tag && Equals(tag);
+
+    public override int GetHashCode() => ID.GetHashCode();
+
+    public int CompareTo(SnowTag other) => ID.CompareTo(other.ID);
+
+    public static bool operator ==(SnowTag left, SnowTag right) => left.Equals(right);
+
+    public static bool operator !=(SnowTag left, SnowTag right) => !left.Equals(right);
+
+    public override string ToString() => ID.ToString();
+
+    public static SnowTag Parse(string s) => new SnowTag(int.Parse(s));
+
+    public static bool TryParse(string s, out SnowTag tag)
+    {
+        if (int.TryParse(s, out var value))
+        {
+            tag = new SnowTag(value);
+            return true;
+        }
+        tag = Empty;
         return false;
     }
 }

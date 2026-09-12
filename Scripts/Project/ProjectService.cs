@@ -148,8 +148,8 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || dataset == null)
             return;
-        if (dataset.Id == SnowportId.Empty)
-            dataset.Id = Snowport.Clock.Create();
+        if (dataset.Id == SnowTag.Empty)
+            dataset.Id = Snowport.Clock.CreateTag();
         CurrentProject.Datasets[dataset.Id] = dataset;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
@@ -163,8 +163,8 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || template == null)
             return;
-        if (template.Id == SnowportId.Empty)
-            template.Id = Snowport.Clock.Create();
+        if (template.Id == SnowTag.Empty)
+            template.Id = Snowport.Clock.CreateTag();
         CurrentProject.Templates[template.Id] = template;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
@@ -187,7 +187,7 @@ public partial class ProjectService : Node
         );
     }
 
-    public void DeletePrototype(SnowportId prototypeRef)
+    public void DeletePrototype(SnowTag prototypeRef)
     {
         if (CurrentProject == null)
             return;
@@ -234,18 +234,18 @@ public partial class ProjectService : Node
         }
     }
 
-    public DataSet GetDataSet(SnowportId datasetRef)
+    public DataSet GetDataSet(SnowTag datasetRef)
     {
-        if (datasetRef == SnowportId.Empty || CurrentProject == null)
+        if (datasetRef == SnowTag.Empty || CurrentProject == null)
             return null;
         if (CurrentProject.Datasets.TryGetValue(datasetRef, out var d) && !d.Deleted)
             return d;
         return null;
     }
 
-    public Template GetTemplate(SnowportId templateRef)
+    public Template GetTemplate(SnowTag templateRef)
     {
-        if (templateRef == SnowportId.Empty || CurrentProject == null)
+        if (templateRef == SnowTag.Empty || CurrentProject == null)
             return null;
         if (CurrentProject.Templates.TryGetValue(templateRef, out var t) && !t.Deleted)
             return t;

@@ -196,7 +196,7 @@ public partial class VcDeck : VisualComponentGroup
     {
         count = Math.Min(count, Children.Count);
 
-        SnowportId[] cards;
+        SnowTag[] cards;
         //draw cards
         if (_showFace)
         {
@@ -241,7 +241,7 @@ public partial class VcDeck : VisualComponentGroup
 
                 var t = TransformEffect.Capture(comp);
                 t.Location = ComponentLocation.Table;
-                t.ContainerRef = SnowportId.Empty;
+                t.ContainerRef = SnowTag.Empty;
                 t.Position = new Vector3(deltaX, Position.Y, Position.Z);
                 t.Rotation = DrawnRotation(comp);
                 // Splayed cards land on top, in draw order.
@@ -278,7 +278,7 @@ public partial class VcDeck : VisualComponentGroup
         var activeSeats = new List<int>(seatCount);
         for (int seat = 0; seat < seatCount; seat++)
         {
-            if (handService.HandContainer(seat) != SnowportId.Empty)
+            if (handService.HandContainer(seat) != SnowTag.Empty)
                 activeSeats.Add(seat);
         }
 
@@ -303,7 +303,7 @@ public partial class VcDeck : VisualComponentGroup
     }
 
     public override void SpawnBuild(
-        SnowportId prototypeRef,
+        SnowTag prototypeRef,
         VcSyncDto syncDto,
         TextureFactory textureFactory
     )
@@ -325,7 +325,7 @@ public partial class VcDeck : VisualComponentGroup
         BuildInternal((PrintedParameters)proto.Parameters, textureFactory);
     }
 
-    public override IEnumerable<CreateEffect> GetSpawnChildEffects(SnowportId containerRef)
+    public override IEnumerable<CreateEffect> GetSpawnChildEffects(SnowTag containerRef)
     {
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
@@ -378,9 +378,9 @@ public partial class VcDeck : VisualComponentGroup
         }
     }
 
-    private CreateEffect CreateCardEffect(string dataSetRow, SnowportId containerRef, int index)
+    private CreateEffect CreateCardEffect(string dataSetRow, SnowTag containerRef, int index)
     {
-        var id = Snowport.Clock.Create();
+        var id = Snowport.Clock.CreateTag();
         return new CreateEffect
         {
             Id = id,

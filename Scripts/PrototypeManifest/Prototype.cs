@@ -6,7 +6,7 @@ public class Prototype : IReplicated
     public Prototype() { }
 
     //unique identifier for this prototype. Should be generated when the component is created, and never changed.
-    public SnowportId Id { get; set; }
+    public SnowTag Id { get; set; }
 
     /// <summary>
     /// Reversible soft-delete flag.

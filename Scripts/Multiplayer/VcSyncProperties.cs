@@ -42,10 +42,10 @@ public class VcSyncDto
     public VisualComponentBase.ComponentLocation Location { get; set; }
 
     /// <summary>
-    /// The container that holds this component or <see cref="SnowportId.Empty"/>.
+    /// The container that holds this component or <see cref="SnowTag.Empty"/>.
     /// </summary>
     [JsonPropertyName("c")]
-    public SnowportId ContainerRef { get; set; } = SnowportId.Empty;
+    public SnowTag ContainerRef { get; set; } = SnowTag.Empty;
 
     /// <summary>
     /// The last event that moved this component with a transform.

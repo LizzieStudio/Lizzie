@@ -67,9 +67,6 @@ public partial class TemplateCreator : Window
 
     private OptionButton _templateNameSelector;
 
-    /// <summary>SnowportId for each template, index-aligned with _templateNameSelector's items.</summary>
-    private readonly List<SnowportId> _templateRefs = new();
-
     private OptionButton _cardSizes;
     private LineEdit _heightInput;
     private LineEdit _widthInput;
@@ -83,9 +80,6 @@ public partial class TemplateCreator : Window
     private Button _zoomButton;
     private Panel _previewWindow;
     private OptionButton _dataSetSelector;
-
-    /// <summary>SnowportId for each dataset, index-aligned with _dataSetSelector. index 0 is "(none)".</summary>
-    private readonly List<SnowportId> _dataSetRefs = new();
 
     private PageControl _pageControl;
 
@@ -121,7 +115,7 @@ public partial class TemplateCreator : Window
 
         UpdateProject();
 
-        if (_tempTemplateRef != SnowportId.Empty)
+        if (_tempTemplateRef != SnowTag.Empty)
         {
             SetTemplateById(_tempTemplateRef);
         }
@@ -254,11 +248,11 @@ public partial class TemplateCreator : Window
         }
     }
 
-    private SnowportId _tempTemplateRef = SnowportId.Empty;
+    private SnowTag _tempTemplateRef = SnowTag.Empty;
 
-    public void SetTemplateById(SnowportId id)
+    public void SetTemplateById(SnowTag id)
     {
-        if (id == SnowportId.Empty)
+        if (id == SnowTag.Empty)
             return;
 
         if (!IsNodeReady())
@@ -267,14 +261,11 @@ public partial class TemplateCreator : Window
             return;
         }
 
-        for (int i = 0; i < _templateRefs.Count; i++)
+        var idx = _templateNameSelector.GetItemIndex(id.Value);
+        if (idx >= 0)
         {
-            if (_templateRefs[i] == id)
-            {
-                _templateNameSelector.Selected = i;
-                ChangeTemplate(i);
-                return;
-            }
+            _templateNameSelector.Selected = idx;
+            ChangeTemplate(idx);
         }
     }
 
@@ -382,13 +373,15 @@ public partial class TemplateCreator : Window
 
     private void ChangeTemplate(long index)
     {
-        if (index < 0 || index >= _templateRefs.Count)
+        if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
         if (CurrentTemplate != null)
             UpdateTemplate(CurrentTemplate);
 
-        var switched = ProjectService.Instance.GetTemplate(_templateRefs[(int)index]);
+        var switched = ProjectService.Instance.GetTemplate(
+            new SnowTag(_templateNameSelector.GetItemId((int)index))
+        );
         if (switched != null)
         {
             SaveTemplate(); //save current template before switching
@@ -1154,19 +1147,13 @@ public partial class TemplateCreator : Window
     private void InitializeDataSets()
     {
         _dataSetSelector.Clear();
-        _dataSetRefs.Clear();
-        _dataSetSelector.AddItem("(none)", 0);
-        _dataSetRefs.Add(SnowportId.Empty);
-
-        var i = 1;
+        _dataSetSelector.AddItem("(none)", SnowTag.Empty.Value);
 
         foreach (
             var d in ProjectService.Instance.CurrentProject.Datasets.Values.Where(v => !v.Deleted)
         )
         {
-            _dataSetSelector.AddItem(d.Name, i);
-            _dataSetRefs.Add(d.Id);
-            i++;
+            _dataSetSelector.AddItem(d.Name, d.Id.Value);
         }
 
         _dataSetSelector.Select(0);
@@ -1237,8 +1224,7 @@ public partial class TemplateCreator : Window
         t.Height = h;
 
         ProjectService.Instance.UpdateTemplate(t);
-        _templateNameSelector.AddItem(t.Name);
-        _templateRefs.Add(t.Id);
+        _templateNameSelector.AddItem(t.Name, t.Id.Value);
         _templateNameSelector.Select(_templateNameSelector.GetItemCount() - 1);
 
         CurrentTemplate = t;
@@ -1252,7 +1238,7 @@ public partial class TemplateCreator : Window
 
     #region Template management
 
-    public Dictionary<SnowportId, Template> Templates
+    public Dictionary<SnowTag, Template> Templates
     {
         get
         {
@@ -1269,12 +1255,10 @@ public partial class TemplateCreator : Window
             return;
 
         _templateNameSelector.Clear();
-        _templateRefs.Clear();
 
         foreach (var t in Templates.Values.Where(v => !v.Deleted).OrderBy(v => v.Name))
         {
-            _templateNameSelector.AddItem(t.Name);
-            _templateRefs.Add(t.Id);
+            _templateNameSelector.AddItem(t.Name, t.Id.Value);
         }
     }
 
@@ -1373,14 +1357,16 @@ public partial class TemplateCreator : Window
 
         InitializeDataSets();
 
-        if (_templateRefs.Count == 0)
+        if (_templateNameSelector.ItemCount == 0)
         {
             CurrentTemplate = null;
             return;
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = ProjectService.Instance.GetTemplate(_templateRefs[0]);
+        CurrentTemplate = ProjectService.Instance.GetTemplate(
+            new SnowTag(_templateNameSelector.GetItemId(0))
+        );
 
         MapDataset();
     }
@@ -1763,16 +1749,17 @@ public partial class TemplateCreator : Window
     //Different dataset has been selected by the user
     private void OnDatasetChanged(long index)
     {
-        if (index == 0)
+        var datasetRef = new SnowTag(_dataSetSelector.GetSelectedId());
+        if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRowName = string.Empty;
             _pageControl.Hide();
-            CurrentTemplate.DataSet = SnowportId.Empty;
+            CurrentTemplate.DataSet = SnowTag.Empty;
         }
-        else if (index < _dataSetRefs.Count)
+        else
         {
-            CurrentTemplate.DataSet = _dataSetRefs[(int)index];
+            CurrentTemplate.DataSet = datasetRef;
         }
 
         UpdateTextureContext(CurrentTemplate.DataSet);
@@ -1780,7 +1767,7 @@ public partial class TemplateCreator : Window
         _updateRequired = true;
     }
 
-    private void UpdateTextureContext(SnowportId datasetRef)
+    private void UpdateTextureContext(SnowTag datasetRef)
     {
         var dataset = ProjectService.Instance.GetDataSet(datasetRef);
         if (dataset != null)
@@ -1798,10 +1785,7 @@ public partial class TemplateCreator : Window
     {
         var datasetRef = CurrentTemplate.DataSet;
 
-        if (
-            datasetRef == SnowportId.Empty
-            || ProjectService.Instance.GetDataSet(datasetRef) == null
-        )
+        if (datasetRef == SnowTag.Empty || ProjectService.Instance.GetDataSet(datasetRef) == null)
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRowName = string.Empty;
@@ -1811,18 +1795,8 @@ public partial class TemplateCreator : Window
             return;
         }
 
-        int index = 0;
-
-        for (var i = 0; i < _dataSetRefs.Count; i++)
-        {
-            if (_dataSetRefs[i] == datasetRef)
-            {
-                index = i;
-                break;
-            }
-        }
-
-        _dataSetSelector.Select(index);
+        var index = _dataSetSelector.GetItemIndex(datasetRef.Value);
+        _dataSetSelector.Select(index < 0 ? 0 : index);
 
         UpdateTextureContext(datasetRef);
 

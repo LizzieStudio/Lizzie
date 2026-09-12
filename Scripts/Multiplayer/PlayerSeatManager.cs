@@ -12,22 +12,22 @@ public partial class PlayerSeatManager : Node
     [Signal]
     public delegate void SeatsChangedEventHandler();
 
-    /// <summary>The current state of a player, keyed by the player's own SnowportId.</summary>
+    /// <summary>The current state of a player, keyed by the player's own SnowTag.</summary>
     private sealed class PlayerRecord
     {
-        public SnowportId Id;
+        public SnowTag Id;
         public int Seat;
-        public SnowportId HandRef;
-        public SnowportId CursorRef;
+        public SnowTag HandRef;
+        public SnowTag CursorRef;
         public bool HasLeft;
 
         /// <summary>The id of the event that last wrote this record.</summary>
         public SnowportId LastUpdateId;
     }
 
-    private readonly Dictionary<SnowportId, PlayerRecord> _players = new();
+    private readonly Dictionary<SnowTag, PlayerRecord> _players = new();
 
-    private SnowportId _localPlayerId = SnowportId.Empty;
+    private SnowTag _localPlayerId = SnowTag.Empty;
 
     public override void _Ready()
     {
@@ -54,7 +54,7 @@ public partial class PlayerSeatManager : Node
     public void Clear()
     {
         _players.Clear();
-        _localPlayerId = SnowportId.Empty;
+        _localPlayerId = SnowTag.Empty;
     }
 
     /// <summary>Returns true if the seat is not owned by anyone.</summary>
@@ -75,14 +75,13 @@ public partial class PlayerSeatManager : Node
     }
 
     /// <summary>The hand container id owned by the current occupant of a seat.</summary>
-    public SnowportId HandRefForSeat(int seatIndex) =>
-        SeatOwner(seatIndex)?.HandRef ?? SnowportId.Empty;
+    public SnowTag HandRefForSeat(int seatIndex) => SeatOwner(seatIndex)?.HandRef ?? SnowTag.Empty;
 
     /// <summary>Claim a seat for the local player.</summary>
     public void ClaimSeat(int seatIndex)
     {
-        if (_localPlayerId == SnowportId.Empty)
-            _localPlayerId = Snowport.Clock.Create();
+        if (_localPlayerId == SnowTag.Empty)
+            _localPlayerId = Snowport.Clock.CreateTag();
 
         _players.TryGetValue(_localPlayerId, out var mine);
 
@@ -94,13 +93,13 @@ public partial class PlayerSeatManager : Node
                     Id = _localPlayerId,
                     Seat = seatIndex,
                     HandRef =
-                        mine != null && mine.HandRef != SnowportId.Empty
+                        mine != null && mine.HandRef != SnowTag.Empty
                             ? mine.HandRef
-                            : Snowport.Clock.Create(),
+                            : Snowport.Clock.CreateTag(),
                     CursorRef =
-                        mine != null && mine.CursorRef != SnowportId.Empty
+                        mine != null && mine.CursorRef != SnowTag.Empty
                             ? mine.CursorRef
-                            : Snowport.Clock.Create(),
+                            : Snowport.Clock.CreateTag(),
                     HasLeft = false,
                 }
             )

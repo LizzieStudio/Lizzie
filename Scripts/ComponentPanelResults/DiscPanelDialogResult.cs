@@ -87,7 +87,7 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
         _preview.Build(p, TextureFactory);
     }
 
-    public override void DisplayPrototype(SnowportId prototypeId)
+    public override void DisplayPrototype(SnowTag prototypeId)
     {
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
         DisplayPrototype(prototype);

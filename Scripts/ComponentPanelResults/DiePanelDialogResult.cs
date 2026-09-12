@@ -14,15 +14,9 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private ComponentPreview _preview;
 
     private OptionButton _frontTemplatePicker;
-
-    /// <summary>SnowportId for each template, index-aligned with _frontTemplatePicker.</summary>
-    private readonly List<SnowportId> _frontTemplateRefs = new();
     private Button _editFrontTemplateButton;
 
     private OptionButton _datasetPicker;
-
-    /// <summary>SnowportId for each dataset, index-aligned with _datasetPicker.</summary>
-    private readonly List<SnowportId> _datasetRefs = new();
     private Button _datasetEditorButton;
 
     [Export]
@@ -79,12 +73,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void TemplatesChanged(long[] ids)
+    private void TemplatesChanged(int[] ids)
     {
         UpdatePreview();
     }
 
-    private void DataSetsChanged(long[] ids)
+    private void DataSetsChanged(int[] ids)
     {
         UpdatePreview();
     }
@@ -111,10 +105,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             return;
 
         _frontTemplatePicker.Clear();
-        _frontTemplateRefs.Clear();
-
-        _frontTemplatePicker.AddItem("(none)");
-        _frontTemplateRefs.Add(SnowportId.Empty);
+        _frontTemplatePicker.AddItem("(none)", SnowTag.Empty.Value);
 
         int.TryParse(_sidesInput.Text, out var sides);
         var target = SidesToTarget(sides);
@@ -125,18 +116,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             )
         )
         {
-            _frontTemplatePicker.AddItem(t.Value.Name);
-            _frontTemplateRefs.Add(t.Key);
+            _frontTemplatePicker.AddItem(t.Value.Name, t.Key.Value);
         }
 
         _datasetPicker.Clear();
-        _datasetRefs.Clear();
-        _datasetPicker.AddItem("(none)");
-        _datasetRefs.Add(SnowportId.Empty);
+        _datasetPicker.AddItem("(none)", SnowTag.Empty.Value);
         foreach (var d in CurrentProject.Datasets.Where(x => !x.Value.Deleted))
         {
-            _datasetPicker.AddItem(d.Value.Name);
-            _datasetRefs.Add(d.Key);
+            _datasetPicker.AddItem(d.Value.Name, d.Key.Value);
         }
     }
 
@@ -165,7 +152,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private void OnDatasetChanged(long index)
     {
-        if (_datasetPicker.Selected == 0)
+        var datasetRef = new SnowTag(_datasetPicker.GetSelectedId());
+        if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRowName = null;
@@ -173,7 +161,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
         else
         {
-            _textureContext.DataSet = ProjectService.Instance.GetDataSet(_datasetRefs[(int)index]);
+            _textureContext.DataSet = ProjectService.Instance.GetDataSet(datasetRef);
             _preview.MultiItemMode = true;
             _preview.SetItemLabels(_textureContext.DataSet.Rows.Keys.ToList());
         }
@@ -185,13 +173,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private void OnFrontTemplateChanged(long index)
     {
-        if (_frontTemplatePicker.Selected == 0)
+        var templateRef = new SnowTag(_frontTemplatePicker.GetSelectedId());
+        if (templateRef == SnowTag.Empty)
         {
             _frontTemplate = null;
         }
         else
         {
-            _frontTemplate = ProjectService.Instance.GetTemplate(_frontTemplateRefs[(int)index]);
+            _frontTemplate = ProjectService.Instance.GetTemplate(templateRef);
         }
 
         UpdatePreview();
@@ -200,17 +189,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private void EditFrontTemplate()
     {
         EventBus.Instance.Publish(
-            new ShowTemplateEditor { TemplateRef = _frontTemplate?.Id ?? SnowportId.Empty }
+            new ShowTemplateEditor { TemplateRef = _frontTemplate?.Id ?? SnowTag.Empty }
         );
     }
 
     private void EditDataset()
     {
         EventBus.Instance.Publish(
-            new ShowDatasetEditor
-            {
-                DatasetRef = _textureContext.DataSet?.Id ?? SnowportId.Empty,
-            }
+            new ShowDatasetEditor { DatasetRef = _textureContext.DataSet?.Id ?? SnowTag.Empty }
         );
     }
 
@@ -323,10 +309,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                     p.FrontTemplate = _frontTemplate.Id;
                 }
 
-                p.Dataset = _textureContext.DataSet?.Id ?? SnowportId.Empty;
+                p.Dataset = _textureContext.DataSet?.Id ?? SnowTag.Empty;
 
                 DataSet = ProjectService.Instance.GetDataSet(
-                    _textureContext.DataSet?.Id ?? SnowportId.Empty
+                    _textureContext.DataSet?.Id ?? SnowTag.Empty
                 );
                 MultipleCreateMode = (DataSet != null);
                 WidthHint = dia / 10;
@@ -379,7 +365,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         return _textureContext.DataSet.Rows.ElementAt(rowNum).Key;
     }
 
-    public override void DisplayPrototype(SnowportId prototypeId)
+    public override void DisplayPrototype(SnowTag prototypeId)
     {
         var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
         DisplayPrototype(prototype);
@@ -443,16 +429,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         // Restore template
         _frontTemplatePicker.Select(0);
         _frontTemplate = null;
-        if (p.FrontTemplate != SnowportId.Empty)
+        if (p.FrontTemplate != SnowTag.Empty)
         {
-            for (int i = 0; i < _frontTemplateRefs.Count; i++)
+            var idx = _frontTemplatePicker.GetItemIndex(p.FrontTemplate.Value);
+            if (idx >= 0)
             {
-                if (_frontTemplateRefs[i] == p.FrontTemplate)
-                {
-                    _frontTemplatePicker.Select(i);
-                    _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
-                    break;
-                }
+                _frontTemplatePicker.Select(idx);
+                _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
             }
         }
 
@@ -460,16 +443,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _datasetPicker.Select(0);
         _textureContext.DataSet = null;
         _textureContext.CurrentRowName = null;
-        if (p.Dataset != SnowportId.Empty)
+        if (p.Dataset != SnowTag.Empty)
         {
-            for (int i = 0; i < _datasetRefs.Count; i++)
+            var idx = _datasetPicker.GetItemIndex(p.Dataset.Value);
+            if (idx >= 0)
             {
-                if (_datasetRefs[i] == p.Dataset)
-                {
-                    _datasetPicker.Select(i);
-                    _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
-                    break;
-                }
+                _datasetPicker.Select(idx);
+                _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
             }
         }
     }

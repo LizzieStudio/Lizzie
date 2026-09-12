@@ -11,7 +11,7 @@ public partial class DataSetManager : ReplicatedStore<DataSet>
     public static DataSetManager Instance => _instance;
 
     [Signal]
-    public delegate void DataSetsChangedEventHandler(long[] ids);
+    public delegate void DataSetsChangedEventHandler(int[] ids);
 
     public override void _Ready()
     {
@@ -35,9 +35,9 @@ public partial class DataSetManager : ReplicatedStore<DataSet>
             _instance = null;
     }
 
-    protected override IDictionary<SnowportId, DataSet> Store =>
+    protected override IDictionary<SnowTag, DataSet> Store =>
         ProjectService.Instance?.CurrentProject?.Datasets;
 
-    protected override void NotifyChanged(IReadOnlyList<SnowportId> ids) =>
-        EmitSignal(SignalName.DataSetsChanged, ids.Select(i => i.AsLong).ToArray());
+    protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
+        EmitSignal(SignalName.DataSetsChanged, ids.Select(i => i.Value).ToArray());
 }

@@ -11,7 +11,7 @@ public partial class PrototypeManager : ReplicatedStore<Prototype>
     public static PrototypeManager Instance => _instance;
 
     [Signal]
-    public delegate void PrototypesChangedEventHandler(long[] ids);
+    public delegate void PrototypesChangedEventHandler(int[] ids);
 
     public override void _Ready()
     {
@@ -35,9 +35,9 @@ public partial class PrototypeManager : ReplicatedStore<Prototype>
             _instance = null;
     }
 
-    protected override IDictionary<SnowportId, Prototype> Store =>
+    protected override IDictionary<SnowTag, Prototype> Store =>
         ProjectService.Instance?.CurrentProject?.Prototypes;
 
-    protected override void NotifyChanged(IReadOnlyList<SnowportId> ids) =>
-        EmitSignal(SignalName.PrototypesChanged, ids.Select(i => i.AsLong).ToArray());
+    protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
+        EmitSignal(SignalName.PrototypesChanged, ids.Select(i => i.Value).ToArray());
 }
