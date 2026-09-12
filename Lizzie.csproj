@@ -3,7 +3,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>Lizzie</RootNamespace>
+    <!-- Required by ImGui -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Must match the version the imgui-godot addon was built against. -->
+    <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\AssetManagement\README.md" />
     <None Include="Scripts\Multiplayer\README.md" />

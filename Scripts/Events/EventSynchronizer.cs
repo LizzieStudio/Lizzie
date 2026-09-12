@@ -14,6 +14,9 @@ public partial class EventSynchronizer : Node
 
     private readonly EventLog _log = new();
 
+    /// <summary>The recorded events, in arrival order. Exposed for debug tooling.</summary>
+    public IReadOnlyList<TableEvent> Events => _log.Events;
+
     /// <summary>
     /// Peers still receiving their catchup events.
     /// They are excluded from live event delivery until caught up.

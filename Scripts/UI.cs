@@ -368,7 +368,7 @@ public partial class UI : CanvasLayer
     private void ShowProjectSettings()
     {
         string s = "res://Scenes/Project/ProjectSettings.tscn";
-        _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettings>();
+        _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettingsDialog>();
         _projectSettings.Closed += ProjectSettingsOnClosed;
         _modalDialogs.AddChild(_projectSettings);
     }
@@ -917,7 +917,7 @@ public partial class UI : CanvasLayer
     }
 
     private bool _popupShown;
-    private ProjectSettings _projectSettings;
+    private ProjectSettingsDialog _projectSettings;
 
     public void ShowComponentPopup(Vector2I position)
     {

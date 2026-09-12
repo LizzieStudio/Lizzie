@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://ciqnkl4mvlnfn"]
 
-[ext_resource type="Script" uid="uid://dwwrrtdbe5o1q" path="res://Scripts/Project/ProjectSettings.cs" id="1_l4pns"]
+[ext_resource type="Script" uid="uid://dwwrrtdbe5o1q" path="res://Scripts/Project/ProjectSettingsDialog.cs" id="1_l4pns"]
 
 [node name="ProjectSettings" type="Window" unique_id=1143015133]
 oversampling_override = 1.0

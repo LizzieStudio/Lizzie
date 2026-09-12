@@ -93,6 +93,10 @@ public abstract partial class BaseCamera : Node3D, ICamera
         )
             return;
 
+        // defer to ImGui debuggers
+        if (ImGuiInterop.ClaimingMouse)
+            return;
+
         if (Input.IsActionPressed("rotate") && @event is InputEventMouseMotion mouseMotion)
         {
             UpdateRotation(mouseMotion.Relative);

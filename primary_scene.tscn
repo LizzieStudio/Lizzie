@@ -17,7 +17,6 @@ _textureFactory = NodePath("UI/TextureFactory")
 [node name="UI" type="CanvasLayer" parent="." unique_id=309296479]
 script = ExtResource("2_a0mv7")
 highlightFontColor = Color(0.54902, 0.694118, 1, 1)
-baseFontColor = null
 
 [node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=571287879]
 anchors_preset = 10
@@ -104,7 +103,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 0
 script = ExtResource("3_h6pmi")
-_openSpeed = null
 
 [node name="MarginContainer" type="MarginContainer" parent="UI/Hand" unique_id=184998263]
 layout_mode = 1

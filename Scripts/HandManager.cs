@@ -71,6 +71,11 @@ public partial class HandManager : Panel
 
     public override void _Input(InputEvent @event)
     {
+        // Don't start a hand-resize drag through an ImGui window.
+        // Resizing takes precedence.
+        if (ImGuiInterop.ClaimingMouse && !_isResizing)
+            return;
+
         if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left } mb)
         {
             if (mb.Pressed && IsOverResizeHandle(mb.Position))

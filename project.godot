@@ -35,6 +35,8 @@ TemplateManager="*uid://dm4lrrivwlf6n"
 DataSetManager="*uid://cblb6r36a0ejg"
 PrototypeManager="*uid://b2b5wnutaihe7"
 SettingsManager="*uid://csb3v4d3ip84q"
+DebugConsole="*uid://dg13x5vbxhq7d"
+ImGuiRoot="*uid://dugmpnsxaagba"
 
 [display]
 
@@ -51,7 +53,7 @@ version_control/autoload_on_startup=true
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/label_font_auto_sizer/plugin.cfg")
+enabled=PackedStringArray("res://addons/imgui-godot/plugin.cfg", "res://addons/label_font_auto_sizer/plugin.cfg")
 
 [file_customization]
 

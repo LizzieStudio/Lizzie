@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
-public partial class ProjectSettings : Window
+public partial class ProjectSettingsDialog : Window
 {
     /// <summary>
     /// The settings when the window was opened.

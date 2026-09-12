@@ -69,6 +69,10 @@ public partial class ComponentPreview : Panel
         if (!Visible)
             return;
 
+        // defer to ImGui debuggers
+        if (ImGuiInterop.ClaimingMouse)
+            return;
+
         if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
         {
             if (mouseEvent.ButtonIndex == MouseButton.WheelUp)
