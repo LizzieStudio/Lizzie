@@ -130,7 +130,6 @@ public static class TemplateEngine
         }
 
         te.ElementName = parameters.TryGetValue("Name", out var name) ? name : string.Empty;
-        te.Id = parameters.TryGetValue("Id", out var id) ? int.Parse(id) : 0;
 
         foreach (var kv in parameters)
         {
@@ -187,8 +186,6 @@ public static class TemplateEngine
         {
             { "Type", element.ElementType.ToString() },
             { "Name", element.ElementName },
-            { "Id", element.Id.ToString() },
-            { "Parent", element.Parent.ToString() },
         };
         foreach (var p in element.Parameters)
         {

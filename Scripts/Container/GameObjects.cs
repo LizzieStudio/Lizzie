@@ -38,6 +38,8 @@ public partial class GameObjects : Node
     /// </summary>
     private readonly HashSet<SnowTag> _tombstones = new();
 
+    private readonly Dictionary<SnowTag, VisualComponentBase> _componentsByRef = new();
+
     private GameController _gameController;
 
     /// <summary>
@@ -141,9 +143,7 @@ public partial class GameObjects : Node
 
     public VisualComponentBase GetComponent(SnowTag reference)
     {
-        return ComponentNodes
-            .OfType<VisualComponentBase>()
-            .FirstOrDefault(vc => vc.Reference == reference);
+        return _componentsByRef.GetValueOrDefault(reference);
     }
 
     /// <summary>
@@ -311,6 +311,10 @@ public partial class GameObjects : Node
         GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
 
         _table.AddChild(component);
+
+        _componentsByRef[component.Reference] = component;
+        component.TreeExiting += () => _componentsByRef.Remove(component.Reference);
+
         component.Build();
 
         QueueStackingUpdate();
@@ -1397,6 +1401,7 @@ public partial class GameObjects : Node
         _pendingSpawns.Clear();
         _pendingTransforms.Clear();
         _tombstones.Clear();
+        _componentsByRef.Clear();
         EventSynchronizer.Instance?.Clear();
         PlayerSeatManager.Instance?.Clear();
 

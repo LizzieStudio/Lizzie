@@ -57,8 +57,7 @@ public class TemplateElement : ITemplateElement
         );
     }
 
-    public int Id { get; set; }
-    public int Parent { get; set; } = -1; //top level
+    public SnowTag Id { get; set; } = SnowTag.Empty;
 
     public void SetParameterValue(string name, string value)
     {
@@ -311,7 +310,7 @@ public interface ITemplateElement
         Box,
         Image,
         Note,
-        Cirlce,
+        Circle,
         Polygon,
         Table,
         Line,
@@ -328,8 +327,7 @@ public interface ITemplateElement
 
     IList<TextureFactory.TextureObject> GetElementData(TextureContext context);
 
-    int Id { get; set; }
-    int Parent { get; set; }
+    SnowTag Id { get; set; }
 
     List<ITemplateElement> Children { get; }
 

@@ -316,17 +316,14 @@ public partial class TemplateCreator : Window
 
         ClearParameterBox();
 
-        int id = 0;
         foreach (var t in CurrentTemplate.Elements)
         {
             var te = TemplateEngine.BuildTemplateElement(t);
 
             var ni = _elementTree.CreateItem(_rootItem);
 
-            if (te.Id == 0)
-                te.Id = id;
-            ni.SetMetadata(0, te.Id);
-            id++;
+            te.Id = Snowport.Clock.CreateTag();
+            ni.SetMetadata(0, te.Id.Value);
             ni.SetText(0, te.ElementName);
 
             _templateElements.Add(te);
@@ -577,7 +574,7 @@ public partial class TemplateCreator : Window
         var id = ti.GetMetadata(0).AsInt32();
 
         //matching param
-        var p = _templateElements.FirstOrDefault(x => x.Id == id);
+        var p = _templateElements.FirstOrDefault(x => x.Id.Value == id);
         return p;
     }
 
@@ -589,7 +586,7 @@ public partial class TemplateCreator : Window
             return;
         var ti = _elementTree.GetSelected();
 
-        if (ti.GetMetadata(0).AsInt32() != _selectedElement.Id)
+        if (ti.GetMetadata(0).AsInt32() != _selectedElement.Id.Value)
             return;
 
         _acceptDialog.DialogText =
@@ -630,7 +627,7 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
-        var max = GetMaxId(_rootItem) + 1;
+        var id = Snowport.Clock.CreateTag();
 
         TemplateElement t = new TextElement(); //for now - delete once all switch elements are populated
 
@@ -646,7 +643,7 @@ public partial class TemplateCreator : Window
                 break;
             case ITemplateElement.TemplateElementType.Note:
                 break;
-            case ITemplateElement.TemplateElementType.Cirlce:
+            case ITemplateElement.TemplateElementType.Circle:
                 break;
             case ITemplateElement.TemplateElementType.Polygon:
                 break;
@@ -660,13 +657,13 @@ public partial class TemplateCreator : Window
                 throw new ArgumentOutOfRangeException();
         }
 
-        var elementName = $"{_selectedElement.ElementName}{max}";
+        var elementName = CreateUniqueElementName(_selectedElement.ElementName);
 
         var ni = _elementTree.CreateItem(_rootItem); //update so that it places item as sibling to selected
-        ni.SetMetadata(0, max);
+        ni.SetMetadata(0, id.Value);
         ni.SetText(0, elementName);
 
-        t.Id = max;
+        t.Id = id;
         t.ElementName = elementName;
 
         t.Parameters.Clear();
@@ -723,7 +720,7 @@ public partial class TemplateCreator : Window
 
     private void AddTextureElement(ITemplateElement.TemplateElementType type)
     {
-        var max = GetMaxId(_rootItem) + 1;
+        var id = Snowport.Clock.CreateTag();
 
         TemplateElement t = new TextElement();
 
@@ -742,7 +739,7 @@ public partial class TemplateCreator : Window
                 break;
             case ITemplateElement.TemplateElementType.Note:
                 break;
-            case ITemplateElement.TemplateElementType.Cirlce:
+            case ITemplateElement.TemplateElementType.Circle:
                 break;
             case ITemplateElement.TemplateElementType.Polygon:
                 break;
@@ -762,13 +759,13 @@ public partial class TemplateCreator : Window
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
 
-        var elementName = $"{prefix}{max}";
+        var elementName = CreateUniqueElementName(prefix);
 
         var ni = _elementTree.CreateItem(_rootItem);
-        ni.SetMetadata(0, max);
+        ni.SetMetadata(0, id.Value);
         ni.SetText(0, elementName);
 
-        t.Id = max;
+        t.Id = id;
         t.ElementName = elementName;
         _templateElements.Add(t);
 
@@ -779,27 +776,20 @@ public partial class TemplateCreator : Window
     }
 
     /// <summary>
-    /// Recursively iterates through all TreeItems starting from a given item.
+    /// Takes <paramref name="prefix"/> and adds an increment to make it unique.
     /// </summary>
-    private int GetMaxId(TreeItem item)
+    private string CreateUniqueElementName(string prefix)
     {
-        int maxId = 0;
+        var names = _templateElements.Select(e => e.ElementName).ToHashSet();
 
-        if (item == null)
-            return 0;
-
-        var id = item.GetMetadata(0).AsInt32();
-        maxId = Math.Max(maxId, id);
-
-        // Iterate over children
-        TreeItem child = item.GetFirstChild();
-        while (child != null)
+        for (int i = 2; i < int.MaxValue; i++)
         {
-            maxId = Math.Max(GetMaxId(child), maxId); // Recursive call
-            child = child.GetNext();
+            var candidate = $"{prefix}{i}";
+            if (!names.Contains(candidate))
+                return candidate;
         }
 
-        return maxId;
+        throw new Exception("unique name not found");
     }
 
     private void RemapParameters()
@@ -1453,7 +1443,7 @@ public partial class TemplateCreator : Window
 
         var dropSection = _elementTree.GetDropSectionAtPosition(position);
 
-        var draggedElement = _templateElements.FirstOrDefault(x => x.Id == draggedId);
+        var draggedElement = _templateElements.FirstOrDefault(x => x.Id.Value == draggedId);
         if (draggedElement == null)
             return;
 
@@ -1488,7 +1478,7 @@ public partial class TemplateCreator : Window
         var oldParent = draggedItem.GetParent();
 
         var newItem = _elementTree.CreateItem(newParent, GetChildIndex(newParent, insertBefore)); //newParent.GetChildIndex(insertBefore));
-        newItem.SetMetadata(0, draggedElement.Id);
+        newItem.SetMetadata(0, draggedElement.Id.Value);
         newItem.SetText(0, draggedElement.ElementName);
 
         var children = new List<TreeItem>();
