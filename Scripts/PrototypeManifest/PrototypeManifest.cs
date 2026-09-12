@@ -328,10 +328,7 @@ public partial class PrototypeManifest : Window
             item.SetText(0, prototype.Name ?? "");
             item.SetText(1, prototype.Type.ToString());
 
-            if (
-                prototypeCounts != null
-                && prototypeCounts.TryGetValue(prototype.Id, out var count)
-            )
+            if (prototypeCounts != null && prototypeCounts.TryGetValue(prototype.Id, out var count))
             {
                 item.SetText(2, count.ToString());
             }

@@ -215,11 +215,7 @@ public partial class ProjectService : Node
 
         if (!CurrentProject.Prototypes.ContainsKey(args.PrototypeRef))
         {
-            var newProto = new Prototype
-            {
-                Id = args.PrototypeRef,
-                Parameters = args.Params,
-            };
+            var newProto = new Prototype { Id = args.PrototypeRef, Parameters = args.Params };
 
             if (!string.IsNullOrEmpty(args.Params?.ComponentName))
             {
