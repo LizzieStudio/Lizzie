@@ -27,7 +27,7 @@ public partial class ImageTile : MarginContainer
         if (obj == null || obj.Asset == null || _asset == null)
             return;
 
-        if (obj.Asset.AssetId == _asset.AssetId)
+        if (obj.Asset.Id == _asset.Id)
         {
             Refresh();
         }

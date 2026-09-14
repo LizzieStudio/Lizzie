@@ -7,7 +7,7 @@ namespace Lizzie.AssetManagement
     /// <summary>
     /// Represents a cloud-stored asset in the project
     /// </summary>
-    public class Asset
+    public class Asset : IReplicated
     {
         public enum AssetType
         {
@@ -22,7 +22,15 @@ namespace Lizzie.AssetManagement
         /// <summary>
         /// Unique identifier for this asset
         /// </summary>
-        public Guid AssetId { get; set; } = Guid.NewGuid();
+        public SnowTag Id { get; set; }
+
+        /// <summary>
+        /// Reversible soft-delete flag.
+        /// </summary>
+        public bool Deleted { get; set; }
+
+        /// <summary>The id of the last event that updated this asset.</summary>
+        public SnowportId LastUpdateId { get; set; }
 
         /// <summary>
         /// User-defined name for the asset

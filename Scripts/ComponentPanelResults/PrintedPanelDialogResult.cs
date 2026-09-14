@@ -426,18 +426,18 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         }
     }
 
-    private string _frontGridImage;
-    private string _backGridImage;
+    private SnowTag _frontGridImage;
+    private SnowTag _backGridImage;
 
     private async void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
     {
-        _frontGridImage = e.SelectedItem?.AssetId.ToString() ?? string.Empty;
+        _frontGridImage = e.SelectedItem?.Id ?? SnowTag.Empty;
         UpdatePreview();
     }
 
     private async void BackImageSelected(object sender, SelectedEventArgs<Asset> e)
     {
-        _backGridImage = e.SelectedItem?.AssetId.ToString() ?? string.Empty;
+        _backGridImage = e.SelectedItem?.Id ?? SnowTag.Empty;
         UpdatePreview();
     }
 
@@ -854,15 +854,11 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _preview.ItemCount = _gridCount;
 
         _frontGridImage = p.FrontGridImageKey;
-        var frontGridAsset = _currentProject?.Images.Values.FirstOrDefault(a =>
-            a.AssetId.ToString() == _frontGridImage
-        );
+        var frontGridAsset = _currentProject?.GetImage(_frontGridImage);
         _gridFrontImageSelector.SelectedImage = frontGridAsset;
 
         _backGridImage = p.BackGridImageKey;
-        var backGridAsset = _currentProject?.Images.Values.FirstOrDefault(a =>
-            a.AssetId.ToString() == _backGridImage
-        );
+        var backGridAsset = _currentProject?.GetImage(_backGridImage);
         _gridBackImageSelector.SelectedImage = backGridAsset;
 
         _gridSingleBack.ButtonPressed = p.GridSingleBack;

@@ -126,6 +126,8 @@ public partial class ImageManager : Window
     {
         foreach (var i in ProjectService.Instance.CurrentProject.Images)
         {
+            if (i.Value.Deleted)
+                continue;
             AddImageTile(i.Value);
         }
     }

@@ -252,15 +252,6 @@ public class TokenMovedEvent : IEvent
 }
 
 /// <summary>
-/// Named Image has been added/removed/updated
-/// </summary>
-public class ImageChangedEvent : IEvent
-{
-    public Guid ImageId { get; set; } //use ID if item deleted
-    public Asset Image { get; set; }
-}
-
-/// <summary>
 /// Example: Command executed event
 /// </summary>
 public class CommandExecutedEvent : IEvent

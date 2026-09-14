@@ -11,6 +11,7 @@ using Godot;
 [JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
 [JsonDerivedType(typeof(UpdateSettingsEffect), "gs")]
 public abstract class Effect
 {

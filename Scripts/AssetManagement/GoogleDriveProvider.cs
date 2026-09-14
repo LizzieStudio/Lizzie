@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Godot;
 
@@ -279,26 +280,39 @@ namespace Lizzie.AssetManagement
         {
             try
             {
-                // Convert Google Drive share URL to direct download URL
+                var fileId = ExtractFileIdFromUrl(publicUrl);
                 var downloadUrl = ConvertToDirectDownloadUrl(publicUrl);
 
-                using var client = new System.Net.Http.HttpClient();
-                var response = await client.GetAsync(downloadUrl);
-
-                // Handle redirect for large files (Google Drive virus scan warning)
-                if (
-                    !response.IsSuccessStatusCode
-                    && response.StatusCode == System.Net.HttpStatusCode.Found
-                )
+                using var handler = new HttpClientHandler
                 {
-                    var redirectUrl = response.Headers.Location?.ToString();
-                    if (!string.IsNullOrEmpty(redirectUrl))
+                    AllowAutoRedirect = true,
+                    UseCookies = true,
+                };
+                using var client = new System.Net.Http.HttpClient(handler);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+
+                var response = await client.GetAsync(downloadUrl);
+                response.EnsureSuccessStatusCode();
+
+                // Google sometimes returns an HTML interstitial. Parse it and re-request once.
+                if (IsHtml(response))
+                {
+                    var html = await response.Content.ReadAsStringAsync();
+                    var confirmUrl = BuildConfirmUrl(html, fileId);
+                    if (confirmUrl != null)
                     {
-                        response = await client.GetAsync(redirectUrl);
+                        response = await client.GetAsync(confirmUrl);
+                        response.EnsureSuccessStatusCode();
                     }
                 }
 
-                response.EnsureSuccessStatusCode();
+                if (IsHtml(response))
+                {
+                    throw new InvalidOperationException(
+                        "Google Drive returned an HTML page instead of the file. Ensure the link "
+                            + "is shared with 'Anyone with the link' and points to an image file."
+                    );
+                }
 
                 var memoryStream = new MemoryStream();
                 await response.Content.CopyToAsync(memoryStream);
@@ -312,6 +326,33 @@ namespace Lizzie.AssetManagement
             }
         }
 
+        private static bool IsHtml(HttpResponseMessage response) =>
+            response.Content.Headers.ContentType?.MediaType?.Contains(
+                "text/html",
+                StringComparison.OrdinalIgnoreCase
+            ) == true;
+
+        /// <summary>
+        /// Builds the confirmed-download URL from the Google Drive interstitial HTML, which
+        /// carries the file id, export, confirm and uuid as a hidden download form.
+        /// </summary>
+        private static string BuildConfirmUrl(string html, string fileId)
+        {
+            if (string.IsNullOrEmpty(fileId))
+                return null;
+
+            var confirm = Regex.Match(html, "name=\"confirm\"\\s+value=\"([^\"]+)\"").Groups[1].Value;
+            if (string.IsNullOrEmpty(confirm))
+                confirm = "t";
+            var uuid = Regex.Match(html, "name=\"uuid\"\\s+value=\"([^\"]+)\"").Groups[1].Value;
+
+            var url =
+                $"https://drive.usercontent.google.com/download?id={fileId}&export=download&confirm={confirm}";
+            if (!string.IsNullOrEmpty(uuid))
+                url += $"&uuid={uuid}";
+            return url;
+        }
+
         private string ConvertToDirectDownloadUrl(string url)
         {
             // Extract file ID from various Google Drive URL formats
@@ -319,8 +360,9 @@ namespace Lizzie.AssetManagement
 
             if (!string.IsNullOrEmpty(fileId))
             {
-                // Use direct download URL format
-                return $"https://drive.google.com/uc?export=download&id={fileId}";
+                // The usercontent endpoint serves the bytes directly; confirm=t skips the
+                // "can't scan this file" interstitial for most public files.
+                return $"https://drive.usercontent.google.com/download?id={fileId}&export=download&confirm=t";
             }
 
             return url;

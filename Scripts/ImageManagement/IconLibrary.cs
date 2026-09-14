@@ -155,6 +155,8 @@ public class IconLibrary : Dictionary<string, IconEntry>
             button.AddSeparator();
             foreach (var img in ProjectService.Instance.CurrentProject.Images)
             {
+                if (img.Value.Deleted)
+                    continue;
                 button.AddItem($"u:{img.Value.Name}", id);
                 id++;
             }
@@ -166,6 +168,8 @@ public class IconLibrary : Dictionary<string, IconEntry>
             button.AddSeparator();
             foreach (var img in ProjectService.Instance.CurrentProject.Images)
             {
+                if (img.Value.Deleted)
+                    continue;
                 button.AddItem($"u:{img.Value.Name}", id);
                 id++;
             }
@@ -177,6 +181,8 @@ public class IconLibrary : Dictionary<string, IconEntry>
             button.AddSeparator();
             foreach (var img in ProjectService.Instance.CurrentProject.Images)
             {
+                if (img.Value.Deleted)
+                    continue;
                 button.AddItem($"u:{img.Value.Name}", id);
                 id++;
             }
@@ -188,6 +194,8 @@ public class IconLibrary : Dictionary<string, IconEntry>
             button.AddSeparator();
             foreach (var img in ProjectService.Instance.CurrentProject.Images)
             {
+                if (img.Value.Deleted)
+                    continue;
                 button.AddItem($"u:{img.Value.Name}", id);
                 id++;
             }
@@ -199,6 +207,8 @@ public class IconLibrary : Dictionary<string, IconEntry>
             button.AddSeparator();
             foreach (var img in ProjectService.Instance.CurrentProject.Images)
             {
+                if (img.Value.Deleted)
+                    continue;
                 button.AddItem($"u:{img.Value.Name}", id);
                 id++;
             }

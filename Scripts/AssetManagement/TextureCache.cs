@@ -17,7 +17,7 @@ public class TextureCache
         }
     }
 
-    private readonly Dictionary<Guid, Texture2D> _assetCache = new();
+    private readonly Dictionary<SnowTag, Texture2D> _assetCache = new();
     private readonly Dictionary<string, Texture2D> _derivedCache = new();
 
     private readonly Dictionary<string, List<Action<Texture2D>>> _pending = new();
@@ -27,11 +27,11 @@ public class TextureCache
         if (asset == null || asset.Image == null)
             return null;
 
-        if (_assetCache.TryGetValue(asset.AssetId, out var cached))
+        if (_assetCache.TryGetValue(asset.Id, out var cached))
             return cached;
 
         var tex = BuildCompressedTexture(asset.Image);
-        _assetCache[asset.AssetId] = tex;
+        _assetCache[asset.Id] = tex;
         return tex;
     }
 

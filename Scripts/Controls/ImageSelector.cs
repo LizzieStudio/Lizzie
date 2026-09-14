@@ -48,12 +48,11 @@ public partial class ImageSelector : Control
             return;
         }
 
-        int index = 1;
         foreach (var i in _project.Images)
         {
-            _optionDropdown.AddItem(i.Value.Name, index);
-            _optionDropdown.SetItemMetadata(index, i.Key);
-            index++;
+            if (i.Value.Deleted)
+                continue;
+            _optionDropdown.AddItem(i.Value.Name, i.Key.Value);
         }
     }
 
@@ -61,14 +60,10 @@ public partial class ImageSelector : Control
     {
         get
         {
-            var s = _optionDropdown.GetItemMetadata(_optionDropdown.Selected).ToString();
-
-            if (string.IsNullOrEmpty(s))
-            {
+            var id = _optionDropdown.GetSelectedId();
+            if (id <= 0)
                 return null;
-            }
-            var a = ProjectService.Instance.CurrentProject.Images.First(x => x.Key == s);
-            return a.Value;
+            return ProjectService.Instance.CurrentProject?.GetImage(new SnowTag(id));
         }
         set
         {
@@ -78,32 +73,23 @@ public partial class ImageSelector : Control
                 return;
             }
 
-            var key = _project?.Images.FirstOrDefault(x => x.Value.AssetId == value.AssetId).Key;
-
-            for (int i = 0; i < _optionDropdown.ItemCount; i++)
-            {
-                if (_optionDropdown.GetItemMetadata(i).ToString() == key)
-                {
-                    _optionDropdown.Select(i);
-                    return;
-                }
-            }
-
-            _optionDropdown.Select(0);
+            var index = _optionDropdown.GetItemIndex(value.Id.Value);
+            _optionDropdown.Select(index >= 0 ? index : 0);
         }
     }
 
     private void ItemSelected(long index)
     {
-        var s = _optionDropdown.GetItemMetadata((int)index).ToString();
+        var id = _optionDropdown.GetItemId((int)index);
 
-        if (string.IsNullOrEmpty(s))
+        if (id == 0)
         {
             ImageSelected?.Invoke(this, new SelectedEventArgs<Asset>());
+            return;
         }
-        var a = ProjectService.Instance.CurrentProject.Images.First(x => x.Key == s);
 
-        ImageSelected?.Invoke(this, new SelectedEventArgs<Asset>(a.Value));
+        var a = ProjectService.Instance.CurrentProject?.GetImage(new SnowTag(id));
+        ImageSelected?.Invoke(this, new SelectedEventArgs<Asset>(a));
     }
 
     public event EventHandler<SelectedEventArgs<Asset>> ImageSelected;

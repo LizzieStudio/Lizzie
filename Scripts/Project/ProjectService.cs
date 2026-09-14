@@ -150,7 +150,6 @@ public partial class ProjectService : Node
             return;
         if (dataset.Id == SnowTag.Empty)
             dataset.Id = Snowport.Clock.CreateTag();
-        CurrentProject.Datasets[dataset.Id] = dataset;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
@@ -165,7 +164,6 @@ public partial class ProjectService : Node
             return;
         if (template.Id == SnowTag.Empty)
             template.Id = Snowport.Clock.CreateTag();
-        CurrentProject.Templates[template.Id] = template;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
@@ -178,7 +176,6 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || settings == null)
             return;
-        CurrentProject.GameSettings = settings;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(null, new UpdateSettingsEffect { Payload = settings })
         );
@@ -188,7 +185,6 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || prototype == null)
             return;
-        CurrentProject.Prototypes[prototype.Id] = prototype;
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
@@ -212,10 +208,14 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || image == null)
             return;
-        CurrentProject.Images.TryAdd(image.AssetId.ToString(), image);
-        CurrentProject.Images[image.AssetId.ToString()] = image;
-        EventBus.Instance.Publish(new AssetChangedEvent { Asset = image });
-        SaveProject(CurrentProject); // Auto-save on image change
+        if (image.Id == SnowTag.Empty)
+            image.Id = Snowport.Clock.CreateTag();
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdateReplicatedEffect<Asset> { Id = image.Id, Payload = image }
+            )
+        );
     }
 
     public void AddPrototypeToManifest(CreateObjectEventArgs args)
@@ -258,7 +258,7 @@ public partial class ProjectService : Node
         return null;
     }
 
-    private readonly Dictionary<Guid, Task> _inFlightFetches = new();
+    private readonly Dictionary<SnowTag, Task> _inFlightFetches = new();
 
     public async Task FetchImageAsync(Asset asset, Action<Asset> callback)
     {
@@ -274,10 +274,10 @@ public partial class ProjectService : Node
         Task fetch;
         lock (_inFlightFetches)
         {
-            if (!_inFlightFetches.TryGetValue(asset.AssetId, out fetch))
+            if (!_inFlightFetches.TryGetValue(asset.Id, out fetch))
             {
                 fetch = DownloadAssetAsync(asset);
-                _inFlightFetches[asset.AssetId] = fetch;
+                _inFlightFetches[asset.Id] = fetch;
             }
         }
 
@@ -290,12 +290,12 @@ public partial class ProjectService : Node
             lock (_inFlightFetches)
             {
                 if (
-                    _inFlightFetches.TryGetValue(asset.AssetId, out var current)
+                    _inFlightFetches.TryGetValue(asset.Id, out var current)
                     && current == fetch
                     && fetch.IsCompleted
                 )
                 {
-                    _inFlightFetches.Remove(asset.AssetId);
+                    _inFlightFetches.Remove(asset.Id);
                 }
             }
         }

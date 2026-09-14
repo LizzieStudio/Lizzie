@@ -12,7 +12,7 @@ public class Project
     public Dictionary<SnowTag, DataSet> Datasets { get; set; } = new();
     public Dictionary<SnowTag, Prototype> Prototypes { get; set; } = new();
 
-    public Dictionary<string, Asset> Images { get; set; } = new();
+    public Dictionary<SnowTag, Asset> Images { get; set; } = new();
 
     /// <summary>
     /// Named scene snapshots the user can save and restore.
@@ -24,11 +24,6 @@ public class Project
     /// Project-level settings edited via the Project Settings dialog.
     /// </summary>
     public ProjectGameSettings GameSettings { get; set; } = new();
-
-    /// <summary>
-    /// List of cloud-stored assets associated with this project
-    /// </summary>
-    public List<Asset> Assets { get; set; } = new();
 
     public Template GetTemplate(SnowTag templateRef)
     {
@@ -65,5 +60,14 @@ public class Project
             GD.PrintErr($"Dataset '{datasetRef}' not found in project.");
             return d;
         }
+    }
+
+    public Asset GetImage(SnowTag imageRef)
+    {
+        if (imageRef == SnowTag.Empty)
+            return null;
+        if (Images.TryGetValue(imageRef, out var asset) && !asset.Deleted)
+            return asset;
+        return null;
     }
 }

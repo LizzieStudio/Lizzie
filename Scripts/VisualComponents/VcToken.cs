@@ -221,7 +221,7 @@ public partial class VcToken : VisualComponentBase
 
         //Grid Parameters
         _frontGridImageKey = p.FrontGridImageKey;
-        if (string.IsNullOrEmpty(_frontGridImageKey))
+        if (_frontGridImageKey == SnowTag.Empty)
         {
             _frontMasterAsset = null;
             _frontMasterSprite = new ImageTexture();
@@ -235,7 +235,7 @@ public partial class VcToken : VisualComponentBase
         }
 
         _backGridImageKey = p.BackGridImageKey;
-        if (string.IsNullOrEmpty(_backGridImageKey))
+        if (_backGridImageKey == SnowTag.Empty)
         {
             _backMasterAsset = null;
             _backMasterSprite = new ImageTexture();
@@ -1304,8 +1304,8 @@ public partial class VcToken : VisualComponentBase
     private Texture2D _backMasterSprite;
     private Asset _frontMasterAsset;
     private Asset _backMasterAsset;
-    private string _frontGridImageKey;
-    private string _backGridImageKey;
+    private SnowTag _frontGridImageKey;
+    private SnowTag _backGridImageKey;
 
     private int _gridRows;
     private int _gridCols;
@@ -1368,8 +1368,8 @@ public abstract class PrintedParameters : ComponentParameters
 
     public List<QuickCardData> QuickCardData { get; set; } = new();
 
-    public string FrontGridImageKey { get; set; } = "";
-    public string BackGridImageKey { get; set; } = "";
+    public SnowTag FrontGridImageKey { get; set; }
+    public SnowTag BackGridImageKey { get; set; }
     public int GridRows { get; set; }
     public int GridCols { get; set; }
     public int GridCount { get; set; }
