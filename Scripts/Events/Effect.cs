@@ -6,9 +6,7 @@ using Godot;
 /// The effects of a TableAction.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
-[JsonDerivedType(typeof(CreateEffect), "c")]
-[JsonDerivedType(typeof(DeleteEffect), "d")]
-[JsonDerivedType(typeof(TransformEffect), "t")]
+[JsonDerivedType(typeof(ComponentEffect), "c")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "p")]
 [JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
@@ -22,19 +20,27 @@ public abstract class Effect
 }
 
 /// <summary>
-/// Brings a new component into existence.
+/// A component upsert for creating, moving, reordering, and deleting a component.
 /// </summary>
-public class CreateEffect : Effect
+public class ComponentEffect : Effect
 {
     [JsonPropertyName("p")]
     public SnowTag PrototypeRef { get; set; }
 
     [JsonPropertyName("s")]
     public VcSyncDto State { get; set; }
-}
 
-/// <summary>Removes a component. Self-explanatory, so its parent event carries no action.</summary>
-public class DeleteEffect : Effect { }
+    /// <summary>
+    /// Captures a component's state.
+    /// </summary>
+    public static ComponentEffect Capture(VisualComponentBase component) =>
+        new()
+        {
+            Id = component.Reference,
+            PrototypeRef = component.PrototypeRef,
+            State = VcSyncDto.CaptureLive(component),
+        };
+}
 
 /// <summary>
 /// Creates, updates, or reversibly deletes a replicated definition.
@@ -77,48 +83,3 @@ public class UpdatePlayerEffect : Effect
     public bool HasLeft { get; set; }
 }
 
-/// <summary>
-/// Instant move, reorientation, relocation, or reordering of a component.
-/// </summary>
-public class TransformEffect : Effect
-{
-    [JsonPropertyName("l")]
-    public VisualComponentBase.ComponentLocation Location { get; set; }
-
-    /// <summary>
-    /// The container that holds the component or <see cref="SnowTag.Empty"/>.
-    /// </summary>
-    [JsonPropertyName("c")]
-    public SnowTag ContainerRef { get; set; }
-
-    [JsonPropertyName("p")]
-    public Vector3 Position { get; set; }
-
-    /// <summary>Target rotation in radians.</summary>
-    [JsonPropertyName("r")]
-    public Vector3 Rotation { get; set; }
-
-    /// <summary>Where the effect sends the component in the ZOrder, or Unset to leave it.</summary>
-    [JsonPropertyName("z")]
-    public ZTarget ZTarget { get; set; }
-
-    /// <summary>Separates components reordered by the same event. Higher ends up on top.</summary>
-    [JsonPropertyName("zs")]
-    public int ZSuborder { get; set; }
-
-    /// <summary>
-    /// Captures a component's current transform state.
-    /// </summary>
-    public static TransformEffect Capture(VisualComponentBase component) =>
-        new()
-        {
-            Id = component.Reference,
-            Location = component.Location,
-            ContainerRef = component.ContainerRef,
-            Position =
-                component.Location == VisualComponentBase.ComponentLocation.Cursor
-                    ? component.CursorOffset
-                    : component.Position,
-            Rotation = component.Rotation,
-        };
-}

@@ -95,12 +95,15 @@ public abstract partial class VisualComponentBase : Area3D
         base._InputEvent(camera, @event, eventPosition, normal, shapeIdx);
     }
 
+    // bug prevention: two events in rapid succession can fight each other
+    private Tween _yTween;
+
     public void MoveToTargetY(float y)
     {
-        var tween = GetTree().CreateTween();
-
-        var newPos = new Vector3(Position.X, y, Position.Z);
-        tween.TweenProperty(this, "position", newPos, 0.2f);
+        if (IsInstanceValid(_yTween))
+            _yTween.Kill();
+        _yTween = GetTree().CreateTween();
+        _yTween.TweenProperty(this, "position:y", y, 0.2f);
     }
 
     public virtual bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
@@ -173,7 +176,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// Produce the effects for any contained components.
     /// <param name="containerRef">the id of the container to these children</param>
     /// </summary>
-    public virtual IEnumerable<CreateEffect> GetSpawnChildEffects(SnowTag containerRef)
+    public virtual IEnumerable<ComponentEffect> GetSpawnChildEffects(SnowTag containerRef)
     {
         yield break;
     }
@@ -181,9 +184,11 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Produce the effects to delete this component.
     /// </summary>
-    public virtual IEnumerable<DeleteEffect> GetDespawnEffects()
+    public virtual IEnumerable<ComponentEffect> GetDespawnEffects()
     {
-        yield return new DeleteEffect { Id = Reference };
+        var e = ComponentEffect.Capture(this);
+        e.State.Location = ComponentLocation.Deleted;
+        yield return e;
     }
 
     /// <summary>
@@ -520,6 +525,7 @@ public abstract partial class VisualComponentBase : Area3D
         Container,
         Hand,
         Cursor,
+        Deleted,
     }
 
     private ComponentLocation _location;
@@ -552,11 +558,11 @@ public abstract partial class VisualComponentBase : Area3D
         && CursorSynchronizer.Instance is { } cursors
         && ContainerRef == cursors.LocalCursorRef;
 
-    private TransformEffect BuildRotation(float degreesAboutY)
+    private ComponentEffect BuildRotation(float degreesAboutY)
     {
-        var t = TransformEffect.Capture(this);
-        t.Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
-        return t;
+        var e = ComponentEffect.Capture(this);
+        e.State.Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
+        return e;
     }
 
     private bool _logicalVisible = true;

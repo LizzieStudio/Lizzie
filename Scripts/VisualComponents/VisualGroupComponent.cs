@@ -52,13 +52,12 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             .Select(
                 (c, i) =>
                 {
-                    var t = TransformEffect.Capture(c);
-                    t.Location = ComponentLocation.Container;
-                    t.ContainerRef = Reference;
-                    t.Position = c.Position;
-                    t.ZTarget = target;
-                    t.ZSuborder = i;
-                    return (Effect)t;
+                    var e = ComponentEffect.Capture(c);
+                    e.State.Location = ComponentLocation.Container;
+                    e.State.ContainerRef = Reference;
+                    e.State.Position = c.Position;
+                    e.State.ZOrder = new ZOrder(target, i, SnowportId.Empty);
+                    return (Effect)e;
                 }
             )
             .ToArray();
@@ -71,13 +70,17 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
     protected abstract void OnChildrenChanged();
 
-    public override IEnumerable<DeleteEffect> GetDespawnEffects()
+    public override IEnumerable<ComponentEffect> GetDespawnEffects()
     {
         foreach (var effect in base.GetDespawnEffects())
             yield return effect;
 
         foreach (var child in Children)
-            yield return new DeleteEffect { Id = child };
+            yield return new ComponentEffect
+            {
+                Id = child,
+                State = new VcSyncDto { Location = ComponentLocation.Deleted },
+            };
     }
 
     /// <summary>
@@ -151,10 +154,9 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             if (comp == null)
                 continue;
 
-            var t = TransformEffect.Capture(comp);
-            t.ZTarget = ZTarget.Top;
-            t.ZSuborder = orderedIds.Count - 1 - i;
-            effects.Add(t);
+            var e = ComponentEffect.Capture(comp);
+            e.State.ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, SnowportId.Empty);
+            effects.Add(e);
         }
 
         return effects.ToArray();

@@ -35,17 +35,14 @@ public partial class PlayerHandService : Node
     /// <summary>
     /// Builds a transform effect that moves a card into a seat's hand at the top of its order.
     /// </summary>
-    public TransformEffect MoveEffect(VisualComponentBase card, int seatIndex, int suborder) =>
-        new()
-        {
-            Id = card.Reference,
-            Location = VisualComponentBase.ComponentLocation.Hand,
-            ContainerRef = HandContainer(seatIndex),
-            Position = card.Position,
-            Rotation = card.Rotation,
-            ZTarget = ZTarget.Top,
-            ZSuborder = suborder,
-        };
+    public ComponentEffect MoveEffect(VisualComponentBase card, int seatIndex, int suborder)
+    {
+        var e = ComponentEffect.Capture(card);
+        e.State.Location = VisualComponentBase.ComponentLocation.Hand;
+        e.State.ContainerRef = HandContainer(seatIndex);
+        e.State.ZOrder = new ZOrder(ZTarget.Top, suborder, SnowportId.Empty);
+        return e;
+    }
 
     /// <summary>
     /// Returns the cards in a given seat's hand, ordered by their ZOrder.

@@ -26,6 +26,24 @@ public class VcSyncDto
         LastMoveId = component.LastMoveId;
     }
 
+    /// <summary>
+    /// Captures a component's live transform.
+    /// </summary>
+    public static VcSyncDto CaptureLive(VisualComponentBase c) =>
+        new()
+        {
+            Position =
+                c.Location == VisualComponentBase.ComponentLocation.Cursor
+                    ? c.CursorOffset
+                    : c.Position,
+            Rotation = c.Rotation,
+            DataSetRow = c.DataSetRow,
+            Location = c.Location,
+            ContainerRef = c.ContainerRef,
+            ZOrder = new ZOrder(ZTarget.Unset, 0, SnowportId.Empty),
+            LastMoveId = SnowportId.Empty,
+        };
+
     [JsonPropertyName("p")]
     public Vector3 Position { get; set; }
 

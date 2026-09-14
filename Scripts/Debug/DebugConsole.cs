@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 using ImGuiNET;
 using SysVec2 = System.Numerics.Vector2;
+using SysVec4 = System.Numerics.Vector4;
 
 /// <summary>
 /// In-game Dear ImGui debug console.
@@ -138,10 +139,21 @@ public partial class DebugConsole : Node
             int count = events?.Count ?? 0;
 
             ImGui.TextUnformatted($"{count} events");
+            ImGui.TextDisabled("amber = undo/redo   dim = undone   sN = source");
             ImGui.Separator();
+
+            var undone =
+                events != null ? UndoLog.ComputeUndone(events) : new HashSet<SnowportId>();
 
             if (ImGui.BeginChild("##eventlist") && count > 0)
             {
+                var indexById = new Dictionary<SnowportId, int>(count);
+                for (int j = 0; j < count; j++)
+                    indexById[events[j].Id] = j;
+
+                var amber = new SysVec4(1f, 0.78f, 0.28f, 1f);
+                var gray = new SysVec4(0.55f, 0.55f, 0.55f, 1f);
+
                 var clipper = new ImGuiListClipperPtr(
                     ImGuiNative.ImGuiListClipper_ImGuiListClipper()
                 );
@@ -150,7 +162,28 @@ public partial class DebugConsole : Node
                 {
                     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                     {
-                        ImGui.TextUnformatted($"{i,6}  {Describe(events[i])}");
+                        var e = events[i];
+                        int pushed = 0;
+                        if (e.Action is UndoAction)
+                        {
+                            ImGui.PushStyleColor(ImGuiCol.Text, amber);
+                            pushed = 1;
+                        }
+                        else if (undone.Contains(e.Id))
+                        {
+                            ImGui.PushStyleColor(ImGuiCol.Text, gray);
+                            pushed = 1;
+                        }
+
+                        string line = $"{i,5}  s{e.Id.source,-3} {Describe(e)}";
+                        if (e.Action is UndoAction u)
+                            line += indexById.TryGetValue(u.Target, out var ti)
+                                ? $"  → #{ti}"
+                                : "  → #?";
+                        ImGui.TextUnformatted(line);
+
+                        if (pushed > 0)
+                            ImGui.PopStyleColor(pushed);
                     }
                 }
                 clipper.End();
@@ -166,6 +199,9 @@ public partial class DebugConsole : Node
     /// </summary>
     private static string Describe(TableEvent e)
     {
+        if (e.Action is UndoAction ua)
+            return ua.Redo ? "Redo" : "Undo";
+
         if (e.Action != null)
             return Trim(e.Action.GetType().Name, "Action");
 
@@ -196,9 +232,9 @@ public partial class DebugConsole : Node
     private static string EffectLabel(Effect fx) =>
         fx switch
         {
-            CreateEffect => "Create",
-            DeleteEffect => "Delete",
-            TransformEffect => "Transform",
+            ComponentEffect { State.Location: VisualComponentBase.ComponentLocation.Deleted } =>
+                "Delete",
+            ComponentEffect => "Upsert",
             UpdatePlayerEffect => "Player",
             UpdateSettingsEffect => "Settings",
             UpdateReplicatedEffect<Template> => "Template",

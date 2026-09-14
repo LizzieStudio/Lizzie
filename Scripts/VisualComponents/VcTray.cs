@@ -172,7 +172,7 @@ public partial class VcTray : VisualComponentGroup
 
         return TableEvent.Now(
             null,
-            new CreateEffect
+            new ComponentEffect
             {
                 Id = id,
                 PrototypeRef = _prototype.Id,

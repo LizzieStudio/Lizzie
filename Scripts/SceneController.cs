@@ -59,8 +59,32 @@ public partial class SceneController : Node3D
         {
             CheckForCommands();
             if (Input.IsActionJustPressed("ui_undo"))
-                GD.PrintErr("Undo not implemented yet.");
+                IssueUndo();
+            if (Input.IsActionJustPressed("ui_redo"))
+                IssueRedo();
         }
+    }
+
+    /// <summary>Issues an undo.</summary>
+    private void IssueUndo()
+    {
+        var log = EventSynchronizer.Instance?.Events;
+        if (log == null)
+            return;
+        if (UndoLog.ComputeUndoTarget(log, Snowport.Clock.source) is SnowportId target)
+            EventSynchronizer.Instance.Submit(TableEvent.Now(new UndoAction { Target = target }));
+    }
+
+    /// <summary>Issues a redo, which is just an undo targeting the most recent active undo.</summary>
+    private void IssueRedo()
+    {
+        var log = EventSynchronizer.Instance?.Events;
+        if (log == null)
+            return;
+        if (UndoLog.ComputeRedoTarget(log, Snowport.Clock.source) is SnowportId target)
+            EventSynchronizer.Instance.Submit(
+                TableEvent.Now(new UndoAction { Target = target, Redo = true })
+            );
     }
 
     public TextureFactory TextureFactory => _textureFactory;

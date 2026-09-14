@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(DealAction), "dl")]
 [JsonDerivedType(typeof(MoveAction), "m")]
 [JsonDerivedType(typeof(ShuffleAction), "s")]
+[JsonDerivedType(typeof(UndoAction), "u")]
 public abstract class TableAction { }
 
 /// <summary>Flips a token or deck.</summary>
@@ -29,3 +30,18 @@ public class MoveAction : TableAction { }
 
 /// <summary>Reorders a container's contents. The new order is carried by the event's transforms.</summary>
 public class ShuffleAction : TableAction { }
+
+/// <summary>
+/// Reverses a prior event, named by its <see cref="SnowportId"/>.
+/// </summary>
+public class UndoAction : TableAction
+{
+    [JsonPropertyName("t")]
+    public SnowportId Target { get; set; }
+
+    /// <summary>
+    /// True to go forward. Redos should Target an Undo event (undo an undo).
+    /// </summary>
+    [JsonPropertyName("r")]
+    public bool Redo { get; set; }
+}

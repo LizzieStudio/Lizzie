@@ -138,11 +138,15 @@ public partial class VcDeck : VisualComponentGroup
     private float _targetZ;
     private bool _flipInProcess;
 
-    private TransformEffect BuildFlip()
+    private ComponentEffect BuildFlip()
     {
-        var t = TransformEffect.Capture(this);
-        t.Rotation = new Vector3(t.Rotation.X, t.Rotation.Y, _showFace ? Mathf.Pi : 0f);
-        return t;
+        var e = ComponentEffect.Capture(this);
+        e.State.Rotation = new Vector3(
+            e.State.Rotation.X,
+            e.State.Rotation.Y,
+            _showFace ? Mathf.Pi : 0f
+        );
+        return e;
     }
 
     public override void AnimateFlip(Vector3 targetRotation)
@@ -239,15 +243,14 @@ public partial class VcDeck : VisualComponentGroup
 
                 float deltaX = Position.X + (_width * (1.5f + i));
 
-                var t = TransformEffect.Capture(comp);
-                t.Location = ComponentLocation.Table;
-                t.ContainerRef = SnowTag.Empty;
-                t.Position = new Vector3(deltaX, Position.Y, Position.Z);
-                t.Rotation = DrawnRotation(comp);
+                var e = ComponentEffect.Capture(comp);
+                e.State.Location = ComponentLocation.Table;
+                e.State.ContainerRef = SnowTag.Empty;
+                e.State.Position = new Vector3(deltaX, Position.Y, Position.Z);
+                e.State.Rotation = DrawnRotation(comp);
                 // Splayed cards land on top, in draw order.
-                t.ZTarget = ZTarget.Top;
-                t.ZSuborder = i;
-                transformed.Add(t);
+                e.State.ZOrder = new ZOrder(ZTarget.Top, i, SnowportId.Empty);
+                transformed.Add(e);
             }
 
             result = transformed.ToArray();
@@ -325,7 +328,7 @@ public partial class VcDeck : VisualComponentGroup
         BuildInternal((PrintedParameters)proto.Parameters, textureFactory);
     }
 
-    public override IEnumerable<CreateEffect> GetSpawnChildEffects(SnowTag containerRef)
+    public override IEnumerable<ComponentEffect> GetSpawnChildEffects(SnowTag containerRef)
     {
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
@@ -378,10 +381,10 @@ public partial class VcDeck : VisualComponentGroup
         }
     }
 
-    private CreateEffect CreateCardEffect(string dataSetRow, SnowTag containerRef, int index)
+    private ComponentEffect CreateCardEffect(string dataSetRow, SnowTag containerRef, int index)
     {
         var id = Snowport.Clock.CreateTag();
-        return new CreateEffect
+        return new ComponentEffect
         {
             Id = id,
             PrototypeRef = PrototypeRef,

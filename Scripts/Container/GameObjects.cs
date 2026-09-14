@@ -25,20 +25,16 @@ public partial class GameObjects : Node
     public delegate void TableChangedEventHandler();
 
     private int _stackingUpdateRequired;
-    private readonly List<PendingSpawnRequest> _pendingSpawns = new();
 
     /// <summary>
-    /// Transforms that arrived before their component's create effect. Drained
-    /// when the component is spawned. Keyed by component reference.
+    /// Upserts whose prototype aren't yet available.
     /// </summary>
-    private readonly Dictionary<SnowTag, List<PendingTransform>> _pendingTransforms = new();
+    private readonly Dictionary<SnowTag, PendingSpawn> _pendingSpawns = new();
 
     /// <summary>
-    /// Components that have been deleted.
+    /// Each component's latest applied transform.
     /// </summary>
-    private readonly HashSet<SnowTag> _tombstones = new();
-
-    private readonly Dictionary<SnowTag, VisualComponentBase> _componentsByRef = new();
+    private readonly Dictionary<SnowTag, SnowportId> _lastWrite = new();
 
     private GameController _gameController;
 
@@ -143,7 +139,9 @@ public partial class GameObjects : Node
 
     public VisualComponentBase GetComponent(SnowTag reference)
     {
-        return _componentsByRef.GetValueOrDefault(reference);
+        return ComponentNodes
+            .OfType<VisualComponentBase>()
+            .FirstOrDefault(c => c.Reference == reference);
     }
 
     /// <summary>
@@ -312,9 +310,6 @@ public partial class GameObjects : Node
 
         _table.AddChild(component);
 
-        _componentsByRef[component.Reference] = component;
-        component.TreeExiting += () => _componentsByRef.Remove(component.Reference);
-
         component.Build();
 
         QueueStackingUpdate();
@@ -334,7 +329,7 @@ public partial class GameObjects : Node
 
             effects.AddRange(childEffects);
             effects.Add(
-                new CreateEffect
+                new ComponentEffect
                 {
                     Id = containerRef,
                     PrototypeRef = component.PrototypeRef,
@@ -365,7 +360,7 @@ public partial class GameObjects : Node
                 .OfType<VisualComponentBase>()
                 .Select(component =>
                     (Effect)
-                        new CreateEffect
+                        new ComponentEffect
                         {
                             Id = component.Reference,
                             PrototypeRef = component.PrototypeRef,
@@ -642,10 +637,9 @@ public partial class GameObjects : Node
         var arr = new Effect[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
         {
-            var t = TransformEffect.Capture(ordered[i]);
-            t.ZTarget = target;
-            t.ZSuborder = i;
-            arr[i] = t;
+            var e = ComponentEffect.Capture(ordered[i]);
+            e.State.ZOrder = new ZOrder(target, i, SnowportId.Empty);
+            arr[i] = e;
         }
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, arr));
@@ -974,16 +968,15 @@ public partial class GameObjects : Node
             if (c == null)
                 continue;
 
-            var t = TransformEffect.Capture(c);
-            t.Location = VisualComponentBase.ComponentLocation.Cursor;
-            t.ContainerRef = cursorContainer;
+            var e = ComponentEffect.Capture(c);
+            e.State.Location = VisualComponentBase.ComponentLocation.Cursor;
+            e.State.ContainerRef = cursorContainer;
             // Position is the cursor-relative offset while held.
-            t.Position = c.SpawnDelta;
+            e.State.Position = c.SpawnDelta;
             if (rotation != null)
-                t.Rotation = rotation(c);
-            t.ZTarget = ZTarget.Top;
-            t.ZSuborder = effects.Count;
-            effects.Add(t);
+                e.State.Rotation = rotation(c);
+            e.State.ZOrder = new ZOrder(ZTarget.Top, effects.Count, SnowportId.Empty);
+            effects.Add(e);
         }
 
         return effects.Count == 0 ? null : TableEvent.Now(new MoveAction(), effects.ToArray());
@@ -1010,12 +1003,12 @@ public partial class GameObjects : Node
             .Where(o => o != null)
             .Select(o =>
             {
-                var t = TransformEffect.Capture(o);
-                t.Location = VisualComponentBase.ComponentLocation.Cursor;
-                t.ContainerRef = cursorContainer;
+                var e = ComponentEffect.Capture(o);
+                e.State.Location = VisualComponentBase.ComponentLocation.Cursor;
+                e.State.ContainerRef = cursorContainer;
                 // Position with a cursor container is relative to the cursor.
-                t.Position = o.Position - cursor;
-                return t;
+                e.State.Position = o.Position - cursor;
+                return e;
             })
             .ToArray();
         if (dragged.Length == 0)
@@ -1269,12 +1262,11 @@ public partial class GameObjects : Node
             .Select(
                 (component, index) =>
                 {
-                    var effect = TransformEffect.Capture(component);
-                    effect.Location = VisualComponentBase.ComponentLocation.Table;
-                    effect.ContainerRef = SnowTag.Empty;
-                    effect.Position = component.Position;
-                    effect.ZTarget = ZTarget.Top;
-                    effect.ZSuborder = index;
+                    var effect = ComponentEffect.Capture(component);
+                    effect.State.Location = VisualComponentBase.ComponentLocation.Table;
+                    effect.State.ContainerRef = SnowTag.Empty;
+                    effect.State.Position = component.Position;
+                    effect.State.ZOrder = new ZOrder(ZTarget.Top, index, SnowportId.Empty);
                     return effect;
                 }
             )
@@ -1301,12 +1293,11 @@ public partial class GameObjects : Node
 
         for (int i = 0; i < toBoard.Count; i++)
         {
-            var effect = TransformEffect.Capture(toBoard[i]);
-            effect.Location = VisualComponentBase.ComponentLocation.Table;
-            effect.ContainerRef = SnowTag.Empty;
-            effect.Position = toBoard[i].Position;
-            effect.ZTarget = ZTarget.Top;
-            effect.ZSuborder = i;
+            var effect = ComponentEffect.Capture(toBoard[i]);
+            effect.State.Location = VisualComponentBase.ComponentLocation.Table;
+            effect.State.ContainerRef = SnowTag.Empty;
+            effect.State.Position = toBoard[i].Position;
+            effect.State.ZOrder = new ZOrder(ZTarget.Top, i, SnowportId.Empty);
             effects.Add(effect);
         }
 
@@ -1399,9 +1390,7 @@ public partial class GameObjects : Node
         _stackingUpdateRequired = 0;
 
         _pendingSpawns.Clear();
-        _pendingTransforms.Clear();
-        _tombstones.Clear();
-        _componentsByRef.Clear();
+        _lastWrite.Clear();
         EventSynchronizer.Instance?.Clear();
         PlayerSeatManager.Instance?.Clear();
 
@@ -1413,37 +1402,31 @@ public partial class GameObjects : Node
     /// </summary>
     private void ApplyEvent(TableEvent e)
     {
+        if (e.Action is UndoAction undo)
+        {
+            ReconstructForUndoRedo(undo);
+            return;
+        }
+
         // Roll and flip animate, so don't snap to their transform.
         var animated = e.Action is RollAction or FlipAction;
 
         foreach (var effect in e.Effects)
-        {
-            switch (effect)
-            {
-                case CreateEffect c:
-                    ApplyCreate(e.Id, c);
-                    break;
-                case DeleteEffect d:
-                    ApplyDelete(d);
-                    break;
-                case TransformEffect t:
-                    ApplyTransform(e.Id, t, animated);
-                    break;
-            }
-        }
+            if (effect is ComponentEffect ce)
+                ApplyUpsert(e.Id, ce, animated);
 
         RebuildContainerCaches();
 
         switch (e.Action)
         {
             case RollAction:
-                foreach (var t in e.Effects.OfType<TransformEffect>())
-                    if (GetComponent(t.Id) is VcDie die)
-                        die.AnimateRoll(t.Rotation);
+                foreach (var fx in e.Effects.OfType<ComponentEffect>())
+                    if (GetComponent(fx.Id) is VcDie die)
+                        die.AnimateRoll(fx.State.Rotation);
                 break;
             case FlipAction:
-                foreach (var t in e.Effects.OfType<TransformEffect>())
-                    GetComponent(t.Id)?.AnimateFlip(t.Rotation);
+                foreach (var fx in e.Effects.OfType<ComponentEffect>())
+                    GetComponent(fx.Id)?.AnimateFlip(fx.State.Rotation);
                 break;
         }
 
@@ -1452,161 +1435,257 @@ public partial class GameObjects : Node
         EmitSignal(SignalName.TableChanged);
     }
 
-    private void ApplyCreate(SnowportId eventId, CreateEffect c)
+    private void ApplyUpsert(SnowportId eventId, ComponentEffect fx, bool animated)
     {
-        // A delete wins over a create for the same ref, even if it arrived first.
-        if (_tombstones.Contains(c.Id))
-            return;
+        var s = fx.State ?? new VcSyncDto();
+        var r = fx.Id;
+        var writeId = s.LastMoveId == SnowportId.Empty ? eventId : s.LastMoveId;
 
-        if (GetComponent(c.Id) != null)
+        // Reject if it's older than the most recent transform.
+        if (_lastWrite.TryGetValue(r, out var last) && writeId.CompareTo(last) < 0)
             return;
+        _lastWrite[r] = writeId;
 
-        if (!TryExecuteSpawn(eventId, c))
+        var c = GetComponent(r);
+
+        if (s.Location == VisualComponentBase.ComponentLocation.Deleted)
         {
-            GD.Print($"Prototype {c.PrototypeRef} not yet available, queuing spawn for {c.Id}");
-            _pendingSpawns.Add(new PendingSpawnRequest(eventId, c));
+            RemoveComponent(c);
+            _pendingSpawns.Remove(r);
+            return;
         }
+
+        if (c == null)
+        {
+            if (!TryExecuteSpawn(writeId, fx))
+                _pendingSpawns[r] = new PendingSpawn(writeId, fx);
+            return;
+        }
+
+        ApplyStateToComponent(c, writeId, s, animated);
     }
 
-    private bool TryExecuteSpawn(SnowportId eventId, CreateEffect effect)
+    /// <summary>
+    /// Detaches a component from the scene synchronously.
+    /// </summary>
+    private void RemoveComponent(VisualComponentBase c)
+    {
+        if (c == null)
+            return;
+        c.GetParent()?.RemoveChild(c);
+        c.QueueFree();
+    }
+
+    /// <summary>Applies a transform to a component.</summary>
+    private static void ApplyStateToComponent(
+        VisualComponentBase c,
+        SnowportId writeId,
+        VcSyncDto s,
+        bool animated
+    )
+    {
+        c.LastMoveId = writeId;
+        c.Location = s.Location;
+        c.ContainerRef = s.ContainerRef;
+        // While held, Position carries the cursor-relative offset.
+        if (s.Location == VisualComponentBase.ComponentLocation.Cursor)
+            c.CursorOffset = s.Position;
+        else
+            c.Position = s.Position;
+        if (!animated)
+            c.Rotation = s.Rotation;
+
+        // Only restack when the transform sets a zorder.
+        if (s.ZOrder.Target != ZTarget.Unset)
+            c.ZOrder =
+                s.ZOrder.LastEvent == SnowportId.Empty
+                    ? new ZOrder(s.ZOrder.Target, s.ZOrder.Suborder, writeId)
+                    : s.ZOrder;
+    }
+
+    /// <summary>
+    /// Spawns a component from a transform.
+    /// </summary>
+    private bool TryExecuteSpawn(SnowportId writeId, ComponentEffect fx)
     {
         if (
             !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                effect.PrototypeRef,
+                fx.PrototypeRef,
                 out var proto
             )
         )
             return false;
 
-        var syncDto = effect.State ?? new VcSyncDto();
+        var s = fx.State ?? new VcSyncDto();
 
-        var path = Utility.ComponentTypeToScenePath(
-            proto.Type,
-            proto.Parameters,
-            syncDto.DataSetRow
-        );
+        var path = Utility.ComponentTypeToScenePath(proto.Type, proto.Parameters, s.DataSetRow);
         var scene = GD.Load<PackedScene>(path).Instantiate();
 
         if (scene is not VisualComponentBase vcb)
         {
-            GD.PrintErr($"Spawned scene for {effect.PrototypeRef} is not a VisualComponentBase");
-            return true; // Fatal data error — do not retry
+            GD.PrintErr($"Spawned scene for {fx.PrototypeRef} is not a VisualComponentBase");
+            return true;
         }
 
-        vcb.Reference = effect.Id;
-        vcb.PrototypeRef = effect.PrototypeRef;
-
-        vcb.SpawnBuild(effect.PrototypeRef, syncDto, TextureFactory);
-
-        // A newly created table component starts on top
-        if (vcb.ContainerRef == SnowTag.Empty && syncDto.ZOrder.LastEvent == SnowportId.Empty)
-            vcb.ZOrder = new ZOrder(ZTarget.Top, 0, eventId);
-
+        vcb.Reference = fx.Id;
+        vcb.PrototypeRef = fx.PrototypeRef;
+        vcb.SpawnBuild(fx.PrototypeRef, s, TextureFactory);
         AddComponentToScene(vcb);
 
-        // Apply any transforms that arrived before this component existed.
-        DrainPendingTransforms(effect.Id);
+        vcb.LastMoveId = writeId;
+        if (s.ZOrder.Target == ZTarget.Unset)
+            vcb.ZOrder = new ZOrder(ZTarget.Top, 0, writeId);
+        else if (s.ZOrder.LastEvent == SnowportId.Empty)
+            vcb.ZOrder = new ZOrder(s.ZOrder.Target, s.ZOrder.Suborder, writeId);
+
         return true;
     }
 
     /// <summary>
-    /// Re-attempts any create effects that were deferred because their prototype was not yet
-    /// available on this client. Re-queues any that still cannot be resolved.
+    /// Re-attempts to spawn nodes that didn't have the prototype yet.
     /// </summary>
     private void RetryPendingSpawns()
     {
         if (_pendingSpawns.Count == 0)
             return;
 
-        var pending = _pendingSpawns.ToList();
+        var pending = _pendingSpawns.Values.ToList();
         _pendingSpawns.Clear();
 
-        foreach (var r in pending)
+        foreach (var p in pending)
+            if (!TryExecuteSpawn(p.WriteId, p.Effect))
+                _pendingSpawns[p.Effect.Id] = p; // prototype still not available
+    }
+
+    private record PendingSpawn(SnowportId WriteId, ComponentEffect Effect);
+
+    #region Undo
+
+    /// <summary>
+    /// Applies an undo or redo by searching backwards for the components that need updating.
+    /// </summary>
+    private void ReconstructForUndoRedo(UndoAction undo)
+    {
+        var log = EventSynchronizer.Instance?.Events;
+        if (log == null)
+            return;
+
+        var undone = UndoLog.ComputeUndone(log);
+        foreach (var r in UndoLog.ResolveAffectedComponents(log, undo.Target))
+            ReconstructComponent(r, log, undone);
+
+        RebuildContainerCaches();
+        QueueStackingUpdate();
+        EmitSignal(SignalName.TableChanged);
+    }
+
+    private static SnowportId WriteIdOf(ComponentEffect ce, SnowportId eventId) =>
+        ce.State.LastMoveId == SnowportId.Empty ? eventId : ce.State.LastMoveId;
+
+    /// <summary>
+    /// Reconstructs one component from the log by scanning backward for the most recent transforms.
+    /// </summary>
+    private void ReconstructComponent(
+        SnowTag r,
+        IReadOnlyList<TableEvent> log,
+        HashSet<SnowportId> undone
+    )
+    {
+        ComponentEffect winner = null;
+        SnowportId winnerId = SnowportId.Empty;
+        ComponentEffect zwin = null;
+        SnowportId zwinId = SnowportId.Empty;
+
+        for (int i = log.Count - 1; i >= 0; i--)
         {
-            if (_tombstones.Contains(r.Effect.Id))
+            var e = log[i];
+            if (undone.Contains(e.Id))
                 continue;
 
-            GD.Print($"Retrying spawn for {r.Effect.Id}");
-            if (!TryExecuteSpawn(r.EventId, r.Effect))
+            ComponentEffect ce = null;
+            foreach (var fx in e.Effects)
+                if (fx is ComponentEffect x && x.Id == r)
+                {
+                    ce = x;
+                    break;
+                }
+            if (ce?.State == null)
+                continue;
+
+            if (ce.State.Location == VisualComponentBase.ComponentLocation.Cursor)
+                continue;
+
+            if (winner == null || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(winner, winnerId)) > 0)
             {
-                GD.PrintErr(
-                    $"Still cannot spawn {r.Effect.Id} because prototype {r.Effect.PrototypeRef} is not available"
-                );
-                _pendingSpawns.Add(r); // Prototype still not available — keep in list
+                winner = ce;
+                winnerId = e.Id;
+            }
+            if (
+                ce.State.ZOrder.Target != ZTarget.Unset
+                && (zwin == null || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(zwin, zwinId)) > 0)
+            )
+            {
+                zwin = ce;
+                zwinId = e.Id;
             }
         }
-    }
 
-    private record PendingSpawnRequest(SnowportId EventId, CreateEffect Effect);
+        _pendingSpawns.Remove(r);
+        var live = GetComponent(r);
 
-    /// <summary>
-    /// Upserts a prototype definition, refreshes any live components built from it,
-    /// and retries spawns that were waiting on it.
-    /// </summary>
-    private void ApplyDelete(DeleteEffect d)
-    {
-        _tombstones.Add(d.Id);
-        _pendingSpawns.RemoveAll(r => r.Effect.Id == d.Id);
-        _pendingTransforms.Remove(d.Id);
-        GetComponent(d.Id)?.QueueFree();
-    }
-
-    private void ApplyTransform(SnowportId eventId, TransformEffect t, bool animated)
-    {
-        var c = GetComponent(t.Id);
-
-        if (c == null)
+        if (winner == null || winner.State.Location == VisualComponentBase.ComponentLocation.Deleted)
         {
-            if (!_tombstones.Contains(t.Id))
-                BufferPendingTransform(eventId, t, animated);
+            RemoveComponent(live);
+            if (winner == null)
+                _lastWrite.Remove(r);
+            else
+                _lastWrite[r] = WriteIdOf(winner, winnerId);
             return;
         }
 
-        // this happens when an outdated event arrives
-        if (eventId.CompareTo(c.LastMoveId) < 0)
-            return;
+        var wId = WriteIdOf(winner, winnerId);
+        _lastWrite[r] = wId;
 
-        c.LastMoveId = eventId;
-
-        c.Location = t.Location;
-        c.ContainerRef = t.ContainerRef;
-        // While held, Position carries the cursor-relative offset.
-        if (t.Location == VisualComponentBase.ComponentLocation.Cursor)
-            c.CursorOffset = t.Position;
-        else
-            c.Position = t.Position;
-        if (!animated)
-            c.Rotation = t.Rotation;
-
-        // Only reorder when the effect asks to.
-        if (t.ZTarget != ZTarget.Unset)
-            c.ZOrder = new ZOrder(t.ZTarget, t.ZSuborder, eventId);
-    }
-
-    private record PendingTransform(SnowportId EventId, TransformEffect Effect, bool Animated);
-
-    private void BufferPendingTransform(SnowportId eventId, TransformEffect t, bool animated)
-    {
-        if (!_pendingTransforms.TryGetValue(t.Id, out var list))
+        var z =
+            zwin != null
+                ? (
+                    zwin.State.ZOrder.LastEvent == SnowportId.Empty
+                        ? new ZOrder(
+                            zwin.State.ZOrder.Target,
+                            zwin.State.ZOrder.Suborder,
+                            WriteIdOf(zwin, zwinId)
+                        )
+                        : zwin.State.ZOrder
+                )
+                : new ZOrder(ZTarget.Top, 0, wId);
+        var s = new VcSyncDto
         {
-            list = new List<PendingTransform>();
-            _pendingTransforms[t.Id] = list;
-        }
-        list.Add(new PendingTransform(eventId, t, animated));
-    }
+            Position = winner.State.Position,
+            Rotation = winner.State.Rotation,
+            DataSetRow = winner.State.DataSetRow,
+            Location = winner.State.Location,
+            ContainerRef = winner.State.ContainerRef,
+            ZOrder = z,
+            LastMoveId = wId,
+        };
 
-    /// <summary>
-    /// Applies any transforms that arrived before this component was created in order.
-    /// </summary>
-    private void DrainPendingTransforms(SnowTag id)
-    {
-        if (!_pendingTransforms.Remove(id, out var list))
+        if (live == null)
+        {
+            var spawnFx = new ComponentEffect
+            {
+                Id = r,
+                PrototypeRef = winner.PrototypeRef,
+                State = s,
+            };
+            if (!TryExecuteSpawn(wId, spawnFx))
+                _pendingSpawns[r] = new PendingSpawn(wId, spawnFx);
             return;
+        }
 
-        list.Sort((a, b) => a.EventId.CompareTo(b.EventId));
-        foreach (var p in list)
-            ApplyTransform(p.EventId, p.Effect, p.Animated);
+        ApplyStateToComponent(live, wId, s, animated: false);
     }
+
+    #endregion
 
     /// <summary>
     /// Refreshes every container's child cache from the source-of-truth,

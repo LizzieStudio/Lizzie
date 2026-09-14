@@ -85,16 +85,16 @@ public partial class VcDie : VisualComponentBase
         return l;
     }
 
-    private TransformEffect BuildRoll()
+    private ComponentEffect BuildRoll()
     {
         // The rolling client picks the target face
         var side = (int)(GD.Randi() % _sides + 1);
 
-        var t = TransformEffect.Capture(this);
+        var e = ComponentEffect.Capture(this);
         if (side <= _sideRotations.Length)
-            t.Rotation = _sideRotations[side - 1] * (3.14159f / 180f); // degrees to radians
+            e.State.Rotation = _sideRotations[side - 1] * (3.14159f / 180f); // degrees to radians
 
-        return t;
+        return e;
     }
 
     public void AnimateRoll(Vector3 targetRotation)
@@ -104,14 +104,14 @@ public partial class VcDie : VisualComponentBase
         _rollTime = 0;
     }
 
-    private TransformEffect ShowSide(int side)
+    private ComponentEffect ShowSide(int side)
     {
         if (side > _sideRotations.Length)
             return null;
 
-        var t = TransformEffect.Capture(this);
-        t.Rotation = _sideRotations[side - 1] * (3.14159f / 180f); //convert to radians
-        return t;
+        var e = ComponentEffect.Capture(this);
+        e.State.Rotation = _sideRotations[side - 1] * (3.14159f / 180f); //convert to radians
+        return e;
     }
 
     private TokenBuildMode _mode;
