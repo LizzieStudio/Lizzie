@@ -16,9 +16,14 @@ public class Project
 
     /// <summary>
     /// Named scene snapshots the user can save and restore.
-    /// Key is the state name.
+    /// Key is the state's immutable id.
     /// </summary>
-    public Dictionary<string, GameState> GameStates { get; set; } = new();
+    public Dictionary<SnowTag, GameState> GameStates { get; set; } = new();
+
+    /// <summary>
+    /// The snapshot currently loaded or <see cref="SnowTag.Empty"/>.
+    /// </summary>
+    public SnowTag ActiveGameState { get; set; }
 
     /// <summary>
     /// Project-level settings edited via the Project Settings dialog.
@@ -68,6 +73,15 @@ public class Project
             return null;
         if (Images.TryGetValue(imageRef, out var asset) && !asset.Deleted)
             return asset;
+        return null;
+    }
+
+    public GameState GetGameState(SnowTag stateRef)
+    {
+        if (stateRef == SnowTag.Empty)
+            return null;
+        if (GameStates.TryGetValue(stateRef, out var state) && !state.Deleted)
+            return state;
         return null;
     }
 }

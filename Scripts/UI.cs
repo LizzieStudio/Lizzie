@@ -69,7 +69,8 @@ public partial class UI : CanvasLayer
 
         _fileMenu = GetNode<PopupMenu>("%File");
         _fileMenu.AddSeparator();
-        _fileMenu.AddItem("Save Snapshot...", 3);
+        _fileMenu.AddItem("Save Snapshot as...", 3);
+        _fileMenu.AddItem("Update Snapshot", 6);
 
         _restoreSnapshotMenu = new PopupMenu();
         _restoreSnapshotMenu.Name = "RestoreSnapshotMenu";
@@ -260,29 +261,73 @@ public partial class UI : CanvasLayer
         _restoreSnapshotMenu.Clear();
 
         var project = ProjectService.Instance.CurrentProject;
-        if (project == null || project.GameStates.Count == 0)
+
+        var updateIdx = _fileMenu.GetItemIndex(6);
+        if (updateIdx >= 0)
+            _fileMenu.SetItemDisabled(
+                updateIdx,
+                project == null || project.ActiveGameState == SnowTag.Empty
+            );
+
+        var ordered = OrderedGameStates(project);
+        if (ordered.Count == 0)
         {
             _restoreSnapshotMenu.AddItem("(no snapshots)", -1);
             _restoreSnapshotMenu.SetItemDisabled(0, true);
             return;
         }
 
-        int id = 0;
-        foreach (var name in project.GameStates.Keys.OrderBy(k => k))
+        foreach (var (state, _) in ordered)
+            _restoreSnapshotMenu.AddItem(GameStateLabel(project, state), state.Id.Value);
+    }
+
+    /// <summary>Non-deleted snapshots in hierarchical order with depth.</summary>
+    private static List<(GameState State, int Depth)> OrderedGameStates(Project project)
+    {
+        var result = new List<(GameState, int)>();
+        if (project == null)
+            return result;
+
+        var alive = project.GameStates.Values.Where(s => !s.Deleted).ToList();
+        var byParent = alive.GroupBy(s => s.Parent)
+            .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Name).ToList());
+
+        void Walk(SnowTag parent, int depth)
         {
-            _restoreSnapshotMenu.AddItem(name, id);
-            id++;
+            if (!byParent.TryGetValue(parent, out var kids))
+                return;
+            foreach (var k in kids)
+            {
+                result.Add((k, depth));
+                Walk(k.Id, depth + 1);
+            }
         }
+
+        Walk(SnowTag.Empty, 0);
+
+        var seen = result.Select(r => r.Item1.Id).ToHashSet();
+        foreach (var s in alive.Where(s => !seen.Contains(s.Id)).OrderBy(s => s.Name))
+            result.Add((s, 0));
+
+        return result;
+    }
+
+    private static string GameStateLabel(Project project, GameState state)
+    {
+        var marker = state.Id == project.ActiveGameState ? "● " : "";
+        var parens =
+            state.Parent != SnowTag.Empty
+            && project.GameStates.TryGetValue(state.Parent, out var parent)
+                ? $" ({parent.Name})"
+                : "";
+        return marker + state.Name + parens;
     }
 
     private void OnRestoreSnapshotSelected(long id)
     {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null)
+        if (id < 0)
             return;
-
-        var name = _restoreSnapshotMenu.GetItemText((int)id);
-        _gameController.MainScene.GameObjects.RestoreGameState(name);
+        ProjectService.Instance.SwitchGameState(new SnowTag((int)id));
     }
 
     private void ShowComponentDefinition()
@@ -424,6 +469,12 @@ public partial class UI : CanvasLayer
                 ShowSaveSnapshotDialog();
                 break;
 
+            case 6:
+                ProjectService.Instance.UpdateGameState(
+                    ProjectService.Instance.CurrentProject?.ActiveGameState ?? SnowTag.Empty
+                );
+                break;
+
             // case 4 is handled by the _restoreSnapshotMenu submenu
 
             case 5:
@@ -463,16 +514,32 @@ public partial class UI : CanvasLayer
         descInput.WrapMode = TextEdit.LineWrappingMode.Boundary;
         vbox.AddChild(descInput);
 
+        var project = ProjectService.Instance.CurrentProject;
+        var parent = project?.GetGameState(project.ActiveGameState);
+        CheckBox linkCheck = null;
+        if (parent != null)
+        {
+            linkCheck = new CheckBox
+            {
+                Text = $"link to {parent.Name}",
+                ButtonPressed = false,
+                TooltipText =
+                    $"When checked, this snapshot will copy updates to components in {parent.Name}."
+            };
+            vbox.AddChild(linkCheck);
+        }
+
         dialog.AddChild(vbox);
 
         dialog.Confirmed += () =>
         {
             var name = input.Text.Trim();
             if (!string.IsNullOrEmpty(name))
-            {
-                _gameController.MainScene.GameObjects.CaptureGameState(name, descInput.Text.Trim());
-                EventBus.Instance.Publish(new GameStateChangedEvent());
-            }
+                ProjectService.Instance.SaveGameState(
+                    name,
+                    descInput.Text.Trim(),
+                    linkCheck?.ButtonPressed ?? false
+                );
             dialog.QueueFree();
         };
         dialog.Canceled += () => dialog.QueueFree();
@@ -507,24 +574,33 @@ public partial class UI : CanvasLayer
         void RefreshList()
         {
             list.Clear();
-            foreach (var name in project.GameStates.Keys.OrderBy(k => k))
-                list.AddItem(name);
+            foreach (var (state, _) in OrderedGameStates(project))
+            {
+                var idx = list.AddItem(GameStateLabel(project, state));
+                list.SetItemMetadata(idx, state.Id.Value);
+            }
         }
 
         RefreshList();
+
+        SnowTag SelectedRef()
+        {
+            var sel = list.GetSelectedItems();
+            if (sel.Length == 0)
+                return SnowTag.Empty;
+            return new SnowTag((int)list.GetItemMetadata(sel[0]));
+        }
 
         var hbox = new HBoxContainer();
         vbox.AddChild(hbox);
 
         var restoreBtn = new Button();
-        restoreBtn.Text = "Restore";
+        restoreBtn.Text = "Switch To";
         restoreBtn.Pressed += () =>
         {
-            var sel = list.GetSelectedItems();
-            if (sel.Length == 0)
-                return;
-            var name = list.GetItemText(sel[0]);
-            _gameController.MainScene.GameObjects.RestoreGameState(name);
+            var stateRef = SelectedRef();
+            if (stateRef != SnowTag.Empty)
+                ProjectService.Instance.SwitchGameState(stateRef);
         };
         hbox.AddChild(restoreBtn);
 
@@ -532,12 +608,10 @@ public partial class UI : CanvasLayer
         deleteBtn.Text = "Delete";
         deleteBtn.Pressed += () =>
         {
-            var sel = list.GetSelectedItems();
-            if (sel.Length == 0)
+            var stateRef = SelectedRef();
+            if (stateRef == SnowTag.Empty)
                 return;
-            var name = list.GetItemText(sel[0]);
-            _gameController.MainScene.GameObjects.DeleteGameState(name);
-            EventBus.Instance.Publish(new GameStateChangedEvent());
+            ProjectService.Instance.DeleteGameState(stateRef);
             RefreshList();
         };
         hbox.AddChild(deleteBtn);

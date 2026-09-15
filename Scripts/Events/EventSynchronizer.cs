@@ -156,6 +156,7 @@ public partial class EventSynchronizer : Node
             .Concat(DataSetManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .Concat(PrototypeManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .Concat(AssetManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(GameStatesManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .Concat(SettingsManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .ToArray();
         var snapshot = TableEvent.Now(null, effects);

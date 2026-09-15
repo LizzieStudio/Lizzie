@@ -11,6 +11,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(MoveAction), "m")]
 [JsonDerivedType(typeof(ShuffleAction), "s")]
 [JsonDerivedType(typeof(UndoAction), "u")]
+[JsonDerivedType(typeof(GameStateSwitchAction), "gsw")]
 public abstract class TableAction { }
 
 /// <summary>Flips a token or deck.</summary>
@@ -30,6 +31,14 @@ public class MoveAction : TableAction { }
 
 /// <summary>Reorders a container's contents. The new order is carried by the event's transforms.</summary>
 public class ShuffleAction : TableAction { }
+
+/// <summary>Restores a snapshot.</summary>
+public class GameStateSwitchAction : TableAction
+{
+    /// <summary>The snapshot to switch to.</summary>
+    [JsonPropertyName("t")]
+    public SnowTag Target { get; set; }
+}
 
 /// <summary>
 /// Reverses a prior event, named by its <see cref="SnowportId"/>.

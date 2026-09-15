@@ -5,11 +5,20 @@ using System.Collections.Generic;
 /// </summary>
 public static class UndoLog
 {
-    /// <summary>True when an event effect at least one component.</summary>
+    /// <summary>True when an event affects at least one component, or clears the table.</summary>
     public static bool IsComponentEvent(TableEvent e)
     {
         foreach (var fx in e.Effects)
-            if (fx is ComponentEffect)
+            if (fx is ComponentEffect or TableClearEffect)
+                return true;
+        return false;
+    }
+
+    /// <summary>True when an event carries a <see cref="TableClearEffect"/>.</summary>
+    public static bool HasTableClear(TableEvent e)
+    {
+        foreach (var fx in e.Effects)
+            if (fx is TableClearEffect)
                 return true;
         return false;
     }
@@ -155,6 +164,14 @@ public static class UndoLog
         foreach (var fx in @base.Effects)
             if (fx is ComponentEffect)
                 affected.Add(fx.Id);
+
+        // A table clear "deletes" components without listing them,
+        // so reconstructing across it must revisit every component.
+        if (HasTableClear(@base))
+            foreach (var ev in log)
+                foreach (var fx in ev.Effects)
+                    if (fx is ComponentEffect)
+                        affected.Add(fx.Id);
 
         return affected;
     }

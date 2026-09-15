@@ -240,6 +240,8 @@ public partial class DebugConsole : Node
             UpdateReplicatedEffect<Template> => "Template",
             UpdateReplicatedEffect<DataSet> => "DataSet",
             UpdateReplicatedEffect<Prototype> => "Prototype",
+            UpdateReplicatedEffect<GameState> => "GameState",
+            TableClearEffect => "Clear",
             _ => Trim(fx.GetType().Name, "Effect"),
         };
 

@@ -12,7 +12,9 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
 [JsonDerivedType(typeof(UpdateSettingsEffect), "gs")]
+[JsonDerivedType(typeof(TableClearEffect), "clr")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -52,6 +54,13 @@ public class UpdateReplicatedEffect<T> : Effect
     [JsonPropertyName("v")]
     public T Payload { get; set; }
 }
+
+/// <summary>
+/// Removes every component older than the enclosing event's id.
+/// Upserts from the same event "survive" the clear.
+/// This is used when restoring from a snapshots.
+/// </summary>
+public class TableClearEffect : Effect { }
 
 /// <summary>
 /// Creates or updates the project settings.

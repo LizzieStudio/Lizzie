@@ -36,6 +36,12 @@ public partial class GameObjects : Node
     /// </summary>
     private readonly Dictionary<SnowTag, SnowportId> _lastWrite = new();
 
+    /// <summary>
+    /// The id of the most recent <see cref="TableClearEffect"/>.
+    /// Any transform older than this is rejected.
+    /// </summary>
+    private SnowportId _clearBarrier = SnowportId.Empty;
+
     private GameController _gameController;
 
     /// <summary>
@@ -386,159 +392,6 @@ public partial class GameObjects : Node
             }
         }
         return counts;
-    }
-
-    #endregion
-
-    #region GameState
-
-    /// <summary>
-    /// Snapshot all VisualComponent children into a named GameState and store it
-    /// in the current project.  If a state with the same name already exists it
-    /// is overwritten.
-    /// </summary>
-    public GameState CaptureGameState(string name, string description = "")
-    {
-        var state = new GameState
-        {
-            Name = name,
-            CapturedAt = DateTime.UtcNow,
-            Description = description,
-        };
-
-        foreach (var child in ComponentNodes)
-        {
-            if (child is VisualComponentBase vcb)
-            {
-                state.Components.Add(GameStateComponent.FromComponent(vcb));
-            }
-        }
-
-        var project = ProjectService.Instance.CurrentProject;
-        if (project != null)
-        {
-            project.GameStates[name] = state;
-            ProjectService.Instance.SaveProject(project);
-            EventBus.Instance.Publish(new GameStateChangedEvent());
-        }
-
-        GD.Print($"GameState '{name}' captured ({state.Components.Count} components).");
-        return state;
-    }
-
-    /// <summary>
-    /// Restore the scene to a previously captured GameState.  Components that
-    /// existed in the snapshot but are no longer in the scene are re-spawned;
-    /// components present in the scene but absent from the snapshot are deleted;
-    /// components in both are repositioned/updated.
-    /// </summary>
-    public void RestoreGameState(string name)
-    {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null || !project.GameStates.TryGetValue(name, out var state))
-        {
-            GD.PrintErr($"RestoreGameState: no state named '{name}' found.");
-            return;
-        }
-
-        RestoreGameState(state);
-    }
-
-    /// <summary>
-    /// Restore the scene directly from a <see cref="GameState"/> object.
-    /// </summary>
-    public void RestoreGameState(GameState state)
-    {
-        if (state == null)
-            return;
-
-        // Build a lookup of the saved components by their reference Guid.
-        var saved = state.Components.ToDictionary(c => c.ComponentRef);
-
-        // Build a lookup of live components.
-        var live = ComponentNodes.OfType<VisualComponentBase>().ToDictionary(c => c.Reference);
-
-        // Update or delete live components.
-        foreach (var (refId, component) in live)
-        {
-            if (saved.TryGetValue(refId, out var entry))
-            {
-                entry.ApplyToComponent(component);
-            }
-            else
-            {
-                // Component not present in snapshot — remove it.
-                component.QueueFree();
-            }
-        }
-
-        // Spawn components that exist in the snapshot but not in the live scene.
-        foreach (var (refId, entry) in saved)
-        {
-            if (live.ContainsKey(refId))
-                continue; // Already handled above.
-
-            var project = ProjectService.Instance.CurrentProject;
-            if (
-                project == null
-                || !project.Prototypes.TryGetValue(entry.PrototypeRef, out var proto)
-            )
-            {
-                GD.PrintErr(
-                    $"RestoreGameState: prototype {entry.PrototypeRef} not found for component {refId}."
-                );
-                continue;
-            }
-
-            var scenePath = Utility.ComponentTypeToScenePath(
-                proto.Type,
-                proto.Parameters,
-                entry.DataSetRow
-            );
-            if (string.IsNullOrEmpty(scenePath))
-            {
-                GD.PrintErr($"RestoreGameState: could not resolve scene for {proto.Type}.");
-                continue;
-            }
-
-            var scene = GD.Load<PackedScene>(scenePath).Instantiate();
-            if (scene is not VisualComponentBase newComponent)
-            {
-                GD.PrintErr($"RestoreGameState: spawned scene is not a VisualComponentBase.");
-                scene.QueueFree();
-                continue;
-            }
-
-            newComponent.Reference = refId;
-            newComponent.PrototypeRef = entry.PrototypeRef;
-
-            entry.ApplyToComponent(newComponent);
-            newComponent.Setup(entry.PrototypeRef, entry.DataSetRow, TextureFactory);
-
-            AddComponentToScene(newComponent);
-        }
-
-        RebuildContainerCaches();
-
-        GD.Print($"GameState '{state.Name}' restored ({state.Components.Count} entries).");
-    }
-
-    /// <summary>
-    /// Remove a named GameState from the current project.
-    /// </summary>
-    public bool DeleteGameState(string name)
-    {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null)
-            return false;
-
-        if (!project.GameStates.Remove(name))
-            return false;
-
-        ProjectService.Instance.SaveProject(project);
-        EventBus.Instance.Publish(new GameStateChangedEvent());
-        GD.Print($"GameState '{name}' deleted.");
-        return true;
     }
 
     #endregion
@@ -1391,6 +1244,7 @@ public partial class GameObjects : Node
 
         _pendingSpawns.Clear();
         _lastWrite.Clear();
+        _clearBarrier = SnowportId.Empty;
         EventSynchronizer.Instance?.Clear();
         PlayerSeatManager.Instance?.Clear();
 
@@ -1414,6 +1268,16 @@ public partial class GameObjects : Node
         foreach (var effect in e.Effects)
             if (effect is ComponentEffect ce)
                 ApplyUpsert(e.Id, ce, animated);
+
+        // We clear the table after upserts because the table clear ignores nodes
+        // from the same event as it. This means that nodes that exist before and
+        // after aren't recreated from scratch, but just kept.
+        if (e.Effects.Any(fx => fx is TableClearEffect))
+            ApplyTableClear(e.Id);
+
+        // keep track of which snapshot is now loaded
+        if (e.Action is GameStateSwitchAction sw && ProjectService.Instance?.CurrentProject != null)
+            ProjectService.Instance.CurrentProject.ActiveGameState = sw.Target;
 
         RebuildContainerCaches();
 
@@ -1441,6 +1305,10 @@ public partial class GameObjects : Node
         var r = fx.Id;
         var writeId = s.LastMoveId == SnowportId.Empty ? eventId : s.LastMoveId;
 
+        // reject anything before a GameStateSwitchAction (for late arrivals)
+        if (writeId.CompareTo(_clearBarrier) < 0)
+            return;
+
         // Reject if it's older than the most recent transform.
         if (_lastWrite.TryGetValue(r, out var last) && writeId.CompareTo(last) < 0)
             return;
@@ -1463,6 +1331,35 @@ public partial class GameObjects : Node
         }
 
         ApplyStateToComponent(c, writeId, s, animated);
+    }
+
+    /// <summary>
+    /// Removes every component older than the clear event and sets the clear barrier so
+    /// late arriving upserts are rejected.
+    /// </summary>
+    private void ApplyTableClear(SnowportId eventId)
+    {
+        if (_clearBarrier.CompareTo(eventId) < 0)
+            _clearBarrier = eventId;
+
+        foreach (var c in ComponentNodes.OfType<VisualComponentBase>().ToList())
+        {
+            if (c.LastMoveId.CompareTo(eventId) >= 0)
+                continue;
+            var r = c.Reference;
+            RemoveComponent(c);
+            _lastWrite.Remove(r);
+            _pendingSpawns.Remove(r);
+        }
+
+        // clear buffered spawns too
+        foreach (
+            var key in _pendingSpawns
+                .Where(kv => kv.Value.WriteId.CompareTo(eventId) < 0)
+                .Select(kv => kv.Key)
+                .ToList()
+        )
+            _pendingSpawns.Remove(key);
     }
 
     /// <summary>
@@ -1574,6 +1471,19 @@ public partial class GameObjects : Node
         foreach (var r in UndoLog.ResolveAffectedComponents(log, undo.Target))
             ReconstructComponent(r, log, undone);
 
+        _clearBarrier = SnowportId.Empty;
+        foreach (var ev in log)
+        {
+            if (
+                !undone.Contains(ev.Id)
+                && UndoLog.HasTableClear(ev)
+                && _clearBarrier.CompareTo(ev.Id) < 0
+            )
+            {
+                _clearBarrier = ev.Id;
+            }
+        }
+
         RebuildContainerCaches();
         QueueStackingUpdate();
         EmitSignal(SignalName.TableChanged);
@@ -1595,12 +1505,16 @@ public partial class GameObjects : Node
         SnowportId winnerId = SnowportId.Empty;
         ComponentEffect zwin = null;
         SnowportId zwinId = SnowportId.Empty;
+        SnowportId barrier = SnowportId.Empty;
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log[i];
             if (undone.Contains(e.Id))
                 continue;
+
+            if (UndoLog.HasTableClear(e) && barrier.CompareTo(e.Id) < 0)
+                barrier = e.Id;
 
             ComponentEffect ce = null;
             foreach (var fx in e.Effects)
@@ -1633,17 +1547,23 @@ public partial class GameObjects : Node
         _pendingSpawns.Remove(r);
         var live = GetComponent(r);
 
-        if (winner == null || winner.State.Location == VisualComponentBase.ComponentLocation.Deleted)
+        var wId = winner == null ? SnowportId.Empty : WriteIdOf(winner, winnerId);
+        var cleared = winner != null && barrier.CompareTo(wId) > 0;
+
+        if (
+            winner == null
+            || cleared
+            || winner.State.Location == VisualComponentBase.ComponentLocation.Deleted
+        )
         {
             RemoveComponent(live);
-            if (winner == null)
+            if (winner == null || cleared)
                 _lastWrite.Remove(r);
             else
-                _lastWrite[r] = WriteIdOf(winner, winnerId);
+                _lastWrite[r] = wId;
             return;
         }
 
-        var wId = WriteIdOf(winner, winnerId);
         _lastWrite[r] = wId;
 
         var z =

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
@@ -216,6 +217,198 @@ public partial class ProjectService : Node
                 new UpdateReplicatedEffect<Asset> { Id = image.Id, Payload = image }
             )
         );
+    }
+
+    /// <summary>
+    /// Captures the current table as a new <see cref="GameState"/>.
+    /// </summary>
+    public GameState SaveGameState(string name, string description = "", bool link = false)
+    {
+        if (CurrentProject == null)
+            return null;
+
+        var parent = link ? CurrentProject.ActiveGameState : SnowTag.Empty;
+        var state = new GameState
+        {
+            Id = Snowport.Clock.CreateTag(),
+            Parent = parent,
+            Name = name,
+            Description = description,
+            Upserts = BuildDelta(parent),
+        };
+
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
+            )
+        );
+        CurrentProject.ActiveGameState = state.Id;
+        SaveProject(CurrentProject);
+        return state;
+    }
+
+    /// <summary>
+    /// Saves over an existing snapshot in place.
+    /// </summary>
+    public void UpdateGameState(SnowTag stateRef)
+    {
+        if (CurrentProject == null || stateRef == SnowTag.Empty)
+            return;
+        if (!CurrentProject.GameStates.TryGetValue(stateRef, out var state) || state.Deleted)
+            return;
+
+        state.Upserts = BuildDelta(state.Parent);
+
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
+            )
+        );
+        SaveProject(CurrentProject);
+    }
+
+    /// <summary>
+    /// The current table expressed as a delta vs the given parent.
+    /// </summary>
+    private ComponentEffect[] BuildDelta(SnowTag parent)
+    {
+        var parentFold = FoldChain(parent);
+        var current = (GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .OfType<ComponentEffect>()
+            .ToDictionary(e => e.Id);
+
+        var delta = new List<ComponentEffect>();
+
+        // added or transformed components
+        foreach (var (id, ce) in current)
+            if (!parentFold.TryGetValue(id, out var prev) || !StateEquals(prev.State, ce.State))
+                delta.Add(ce);
+
+        // removed components
+        foreach (var (id, prev) in parentFold)
+            if (!current.ContainsKey(id))
+                delta.Add(
+                    new ComponentEffect
+                    {
+                        Id = id,
+                        PrototypeRef = prev.PrototypeRef,
+                        State = new VcSyncDto
+                        {
+                            Location = VisualComponentBase.ComponentLocation.Deleted,
+                        },
+                    }
+                );
+
+        return delta.ToArray();
+    }
+
+    public void DeleteGameState(SnowTag stateRef)
+    {
+        if (CurrentProject == null)
+            return;
+        if (!CurrentProject.GameStates.TryGetValue(stateRef, out var state))
+            return;
+
+        // reject deleting a parent snapshot
+        if (CurrentProject.GameStates.Values.Any(g => !g.Deleted && g.Parent == stateRef))
+        {
+            GD.PrintErr($"Cannot delete GameState '{state.Name}': it has child snapshots.");
+            return;
+        }
+
+        state.Deleted = true;
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(
+                null,
+                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
+            )
+        );
+        SaveProject(CurrentProject);
+    }
+
+    /// <summary>
+    /// Switches every client to a saved game state.
+    /// </summary>
+    public void SwitchGameState(SnowTag stateRef)
+    {
+        if (CurrentProject?.GetGameState(stateRef) == null)
+            return;
+
+        var effects = new List<Effect> { new TableClearEffect() };
+        foreach (var ce in FoldChain(stateRef).Values)
+        {
+            var s = ce.State ?? new VcSyncDto();
+            // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
+            // Clear LastMoveId so ApplyUpsert falls back to this event's id and wins LWW.
+            effects.Add(
+                new ComponentEffect
+                {
+                    Id = ce.Id,
+                    PrototypeRef = ce.PrototypeRef,
+                    State = new VcSyncDto
+                    {
+                        Position = s.Position,
+                        Rotation = s.Rotation,
+                        DataSetRow = s.DataSetRow,
+                        Location = s.Location,
+                        ContainerRef = s.ContainerRef,
+                        ZOrder = s.ZOrder,
+                        LastMoveId = SnowportId.Empty,
+                    },
+                }
+            );
+        }
+
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(new GameStateSwitchAction { Target = stateRef }, effects.ToArray())
+        );
+    }
+
+    /// <summary>
+    /// Collect a snapshot's ancestory into a set of component upserts.
+    /// </summary>
+    private Dictionary<SnowTag, ComponentEffect> FoldChain(SnowTag stateRef)
+    {
+        var chain = new List<GameState>();
+        var cursor = stateRef;
+        while (
+            cursor != SnowTag.Empty
+            && CurrentProject != null
+            && CurrentProject.GameStates.TryGetValue(cursor, out var gs)
+        )
+        {
+            chain.Add(gs);
+            cursor = gs.Parent;
+        }
+        chain.Reverse(); // root first
+
+        var fold = new Dictionary<SnowTag, ComponentEffect>();
+        foreach (var gs in chain)
+            foreach (var up in gs.Upserts)
+            {
+                if (up.State?.Location == VisualComponentBase.ComponentLocation.Deleted)
+                    fold.Remove(up.Id);
+                else
+                    fold[up.Id] = up;
+            }
+        return fold;
+    }
+
+    /// <summary>Compares two component states, ignoring the transient last-move id.</summary>
+    private static bool StateEquals(VcSyncDto a, VcSyncDto b)
+    {
+        if (a == null || b == null)
+            return a == b;
+        return a.Position == b.Position
+            && a.Rotation == b.Rotation
+            && a.Location == b.Location
+            && a.ContainerRef == b.ContainerRef
+            && a.DataSetRow == b.DataSetRow
+            && a.ZOrder.Target == b.ZOrder.Target
+            && a.ZOrder.Suborder == b.ZOrder.Suborder
+            && a.ZOrder.LastEvent == b.ZOrder.LastEvent;
     }
 
     public void AddPrototypeToManifest(CreateObjectEventArgs args)
