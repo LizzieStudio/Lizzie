@@ -289,7 +289,8 @@ public partial class UI : CanvasLayer
             return result;
 
         var alive = project.GameStates.Values.Where(s => !s.Deleted).ToList();
-        var byParent = alive.GroupBy(s => s.Parent)
+        var byParent = alive
+            .GroupBy(s => s.Parent)
             .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Name).ToList());
 
         void Walk(SnowTag parent, int depth)
@@ -524,7 +525,7 @@ public partial class UI : CanvasLayer
                 Text = $"link to {parent.Name}",
                 ButtonPressed = false,
                 TooltipText =
-                    $"When checked, this snapshot will copy updates to components in {parent.Name}."
+                    $"When checked, this snapshot will copy updates to components in {parent.Name}.",
             };
             vbox.AddChild(linkCheck);
         }

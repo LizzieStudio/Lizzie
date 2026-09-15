@@ -65,9 +65,10 @@ public partial class ImGuiLayer : CanvasLayer
 
     public Vector2I UpdateViewport()
     {
-        Vector2I vpSize = _parentViewport is Window w ? w.Size
+        Vector2I vpSize = _parentViewport is Window w
+            ? w.Size
             : (_parentViewport as SubViewport)?.Size
-            ?? throw new System.InvalidOperationException();
+                ?? throw new System.InvalidOperationException();
 
         if (_visible)
         {
@@ -80,14 +81,16 @@ public partial class ImGuiLayer : CanvasLayer
                 RenderingServer.ViewportSetSize(
                     _subViewportRid,
                     _subViewportSize.X,
-                    _subViewportSize.Y);
+                    _subViewportSize.Y
+                );
                 Rid vptex = RenderingServer.ViewportGetTexture(_subViewportRid);
                 RenderingServer.CanvasItemClear(_canvasItem);
                 RenderingServer.CanvasItemSetTransform(_canvasItem, ft.AffineInverse());
                 RenderingServer.CanvasItemAddTextureRect(
                     _canvasItem,
                     new(0, 0, _subViewportSize.X, _subViewportSize.Y),
-                    vptex);
+                    vptex
+                );
             }
         }
 
@@ -106,11 +109,7 @@ public partial class ImGuiLayer : CanvasLayer
     }
 }
 #else
-namespace ImGuiNET
-{
-}
+namespace ImGuiNET { }
 
-namespace ImGuiGodot
-{
-}
+namespace ImGuiGodot { }
 #endif

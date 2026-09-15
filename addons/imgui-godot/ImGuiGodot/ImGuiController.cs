@@ -56,8 +56,11 @@ public partial class ImGuiController : Node
             GD.PushError($"imgui-godot: config does not exist: {cfgPath}");
         }
 
-        Internal.State.Init(cfg ?? (Resource)((GDScript)GD.Load(
-                "res://addons/imgui-godot/scripts/ImGuiConfig.gd")).New());
+        Internal.State.Init(
+            cfg
+                ?? (Resource)
+                    ((GDScript)GD.Load("res://addons/imgui-godot/scripts/ImGuiConfig.gd")).New()
+        );
 
         _helper = new ImGuiControllerHelper();
         AddChild(_helper);
@@ -118,8 +121,8 @@ public partial class ImGuiController : Node
                 AddChild(newLayer);
             else
                 window.AddChild(newLayer);
-            ImGui.GetIO().BackendFlags |= ImGuiBackendFlags.PlatformHasViewports
-                | ImGuiBackendFlags.HasMouseHoveredViewport;
+            ImGui.GetIO().BackendFlags |=
+                ImGuiBackendFlags.PlatformHasViewports | ImGuiBackendFlags.HasMouseHoveredViewport;
         }
         else if (vp is SubViewport svp)
         {

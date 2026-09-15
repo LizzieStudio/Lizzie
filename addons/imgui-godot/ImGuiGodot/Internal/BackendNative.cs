@@ -80,6 +80,7 @@ internal sealed class BackendNative : IBackend
     {
         _gd.Call(MethodName.ResetFonts);
     }
+
     public void SetMainViewport(Viewport vp)
     {
         _gd.Call(MethodName.SetMainViewport, vp);

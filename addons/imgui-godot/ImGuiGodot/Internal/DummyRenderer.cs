@@ -7,24 +7,14 @@ internal sealed class DummyRenderer : IRenderer
 {
     public string Name => "godot4_net_dummy";
 
-    public void InitViewport(Rid vprid)
-    {
-    }
+    public void InitViewport(Rid vprid) { }
 
-    public void CloseViewport(Rid vprid)
-    {
-    }
+    public void CloseViewport(Rid vprid) { }
 
-    public void OnHide()
-    {
-    }
+    public void OnHide() { }
 
-    public void Render()
-    {
-    }
+    public void Render() { }
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() { }
 }
 #endif

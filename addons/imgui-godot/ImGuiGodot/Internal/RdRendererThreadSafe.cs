@@ -5,9 +5,10 @@ using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-
-using SharedList = ImGuiGodot.Internal.DisposableList<Godot.Rid,
-    ImGuiGodot.Internal.ClonedDrawData>;
+using SharedList = ImGuiGodot.Internal.DisposableList<
+    Godot.Rid,
+    ImGuiGodot.Internal.ClonedDrawData
+>;
 
 namespace ImGuiGodot.Internal;
 
@@ -50,10 +51,13 @@ internal sealed class ClonedDrawData : IDisposable
     }
 }
 
-internal sealed class DisposableList<T, U> : List<Tuple<T, U>>, IDisposable where U : IDisposable
+internal sealed class DisposableList<T, U> : List<Tuple<T, U>>, IDisposable
+    where U : IDisposable
 {
     public DisposableList() { }
-    public DisposableList(int capacity) : base(capacity) { }
+
+    public DisposableList(int capacity)
+        : base(capacity) { }
 
     public void Dispose()
     {

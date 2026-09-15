@@ -386,13 +386,13 @@ public partial class ProjectService : Node
 
         var fold = new Dictionary<SnowTag, ComponentEffect>();
         foreach (var gs in chain)
-            foreach (var up in gs.Upserts)
-            {
-                if (up.State?.Location == VisualComponentBase.ComponentLocation.Deleted)
-                    fold.Remove(up.Id);
-                else
-                    fold[up.Id] = up;
-            }
+        foreach (var up in gs.Upserts)
+        {
+            if (up.State?.Location == VisualComponentBase.ComponentLocation.Deleted)
+                fold.Remove(up.Id);
+            else
+                fold[up.Id] = up;
+        }
         return fold;
     }
 

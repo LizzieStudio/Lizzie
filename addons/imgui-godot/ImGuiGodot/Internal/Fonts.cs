@@ -19,6 +19,7 @@ internal sealed class Fonts
         public bool Merge { get; init; }
         public ushort[]? Ranges { get; init; }
     }
+
     private readonly List<FontParams> _fontConfiguration = [];
 
     public Fonts()
@@ -30,7 +31,10 @@ internal sealed class Fonts
     {
         var io = ImGui.GetIO();
         io.Fonts.Clear();
-        unsafe { io.NativePtr->FontDefault = null; }
+        unsafe
+        {
+            io.NativePtr->FontDefault = null;
+        }
         _fontConfiguration.Clear();
     }
 
@@ -42,8 +46,9 @@ internal sealed class Fonts
                 Font = fontData,
                 FontSize = fontSize,
                 Merge = merge,
-                Ranges = ranges
-            });
+                Ranges = ranges,
+            }
+        );
     }
 
     private static unsafe void AddFontToAtlas(FontParams fp, float scale)
@@ -65,7 +70,7 @@ internal sealed class Fonts
                 SizePixels = fontSize,
                 OversampleH = 1,
                 OversampleV = 1,
-                PixelSnapH = true
+                PixelSnapH = true,
             };
             io.Fonts.AddFontDefault(fc);
         }
@@ -104,7 +109,8 @@ internal sealed class Fonts
     private static unsafe ImVector GetRanges(Font font)
     {
         var builder = new ImFontGlyphRangesBuilderPtr(
-            ImGuiNative.ImFontGlyphRangesBuilder_ImFontGlyphRangesBuilder());
+            ImGuiNative.ImFontGlyphRangesBuilder_ImFontGlyphRangesBuilder()
+        );
         builder.AddText(font.GetSupportedChars());
         builder.BuildRanges(out ImVector vec);
         builder.Destroy();
@@ -174,7 +180,8 @@ internal sealed class Fonts
             out byte* pixelData,
             out int width,
             out int height,
-            out int bytesPerPixel);
+            out int bytesPerPixel
+        );
 
         byte[] pixels = new byte[width * height * bytesPerPixel];
         Marshal.Copy((IntPtr)pixelData, pixels, 0, pixels.Length);

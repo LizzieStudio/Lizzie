@@ -341,7 +341,10 @@ namespace Lizzie.AssetManagement
             if (string.IsNullOrEmpty(fileId))
                 return null;
 
-            var confirm = Regex.Match(html, "name=\"confirm\"\\s+value=\"([^\"]+)\"").Groups[1].Value;
+            var confirm = Regex
+                .Match(html, "name=\"confirm\"\\s+value=\"([^\"]+)\"")
+                .Groups[1]
+                .Value;
             if (string.IsNullOrEmpty(confirm))
                 confirm = "t";
             var uuid = Regex.Match(html, "name=\"uuid\"\\s+value=\"([^\"]+)\"").Groups[1].Value;

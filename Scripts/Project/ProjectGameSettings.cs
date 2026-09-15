@@ -31,12 +31,17 @@ public record ProjectGameSettings
     public int MaxPlayers { get; init; } = 4;
 
     public ImmutableArray<ProjectPlayerSettings> Players { get; init; } =
-        new[] { 0, 1, 2, 3 }.Select((n) => new ProjectPlayerSettings
-            {
-                Name = $"Seat {n}",
-                // 13/34 is roughly the golden angle. It picks distinct colors on the color wheel.
-                Color = Color.FromOkHsl(13f/34f * n, 1.0f, 0.7f),
-            }).ToImmutableArray();
+        new[] { 0, 1, 2, 3 }
+            .Select(
+                (n) =>
+                    new ProjectPlayerSettings
+                    {
+                        Name = $"Seat {n}",
+                        // 13/34 is roughly the golden angle. It picks distinct colors on the color wheel.
+                        Color = Color.FromOkHsl(13f / 34f * n, 1.0f, 0.7f),
+                    }
+            )
+            .ToImmutableArray();
 
     // Game Info tab
     public string GameTitle { get; init; } = string.Empty;

@@ -8,9 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace ImGuiGodot.Internal;
 
-internal sealed class RdRendererException(string message) : ApplicationException(message)
-{
-}
+internal sealed class RdRendererException(string message) : ApplicationException(message) { }
 
 internal class RdRenderer : IRenderer
 {
@@ -27,11 +25,13 @@ internal class RdRenderer : IRenderer
     private readonly ArrayPool<byte> _bufPool = ArrayPool<byte>.Create();
 
     private Rid _idxBuffer;
+
     /// <summary>
     /// size in indices
     /// </summary>
     private int _idxBufferSize = 0;
     private Rid _vtxBuffer;
+
     /// <summary>
     /// size in vertices
     /// </summary>
@@ -59,7 +59,8 @@ internal class RdRenderer : IRenderer
         // set up everything to match the official Vulkan backend as closely as possible
 
         using var shaderFile = ResourceLoader.Load<RDShaderFile>(
-            "res://addons/imgui-godot/data/ImGuiShader.glsl");
+            "res://addons/imgui-godot/data/ImGuiShader.glsl"
+        );
         _shader = RD.ShaderCreateFromSpirV(shaderFile.GetSpirV());
         if (!_shader.IsValid)
             throw new RdRendererException("failed to create shader");
@@ -72,7 +73,7 @@ internal class RdRenderer : IRenderer
             Location = 0,
             Format = RenderingDevice.DataFormat.R32G32Sfloat,
             Stride = vtxStride,
-            Offset = 0
+            Offset = 0,
         };
 
         using RDVertexAttribute attrUvs = new()
@@ -80,7 +81,7 @@ internal class RdRenderer : IRenderer
             Location = 1,
             Format = RenderingDevice.DataFormat.R32G32Sfloat,
             Stride = vtxStride,
-            Offset = sizeof(float) * 2
+            Offset = sizeof(float) * 2,
         };
 
         using RDVertexAttribute attrColors = new()
@@ -88,13 +89,15 @@ internal class RdRenderer : IRenderer
             Location = 2,
             Format = RenderingDevice.DataFormat.R8G8B8A8Unorm,
             Stride = vtxStride,
-            Offset = sizeof(float) * 4
+            Offset = sizeof(float) * 4,
         };
 
-        var vattrs = new Godot.Collections.Array<RDVertexAttribute>() {
+        var vattrs = new Godot.Collections.Array<RDVertexAttribute>()
+        {
             attrPoints,
             attrUvs,
-            attrColors };
+            attrColors,
+        };
         _vtxFormat = RD.VertexFormatCreate(vattrs);
 
         // blend state
@@ -120,7 +123,7 @@ internal class RdRenderer : IRenderer
         // rasterization state
         using var rasterizationState = new RDPipelineRasterizationState
         {
-            FrontFace = RenderingDevice.PolygonFrontFace.CounterClockwise
+            FrontFace = RenderingDevice.PolygonFrontFace.CounterClockwise,
         };
 
         using var af = new RDAttachmentFormat()
@@ -141,7 +144,8 @@ internal class RdRenderer : IRenderer
             rasterizationState,
             new RDPipelineMultisampleState(),
             new RDPipelineDepthStencilState(),
-            blendData);
+            blendData
+        );
 
         if (!_pipeline.IsValid)
             throw new RdRendererException("failed to create pipeline");
@@ -154,7 +158,7 @@ internal class RdRenderer : IRenderer
             MipFilter = RenderingDevice.SamplerFilter.Linear,
             RepeatU = RenderingDevice.SamplerRepeatMode.Repeat,
             RepeatV = RenderingDevice.SamplerRepeatMode.Repeat,
-            RepeatW = RenderingDevice.SamplerRepeatMode.Repeat
+            RepeatW = RenderingDevice.SamplerRepeatMode.Repeat,
         };
         _sampler = RD.SamplerCreate(samplerState);
         if (!_sampler.IsValid)
@@ -169,9 +173,7 @@ internal class RdRenderer : IRenderer
         RenderingServer.ViewportSetClearMode(vprid, RenderingServer.ViewportClearMode.Never);
     }
 
-    public void CloseViewport(Rid vprid)
-    {
-    }
+    public void CloseViewport(Rid vprid) { }
 
     private void SetupBuffers(ImDrawDataPtr drawData)
     {
@@ -214,7 +216,7 @@ internal class RdRenderer : IRenderer
                     using RDUniform uniform = new()
                     {
                         Binding = 0,
-                        UniformType = RenderingDevice.UniformType.SamplerWithTexture
+                        UniformType = RenderingDevice.UniformType.SamplerWithTexture,
                     };
                     uniform.AddId(_sampler);
                     uniform.AddId(texrid);
@@ -237,8 +239,10 @@ internal class RdRenderer : IRenderer
             for (int cmdi = 0; cmdi < cmdList.CmdBuffer.Size; ++cmdi)
             {
                 ImDrawCmdPtr drawCmd = cmdList.CmdBuffer[cmdi];
-                drawCmd.TextureId = (IntPtr)RenderingServer.TextureGetRdTexture(
-                    Util.ConstructRid((ulong)drawCmd.TextureId)).Id;
+                drawCmd.TextureId = (IntPtr)
+                    RenderingServer
+                        .TextureGetRdTexture(Util.ConstructRid((ulong)drawCmd.TextureId))
+                        .Id;
             }
         }
     }
@@ -300,7 +304,8 @@ internal class RdRenderer : IRenderer
                 RD.FreeRid(_idxBuffer);
             _idxBuffer = RD.IndexBufferCreate(
                 (uint)drawData.TotalIdxCount,
-                RenderingDevice.IndexBufferFormat.Uint16);
+                RenderingDevice.IndexBufferFormat.Uint16
+            );
             _idxBufferSize = drawData.TotalIdxCount;
         }
 
@@ -330,7 +335,8 @@ internal class RdRenderer : IRenderer
             _clearColors,
             1f,
             0,
-            _zeroRect);
+            _zeroRect
+        );
 #else
         const RenderingDevice.FinalAction finalAction =
 #if GODOT4_3_OR_GREATER
@@ -338,10 +344,18 @@ internal class RdRenderer : IRenderer
 #else
         RenderingDevice.FinalAction.Read;
 #endif
-        long dl = RD.DrawListBegin(fb,
-                RenderingDevice.InitialAction.Clear, finalAction,
-                RenderingDevice.InitialAction.Clear, finalAction,
-                _clearColors, 1f, 0, _zeroRect, _storageTextures);
+        long dl = RD.DrawListBegin(
+            fb,
+            RenderingDevice.InitialAction.Clear,
+            finalAction,
+            RenderingDevice.InitialAction.Clear,
+            finalAction,
+            _clearColors,
+            1f,
+            0,
+            _zeroRect,
+            _storageTextures
+        );
 #endif
 
         RD.DrawListBindRenderPipeline(dl, _pipeline);
@@ -361,9 +375,11 @@ internal class RdRenderer : IRenderer
                 if (!_uniformSets.ContainsKey(drawCmd.GetTexID()))
                     continue;
 
-                Rid idxArray = RD.IndexArrayCreate(_idxBuffer,
+                Rid idxArray = RD.IndexArrayCreate(
+                    _idxBuffer,
                     (uint)(drawCmd.IdxOffset + globalIdxOffset),
-                    drawCmd.ElemCount);
+                    drawCmd.ElemCount
+                );
 
                 long voff = (drawCmd.VtxOffset + globalVtxOffset) * vertSize;
                 _srcBuffers[0] = _srcBuffers[1] = _srcBuffers[2] = _vtxBuffer;
@@ -372,7 +388,8 @@ internal class RdRenderer : IRenderer
                     (uint)cmdList.VtxBuffer.Size,
                     _vtxFormat,
                     _srcBuffers,
-                    _vtxOffsets);
+                    _vtxOffsets
+                );
 
                 RD.DrawListBindUniformSet(dl, _uniformSets[drawCmd.GetTexID()], 0);
                 RD.DrawListBindIndexArray(dl, idxArray);
@@ -382,7 +399,8 @@ internal class RdRenderer : IRenderer
                     drawCmd.ClipRect.X,
                     drawCmd.ClipRect.Y,
                     drawCmd.ClipRect.Z - drawCmd.ClipRect.X,
-                    drawCmd.ClipRect.W - drawCmd.ClipRect.Y);
+                    drawCmd.ClipRect.W - drawCmd.ClipRect.Y
+                );
                 clipRect.Position -= drawData.DisplayPos.ToVector2I();
                 RD.DrawListEnableScissor(dl, clipRect);
 
@@ -400,9 +418,7 @@ internal class RdRenderer : IRenderer
 #endif
     }
 
-    public void OnHide()
-    {
-    }
+    public void OnHide() { }
 
     public void Dispose()
     {

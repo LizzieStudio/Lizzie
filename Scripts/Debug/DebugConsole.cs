@@ -82,14 +82,7 @@ public partial class DebugConsole : Node
             _input = _input.Replace("`", "");
 
             ImGui.SetNextItemWidth(-1);
-            if (
-                ImGui.InputText(
-                    "##cmd",
-                    ref _input,
-                    256,
-                    ImGuiInputTextFlags.EnterReturnsTrue
-                )
-            )
+            if (ImGui.InputText("##cmd", ref _input, 256, ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 RunCommand(_input);
                 _input = "";
@@ -142,8 +135,7 @@ public partial class DebugConsole : Node
             ImGui.TextDisabled("amber = undo/redo   dim = undone   sN = source");
             ImGui.Separator();
 
-            var undone =
-                events != null ? UndoLog.ComputeUndone(events) : new HashSet<SnowportId>();
+            var undone = events != null ? UndoLog.ComputeUndone(events) : new HashSet<SnowportId>();
 
             if (ImGui.BeginChild("##eventlist") && count > 0)
             {
@@ -175,7 +167,7 @@ public partial class DebugConsole : Node
                             pushed = 1;
                         }
 
-                        string line = $"{i,5}  s{e.Id.source,-3} {Describe(e)}";
+                        string line = $"{i, 5}  s{e.Id.source, -3} {Describe(e)}";
                         if (e.Action is UndoAction u)
                             line += indexById.TryGetValue(u.Target, out var ti)
                                 ? $"  → #{ti}"
@@ -210,8 +202,7 @@ public partial class DebugConsole : Node
 
         return string.Join(
             ", ",
-            e.Effects
-                .GroupBy(EffectLabel)
+            e.Effects.GroupBy(EffectLabel)
                 .Select(g => g.Count() > 1 ? $"{g.Key}×{g.Count()}" : g.Key)
         );
     }

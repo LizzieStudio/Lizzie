@@ -257,7 +257,8 @@ public partial class ProjectSettingsDialog : Window
     /// </summary>
     private ProjectGameSettings ReadUi()
     {
-        var current = ProjectService.Instance.CurrentProject?.GameSettings ?? new ProjectGameSettings();
+        var current =
+            ProjectService.Instance.CurrentProject?.GameSettings ?? new ProjectGameSettings();
         return current with
         {
             StartIn2D = _2dToggle.ButtonPressed,

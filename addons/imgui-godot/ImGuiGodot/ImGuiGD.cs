@@ -62,7 +62,8 @@ public static partial class ImGuiGD
         FontFile fontData,
         int fontSize,
         bool merge = false,
-        ushort[]? glyphRanges = null)
+        ushort[]? glyphRanges = null
+    )
     {
         _backend.AddFont(fontData, fontSize, merge, glyphRanges);
     }
@@ -75,7 +76,8 @@ public static partial class ImGuiGD
     {
         ushort* p = (ushort*)glyphRanges;
         int len = 1;
-        while (p[len++] != 0) ;
+        while (p[len++] != 0)
+            ;
         ushort[] gr = new ushort[len];
         for (int i = 0; i < len; ++i)
             gr[i] = p[i];

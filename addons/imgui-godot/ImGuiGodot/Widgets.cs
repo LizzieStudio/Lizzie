@@ -1,6 +1,6 @@
+using System;
 using Godot;
 using ImGuiNET;
-using System;
 using Vector2 = System.Numerics.Vector2;
 using Vector4 = System.Numerics.Vector4;
 
@@ -42,7 +42,8 @@ public static partial class ImGuiGD
         Vector2 size,
         Vector2 uv0,
         Vector2 uv1,
-        Vector4 tint_col)
+        Vector4 tint_col
+    )
     {
         Image(tex, size, uv0, uv1, tint_col, Vector4.Zero);
     }
@@ -53,7 +54,8 @@ public static partial class ImGuiGD
         Vector2 uv0,
         Vector2 uv1,
         Vector4 tint_col,
-        Vector4 border_col)
+        Vector4 border_col
+    )
     {
         ImGuiNative.igImage((IntPtr)tex.GetRid().Id, size, uv0, uv1, tint_col, border_col);
     }
@@ -89,7 +91,8 @@ public static partial class ImGuiGD
         Texture2D tex,
         Vector2 size,
         Vector2 uv0,
-        Vector2 uv1)
+        Vector2 uv1
+    )
     {
         return ImageButton(str_id, tex, size, uv0, uv1, Vector4.Zero, Vector4.One);
     }
@@ -100,7 +103,8 @@ public static partial class ImGuiGD
         Vector2 size,
         Vector2 uv0,
         Vector2 uv1,
-        Vector4 bg_col)
+        Vector4 bg_col
+    )
     {
         return ImageButton(str_id, tex, size, uv0, uv1, bg_col, Vector4.One);
     }
@@ -112,7 +116,8 @@ public static partial class ImGuiGD
         Vector2 uv0,
         Vector2 uv1,
         Vector4 bg_col,
-        Vector4 tint_col)
+        Vector4 tint_col
+    )
     {
         return ImGui.ImageButton(str_id, (IntPtr)tex.GetRid().Id, size, uv0, uv1, bg_col, tint_col);
     }
@@ -132,7 +137,8 @@ public static partial class ImGuiGD
         AtlasTexture tex,
         Vector2 size,
         Vector4 bg_col,
-        Vector4 tint_col)
+        Vector4 tint_col
+    )
     {
         var (uv0, uv1) = GetAtlasUVs(tex);
         return ImGui.ImageButton(str_id, (IntPtr)tex.GetRid().Id, size, uv0, uv1, bg_col, tint_col);
@@ -161,18 +167,19 @@ public static class Widgets
 
     public static void Image(Texture2D tex, Vector2 size) => ImGuiGD.Image(tex, size);
 
-    public static void Image(Texture2D tex, Vector2 size, Vector2 uv0)
-        => ImGuiGD.Image(tex, size, uv0);
+    public static void Image(Texture2D tex, Vector2 size, Vector2 uv0) =>
+        ImGuiGD.Image(tex, size, uv0);
 
-    public static void Image(Texture2D tex, Vector2 size, Vector2 uv0, Vector2 uv1)
-        => ImGuiGD.Image(tex, size, uv0, uv1);
+    public static void Image(Texture2D tex, Vector2 size, Vector2 uv0, Vector2 uv1) =>
+        ImGuiGD.Image(tex, size, uv0, uv1);
 
     public static void Image(
         Texture2D tex,
         Vector2 size,
         Vector2 uv0,
         Vector2 uv1,
-        Vector4 tint_col) => ImGuiGD.Image(tex, size, uv0, uv1, tint_col);
+        Vector4 tint_col
+    ) => ImGuiGD.Image(tex, size, uv0, uv1, tint_col);
 
     public static void Image(
         Texture2D tex,
@@ -180,28 +187,34 @@ public static class Widgets
         Vector2 uv0,
         Vector2 uv1,
         Vector4 tint_col,
-        Vector4 border_col) => ImGuiGD.Image(tex, size, uv0, uv1, tint_col, border_col);
+        Vector4 border_col
+    ) => ImGuiGD.Image(tex, size, uv0, uv1, tint_col, border_col);
 
     public static void Image(AtlasTexture tex, Vector2 size) => ImGuiGD.Image(tex, size);
 
-    public static void Image(AtlasTexture tex, Vector2 size, Vector4 tint_col)
-        => ImGuiGD.Image(tex, size, tint_col);
+    public static void Image(AtlasTexture tex, Vector2 size, Vector4 tint_col) =>
+        ImGuiGD.Image(tex, size, tint_col);
 
-    public static void Image(AtlasTexture tex, Vector2 size, Vector4 tint_col, Vector4 border_col)
-        => ImGuiGD.Image(tex, size, tint_col, border_col);
+    public static void Image(
+        AtlasTexture tex,
+        Vector2 size,
+        Vector4 tint_col,
+        Vector4 border_col
+    ) => ImGuiGD.Image(tex, size, tint_col, border_col);
 
-    public static bool ImageButton(string str_id, Texture2D tex, Vector2 size)
-        => ImGuiGD.ImageButton(str_id, tex, size);
+    public static bool ImageButton(string str_id, Texture2D tex, Vector2 size) =>
+        ImGuiGD.ImageButton(str_id, tex, size);
 
-    public static bool ImageButton(string str_id, Texture2D tex, Vector2 size, Vector2 uv0)
-        => ImGuiGD.ImageButton(str_id, tex, size, uv0);
+    public static bool ImageButton(string str_id, Texture2D tex, Vector2 size, Vector2 uv0) =>
+        ImGuiGD.ImageButton(str_id, tex, size, uv0);
 
     public static bool ImageButton(
         string str_id,
         Texture2D tex,
         Vector2 size,
         Vector2 uv0,
-        Vector2 uv1) => ImGuiGD.ImageButton(str_id, tex, size, uv0, uv1);
+        Vector2 uv1
+    ) => ImGuiGD.ImageButton(str_id, tex, size, uv0, uv1);
 
     public static bool ImageButton(
         string str_id,
@@ -209,7 +222,8 @@ public static class Widgets
         Vector2 size,
         Vector2 uv0,
         Vector2 uv1,
-        Vector4 bg_col) => ImGuiGD.ImageButton(str_id, tex, size, uv0, uv1, bg_col);
+        Vector4 bg_col
+    ) => ImGuiGD.ImageButton(str_id, tex, size, uv0, uv1, bg_col);
 
     public static bool ImageButton(
         string str_id,
@@ -218,20 +232,22 @@ public static class Widgets
         Vector2 uv0,
         Vector2 uv1,
         Vector4 bg_col,
-        Vector4 tint_col) => ImGuiGD.ImageButton(str_id, tex, size, uv0, uv1, bg_col, tint_col);
+        Vector4 tint_col
+    ) => ImGuiGD.ImageButton(str_id, tex, size, uv0, uv1, bg_col, tint_col);
 
-    public static bool ImageButton(string str_id, AtlasTexture tex, Vector2 size)
-        => ImGuiGD.ImageButton(str_id, tex, size);
+    public static bool ImageButton(string str_id, AtlasTexture tex, Vector2 size) =>
+        ImGuiGD.ImageButton(str_id, tex, size);
 
-    public static bool ImageButton(string str_id, AtlasTexture tex, Vector2 size, Vector4 bg_col)
-        => ImGuiGD.ImageButton(str_id, tex, size, bg_col);
+    public static bool ImageButton(string str_id, AtlasTexture tex, Vector2 size, Vector4 bg_col) =>
+        ImGuiGD.ImageButton(str_id, tex, size, bg_col);
 
     public static bool ImageButton(
         string str_id,
         AtlasTexture tex,
         Vector2 size,
         Vector4 bg_col,
-        Vector4 tint_col) => ImGuiGD.ImageButton(str_id, tex, size, bg_col, tint_col);
+        Vector4 tint_col
+    ) => ImGuiGD.ImageButton(str_id, tex, size, bg_col, tint_col);
 }
 
 #if NET10_0_OR_GREATER

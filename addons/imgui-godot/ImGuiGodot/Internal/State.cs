@@ -12,7 +12,7 @@ internal sealed class State : IDisposable
     {
         Dummy,
         Canvas,
-        RenderingDevice
+        RenderingDevice,
     }
 
     private static readonly IntPtr _backendName = Marshal.StringToCoTaskMemAnsi("godot4_net");
@@ -37,7 +37,8 @@ internal sealed class State : IDisposable
     private delegate void PlatformSetImeDataFn(
         nint ctx,
         ImGuiViewportPtr vp,
-        ImGuiPlatformImeDataPtr data);
+        ImGuiPlatformImeDataPtr data
+    );
     private static readonly PlatformSetImeDataFn _setImeData = SetImeData;
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -64,11 +65,11 @@ internal sealed class State : IDisposable
 
         var io = ImGui.GetIO();
         io.BackendFlags =
-            ImGuiBackendFlags.HasGamepad |
-            ImGuiBackendFlags.HasSetMousePos |
-            ImGuiBackendFlags.HasMouseCursors |
-            ImGuiBackendFlags.RendererHasVtxOffset |
-            ImGuiBackendFlags.RendererHasViewports;
+            ImGuiBackendFlags.HasGamepad
+            | ImGuiBackendFlags.HasSetMousePos
+            | ImGuiBackendFlags.HasMouseCursors
+            | ImGuiBackendFlags.RendererHasVtxOffset
+            | ImGuiBackendFlags.RendererHasViewports;
 
         if (_rendererName == IntPtr.Zero)
         {
@@ -83,9 +84,11 @@ internal sealed class State : IDisposable
             var pio = ImGui.GetPlatformIO().NativePtr;
             pio->Platform_SetImeDataFn = Marshal.GetFunctionPointerForDelegate(_setImeData);
             pio->Platform_SetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(
-                _setClipboardText);
+                _setClipboardText
+            );
             pio->Platform_GetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(
-                _getClipboardText);
+                _getClipboardText
+            );
         }
 
         Viewports = new Viewports();
@@ -109,8 +112,10 @@ internal sealed class State : IDisposable
             rendererType = RendererType.Dummy;
 
         // fall back to Canvas in OpenGL compatibility mode
-        if (rendererType == RendererType.RenderingDevice
-            && RenderingServer.GetRenderingDevice() == null)
+        if (
+            rendererType == RendererType.RenderingDevice
+            && RenderingServer.GetRenderingDevice() == null
+        )
         {
             rendererType = RendererType.Canvas;
         }
@@ -128,7 +133,7 @@ internal sealed class State : IDisposable
                 RendererType.RenderingDevice => threadModel == 2
                     ? new RdRendererThreadSafe()
                     : new RdRenderer(),
-                _ => throw new ArgumentException("Invalid renderer", nameof(cfg))
+                _ => throw new ArgumentException("Invalid renderer", nameof(cfg)),
             };
         }
         catch (Exception e)
@@ -148,7 +153,7 @@ internal sealed class State : IDisposable
         Instance = new(renderer)
         {
             Scale = (float)cfg.Get("Scale"),
-            LayerNum = (int)cfg.Get("Layer")
+            LayerNum = (int)cfg.Get("Layer"),
         };
 
         ImGui.GetIO().SetIniFilename((string)cfg.Get("IniFilename"));
@@ -218,7 +223,7 @@ internal sealed class State : IDisposable
             Vector2I pos = new(
                 (int)(data.InputPos.X - vp.Pos.X),
                 (int)(data.InputPos.Y - vp.Pos.Y + data.InputLineHeight)
-                );
+            );
             DisplayServer.WindowSetImePosition(pos, windowID);
         }
     }

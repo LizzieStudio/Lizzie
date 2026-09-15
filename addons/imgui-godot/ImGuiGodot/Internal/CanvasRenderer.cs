@@ -26,11 +26,7 @@ internal sealed class CanvasRenderer : IRenderer
         RenderingServer.ViewportAttachCanvas(vprid, canvas);
         RenderingServer.CanvasItemSetParent(canvasItem, canvas);
 
-        _vpData[vprid] = new ViewportData()
-        {
-            Canvas = canvas,
-            RootCanvasItem = canvasItem,
-        };
+        _vpData[vprid] = new ViewportData() { Canvas = canvas, RootCanvasItem = canvasItem };
     }
 
     public void Render()
@@ -158,11 +154,15 @@ internal sealed class CanvasRenderer : IRenderer
                 }
                 RenderingServer.CanvasItemSetTransform(child, xform);
                 RenderingServer.CanvasItemSetClip(child, true);
-                RenderingServer.CanvasItemSetCustomRect(child, true, new Rect2(
-                    drawCmd.ClipRect.X,
-                    drawCmd.ClipRect.Y,
-                    drawCmd.ClipRect.Z - drawCmd.ClipRect.X,
-                    drawCmd.ClipRect.W - drawCmd.ClipRect.Y)
+                RenderingServer.CanvasItemSetCustomRect(
+                    child,
+                    true,
+                    new Rect2(
+                        drawCmd.ClipRect.X,
+                        drawCmd.ClipRect.Y,
+                        drawCmd.ClipRect.Z - drawCmd.ClipRect.X,
+                        drawCmd.ClipRect.W - drawCmd.ClipRect.Y
+                    )
                 );
 
                 RenderingServer.CanvasItemAddTriangleArray(
@@ -174,7 +174,8 @@ internal sealed class CanvasRenderer : IRenderer
                     null,
                     null,
                     texrid,
-                    -1);
+                    -1
+                );
             }
         }
     }

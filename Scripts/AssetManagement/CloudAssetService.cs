@@ -598,9 +598,9 @@ namespace Lizzie.AssetManagement
                         comps == 4
                             ? " - this is a CMYK/YCCK (4-channel) JPEG, which Godot cannot decode; "
                                 + "convert it to an RGB PNG or JPEG"
-                            : marker == 0xC2
-                                ? " - progressive JPEG, which Godot may not decode; re-save as baseline or PNG"
-                                : "";
+                        : marker == 0xC2
+                            ? " - progressive JPEG, which Godot may not decode; re-save as baseline or PNG"
+                        : "";
                     return $"JPEG {width}x{height}, {precision}-bit, {comps} component(s){note}";
                 }
                 p += 2 + len;

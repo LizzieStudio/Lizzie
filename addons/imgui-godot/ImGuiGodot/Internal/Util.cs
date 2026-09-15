@@ -1,5 +1,5 @@
-using Godot;
 using System.Runtime.CompilerServices;
+using Godot;
 
 namespace ImGuiGodot.Internal;
 

@@ -169,9 +169,9 @@ public static class UndoLog
         // so reconstructing across it must revisit every component.
         if (HasTableClear(@base))
             foreach (var ev in log)
-                foreach (var fx in ev.Effects)
-                    if (fx is ComponentEffect)
-                        affected.Add(fx.Id);
+            foreach (var fx in ev.Effects)
+                if (fx is ComponentEffect)
+                    affected.Add(fx.Id);
 
         return affected;
     }

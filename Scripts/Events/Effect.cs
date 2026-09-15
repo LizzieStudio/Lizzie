@@ -92,4 +92,3 @@ public class UpdatePlayerEffect : Effect
     [JsonPropertyName("l")]
     public bool HasLeft { get; set; }
 }
-
