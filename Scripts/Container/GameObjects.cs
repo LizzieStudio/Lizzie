@@ -1248,7 +1248,16 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Clear();
         PlayerSeatManager.Instance?.Clear();
 
-        ProjectService.Instance.CurrentProject?.Prototypes.Clear();
+        var project = ProjectService.Instance?.CurrentProject;
+        if (project != null)
+        {
+            project.Prototypes.Clear();
+            project.Templates.Clear();
+            project.Datasets.Clear();
+            project.Images.Clear();
+            project.GameSettings = new ProjectGameSettings();
+        }
+        GameStatesStore.Instance?.ResetForJoin();
     }
 
     /// <summary>

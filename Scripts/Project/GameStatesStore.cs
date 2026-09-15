@@ -100,6 +100,19 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
         EventBus.Instance.Publish(new GameStateChangedEvent());
     }
 
+    /// <summary>
+    /// Clears snapshots in preparation for join.
+    /// </summary>
+    public void ResetForJoin()
+    {
+        Store?.Clear();
+        _activeWriteId = SnowportId.Empty;
+
+        var project = ProjectService.Instance?.CurrentProject;
+        if (project != null)
+            project.ActiveGameState = SnowTag.Empty;
+    }
+
     /// <summary>Adds the active-snapshot pointer to the catchup for a joining client.</summary>
     public override Effect[] GenerateCatchupEffects()
     {

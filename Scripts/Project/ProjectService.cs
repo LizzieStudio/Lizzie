@@ -81,6 +81,14 @@ public partial class ProjectService : Node
 
     public bool SaveProject(Project project)
     {
+        // TODO: temporary fix
+        // This keeps clients who are joining someone elses game from saving over their project
+        if (
+            MultiplayerManager.Instance?.IsMultiplayerActive == true
+            && MultiplayerManager.Instance?.IsServer != true
+        )
+            return false;
+
         using var saveFile = FileAccess.Open(
             $"user://{project.Filename}.proj",
             FileAccess.ModeFlags.Write
