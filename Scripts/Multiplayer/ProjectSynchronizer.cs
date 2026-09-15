@@ -95,6 +95,13 @@ public partial class ProjectSynchronizer : Node
                 project.Images = ProjectService.Instance.CurrentProject?.Images ?? project.Images;
                 project.GameSettings =
                     ProjectService.Instance.CurrentProject?.GameSettings ?? project.GameSettings;
+                project.GameStates =
+                    ProjectService.Instance.CurrentProject?.GameStates ?? project.GameStates;
+                if (ProjectService.Instance.CurrentProject != null)
+                    project.ActiveGameState = ProjectService
+                        .Instance
+                        .CurrentProject
+                        .ActiveGameState;
             }
 
             ProjectService.Instance.SetProjectSilent(project);

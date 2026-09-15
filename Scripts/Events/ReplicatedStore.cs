@@ -14,7 +14,7 @@ public abstract partial class ReplicatedStore<TEntity> : Node
     protected abstract void NotifyChanged(IReadOnlyList<SnowTag> ids);
 
     /// <summary>Captures the non-deleted definitions for a joining client.</summary>
-    public Effect[] GenerateCatchupEffects()
+    public virtual Effect[] GenerateCatchupEffects()
     {
         var store = Store;
         if (store == null)

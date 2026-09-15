@@ -15,6 +15,7 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
 [JsonDerivedType(typeof(UpdateSettingsEffect), "gs")]
 [JsonDerivedType(typeof(TableClearEffect), "clr")]
+[JsonDerivedType(typeof(ActiveGameStateEffect), "ags")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -61,6 +62,15 @@ public class UpdateReplicatedEffect<T> : Effect
 /// This is used when restoring from a snapshots.
 /// </summary>
 public class TableClearEffect : Effect { }
+
+/// <summary>
+/// Sets which snapshot is the active (loaded) one.
+/// </summary>
+public class ActiveGameStateEffect : Effect
+{
+    [JsonPropertyName("t")]
+    public SnowTag Target { get; set; }
+}
 
 /// <summary>
 /// Creates or updates the project settings.

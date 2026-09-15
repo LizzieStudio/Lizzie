@@ -1275,10 +1275,6 @@ public partial class GameObjects : Node
         if (e.Effects.Any(fx => fx is TableClearEffect))
             ApplyTableClear(e.Id);
 
-        // keep track of which snapshot is now loaded
-        if (e.Action is GameStateSwitchAction sw && ProjectService.Instance?.CurrentProject != null)
-            ProjectService.Instance.CurrentProject.ActiveGameState = sw.Target;
-
         RebuildContainerCaches();
 
         switch (e.Action)

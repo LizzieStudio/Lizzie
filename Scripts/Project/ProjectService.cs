@@ -240,10 +240,10 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
-                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
+                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state },
+                new ActiveGameStateEffect { Target = state.Id }
             )
         );
-        CurrentProject.ActiveGameState = state.Id;
         SaveProject(CurrentProject);
         return state;
     }
@@ -336,7 +336,11 @@ public partial class ProjectService : Node
         if (CurrentProject?.GetGameState(stateRef) == null)
             return;
 
-        var effects = new List<Effect> { new TableClearEffect() };
+        var effects = new List<Effect>
+        {
+            new TableClearEffect(),
+            new ActiveGameStateEffect { Target = stateRef },
+        };
         foreach (var ce in FoldChain(stateRef).Values)
         {
             var s = ce.State ?? new VcSyncDto();
