@@ -192,5 +192,50 @@ public partial class EventSynchronizer : Node
     )]
     private void ReceiveBacklog(string json) => ReceiveEvent(json);
 
+    /// <summary>
+    /// Ask the host to stream us the current table as catchup events.
+    /// </summary>
+    public void RequestCatchup()
+    {
+        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
+            return;
+        if (MultiplayerManager.Instance.IsServer)
+            return;
+
+        RpcId(1, nameof(ServerSendCatchup));
+    }
+
+    /// <summary>
+    /// Client calls this on the server to request "catch-up" events.
+    /// </summary>
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ServerSendCatchup()
+    {
+        if (MultiplayerManager.Instance?.IsServer != true)
+            return;
+
+        var senderId = Multiplayer.GetRemoteSenderId();
+        SendStateTo(senderId);
+        RpcId(senderId, nameof(ClientCatchupComplete));
+    }
+
+    /// <summary>
+    /// Server calls this on the client once all events are synchronized.
+    /// </summary>
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ClientCatchupComplete()
+    {
+        GD.Print("[EventSynchronizer] Catchup complete – requesting player position selection.");
+        EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
+    }
+
     #endregion
 }

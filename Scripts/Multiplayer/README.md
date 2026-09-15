@@ -28,21 +28,18 @@ Central manager for network connections and player state.
 - `PlayerDisconnected(int playerId)` - Emitted when a player leaves
 - `ConnectionFailed` - Emitted when client fails to connect
 
-### 2. ProjectSynchronizer (`Scripts/Multiplayer/ProjectSynchronizer.cs`)
-Synchronizes project-level data across the network.
-
-**What it syncs:**
-- Entire project structure (but not prototypes*)
-- Individual datasets
-- Individual templates
-
-*Prototypes are now synced through `EventSynchronizer`.
+### 2. EventSynchronizer (`Scripts/Events/EventSynchronizer.cs`)
+The event-sourced synchronizer that fires events locally and on all peers.
 
 **How it works:**
-- Listens for local changes via the definition-manager signals
-- Sends changes to server via RPC
-- Server broadcasts to all clients
-- Clients apply changes without re-triggering sync events
+- Local edits build a `TableEvent` and call `Submit`, which records it in the append-only
+  `EventLog` and broadcasts the serialized event to all clients.
+- Each `ReplicatedStore` subscribes to `Applied` and merges the relevant effects
+  into the current `Project` with last-writer-wins by `SnowportId`.
+- On join, `RequestCatchup()` asks the host to `SendStateTo` the joiner: a single snapshot
+  event of every store's current state, followed by any backlog events after the cutoff index.
+- `Project.Filename` is intentionally **not** synced — a joiner starts unnamed and must Save As
+  before its machine will write the project to disk.
 
 ### 3. MultiplayerDialog (`Scripts/Multiplayer/MultiplayerDialog.cs`)
 UI window for hosting/joining multiplayer sessions.
@@ -70,7 +67,7 @@ In your Godot project settings, add these scripts as AutoLoad singletons (in thi
 1. **EventBus** → `Scripts/EventBus.cs`
 2. **ProjectService** → `Scripts/Project/ProjectService.cs`
 3. **MultiplayerManager** → `Scripts/Multiplayer/MultiplayerManager.cs`
-4. **ProjectSynchronizer** → `Scripts/Multiplayer/ProjectSynchronizer.cs`
+4. **EventSynchronizer** → `Scripts/Events/EventSynchronizer.cs`
 
 ### 2. Add MultiplayerDialogManager to Your Scene
 
@@ -193,11 +190,10 @@ public partial class MyCustomNode : Node
 4. Clients apply transform updates
 
 **Project Sync Flow:**
-1. User modifies dataset/prototype/template
-2. EventBus publishes change event
-3. ProjectSynchronizer sends to server
-4. Server broadcasts to all clients
-5. Clients apply changes using `SetProjectSilent()` to avoid recursive sync
+1. User modifies dataset/prototype/template/etc.
+2. The change is submitted as a `TableEvent` to `EventSynchronizer`
+3. The event fires locally and on all peers
+4. Every peer's `ReplicatedStore` merges the effect into its `Project`
 
 ## Performance Considerations
 
@@ -262,11 +258,13 @@ Potential improvements for future versions:
 | `LocalPlayerId` | `int` | This player's unique ID |
 | `Players` | `IReadOnlyDictionary<int, PlayerInfo>` | All connected players |
 
-### ProjectSynchronizer
+### EventSynchronizer
 
 | Method | Description |
 |--------|-------------|
-| `RequestProjectSync()` | Request full project from server (used when joining) |
+| `Submit(TableEvent e)` | Record and broadcast a table event |
+| `RequestCatchup()` | Ask the host to stream the current table |
+| `SendStateTo(int peerId)` | Host-side: stream events to a joining peer |
 
 ---
 

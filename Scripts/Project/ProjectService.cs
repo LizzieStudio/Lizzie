@@ -33,7 +33,6 @@ public partial class ProjectService : Node
     }
 
     private Project _currentProject;
-    private bool _suppressProjectChangeEvent = false;
 
     public Project CurrentProject
     {
@@ -43,25 +42,15 @@ public partial class ProjectService : Node
             if (!ReferenceEquals(_currentProject, value))
                 TextureCache.Instance.Clear();
             _currentProject = value;
-            if (!_suppressProjectChangeEvent)
-            {
-                EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
-                EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
-            }
+            EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
+            EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
         }
     }
 
     /// <summary>
-    /// Set current project without triggering change event (used for network sync)
+    /// Starts a fresh, unnamed game.
     /// </summary>
-    public void SetProjectSilent(Project project)
-    {
-        _suppressProjectChangeEvent = true;
-        if (!ReferenceEquals(_currentProject, project))
-            TextureCache.Instance.Clear();
-        _currentProject = project;
-        _suppressProjectChangeEvent = false;
-    }
+    public void NewGame() => CurrentProject = new Project();
 
     public Project LoadProject(string name)
     {
@@ -81,12 +70,9 @@ public partial class ProjectService : Node
 
     public bool SaveProject(Project project)
     {
-        // TODO: temporary fix
-        // This keeps clients who are joining someone elses game from saving over their project
-        if (
-            MultiplayerManager.Instance?.IsMultiplayerActive == true
-            && MultiplayerManager.Instance?.IsServer != true
-        )
+        // an unnamed project will not autosave
+        // this happens after joining a game
+        if (string.IsNullOrWhiteSpace(project.Filename))
             return false;
 
         using var saveFile = FileAccess.Open(
@@ -110,17 +96,7 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Serialize a project to JSON string for network sync
-    /// </summary>
-    public string SerializeProject(Project project)
-    {
-        if (project == null)
-            return "{}";
-        return JsonSerializer.Serialize(project, LizzieJson.Options);
-    }
-
-    /// <summary>
-    /// Deserialize a project from JSON string for network sync
+    /// Deserialize a project from JSON string
     /// </summary>
     public Project DeserializeProject(string json)
     {

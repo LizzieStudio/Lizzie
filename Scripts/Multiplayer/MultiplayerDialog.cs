@@ -172,9 +172,6 @@ public partial class MultiplayerDialog : Window
         }
         else
         {
-            // Request project sync setup
-            ProjectSynchronizer.Instance?.RequestProjectSync();
-
             // Prompt the host to choose a seat right away.
             EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
         }
@@ -202,17 +199,16 @@ public partial class MultiplayerDialog : Window
         {
             _statusLabel.Text = "Connecting...";
 
-            // Request project sync after connection
-            CallDeferred(nameof(RequestProjectSyncDeferred));
+            CallDeferred(nameof(RequestCatchupDeferred));
         }
     }
 
-    private void RequestProjectSyncDeferred()
+    private void RequestCatchupDeferred()
     {
-        // Wait a frame for connection to establish
+        // Wait a moment for the connection to establish
         GetTree().CreateTimer(0.5).Timeout += () =>
         {
-            ProjectSynchronizer.Instance?.RequestProjectSync();
+            EventSynchronizer.Instance?.RequestCatchup();
         };
     }
 

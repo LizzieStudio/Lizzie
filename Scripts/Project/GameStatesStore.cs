@@ -101,16 +101,11 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     }
 
     /// <summary>
-    /// Clears snapshots in preparation for join.
+    /// Resets the active-snapshot write tracker in preparation for a new game.
     /// </summary>
     public void ResetForJoin()
     {
-        Store?.Clear();
         _activeWriteId = SnowportId.Empty;
-
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project != null)
-            project.ActiveGameState = SnowTag.Empty;
     }
 
     /// <summary>Adds the active-snapshot pointer to the catchup for a joining client.</summary>

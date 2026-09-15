@@ -83,7 +83,7 @@ public partial class MultiplayerManager : Node
         _localPlayerId = Multiplayer.GetUniqueId();
 
         // Use source 0 by default.
-        Snowport.Clock = new Snowport(0);
+        Snowport.Clock = Snowport.Clock.WithSource(0);
 
         // Add server as first player
         _players[_localPlayerId] = new PlayerInfo
@@ -142,7 +142,7 @@ public partial class MultiplayerManager : Node
         _localPlayerId = 0;
 
         // Start using the host source again.
-        Snowport.Clock = new Snowport(0);
+        Snowport.Clock = Snowport.Clock.WithSource(0);
 
         // Drop any event history accumulated during the session.
         EventSynchronizer.Instance?.Clear();

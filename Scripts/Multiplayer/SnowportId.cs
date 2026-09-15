@@ -27,6 +27,20 @@ public class Snowport
     }
 
     /// <summary>
+    /// Returns a clock under a new source that keeps the hybrid-clock and tag counter.
+    /// Use this instead of <c>new Snowport(source)</c> when the local player switches source
+    /// while keeping the current table (hosting or disconnecting).
+    /// </summary>
+    public Snowport WithSource(byte newSource)
+    {
+        return new Snowport(newSource)
+        {
+            _useLogicClock = _useLogicClock,
+            _tagCounter = _tagCounter,
+        };
+    }
+
+    /// <summary>
     /// Create a new SnowportId.
     /// </summary>
     /// <returns></returns>

@@ -463,7 +463,11 @@ public partial class UI : CanvasLayer
                 break;
 
             case 2:
-                ProjectService.Instance.SaveProject();
+                var current = ProjectService.Instance.CurrentProject;
+                if (current != null && string.IsNullOrWhiteSpace(current.Filename))
+                    ShowSaveAsDialog();
+                else
+                    ProjectService.Instance.SaveProject();
                 break;
 
             case 3:
@@ -486,6 +490,50 @@ public partial class UI : CanvasLayer
                 ShowMultiplayerDialog();
                 break;
         }
+    }
+
+    private void ShowSaveAsDialog()
+    {
+        var dialog = new ConfirmationDialog
+        {
+            Title = "Save Project As",
+            OkButtonText = "Save"
+        };
+
+        var vbox = new VBoxContainer
+        {
+            CustomMinimumSize = new Vector2(300, 0)
+        };
+
+        var nameLabel = new Label
+        {
+            Text = "Project name:"
+        };
+        vbox.AddChild(nameLabel);
+
+        var input = new LineEdit
+        {
+            PlaceholderText = "Enter project name..."
+        };
+        vbox.AddChild(input);
+
+        dialog.AddChild(vbox);
+
+        dialog.Confirmed += () =>
+        {
+            var name = input.Text.Trim();
+            var project = ProjectService.Instance.CurrentProject;
+            if (!string.IsNullOrEmpty(name) && project != null)
+            {
+                project.Filename = name;
+                ProjectService.Instance.SaveProject();
+            }
+            dialog.QueueFree();
+        };
+        dialog.Canceled += () => dialog.QueueFree();
+
+        _modalDialogs.AddChild(dialog);
+        dialog.PopupCentered();
     }
 
     private void ShowSaveSnapshotDialog()
