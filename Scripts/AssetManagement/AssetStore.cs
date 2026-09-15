@@ -6,10 +6,10 @@ using Lizzie.AssetManagement;
 /// <summary>
 /// Tracks assets.
 /// </summary>
-public partial class AssetManager : ReplicatedStore<Asset>
+public partial class AssetStore : ReplicatedStore<Asset>
 {
-    private static AssetManager _instance;
-    public static AssetManager Instance => _instance;
+    private static AssetStore _instance;
+    public static AssetStore Instance => _instance;
 
     [Signal]
     public delegate void AssetsChangedEventHandler(int[] ids);

@@ -75,8 +75,8 @@ public partial class PrototypeManifest : Window
             Refresh(_prototypeCounts);
         }
 
-        if (PrototypeManager.Instance != null)
-            PrototypeManager.Instance.PrototypesChanged += RefreshSelectedPrototype;
+        if (PrototypeStore.Instance != null)
+            PrototypeStore.Instance.PrototypesChanged += RefreshSelectedPrototype;
     }
 
     public event EventHandler Closed;

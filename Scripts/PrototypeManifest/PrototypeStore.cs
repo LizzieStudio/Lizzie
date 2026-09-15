@@ -3,15 +3,15 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// Tracks dataset definitions as a last-write-wins register.
+/// Tracks prototype definitions as a last-write-wins register.
 /// </summary>
-public partial class DataSetManager : ReplicatedStore<DataSet>
+public partial class PrototypeStore : ReplicatedStore<Prototype>
 {
-    private static DataSetManager _instance;
-    public static DataSetManager Instance => _instance;
+    private static PrototypeStore _instance;
+    public static PrototypeStore Instance => _instance;
 
     [Signal]
-    public delegate void DataSetsChangedEventHandler(int[] ids);
+    public delegate void PrototypesChangedEventHandler(int[] ids);
 
     public override void _Ready()
     {
@@ -35,9 +35,9 @@ public partial class DataSetManager : ReplicatedStore<DataSet>
             _instance = null;
     }
 
-    protected override IDictionary<SnowTag, DataSet> Store =>
-        ProjectService.Instance?.CurrentProject?.Datasets;
+    protected override IDictionary<SnowTag, Prototype> Store =>
+        ProjectService.Instance?.CurrentProject?.Prototypes;
 
     protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
-        EmitSignal(SignalName.DataSetsChanged, ids.Select(i => i.Value).ToArray());
+        EmitSignal(SignalName.PrototypesChanged, ids.Select(i => i.Value).ToArray());
 }

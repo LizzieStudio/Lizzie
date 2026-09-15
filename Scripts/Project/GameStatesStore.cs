@@ -3,10 +3,10 @@ using System.Collections.Generic;
 /// <summary>
 /// Tracks and synchronizes saved game states.
 /// </summary>
-public partial class GameStatesManager : ReplicatedStore<GameState>
+public partial class GameStatesStore : ReplicatedStore<GameState>
 {
-    private static GameStatesManager _instance;
-    public static GameStatesManager Instance => _instance;
+    private static GameStatesStore _instance;
+    public static GameStatesStore Instance => _instance;
 
     public override void _Ready()
     {

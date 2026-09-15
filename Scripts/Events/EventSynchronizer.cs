@@ -152,11 +152,11 @@ public partial class EventSynchronizer : Node
         var effects = gameObjects
             .GenerateCatchupEffects()
             .Concat(PlayerSeatManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(TemplateManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(DataSetManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(PrototypeManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(AssetManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(GameStatesManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(TemplateStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(DataSetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(PrototypeStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(AssetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(GameStatesStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .Concat(SettingsManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .ToArray();
         var snapshot = TableEvent.Now(null, effects);

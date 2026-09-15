@@ -5,10 +5,10 @@ using Godot;
 /// <summary>
 /// Tracks template definitions as a last-write-wins register.
 /// </summary>
-public partial class TemplateManager : ReplicatedStore<Template>
+public partial class TemplateStore : ReplicatedStore<Template>
 {
-    private static TemplateManager _instance;
-    public static TemplateManager Instance => _instance;
+    private static TemplateStore _instance;
+    public static TemplateStore Instance => _instance;
 
     [Signal]
     public delegate void TemplatesChangedEventHandler(int[] ids);

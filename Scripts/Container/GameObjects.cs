@@ -62,12 +62,12 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
 
-        if (DataSetManager.Instance != null)
-            DataSetManager.Instance.DataSetsChanged += OnDataSetsChanged;
-        if (TemplateManager.Instance != null)
-            TemplateManager.Instance.TemplatesChanged += OnTemplatesChanged;
-        if (PrototypeManager.Instance != null)
-            PrototypeManager.Instance.PrototypesChanged += OnPrototypesChanged;
+        if (DataSetStore.Instance != null)
+            DataSetStore.Instance.DataSetsChanged += OnDataSetsChanged;
+        if (TemplateStore.Instance != null)
+            TemplateStore.Instance.TemplatesChanged += OnTemplatesChanged;
+        if (PrototypeStore.Instance != null)
+            PrototypeStore.Instance.PrototypesChanged += OnPrototypesChanged;
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);

@@ -59,10 +59,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdateQuickSidesVisibility();
 
         //register for events
-        if (TemplateManager.Instance != null)
-            TemplateManager.Instance.TemplatesChanged += TemplatesChanged;
-        if (DataSetManager.Instance != null)
-            DataSetManager.Instance.DataSetsChanged += DataSetsChanged;
+        if (TemplateStore.Instance != null)
+            TemplateStore.Instance.TemplatesChanged += TemplatesChanged;
+        if (DataSetStore.Instance != null)
+            DataSetStore.Instance.DataSetsChanged += DataSetsChanged;
     }
 
     private int _curDie;
