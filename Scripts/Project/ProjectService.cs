@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -164,6 +165,34 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(null, new UpdateSettingsEffect { Payload = settings })
         );
+    }
+
+    /// <summary>
+    /// Assigns a hand container SnowTag to any seat that lacks one.
+    /// </summary>
+    public void EnsureSeatHands()
+    {
+        if (CurrentProject == null)
+            return;
+        if (MultiplayerManager.Instance?.HasAuthority() == false)
+            return;
+
+        var settings = CurrentProject.GameSettings;
+        var builder = settings.Players.ToBuilder();
+        bool changed = false;
+        for (int i = 0; i < builder.Count; i++)
+        {
+            if (builder[i].HandRef == SnowTag.Empty)
+            {
+                builder[i] = builder[i] with { HandRef = Snowport.Clock.CreateTag() };
+                changed = true;
+            }
+        }
+
+        if (!changed)
+            return;
+
+        UpdateGameSettings(settings with { Players = builder.ToImmutable() });
     }
 
     public void UpdatePrototype(Prototype prototype)

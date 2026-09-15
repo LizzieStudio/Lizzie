@@ -1246,7 +1246,7 @@ public partial class GameObjects : Node
         _lastWrite.Clear();
         _clearBarrier = SnowportId.Empty;
         EventSynchronizer.Instance?.Clear();
-        PlayerSeatManager.Instance?.Clear();
+        ConnectionStore.Instance?.Clear();
 
         ProjectService.Instance?.NewGame();
         GameStatesStore.Instance?.ResetForJoin();

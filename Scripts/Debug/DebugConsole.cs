@@ -226,7 +226,7 @@ public partial class DebugConsole : Node
             ComponentEffect { State.Location: VisualComponentBase.ComponentLocation.Deleted } =>
                 "Delete",
             ComponentEffect => "Upsert",
-            UpdatePlayerEffect => "Player",
+            UpdateReplicatedEffect<Connection> => "Connection",
             UpdateSettingsEffect => "Settings",
             UpdateReplicatedEffect<Template> => "Template",
             UpdateReplicatedEffect<DataSet> => "DataSet",

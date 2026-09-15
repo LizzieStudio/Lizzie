@@ -57,4 +57,10 @@ public record ProjectPlayerSettings
     public string Name { get; init; } = string.Empty;
     public Color Color { get; init; } = new Color(1f, 1f, 1f, 1f);
     public bool IsAdmin { get; init; } = false;
+
+    /// <summary>
+    /// The container id for this seat's hand.
+    /// The hand belongs to the seat, not the player.
+    /// </summary>
+    public SnowTag HandRef { get; init; } = SnowTag.Empty;
 }

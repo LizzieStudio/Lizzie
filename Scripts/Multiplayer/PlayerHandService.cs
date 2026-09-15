@@ -30,7 +30,7 @@ public partial class PlayerHandService : Node
     /// Gets the container id for a seat's hand.
     /// </summary>
     public SnowTag HandContainer(int seatIndex) =>
-        PlayerSeatManager.Instance?.HandRefForSeat(seatIndex) ?? SnowTag.Empty;
+        ConnectionStore.Instance?.HandRefForSeat(seatIndex) ?? SnowTag.Empty;
 
     /// <summary>
     /// Builds a transform effect that moves a card into a seat's hand at the top of its order.
@@ -70,7 +70,7 @@ public partial class PlayerHandService : Node
     /// </summary>
     public static int LocalSeatIndex()
     {
-        var psm = PlayerSeatManager.Instance;
+        var psm = ConnectionStore.Instance;
         if (psm == null)
             return 0; // safe default for solo mode
 

@@ -69,11 +69,11 @@ public partial class CursorSynchronizer : Node
     {
         foreach (var effect in e.Effects)
             if (
-                effect is UpdatePlayerEffect { HasLeft: false, CursorRef: var cursorRef }
-                && cursorRef != SnowTag.Empty
-                && cursorRef.source == Snowport.Clock.source
+                effect is UpdateReplicatedEffect<Connection> { Payload: { Deleted: false } conn }
+                && conn.CursorRef != SnowTag.Empty
+                && conn.CursorRef.source == Snowport.Clock.source
             )
-                _localCursorRef = cursorRef;
+                _localCursorRef = conn.CursorRef;
     }
 
     public void SetContext(DragPlane dragPlane, Node3D cursorParent)
@@ -198,7 +198,7 @@ public partial class CursorSynchronizer : Node
 
     private static Color GetSeatColor(byte source)
     {
-        var seat = PlayerSeatManager.Instance?.GetSeatBySource(source) ?? -2;
+        var seat = ConnectionStore.Instance?.GetSeatBySource(source) ?? -2;
         var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
         if (settings == null || seat < 0 || seat >= settings.Players.Length)
             return FallbackColor;

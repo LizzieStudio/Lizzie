@@ -151,7 +151,7 @@ public partial class EventSynchronizer : Node
         int cutoff = _log.Count;
         var effects = gameObjects
             .GenerateCatchupEffects()
-            .Concat(PlayerSeatManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(ConnectionStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .Concat(TemplateStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .Concat(DataSetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
             .Concat(PrototypeStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())

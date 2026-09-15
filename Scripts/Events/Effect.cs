@@ -8,7 +8,7 @@ using Godot;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
 [JsonDerivedType(typeof(ComponentEffect), "c")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "p")]
-[JsonDerivedType(typeof(UpdatePlayerEffect), "u")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Connection>), "cn")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
@@ -81,24 +81,3 @@ public class UpdateSettingsEffect : Effect
     public ProjectGameSettings Payload { get; set; }
 }
 
-/// <summary>
-/// Announces or updates a player.
-/// </summary>
-public class UpdatePlayerEffect : Effect
-{
-    /// <summary>The seat this player occupies.</summary>
-    [JsonPropertyName("s")]
-    public int Seat { get; set; }
-
-    /// <summary>The container id for this player's hand.</summary>
-    [JsonPropertyName("h")]
-    public SnowTag HandRef { get; set; }
-
-    /// <summary>The container id for this player's cursor.</summary>
-    [JsonPropertyName("c")]
-    public SnowTag CursorRef { get; set; }
-
-    /// <summary>True once the player has left.</summary>
-    [JsonPropertyName("l")]
-    public bool HasLeft { get; set; }
-}

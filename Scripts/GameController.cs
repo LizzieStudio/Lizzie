@@ -40,7 +40,8 @@ public partial class GameController : Node3D
         if (active != SnowTag.Empty && MultiplayerManager.Instance?.IsMultiplayerActive != true)
             ProjectService.Instance.SwitchGameState(active);
 
-        PlayerSeatManager.Instance?.EnsureLocalSeat();
+        ProjectService.Instance.EnsureSeatHands();
+        ConnectionStore.Instance?.EnsureLocalSeat();
     }
 
     private void MainSceneOnShowComponentPopup2(object sender, ShowComponentPopupEventArgs e)

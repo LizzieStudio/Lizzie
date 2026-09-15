@@ -93,7 +93,7 @@ public partial class MultiplayerManager : Node
             Source = 0,
         };
 
-        PlayerSeatManager.Instance?.Clear();
+        ConnectionStore.Instance?.Clear();
 
         GD.Print($"Server started on port {port}. Server ID: {_localPlayerId}");
         EmitSignal("ServerStarted");
@@ -146,10 +146,10 @@ public partial class MultiplayerManager : Node
 
         // Drop any event history accumulated during the session.
         EventSynchronizer.Instance?.Clear();
-        PlayerSeatManager.Instance?.Clear();
+        ConnectionStore.Instance?.Clear();
 
         // Back to solo.
-        PlayerSeatManager.Instance?.EnsureLocalSeat();
+        ConnectionStore.Instance?.EnsureLocalSeat();
 
         GD.Print("Disconnected from multiplayer");
     }
@@ -172,7 +172,7 @@ public partial class MultiplayerManager : Node
         GD.Print($"Peer disconnected: {id}");
 
         var playerId = (int)id;
-        PlayerSeatManager.Instance?.ReleaseSeat(playerId);
+        ConnectionStore.Instance?.ReleaseSeat(playerId);
         EventSynchronizer.Instance?.EndSync(playerId);
         _players.Remove(playerId);
 
