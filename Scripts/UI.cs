@@ -456,10 +456,16 @@ public partial class UI : CanvasLayer
 
             case 1:
                 var p = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
-                ProjectService.Instance.CurrentProject = p;
-                // Local project open: ask the player which seat they want.
                 if (p != null)
+                {
+                    if (
+                        p.ActiveGameState != SnowTag.Empty
+                        && MultiplayerManager.Instance?.IsMultiplayerActive != true
+                    )
+                        ProjectService.Instance.SwitchGameState(p.ActiveGameState);
+
                     ShowPlayerPositionDialog();
+                }
                 break;
 
             case 2:

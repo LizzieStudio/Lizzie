@@ -100,6 +100,14 @@ public partial class EventSynchronizer : Node
         GD.Print($"{Snowport.Clock.source} Received event {json}");
 
         var e = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
+        Ingest(e);
+    }
+
+    /// <summary>
+    /// Record and apply an event locally without broadcasting it.
+    /// </summary>
+    public void Ingest(TableEvent e)
+    {
         if (e == null)
             return;
 
@@ -135,6 +143,18 @@ public partial class EventSynchronizer : Node
     public void EndSync(int peerId) => _syncingPeers.Remove(peerId);
 
     /// <summary>
+    /// The effects that persist in a saved project.
+    /// </summary>
+    public Effect[] BuildProjectEffects() =>
+        (TemplateStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(DataSetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(PrototypeStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(AssetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(GameStatesStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(SettingsManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .ToArray();
+
+    /// <summary>
     /// Stream the current table to a joining peer as fresh creation events.
     public void SendStateTo(int peerId)
     {
@@ -152,12 +172,7 @@ public partial class EventSynchronizer : Node
         var effects = gameObjects
             .GenerateCatchupEffects()
             .Concat(ConnectionStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(TemplateStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(DataSetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(PrototypeStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(AssetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(GameStatesStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(SettingsManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
+            .Concat(BuildProjectEffects())
             .ToArray();
         var snapshot = TableEvent.Now(null, effects);
         RpcId(

@@ -5,6 +5,8 @@ public partial class Table : StaticBody3D
 {
     private MeshInstance3D _tableMesh;
     private PlaneMesh _mesh;
+    private Material _playMat;
+    private ShaderMaterial _blueprintMat;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -12,6 +14,13 @@ public partial class Table : StaticBody3D
         _tableMesh = GetNode<MeshInstance3D>("%TableMesh");
         _mesh = _tableMesh.Mesh as PlaneMesh;
         _mesh.Size = _size;
+        _playMat = _mesh.Material; // the scene's original green table
+
+        var shader = GD.Load<Shader>("res://Shaders/blueprint_table.gdshader");
+        _blueprintMat = new ShaderMaterial { Shader = shader };
+        PushSizeToShader(_mesh.Size);
+
+        _mesh.Material = _playMat;
 
         EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
     }
@@ -19,21 +28,25 @@ public partial class Table : StaticBody3D
     private void OnProjectSettingsChanged()
     {
         var s = ProjectService.Instance.CurrentProject.GameSettings;
-        if (s.TableUnits == 0) //feet
-        {
-            SetTableSize(new Vector2(s.TableWidth, s.TableHeight) * 12f * 2.54f); //convert to cm
-        }
-        else
-        {
-            SetTableSize(new Vector2(s.TableWidth, s.TableHeight) * 100f); //table is in cm
-        }
+        Vector2 sizeCm =
+            s.TableUnits == 0 // feet
+                ? new Vector2(s.TableWidth, s.TableHeight) * 12f * 2.54f // convert to cm
+                : new Vector2(s.TableWidth, s.TableHeight) * 100f; // table is in cm
 
-        var color = s.TableColor;
-        if (_mesh.Material is StandardMaterial3D mat)
+        SetTableSize(sizeCm);
+        PushSizeToShader(sizeCm);
+
+        if (_playMat is StandardMaterial3D mat)
         {
-            mat.AlbedoColor = color;
+            mat.AlbedoColor = s.TableColor;
         }
     }
+
+    private void PushSizeToShader(Vector2 sizeCm) =>
+        _blueprintMat?.SetShaderParameter("table_size", sizeCm);
+
+    /// <summary>true shows a blueprint table, which will be used for edit mode.</summary>
+    public void SetEditMode(bool editing) => _mesh.Material = editing ? _blueprintMat : _playMat;
 
     private Vector2 _size = new Vector2(100, 100);
 

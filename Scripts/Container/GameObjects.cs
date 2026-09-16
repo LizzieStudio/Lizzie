@@ -1227,9 +1227,9 @@ public partial class GameObjects : Node
     private void OnLocalPlayerJoinedGame() => ReplaceWithNewGame();
 
     /// <summary>
-    /// Resets the game for joining an existing game.
+    /// Resets the game for loading a project.
     /// </summary>
-    public void ReplaceWithNewGame()
+    public void ResetForLoad()
     {
         var old = _table;
         _table = new Node { Name = "Table" };
@@ -1247,9 +1247,16 @@ public partial class GameObjects : Node
         _clearBarrier = SnowportId.Empty;
         EventSynchronizer.Instance?.Clear();
         ConnectionStore.Instance?.Clear();
-
-        ProjectService.Instance?.NewGame();
         GameStatesStore.Instance?.ResetForJoin();
+    }
+
+    /// <summary>
+    /// Resets the game for joining an existing game.
+    /// </summary>
+    public void ReplaceWithNewGame()
+    {
+        ResetForLoad();
+        ProjectService.Instance?.NewGame();
     }
 
     /// <summary>

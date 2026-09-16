@@ -4,9 +4,10 @@ using Godot;
 
 public static class LizzieJson
 {
-    public static readonly JsonSerializerOptions Options = new()
+    public static readonly JsonSerializerOptions EventOptions = new()
     {
         PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
         Converters =
         {
             new GodotNativeJsonConverter<Color>(),
@@ -15,10 +16,5 @@ public static class LizzieJson
             new SnowportIdJsonConverter(),
             new SnowTagJsonConverter(),
         },
-    };
-
-    public static readonly JsonSerializerOptions EventOptions = new(Options)
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
     };
 }

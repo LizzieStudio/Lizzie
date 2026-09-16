@@ -60,13 +60,37 @@ public partial class ProjectService : Node
             return null; // Error! We don't have a save to load.
         }
 
+        GameObjects?.ResetForLoad();
+
+        var project = new Project { Filename = name };
+        CurrentProject = project;
+
+        // the file is a list of events using JSON-lines
         using var loadFile = FileAccess.Open($"user://{name}.proj", FileAccess.ModeFlags.Read);
+        while (!loadFile.EofReached())
+        {
+            var line = loadFile.GetLine();
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
 
-        var s = loadFile.GetAsText();
+            TableEvent e;
+            try
+            {
+                e = JsonSerializer.Deserialize<TableEvent>(line, LizzieJson.EventOptions);
+            }
+            catch (Exception ex)
+            {
+                // a broken line is skipped
+                GD.PrintErr($"Skipping unreadable project line: {ex.Message}");
+                continue;
+            }
 
+            EventSynchronizer.Instance?.Ingest(e);
+        }
         loadFile.Close();
 
-        return DeserializeProject(s);
+        SeedTagsFromProject(project);
+        return project;
     }
 
     public bool SaveProject(Project project)
@@ -76,14 +100,21 @@ public partial class ProjectService : Node
         if (string.IsNullOrWhiteSpace(project.Filename))
             return false;
 
+        var sync = EventSynchronizer.Instance;
+        if (sync == null)
+            return false;
+
         using var saveFile = FileAccess.Open(
             $"user://{project.Filename}.proj",
             FileAccess.ModeFlags.Write
         );
 
-        var s = JsonSerializer.Serialize<Project>(project, LizzieJson.Options);
+        var line = JsonSerializer.Serialize(
+            TableEvent.Now(null, sync.BuildProjectEffects()),
+            LizzieJson.EventOptions
+        );
+        saveFile.StoreLine(line);
 
-        saveFile.StoreString(s);
         saveFile.Close();
 
         return true;
@@ -97,37 +128,46 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Deserialize a project from JSON string
+    /// Advances the tag counter past every SnowTag.
     /// </summary>
-    public Project DeserializeProject(string json)
+    private static void SeedTagsFromProject(Project project)
     {
-        if (string.IsNullOrEmpty(json))
-            return null;
-        try
-        {
-            return JsonSerializer.Deserialize<Project>(json, LizzieJson.Options);
-        }
-        catch (Exception ex)
-        {
-            // The project will fail to load whenever we introduce breaking changes on the format.
-            GD.PrintErr($"Failed to deserialize project: {ex.Message}");
-            return null;
-        }
-    }
+        // I'd like to find a way to get rid of this method.
+        // It's only necessary for the ZOrder.
 
-    public string SerializeDataSet(DataSet dataset)
-    {
-        if (dataset == null)
-            return "{}";
-        return JsonSerializer.Serialize(dataset, LizzieJson.Options);
-    }
+        if (project == null)
+            return;
 
-    public DataSet DeserializeDataSet(string json)
-    {
-        if (string.IsNullOrEmpty(json))
-            return null;
-        var dataset = JsonSerializer.Deserialize<DataSet>(json, LizzieJson.Options);
-        return dataset;
+        var clock = Snowport.Clock;
+
+        void ObserveTags<T>(IEnumerable<T> items)
+            where T : IReplicated
+        {
+            foreach (var it in items)
+                clock.ObserveTag(it.Id);
+        }
+
+        ObserveTags(project.Templates.Values);
+        ObserveTags(project.Datasets.Values);
+        ObserveTags(project.Prototypes.Values);
+        ObserveTags(project.Images.Values);
+        ObserveTags(project.GameStates.Values);
+
+        clock.ObserveTag(project.ActiveGameState);
+
+        foreach (var gs in project.GameStates.Values)
+        foreach (var up in gs.Upserts ?? Array.Empty<ComponentEffect>())
+        {
+            clock.ObserveTag(up.Id);
+            clock.ObserveTag(up.PrototypeRef);
+            if (up.State != null)
+                clock.ObserveTag(up.State.ContainerRef);
+        }
+
+        var players = project.GameSettings?.Players ?? default;
+        if (!players.IsDefaultOrEmpty)
+            foreach (var p in players)
+                clock.ObserveTag(p.HandRef);
     }
 
     public void UpdateDataSet(DataSet dataset)

@@ -65,13 +65,23 @@ public class Snowport
     }
 
     /// <summary>
-    /// Process a SnowportId from another source to update the hybrid clock.
+    /// Advance the tag counter past <paramref name="tag"/> when it shares our source.
+    /// </summary>
+    public void ObserveTag(SnowTag tag)
+    {
+        if (tag.source != source)
+            return;
+        int counter = tag.Value & 0xFFFFFF;
+        if (counter >= _tagCounter)
+            _tagCounter = counter + 1;
+    }
+
+    /// <summary>
+    /// Advance the hybrid clock past <paramref name="id"/> so the next minted id is greater.
     /// </summary>
     /// <param name="id">The id to consume.</param>
     public void Process(SnowportId id)
     {
-        if (id.source == source)
-            return;
         // If the ID's time appears to be in the future,
         // adjust the local time to match it.
         var gameTime = Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
