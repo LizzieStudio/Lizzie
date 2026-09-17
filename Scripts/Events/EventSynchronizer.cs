@@ -36,10 +36,6 @@ public partial class EventSynchronizer : Node
 
     public void Submit(TableEvent e)
     {
-        GD.Print(
-            $"{Snowport.Clock.source} Submitted event action={e.Action?.GetType().Name ?? "none"} effects={e.Effects.Length}"
-        );
-
         if (_log.TryRecord(e))
             Dispatch(e);
 
@@ -96,8 +92,6 @@ public partial class EventSynchronizer : Node
 
     private void ReceiveEvent(string json)
     {
-        GD.Print($"{Snowport.Clock.source} Received event {json}");
-
         var e = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
         Ingest(e);
     }

@@ -184,13 +184,6 @@ public partial class GameObjects : Node
         ProcessActiveDrags();
         RecomputeZones();
 
-        /*
-        if (_modalOpen) return;
-        {
-            return; //don't do anything if a modal dialog is open
-        }
-        */
-
         switch (CursorMode)
         {
             case CursorMode.Spawn:
@@ -311,8 +304,6 @@ public partial class GameObjects : Node
             GD.PrintErr("component somehow lost its SnowTag");
             return;
         }
-
-        GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
 
         _table.AddChild(component);
 
@@ -579,23 +570,6 @@ public partial class GameObjects : Node
                 }
             }
         }
-
-        GD.Print("Collision check complete");
-
-        //uncomment the below to get a printout of the Underneath dictionary
-
-        /*
-        foreach (var r in underneath)
-        {
-            string s = String.Empty;
-            foreach (var q in r.Value)
-            {
-                s += $"{q} ";
-            }
-
-            GD.PrintErr($"{r.Key} is above {s}");
-        }
-        */
 
         //loop through all the objects and check the dictionary (which is in Z order) and stack
         //The y coordinate is set to the sum of all of the YHeight values below it.
@@ -978,12 +952,8 @@ public partial class GameObjects : Node
 
         var collider = result["collider"].As<Node>();
 
-        GD.Print($"Collider: {collider.Name} Parent: {collider.GetParent()?.Name}");
         // If the hit node is not itself a VisualComponentGroup, walk up the parent chain
         var group = collider as VisualComponentGroup;
-
-        if (group != null)
-            GD.Print($"VCG: {group.Name}");
 
         if (group == null)
         {
@@ -1001,25 +971,6 @@ public partial class GameObjects : Node
 
         if (group == null || !group.CanAcceptDrop || group.IsDragging)
             return null;
-
-        /*
-        // Verify the ray hit the DragDropCollider specifically, not another shape on the group
-        if (group.DragDropCollider != null)
-        {
-            int hitShapeIndex = result["shape"].AsInt32();
-            int dragDropIndex = 0;
-            foreach (var child in group.ComponentNodes)
-            {
-                if (child is CollisionShape3D cs)
-                {
-                    if (cs == group.DragDropCollider)
-                        break;
-                    dragDropIndex++;
-                }
-            }
-            if (hitShapeIndex != dragDropIndex) return null;
-        }
-        */
 
         return group;
     }

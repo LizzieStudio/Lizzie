@@ -305,7 +305,6 @@ public partial class VcToken : VisualComponentBase
         if (!IsNodeReady())
         {
             _buildRequired = true;
-            GD.PrintErr("VcToken was built before the node was ready.");
             return;
         }
 
