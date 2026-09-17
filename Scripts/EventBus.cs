@@ -262,7 +262,11 @@ public class CommandExecutedEvent : IEvent
 
 public class ProjectChangedEvent : IEvent { }
 
-public class GameStateChangedEvent : IEvent { }
+public class GameStateChangedEvent : IEvent
+{
+    /// <summary>Whether the table is in snapshot edit mode.</summary>
+    public bool Editing { get; set; }
+}
 
 public class ShowTemplateEditor : IEvent
 {

@@ -70,6 +70,10 @@ public class ActiveGameStateEffect : Effect
 {
     [JsonPropertyName("t")]
     public SnowTag Target { get; set; }
+
+    /// <summary>Whether switching to this snapshot also enters edit mode.</summary>
+    [JsonPropertyName("ed")]
+    public bool Editing { get; set; }
 }
 
 /// <summary>

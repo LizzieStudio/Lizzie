@@ -382,9 +382,9 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Switches every client to a saved game state.
+    /// Switches every client to a saved game state, optionally entering edit mode.
     /// </summary>
-    public void SwitchGameState(SnowTag stateRef)
+    public void SwitchGameState(SnowTag stateRef, bool editing = false)
     {
         if (CurrentProject?.GetGameState(stateRef) == null)
             return;
@@ -392,7 +392,7 @@ public partial class ProjectService : Node
         var effects = new List<Effect>
         {
             new TableClearEffect(),
-            new ActiveGameStateEffect { Target = stateRef },
+            new ActiveGameStateEffect { Target = stateRef, Editing = editing },
         };
         foreach (var ce in FoldChain(stateRef).Values)
         {
@@ -421,6 +421,71 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(new GameStateSwitchAction { Target = stateRef }, effects.ToArray())
         );
+    }
+
+    /// <summary>
+    /// Enters or leaves snapshot edit mode across all clients.
+    /// </summary>
+    public void SetEditMode(bool editing)
+    {
+        if (CurrentProject == null)
+            return;
+        if ((GameStatesStore.Instance?.EditMode ?? false) == editing)
+            return;
+
+        var active = CurrentProject.ActiveGameState;
+        if (editing)
+        {
+            if (active == SnowTag.Empty)
+            {
+                GD.PrintErr("Edit mode needs an active snapshot.");
+                return;
+            }
+            SwitchGameState(active, editing: true);
+        }
+        else
+        {
+            EventSynchronizer.Instance?.Submit(
+                TableEvent.Now(null, new ActiveGameStateEffect { Target = active, Editing = false })
+            );
+        }
+    }
+
+    /// <summary>
+    /// Re-captures the active snapshot from the live table in place.
+    /// </summary>
+    public void CaptureActiveSnapshotLocal()
+    {
+        if (CurrentProject == null)
+            return;
+        var active = CurrentProject.ActiveGameState;
+        if (active == SnowTag.Empty)
+            return;
+        if (!CurrentProject.GameStates.TryGetValue(active, out var state) || state.Deleted)
+            return;
+
+        state.Upserts = BuildDelta(state.Parent);
+    }
+
+    /// <summary>
+    /// True when the live table matches the active snapshot.
+    /// </summary>
+    public bool ActiveTableMatchesSnapshot()
+    {
+        if (CurrentProject == null)
+            return true;
+        var state = CurrentProject.GetGameState(CurrentProject.ActiveGameState);
+        if (state == null)
+            return true;
+
+        var current = BuildDelta(state.Parent).ToDictionary(e => e.Id);
+        var stored = (state.Upserts ?? Array.Empty<ComponentEffect>()).ToDictionary(e => e.Id);
+        if (current.Count != stored.Count)
+            return false;
+        foreach (var (id, ce) in current)
+            if (!stored.TryGetValue(id, out var prev) || !StateEquals(prev.State, ce.State))
+                return false;
+        return true;
     }
 
     /// <summary>

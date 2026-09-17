@@ -13,6 +13,7 @@ public partial class UI : CanvasLayer
     private Color baseFontColor;
 
     private HBoxContainer modeButtons;
+    private Button _editModeButton;
 
     public event EventHandler<SceneModeChangeArgs> SceneModeChange;
 
@@ -67,18 +68,22 @@ public partial class UI : CanvasLayer
 
         SetSceneMode(Config.Registry.Get<SceneMode>("SceneMode"));
 
+        _editModeButton = new Button { Text = "Edit Snapshot", ToggleMode = true };
+        _editModeButton.Toggled += OnEditModeButtonToggled;
+        modeButtons.AddChild(_editModeButton);
+
         _fileMenu = GetNode<PopupMenu>("%File");
         _fileMenu.AddSeparator();
-        _fileMenu.AddItem("Save Snapshot as...", 3);
-        _fileMenu.AddItem("Update Snapshot", 6);
+        _fileMenu.AddItem("Save as New Snapshot", 3);
+        _fileMenu.AddItem("Save Changes to Snapshot", 6);
 
         _restoreSnapshotMenu = new PopupMenu();
         _restoreSnapshotMenu.Name = "RestoreSnapshotMenu";
         _restoreSnapshotMenu.IdPressed += OnRestoreSnapshotSelected;
         _fileMenu.AddChild(_restoreSnapshotMenu);
-        _fileMenu.AddSubmenuNodeItem("Restore Snapshot", _restoreSnapshotMenu, 4);
+        _fileMenu.AddSubmenuNodeItem("Switch Snapshot", _restoreSnapshotMenu, 4);
 
-        _fileMenu.AddItem("Snapshot Manager...", 5);
+        _fileMenu.AddItem("Manage Snapshots...", 5);
         _fileMenu.AddSeparator();
         _fileMenu.AddItem("Multiplayer...", 10);
         _fileMenu.IdPressed += FileMenuOnIdPressed;
@@ -246,11 +251,59 @@ public partial class UI : CanvasLayer
     private void ProjectChanged(ProjectChangedEvent obj)
     {
         RebuildRestoreSnapshotMenu();
+        UpdateEditModeButton(GameStatesStore.Instance?.EditMode ?? false);
     }
 
     private void OnGameStateChanged(GameStateChangedEvent e)
     {
         RebuildRestoreSnapshotMenu();
+        UpdateEditModeButton(e.Editing);
+        _gameController?.MainScene?.Table?.SetEditMode(e.Editing);
+    }
+
+    private void UpdateEditModeButton(bool editing)
+    {
+        if (_editModeButton == null)
+            return;
+
+        _editModeButton.SetPressedNoSignal(editing);
+        _editModeButton.Text = editing ? "Editing Snapshot" : "Edit Snapshot";
+
+        bool hasActive =
+            (ProjectService.Instance?.CurrentProject?.ActiveGameState ?? SnowTag.Empty)
+            != SnowTag.Empty;
+        _editModeButton.Disabled = !editing && !hasActive;
+    }
+
+    private void OnEditModeButtonToggled(bool on)
+    {
+        // open a confirmation dialogue if there's unsaved changes
+        if (on && !ProjectService.Instance.ActiveTableMatchesSnapshot())
+        {
+            var confirm = new ConfirmationDialog
+            {
+                Title = "Enter Edit Mode",
+                DialogText =
+                    "Editing loads the snapshot and resets the table for all players. "
+                    + "Discard the current play state?",
+                OkButtonText = "Edit",
+            };
+            confirm.Confirmed += () =>
+            {
+                ProjectService.Instance.SetEditMode(true);
+                confirm.QueueFree();
+            };
+            confirm.Canceled += () =>
+            {
+                _editModeButton.SetPressedNoSignal(false); // revert the toggle
+                confirm.QueueFree();
+            };
+            _modalDialogs.AddChild(confirm);
+            confirm.PopupCentered();
+            return;
+        }
+
+        ProjectService.Instance.SetEditMode(on);
     }
 
     private void RebuildRestoreSnapshotMenu()
@@ -262,11 +315,12 @@ public partial class UI : CanvasLayer
 
         var project = ProjectService.Instance.CurrentProject;
 
+        var editing = GameStatesStore.Instance?.EditMode ?? false;
         var updateIdx = _fileMenu.GetItemIndex(6);
         if (updateIdx >= 0)
             _fileMenu.SetItemDisabled(
                 updateIdx,
-                project == null || project.ActiveGameState == SnowTag.Empty
+                editing || project == null || project.ActiveGameState == SnowTag.Empty
             );
 
         var ordered = OrderedGameStates(project);
@@ -545,7 +599,7 @@ public partial class UI : CanvasLayer
     private void ShowSaveSnapshotDialog()
     {
         var dialog = new ConfirmationDialog();
-        dialog.Title = "Save Snapshot";
+        dialog.Title = "Save as New Snapshot";
         dialog.OkButtonText = "Save";
 
         var vbox = new VBoxContainer();
@@ -610,7 +664,7 @@ public partial class UI : CanvasLayer
             return;
 
         var dialog = new Window();
-        dialog.Title = "Snapshot Manager";
+        dialog.Title = "Manage Snapshots";
         dialog.Size = new Vector2I(400, 300);
         dialog.Unresizable = false;
 

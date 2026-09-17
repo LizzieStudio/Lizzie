@@ -18,6 +18,7 @@ public partial class SceneController : Node3D
 
     private CameraManager _cameraManager;
     private GameObjects _gameObjects;
+    private Table _table;
 
     private VcMeeple _meepletest;
 
@@ -27,6 +28,7 @@ public partial class SceneController : Node3D
     {
         _cameraManager = GetNode<CameraManager>("Cameras");
         _gameObjects = GetNode<GameObjects>("GameObjects");
+        _table = GetNode<Table>("Table");
         SetMode(Config.Registry.Get<SceneMode>("SceneMode"));
         _gameObjects.ShowComponentPopup += GameObjectsOnShowComponentPopup;
         _gameObjects.HoveredComponentChange += OnHoveredComponentChange;
@@ -48,6 +50,9 @@ public partial class SceneController : Node3D
     public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange;
 
     public GameObjects GameObjects => _gameObjects;
+
+    /// <summary>The rendered table surface.</summary>
+    public Table Table => _table;
 
     public override void _Process(double delta)
     {
