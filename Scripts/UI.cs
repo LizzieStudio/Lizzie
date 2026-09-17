@@ -719,7 +719,7 @@ public partial class UI : CanvasLayer
 
     private void ShowProjectManager()
     {
-        var s = "res://Scenes/project_manager.tscn";
+        var s = "res://Scenes/Project/project_manager.tscn";
         _projectManager = GD.Load<PackedScene>(s).Instantiate<ProjectManager>();
         _projectManager.Closed += ProjectManagerClosed;
         _modalDialogs.AddChild(_projectManager);
