@@ -78,13 +78,13 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     }
 
     /// <summary>Applies an edit-mode transition.</summary>
-    private void SetEditModeFlag(bool editing)
+    private void SetEditModeFlag(bool editing, bool save = true)
     {
         bool was = EditMode;
         EditMode = editing;
         EventBus.Instance.Publish(new GameStateChangedEvent { Editing = EditMode });
 
-        if (was && !editing)
+        if (save && was && !editing)
             ProjectService.Instance?.SaveProject();
     }
 
@@ -94,6 +94,8 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     private void MaybeScheduleCapture(TableEvent e)
     {
         if (!EditMode)
+            return;
+        if (EventSynchronizer.Instance?.BulkLoading == true)
             return;
         var project = ProjectService.Instance?.CurrentProject;
         if (project == null || project.ActiveGameState == SnowTag.Empty)
@@ -119,9 +121,19 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     }
 
     /// <summary>
+    /// Restores the active-snapshot pointer from the full log.
+    /// </summary>
+    public void RebuildActiveFromLog()
+    {
+        var project = ProjectService.Instance?.CurrentProject;
+        if (project != null)
+            RecomputeActive(project, save: false);
+    }
+
+    /// <summary>
     /// Restores the active-snapshot pointer to the latest non-undone switch or save.
     /// </summary>
-    private void RecomputeActive(Project project)
+    private void RecomputeActive(Project project, bool save = true)
     {
         var log = EventSynchronizer.Instance?.Events;
         if (log == null)
@@ -150,7 +162,7 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
 
         _activeWriteId = writeId;
         project.ActiveGameState = active;
-        SetEditModeFlag(editing);
+        SetEditModeFlag(editing, save);
     }
 
     /// <summary>
@@ -160,20 +172,5 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     {
         _activeWriteId = SnowportId.Empty;
         EditMode = false;
-    }
-
-    /// <summary>Adds the active-snapshot pointer to the catchup for a joining client.</summary>
-    public override Effect[] GenerateCatchupEffects()
-    {
-        var effects = base.GenerateCatchupEffects();
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project == null || project.ActiveGameState == SnowTag.Empty)
-            return effects;
-
-        return effects
-            .Append(
-                new ActiveGameStateEffect { Target = project.ActiveGameState, Editing = EditMode }
-            )
-            .ToArray();
     }
 }

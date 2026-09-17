@@ -161,9 +161,6 @@ public partial class MultiplayerManager : Node
         var playerId = (int)id;
         _players[playerId] = new PlayerInfo { PlayerId = playerId, IsLocal = false };
 
-        // Withhold live events from the newcomer until it's caught up.
-        EventSynchronizer.Instance?.BeginSync(playerId);
-
         EmitSignal("PlayerConnected", playerId);
     }
 
@@ -173,7 +170,6 @@ public partial class MultiplayerManager : Node
 
         var playerId = (int)id;
         ConnectionStore.Instance?.ReleaseSeat(playerId);
-        EventSynchronizer.Instance?.EndSync(playerId);
         _players.Remove(playerId);
 
         EmitSignal("PlayerDisconnected", playerId);

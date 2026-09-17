@@ -1264,6 +1264,9 @@ public partial class GameObjects : Node
     /// </summary>
     private void ApplyEvent(TableEvent e)
     {
+        if (EventSynchronizer.Instance?.BulkLoading == true)
+            return;
+
         if (e.Action is UndoAction undo)
         {
             ReconstructForUndoRedo(undo);
@@ -1463,6 +1466,42 @@ public partial class GameObjects : Node
     #region Undo
 
     /// <summary>
+    /// Rebuilds the whole table from the event log.
+    /// </summary>
+    public void RebuildFromLog()
+    {
+        var log = EventSynchronizer.Instance?.Events;
+        if (log == null)
+            return;
+
+        var undone = UndoLog.ComputeUndone(log);
+
+        _clearBarrier = SnowportId.Empty;
+        var tags = new HashSet<SnowTag>();
+        foreach (var ev in log)
+        {
+            if (
+                !undone.Contains(ev.Id)
+                && UndoLog.HasTableClear(ev)
+                && _clearBarrier.CompareTo(ev.Id) < 0
+            )
+                _clearBarrier = ev.Id;
+
+            foreach (var fx in ev.Effects)
+                if (fx is ComponentEffect ce)
+                    tags.Add(ce.Id);
+        }
+
+        foreach (var r in tags)
+            ReconstructComponent(r, log, undone);
+
+        RetryPendingSpawns();
+        RebuildContainerCaches();
+        QueueStackingUpdate();
+        EmitSignal(SignalName.TableChanged);
+    }
+
+    /// <summary>
     /// Applies an undo or redo by searching backwards for the components that need updating.
     /// </summary>
     private void ReconstructForUndoRedo(UndoAction undo)
@@ -1517,7 +1556,8 @@ public partial class GameObjects : Node
             if (undone.Contains(e.Id))
                 continue;
 
-            if (UndoLog.HasTableClear(e) && barrier.CompareTo(e.Id) < 0)
+            bool clearHere = UndoLog.HasTableClear(e);
+            if (clearHere && barrier.CompareTo(e.Id) < 0)
                 barrier = e.Id;
 
             ComponentEffect ce = null;
@@ -1527,25 +1567,34 @@ public partial class GameObjects : Node
                     ce = x;
                     break;
                 }
-            if (ce?.State == null)
-                continue;
 
-            if (ce.State.Location == VisualComponentBase.ComponentLocation.Cursor)
-                continue;
-
-            if (winner == null || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(winner, winnerId)) > 0)
-            {
-                winner = ce;
-                winnerId = e.Id;
-            }
             if (
-                ce.State.ZOrder.Target != ZTarget.Unset
-                && (zwin == null || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(zwin, zwinId)) > 0)
+                ce?.State != null
+                && ce.State.Location != VisualComponentBase.ComponentLocation.Cursor
             )
             {
-                zwin = ce;
-                zwinId = e.Id;
+                if (
+                    winner == null
+                    || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(winner, winnerId)) > 0
+                )
+                {
+                    winner = ce;
+                    winnerId = e.Id;
+                }
+                if (
+                    ce.State.ZOrder.Target != ZTarget.Unset
+                    && (zwin == null || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(zwin, zwinId)) > 0)
+                )
+                {
+                    zwin = ce;
+                    zwinId = e.Id;
+                }
             }
+
+            if (winner != null && zwin != null)
+                break;
+            if (clearHere)
+                break;
         }
 
         _pendingSpawns.Remove(r);

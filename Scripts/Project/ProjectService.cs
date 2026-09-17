@@ -65,6 +65,9 @@ public partial class ProjectService : Node
         var project = new Project { Filename = name };
         CurrentProject = project;
 
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.BulkLoading = true;
+
         // the file is a list of events using JSON-lines
         using var loadFile = FileAccess.Open($"user://{name}.proj", FileAccess.ModeFlags.Read);
         while (!loadFile.EofReached())
@@ -89,8 +92,17 @@ public partial class ProjectService : Node
         }
         loadFile.Close();
 
-        SeedTagsFromProject(project);
+        SettleAfterIngest();
         return project;
+    }
+
+    public void SettleAfterIngest()
+    {
+        GameObjects?.RebuildFromLog();
+        GameStatesStore.Instance?.RebuildActiveFromLog();
+        SeedTagsFromLog();
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.BulkLoading = false;
     }
 
     public bool SaveProject(Project project)
@@ -109,11 +121,9 @@ public partial class ProjectService : Node
             FileAccess.ModeFlags.Write
         );
 
-        var line = JsonSerializer.Serialize(
-            TableEvent.Now(null, sync.BuildProjectEffects()),
-            LizzieJson.EventOptions
-        );
-        saveFile.StoreLine(line);
+        // Persist the entire event log, one event per JSON line.
+        foreach (var e in sync.Events)
+            saveFile.StoreLine(JsonSerializer.Serialize(e, LizzieJson.EventOptions));
 
         saveFile.Close();
 
@@ -130,44 +140,48 @@ public partial class ProjectService : Node
     /// <summary>
     /// Advances the tag counter past every SnowTag.
     /// </summary>
-    private static void SeedTagsFromProject(Project project)
+    private static void SeedTagsFromLog()
     {
-        // I'd like to find a way to get rid of this method.
-        // It's only necessary for the ZOrder.
-
-        if (project == null)
+        var log = EventSynchronizer.Instance?.Events;
+        if (log == null)
             return;
 
         var clock = Snowport.Clock;
 
-        void ObserveTags<T>(IEnumerable<T> items)
-            where T : IReplicated
+        void ObserveUpsert(ComponentEffect ce)
         {
-            foreach (var it in items)
-                clock.ObserveTag(it.Id);
+            clock.ObserveTag(ce.Id);
+            clock.ObserveTag(ce.PrototypeRef);
+            if (ce.State != null)
+                clock.ObserveTag(ce.State.ContainerRef);
         }
 
-        ObserveTags(project.Templates.Values);
-        ObserveTags(project.Datasets.Values);
-        ObserveTags(project.Prototypes.Values);
-        ObserveTags(project.Images.Values);
-        ObserveTags(project.GameStates.Values);
-
-        clock.ObserveTag(project.ActiveGameState);
-
-        foreach (var gs in project.GameStates.Values)
-        foreach (var up in gs.Upserts ?? Array.Empty<ComponentEffect>())
+        foreach (var e in log)
+        foreach (var fx in e.Effects)
         {
-            clock.ObserveTag(up.Id);
-            clock.ObserveTag(up.PrototypeRef);
-            if (up.State != null)
-                clock.ObserveTag(up.State.ContainerRef);
-        }
+            clock.ObserveTag(fx.Id);
 
-        var players = project.GameSettings?.Players ?? default;
-        if (!players.IsDefaultOrEmpty)
-            foreach (var p in players)
-                clock.ObserveTag(p.HandRef);
+            switch (fx)
+            {
+                case ComponentEffect ce:
+                    ObserveUpsert(ce);
+                    break;
+                case ActiveGameStateEffect ags:
+                    clock.ObserveTag(ags.Target);
+                    break;
+                case UpdateReplicatedEffect<GameState> gsFx when gsFx.Payload != null:
+                    clock.ObserveTag(gsFx.Payload.Parent);
+                    foreach (var up in gsFx.Payload.Upserts ?? Array.Empty<ComponentEffect>())
+                        ObserveUpsert(up);
+                    break;
+                case UpdateSettingsEffect set when set.Payload != null:
+                    var players = set.Payload.Players;
+                    if (!players.IsDefaultOrEmpty)
+                        foreach (var p in players)
+                            clock.ObserveTag(p.HandRef);
+                    break;
+            }
+        }
     }
 
     public void UpdateDataSet(DataSet dataset)

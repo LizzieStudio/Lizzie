@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Godot;
 
@@ -30,16 +29,6 @@ public partial class SettingsManager : Node
 
         if (_instance == this)
             _instance = null;
-    }
-
-    /// <summary>Captures the current settings for a joining client.</summary>
-    public Effect[] GenerateCatchupEffects()
-    {
-        var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
-        if (settings == null)
-            return Array.Empty<Effect>();
-
-        return new Effect[] { new UpdateSettingsEffect { Payload = settings } };
     }
 
     /// <summary>Merges the settings effect in the event, if any, into the project.</summary>

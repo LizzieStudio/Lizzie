@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using Godot;
 
@@ -14,14 +13,14 @@ public partial class EventSynchronizer : Node
 
     private readonly EventLog _log = new();
 
-    /// <summary>The recorded events, in arrival order. Exposed for debug tooling.</summary>
+    /// <summary>The recorded events, in SnowportId order. Exposed for debug tooling.</summary>
     public IReadOnlyList<TableEvent> Events => _log.Events;
 
     /// <summary>
-    /// Peers still receiving their catchup events.
-    /// They are excluded from live event delivery until caught up.
+    /// While true, events are recorded but not applied to the scene per-event.
+    /// Set during a project load or joining a game.
     /// </summary>
-    private readonly HashSet<int> _syncingPeers = new();
+    public bool BulkLoading { get; set; }
 
     /// <summary>
     /// Represents a player action and its subsequent effects.
@@ -71,15 +70,15 @@ public partial class EventSynchronizer : Node
     }
 
     /// <summary>
-    /// Server-only: relay an event to every other live peer, skipping the sender,
-    /// the host itself, and any peer still receiving its initial snapshot.
+    /// Server-only: relay an event to every other live peer, skipping the sender
+    /// and the host itself.
     /// </summary>
     private void BroadcastEvent(string json, int excludeSender = -1)
     {
         foreach (var player in MultiplayerManager.Instance.Players)
         {
             int id = player.Key;
-            if (id == 1 || id == excludeSender || _syncingPeers.Contains(id))
+            if (id == 1 || id == excludeSender)
                 continue;
             RpcId(id, nameof(ClientReceiveEvent), json);
         }
@@ -128,69 +127,20 @@ public partial class EventSynchronizer : Node
     #region Catchup
 
     /// <summary>
-    /// Mark a freshly connected peer as syncing so it is excluded from
-    /// live event delivery until it has received its state snapshot.
+    /// Stream the entire event log to a joining peer, oldest-to-newest.
     /// </summary>
-    public void BeginSync(int peerId)
-    {
-        if (MultiplayerManager.Instance?.IsServer == true)
-            _syncingPeers.Add(peerId);
-    }
-
-    /// <summary>
-    /// Stop excluding a peer from live event delivery.
-    /// </summary>
-    public void EndSync(int peerId) => _syncingPeers.Remove(peerId);
-
-    /// <summary>
-    /// The effects that persist in a saved project.
-    /// </summary>
-    public Effect[] BuildProjectEffects() =>
-        (TemplateStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(DataSetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(PrototypeStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(AssetStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(GameStatesStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(SettingsManager.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .ToArray();
-
-    /// <summary>
-    /// Stream the current table to a joining peer as fresh creation events.
     public void SendStateTo(int peerId)
     {
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        var gameObjects = ProjectService.Instance?.GameObjects;
-        if (gameObjects == null)
-        {
-            EndSync(peerId);
-            return;
-        }
-
-        int cutoff = _log.Count;
-        var effects = gameObjects
-            .GenerateCatchupEffects()
-            .Concat(ConnectionStore.Instance?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .Concat(BuildProjectEffects())
-            .ToArray();
-        var snapshot = TableEvent.Now(null, effects);
-        RpcId(
-            peerId,
-            nameof(ReceiveSnapshot),
-            JsonSerializer.Serialize(snapshot, LizzieJson.EventOptions)
-        );
-
-        // Replay anything that landed after the cutoff.
-        foreach (var e in _log.EventsFrom(cutoff))
+        var events = _log.Events;
+        for (int i = 0; i < events.Count; i++)
             RpcId(
                 peerId,
-                nameof(ReceiveBacklog),
-                JsonSerializer.Serialize(e, LizzieJson.EventOptions)
+                nameof(ReceiveState),
+                JsonSerializer.Serialize(events[i], LizzieJson.EventOptions)
             );
-
-        // The peer is caught up. Resume sending them events.
-        EndSync(peerId);
     }
 
     [Rpc(
@@ -198,17 +148,10 @@ public partial class EventSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void ReceiveSnapshot(string json) => ReceiveEvent(json);
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ReceiveBacklog(string json) => ReceiveEvent(json);
+    private void ReceiveState(string json) => ReceiveEvent(json);
 
     /// <summary>
-    /// Ask the host to stream us the current table as catchup events.
+    /// Ask the host to stream this client the full event log as catchup.
     /// </summary>
     public void RequestCatchup()
     {
@@ -217,6 +160,7 @@ public partial class EventSynchronizer : Node
         if (MultiplayerManager.Instance.IsServer)
             return;
 
+        BulkLoading = true;
         RpcId(1, nameof(ServerSendCatchup));
     }
 
@@ -248,7 +192,8 @@ public partial class EventSynchronizer : Node
     )]
     private void ClientCatchupComplete()
     {
-        GD.Print("[EventSynchronizer] Catchup complete – requesting player position selection.");
+        GD.Print("[EventSynchronizer] Catchup complete - settling table.");
+        ProjectService.Instance?.SettleAfterIngest();
         EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
     }
 

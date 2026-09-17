@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -12,19 +11,6 @@ public abstract partial class ReplicatedStore<TEntity> : Node
     protected abstract IDictionary<SnowTag, TEntity> Store { get; }
 
     protected abstract void NotifyChanged(IReadOnlyList<SnowTag> ids);
-
-    /// <summary>Captures the non-deleted definitions for a joining client.</summary>
-    public virtual Effect[] GenerateCatchupEffects()
-    {
-        var store = Store;
-        if (store == null)
-            return Array.Empty<Effect>();
-
-        return store
-            .Values.Where(e => !e.Deleted)
-            .Select(e => (Effect)new UpdateReplicatedEffect<TEntity> { Id = e.Id, Payload = e })
-            .ToArray();
-    }
 
     /// <summary>Merges every replicated effect in the event into the store.</summary>
     protected void OnEventApplied(TableEvent e)

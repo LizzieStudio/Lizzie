@@ -512,12 +512,6 @@ public partial class UI : CanvasLayer
                 var p = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
                 if (p != null)
                 {
-                    if (
-                        p.ActiveGameState != SnowTag.Empty
-                        && MultiplayerManager.Instance?.IsMultiplayerActive != true
-                    )
-                        ProjectService.Instance.SwitchGameState(p.ActiveGameState);
-
                     ShowPlayerPositionDialog();
                 }
                 break;
@@ -554,27 +548,14 @@ public partial class UI : CanvasLayer
 
     private void ShowSaveAsDialog()
     {
-        var dialog = new ConfirmationDialog
-        {
-            Title = "Save Project As",
-            OkButtonText = "Save"
-        };
+        var dialog = new ConfirmationDialog { Title = "Save Project As", OkButtonText = "Save" };
 
-        var vbox = new VBoxContainer
-        {
-            CustomMinimumSize = new Vector2(300, 0)
-        };
+        var vbox = new VBoxContainer { CustomMinimumSize = new Vector2(300, 0) };
 
-        var nameLabel = new Label
-        {
-            Text = "Project name:"
-        };
+        var nameLabel = new Label { Text = "Project name:" };
         vbox.AddChild(nameLabel);
 
-        var input = new LineEdit
-        {
-            PlaceholderText = "Enter project name..."
-        };
+        var input = new LineEdit { PlaceholderText = "Enter project name..." };
         vbox.AddChild(input);
 
         dialog.AddChild(vbox);

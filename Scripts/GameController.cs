@@ -29,16 +29,11 @@ public partial class GameController : Node3D
 
         EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawnPrototype);
 
+        ProjectService.Instance.GameObjects = _mainScene.GameObjects;
+
         ProjectService.Instance.CurrentProject =
             ProjectService.Instance.LoadProject(ProjectService.SampleProjectName)
             ?? new Project { Filename = ProjectService.SampleProjectName };
-        ProjectService.Instance.GameObjects = _mainScene.GameObjects;
-
-        // Populate the table from the last-loaded snapshot.
-        // In multiplayer, this is handled via "catch-up", so skip the local switch there.
-        var active = ProjectService.Instance.CurrentProject.ActiveGameState;
-        if (active != SnowTag.Empty && MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            ProjectService.Instance.SwitchGameState(active);
 
         ProjectService.Instance.EnsureSeatHands();
         ConnectionStore.Instance?.EnsureLocalSeat();

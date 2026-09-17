@@ -84,4 +84,3 @@ public class UpdateSettingsEffect : Effect
     [JsonPropertyName("v")]
     public ProjectGameSettings Payload { get; set; }
 }
-
