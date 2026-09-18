@@ -222,9 +222,6 @@ public partial class DatasetEditor : Window
 
         ProjectService.Instance.UpdateDataSet(_currentDataSet);
 
-        if (_project != null)
-            ProjectService.Instance.SaveProject(_project);
-
         GD.Print("Dataset saved successfully");
 
         CloseDialog();

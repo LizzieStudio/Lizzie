@@ -78,14 +78,10 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     }
 
     /// <summary>Applies an edit-mode transition.</summary>
-    private void SetEditModeFlag(bool editing, bool save = true)
+    private void SetEditModeFlag(bool editing)
     {
-        bool was = EditMode;
         EditMode = editing;
         EventBus.Instance.Publish(new GameStateChangedEvent { Editing = EditMode });
-
-        if (save && was && !editing)
-            ProjectService.Instance?.SaveProject();
     }
 
     /// <summary>
@@ -127,13 +123,13 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     {
         var project = ProjectService.Instance?.CurrentProject;
         if (project != null)
-            RecomputeActive(project, save: false);
+            RecomputeActive(project);
     }
 
     /// <summary>
     /// Restores the active-snapshot pointer to the latest non-undone switch or save.
     /// </summary>
-    private void RecomputeActive(Project project, bool save = true)
+    private void RecomputeActive(Project project)
     {
         var log = EventSynchronizer.Instance?.Events;
         if (log == null)
@@ -162,7 +158,7 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
 
         _activeWriteId = writeId;
         project.ActiveGameState = active;
-        SetEditModeFlag(editing, save);
+        SetEditModeFlag(editing);
     }
 
     /// <summary>

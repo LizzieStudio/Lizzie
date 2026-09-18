@@ -25,6 +25,8 @@ Players should pick their own seat color. There can be a starting default.
 
 Allow players to Undo things that another player did, possible with Ctrl+Shift+Z
 
+Deleted records stick around in save files forever at the moment.
+
 # Other issues
 
 These are not planned for my current branch.

@@ -248,7 +248,6 @@ public partial class ProjectSettingsDialog : Window
         }
 
         ProjectService.Instance.UpdateGameSettings(ReadUi());
-        ProjectService.Instance.SaveProject(project);
         OnClosePressed();
     }
 

@@ -399,7 +399,6 @@ public partial class TemplateCreator : Window
             _hierarchicalElements
         );
         ProjectService.Instance.UpdateTemplate(_currentTemplate);
-        ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject);
 
         EventBus.Instance.Publish<ProjectChangedEvent>();
 

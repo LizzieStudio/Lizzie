@@ -62,6 +62,9 @@ public partial class UI : CanvasLayer
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        // don't close automatically in case their are unsaved changes
+        GetTree().AutoAcceptQuit = false;
+
         modeButtons = GetNode<HBoxContainer>("Mode");
         var buttons = modeButtons.GetChildren();
         baseFontColor = new Color(1, 1, 1, 1);
@@ -74,14 +77,14 @@ public partial class UI : CanvasLayer
 
         _fileMenu = GetNode<PopupMenu>("%File");
         _fileMenu.AddSeparator();
-        _fileMenu.AddItem("Save as New Snapshot", 3);
-        _fileMenu.AddItem("Save Changes to Snapshot", 6);
+        _fileMenu.AddItem("Create Snapshot", 3);
+        _fileMenu.AddItem("Update Snapshot", 6);
 
         _restoreSnapshotMenu = new PopupMenu();
         _restoreSnapshotMenu.Name = "RestoreSnapshotMenu";
         _restoreSnapshotMenu.IdPressed += OnRestoreSnapshotSelected;
         _fileMenu.AddChild(_restoreSnapshotMenu);
-        _fileMenu.AddSubmenuNodeItem("Switch Snapshot", _restoreSnapshotMenu, 4);
+        _fileMenu.AddSubmenuNodeItem("Restore Snapshot", _restoreSnapshotMenu, 4);
 
         _fileMenu.AddItem("Manage Snapshots...", 5);
         _fileMenu.AddSeparator();
@@ -546,7 +549,7 @@ public partial class UI : CanvasLayer
         }
     }
 
-    private void ShowSaveAsDialog()
+    private void ShowSaveAsDialog(Action onSaved = null)
     {
         var dialog = new ConfirmationDialog { Title = "Save Project As", OkButtonText = "Save" };
 
@@ -564,12 +567,15 @@ public partial class UI : CanvasLayer
         {
             var name = input.Text.Trim();
             var project = ProjectService.Instance.CurrentProject;
+            var saved = false;
             if (!string.IsNullOrEmpty(name) && project != null)
             {
                 project.Filename = name;
-                ProjectService.Instance.SaveProject();
+                saved = ProjectService.Instance.SaveProject();
             }
             dialog.QueueFree();
+            if (saved)
+                onSaved?.Invoke();
         };
         dialog.Canceled += () => dialog.QueueFree();
 
@@ -577,11 +583,72 @@ public partial class UI : CanvasLayer
         dialog.PopupCentered();
     }
 
+    public override void _Notification(int what)
+    {
+        if (what == NotificationWMCloseRequest)
+            HandleCloseRequest();
+    }
+
+    /// <summary>
+    /// On window close, confirm before discarding unsaved changes.
+    /// </summary>
+    private void HandleCloseRequest()
+    {
+        if (ProjectService.Instance?.HasUnsavedChanges != true)
+        {
+            GetTree().Quit();
+            return;
+        }
+
+        var dialog = new ConfirmationDialog
+        {
+            Title = "Unsaved Changes",
+            DialogText = "This project has unsaved changes. Save before closing?",
+            OkButtonText = "Save",
+            CancelButtonText = "Cancel",
+        };
+        dialog.AddButton("Don't Save", true, "discard");
+
+        dialog.Confirmed += () =>
+        {
+            dialog.QueueFree();
+            SaveThenQuit();
+        };
+        dialog.CustomAction += action =>
+        {
+            if (action == "discard")
+            {
+                dialog.QueueFree();
+                GetTree().Quit();
+            }
+        };
+        dialog.Canceled += () => dialog.QueueFree();
+
+        _modalDialogs.AddChild(dialog);
+        dialog.PopupCentered();
+    }
+
+    private void SaveThenQuit()
+    {
+        var project = ProjectService.Instance?.CurrentProject;
+        if (project != null && string.IsNullOrWhiteSpace(project.Filename))
+        {
+            // don't quit unless the save succeeds
+            ShowSaveAsDialog(onSaved: () => GetTree().Quit());
+            return;
+        }
+
+        if (ProjectService.Instance?.SaveProject() == true)
+            GetTree().Quit();
+    }
+
     private void ShowSaveSnapshotDialog()
     {
-        var dialog = new ConfirmationDialog();
-        dialog.Title = "Save as New Snapshot";
-        dialog.OkButtonText = "Save";
+        var dialog = new ConfirmationDialog
+        {
+            Title = "Create Snapshot",
+            OkButtonText = "Create"
+        };
 
         var vbox = new VBoxContainer();
         vbox.CustomMinimumSize = new Vector2(300, 0);
@@ -685,7 +752,7 @@ public partial class UI : CanvasLayer
         vbox.AddChild(hbox);
 
         var restoreBtn = new Button();
-        restoreBtn.Text = "Switch To";
+        restoreBtn.Text = "Restore";
         restoreBtn.Pressed += () =>
         {
             var stateRef = SelectedRef();

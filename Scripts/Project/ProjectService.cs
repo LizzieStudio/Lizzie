@@ -27,10 +27,47 @@ public partial class ProjectService : Node
         }
     }
 
+    private const string AppName = "Lizzie";
+
     public override void _Ready()
     {
         _instance = this;
         GD.Print("ProjectService initialized");
+
+        Callable.From(SubscribeToEventLog).CallDeferred();
+    }
+
+    private void SubscribeToEventLog()
+    {
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.Applied += OnEventApplied;
+        UpdateWindowTitle();
+    }
+
+    /// <summary>
+    /// Only used to track unsaved changes.
+    /// </summary>
+    private void OnEventApplied(TableEvent _)
+    {
+        if (EventSynchronizer.Instance?.BulkLoading == true)
+            return;
+        if (CurrentProject == null)
+            return;
+        HasUnsavedChanges = true;
+    }
+
+    private bool _hasUnsavedChanges;
+
+    public bool HasUnsavedChanges
+    {
+        get => _hasUnsavedChanges;
+        private set
+        {
+            if (_hasUnsavedChanges == value)
+                return;
+            _hasUnsavedChanges = value;
+            UpdateWindowTitle();
+        }
     }
 
     private Project _currentProject;
@@ -43,15 +80,34 @@ public partial class ProjectService : Node
             if (!ReferenceEquals(_currentProject, value))
                 TextureCache.Instance.Clear();
             _currentProject = value;
+            UpdateWindowTitle();
             EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
             EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
         }
     }
 
     /// <summary>
+    /// Shows the project name and a * if there are unsaved changes.
+    /// </summary>
+    private void UpdateWindowTitle()
+    {
+        if (!IsInsideTree())
+            return;
+        var filename = string.IsNullOrWhiteSpace(CurrentProject?.Filename)
+            ? "Untitled"
+            : CurrentProject.Filename;
+        var marker = HasUnsavedChanges ? "*" : "";
+        GetWindow().Title = $"{filename}{marker}: {AppName}";
+    }
+
+    /// <summary>
     /// Starts a fresh, unnamed game.
     /// </summary>
-    public void NewGame() => CurrentProject = new Project();
+    public void NewGame()
+    {
+        CurrentProject = new Project();
+        HasUnsavedChanges = false;
+    }
 
     public Project LoadProject(string name)
     {
@@ -103,6 +159,8 @@ public partial class ProjectService : Node
         SeedTagsFromLog();
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
+
+        HasUnsavedChanges = false;
     }
 
     public bool SaveProject(Project project)
@@ -116,17 +174,42 @@ public partial class ProjectService : Node
         if (sync == null)
             return false;
 
-        using var saveFile = FileAccess.Open(
-            $"user://{project.Filename}.proj",
-            FileAccess.ModeFlags.Write
-        );
+        var finalVirtual = $"user://{project.Filename}.proj";
+        var tempVirtual = $"user://{project.Filename}.{OS.GetProcessId()}.proj.tmp";
 
-        // Persist the entire event log, one event per JSON line.
-        foreach (var e in sync.Events)
-            saveFile.StoreLine(JsonSerializer.Serialize(e, LizzieJson.EventOptions));
+        using (var saveFile = FileAccess.Open(tempVirtual, FileAccess.ModeFlags.Write))
+        {
+            if (saveFile == null)
+            {
+                GD.PrintErr(
+                    $"Could not open temp save file '{tempVirtual}': {FileAccess.GetOpenError()}"
+                );
+                return false;
+            }
 
-        saveFile.Close();
+            foreach (var e in BuildCompactedEvents(project))
+                saveFile.StoreLine(JsonSerializer.Serialize(e, LizzieJson.EventOptions));
+        }
 
+        var tempReal = ProjectSettings.GlobalizePath(tempVirtual);
+        try
+        {
+            System.IO.File.Move(tempReal, ProjectSettings.GlobalizePath(finalVirtual), true);
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"Could not finalize save '{finalVirtual}': {ex.Message}");
+            try
+            {
+                System.IO.File.Delete(tempReal);
+            }
+            catch
+            {
+            }
+            return false;
+        }
+
+        HasUnsavedChanges = false;
         return true;
     }
 
@@ -136,6 +219,41 @@ public partial class ProjectService : Node
             return false;
         return SaveProject(CurrentProject);
     }
+
+    /// <summary>
+    /// Rebuilds the event log as one event holding the current state.
+    /// </summary>
+    private IEnumerable<TableEvent> BuildCompactedEvents(Project project)
+    {
+        var effects = new List<Effect>();
+
+        if (project.GameSettings != null)
+            effects.Add(new UpdateSettingsEffect { Payload = project.GameSettings });
+
+        effects.AddRange(UpsertEffects(project.Templates));
+        effects.AddRange(UpsertEffects(project.Datasets));
+        effects.AddRange(UpsertEffects(project.Prototypes));
+        effects.AddRange(UpsertEffects(project.Images));
+        effects.AddRange(UpsertEffects(project.GameStates));
+
+        if (project.ActiveGameState != SnowTag.Empty)
+            effects.Add(
+                new ActiveGameStateEffect
+                {
+                    Target = project.ActiveGameState,
+                    Editing = GameStatesStore.Instance?.EditMode ?? false,
+                }
+            );
+
+        effects.AddRange(GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>());
+
+        return [TableEvent.Now(null, effects.ToArray())];
+    }
+
+    /// <summary>One upsert effect carrying the current value of every record in the store.</summary>
+    private static IEnumerable<Effect> UpsertEffects<T>(IDictionary<SnowTag, T> store)
+        where T : class, IReplicated =>
+        store.Values.Select(r => (Effect)new UpdateReplicatedEffect<T> { Id = r.Id, Payload = r });
 
     /// <summary>
     /// Advances the tag counter past every SnowTag.
@@ -269,7 +387,6 @@ public partial class ProjectService : Node
             return;
         prototype.Deleted = true;
         UpdatePrototype(prototype);
-        SaveProject(CurrentProject);
     }
 
     public void UpdateImage(Asset image)
@@ -311,7 +428,6 @@ public partial class ProjectService : Node
                 new ActiveGameStateEffect { Target = state.Id }
             )
         );
-        SaveProject(CurrentProject);
         return state;
     }
 
@@ -333,7 +449,6 @@ public partial class ProjectService : Node
                 new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
             )
         );
-        SaveProject(CurrentProject);
     }
 
     /// <summary>
@@ -392,7 +507,6 @@ public partial class ProjectService : Node
                 new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
             )
         );
-        SaveProject(CurrentProject);
     }
 
     /// <summary>
