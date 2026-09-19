@@ -203,9 +203,7 @@ public partial class ProjectService : Node
             {
                 System.IO.File.Delete(tempReal);
             }
-            catch
-            {
-            }
+            catch { }
             return false;
         }
 

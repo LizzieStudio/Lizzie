@@ -645,11 +645,7 @@ public partial class UI : CanvasLayer
 
     private void ShowSaveSnapshotDialog()
     {
-        var dialog = new ConfirmationDialog
-        {
-            Title = "Create Snapshot",
-            OkButtonText = "Create"
-        };
+        var dialog = new ConfirmationDialog { Title = "Create Snapshot", OkButtonText = "Create" };
 
         var vbox = new VBoxContainer();
         vbox.CustomMinimumSize = new Vector2(300, 0);
