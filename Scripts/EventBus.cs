@@ -262,12 +262,6 @@ public class CommandExecutedEvent : IEvent
 
 public class ProjectChangedEvent : IEvent { }
 
-public class GameStateChangedEvent : IEvent
-{
-    /// <summary>Whether the table is in snapshot edit mode.</summary>
-    public bool Editing { get; set; }
-}
-
 public class ShowTemplateEditor : IEvent
 {
     public SnowTag TemplateRef { get; set; }
@@ -302,11 +296,6 @@ public class ModalDialogOpenedEvent : IEvent { }
 /// When a dialog is closed, this event is published to re-enable inputs
 /// </summary>
 public class ModalDialogClosedEvent : IEvent { }
-
-public class AssetChangedEvent : IEvent
-{
-    public Asset Asset { get; set; }
-}
 
 public class SpawnPrototypeEvent : IEvent
 {

@@ -39,5 +39,5 @@ public partial class PrototypeStore : ReplicatedStore<Prototype>
         ProjectService.Instance?.CurrentProject?.Prototypes;
 
     protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
-        EmitSignal(SignalName.PrototypesChanged, ids.Select(i => i.Value).ToArray());
+        EmitSignal(SignalName.PrototypesChanged, SnowTag.ToValues(ids));
 }

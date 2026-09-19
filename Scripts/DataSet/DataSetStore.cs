@@ -39,5 +39,5 @@ public partial class DataSetStore : ReplicatedStore<DataSet>
         ProjectService.Instance?.CurrentProject?.Datasets;
 
     protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
-        EmitSignal(SignalName.DataSetsChanged, ids.Select(i => i.Value).ToArray());
+        EmitSignal(SignalName.DataSetsChanged, SnowTag.ToValues(ids));
 }

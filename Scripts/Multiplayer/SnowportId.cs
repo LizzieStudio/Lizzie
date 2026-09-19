@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 /// <summary>
@@ -174,6 +175,17 @@ public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
 
     /// <summary>The source that minted this tag. The host is 0, the rest are 1-255.</summary>
     public byte source => (byte)((ID >> 24) & 0xFF);
+
+    /// <summary>
+    /// Projects tags to their raw int values.
+    /// </summary>
+    public static int[] ToValues(IReadOnlyList<SnowTag> tags)
+    {
+        var values = new int[tags.Count];
+        for (int i = 0; i < tags.Count; i++)
+            values[i] = tags[i].ID;
+        return values;
+    }
 
     public bool Equals(SnowTag other) => ID == other.ID;
 

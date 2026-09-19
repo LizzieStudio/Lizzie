@@ -14,7 +14,10 @@ public partial class ImageTile : MarginContainer
     {
         _imageName = GetNode<Label>("%ImageName");
         _thumbnail = GetNode<TextureRect>("%Thumbnail");
-        EventBus.Instance.Subscribe<AssetChangedEvent>(OnAssetChanged);
+
+        if (AssetStore.Instance != null)
+            AssetStore.Instance.AssetsChanged += OnAssetsChanged;
+
         if (_refreshRequired)
         {
             Refresh();
@@ -22,15 +25,17 @@ public partial class ImageTile : MarginContainer
         }
     }
 
-    private void OnAssetChanged(AssetChangedEvent obj)
+    private void OnAssetsChanged(int[] ids)
     {
-        if (obj == null || obj.Asset == null || _asset == null)
+        if (_asset == null)
             return;
 
-        if (obj.Asset.Id == _asset.Id)
-        {
-            Refresh();
-        }
+        foreach (var id in ids)
+            if (id == _asset.Id.Value)
+            {
+                Refresh();
+                return;
+            }
     }
 
     private Asset _asset;

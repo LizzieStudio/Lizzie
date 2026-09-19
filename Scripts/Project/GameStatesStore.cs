@@ -11,6 +11,10 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     private static GameStatesStore _instance;
     public static GameStatesStore Instance => _instance;
 
+    /// <summary>Raised after the game-state registry or the edit-mode flag changes.</summary>
+    [Signal]
+    public delegate void GameStatesChangedEventHandler(bool editing);
+
     /// <summary>The id of the last event that wrote <see cref="Project.ActiveGameState"/>.</summary>
     private SnowportId _activeWriteId = SnowportId.Empty;
 
@@ -48,7 +52,7 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
 
     protected override void NotifyChanged(IReadOnlyList<SnowTag> ids)
     {
-        EventBus.Instance.Publish(new GameStateChangedEvent { Editing = EditMode });
+        EmitSignal(SignalName.GameStatesChanged, EditMode);
     }
 
     /// <summary>Merges game-state records and sets the active-snapshot.</summary>
@@ -81,7 +85,7 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     private void SetEditModeFlag(bool editing)
     {
         EditMode = editing;
-        EventBus.Instance.Publish(new GameStateChangedEvent { Editing = EditMode });
+        EmitSignal(SignalName.GameStatesChanged, EditMode);
     }
 
     /// <summary>

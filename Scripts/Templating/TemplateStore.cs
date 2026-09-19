@@ -39,5 +39,5 @@ public partial class TemplateStore : ReplicatedStore<Template>
         ProjectService.Instance?.CurrentProject?.Templates;
 
     protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
-        EmitSignal(SignalName.TemplatesChanged, ids.Select(i => i.Value).ToArray());
+        EmitSignal(SignalName.TemplatesChanged, SnowTag.ToValues(ids));
 }

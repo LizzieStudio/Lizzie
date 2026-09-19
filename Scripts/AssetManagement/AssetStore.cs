@@ -39,15 +39,6 @@ public partial class AssetStore : ReplicatedStore<Asset>
     protected override IDictionary<SnowTag, Asset> Store =>
         ProjectService.Instance?.CurrentProject?.Images;
 
-    protected override void NotifyChanged(IReadOnlyList<SnowTag> ids)
-    {
-        EmitSignal(SignalName.AssetsChanged, ids.Select(i => i.Value).ToArray());
-
-        var store = Store;
-        foreach (var id in ids)
-        {
-            if (store != null && store.TryGetValue(id, out var asset))
-                EventBus.Instance.Publish(new AssetChangedEvent { Asset = asset });
-        }
-    }
+    protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
+        EmitSignal(SignalName.AssetsChanged, SnowTag.ToValues(ids));
 }

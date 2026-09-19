@@ -131,7 +131,8 @@ public partial class UI : CanvasLayer
         CallDeferred(nameof(InitOpponentHandsPositions));
 
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
-        EventBus.Instance.Subscribe<GameStateChangedEvent>(OnGameStateChanged);
+        if (GameStatesStore.Instance != null)
+            GameStatesStore.Instance.GameStatesChanged += OnGameStateChanged;
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
         EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
@@ -257,11 +258,11 @@ public partial class UI : CanvasLayer
         UpdateEditModeButton(GameStatesStore.Instance?.EditMode ?? false);
     }
 
-    private void OnGameStateChanged(GameStateChangedEvent e)
+    private void OnGameStateChanged(bool editing)
     {
         RebuildRestoreSnapshotMenu();
-        UpdateEditModeButton(e.Editing);
-        _gameController?.MainScene?.Table?.SetEditMode(e.Editing);
+        UpdateEditModeButton(editing);
+        _gameController?.MainScene?.Table?.SetEditMode(editing);
     }
 
     private void UpdateEditModeButton(bool editing)
