@@ -1,6 +1,4 @@
 using System;
-using System.Text.Json.Serialization;
-using Godot;
 
 namespace Lizzie.AssetManagement
 {
@@ -82,17 +80,5 @@ namespace Lizzie.AssetManagement
         /// Additional metadata specific to the cloud provider
         /// </summary>
         public string ProviderMetadata { get; set; }
-
-        /// <summary>
-        /// Cached image data for quick access (optional, can be null if not loaded)
-        /// </summary>
-        [JsonIgnore]
-        public Image Image { get; set; }
-
-        /// <summary>
-        /// We do not load the asset until it's needed, so this flag indicates whether we've downloaded it yet
-        /// </summary>
-        [JsonIgnore]
-        public bool AssetDownloaded { get; set; }
     }
 }

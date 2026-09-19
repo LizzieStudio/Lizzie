@@ -57,11 +57,8 @@ public partial class ImageTile : MarginContainer
     public async void Refresh()
     {
         _imageName.Text = _asset.Name;
-        await ProjectService.Instance.FetchImageAsync(_asset, OnImageFetched);
-    }
-
-    private void OnImageFetched(Asset asset)
-    {
-        _thumbnail.Texture = ImageTexture.CreateFromImage(_asset.Image);
+        var image = await ProjectService.Instance.FetchImageAsync(_asset);
+        if (image != null)
+            _thumbnail.Texture = ImageTexture.CreateFromImage(image);
     }
 }

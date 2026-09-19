@@ -702,16 +702,13 @@ public partial class ProjectService : Node
 
     private readonly Dictionary<SnowTag, Task> _inFlightFetches = new();
 
-    public async Task FetchImageAsync(Asset asset, Action<Asset> callback)
+    public async Task<Image> FetchImageAsync(Asset asset)
     {
         if (asset == null)
-            return;
+            return null;
 
-        if (asset.AssetDownloaded)
-        {
-            callback(asset);
-            return;
-        }
+        if (AssetImageCache.Instance.IsDownloaded(asset))
+            return AssetImageCache.Instance.GetImage(asset);
 
         Task fetch;
         lock (_inFlightFetches)
@@ -742,7 +739,7 @@ public partial class ProjectService : Node
             }
         }
 
-        callback(asset);
+        return AssetImageCache.Instance.GetImage(asset);
     }
 
     private static async Task DownloadAssetAsync(Asset asset)
@@ -764,8 +761,7 @@ public partial class ProjectService : Node
                 return;
             }
 
-            asset.Image = r.Item2;
-            asset.AssetDownloaded = true;
+            AssetImageCache.Instance.Store(asset, r.Item2);
         }
         catch (Exception ex)
         {

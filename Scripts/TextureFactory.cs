@@ -105,7 +105,7 @@ public partial class TextureFactory : SubViewport
                 {
                     string imageName = obj.Text.Substring(2);
                     var asset = project.Assets.Values.FirstOrDefault(a => a.Name == imageName);
-                    if (asset != null && !asset.AssetDownloaded)
+                    if (asset != null && !AssetImageCache.Instance.IsDownloaded(asset))
                     {
                         pendingAssets.Add(asset);
                     }
@@ -118,12 +118,7 @@ public partial class TextureFactory : SubViewport
                 var tasks = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
                 foreach (var asset in pendingAssets)
                 {
-                    var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
-                    await ProjectService.Instance.FetchImageAsync(
-                        asset,
-                        _ => tcs.TrySetResult(true)
-                    );
-                    tasks.Add(tcs.Task);
+                    tasks.Add(ProjectService.Instance.FetchImageAsync(asset));
                 }
                 await System.Threading.Tasks.Task.WhenAll(tasks);
                 _waitingForAsset = false;
@@ -518,9 +513,10 @@ public partial class TextureFactory : SubViewport
                 string.Equals(a.Name, name, StringComparison.CurrentCultureIgnoreCase)
             );
 
-            if (asset?.Image != null)
+            var image = AssetImageCache.Instance.GetImage(asset);
+            if (image != null)
             {
-                return ImageTexture.CreateFromImage(asset.Image);
+                return ImageTexture.CreateFromImage(image);
             }
 
             return _iconLibrary.TextureFromKey(string.Empty);
@@ -534,9 +530,10 @@ public partial class TextureFactory : SubViewport
                 string.Equals(a.Name, uname, StringComparison.CurrentCultureIgnoreCase)
             );
 
-            if (asset?.Image != null)
+            var image = AssetImageCache.Instance.GetImage(asset);
+            if (image != null)
             {
-                return ImageTexture.CreateFromImage(asset.Image);
+                return ImageTexture.CreateFromImage(image);
             }
 
             return _iconLibrary.TextureFromKey(string.Empty);
@@ -1005,9 +1002,10 @@ public partial class TextureFactory : SubViewport
             string imageName = obj.Text.Substring(2);
             var project = ProjectService.Instance.CurrentProject;
             var asset = project?.Assets.Values.FirstOrDefault(a => a.Name == imageName);
-            if (asset?.Image != null)
+            var assetImage = AssetImageCache.Instance.GetImage(asset);
+            if (assetImage != null)
             {
-                texture = ImageTexture.CreateFromImage(asset.Image);
+                texture = ImageTexture.CreateFromImage(assetImage);
             }
             else
             {

@@ -17,21 +17,26 @@ public class TextureCache
         }
     }
 
-    private readonly Dictionary<SnowTag, Texture2D> _assetCache = new();
+    private readonly Dictionary<string, Texture2D> _assetCache = new();
     private readonly Dictionary<string, Texture2D> _derivedCache = new();
 
     private readonly Dictionary<string, List<Action<Texture2D>>> _pending = new();
 
     public Texture2D GetOrCreateAssetTexture(Asset asset)
     {
-        if (asset == null || asset.Image == null)
+        if (asset == null)
             return null;
 
-        if (_assetCache.TryGetValue(asset.Id, out var cached))
+        var image = AssetImageCache.Instance.GetImage(asset);
+        if (image == null)
+            return null;
+
+        var key = asset.SheetKey();
+        if (_assetCache.TryGetValue(key, out var cached))
             return cached;
 
-        var tex = BuildCompressedTexture(asset.Image);
-        _assetCache[asset.Id] = tex;
+        var tex = BuildCompressedTexture(image);
+        _assetCache[key] = tex;
         return tex;
     }
 

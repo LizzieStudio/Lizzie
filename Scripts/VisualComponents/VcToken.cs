@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
@@ -33,17 +34,6 @@ public partial class VcToken : VisualComponentBase
         set
         {
             _faceTexture = value;
-
-            /*
-            if (value != null)
-            {
-                var image = value.GetImage();
-                if (image != null)
-                {
-                    image.SavePng("c:/winwam5/facetest.png");
-                }
-            }
-            */
 
             if (_frontMaterial != null && value != null)
                 _frontMaterial.AlbedoTexture = value;
@@ -189,9 +179,6 @@ public partial class VcToken : VisualComponentBase
     {
         base.Setup(parameters, dataSetRow, textureFactory);
 
-        // VcToken renders both standalone tokens and the cards inside a deck, so the
-        // parameters may be either TokenParameters or DeckParameters — both derive from
-        // PrintedParameters.
         var p = (PrintedParameters)parameters;
 
         if (p.Height <= 0)
@@ -224,7 +211,6 @@ public partial class VcToken : VisualComponentBase
         if (_frontGridImageKey == SnowTag.Empty)
         {
             _frontMasterAsset = null;
-            _frontMasterSprite = new ImageTexture();
         }
         else
         {
@@ -238,7 +224,6 @@ public partial class VcToken : VisualComponentBase
         if (_backGridImageKey == SnowTag.Empty)
         {
             _backMasterAsset = null;
-            _backMasterSprite = new ImageTexture();
         }
         else
         {
@@ -544,59 +529,81 @@ public partial class VcToken : VisualComponentBase
     {
         if (_frontMasterAsset == null)
         {
-            _frontMasterSprite = new ImageTexture();
-            ApplyGridFaceTexture();
+            ApplyGridFaceTexture(new ImageTexture());
         }
         else
         {
-            ProjectService.Instance.FetchImageAsync(_frontMasterAsset, BuildGridFace);
+            _ = BuildGridFace(_frontMasterAsset);
         }
 
         if (_differentBack)
         {
             if (_backMasterAsset == null)
             {
-                _backMasterSprite = new ImageTexture();
-                ApplyGridBackTexture();
+                ApplyGridBackTexture(new ImageTexture());
             }
             else
             {
-                ProjectService.Instance.FetchImageAsync(_backMasterAsset, BuildGridBack);
+                _ = BuildGridBack(_backMasterAsset);
             }
         }
     }
 
-    private void BuildGridFace(Asset asset)
+    private async Task BuildGridFace(Asset asset)
     {
-        if (!asset.AssetDownloaded)
+        var image = await ProjectService.Instance.FetchImageAsync(asset);
+        if (image == null)
             return;
 
-        _frontMasterSprite = TextureCache.Instance.GetOrCreateAssetTexture(asset);
-
-        ApplyGridFaceTexture();
+        ApplyGridFaceTexture(TextureCache.Instance.GetOrCreateAssetTexture(asset));
     }
 
-    private void ApplyGridFaceTexture()
+    private void ApplyGridFaceTexture(Texture2D texture)
     {
         if (!_differentBack)
             _backTextureGenerated = true;
-        FaceTexture = _frontMasterSprite;
+        FaceTexture = texture;
         MapFrontTexture();
     }
 
-    private void BuildGridBack(Asset asset)
+    private async Task BuildGridBack(Asset asset)
     {
-        if (!asset.AssetDownloaded)
+        var image = await ProjectService.Instance.FetchImageAsync(asset);
+        if (image == null)
             return;
 
-        _backMasterSprite = TextureCache.Instance.GetOrCreateAssetTexture(asset);
-
-        ApplyGridBackTexture();
+        ApplyGridBackTexture(TextureCache.Instance.GetOrCreateAssetTexture(asset));
     }
 
-    private void ApplyGridBackTexture()
+    private void ApplyGridBackTexture(Texture2D texture)
     {
-        BackTexture = _backMasterSprite;
+        BackTexture = texture;
+        MapBackTexture();
+    }
+
+    private void ApplyDerivedSheet(
+        Texture2D front,
+        Texture2D back,
+        int faceHframes,
+        int faceVframes,
+        int faceFrame,
+        int backHframes,
+        int backVframes,
+        int backFrame
+    )
+    {
+        _faceHframes = faceHframes;
+        _faceVframes = faceVframes;
+        _faceFrame = faceFrame;
+        _backHframes = backHframes;
+        _backVframes = backVframes;
+        _backFrame = backFrame;
+        FaceTexture = front;
+        BackTexture = back;
+        _frontTextureGenerated = true;
+        _backTextureGenerated = true;
+        TextureChanged = true;
+        MapFrontTexture();
         MapBackTexture();
     }
 
@@ -650,7 +657,7 @@ public partial class VcToken : VisualComponentBase
 
         Texture2D front = null;
         Texture2D back = null;
-        bool backReady = bt == null; // no back template ⇒ back reuses the front
+        bool backReady = bt == null;
 
         void Apply()
         {
@@ -660,21 +667,16 @@ public partial class VcToken : VisualComponentBase
             if (effectiveBack == null)
                 return;
 
-            _frontMasterSprite = front;
-            _backMasterSprite = effectiveBack;
-            _faceHframes = hframes;
-            _faceVframes = vframes;
-            _faceFrame = faceFrame;
-            _backHframes = hframes;
-            _backVframes = vframes;
-            _backFrame = faceFrame;
-            FaceTexture = front;
-            BackTexture = effectiveBack;
-            _frontTextureGenerated = true;
-            _backTextureGenerated = true;
-            TextureChanged = true;
-            MapFrontTexture();
-            MapBackTexture();
+            ApplyDerivedSheet(
+                front,
+                effectiveBack,
+                hframes,
+                vframes,
+                faceFrame,
+                hframes,
+                vframes,
+                faceFrame
+            );
         }
 
         bool weBuildFront = TextureCache.Instance.RequestDerived(
@@ -833,21 +835,16 @@ public partial class VcToken : VisualComponentBase
         {
             if (front == null || back == null)
                 return;
-            _frontMasterSprite = front;
-            _backMasterSprite = back;
-            _faceHframes = hframes;
-            _faceVframes = vframes;
-            _faceFrame = faceFrame;
-            _backHframes = backH;
-            _backVframes = backV;
-            _backFrame = backFrameIndex;
-            FaceTexture = front;
-            BackTexture = back;
-            _frontTextureGenerated = true;
-            _backTextureGenerated = true;
-            TextureChanged = true;
-            MapFrontTexture();
-            MapBackTexture();
+            ApplyDerivedSheet(
+                front,
+                back,
+                hframes,
+                vframes,
+                faceFrame,
+                backH,
+                backV,
+                backFrameIndex
+            );
         }
 
         bool weBuildFront = TextureCache.Instance.RequestDerived(
@@ -1110,14 +1107,6 @@ public partial class VcToken : VisualComponentBase
             Width = sW,
         };
 
-        /*
-         Square = 0,
-        Circle = 1,
-        HexPoint = 2,
-        HexFlat = 3,
-        RoundedRect = 4
-         */
-
         if (qtf == null)
         {
             qtf = new QuickTextureField
@@ -1187,9 +1176,6 @@ public partial class VcToken : VisualComponentBase
         TextureChanged = true;
 
         MapFrontTexture();
-
-        //var d = t.GetImage();
-        //d.SavePng(@"c:\winwam5\token.png");
     }
 
     private bool _mapFrontTextureRequired;
@@ -1299,8 +1285,6 @@ public partial class VcToken : VisualComponentBase
     private int _backFontSize;
 
     //grid parameters
-    private Texture2D _frontMasterSprite;
-    private Texture2D _backMasterSprite;
     private Asset _frontMasterAsset;
     private Asset _backMasterAsset;
     private SnowTag _frontGridImageKey;
