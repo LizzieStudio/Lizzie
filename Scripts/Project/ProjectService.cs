@@ -296,7 +296,10 @@ public partial class ProjectService : Node
                     var players = set.Payload.Players;
                     if (!players.IsDefaultOrEmpty)
                         foreach (var p in players)
+                        {
                             clock.ObserveTag(p.HandRef);
+                            clock.ObserveTag(p.CursorRef);
+                        }
                     break;
             }
         }
@@ -340,9 +343,9 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Assigns a hand container SnowTag to any seat that lacks one.
+    /// Assigns hand and cursor container SnowTags to any seat that lacks one.
     /// </summary>
-    public void EnsureSeatHands()
+    public void EnsureSeatContainers()
     {
         if (CurrentProject == null)
             return;
@@ -357,6 +360,12 @@ public partial class ProjectService : Node
             if (builder[i].HandRef == SnowTag.Empty)
             {
                 builder[i] = builder[i] with { HandRef = Snowport.Clock.CreateTag() };
+                changed = true;
+            }
+
+            if (builder[i].CursorRef == SnowTag.Empty)
+            {
+                builder[i] = builder[i] with { CursorRef = Snowport.Clock.CreateTag() };
                 changed = true;
             }
         }

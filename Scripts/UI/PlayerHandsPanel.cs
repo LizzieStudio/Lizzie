@@ -24,8 +24,8 @@ public partial class PlayerHandsPanel : Panel
 
         _playerHandsContainer = GetNode<VBoxContainer>("%PlayerHands");
 
-        if (ConnectionStore.Instance != null)
-            ConnectionStore.Instance.SeatsChanged += OnModelChanged;
+        if (PresenceSynchronizer.Instance != null)
+            PresenceSynchronizer.Instance.SeatsChanged += OnModelChanged;
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
 
         Callable.From(ConnectTable).CallDeferred();
@@ -33,8 +33,8 @@ public partial class PlayerHandsPanel : Panel
 
     public override void _ExitTree()
     {
-        if (ConnectionStore.Instance != null)
-            ConnectionStore.Instance.SeatsChanged -= OnModelChanged;
+        if (PresenceSynchronizer.Instance != null)
+            PresenceSynchronizer.Instance.SeatsChanged -= OnModelChanged;
         if (_gameObjects != null && IsInstanceValid(_gameObjects))
             _gameObjects.TableChanged -= OnModelChanged;
         EventBus.Instance.Unsubscribe<ProjectChangedEvent>(OnProjectChanged);

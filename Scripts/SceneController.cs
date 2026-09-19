@@ -34,12 +34,12 @@ public partial class SceneController : Node3D
         _gameObjects.HoveredComponentChange += OnHoveredComponentChange;
         _gameObjects.TextureFactory = _textureFactory;
 
-        CursorSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
+        PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
     }
 
     public override void _ExitTree()
     {
-        CursorSynchronizer.Instance?.ClearContext();
+        PresenceSynchronizer.Instance?.ClearContext();
     }
 
     private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)

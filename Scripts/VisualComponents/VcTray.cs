@@ -165,7 +165,7 @@ public partial class VcTray : VisualComponentGroup
         if (_prototype == null)
             return null;
 
-        if (CursorSynchronizer.Instance is not { } cursors)
+        if (PresenceSynchronizer.Instance is not { } cursors)
             return null;
 
         var id = Snowport.Clock.CreateTag();

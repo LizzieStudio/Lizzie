@@ -37,8 +37,8 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.ConnectionFailed += OnConnectionFailed;
         }
 
-        if (ConnectionStore.Instance != null)
-            ConnectionStore.Instance.SeatsChanged += OnSeatsChanged;
+        if (PresenceSynchronizer.Instance != null)
+            PresenceSynchronizer.Instance.SeatsChanged += OnSeatsChanged;
 
         UpdateUI();
     }
@@ -55,8 +55,8 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.ConnectionFailed -= OnConnectionFailed;
         }
 
-        if (ConnectionStore.Instance != null)
-            ConnectionStore.Instance.SeatsChanged -= OnSeatsChanged;
+        if (PresenceSynchronizer.Instance != null)
+            PresenceSynchronizer.Instance.SeatsChanged -= OnSeatsChanged;
     }
 
     private void BuildUI()
@@ -130,7 +130,7 @@ public partial class MultiplayerDialog : Window
 
         foreach (var player in mm.Players.Values)
         {
-            int seat = ConnectionStore.Instance?.GetSeatBySource(player.Source) ?? -2;
+            int seat = PresenceSynchronizer.Instance?.GetSeatBySource(player.Source) ?? -2;
 
             var label = SeatLabel(seat, settings);
             if (player.IsLocal)

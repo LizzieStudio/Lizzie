@@ -35,8 +35,8 @@ public partial class GameController : Node3D
             ProjectService.Instance.LoadProject(ProjectService.SampleProjectName)
             ?? new Project { Filename = ProjectService.SampleProjectName };
 
-        ProjectService.Instance.EnsureSeatHands();
-        ConnectionStore.Instance?.EnsureLocalSeat();
+        ProjectService.Instance.EnsureSeatContainers();
+        PresenceSynchronizer.Instance?.EnsureLocalSeat();
     }
 
     private void MainSceneOnShowComponentPopup2(object sender, ShowComponentPopupEventArgs e)

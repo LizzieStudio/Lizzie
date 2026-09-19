@@ -93,7 +93,7 @@ public partial class MultiplayerManager : Node
             Source = 0,
         };
 
-        ConnectionStore.Instance?.Clear();
+        PresenceSynchronizer.Instance?.Clear();
 
         GD.Print($"Server started on port {port}. Server ID: {_localPlayerId}");
         EmitSignal("ServerStarted");
@@ -146,10 +146,10 @@ public partial class MultiplayerManager : Node
 
         // Drop any event history accumulated during the session.
         EventSynchronizer.Instance?.Clear();
-        ConnectionStore.Instance?.Clear();
+        PresenceSynchronizer.Instance?.Clear();
 
         // Back to solo.
-        ConnectionStore.Instance?.EnsureLocalSeat();
+        PresenceSynchronizer.Instance?.EnsureLocalSeat();
 
         GD.Print("Disconnected from multiplayer");
     }
@@ -169,7 +169,7 @@ public partial class MultiplayerManager : Node
         GD.Print($"Peer disconnected: {id}");
 
         var playerId = (int)id;
-        ConnectionStore.Instance?.ReleaseSeat(playerId);
+        PresenceSynchronizer.Instance?.ReleaseSeatForPeer(playerId);
         _players.Remove(playerId);
 
         EmitSignal("PlayerDisconnected", playerId);
@@ -226,6 +226,9 @@ public partial class MultiplayerManager : Node
         foreach (var kv in _players)
             if (kv.Key != playerId)
                 RpcId(playerId, nameof(ReceivePlayerPresence), kv.Key, (int)kv.Value.Source);
+
+        // Give the newcomer the current seat occupancy.
+        PresenceSynchronizer.Instance?.SendSeatSnapshotTo(playerId);
 
         // Announce the newcomer to everyone.
         Rpc(nameof(ReceivePlayerPresence), playerId, (int)source);

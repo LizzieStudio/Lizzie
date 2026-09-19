@@ -34,8 +34,8 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         Confirmed += OnConfirmed;
         Canceled += OnCanceled;
 
-        if (ConnectionStore.Instance != null)
-            ConnectionStore.Instance.SeatsChanged += OnSeatsChanged;
+        if (PresenceSynchronizer.Instance != null)
+            PresenceSynchronizer.Instance.SeatsChanged += OnSeatsChanged;
         EventBus.Instance?.Subscribe<RequestPlayerPositionEvent>(OnReprompt);
 
         PopulateList();
@@ -43,8 +43,8 @@ public partial class PlayerPositionDialog : ConfirmationDialog
 
     public override void _ExitTree()
     {
-        if (ConnectionStore.Instance != null)
-            ConnectionStore.Instance.SeatsChanged -= OnSeatsChanged;
+        if (PresenceSynchronizer.Instance != null)
+            PresenceSynchronizer.Instance.SeatsChanged -= OnSeatsChanged;
         EventBus.Instance?.Unsubscribe<RequestPlayerPositionEvent>(OnReprompt);
     }
 
@@ -72,7 +72,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         for (int i = 0; i < settings.Players.Length; i++)
         {
             var player = settings.Players[i];
-            bool available = ConnectionStore.Instance?.IsAvailable(i) ?? true;
+            bool available = PresenceSynchronizer.Instance?.IsAvailable(i) ?? true;
 
             var label = $"Player {i + 1}: {player.Name}";
             if (!available)
@@ -118,7 +118,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         int listIdx = selected[0];
         int seatIdx = _seatIndexMap[listIdx];
 
-        ConnectionStore.Instance?.ClaimSeat(seatIdx);
+        PresenceSynchronizer.Instance?.RequestSeat(seatIdx);
         // The dialog will be freed once the claim result comes back (or immediately for local).
         QueueFree();
     }

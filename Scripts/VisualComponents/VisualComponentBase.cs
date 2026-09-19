@@ -555,7 +555,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>True while this component is being held by the local player's cursor.</summary>
     public bool IsHeldByLocal =>
         IsDragging
-        && CursorSynchronizer.Instance is { } cursors
+        && PresenceSynchronizer.Instance is { } cursors
         && ContainerRef == cursors.LocalCursorRef;
 
     private ComponentEffect BuildRotation(float degreesAboutY)

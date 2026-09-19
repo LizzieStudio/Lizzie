@@ -784,9 +784,9 @@ public partial class GameObjects : Node
         Func<VisualComponentBase, Vector3> rotation = null
     )
     {
-        if (CursorSynchronizer.Instance == null)
+        if (PresenceSynchronizer.Instance == null)
             return null;
-        var cursorContainer = CursorSynchronizer.Instance.LocalCursorRef;
+        var cursorContainer = PresenceSynchronizer.Instance.LocalCursorRef;
 
         var effects = new List<Effect>();
         foreach (var r in componentRefs)
@@ -822,9 +822,9 @@ public partial class GameObjects : Node
 
     private void BeginDrag(IEnumerable<VisualComponentBase> components, Vector3 cursor)
     {
-        if (CursorSynchronizer.Instance == null)
+        if (PresenceSynchronizer.Instance == null)
             return;
-        var cursorContainer = CursorSynchronizer.Instance.LocalCursorRef;
+        var cursorContainer = PresenceSynchronizer.Instance.LocalCursorRef;
 
         var dragged = components
             .Where(o => o != null)
@@ -1197,7 +1197,7 @@ public partial class GameObjects : Node
         _lastWrite.Clear();
         _clearBarrier = SnowportId.Empty;
         EventSynchronizer.Instance?.Clear();
-        ConnectionStore.Instance?.Clear();
+        PresenceSynchronizer.Instance?.Clear();
         GameStatesStore.Instance?.ResetForJoin();
     }
 
@@ -1627,23 +1627,23 @@ public partial class GameObjects : Node
     private void ProcessActiveDrags()
     {
         var dragHeight = GetDragHeight();
-        var cursors = CursorSynchronizer.Instance;
+        var cursors = PresenceSynchronizer.Instance;
         if (cursors == null)
             return;
 
-        var localSource = Snowport.Clock.source;
+        var localCursorRef = cursors.LocalCursorRef;
 
         foreach (var n in ComponentNodes)
         {
             if (n is not VisualComponentBase { IsDragging: true } c)
                 continue;
 
-            var source = c.ContainerRef.source;
+            bool isLocal = localCursorRef != SnowTag.Empty && c.ContainerRef == localCursorRef;
 
-            if (source == localSource && _localDragOverHand)
+            if (isLocal && _localDragOverHand)
                 continue;
 
-            if (!cursors.TryGetCursor(source, out var cursor))
+            if (!cursors.TryGetCursorByContainer(c.ContainerRef, out var cursor))
                 continue;
 
             c.Position = new Vector3(

@@ -8,7 +8,6 @@ using Godot;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
 [JsonDerivedType(typeof(ComponentEffect), "c")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "p")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<Connection>), "cn")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
