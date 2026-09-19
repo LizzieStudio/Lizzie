@@ -228,7 +228,7 @@ public partial class VcToken : VisualComponentBase
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Images.TryGetValue(
+            ProjectService.Instance.CurrentProject.Assets.TryGetValue(
                 _frontGridImageKey,
                 out _frontMasterAsset
             );
@@ -242,7 +242,7 @@ public partial class VcToken : VisualComponentBase
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Images.TryGetValue(
+            ProjectService.Instance.CurrentProject.Assets.TryGetValue(
                 _backGridImageKey,
                 out _backMasterAsset
             );

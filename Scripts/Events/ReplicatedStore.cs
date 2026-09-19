@@ -33,8 +33,6 @@ public abstract partial class ReplicatedStore<TEntity> : Node
             )
                 continue;
 
-            entity.Id = fx.Id;
-            entity.LastUpdateId = e.Id;
             store[fx.Id] = entity;
             changed.Add(fx.Id);
         }

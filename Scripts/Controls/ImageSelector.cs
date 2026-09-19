@@ -48,7 +48,7 @@ public partial class ImageSelector : Control
             return;
         }
 
-        foreach (var i in _project.Images)
+        foreach (var i in _project.Assets)
         {
             if (i.Value.Deleted)
                 continue;

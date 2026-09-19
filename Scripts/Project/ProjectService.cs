@@ -231,7 +231,7 @@ public partial class ProjectService : Node
         effects.AddRange(UpsertEffects(project.Templates));
         effects.AddRange(UpsertEffects(project.Datasets));
         effects.AddRange(UpsertEffects(project.Prototypes));
-        effects.AddRange(UpsertEffects(project.Images));
+        effects.AddRange(UpsertEffects(project.Assets));
         effects.AddRange(UpsertEffects(project.GameStates));
 
         if (project.ActiveGameState != SnowTag.Empty)
@@ -303,33 +303,47 @@ public partial class ProjectService : Node
         }
     }
 
-    public void UpdateDataSet(DataSet dataset)
+    /// <summary>
+    /// Creates or updates any replicated definition.
+    /// </summary>
+    public void Upsert<T>(T entity)
+        where T : class, IReplicated
     {
-        if (CurrentProject == null || dataset == null)
+        if (CurrentProject == null || entity == null)
             return;
-        if (dataset.Id == SnowTag.Empty)
-            dataset.Id = Snowport.Clock.CreateTag();
+
+        if (entity.Id == SnowTag.Empty)
+            entity.Id = Snowport.Clock.CreateTag();
+
+        var eventId = Snowport.Clock.Create();
+        entity.LastUpdateId = eventId;
+
         EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new UpdateReplicatedEffect<DataSet> { Id = dataset.Id, Payload = dataset }
-            )
+            new TableEvent
+            {
+                Id = eventId,
+                Action = null,
+                Effects = new Effect[]
+                {
+                    new UpdateReplicatedEffect<T> { Id = entity.Id, Payload = entity },
+                },
+            }
         );
     }
 
-    public void UpdateTemplate(Template template)
-    {
-        if (CurrentProject == null || template == null)
-            return;
-        if (template.Id == SnowTag.Empty)
-            template.Id = Snowport.Clock.CreateTag();
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new UpdateReplicatedEffect<Template> { Id = template.Id, Payload = template }
-            )
+    /// <summary>
+    /// TODO: obsolete once these definitions become immutable records (use <c>with</c> instead).
+    /// </summary>
+    private static T CloneReplicated<T>(T source)
+        where T : class, IReplicated =>
+        JsonSerializer.Deserialize<T>(
+            JsonSerializer.Serialize(source, LizzieJson.EventOptions),
+            LizzieJson.EventOptions
         );
-    }
+
+    public void UpdateDataSet(DataSet dataset) => Upsert(dataset);
+
+    public void UpdateTemplate(Template template) => Upsert(template);
 
     public void UpdateGameSettings(ProjectGameSettings settings)
     {
@@ -374,17 +388,7 @@ public partial class ProjectService : Node
         UpdateGameSettings(settings with { Players = builder.ToImmutable() });
     }
 
-    public void UpdatePrototype(Prototype prototype)
-    {
-        if (CurrentProject == null || prototype == null)
-            return;
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new UpdateReplicatedEffect<Prototype> { Id = prototype.Id, Payload = prototype }
-            )
-        );
-    }
+    public void UpdatePrototype(Prototype prototype) => Upsert(prototype);
 
     public void DeletePrototype(SnowTag prototypeRef)
     {
@@ -392,23 +396,13 @@ public partial class ProjectService : Node
             return;
         if (!CurrentProject.Prototypes.TryGetValue(prototypeRef, out var prototype))
             return;
-        prototype.Deleted = true;
-        UpdatePrototype(prototype);
+
+        var deleted = CloneReplicated(prototype);
+        deleted.Deleted = true;
+        Upsert(deleted);
     }
 
-    public void UpdateImage(Asset image)
-    {
-        if (CurrentProject == null || image == null)
-            return;
-        if (image.Id == SnowTag.Empty)
-            image.Id = Snowport.Clock.CreateTag();
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new UpdateReplicatedEffect<Asset> { Id = image.Id, Payload = image }
-            )
-        );
-    }
+    public void UpdateImage(Asset image) => Upsert(image);
 
     /// <summary>
     /// Captures the current table as a new <see cref="GameState"/>.
@@ -428,12 +422,19 @@ public partial class ProjectService : Node
             Upserts = BuildDelta(parent),
         };
 
+        var eventId = Snowport.Clock.Create();
+        state.LastUpdateId = eventId;
         EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state },
-                new ActiveGameStateEffect { Target = state.Id }
-            )
+            new TableEvent
+            {
+                Id = eventId,
+                Action = null,
+                Effects = new Effect[]
+                {
+                    new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state },
+                    new ActiveGameStateEffect { Target = state.Id },
+                },
+            }
         );
         return state;
     }
@@ -448,14 +449,9 @@ public partial class ProjectService : Node
         if (!CurrentProject.GameStates.TryGetValue(stateRef, out var state) || state.Deleted)
             return;
 
-        state.Upserts = BuildDelta(state.Parent);
-
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
-            )
-        );
+        var updated = CloneReplicated(state);
+        updated.Upserts = BuildDelta(updated.Parent);
+        Upsert(updated);
     }
 
     /// <summary>
@@ -507,13 +503,9 @@ public partial class ProjectService : Node
             return;
         }
 
-        state.Deleted = true;
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state }
-            )
-        );
+        var deleted = CloneReplicated(state);
+        deleted.Deleted = true;
+        Upsert(deleted);
     }
 
     /// <summary>

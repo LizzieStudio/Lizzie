@@ -37,7 +37,7 @@ public partial class AssetStore : ReplicatedStore<Asset>
     }
 
     protected override IDictionary<SnowTag, Asset> Store =>
-        ProjectService.Instance?.CurrentProject?.Images;
+        ProjectService.Instance?.CurrentProject?.Assets;
 
     protected override void NotifyChanged(IReadOnlyList<SnowTag> ids) =>
         EmitSignal(SignalName.AssetsChanged, SnowTag.ToValues(ids));

@@ -104,7 +104,7 @@ public partial class TextureFactory : SubViewport
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
-                    var asset = project.Images.Values.FirstOrDefault(a => a.Name == imageName);
+                    var asset = project.Assets.Values.FirstOrDefault(a => a.Name == imageName);
                     if (asset != null && !asset.AssetDownloaded)
                     {
                         pendingAssets.Add(asset);
@@ -498,7 +498,7 @@ public partial class TextureFactory : SubViewport
     private bool IsIconUserDefined(string name)
     {
         if (
-            ProjectService.Instance.CurrentProject.Images.Any(x =>
+            ProjectService.Instance.CurrentProject.Assets.Any(x =>
                 string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)
             )
         )
@@ -514,7 +514,7 @@ public partial class TextureFactory : SubViewport
         if (IsIconUserDefined(name))
         {
             var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a =>
+            var asset = project?.Assets.Values.FirstOrDefault(a =>
                 string.Equals(a.Name, name, StringComparison.CurrentCultureIgnoreCase)
             );
 
@@ -530,7 +530,7 @@ public partial class TextureFactory : SubViewport
         if (IsIconUserDefined(uname))
         {
             var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a =>
+            var asset = project?.Assets.Values.FirstOrDefault(a =>
                 string.Equals(a.Name, uname, StringComparison.CurrentCultureIgnoreCase)
             );
 
@@ -1004,7 +1004,7 @@ public partial class TextureFactory : SubViewport
         {
             string imageName = obj.Text.Substring(2);
             var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a => a.Name == imageName);
+            var asset = project?.Assets.Values.FirstOrDefault(a => a.Name == imageName);
             if (asset?.Image != null)
             {
                 texture = ImageTexture.CreateFromImage(asset.Image);

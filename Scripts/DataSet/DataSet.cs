@@ -69,11 +69,6 @@ public class DataSet : IReplicated
         return clonedDataSet;
     }
 
-    public string SheetKey()
-    {
-        return $"{Id.Value:X8}{LastUpdateId.Value:X16}";
-    }
-
     public static DataSet TestDataSet()
     {
         var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = "Test Data" };

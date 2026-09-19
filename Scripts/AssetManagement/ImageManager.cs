@@ -124,7 +124,7 @@ public partial class ImageManager : Window
 
     private void InitializeTiles()
     {
-        foreach (var i in ProjectService.Instance.CurrentProject.Images)
+        foreach (var i in ProjectService.Instance.CurrentProject.Assets)
         {
             if (i.Value.Deleted)
                 continue;

@@ -61,9 +61,4 @@ public class Template : IReplicated
     }
 
     public SnowTag DataSet { get; set; }
-
-    public string SheetKey()
-    {
-        return $"{Id.Value:X8}{LastUpdateId.Value:X16}";
-    }
 }

@@ -12,7 +12,7 @@ public class Project
     public Dictionary<SnowTag, DataSet> Datasets { get; set; } = new();
     public Dictionary<SnowTag, Prototype> Prototypes { get; set; } = new();
 
-    public Dictionary<SnowTag, Asset> Images { get; set; } = new();
+    public Dictionary<SnowTag, Asset> Assets { get; set; } = new();
 
     /// <summary>
     /// Named scene snapshots the user can save and restore.
@@ -71,7 +71,7 @@ public class Project
     {
         if (imageRef == SnowTag.Empty)
             return null;
-        if (Images.TryGetValue(imageRef, out var asset) && !asset.Deleted)
+        if (Assets.TryGetValue(imageRef, out var asset) && !asset.Deleted)
             return asset;
         return null;
     }
