@@ -192,9 +192,9 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private void SetCellOn(int row, int col)
     {
-        if (!_gridState[row,col])
+        if (!_gridState[row, col])
         {
-            _gridState[row,col] = true;
+            _gridState[row, col] = true;
             UpdateCellVisual(row, col);
             UpdatePreview();
         }
@@ -202,9 +202,9 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private void SetCellOff(int row, int col)
     {
-        if (_gridState[row,col])
+        if (_gridState[row, col])
         {
-            _gridState[row,col] = false;
+            _gridState[row, col] = false;
             UpdateCellVisual(row, col);
             UpdatePreview();
         }
@@ -217,7 +217,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
         if (styleBox != null)
         {
-            styleBox.BgColor = _gridState[row,col] ? _onColor : _offColor;
+            styleBox.BgColor = _gridState[row, col] ? _onColor : _offColor;
         }
     }
 
@@ -235,7 +235,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
         // Hover effect for off cells
         var styleBox = panel.GetThemeStylebox("panel") as StyleBoxFlat;
-        if (styleBox != null && !_gridState[row,col])
+        if (styleBox != null && !_gridState[row, col])
         {
             //styleBox.BorderColor = new Color(0.8f, 0.8f, 0.8f);
             styleBox.SetBorderWidthAll(2);
@@ -245,7 +245,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
     private void OnCellMouseExited(Panel panel, int row, int col)
     {
         var styleBox = panel.GetThemeStylebox("panel") as StyleBoxFlat;
-        if (styleBox != null && !_gridState[row,col])
+        if (styleBox != null && !_gridState[row, col])
         {
             styleBox.BorderColor = new Color(0.4f, 0.4f, 0.4f);
             styleBox.SetBorderWidthAll(1);
@@ -254,10 +254,14 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private ImmutableArray<ImmutableArray<bool>> GetImmutableGridState()
     {
-        return Enumerable.Range(0, _gridSize)
-            .Select(row => Enumerable.Range(0, _gridSize)
-                .Select(col => _gridState[row, col])
-                .ToImmutableArray())
+        return Enumerable
+            .Range(0, _gridSize)
+            .Select(row =>
+                Enumerable
+                    .Range(0, _gridSize)
+                    .Select(col => _gridState[row, col])
+                    .ToImmutableArray()
+            )
             .ToImmutableArray();
     }
 
@@ -276,7 +280,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         {
             for (int col = 0; col < _gridSize; col++)
             {
-                _gridState[row,col] = state[row][col];
+                _gridState[row, col] = state[row][col];
                 UpdateCellVisual(row, col);
             }
         }

@@ -238,8 +238,9 @@ public partial class Utility : Node
 
     private static string DieScene(ComponentParameters parameters)
     {
-        var sides =
-            parameters is DieParameters die ? die.Sides : ImmutableArray<QuickTextureField>.Empty;
+        var sides = parameters is DieParameters die
+            ? die.Sides
+            : ImmutableArray<QuickTextureField>.Empty;
 
         if (sides.Length == 0)
             return $"res://Scenes/VisualComponents/Dice/VcD6s.tscn";

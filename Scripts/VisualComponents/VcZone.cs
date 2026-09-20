@@ -12,7 +12,6 @@ using Godot;
 /// </summary>
 public partial class VcZone : VisualComponentBase
 {
-
     private float _width = 2f;
     private float _depth = 2f;
 

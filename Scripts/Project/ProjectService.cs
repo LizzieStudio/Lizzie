@@ -548,7 +548,10 @@ public partial class ProjectService : Node
             return;
 
         // TODO: This needs to be removed and GameStates need to be updated on each event
-        CurrentProject.GameStates[active] = state with { Upserts = BuildDelta(state.Parent) };
+        CurrentProject.GameStates[active] = state with
+        {
+            Upserts = BuildDelta(state.Parent),
+        };
     }
 
     /// <summary>

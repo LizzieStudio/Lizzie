@@ -922,7 +922,9 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
-    private static ImmutableArray<QuickCardData> ExpandQuickCardList(ImmutableArray<QuickCardData> source)
+    private static ImmutableArray<QuickCardData> ExpandQuickCardList(
+        ImmutableArray<QuickCardData> source
+    )
     {
         var cards = ImmutableArray.CreateBuilder<QuickCardData>();
         foreach (var q in source)

@@ -24,5 +24,9 @@ public record DataRow : IReplicated
         ImmutableDictionary<SnowTag, string>.Empty;
 
     public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-        this with { Id = id, LastUpdateId = lastUpdateId };
+        this with
+        {
+            Id = id,
+            LastUpdateId = lastUpdateId,
+        };
 }

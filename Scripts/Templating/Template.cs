@@ -62,5 +62,9 @@ public record Template : IReplicated
     public SnowTag DataSet { get; init; }
 
     public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-        this with { Id = id, LastUpdateId = lastUpdateId };
+        this with
+        {
+            Id = id,
+            LastUpdateId = lastUpdateId,
+        };
 }

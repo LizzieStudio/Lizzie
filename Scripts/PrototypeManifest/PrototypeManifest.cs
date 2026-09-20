@@ -151,7 +151,9 @@ public partial class PrototypeManifest : Window
         if (_selectedPrototype != null)
         {
             OnClose();
-            EventBus.Instance.Publish(new SpawnPrototypeEvent { PrototypeRef = _selectedPrototype.Id });
+            EventBus.Instance.Publish(
+                new SpawnPrototypeEvent { PrototypeRef = _selectedPrototype.Id }
+            );
         }
     }
 
@@ -164,7 +166,7 @@ public partial class PrototypeManifest : Window
         {
             Title = "Delete Prototype",
             DialogText = $"Delete \"{_selectedPrototype.Name}\"? This cannot be undone.",
-            OkButtonText = "Delete"
+            OkButtonText = "Delete",
         };
 
         dialog.Confirmed += () =>

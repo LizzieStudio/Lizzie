@@ -30,5 +30,9 @@ public record GameState : IReplicated
         ImmutableArray<ComponentEffect>.Empty;
 
     public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-        this with { Id = id, LastUpdateId = lastUpdateId };
+        this with
+        {
+            Id = id,
+            LastUpdateId = lastUpdateId,
+        };
 }

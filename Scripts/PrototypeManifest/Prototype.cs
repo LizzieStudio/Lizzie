@@ -22,5 +22,9 @@ public record Prototype : IReplicated
     public VisualComponentBase.VisualComponentType Type => Parameters?.ComponentType ?? default;
 
     public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-        this with { Id = id, LastUpdateId = lastUpdateId };
+        this with
+        {
+            Id = id,
+            LastUpdateId = lastUpdateId,
+        };
 }

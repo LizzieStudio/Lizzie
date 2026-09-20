@@ -20,7 +20,11 @@ public record DataSet : IReplicated
     public ImmutableArray<Column> Columns { get; init; } = ImmutableArray<Column>.Empty;
 
     public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-        this with { Id = id, LastUpdateId = lastUpdateId };
+        this with
+        {
+            Id = id,
+            LastUpdateId = lastUpdateId,
+        };
 }
 
 public record Column

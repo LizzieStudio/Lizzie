@@ -41,6 +41,10 @@ namespace Lizzie.AssetManagement
         public string CloudPath { get; init; }
 
         public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-            this with { Id = id, LastUpdateId = lastUpdateId };
+            this with
+            {
+                Id = id,
+                LastUpdateId = lastUpdateId,
+            };
     }
 }
