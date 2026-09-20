@@ -346,18 +346,21 @@ public partial class VcDeck : VisualComponentGroup
         }
     }
 
-    private IEnumerable<string> EnumerateCardRows(PrintedParameters parameters, Project project)
+    private IEnumerable<(int Index, SnowTag Id)> EnumerateCardRows(
+        PrintedParameters parameters,
+        Project project
+    )
     {
         switch (parameters.Mode)
         {
             case VcToken.TokenBuildMode.QuickDeck:
             {
-                int cardNum = 1;
+                int cardNum = 0;
                 foreach (var q in parameters.QuickCardData ?? new())
                 {
                     foreach (var _ in Utility.ParseValueRanges(q.Caption))
                     {
-                        yield return cardNum.ToString();
+                        yield return (cardNum, SnowTag.Empty);
                         cardNum++;
                     }
                 }
@@ -366,22 +369,25 @@ public partial class VcDeck : VisualComponentGroup
 
             case VcToken.TokenBuildMode.Template:
             {
-                var dataset = project.GetDataset(parameters.Dataset);
-                foreach (var kv in dataset.Rows)
-                    yield return kv.Key;
+                foreach (var row in project.GetRows(parameters.Dataset))
+                    yield return (-1, row.Id);
                 break;
             }
 
             case VcToken.TokenBuildMode.Grid:
             {
                 for (int i = 0; i < parameters.GridCount; i++)
-                    yield return i.ToString();
+                    yield return (i, SnowTag.Empty);
                 break;
             }
         }
     }
 
-    private ComponentEffect CreateCardEffect(string dataSetRow, SnowTag containerRef, int index)
+    private ComponentEffect CreateCardEffect(
+        (int Index, SnowTag Id) row,
+        SnowTag containerRef,
+        int zIndex
+    )
     {
         var id = Snowport.Clock.CreateTag();
         return new ComponentEffect
@@ -390,27 +396,24 @@ public partial class VcDeck : VisualComponentGroup
             PrototypeRef = PrototypeRef,
             State = new VcSyncDto
             {
-                DataSetRow = dataSetRow,
+                DataSetRowIndex = row.Index,
+                DataSetRowId = row.Id,
                 Location = ComponentLocation.Container,
                 ContainerRef = containerRef,
                 // First enumerated card are at the top.
-                ZOrder = new ZOrder(ZTarget.Top, -index, SnowportId.Empty),
+                ZOrder = new ZOrder(ZTarget.Top, -zIndex, SnowportId.Empty),
             },
         };
     }
 
-    public override bool Setup(
-        ComponentParameters parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
         return BuildInternal((PrintedParameters)parameters, textureFactory);
     }
 
     private bool BuildInternal(PrintedParameters parameters, TextureFactory textureFactory)
     {
-        base.Setup(parameters, DataSetRow, textureFactory);
+        base.Setup(parameters, textureFactory);
 
         _frontSprite = GetNode<Sprite3D>("%FrontSprite");
         _backSprite = GetNode<Sprite3D>("%BackSprite");

@@ -116,15 +116,9 @@ public partial class VcDie : VisualComponentBase
 
     private TokenBuildMode _mode;
 
-    public override bool Setup(
-        ComponentParameters parameters,
-        string datasetRow,
-        TextureFactory textureFactory
-    )
+    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
-        DataSetRow = datasetRow;
-
-        base.Setup(parameters, datasetRow, textureFactory);
+        base.Setup(parameters, textureFactory);
         var p = (DieParameters)parameters;
 
         _textureFactory = textureFactory;
@@ -218,9 +212,11 @@ public partial class VcDie : VisualComponentBase
 
     private void BuildTemplate()
     {
+        ProjectService.Instance.CurrentProject.DataRows.TryGetValue(DataSetRowId, out var row);
+
         var tc = new TextureContext
         {
-            CurrentRowName = DataSetRow,
+            CurrentRow = row,
             Dpi = 100,
             ParentSize = new Vector2(512, 512),
         };

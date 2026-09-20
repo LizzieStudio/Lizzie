@@ -171,13 +171,9 @@ public partial class VcToken : VisualComponentBase
 
     private bool _buildRequired;
 
-    public override bool Setup(
-        ComponentParameters parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
-        base.Setup(parameters, dataSetRow, textureFactory);
+        base.Setup(parameters, textureFactory);
 
         var p = (PrintedParameters)parameters;
 
@@ -243,13 +239,9 @@ public partial class VcToken : VisualComponentBase
         _frontTemplateRef = p.FrontTemplate;
         _backTemplateRef = p.BackTemplate;
         _datasetRef = p.Dataset;
-        if (string.IsNullOrWhiteSpace(DataSetRow))
-            DataSetRow = p.CardReference;
 
         _quickCardList = p.QuickCardData ?? new();
 
-        // Face-frame indices are render-time state (never persisted); default them and, in
-        // grid mode, derive them from the grid dimensions and the current row index.
         _faceHframes = 1;
         _faceVframes = 1;
         _faceFrame = 0;
@@ -261,8 +253,7 @@ public partial class VcToken : VisualComponentBase
         {
             int cols = Math.Max(_gridCols, 1);
             int rows = Math.Max(_gridRows, 1);
-            int.TryParse(DataSetRow, out var idx);
-            idx = Math.Max(idx, 0);
+            int idx = Math.Max(DataSetRowIndex, 0);
             _faceHframes = cols;
             _faceVframes = rows;
             _faceFrame = idx;
@@ -632,12 +623,12 @@ public partial class VcToken : VisualComponentBase
         if (ft is null || ds is null)
             return;
 
-        var rows = ds.Rows.Select(r => r.Key).ToList();
+        var rows = ProjectService.Instance.GetRows(_datasetRef);
         int n = rows.Count;
         if (n == 0)
             return;
 
-        int faceFrame = rows.IndexOf(DataSetRow);
+        int faceFrame = rows.FindIndex(r => r.Id == DataSetRowId);
         if (faceFrame < 0)
             return;
 
@@ -652,8 +643,9 @@ public partial class VcToken : VisualComponentBase
         int hframes = (int)Math.Ceiling(Math.Sqrt(n));
         int vframes = (int)Math.Ceiling((double)n / hframes);
 
-        string frontKey = $"tpl:{ft.SheetKey()}:{ds.SheetKey()}";
-        string backKey = bt != null ? $"tpl:{bt.SheetKey()}:{ds.SheetKey()}" : null;
+        string rowsKey = rows.SheetKey();
+        string frontKey = $"tpl:{ft.SheetKey()}:{ds.SheetKey()}:{rowsKey}";
+        string backKey = bt != null ? $"tpl:{bt.SheetKey()}:{ds.SheetKey()}:{rowsKey}" : null;
 
         Texture2D front = null;
         Texture2D back = null;
@@ -735,7 +727,7 @@ public partial class VcToken : VisualComponentBase
         TextureFactory factory,
         Template template,
         DataSet dataset,
-        List<string> rows,
+        List<DataRow> rows,
         int cellW,
         int cellH,
         int hframes,
@@ -752,7 +744,7 @@ public partial class VcToken : VisualComponentBase
         };
         foreach (var row in rows)
         {
-            ctx.CurrentRowName = row;
+            ctx.CurrentRow = row;
             defs.Add(TemplateEngine.GenerateTextureDefinition(template, ctx));
         }
         new SpriteSheetBuilder(
@@ -770,8 +762,8 @@ public partial class VcToken : VisualComponentBase
 
     private void BuildQuickDeck(TextureFactory textureFactory)
     {
-        int.TryParse(DataSetRow, out var r);
-        if (r == 0)
+        int faceFrame = DataSetRowIndex;
+        if (faceFrame < 0)
             return;
 
         var cards = ExpandQuickCardList(_quickCardList);
@@ -785,7 +777,6 @@ public partial class VcToken : VisualComponentBase
         ComputeCellSize(_height, _width, out var cellW, out var cellH);
 
         bool singleBack = AllBacksIdentical(cards);
-        int faceFrame = r - 1;
         int backFrameIndex = singleBack ? 0 : faceFrame;
         int backH = singleBack ? 1 : hframes;
         int backV = singleBack ? 1 : vframes;
@@ -1320,12 +1311,6 @@ public partial class VcToken : VisualComponentBase
     }
 }
 
-public class TokenSize
-{
-    public float Height { get; set; }
-    public float Width { get; set; }
-}
-
 public abstract class PrintedParameters : ComponentParameters
 {
     public float Height { get; set; }
@@ -1361,7 +1346,6 @@ public abstract class PrintedParameters : ComponentParameters
     public SnowTag FrontTemplate { get; set; }
     public SnowTag BackTemplate { get; set; }
     public SnowTag Dataset { get; set; }
-    public string CardReference { get; set; } = "";
 }
 
 public sealed class TokenParameters : PrintedParameters

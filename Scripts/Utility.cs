@@ -158,7 +158,8 @@ public partial class Utility : Node
     public static string ComponentTypeToScenePath(
         VisualComponentBase.VisualComponentType componentType,
         ComponentParameters parameters,
-        string dataSetRow = "",
+        int rowIndex = -1,
+        SnowTag? rowId = null,
         bool previewMode = false
     )
     {
@@ -175,7 +176,8 @@ public partial class Utility : Node
 
             case VisualComponentBase.VisualComponentType.Deck:
             {
-                if (string.IsNullOrEmpty(dataSetRow) && !previewMode)
+                bool isCard = rowIndex >= 0 || (rowId != null && rowId != SnowTag.Empty);
+                if (!isCard && !previewMode)
                     return "res://Scenes/VisualComponents/VcDeck.tscn";
                 return TokenScene(parameters);
             }

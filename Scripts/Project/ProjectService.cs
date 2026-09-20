@@ -230,6 +230,7 @@ public partial class ProjectService : Node
 
         effects.AddRange(UpsertEffects(project.Templates));
         effects.AddRange(UpsertEffects(project.Datasets));
+        effects.AddRange(UpsertEffects(project.DataRows));
         effects.AddRange(UpsertEffects(project.Prototypes));
         effects.AddRange(UpsertEffects(project.Assets));
         effects.AddRange(UpsertEffects(project.GameStates));
@@ -342,6 +343,24 @@ public partial class ProjectService : Node
         );
 
     public void UpdateDataSet(DataSet dataset) => Upsert(dataset);
+
+    public void UpdateDataRow(DataRow row) => Upsert(row);
+
+    public void DeleteDataRow(SnowTag rowRef)
+    {
+        if (CurrentProject == null)
+            return;
+        if (!CurrentProject.DataRows.TryGetValue(rowRef, out var row))
+            return;
+
+        var deleted = CloneReplicated(row);
+        deleted.Deleted = true;
+        Upsert(deleted);
+    }
+
+    /// <summary>The non-deleted rows of a dataset in order.</summary>
+    public List<DataRow> GetRows(SnowTag datasetRef) =>
+        CurrentProject?.GetRows(datasetRef) ?? new List<DataRow>();
 
     public void UpdateTemplate(Template template) => Upsert(template);
 
@@ -535,7 +554,8 @@ public partial class ProjectService : Node
                     {
                         Position = s.Position,
                         Rotation = s.Rotation,
-                        DataSetRow = s.DataSetRow,
+                        DataSetRowIndex = s.DataSetRowIndex,
+                        DataSetRowId = s.DataSetRowId,
                         Location = s.Location,
                         ContainerRef = s.ContainerRef,
                         ZOrder = s.ZOrder,
@@ -654,7 +674,8 @@ public partial class ProjectService : Node
             && a.Rotation == b.Rotation
             && a.Location == b.Location
             && a.ContainerRef == b.ContainerRef
-            && a.DataSetRow == b.DataSetRow
+            && a.DataSetRowIndex == b.DataSetRowIndex
+            && a.DataSetRowId == b.DataSetRowId
             && a.ZOrder.Target == b.ZOrder.Target
             && a.ZOrder.Suborder == b.ZOrder.Suborder
             && a.ZOrder.LastEvent == b.ZOrder.LastEvent;
@@ -773,7 +794,6 @@ public partial class ProjectService : Node
 
     public VisualComponentBase SpawnDisconnectedVisualComponent(
         Prototype prototype,
-        string row,
         TextureFactory textureFactory
     )
     {
@@ -800,7 +820,7 @@ public partial class ProjectService : Node
             prototype.Parameters.ComponentName = "unbound";
         }
 
-        if (component.Setup(prototype.Id, row, textureFactory))
+        if (component.Setup(prototype.Id, textureFactory))
         {
             return component;
         }

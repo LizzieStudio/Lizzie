@@ -41,15 +41,11 @@ public partial class VcTray : VisualComponentGroup
 
     private TextureFactory _textureFactory;
 
-    public override bool Setup(
-        ComponentParameters parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
         _textureFactory = textureFactory;
 
-        base.Setup(parameters, dataSetRow, textureFactory);
+        base.Setup(parameters, textureFactory);
         var p = (TrayParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
@@ -138,7 +134,6 @@ public partial class VcTray : VisualComponentGroup
 
         var c = ProjectService.Instance.SpawnDisconnectedVisualComponent(
             _prototype,
-            string.Empty,
             textureFactory
         );
         UpdateChildScale(c);

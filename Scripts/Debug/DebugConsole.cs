@@ -229,6 +229,7 @@ public partial class DebugConsole : Node
             UpdateSettingsEffect => "Settings",
             UpdateReplicatedEffect<Template> => "Template",
             UpdateReplicatedEffect<DataSet> => "DataSet",
+            UpdateReplicatedEffect<DataRow> => "DataRow",
             UpdateReplicatedEffect<Prototype> => "Prototype",
             UpdateReplicatedEffect<GameState> => "GameState",
             TableClearEffect => "Clear",

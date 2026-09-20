@@ -14,6 +14,20 @@ public static class UndoLog
         return false;
     }
 
+    /// <summary>
+    /// True when an event is something the user can undo:
+    /// * component change
+    /// * table clear
+    /// * datarow upsert
+    /// </summary>
+    public static bool IsUndoableEvent(TableEvent e)
+    {
+        foreach (var fx in e.Effects)
+            if (fx is ComponentEffect or TableClearEffect or UpdateReplicatedEffect<DataRow>)
+                return true;
+        return false;
+    }
+
     /// <summary>True when an event carries a <see cref="TableClearEffect"/>.</summary>
     public static bool HasTableClear(TableEvent e)
     {
@@ -111,7 +125,7 @@ public static class UndoLog
                 continue;
 
             var @base = ResolveBase(e, byId);
-            if (@base != null && IsComponentEvent(@base))
+            if (@base != null && IsUndoableEvent(@base))
                 return e.Id;
         }
 
@@ -174,5 +188,52 @@ public static class UndoLog
                     affected.Add(fx.Id);
 
         return affected;
+    }
+
+    /// <summary>
+    /// The dataset rows whose value an undo of <paramref name="targetId"/> should change.
+    /// </summary>
+    public static HashSet<SnowTag> ResolveAffectedRows(
+        IReadOnlyList<TableEvent> log,
+        SnowportId targetId
+    )
+    {
+        var affected = new HashSet<SnowTag>();
+        var byId = Index(log);
+        if (!byId.TryGetValue(targetId, out var e))
+            return affected;
+
+        var @base = ResolveBase(e, byId);
+        if (@base == null)
+            return affected;
+
+        foreach (var fx in @base.Effects)
+            if (fx is UpdateReplicatedEffect<DataRow>)
+                affected.Add(fx.Id);
+
+        return affected;
+    }
+
+    /// <summary>
+    /// The newest non-undone record for <paramref name="id"/>, or null if none remains.
+    /// </summary>
+    public static T LatestReplicated<T>(
+        IReadOnlyList<TableEvent> log,
+        SnowTag id,
+        HashSet<SnowportId> undone
+    )
+        where T : class, IReplicated
+    {
+        for (int i = log.Count - 1; i >= 0; i--)
+        {
+            var e = log[i];
+            if (undone.Contains(e.Id))
+                continue;
+
+            foreach (var fx in e.Effects)
+                if (fx is UpdateReplicatedEffect<T> u && u.Id == id)
+                    return u.Payload;
+        }
+        return null;
     }
 }

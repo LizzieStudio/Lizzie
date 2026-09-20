@@ -34,7 +34,12 @@ public partial class ComponentPreviewPopup : Window
                 )
             )
             {
-                _preview.Build(prototype, component.DataSetRow, textureFactory);
+                _preview.Build(
+                    prototype,
+                    component.DataSetRowIndex,
+                    component.DataSetRowId,
+                    textureFactory
+                );
                 _preview.SpinStop();
                 Show();
             }

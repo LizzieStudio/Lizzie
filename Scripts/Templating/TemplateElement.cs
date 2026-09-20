@@ -262,41 +262,17 @@ public class TemplateElement : ITemplateElement
             StringComparison.InvariantCultureIgnoreCase
         );
 
-        //check dataset to column match
-        if (
-            context.DataSet != null
-            && !string.IsNullOrEmpty(context.CurrentRowName)
-            && context.DataSet.Rows.ContainsKey(context.CurrentRowName)
-        )
+        if (context.DataSet != null && context.CurrentRow != null)
         {
-            s = s.Replace(
-                "{Name}",
-                context.CurrentRowName,
-                StringComparison.InvariantCultureIgnoreCase
-            );
-
-            for (int i = 0; i < context.DataSet.Columns.Count; i++)
+            var data = context.CurrentRow.Data;
+            foreach (var col in context.DataSet.Columns)
             {
-                var r = "{" + context.DataSet.Columns[i] + "}";
-                s = s.Replace(r, context.DataSet.Rows[context.CurrentRowName].Data[i]);
+                var r = "{" + col.Name + "}";
+                s = s.Replace(r, data.GetValueOrDefault(col.Id, string.Empty));
             }
         }
 
         return s;
-    }
-
-    /// <summary>
-    /// Retrieves all public static Color fields from the Godot.Colors class.
-    /// </summary>
-    private List<(string Name, Color Value)> GetAllColors()
-    {
-        var colorType = typeof(Colors);
-
-        return colorType
-            .GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(f => f.FieldType == typeof(Color))
-            .Select(f => (f.Name, (Color)f.GetValue(null)!))
-            .ToList();
     }
 
     #endregion

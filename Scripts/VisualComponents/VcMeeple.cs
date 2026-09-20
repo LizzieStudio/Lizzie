@@ -14,13 +14,9 @@ public partial class VcMeeple : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    public override bool Setup(
-        ComponentParameters parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
-        base.Setup(parameters, dataSetRow, textureFactory);
+        base.Setup(parameters, textureFactory);
         var p = (MeepleParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");

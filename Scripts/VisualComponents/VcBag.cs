@@ -32,15 +32,11 @@ public partial class VcBag : VisualComponentGroup
 
     private TextureFactory _textureFactory;
 
-    public override bool Setup(
-        ComponentParameters parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
         _textureFactory = textureFactory;
 
-        base.Setup(parameters, dataSetRow, textureFactory);
+        base.Setup(parameters, textureFactory);
         var p = (BagParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");

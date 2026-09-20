@@ -391,7 +391,8 @@ public partial class PrototypeManifest : Window
         //update the preview
         _preview.ClearComponent();
 
-        string row = "0";
+        int rowIndex = 0;
+        SnowTag rowId = SnowTag.Empty;
 
         SnowTag datasetParam = SnowTag.Empty;
         if (SelectedPrototype.Parameters is PrintedParameters pp)
@@ -405,13 +406,15 @@ public partial class PrototypeManifest : Window
 
         if (datasetParam != SnowTag.Empty)
         {
-            var dataset = ProjectService.Instance.GetDataSet(datasetParam);
-
-            if (dataset != null && dataset.Rows.Count > 0)
-                row = dataset.Rows.First().Key;
+            var rows = ProjectService.Instance.GetRows(datasetParam);
+            if (rows.Count > 0)
+            {
+                rowIndex = -1;
+                rowId = rows[0].Id;
+            }
         }
 
-        _preview.Build(SelectedPrototype, row, TextureFactory);
+        _preview.Build(SelectedPrototype, rowIndex, rowId, TextureFactory);
     }
 
     public TextureFactory TextureFactory { get; set; }

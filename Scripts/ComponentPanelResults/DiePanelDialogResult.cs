@@ -156,14 +156,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
-            _textureContext.CurrentRowName = null;
+            _textureContext.CurrentRow = null;
             _preview.MultiItemMode = false;
         }
         else
         {
             _textureContext.DataSet = ProjectService.Instance.GetDataSet(datasetRef);
+            _preview.ItemCount = ProjectService.Instance.GetRows(datasetRef).Count;
             _preview.MultiItemMode = true;
-            _preview.SetItemLabels(_textureContext.DataSet.Rows.Keys.ToList());
         }
 
         UpdatePreview();
@@ -349,20 +349,20 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             return;
         }
 
-        dia = 16;
-
         _preview.SetComponentVisibility(true);
 
-        _preview.Build(GetParams(), GetRow(_curDie), TextureFactory);
+        var rowId = GetRow(_curDie);
+        _preview.Build(GetParams(), -1, rowId, TextureFactory);
     }
 
-    private string GetRow(int rowNum)
+    private SnowTag GetRow(int rowNum)
     {
         if (_textureContext.DataSet == null)
-            return string.Empty;
-        if (rowNum < 0 || rowNum >= _textureContext.DataSet.Rows.Count)
-            return string.Empty;
-        return _textureContext.DataSet.Rows.ElementAt(rowNum).Key;
+            return SnowTag.Empty;
+        var rows = ProjectService.Instance.GetRows(_textureContext.DataSet.Id);
+        if (rowNum < 0 || rowNum >= rows.Count)
+            return SnowTag.Empty;
+        return rows[rowNum].Id;
     }
 
     public override void DisplayPrototype(SnowTag prototypeId)
@@ -442,7 +442,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         // Restore dataset
         _datasetPicker.Select(0);
         _textureContext.DataSet = null;
-        _textureContext.CurrentRowName = null;
+        _textureContext.CurrentRow = null;
         if (p.Dataset != SnowTag.Empty)
         {
             var idx = _datasetPicker.GetItemIndex(p.Dataset.Value);

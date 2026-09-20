@@ -111,7 +111,7 @@ public partial class ComponentPreview : Panel
                 _component.PrototypeRef
             );
             if (proto?.Parameters != null)
-                Build(proto.Parameters, _row, _textureFactory);
+                Build(proto.Parameters, _rowIndex, _rowId, _textureFactory);
             _buildNeeded = false;
             AutoZoomComponent(_component);
         }
@@ -124,7 +124,8 @@ public partial class ComponentPreview : Panel
 
     private VisualComponentBase _component;
     private bool _buildNeeded;
-    private string _row;
+    private int _rowIndex = -1;
+    private SnowTag _rowId = SnowTag.Empty;
 
     private bool _componentActive;
 
@@ -246,22 +247,21 @@ public partial class ComponentPreview : Panel
     }
 
     public void Build(ComponentParameters parameters, TextureFactory textureFactory) =>
-        Build(parameters, string.Empty, textureFactory);
+        Build(parameters, -1, SnowTag.Empty, textureFactory);
 
-    public void Build(ComponentParameters parameters, string row, TextureFactory textureFactory)
+    public void Build(
+        ComponentParameters parameters,
+        int rowIndex,
+        SnowTag rowId,
+        TextureFactory textureFactory
+    )
     {
         if (_component != null)
         {
-            if (string.IsNullOrWhiteSpace(row))
-            {
-                _component.Setup(parameters, textureFactory); //we are doing this because not all components override the Setup method with the row parameter, and we don't want to break those that don't
-                _component.Build();
-            }
-            else
-            {
-                _component.Setup(parameters, row, textureFactory);
-                _component.Build();
-            }
+            _component.DataSetRowIndex = rowIndex;
+            _component.DataSetRowId = rowId;
+            _component.Setup(parameters, textureFactory);
+            _component.Build();
 
             var z = _component.Aabb.GetLongestAxisSize();
             if (z != 0)
@@ -271,25 +271,39 @@ public partial class ComponentPreview : Panel
 
     public void Build(Prototype prototype, TextureFactory textureFactory)
     {
-        Build(prototype, string.Empty, textureFactory);
+        Build(prototype, -1, SnowTag.Empty, textureFactory);
     }
 
-    public void Build(Prototype prototype, string row, TextureFactory textureFactory)
+    public void Build(
+        Prototype prototype,
+        int rowIndex,
+        SnowTag rowId,
+        TextureFactory textureFactory
+    )
     {
-        var c = SpawnComponent(prototype, row);
-        _row = row;
+        var c = SpawnComponent(prototype, rowIndex, rowId);
+        _rowIndex = rowIndex;
+        _rowId = rowId;
         _buildNeeded = true;
 
         SetComponent(c, GetRotationVector(prototype.Type));
         _textureFactory = textureFactory;
     }
 
-    private VisualComponentBase SpawnComponent(Prototype prototype, string row)
+    private VisualComponentBase SpawnComponent(Prototype prototype, int rowIndex, SnowTag rowId)
     {
-        var s = Utility.ComponentTypeToScenePath(prototype.Type, prototype.Parameters, row, true);
+        var s = Utility.ComponentTypeToScenePath(
+            prototype.Type,
+            prototype.Parameters,
+            rowIndex,
+            rowId,
+            true
+        );
         var scene = GD.Load<PackedScene>(s);
         var c = scene.Instantiate<VisualComponentBase>();
         c.PrototypeRef = prototype.Id;
+        c.DataSetRowIndex = rowIndex;
+        c.DataSetRowId = rowId;
         return c;
     }
 
@@ -352,11 +366,6 @@ public partial class ComponentPreview : Panel
             }
             _pageControl.SetItemCount(_itemCount);
         }
-    }
-
-    public void SetItemLabels(IList<string> labels)
-    {
-        _pageControl.SetItemLabels(labels);
     }
 
     public int CurrentItem { get; set; }

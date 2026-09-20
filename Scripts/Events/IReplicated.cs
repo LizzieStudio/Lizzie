@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 /// <summary>
 /// Replicated in multiplayer on every update.
 /// </summary>
@@ -19,4 +21,15 @@ public static class ReplicatedExtensions
     /// </summary>
     public static string SheetKey(this IReplicated replicated) =>
         $"{replicated.Id.Value:X8}{replicated.LastUpdateId.Value:X16}";
+
+    /// <summary>
+    /// A cache key that changes whenever any definition is updated.
+    /// </summary>
+    public static string SheetKey(this IEnumerable<IReplicated> items)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var item in items)
+            sb.Append(item.SheetKey());
+        return sb.ToString();
+    }
 }

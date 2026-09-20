@@ -12,12 +12,20 @@ public abstract partial class ReplicatedStore<TEntity> : Node
 
     protected abstract void NotifyChanged(IReadOnlyList<SnowTag> ids);
 
+    protected virtual void OnUndo(UndoAction undo) { }
+
     /// <summary>Merges every replicated effect in the event into the store.</summary>
     protected void OnEventApplied(TableEvent e)
     {
         var store = Store;
         if (store == null)
             return;
+
+        if (e.Action is UndoAction undo)
+        {
+            OnUndo(undo);
+            return;
+        }
 
         var changed = new List<SnowTag>();
 

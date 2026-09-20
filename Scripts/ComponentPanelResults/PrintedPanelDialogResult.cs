@@ -480,14 +480,14 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
-            _textureContext.CurrentRowName = null;
+            _textureContext.CurrentRow = null;
             _preview.MultiItemMode = false;
         }
         else
         {
             _textureContext.DataSet = ProjectService.Instance.GetDataSet(datasetRef);
+            _preview.ItemCount = ProjectService.Instance.GetRows(datasetRef).Count;
             _preview.MultiItemMode = true;
-            _preview.SetItemLabels(_textureContext.DataSet.Rows.Keys.ToList());
         }
 
         UpdatePreview();
@@ -726,19 +726,18 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        // GetParams() also updates ComponentType (Token vs Deck) based on the active tab.
-        _preview.Build(GetParams(), GetRow(_curToken), TextureFactory);
+        var (rowIndex, rowId) = GetRow(_curToken);
+        _preview.Build(GetParams(), rowIndex, rowId, TextureFactory);
     }
 
-    private string GetRow(int rowNum)
+    private (int Index, SnowTag Id) GetRow(int rowNum)
     {
-        if (_tabs.CurrentTab == 1)
-            return (rowNum + 1).ToString();
-        if (_textureContext.DataSet == null)
-            return rowNum.ToString();
-        if (rowNum < 0 || rowNum >= _textureContext.DataSet.Rows.Count)
-            return string.Empty;
-        return _textureContext.DataSet.Rows.ElementAt(rowNum).Key;
+        if (_tabs.CurrentTab == 1 || _textureContext.DataSet == null)
+            return (rowNum, SnowTag.Empty);
+        var rows = ProjectService.Instance.GetRows(_textureContext.DataSet.Id);
+        if (rowNum < 0 || rowNum >= rows.Count)
+            return (-1, SnowTag.Empty);
+        return (-1, rows[rowNum].Id);
     }
 
     private int _curToken;
@@ -889,7 +888,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _datasetPicker.Select(0);
         _textureContext.DataSet = null;
-        _textureContext.CurrentRowName = null;
+        _textureContext.CurrentRow = null;
         if (p.Dataset != SnowTag.Empty)
         {
             var idx = _datasetPicker.GetItemIndex(p.Dataset.Value);

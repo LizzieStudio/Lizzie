@@ -10,8 +10,6 @@ public partial class DatasetEditor : Window
 
     private VBoxContainer _mainContainer;
     private Button _deleteButton;
-    private Button _saveButton;
-    private Button _cancelButton;
     private Button _newButton;
     private OptionButton _datasetList;
     private SnowTag _pendingDatasetRef = SnowTag.Empty;
@@ -30,19 +28,36 @@ public partial class DatasetEditor : Window
     private LineEdit _newDatasetNameInput;
     private Label _newDatasetErrorLabel;
     private HBoxContainer _newRowContainer;
-    private int _nextRowId = 0;
+
+    private List<DataRow> _rows = new();
+
+    private List<SnowTag> _columnIds = new();
+
     private const float CheckboxColumnWidth = 40f;
     private const float DefaultColumnWidth = 120f;
     private const float MinColumnWidth = 50f;
     private const float HeaderHeight = 30f;
     private const float RowHeight = 30f;
 
-    // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         _project = ProjectService.Instance.CurrentProject;
 
         InitializeSpreadsheet();
+
+        CloseRequested += CloseDialog;
+        if (DataRowStore.Instance != null)
+            DataRowStore.Instance.DataRowsChanged += OnDataRowsChanged;
+        if (DataSetStore.Instance != null)
+            DataSetStore.Instance.DataSetsChanged += OnDataSetsChanged;
+    }
+
+    public override void _ExitTree()
+    {
+        if (DataRowStore.Instance != null)
+            DataRowStore.Instance.DataRowsChanged -= OnDataRowsChanged;
+        if (DataSetStore.Instance != null)
+            DataSetStore.Instance.DataSetsChanged -= OnDataSetsChanged;
     }
 
     private void InitializeSpreadsheet()
@@ -75,10 +90,6 @@ public partial class DatasetEditor : Window
         _linkButton = GetNode<Button>("%Link");
         _linkButton.Pressed += OnImportPressed;
 
-        _saveButton = GetNode<Button>("%Save");
-        _saveButton.Pressed += SaveDataSet;
-        _cancelButton = GetNode<Button>("%Cancel");
-        _cancelButton.Pressed += CloseDialog;
         _newButton = GetNode<Button>("%New");
         _newButton.Pressed += OnNewDatasetPressed;
 
@@ -86,10 +97,7 @@ public partial class DatasetEditor : Window
         _datasetList.ItemSelected += OnDatasetSelected;
 
         InitializeNewDatasetDialog();
-        LoadDatasetList();
-
-        if (_pendingDatasetRef != SnowTag.Empty)
-            SelectDatasetById(_pendingDatasetRef);
+        LoadInitial();
     }
 
     /// <summary>Opens the editor on a specific dataset once the node is ready.</summary>
@@ -105,34 +113,45 @@ public partial class DatasetEditor : Window
         SelectDatasetById(id);
     }
 
-    private void SelectDatasetById(SnowTag id)
-    {
-        var idx = _datasetList.GetItemIndex(id.Value);
-        if (idx < 0)
-            return;
-
-        _datasetList.Select(idx);
-        var ds = ProjectService.Instance.GetDataSet(id);
-        if (ds != null)
-            MapDataSet(ds);
-    }
-
-    private void LoadDatasetList()
+    private void LoadInitial()
     {
         if (_project == null || _datasetList == null)
             return;
 
+        PopulateDatasetDropdown(SnowTag.Empty);
+
+        var target =
+            _pendingDatasetRef != SnowTag.Empty ? _pendingDatasetRef
+            : _datasetList.ItemCount > 0 ? new SnowTag(_datasetList.GetItemId(0))
+            : SnowTag.Empty;
+
+        if (target != SnowTag.Empty)
+            SelectDatasetById(target);
+    }
+
+    private void PopulateDatasetDropdown(SnowTag select)
+    {
         _datasetList.Clear();
         foreach (var d in _project.Datasets.Values.Where(v => !v.Deleted))
-        {
             _datasetList.AddItem(d.Name, d.Id.Value);
-        }
 
-        if (_datasetList.ItemCount > 0)
+        if (select != SnowTag.Empty)
         {
-            _datasetList.Select(0);
-            MapDataSet(ProjectService.Instance.GetDataSet(new SnowTag(_datasetList.GetItemId(0))));
+            var idx = _datasetList.GetItemIndex(select.Value);
+            if (idx >= 0)
+                _datasetList.Select(idx);
         }
+    }
+
+    private void SelectDatasetById(SnowTag id)
+    {
+        var idx = _datasetList.GetItemIndex(id.Value);
+        if (idx >= 0)
+            _datasetList.Select(idx);
+
+        var ds = ProjectService.Instance.GetDataSet(id);
+        if (ds != null)
+            MapDataSet(ds);
     }
 
     private void OnDatasetSelected(long index)
@@ -201,7 +220,6 @@ public partial class DatasetEditor : Window
         var ds = new DataSet { Name = name };
         ProjectService.Instance.UpdateDataSet(ds);
 
-        LoadDatasetList();
         SelectDatasetById(ds.Id);
     }
 
@@ -213,93 +231,215 @@ public partial class DatasetEditor : Window
         Hide();
     }
 
-    private void SaveDataSet()
+    private void MapDataSet(DataSet ds)
     {
-        if (_currentDataSet == null)
+        if (_mainContainer == null || ds == null)
             return;
 
-        CommitGridToDataSet();
+        _currentDataSet = ds;
 
-        ProjectService.Instance.UpdateDataSet(_currentDataSet);
+        // Use copies so we can diff them for updates.
+        // TODO: this should be removed if they become immutable.
+        _rows = ProjectService.Instance.GetRows(ds.Id).Select(CloneRow).ToList();
 
-        GD.Print("Dataset saved successfully");
-
-        CloseDialog();
+        RebuildGrid();
     }
 
-    private void CommitGridToDataSet()
+    private static DataRow CloneRow(DataRow r) =>
+        new()
+        {
+            Id = r.Id,
+            DataSetId = r.DataSetId,
+            Rank = r.Rank,
+            Data = new Dictionary<SnowTag, string>(r.Data),
+        };
+
+    private void RebuildGrid()
     {
-        if (_currentDataSet == null)
+        if (_mainContainer == null || _currentDataSet == null)
             return;
 
-        // Update column headers from HeaderCell controls
-        _currentDataSet.Columns.Clear();
-        var headerChildren = _headerContainer.GetChildren();
-        for (int i = 1; i < headerChildren.Count; i++) // Skip first child (checkbox header)
+        ClearSpreadsheet();
+
+        _columnIds = _currentDataSet.Columns.Select(c => c.Id).ToList();
+
+        _columnWidths.Clear();
+        _rowCheckboxes.Clear();
+        for (int i = 0; i < _currentDataSet.Columns.Count; i++)
+            _columnWidths.Add(DefaultColumnWidth);
+
+        CreateHeaderRow();
+        CreateDataRows();
+        CreateNewRow();
+    }
+
+    private void ClearSpreadsheet()
+    {
+        foreach (var c in _headerContainer.GetChildren())
+            c.QueueFree();
+
+        foreach (var c in _dataContainer.GetChildren())
+            c.QueueFree();
+    }
+
+    private void CreateHeaderRow()
+    {
+        // Add checkbox column header
+        var checkboxHeader = new PanelContainer();
+        checkboxHeader.CustomMinimumSize = new Vector2(CheckboxColumnWidth, HeaderHeight);
+        _headerContainer.AddChild(checkboxHeader);
+
+        for (int i = 0; i < _currentDataSet.Columns.Count; i++)
         {
-            if (headerChildren[i] is HeaderCell headerCell)
+            var headerCell = new HeaderCell();
+            headerCell.SetColumnIndex(i);
+            headerCell.SetHeaderText(_currentDataSet.Columns[i].Name);
+            headerCell.CustomMinimumSize = new Vector2(_columnWidths[i], HeaderHeight);
+            headerCell.ColumnResized += OnColumnResized;
+
+            _headerContainer.AddChild(headerCell);
+        }
+    }
+
+    private void CreateDataRows()
+    {
+        foreach (var row in _rows)
+        {
+            var rowContainer = new HBoxContainer();
+            rowContainer.CustomMinimumSize = new Vector2(0, RowHeight);
+
+            // Add checkbox as first cell
+            var checkboxCell = new CenterContainer();
+            checkboxCell.CustomMinimumSize = new Vector2(CheckboxColumnWidth, RowHeight);
+            var checkbox = new CheckBox();
+            _rowCheckboxes.Add(checkbox);
+            checkboxCell.AddChild(checkbox);
+            rowContainer.AddChild(checkboxCell);
+
+            for (int i = 0; i < _columnIds.Count; i++)
             {
-                _currentDataSet.Columns.Add(headerCell.GetHeaderText());
+                var cell = new LineEdit();
+                cell.Text = row.Data.GetValueOrDefault(_columnIds[i], string.Empty);
+                cell.CustomMinimumSize = new Vector2(_columnWidths[i], RowHeight);
+                cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
+                cell.SizeFlagsVertical = Control.SizeFlags.Fill;
+
+                var captured = row;
+                var container = rowContainer;
+                cell.FocusExited += () => CommitRow(captured, container);
+                cell.TextSubmitted += _ => CommitRow(captured, container);
+
+                rowContainer.AddChild(cell);
             }
+
+            _dataContainer.AddChild(rowContainer);
+        }
+    }
+
+    private void CreateNewRow()
+    {
+        _newRowContainer = new HBoxContainer();
+        _newRowContainer.CustomMinimumSize = new Vector2(0, RowHeight);
+
+        // Add empty checkbox cell
+        var checkboxCell = new CenterContainer();
+        checkboxCell.CustomMinimumSize = new Vector2(CheckboxColumnWidth, RowHeight);
+        _newRowContainer.AddChild(checkboxCell);
+
+        for (int i = 0; i < _columnIds.Count; i++)
+        {
+            var cell = new LineEdit();
+            cell.CustomMinimumSize = new Vector2(_columnWidths[i], RowHeight);
+            cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
+            cell.SizeFlagsVertical = Control.SizeFlags.Fill;
+            cell.PlaceholderText = "Enter data...";
+
+            cell.FocusExited += () => Callable.From(TryCommitNewRow).CallDeferred();
+            cell.TextSubmitted += _ => CommitNewRow();
+
+            _newRowContainer.AddChild(cell);
         }
 
-        // Update row data from LineEdit controls
-        var rowContainers = _dataContainer.GetChildren();
-        int rowIndex = 0;
+        _dataContainer.AddChild(_newRowContainer);
+    }
 
-        foreach (var child in rowContainers)
+    private Dictionary<SnowTag, string> BuildRowData(HBoxContainer rowContainer)
+    {
+        var data = new Dictionary<SnowTag, string>();
+        for (int i = 1; i < rowContainer.GetChildCount(); i++) // skip checkbox cell
         {
-            if (child is HBoxContainer rowContainer)
-            {
-                // Skip the new row container (last one)
-                if (rowContainer == _newRowContainer)
-                {
-                    // Check if new row has data and add it
-                    bool hasData = false;
-                    var rowData = new List<string>();
-
-                    for (int i = 1; i < rowContainer.GetChildCount(); i++) // Skip checkbox cell
-                    {
-                        if (rowContainer.GetChild(i) is LineEdit cell)
-                        {
-                            rowData.Add(cell.Text);
-                            if (!string.IsNullOrWhiteSpace(cell.Text))
-                            {
-                                hasData = true;
-                            }
-                        }
-                    }
-
-                    if (hasData)
-                    {
-                        var rowKey = _nextRowId.ToString();
-                        _nextRowId++;
-                        var newRow = new DataRow { Data = rowData };
-                        _currentDataSet.Rows[rowKey] = newRow;
-                    }
-                    continue;
-                }
-
-                // Update existing row data
-                if (rowIndex < _currentDataSet.Rows.Count)
-                {
-                    var rowKey = _currentDataSet.Rows.Keys.ElementAt(rowIndex);
-                    var dataRow = _currentDataSet.Rows[rowKey];
-
-                    dataRow.Data.Clear();
-                    var cells = rowContainer.GetChildren();
-                    for (int i = 1; i < cells.Count; i++) // Skip checkbox cell at index 0
-                    {
-                        if (cells[i] is LineEdit cell)
-                        {
-                            dataRow.Data.Add(cell.Text);
-                        }
-                    }
-
-                    rowIndex++;
-                }
-            }
+            if (rowContainer.GetChild(i) is not LineEdit cell)
+                continue;
+            int col = i - 1;
+            if (col < _columnIds.Count && !string.IsNullOrEmpty(cell.Text))
+                data[_columnIds[col]] = cell.Text;
         }
+        return data;
+    }
+
+    private static bool DataEqual(Dictionary<SnowTag, string> a, Dictionary<SnowTag, string> b)
+    {
+        if (a.Count != b.Count)
+            return false;
+        foreach (var kv in a)
+            if (!b.TryGetValue(kv.Key, out var v) || v != kv.Value)
+                return false;
+        return true;
+    }
+
+    private void CommitRow(DataRow snapshot, HBoxContainer rowContainer)
+    {
+        if (_currentDataSet == null || !IsInstanceValid(rowContainer))
+            return;
+
+        var newData = BuildRowData(rowContainer);
+        if (DataEqual(newData, snapshot.Data))
+            return;
+
+        snapshot.Data = newData;
+
+        ProjectService.Instance.UpdateDataRow(
+            new DataRow
+            {
+                Id = snapshot.Id,
+                DataSetId = snapshot.DataSetId,
+                Rank = snapshot.Rank,
+                Data = newData,
+            }
+        );
+    }
+
+    private void TryCommitNewRow()
+    {
+        if (_newRowContainer == null || !IsInstanceValid(_newRowContainer))
+            return;
+
+        var focus = GetViewport()?.GuiGetFocusOwner();
+        if (focus != null && _newRowContainer.IsAncestorOf(focus))
+            return;
+
+        CommitNewRow();
+    }
+
+    private void CommitNewRow()
+    {
+        if (_currentDataSet == null || _newRowContainer == null)
+            return;
+
+        var newData = BuildRowData(_newRowContainer);
+        if (newData.Count == 0)
+            return;
+
+        var lastRank = _rows.Count > 0 ? _rows[^1].Rank : null;
+        var row = new DataRow
+        {
+            Id = Snowport.Clock.CreateTag(),
+            DataSetId = _currentDataSet.Id,
+            Rank = RowRank.Between(lastRank, null),
+            Data = newData,
+        };
+
+        ProjectService.Instance.UpdateDataRow(row);
     }
 
     private void OnAddColumnPressed()
@@ -307,17 +447,14 @@ public partial class DatasetEditor : Window
         if (_currentDataSet == null)
             return;
 
-        CommitGridToDataSet();
-
-        _currentDataSet.Columns.Add($"Column {_currentDataSet.Columns.Count + 1}");
-
-        foreach (var row in _currentDataSet.Rows.Values)
-        {
-            while (row.Data.Count < _currentDataSet.Columns.Count)
-                row.Data.Add(string.Empty);
-        }
-
-        MapDataSet(_currentDataSet);
+        _currentDataSet.Columns.Add(
+            new Column
+            {
+                Id = Snowport.Clock.CreateTag(),
+                Name = $"Column {_currentDataSet.Columns.Count + 1}",
+            }
+        );
+        ProjectService.Instance.UpdateDataSet(_currentDataSet);
     }
 
     private void OnDeleteColumnPressed()
@@ -325,18 +462,20 @@ public partial class DatasetEditor : Window
         if (_currentDataSet == null || _currentDataSet.Columns.Count == 0)
             return;
 
-        CommitGridToDataSet();
+        _currentDataSet.Columns.RemoveAt(_currentDataSet.Columns.Count - 1);
+        ProjectService.Instance.UpdateDataSet(_currentDataSet);
+    }
 
-        int lastIndex = _currentDataSet.Columns.Count - 1;
-        _currentDataSet.Columns.RemoveAt(lastIndex);
+    private void OnDeleteButtonPressed()
+    {
+        if (_currentDataSet == null)
+            return;
 
-        foreach (var row in _currentDataSet.Rows.Values)
+        for (int i = 0; i < _rows.Count && i < _rowCheckboxes.Count; i++)
         {
-            if (row.Data.Count > lastIndex)
-                row.Data.RemoveAt(lastIndex);
+            if (_rowCheckboxes[i].ButtonPressed)
+                ProjectService.Instance.DeleteDataRow(_rows[i].Id);
         }
-
-        MapDataSet(_currentDataSet);
     }
 
     private void OnImportPressed()
@@ -392,191 +531,37 @@ public partial class DatasetEditor : Window
         }
 
         var header = lines[0];
-        _currentDataSet.Columns = header.ToList();
-        _currentDataSet.Rows.Clear();
-        _nextRowId = 0;
 
+        var columns = header
+            .Select(h => new Column { Id = Snowport.Clock.CreateTag(), Name = h })
+            .ToList();
+        _currentDataSet.Columns = columns;
+        ProjectService.Instance.UpdateDataSet(_currentDataSet);
+
+        foreach (var existing in ProjectService.Instance.GetRows(_currentDataSet.Id))
+            ProjectService.Instance.DeleteDataRow(existing.Id);
+
+        string prevRank = null;
         for (int i = 1; i < lines.Count; i++)
         {
-            var rowKey = _nextRowId.ToString();
-            _nextRowId++;
-            _currentDataSet.Rows[rowKey] = new DataRow
+            var data = new Dictionary<SnowTag, string>();
+            for (int c = 0; c < columns.Count && c < lines[i].Length; c++)
             {
-                Data = NormalizeRowWidth(lines[i], header.Length),
-            };
-        }
+                if (!string.IsNullOrEmpty(lines[i][c]))
+                    data[columns[c].Id] = lines[i][c];
+            }
 
-        MapDataSet(_currentDataSet);
-    }
-
-    private static List<string> NormalizeRowWidth(string[] cells, int width)
-    {
-        var list = new List<string>(cells);
-        while (list.Count < width)
-            list.Add(string.Empty);
-        if (list.Count > width)
-            list.RemoveRange(width, list.Count - width);
-        return list;
-    }
-
-    private void MapDataSet(DataSet ds)
-    {
-        if (_mainContainer == null || ds == null)
-            return;
-
-        _currentDataSet = ds;
-
-        ClearSpreadsheet();
-
-        _columnWidths.Clear();
-        _rowCheckboxes.Clear();
-        for (int i = 0; i < ds.Columns.Count; i++)
-        {
-            _columnWidths.Add(DefaultColumnWidth);
-        }
-
-        // Calculate next row ID
-        _nextRowId = 0;
-        if (ds.Rows.Count > 0)
-        {
-            foreach (var key in ds.Rows.Keys)
-            {
-                if (int.TryParse(key, out int id))
+            prevRank = RowRank.Between(prevRank, null);
+            ProjectService.Instance.UpdateDataRow(
+                new DataRow
                 {
-                    _nextRowId = Math.Max(_nextRowId, id + 1);
+                    Id = Snowport.Clock.CreateTag(),
+                    DataSetId = _currentDataSet.Id,
+                    Rank = prevRank,
+                    Data = data,
                 }
-            }
+            );
         }
-
-        CreateHeaderRow(ds);
-        CreateDataRows(ds);
-        CreateNewRow(ds);
-    }
-
-    private void ClearSpreadsheet()
-    {
-        foreach (var c in _headerContainer.GetChildren())
-        {
-            c.QueueFree();
-        }
-
-        foreach (var c in _dataContainer.GetChildren())
-        {
-            c.QueueFree();
-        }
-    }
-
-    private void CreateHeaderRow(DataSet ds)
-    {
-        // Add checkbox column header
-        var checkboxHeader = new PanelContainer();
-        checkboxHeader.CustomMinimumSize = new Vector2(CheckboxColumnWidth, HeaderHeight);
-        _headerContainer.AddChild(checkboxHeader);
-
-        for (int i = 0; i < ds.Columns.Count; i++)
-        {
-            var headerCell = new HeaderCell();
-            headerCell.SetColumnIndex(i);
-            headerCell.SetHeaderText(ds.Columns[i]);
-            headerCell.CustomMinimumSize = new Vector2(_columnWidths[i], HeaderHeight);
-            headerCell.ColumnResized += OnColumnResized;
-
-            _headerContainer.AddChild(headerCell);
-        }
-    }
-
-    private void CreateDataRows(DataSet ds)
-    {
-        foreach (var kv in ds.Rows)
-        {
-            var rowContainer = new HBoxContainer();
-            rowContainer.CustomMinimumSize = new Vector2(0, RowHeight);
-
-            // Add checkbox as first cell
-            var checkboxCell = new CenterContainer();
-            checkboxCell.CustomMinimumSize = new Vector2(CheckboxColumnWidth, RowHeight);
-            var checkbox = new CheckBox();
-            _rowCheckboxes.Add(checkbox);
-            checkboxCell.AddChild(checkbox);
-            rowContainer.AddChild(checkboxCell);
-
-            for (int i = 0; i < ds.Columns.Count; i++)
-            {
-                var cell = new LineEdit();
-                cell.Text = i < kv.Value.Data.Count ? kv.Value.Data[i] : string.Empty;
-                cell.CustomMinimumSize = new Vector2(_columnWidths[i], RowHeight);
-                cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
-                cell.SizeFlagsVertical = Control.SizeFlags.Fill;
-
-                // We are changing this to just save when the user clicks the button rather than as we go.
-
-                rowContainer.AddChild(cell);
-            }
-
-            _dataContainer.AddChild(rowContainer);
-        }
-    }
-
-    private void CreateNewRow(DataSet ds)
-    {
-        if (ds == null)
-            return;
-
-        _newRowContainer = new HBoxContainer();
-        _newRowContainer.CustomMinimumSize = new Vector2(0, RowHeight);
-
-        // Add empty checkbox cell
-        var checkboxCell = new CenterContainer();
-        checkboxCell.CustomMinimumSize = new Vector2(CheckboxColumnWidth, RowHeight);
-        _newRowContainer.AddChild(checkboxCell);
-
-        // Add empty LineEdit cells for each column
-        for (int i = 0; i < ds.Columns.Count; i++)
-        {
-            var cell = new LineEdit();
-            cell.CustomMinimumSize = new Vector2(_columnWidths[i], RowHeight);
-            cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
-            cell.SizeFlagsVertical = Control.SizeFlags.Fill;
-            cell.PlaceholderText = "Enter data...";
-
-            // Store column index in metadata for easy retrieval
-            cell.SetMeta("column_index", i);
-            cell.TextSubmitted += _ => CommitNewRow();
-
-            _newRowContainer.AddChild(cell);
-        }
-
-        _dataContainer.AddChild(_newRowContainer);
-    }
-
-    private void CommitNewRow()
-    {
-        if (_currentDataSet == null || _newRowContainer == null)
-            return;
-
-        bool hasData = false;
-        var rowData = new List<string>();
-
-        for (int i = 1; i < _newRowContainer.GetChildCount(); i++) // Skip checkbox cell at index 0
-        {
-            if (_newRowContainer.GetChild(i) is LineEdit cell)
-            {
-                rowData.Add(cell.Text);
-                if (!string.IsNullOrWhiteSpace(cell.Text))
-                {
-                    hasData = true;
-                }
-            }
-        }
-
-        if (!hasData)
-            return;
-
-        var rowKey = _nextRowId.ToString();
-        _nextRowId++;
-        _currentDataSet.Rows[rowKey] = new DataRow { Data = rowData };
-
-        MapDataSet(_currentDataSet);
     }
 
     private void OnColumnResized(int columnIndex, float newWidth)
@@ -591,7 +576,6 @@ public partial class DatasetEditor : Window
 
     private void UpdateColumnWidth(int columnIndex)
     {
-        // Skip the first child (checkbox header)
         var headerChildren = _headerContainer.GetChildren();
         if (columnIndex + 1 < headerChildren.Count)
         {
@@ -620,37 +604,66 @@ public partial class DatasetEditor : Window
     {
         _project = project;
         if (_mainContainer != null)
-            LoadDatasetList();
+            LoadInitial();
     }
 
-    private void OnDeleteButtonPressed()
+    private void OnDataRowsChanged(int[] ids)
     {
         if (_currentDataSet == null)
             return;
 
-        var rowsToDelete = new List<string>();
-
-        // Collect row keys for checked checkboxes
-        for (int i = 0; i < _rowCheckboxes.Count; i++)
+        foreach (var raw in ids)
         {
-            if (_rowCheckboxes[i].ButtonPressed)
+            var id = new SnowTag(raw);
+            var stored = _project.DataRows.GetValueOrDefault(id);
+            bool shown = _rows.Any(r => r.Id == id);
+            bool belongs =
+                shown
+                || (stored != null && !stored.Deleted && stored.DataSetId == _currentDataSet.Id);
+            if (!belongs)
+                continue;
+
+            if (!RowMatchesShown(id, stored))
             {
-                var rowIndex = i;
-                var rowKey = _currentDataSet.Rows.Keys.ElementAt(rowIndex);
-                rowsToDelete.Add(rowKey);
+                MapDataSet(_currentDataSet);
+                return;
             }
         }
+    }
 
-        // Remove rows from dataset
-        foreach (var key in rowsToDelete)
+    private bool RowMatchesShown(SnowTag id, DataRow stored)
+    {
+        var shown = _rows.FirstOrDefault(r => r.Id == id);
+        if (stored == null || stored.Deleted)
+            return shown == null;
+        if (shown == null)
+            return false;
+        return stored.Rank == shown.Rank && DataEqual(stored.Data, shown.Data);
+    }
+
+    private void OnDataSetsChanged(int[] ids)
+    {
+        if (_project == null || _datasetList == null)
+            return;
+
+        var keep = _currentDataSet?.Id ?? SnowTag.Empty;
+        PopulateDatasetDropdown(keep);
+
+        if (keep == SnowTag.Empty)
+            return;
+
+        var cur = ProjectService.Instance.GetDataSet(keep);
+        if (cur != null)
         {
-            _currentDataSet.Rows.Remove(key);
+            _currentDataSet = cur;
+            RebuildGrid();
         }
-
-        // Refresh the display if any rows were deleted
-        if (rowsToDelete.Count > 0)
+        else
         {
-            MapDataSet(_currentDataSet);
+            _currentDataSet = null;
+            ClearSpreadsheet();
+            if (_datasetList.ItemCount > 0)
+                SelectDatasetById(new SnowTag(_datasetList.GetItemId(0)));
         }
     }
 }

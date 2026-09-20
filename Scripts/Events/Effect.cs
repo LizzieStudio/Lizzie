@@ -10,6 +10,7 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "p")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<DataRow>), "dw")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
 [JsonDerivedType(typeof(UpdateSettingsEffect), "gs")]

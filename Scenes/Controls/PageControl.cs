@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Godot;
 
 public partial class PageControl : HBoxContainer
@@ -39,15 +37,6 @@ public partial class PageControl : HBoxContainer
         return CurrentItem;
     }
 
-    public void SetItemLabels(IList<string> items)
-    {
-        _itemLabels = items;
-        ItemCount = items.Count();
-        UpdateMultiLabel();
-    }
-
-    private IList<string> _itemLabels;
-
     public void SetItemCount(int count)
     {
         ItemCount = count;
@@ -64,14 +53,7 @@ public partial class PageControl : HBoxContainer
 
     private void UpdateMultiLabel()
     {
-        if (_itemLabels == null || !_itemLabels.Any())
-        {
-            _curItemLabel.Text = $"{CurrentItem + 1} of {ItemCount}";
-        }
-        else
-        {
-            _curItemLabel.Text = _itemLabels[CurrentItem];
-        }
+        _curItemLabel.Text = $"{CurrentItem + 1} of {ItemCount}";
     }
 
     private void SetPreviewItem(int item)

@@ -70,7 +70,7 @@ public partial class GameController : Node3D
         }
         else
         {
-            var sc = SingleComponentSpawn(args, string.Empty);
+            var sc = SingleComponentSpawn(args, -1, SnowTag.Empty);
             if (sc != null)
                 components.Add(sc);
         }
@@ -106,7 +106,7 @@ public partial class GameController : Node3D
             PrototypeName = scenePath,
         };
 
-        var component = SingleComponentSpawn(args, string.Empty);
+        var component = SingleComponentSpawn(args, e.DataSetRowIndex, e.DataSetRowId);
         if (component != null)
             _mainScene.EnterSpawnMode(new List<VisualComponentBase> { component });
     }
@@ -134,7 +134,7 @@ public partial class GameController : Node3D
         for (int i = 0; i < gridRows; i++)
         for (int j = 0; j < gridCols; j++)
         {
-            var mc = SingleComponentSpawn(args, cardNum.ToString());
+            var mc = SingleComponentSpawn(args, cardNum, SnowTag.Empty);
 
             if (mc != null)
             {
@@ -160,7 +160,8 @@ public partial class GameController : Node3D
         List<VisualComponentBase> components
     )
     {
-        int cols = (int)Math.Ceiling(Math.Sqrt(args.DataSet.Rows.Count));
+        var rows = ProjectService.Instance.GetRows(args.DataSet.Id);
+        int cols = (int)Math.Ceiling(Math.Sqrt(rows.Count));
 
         int i = 0;
         int j = 0;
@@ -168,9 +169,9 @@ public partial class GameController : Node3D
         float w = args.WidthHint * 1.5f;
         float h = args.HeightHint * 1.5f;
 
-        foreach (var r in args.DataSet.Rows)
+        foreach (var r in rows)
         {
-            var mc = SingleComponentSpawn(args, r.Key);
+            var mc = SingleComponentSpawn(args, -1, r.Id);
 
             if (mc != null)
             {
@@ -187,7 +188,11 @@ public partial class GameController : Node3D
         }
     }
 
-    private VisualComponentBase SingleComponentSpawn(CreateObjectEventArgs args, string row)
+    private VisualComponentBase SingleComponentSpawn(
+        CreateObjectEventArgs args,
+        int rowIndex,
+        SnowTag rowId
+    )
     {
         VisualComponentBase component = ProjectService.Instance.SpawnComponent(args.PrototypeName);
 
@@ -198,6 +203,8 @@ public partial class GameController : Node3D
         }
 
         component.PrototypeRef = args.PrototypeRef;
+        component.DataSetRowIndex = rowIndex;
+        component.DataSetRowId = rowId;
 
         //if the name is blank in the parameters, set it
         if (
@@ -211,7 +218,7 @@ public partial class GameController : Node3D
             );
         }
 
-        if (component.Setup(args.PrototypeRef, row, _textureFactory))
+        if (component.Setup(args.PrototypeRef, _textureFactory))
         {
             return component;
         }

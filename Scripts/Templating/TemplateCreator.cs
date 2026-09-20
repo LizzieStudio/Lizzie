@@ -1731,7 +1731,8 @@ public partial class TemplateCreator : Window
 
     private void ChangePage(object sender, ItemSelectedEventArgs e)
     {
-        _textureContext.CurrentRowName = e.Caption;
+        var rows = ProjectService.Instance.GetRows(CurrentTemplate.DataSet);
+        _textureContext.CurrentRow = e.Index >= 0 && e.Index < rows.Count ? rows[e.Index] : null;
         _updateRequired = true;
     }
 
@@ -1742,7 +1743,7 @@ public partial class TemplateCreator : Window
         if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
-            _textureContext.CurrentRowName = string.Empty;
+            _textureContext.CurrentRow = null;
             _pageControl.Hide();
             CurrentTemplate.DataSet = SnowTag.Empty;
         }
@@ -1763,10 +1764,8 @@ public partial class TemplateCreator : Window
         {
             CurrentTemplate.DataSet = datasetRef;
             _textureContext.DataSet = dataset;
-            _textureContext.CurrentRowName =
-                _textureContext.DataSet.Rows.Count > 0
-                    ? _textureContext.DataSet.Rows.First().Key
-                    : string.Empty;
+            var rows = ProjectService.Instance.GetRows(datasetRef);
+            _textureContext.CurrentRow = rows.Count > 0 ? rows[0] : null;
         }
     }
 
@@ -1777,7 +1776,7 @@ public partial class TemplateCreator : Window
         if (datasetRef == SnowTag.Empty || ProjectService.Instance.GetDataSet(datasetRef) == null)
         {
             _textureContext.DataSet = null;
-            _textureContext.CurrentRowName = string.Empty;
+            _textureContext.CurrentRow = null;
             _dataSetSelector.Select(0);
             _pageControl.Hide();
             _updateRequired = true;
@@ -1789,7 +1788,7 @@ public partial class TemplateCreator : Window
 
         UpdateTextureContext(datasetRef);
 
-        _pageControl.SetItemLabels(_textureContext.DataSet.Rows.Select(x => x.Key).ToArray());
+        _pageControl.SetItemCount(ProjectService.Instance.GetRows(datasetRef).Count);
         _pageControl.Show();
 
         _updateRequired = true;
@@ -1805,5 +1804,5 @@ public class TextureContext()
 
     public DataSet DataSet { get; set; }
 
-    public string CurrentRowName { get; set; }
+    public DataRow CurrentRow { get; set; }
 }

@@ -64,6 +64,8 @@ public partial class GameObjects : Node
 
         if (DataSetStore.Instance != null)
             DataSetStore.Instance.DataSetsChanged += OnDataSetsChanged;
+        if (DataRowStore.Instance != null)
+            DataRowStore.Instance.DataRowsChanged += OnDataRowsChanged;
         if (TemplateStore.Instance != null)
             TemplateStore.Instance.TemplatesChanged += OnTemplatesChanged;
         if (PrototypeStore.Instance != null)
@@ -96,6 +98,18 @@ public partial class GameObjects : Node
     private void OnDataSetsChanged(int[] ids)
     {
         //naive approach for now
+        foreach (var c in ComponentNodes)
+        {
+            if (c is VisualComponentBase vc)
+            {
+                vc.ProcessCommand(VisualCommand.Refresh);
+            }
+        }
+    }
+
+    private void OnDataRowsChanged(int[] ids)
+    {
+        // TODO: do a more narrow update
         foreach (var c in ComponentNodes)
         {
             if (c is VisualComponentBase vc)
@@ -1373,7 +1387,12 @@ public partial class GameObjects : Node
 
         var s = fx.State ?? new VcSyncDto();
 
-        var path = Utility.ComponentTypeToScenePath(proto.Type, proto.Parameters, s.DataSetRow);
+        var path = Utility.ComponentTypeToScenePath(
+            proto.Type,
+            proto.Parameters,
+            s.DataSetRowIndex,
+            s.DataSetRowId
+        );
         var scene = GD.Load<PackedScene>(path).Instantiate();
 
         if (scene is not VisualComponentBase vcb)
@@ -1586,7 +1605,8 @@ public partial class GameObjects : Node
         {
             Position = winner.State.Position,
             Rotation = winner.State.Rotation,
-            DataSetRow = winner.State.DataSetRow,
+            DataSetRowIndex = winner.State.DataSetRowIndex,
+            DataSetRowId = winner.State.DataSetRowId,
             Location = winner.State.Location,
             ContainerRef = winner.State.ContainerRef,
             ZOrder = z,

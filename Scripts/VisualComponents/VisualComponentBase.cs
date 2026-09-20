@@ -108,32 +108,16 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
-        return Setup(parameters, DataSetRow, textureFactory);
-    }
-
-    public virtual bool Setup(
-        ComponentParameters parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
-    {
         TextureFactory = textureFactory;
         TextureReady = false;
 
         if (parameters != null && !string.IsNullOrEmpty(parameters.ComponentName))
             ComponentName = parameters.ComponentName;
 
-        if (!string.IsNullOrEmpty(dataSetRow))
-            DataSetRow = dataSetRow;
-
         return true;
     }
 
-    public virtual bool Setup(
-        SnowTag prototypeRef,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    public virtual bool Setup(SnowTag prototypeRef, TextureFactory textureFactory)
     {
         TextureFactory = textureFactory;
         TextureReady = false;
@@ -152,8 +136,6 @@ public abstract partial class VisualComponentBase : Area3D
         }
 
         PrototypeRef = prototypeRef;
-        if (!string.IsNullOrEmpty(dataSetRow))
-            DataSetRow = dataSetRow;
 
         Setup(proto.Parameters, textureFactory);
 
@@ -169,7 +151,7 @@ public abstract partial class VisualComponentBase : Area3D
     )
     {
         syncDto.ApplyToComponent(this);
-        Setup(prototypeRef, syncDto.DataSetRow, textureFactory);
+        Setup(prototypeRef, textureFactory);
     }
 
     /// <summary>
@@ -199,7 +181,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <returns></returns>
     public virtual bool Refresh(TextureFactory textureFactory)
     {
-        var result = Setup(PrototypeRef, DataSetRow, textureFactory);
+        var result = Setup(PrototypeRef, textureFactory);
         if (result)
             Build();
         return result;
@@ -228,7 +210,12 @@ public abstract partial class VisualComponentBase : Area3D
         if (command == VisualCommand.Duplicate)
         {
             EventBus.Instance.Publish(
-                new SpawnPrototypeEvent { PrototypeRef = PrototypeRef, DataSetRow = DataSetRow }
+                new SpawnPrototypeEvent
+                {
+                    PrototypeRef = PrototypeRef,
+                    DataSetRowIndex = DataSetRowIndex,
+                    DataSetRowId = DataSetRowId,
+                }
             );
             return [];
         }
@@ -293,9 +280,20 @@ public abstract partial class VisualComponentBase : Area3D
     public SnowTag ContainerRef { get; set; } = SnowTag.Empty;
 
     /// <summary>
-    /// Which row in the DataSet supplies the data for templating
+    /// Index for grid and quick deck cards.
+    /// Defaults to <c>-1</c>
     /// </summary>
-    public virtual string DataSetRow { get; set; }
+    public virtual int DataSetRowIndex { get; set; } = -1;
+
+    /// <summary>
+    /// The dataset row that supplies this card's templating data. Defaults to <see cref="SnowTag.Empty"/>.
+    /// </summary>
+    public virtual SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
+
+    /// <summary>
+    /// True when this instance is an individual card rather than a deck container.
+    /// </summary>
+    public bool IsCardInstance => DataSetRowIndex >= 0 || DataSetRowId != SnowTag.Empty;
 
     public virtual Polygon2D YProjection { get; private set; }
 

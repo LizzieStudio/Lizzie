@@ -4,34 +4,6 @@ using Lizzie.Scripts.Templating;
 
 public static class TemplateEngine
 {
-    public static List<TextureFactory.TextureDefinition> GenerateTextureDefinitions(
-        Template template,
-        TextureContext _textureContext
-    )
-    {
-        var l = new List<TextureFactory.TextureDefinition>();
-
-        var t = new TextureContext
-        {
-            DataSet = _textureContext.DataSet,
-            ParentSize = _textureContext.ParentSize,
-        };
-
-        if (t.DataSet == null) //no dataset, so just return a single base texture
-        {
-            l.Add(GenerateTextureDefinition(template, t));
-            return l;
-        }
-
-        foreach (var r in _textureContext.DataSet.Rows)
-        {
-            t.CurrentRowName = r.Key;
-            l.Add(GenerateTextureDefinition(template, t));
-        }
-
-        return l; //new List<TextureFactory.TextureDefinition>()
-    }
-
     public static TextureFactory.TextureDefinition GenerateTextureDefinition(
         Template template,
         TextureContext _textureContext
@@ -193,65 +165,5 @@ public static class TemplateEngine
         }
 
         return d;
-    }
-
-    public static List<QuickCardData> GenerateQuickCards(
-        List<QuickCardData> quickSuitData,
-        int suitCount
-    )
-    {
-        var outCards = new List<QuickCardData>();
-
-        for (int i = 0; i < suitCount; i++)
-        {
-            var values = Utility.ParseValueRanges(quickSuitData[i].Caption);
-
-            foreach (var v in values)
-            {
-                var c = new QuickCardData
-                {
-                    BackgroundColor = quickSuitData[i].BackgroundColor,
-                    Caption = v,
-                    CardBackColor = quickSuitData[i].CardBackColor,
-                    CardBackValue = quickSuitData[i].CardBackValue,
-                };
-
-                outCards.Add(c);
-            }
-        }
-
-        return outCards;
-    }
-
-    public static QuickCardData GenerateQuickCardByRow(
-        List<QuickCardData> quickSuitData,
-        int suitCount,
-        int row
-    )
-    {
-        int curRow = 1;
-
-        for (int i = 0; i < suitCount; i++)
-        {
-            var values = Utility.ParseValueRanges(quickSuitData[i].Caption);
-
-            foreach (var v in values)
-            {
-                var c = new QuickCardData
-                {
-                    BackgroundColor = quickSuitData[i].BackgroundColor,
-                    Caption = v,
-                    CardBackColor = quickSuitData[i].CardBackColor,
-                    CardBackValue = quickSuitData[i].CardBackValue,
-                };
-
-                if (curRow == row)
-                    return c;
-
-                curRow++;
-            }
-        }
-
-        return new QuickCardData();
     }
 }

@@ -300,7 +300,8 @@ public class ModalDialogClosedEvent : IEvent { }
 public class SpawnPrototypeEvent : IEvent
 {
     public SnowTag PrototypeRef { get; set; }
-    public string DataSetRow { get; set; } = string.Empty;
+    public int DataSetRowIndex { get; set; } = -1;
+    public SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
 }
 
 public class QueueStackingUpdateEvent : IEvent { }

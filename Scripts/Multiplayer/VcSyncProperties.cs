@@ -20,7 +20,8 @@ public class VcSyncDto
                 : component.Position;
         Rotation = component.Rotation;
         ZOrder = component.ZOrder;
-        DataSetRow = component.DataSetRow;
+        DataSetRowIndex = component.DataSetRowIndex;
+        DataSetRowId = component.DataSetRowId;
         Location = component.Location;
         ContainerRef = component.ContainerRef;
         LastMoveId = component.LastMoveId;
@@ -37,7 +38,8 @@ public class VcSyncDto
                     ? c.CursorOffset
                     : c.Position,
             Rotation = c.Rotation,
-            DataSetRow = c.DataSetRow,
+            DataSetRowIndex = c.DataSetRowIndex,
+            DataSetRowId = c.DataSetRowId,
             Location = c.Location,
             ContainerRef = c.ContainerRef,
             ZOrder = new ZOrder(ZTarget.Unset, 0, SnowportId.Empty),
@@ -53,8 +55,12 @@ public class VcSyncDto
     [JsonPropertyName("z")]
     public ZOrder ZOrder { get; set; }
 
-    [JsonPropertyName("d")]
-    public string DataSetRow { get; set; }
+    [JsonPropertyName("di")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public int DataSetRowIndex { get; set; } = -1;
+
+    [JsonPropertyName("dr")]
+    public SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
 
     [JsonPropertyName("l")]
     public VisualComponentBase.ComponentLocation Location { get; set; }
@@ -81,7 +87,8 @@ public class VcSyncDto
             component.Position = Position;
         component.Rotation = Rotation;
         component.ZOrder = ZOrder;
-        component.DataSetRow = DataSetRow;
+        component.DataSetRowIndex = DataSetRowIndex;
+        component.DataSetRowId = DataSetRowId;
         component.Location = Location;
         component.ContainerRef = ContainerRef;
         component.LastMoveId = LastMoveId;
