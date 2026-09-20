@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using Godot;
 using static VcToken;
@@ -15,7 +16,7 @@ public partial class VcDie : VisualComponentBase
     private MeshInstance3D _mainMesh;
 
     private TextureFactory _textureFactory;
-    private QuickTextureField[] _sideData;
+    private ImmutableArray<QuickTextureField> _sideData;
     private Color _dieColor;
 
     public override void _Ready()
@@ -253,7 +254,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     private TextureFactory.TextureDefinition D6TextureDefinition(
-        QuickTextureField[] sides,
+        ImmutableArray<QuickTextureField> sides,
         Color color
     )
     {
@@ -296,7 +297,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     private TextureFactory.TextureDefinition D8TextureDefinition(
-        QuickTextureField[] sides,
+        ImmutableArray<QuickTextureField> sides,
         Color color
     )
     {
@@ -341,7 +342,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     private TextureFactory.TextureDefinition D10TextureDefinition(
-        QuickTextureField[] sides,
+        ImmutableArray<QuickTextureField> sides,
         Color color
     )
     {
@@ -388,7 +389,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     private TextureFactory.TextureDefinition D12TextureDefinition(
-        QuickTextureField[] sides,
+        ImmutableArray<QuickTextureField> sides,
         Color color
     )
     {
@@ -437,7 +438,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     private TextureFactory.TextureDefinition D20TextureDefinition(
-        QuickTextureField[] sides,
+        ImmutableArray<QuickTextureField> sides,
         Color color
     )
     {
@@ -527,17 +528,18 @@ public partial class VcDie : VisualComponentBase
     }
 }
 
-public sealed class DieParameters : ComponentParameters
+public sealed record DieParameters : ComponentParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>
         VisualComponentBase.VisualComponentType.Die;
 
-    public float Size { get; set; }
-    public Color Color { get; set; } = Colors.White;
-    public QuickTextureField[] Sides { get; set; } = Array.Empty<QuickTextureField>();
-    public int SideCount { get; set; }
-    public VcToken.TokenBuildMode Mode { get; set; }
-    public SnowTag FrontTemplate { get; set; }
-    public SnowTag Dataset { get; set; }
+    public float Size { get; init; }
+    public Color Color { get; init; } = Colors.White;
+    public ImmutableArray<QuickTextureField> Sides { get; init; } =
+        ImmutableArray<QuickTextureField>.Empty;
+    public int SideCount { get; init; }
+    public VcToken.TokenBuildMode Mode { get; init; }
+    public SnowTag FrontTemplate { get; init; }
+    public SnowTag Dataset { get; init; }
 }

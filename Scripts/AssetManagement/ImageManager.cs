@@ -74,9 +74,6 @@ public partial class ImageManager : Window
         _addPanel.Visible = false;
         UpdateButtons(true);
 
-        //TODO - Check that name and URL exist and are unique
-        //plus other validation
-
         //create the new asset
         var asset = new Asset
         {
@@ -85,24 +82,8 @@ public partial class ImageManager : Window
             CloudPath = _urlInput.Text,
         };
 
-        switch (_cloudServiceOption.Selected)
-        {
-            case 0:
-                asset.ProviderType = CloudProviderType.GoogleDrive;
-                break;
-            case 1:
-                asset.ProviderType = CloudProviderType.Dropbox;
-                break;
-            case 2:
-                asset.ProviderType = CloudProviderType.OneDrive;
-                break;
-            default:
-                GD.PrintErr("Invalid cloud service selected");
-                return;
-        }
-
         AddImageTile(asset);
-        ProjectService.Instance.UpdateImage(asset);
+        ProjectService.Instance.Upsert(asset);
     }
 
     private void OnCancelImagePressed()

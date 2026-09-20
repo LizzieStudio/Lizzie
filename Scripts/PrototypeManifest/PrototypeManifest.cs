@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Channels;
 using Godot;
 
 public partial class PrototypeManifest : Window
@@ -117,7 +116,6 @@ public partial class PrototypeManifest : Window
         _prototypeTree.SelectMode = Tree.SelectModeEnum.Row;
         _prototypeTree.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         _prototypeTree.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _prototypeTree.ButtonClicked += PrototypeEditClicked;
 
         _prototypeTree.ColumnTitlesVisible = true;
         _prototypeTree.SetColumnTitle(0, "Name");
@@ -148,74 +146,34 @@ public partial class PrototypeManifest : Window
         _root = _prototypeTree.CreateItem();
     }
 
-    private void PrototypeEditClicked(TreeItem item, long column, long id, long mouseButtonIndex)
-    {
-        var prototypeRef = new SnowTag(item.GetMetadata(0).AsInt32());
-
-        switch (id)
-        {
-            case 0:
-                EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = prototypeRef });
-                break;
-
-            case 1:
-                SpawnPrototype(prototypeRef);
-                break;
-
-            case 2:
-                DuplicatePrototype(prototypeRef);
-                break;
-
-            case 3:
-                DeletePrototype(prototypeRef);
-                break;
-        }
-    }
-
     private void SpawnPrototype()
     {
         if (_selectedPrototype != null)
         {
-            SpawnPrototype(_selectedPrototype.Id);
+            OnClose();
+            EventBus.Instance.Publish(new SpawnPrototypeEvent { PrototypeRef = _selectedPrototype.Id });
         }
-    }
-
-    private void SpawnPrototype(SnowTag prototypeRef)
-    {
-        OnClose();
-        EventBus.Instance.Publish(new SpawnPrototypeEvent { PrototypeRef = prototypeRef });
     }
 
     private void DeletePrototype()
     {
-        if (_selectedPrototype != null)
-        {
-            DeletePrototype(_selectedPrototype.Id);
-        }
-    }
-
-    private void DeletePrototype(SnowTag prototypeRef)
-    {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var prototype
-            )
-        )
+        if (_selectedPrototype == null)
             return;
 
-        var dialog = new ConfirmationDialog();
-        dialog.Title = "Delete Prototype";
-        dialog.DialogText = $"Delete \"{prototype.Name}\"? This cannot be undone.";
-        dialog.OkButtonText = "Delete";
+        var dialog = new ConfirmationDialog
+        {
+            Title = "Delete Prototype",
+            DialogText = $"Delete \"{_selectedPrototype.Name}\"? This cannot be undone.",
+            OkButtonText = "Delete"
+        };
 
         dialog.Confirmed += () =>
         {
-            ProjectService.Instance.DeletePrototype(prototypeRef);
+            ProjectService.Instance.Upsert(_selectedPrototype with { Deleted = true });
             Refresh(_prototypeCounts);
             dialog.QueueFree();
         };
-        dialog.Canceled += () => dialog.QueueFree();
+        dialog.Canceled += dialog.QueueFree;
 
         AddChild(dialog);
         dialog.PopupCentered();
@@ -223,20 +181,7 @@ public partial class PrototypeManifest : Window
 
     private void DuplicatePrototype()
     {
-        if (_selectedPrototype != null)
-        {
-            DuplicatePrototype(_selectedPrototype.Id);
-        }
-    }
-
-    private void DuplicatePrototype(SnowTag prototypeRef)
-    {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var original
-            )
-        )
+        if (_selectedPrototype == null)
             return;
 
         var existingNames = ProjectService
@@ -245,7 +190,7 @@ public partial class PrototypeManifest : Window
 
         // Strip any existing trailing " (N)" suffix before generating the new name
         var baseName = System.Text.RegularExpressions.Regex.Replace(
-            original.Name,
+            _selectedPrototype.Name,
             @"\s*\(\d+\)$",
             string.Empty
         );
@@ -262,11 +207,10 @@ public partial class PrototypeManifest : Window
         {
             Id = Snowport.Clock.CreateTag(),
             Name = newName,
-            Parameters = original.Parameters.Clone(),
+            Parameters = _selectedPrototype.Parameters with { ComponentName = newName },
         };
-        duplicate.Parameters.ComponentName = newName;
 
-        ProjectService.Instance.UpdatePrototype(duplicate);
+        ProjectService.Instance.Upsert(duplicate);
         Refresh(_prototypeCounts);
     }
 
@@ -293,14 +237,6 @@ public partial class PrototypeManifest : Window
     {
         if (ProjectService.Instance?.CurrentProject == null)
             return;
-
-        /*
-        Texture2D pencil = ResourceLoader.Load<Texture2D>("res://Textures/UI/pencil.png");
-        Texture2D trash = ResourceLoader.Load<Texture2D>("res://Textures/UI/trash-can.png");
-        Texture2D copy =
-            ResourceLoader.Load<Texture2D>("res://Textures/UI/content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg");
-        Texture2D spawn = ResourceLoader.Load<Texture2D>("res://Textures/UI/bottom.png");
-        */
 
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
@@ -339,13 +275,6 @@ public partial class PrototypeManifest : Window
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
             item.SetMetadata(0, prototype.Id.Value);
-
-            /*
-            item.AddButton(2, pencil);
-            item.AddButton(2, spawn);
-            item.AddButton(2, copy);
-            item.AddButton(2, trash);
-            */
         }
     }
 

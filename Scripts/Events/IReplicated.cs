@@ -5,13 +5,18 @@ using System.Collections.Generic;
 /// </summary>
 public interface IReplicated
 {
-    SnowTag Id { get; set; }
+    SnowTag Id { get; }
 
     /// <summary>The id of the event that last wrote this definition.</summary>
-    SnowportId LastUpdateId { get; set; }
+    SnowportId LastUpdateId { get; }
 
     /// <summary>Reversible soft-delete flag.</summary>
-    bool Deleted { get; set; }
+    bool Deleted { get; }
+
+    /// <summary>
+    /// Returns a copy with a replaced id and lastUpdateId
+    /// </summary>
+    IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId);
 }
 
 public static class ReplicatedExtensions

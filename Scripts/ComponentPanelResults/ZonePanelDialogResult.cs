@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Godot;
 
 /// <summary>
@@ -82,29 +83,32 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     public override ComponentParameters GetParams()
     {
-        var p = new ZoneParameters
-        {
-            ComponentName = _nameInput.Text,
-            Width = ParamToFloat(_widthInput.Text),
-            Depth = ParamToFloat(_depthInput.Text),
-            DefaultIncluded = _defaultIncluded.ButtonPressed,
-            HiddenWhenExcluded = _hiddenWhenExcluded.ButtonPressed,
-        };
+        var included = ImmutableArray.CreateBuilder<int>();
+        var excluded = ImmutableArray.CreateBuilder<int>();
 
         foreach (var kv in _seatOptions)
         {
             switch (kv.Value.GetSelectedId())
             {
                 case OptIncluded:
-                    p.IncludedSeats.Add(kv.Key);
+                    included.Add(kv.Key);
                     break;
                 case OptExcluded:
-                    p.ExcludedSeats.Add(kv.Key);
+                    excluded.Add(kv.Key);
                     break;
             }
         }
 
-        return p;
+        return new ZoneParameters
+        {
+            ComponentName = _nameInput.Text,
+            Width = ParamToFloat(_widthInput.Text),
+            Depth = ParamToFloat(_depthInput.Text),
+            DefaultIncluded = _defaultIncluded.ButtonPressed,
+            HiddenWhenExcluded = _hiddenWhenExcluded.ButtonPressed,
+            IncludedSeats = included.ToImmutable(),
+            ExcludedSeats = excluded.ToImmutable(),
+        };
     }
 
     public override void DisplayPrototype(SnowTag prototypeId)

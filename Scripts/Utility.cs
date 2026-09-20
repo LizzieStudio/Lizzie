@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
@@ -237,9 +238,10 @@ public partial class Utility : Node
 
     private static string DieScene(ComponentParameters parameters)
     {
-        var sides = parameters is DieParameters die ? die.Sides : null;
+        var sides =
+            parameters is DieParameters die ? die.Sides : ImmutableArray<QuickTextureField>.Empty;
 
-        if (sides == null || sides.Length == 0)
+        if (sides.Length == 0)
             return $"res://Scenes/VisualComponents/Dice/VcD6s.tscn";
 
         string shape = string.Empty;

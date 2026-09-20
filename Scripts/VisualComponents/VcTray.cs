@@ -181,16 +181,16 @@ public partial class VcTray : VisualComponentGroup
     }
 }
 
-public sealed class TrayParameters : ComponentParameters
+public sealed record TrayParameters : ComponentParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>
         VisualComponentBase.VisualComponentType.Tray;
 
-    public float Height { get; set; }
-    public float Width { get; set; }
-    public float Length { get; set; }
-    public Color Color { get; set; } = Colors.Black;
+    public float Height { get; init; }
+    public float Width { get; init; }
+    public float Length { get; init; }
+    public Color Color { get; init; } = Colors.Black;
 
-    public string Prototype { get; set; } = "";
+    public string Prototype { get; init; } = "";
 }

@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
-using Godot;
-using TTSS.Scripts.Templating;
 
-public class Template : IReplicated
+public record Template : IReplicated
 {
     public enum TemplateTarget
     {
@@ -17,23 +15,24 @@ public class Template : IReplicated
         D20,
     }
 
-    public SnowTag Id { get; set; }
+    public SnowTag Id { get; init; }
 
     /// <summary>
     /// Reversible soft-delete flag.
     /// </summary>
-    public bool Deleted { get; set; }
+    public bool Deleted { get; init; }
 
     /// <summary>The id of the last event that updated this template.</summary>
-    public SnowportId LastUpdateId { get; set; }
+    public SnowportId LastUpdateId { get; init; }
 
-    public string Name { get; set; }
-    public string Description { get; set; }
+    public string Name { get; init; }
+    public string Description { get; init; }
 
-    public string SizeTemplate { get; set; }
-    public float Width { get; set; }
-    public float Height { get; set; }
-    public List<Dictionary<string, string>> Elements { get; set; } = new();
+    public string SizeTemplate { get; init; }
+    public float Width { get; init; }
+    public float Height { get; init; }
+    public ImmutableArray<ImmutableDictionary<string, string>> Elements { get; init; } =
+        ImmutableArray<ImmutableDictionary<string, string>>.Empty;
 
     [JsonIgnore]
     public TemplateTarget Target
@@ -60,5 +59,8 @@ public class Template : IReplicated
         }
     }
 
-    public SnowTag DataSet { get; set; }
+    public SnowTag DataSet { get; init; }
+
+    public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
+        this with { Id = id, LastUpdateId = lastUpdateId };
 }

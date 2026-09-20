@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 using Lizzie.AssetManagement;
@@ -643,36 +644,48 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         switch (_tabs.CurrentTab)
         {
             case 0:
-                d.Mode = VcToken.TokenBuildMode.Quick;
-                d.QuickFront = _frontField.GetQuickTextureField();
-                d.QuickBack = _backField.GetQuickTextureField();
-                d.DifferentBack = _quickBackCheckbox.ButtonPressed;
+                d = d with
+                {
+                    Mode = VcToken.TokenBuildMode.Quick,
+                    QuickFront = _frontField.GetQuickTextureField(),
+                    QuickBack = _backField.GetQuickTextureField(),
+                    DifferentBack = _quickBackCheckbox.ButtonPressed,
+                };
                 break;
 
             case 1:
                 LoadQuickSuits();
-                d.QuickCardData = _quickSuits;
-                d.DifferentBack = true;
-                d.Mode = VcToken.TokenBuildMode.QuickDeck;
+                d = d with
+                {
+                    QuickCardData = _quickSuits.ToImmutableArray(),
+                    DifferentBack = true,
+                    Mode = VcToken.TokenBuildMode.QuickDeck,
+                };
                 spawnAsDeck = true;
                 WidthHint = width / 10f;
                 HeightHint = height / 10f;
                 break;
 
             case 2:
-                d.Mode = VcToken.TokenBuildMode.Custom;
-                d.DifferentBack = _customBackCheckbox.ButtonPressed;
+                d = d with
+                {
+                    Mode = VcToken.TokenBuildMode.Custom,
+                    DifferentBack = _customBackCheckbox.ButtonPressed,
+                };
                 break;
 
             case 3:
-                d.FrontGridImageKey = _frontGridImage;
-                d.BackGridImageKey = _backGridImage;
-                d.GridRows = _gridRows;
-                d.GridCols = _gridCols;
-                d.GridCount = _gridCount;
-                d.Mode = VcToken.TokenBuildMode.Grid;
-                d.DifferentBack = true;
-                d.GridSingleBack = _gridSingleBack.ButtonPressed;
+                d = d with
+                {
+                    FrontGridImageKey = _frontGridImage,
+                    BackGridImageKey = _backGridImage,
+                    GridRows = _gridRows,
+                    GridCols = _gridCols,
+                    GridCount = _gridCount,
+                    Mode = VcToken.TokenBuildMode.Grid,
+                    DifferentBack = true,
+                    GridSingleBack = _gridSingleBack.ButtonPressed,
+                };
                 if (_gridCount > 1)
                 {
                     spawnAsDeck = true;
@@ -682,12 +695,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 break;
 
             case 4:
-                d.Mode = VcToken.TokenBuildMode.Template;
+                d = d with { Mode = VcToken.TokenBuildMode.Template };
                 if (_frontTemplate != null)
-                    d.FrontTemplate = _frontTemplate.Id;
+                    d = d with { FrontTemplate = _frontTemplate.Id };
                 if (_backTemplate != null)
-                    d.BackTemplate = _backTemplate.Id;
-                d.Dataset = _textureContext.DataSet?.Id ?? SnowTag.Empty;
+                    d = d with { BackTemplate = _backTemplate.Id };
+                d = d with { Dataset = _textureContext.DataSet?.Id ?? SnowTag.Empty };
                 if (_textureContext.DataSet != null)
                 {
                     spawnAsDeck = true;
@@ -698,8 +711,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 break;
         }
 
-        d.BackBgColor = _quickBackgroundColor2.Color;
-        d.BackFontSize = 24;
+        d = d with { BackBgColor = _quickBackgroundColor2.Color, BackFontSize = 24 };
 
         if (spawnAsDeck)
         {
@@ -828,16 +840,16 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             _ => 0,
         };
 
-        if (p.QuickCardData is { Count: > 0 } quickData)
+        if (p.QuickCardData is { Length: > 0 } quickData)
         {
-            _quickSuitCount.Select(Math.Min(quickData.Count - 1, MaxQuickSuitCount - 1));
+            _quickSuitCount.Select(Math.Min(quickData.Length - 1, MaxQuickSuitCount - 1));
             QuickSuitCountChanged(_quickSuitCount.Selected);
-            for (int i = 0; i < quickData.Count && i < MaxQuickSuitCount; i++)
+            for (int i = 0; i < quickData.Length && i < MaxQuickSuitCount; i++)
             {
                 _quickSuitColors[i].Color = quickData[i].BackgroundColor;
                 _quickSuitValues[i].Text = quickData[i].Caption;
             }
-            if (quickData.Count > 0)
+            if (quickData.Length > 0)
             {
                 _quickBackColor.Color = quickData[0].CardBackColor;
                 _quickBackText.Text = quickData[0].CardBackValue;

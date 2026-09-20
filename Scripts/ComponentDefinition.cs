@@ -140,7 +140,7 @@ public partial class ComponentDefinition : Window
             }
 
             if (string.IsNullOrEmpty(result.BaseName))
-                result.BaseName = CurName;
+                result = result with { BaseName = CurName };
 
             CreateObjectEventArgs e = new()
             {
@@ -203,10 +203,10 @@ public partial class ComponentDefinition : Window
             return;
 
         var editResult = _panelDictionary[CurName] as ComponentPanelDialogResult;
-        prototype.Parameters = editResult?.GetParams();
-        prototype.Name = prototype.Parameters?.ComponentName;
+        var newParams = editResult?.GetParams();
+        prototype = prototype with { Parameters = newParams, Name = newParams?.ComponentName };
 
-        ProjectService.Instance.UpdatePrototype(prototype);
+        ProjectService.Instance.Upsert(prototype);
 
         CloseDialog?.Invoke(this, EventArgs.Empty);
     }

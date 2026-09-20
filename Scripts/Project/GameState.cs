@@ -1,26 +1,24 @@
-using System;
+using System.Collections.Immutable;
 
-public class GameState : IReplicated
+public record GameState : IReplicated
 {
-    public GameState() { }
-
     /// <summary>Unique identity of this saved state.</summary>
-    public SnowTag Id { get; set; }
+    public SnowTag Id { get; init; }
 
     /// <summary>The linked snapshot or <see cref="SnowTag.Empty"/>.</summary>
-    public SnowTag Parent { get; set; }
+    public SnowTag Parent { get; init; }
 
     /// <summary>Reversible soft-delete flag.</summary>
-    public bool Deleted { get; set; }
+    public bool Deleted { get; init; }
 
     /// <summary>The id of the last event that wrote this record.</summary>
-    public SnowportId LastUpdateId { get; set; }
+    public SnowportId LastUpdateId { get; init; }
 
     /// <summary>Human-readable name chosen by the user.</summary>
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
 
     /// <summary>A freeform description entered by the user (optional).</summary>
-    public string Description { get; set; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
 
     /// <summary>
     /// A delta vs the parent:
@@ -28,5 +26,9 @@ public class GameState : IReplicated
     /// * one upsert for each transformed component
     /// * one delete upsert for each removed component
     /// </summary>
-    public ComponentEffect[] Upserts { get; set; } = Array.Empty<ComponentEffect>();
+    public ImmutableArray<ComponentEffect> Upserts { get; init; } =
+        ImmutableArray<ComponentEffect>.Empty;
+
+    public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
+        this with { Id = id, LastUpdateId = lastUpdateId };
 }

@@ -17,7 +17,6 @@ namespace Lizzie.AssetManagement
         private string _accessToken;
         private string _baseFolderPath;
         private readonly System.Net.Http.HttpClient _httpClient;
-        private const string GraphApiBaseUrl = "https://graph.microsoft.com/v1.0";
 
         public bool IsInitialized { get; private set; }
 
@@ -55,193 +54,6 @@ namespace Lizzie.AssetManagement
             {
                 GD.PrintErr($"Failed to initialize OneDrive provider: {ex.Message}");
                 IsInitialized = false;
-                throw;
-            }
-        }
-
-        public async Task<CloudFileInfo> UploadFileAsync(
-            string localFilePath,
-            string destinationPath
-        )
-        {
-            if (!IsInitialized)
-                throw new InvalidOperationException("Provider not initialized");
-
-            try
-            {
-                using var stream = File.OpenRead(localFilePath);
-                var filename = Path.GetFileName(localFilePath);
-                return await UploadStreamAsync(stream, filename, destinationPath);
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"OneDrive upload failed: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<CloudFileInfo> UploadStreamAsync(
-            Stream stream,
-            string filename,
-            string destinationPath
-        )
-        {
-            if (!IsInitialized)
-                throw new InvalidOperationException("Provider not initialized");
-
-            try
-            {
-                var fullPath = CombinePath(_baseFolderPath, destinationPath, filename);
-
-                // For small files (< 4MB), use simple upload
-                if (stream.Length < 4 * 1024 * 1024)
-                {
-                    var url = $"{GraphApiBaseUrl}/me/drive/root:{fullPath}:/content";
-
-                    var content = new StreamContent(stream);
-                    content.Headers.ContentType = new MediaTypeHeaderValue(
-                        "application/octet-stream"
-                    );
-
-                    var response = await _httpClient.PutAsync(url, content);
-                    response.EnsureSuccessStatusCode();
-
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var metadata = JsonSerializer.Deserialize<OneDriveFileMetadata>(
-                        responseContent
-                    );
-
-                    return new CloudFileInfo
-                    {
-                        FileId = metadata.id,
-                        Filename = metadata.name,
-                        Path = fullPath,
-                        FileSize = metadata.size,
-                        CreatedDate = DateTime.Parse(metadata.createdDateTime),
-                        ModifiedDate = DateTime.Parse(metadata.lastModifiedDateTime),
-                        MimeType = metadata.file?.mimeType,
-                        Metadata = responseContent,
-                    };
-                }
-                else
-                {
-                    throw new NotImplementedException(
-                        "Large file upload (>4MB) requires upload session API"
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"OneDrive stream upload failed: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task DownloadFileAsync(string cloudFileId, string localFilePath)
-        {
-            if (!IsInitialized)
-                throw new InvalidOperationException("Provider not initialized");
-
-            try
-            {
-                using var stream = await DownloadStreamAsync(cloudFileId);
-                using var fileStream = File.Create(localFilePath);
-                await stream.CopyToAsync(fileStream);
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"OneDrive download failed: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<Stream> DownloadStreamAsync(string cloudFileId)
-        {
-            if (!IsInitialized)
-                throw new InvalidOperationException("Provider not initialized");
-
-            try
-            {
-                var url = $"{GraphApiBaseUrl}/me/drive/items/{cloudFileId}/content";
-                var response = await _httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                var memoryStream = new MemoryStream();
-                await response.Content.CopyToAsync(memoryStream);
-                memoryStream.Position = 0;
-                return memoryStream;
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"OneDrive stream download failed: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task DeleteFileAsync(string cloudFileId)
-        {
-            if (!IsInitialized)
-                throw new InvalidOperationException("Provider not initialized");
-
-            try
-            {
-                var url = $"{GraphApiBaseUrl}/me/drive/items/{cloudFileId}";
-                var response = await _httpClient.DeleteAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                GD.Print($"Deleted file from OneDrive: {cloudFileId}");
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"OneDrive delete failed: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<CloudFileInfo> GetFileInfoAsync(string cloudFileId)
-        {
-            if (!IsInitialized)
-                throw new InvalidOperationException("Provider not initialized");
-
-            try
-            {
-                var url = $"{GraphApiBaseUrl}/me/drive/items/{cloudFileId}";
-                var response = await _httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var metadata = JsonSerializer.Deserialize<OneDriveFileMetadata>(responseContent);
-
-                return new CloudFileInfo
-                {
-                    FileId = metadata.id,
-                    Filename = metadata.name,
-                    FileSize = metadata.size,
-                    MimeType = metadata.file?.mimeType,
-                    CreatedDate = DateTime.Parse(metadata.createdDateTime),
-                    ModifiedDate = DateTime.Parse(metadata.lastModifiedDateTime),
-                    Metadata = responseContent,
-                };
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"OneDrive get file info failed: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task DownloadPublicFileAsync(string publicUrl, string localFilePath)
-        {
-            try
-            {
-                using var stream = await DownloadPublicFileStreamAsync(publicUrl);
-                using var fileStream = File.Create(localFilePath);
-                await stream.CopyToAsync(fileStream);
-                GD.Print($"Downloaded public file from OneDrive to: {localFilePath}");
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"OneDrive public file download failed: {ex.Message}");
                 throw;
             }
         }
@@ -294,22 +106,6 @@ namespace Lizzie.AssetManagement
             return url;
         }
 
-        private string ExtractFolderId(string folderUrl)
-        {
-            if (string.IsNullOrEmpty(folderUrl))
-                return "root";
-
-            // If it's already just an ID, return it
-            if (!folderUrl.Contains("/") && !folderUrl.Contains("onedrive.live.com"))
-            {
-                return folderUrl;
-            }
-
-            // For OneDrive URLs, might need custom extraction logic
-            // For now, assume it's a direct folder ID or path
-            return folderUrl;
-        }
-
         private string NormalizePath(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -317,32 +113,9 @@ namespace Lizzie.AssetManagement
             return path.Replace("\\", "/").Trim('/');
         }
 
-        private string CombinePath(params string[] parts)
-        {
-            var combined = string.Join("/", parts).Replace("\\", "/");
-            while (combined.Contains("//"))
-                combined = combined.Replace("//", "/");
-            return combined.Trim('/');
-        }
-
         private class OneDriveCredentials
         {
             public string AccessToken { get; set; }
-        }
-
-        private class OneDriveFileMetadata
-        {
-            public string id { get; set; }
-            public string name { get; set; }
-            public long size { get; set; }
-            public string createdDateTime { get; set; }
-            public string lastModifiedDateTime { get; set; }
-            public OneDriveFileInfo file { get; set; }
-        }
-
-        private class OneDriveFileInfo
-        {
-            public string mimeType { get; set; }
         }
     }
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
@@ -10,12 +12,6 @@ using Godot;
 /// </summary>
 public partial class VcZone : VisualComponentBase
 {
-    public const string WidthKey = "Width";
-    public const string DepthKey = "Depth";
-    public const string DefaultIncludedKey = "DefaultIncluded";
-    public const string IncludedSeatsKey = "IncludedSeats";
-    public const string ExcludedSeatsKey = "ExcludedSeats";
-    public const string HiddenWhenExcludedKey = "HiddenWhenExcluded";
 
     private float _width = 2f;
     private float _depth = 2f;
@@ -69,8 +65,8 @@ public partial class VcZone : VisualComponentBase
 
         _defaultIncluded = p.DefaultIncluded;
         _hiddenWhenExcluded = p.HiddenWhenExcluded;
-        _includedSeats = new HashSet<int>(p.IncludedSeats);
-        _excludedSeats = new HashSet<int>(p.ExcludedSeats);
+        _includedSeats = p.IncludedSeats.ToHashSet();
+        _excludedSeats = p.ExcludedSeats.ToHashSet();
 
         if (MainMesh != null)
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
@@ -84,10 +80,10 @@ public partial class VcZone : VisualComponentBase
 
     public override float MaxAxisSize => Math.Max(_width, _depth);
 
-    //Zones always sit below everything else.
+    // Zones always sit below everything else.
     public override ZOrder ZOrder
     {
-        get => global::ZOrder.Floor;
+        get => ZOrder.Floor;
         set { }
     }
 
@@ -118,16 +114,16 @@ public partial class VcZone : VisualComponentBase
     }
 }
 
-public sealed class ZoneParameters : ComponentParameters
+public sealed record ZoneParameters : ComponentParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>
         VisualComponentBase.VisualComponentType.Zone;
 
-    public float Width { get; set; } = 2f;
-    public float Depth { get; set; } = 2f;
-    public bool DefaultIncluded { get; set; }
-    public bool HiddenWhenExcluded { get; set; }
-    public List<int> IncludedSeats { get; set; } = new();
-    public List<int> ExcludedSeats { get; set; } = new();
+    public float Width { get; init; } = 2f;
+    public float Depth { get; init; } = 2f;
+    public bool DefaultIncluded { get; init; }
+    public bool HiddenWhenExcluded { get; init; }
+    public ImmutableArray<int> IncludedSeats { get; init; } = ImmutableArray<int>.Empty;
+    public ImmutableArray<int> ExcludedSeats { get; init; } = ImmutableArray<int>.Empty;
 }

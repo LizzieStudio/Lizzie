@@ -1,27 +1,30 @@
-using System.Collections.Generic;
+using System.Collections.Immutable;
 
-public class DataSet : IReplicated
+public record DataSet : IReplicated
 {
-    public SnowTag Id { get; set; }
+    public SnowTag Id { get; init; }
 
     /// <summary>
     /// Reversible soft-delete flag.
     /// </summary>
-    public bool Deleted { get; set; }
+    public bool Deleted { get; init; }
 
     /// <summary>The id of the last event that updated this dataset.</summary>
-    public SnowportId LastUpdateId { get; set; }
+    public SnowportId LastUpdateId { get; init; }
 
-    public string Name { get; set; }
+    public string Name { get; init; }
 
     /// <summary>
     /// The dataset's columns, in display order.
     /// </summary>
-    public List<Column> Columns { get; set; } = new();
+    public ImmutableArray<Column> Columns { get; init; } = ImmutableArray<Column>.Empty;
+
+    public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
+        this with { Id = id, LastUpdateId = lastUpdateId };
 }
 
-public class Column
+public record Column
 {
-    public SnowTag Id { get; set; }
-    public string Name { get; set; } = string.Empty;
+    public SnowTag Id { get; init; }
+    public string Name { get; init; } = string.Empty;
 }

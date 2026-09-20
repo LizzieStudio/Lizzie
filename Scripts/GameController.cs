@@ -101,7 +101,7 @@ public partial class GameController : Node3D
         var args = new CreateObjectEventArgs
         {
             ComponentType = prototype.Type,
-            Params = prototype.Parameters.Clone(),
+            Params = prototype.Parameters,
             PrototypeRef = prototype.Id,
             PrototypeName = scenePath,
         };
@@ -213,9 +213,10 @@ public partial class GameController : Node3D
             && string.IsNullOrWhiteSpace(args.Params.ComponentName)
         )
         {
-            args.Params.ComponentName = _mainScene.GameObjects.CreateUniqueName(
-                args.Params.BaseName
-            );
+            args.Params = args.Params with
+            {
+                ComponentName = _mainScene.GameObjects.CreateUniqueName(args.Params.BaseName),
+            };
         }
 
         if (component.Setup(args.PrototypeRef, _textureFactory))

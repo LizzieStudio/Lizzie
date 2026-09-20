@@ -74,7 +74,9 @@ public static class TemplateEngine
         }
     }
 
-    public static ITemplateElement BuildTemplateElement(Dictionary<string, string> parameters)
+    public static ITemplateElement BuildTemplateElement(
+        IReadOnlyDictionary<string, string> parameters
+    )
     {
         TemplateElement te;
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
@@ -29,7 +30,7 @@ public partial class DatasetEditor : Window
     private Label _newDatasetErrorLabel;
     private HBoxContainer _newRowContainer;
 
-    private List<DataRow> _rows = new();
+    private IReadOnlyList<DataRow> _rows = new List<DataRow>();
 
     private List<SnowTag> _columnIds = new();
 
@@ -50,14 +51,6 @@ public partial class DatasetEditor : Window
             DataRowStore.Instance.DataRowsChanged += OnDataRowsChanged;
         if (DataSetStore.Instance != null)
             DataSetStore.Instance.DataSetsChanged += OnDataSetsChanged;
-    }
-
-    public override void _ExitTree()
-    {
-        if (DataRowStore.Instance != null)
-            DataRowStore.Instance.DataRowsChanged -= OnDataRowsChanged;
-        if (DataSetStore.Instance != null)
-            DataSetStore.Instance.DataSetsChanged -= OnDataSetsChanged;
     }
 
     private void InitializeSpreadsheet()
@@ -218,7 +211,7 @@ public partial class DatasetEditor : Window
             return;
 
         var ds = new DataSet { Name = name };
-        ProjectService.Instance.UpdateDataSet(ds);
+        ProjectService.Instance.Upsert(ds);
 
         SelectDatasetById(ds.Id);
     }
@@ -238,21 +231,10 @@ public partial class DatasetEditor : Window
 
         _currentDataSet = ds;
 
-        // Use copies so we can diff them for updates.
-        // TODO: this should be removed if they become immutable.
-        _rows = ProjectService.Instance.GetRows(ds.Id).Select(CloneRow).ToList();
+        _rows = ProjectService.Instance.GetRows(ds.Id);
 
         RebuildGrid();
     }
-
-    private static DataRow CloneRow(DataRow r) =>
-        new()
-        {
-            Id = r.Id,
-            DataSetId = r.DataSetId,
-            Rank = r.Rank,
-            Data = new Dictionary<SnowTag, string>(r.Data),
-        };
 
     private void RebuildGrid()
     {
@@ -265,7 +247,7 @@ public partial class DatasetEditor : Window
 
         _columnWidths.Clear();
         _rowCheckboxes.Clear();
-        for (int i = 0; i < _currentDataSet.Columns.Count; i++)
+        for (int i = 0; i < _currentDataSet.Columns.Length; i++)
             _columnWidths.Add(DefaultColumnWidth);
 
         CreateHeaderRow();
@@ -289,7 +271,7 @@ public partial class DatasetEditor : Window
         checkboxHeader.CustomMinimumSize = new Vector2(CheckboxColumnWidth, HeaderHeight);
         _headerContainer.AddChild(checkboxHeader);
 
-        for (int i = 0; i < _currentDataSet.Columns.Count; i++)
+        for (int i = 0; i < _currentDataSet.Columns.Length; i++)
         {
             var headerCell = new HeaderCell();
             headerCell.SetColumnIndex(i);
@@ -377,7 +359,10 @@ public partial class DatasetEditor : Window
         return data;
     }
 
-    private static bool DataEqual(Dictionary<SnowTag, string> a, Dictionary<SnowTag, string> b)
+    private static bool DataEqual(
+        IReadOnlyDictionary<SnowTag, string> a,
+        IReadOnlyDictionary<SnowTag, string> b
+    )
     {
         if (a.Count != b.Count)
             return false;
@@ -396,15 +381,13 @@ public partial class DatasetEditor : Window
         if (DataEqual(newData, snapshot.Data))
             return;
 
-        snapshot.Data = newData;
-
-        ProjectService.Instance.UpdateDataRow(
+        ProjectService.Instance.Upsert(
             new DataRow
             {
                 Id = snapshot.Id,
                 DataSetId = snapshot.DataSetId,
                 Rank = snapshot.Rank,
-                Data = newData,
+                Data = newData.ToImmutableDictionary(),
             }
         );
     }
@@ -436,10 +419,10 @@ public partial class DatasetEditor : Window
             Id = Snowport.Clock.CreateTag(),
             DataSetId = _currentDataSet.Id,
             Rank = RowRank.Between(lastRank, null),
-            Data = newData,
+            Data = newData.ToImmutableDictionary(),
         };
 
-        ProjectService.Instance.UpdateDataRow(row);
+        ProjectService.Instance.Upsert(row);
     }
 
     private void OnAddColumnPressed()
@@ -447,23 +430,29 @@ public partial class DatasetEditor : Window
         if (_currentDataSet == null)
             return;
 
-        _currentDataSet.Columns.Add(
-            new Column
-            {
-                Id = Snowport.Clock.CreateTag(),
-                Name = $"Column {_currentDataSet.Columns.Count + 1}",
-            }
-        );
-        ProjectService.Instance.UpdateDataSet(_currentDataSet);
+        _currentDataSet = _currentDataSet with
+        {
+            Columns = _currentDataSet.Columns.Add(
+                new Column
+                {
+                    Id = Snowport.Clock.CreateTag(),
+                    Name = $"Column {_currentDataSet.Columns.Length + 1}",
+                }
+            ),
+        };
+        ProjectService.Instance.Upsert(_currentDataSet);
     }
 
     private void OnDeleteColumnPressed()
     {
-        if (_currentDataSet == null || _currentDataSet.Columns.Count == 0)
+        if (_currentDataSet == null || _currentDataSet.Columns.Length == 0)
             return;
 
-        _currentDataSet.Columns.RemoveAt(_currentDataSet.Columns.Count - 1);
-        ProjectService.Instance.UpdateDataSet(_currentDataSet);
+        _currentDataSet = _currentDataSet with
+        {
+            Columns = _currentDataSet.Columns.RemoveAt(_currentDataSet.Columns.Length - 1),
+        };
+        ProjectService.Instance.Upsert(_currentDataSet);
     }
 
     private void OnDeleteButtonPressed()
@@ -474,7 +463,7 @@ public partial class DatasetEditor : Window
         for (int i = 0; i < _rows.Count && i < _rowCheckboxes.Count; i++)
         {
             if (_rowCheckboxes[i].ButtonPressed)
-                ProjectService.Instance.DeleteDataRow(_rows[i].Id);
+                ProjectService.Instance.Upsert(_rows[i] with { Deleted = true });
         }
     }
 
@@ -532,36 +521,46 @@ public partial class DatasetEditor : Window
 
         var header = lines[0];
 
-        var columns = header
-            .Select(h => new Column { Id = Snowport.Clock.CreateTag(), Name = h })
-            .ToList();
-        _currentDataSet.Columns = columns;
-        ProjectService.Instance.UpdateDataSet(_currentDataSet);
+        var batch = new UpsertBatch();
+
+        var currentColumns = _currentDataSet.Columns.Select(c => c.Name);
+
+        if (!currentColumns.SequenceEqual(header))
+        {
+            // TODO: we should do column matching based on string
+            var nextColumns = header
+                .Select(h => new Column { Id = Snowport.Clock.CreateTag(), Name = h })
+                .ToImmutableArray();
+            _currentDataSet = _currentDataSet with { Columns = nextColumns };
+            batch.Add(_currentDataSet);
+        }
 
         foreach (var existing in ProjectService.Instance.GetRows(_currentDataSet.Id))
-            ProjectService.Instance.DeleteDataRow(existing.Id);
+            batch.Add(existing with { Deleted = true });
 
         string prevRank = null;
         for (int i = 1; i < lines.Count; i++)
         {
             var data = new Dictionary<SnowTag, string>();
-            for (int c = 0; c < columns.Count && c < lines[i].Length; c++)
+            for (int c = 0; c < _currentDataSet.Columns.Length && c < lines[i].Length; c++)
             {
                 if (!string.IsNullOrEmpty(lines[i][c]))
-                    data[columns[c].Id] = lines[i][c];
+                    data[_currentDataSet.Columns[c].Id] = lines[i][c];
             }
 
             prevRank = RowRank.Between(prevRank, null);
-            ProjectService.Instance.UpdateDataRow(
+            batch.Add(
                 new DataRow
                 {
                     Id = Snowport.Clock.CreateTag(),
                     DataSetId = _currentDataSet.Id,
                     Rank = prevRank,
-                    Data = data,
+                    Data = data.ToImmutableDictionary(),
                 }
             );
         }
+
+        batch.Submit();
     }
 
     private void OnColumnResized(int columnIndex, float newWidth)

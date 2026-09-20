@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -240,7 +241,7 @@ public partial class VcToken : VisualComponentBase
         _backTemplateRef = p.BackTemplate;
         _datasetRef = p.Dataset;
 
-        _quickCardList = p.QuickCardData ?? new();
+        _quickCardList = p.QuickCardData;
 
         _faceHframes = 1;
         _faceVframes = 1;
@@ -758,7 +759,7 @@ public partial class VcToken : VisualComponentBase
         ).Start();
     }
 
-    private List<QuickCardData> _quickCardList = new();
+    private ImmutableArray<QuickCardData> _quickCardList = new();
 
     private void BuildQuickDeck(TextureFactory textureFactory)
     {
@@ -767,7 +768,7 @@ public partial class VcToken : VisualComponentBase
             return;
 
         var cards = ExpandQuickCardList(_quickCardList);
-        int n = cards.Count;
+        int n = cards.Length;
         if (n == 0)
             return;
 
@@ -805,7 +806,7 @@ public partial class VcToken : VisualComponentBase
 
     private void ApplySheetWhenReady(
         TextureFactory textureFactory,
-        List<QuickCardData> cards,
+        ImmutableArray<QuickCardData> cards,
         string frontKey,
         string backKey,
         int cellW,
@@ -857,7 +858,7 @@ public partial class VcToken : VisualComponentBase
 
         if (weBuildFront)
         {
-            var defs = new List<TextureFactory.TextureDefinition>(cards.Count);
+            var defs = new List<TextureFactory.TextureDefinition>(cards.Length);
             foreach (var card in cards)
             {
                 defs.Add(
@@ -890,7 +891,7 @@ public partial class VcToken : VisualComponentBase
         if (weBuildBack)
         {
             var defs = new List<TextureFactory.TextureDefinition>();
-            var backCards = singleBack ? new List<QuickCardData> { cards[0] } : cards;
+            var backCards = singleBack ? [cards[0]] : cards;
             foreach (var card in backCards)
             {
                 defs.Add(
@@ -921,9 +922,9 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
-    private static List<QuickCardData> ExpandQuickCardList(List<QuickCardData> source)
+    private static ImmutableArray<QuickCardData> ExpandQuickCardList(ImmutableArray<QuickCardData> source)
     {
-        var cards = new List<QuickCardData>();
+        var cards = ImmutableArray.CreateBuilder<QuickCardData>();
         foreach (var q in source)
         {
             foreach (var v in Utility.ParseValueRanges(q.Caption))
@@ -939,15 +940,15 @@ public partial class VcToken : VisualComponentBase
                 );
             }
         }
-        return cards;
+        return cards.ToImmutable();
     }
 
-    private static bool AllBacksIdentical(List<QuickCardData> cards)
+    private static bool AllBacksIdentical(ImmutableArray<QuickCardData> cards)
     {
-        if (cards.Count <= 1)
+        if (cards.Length <= 1)
             return true;
         var first = cards[0];
-        for (int i = 1; i < cards.Count; i++)
+        for (int i = 1; i < cards.Length; i++)
         {
             if (
                 cards[i].CardBackValue != first.CardBackValue
@@ -971,7 +972,7 @@ public partial class VcToken : VisualComponentBase
     }
 
     public static string QuickDeckSheetKey(
-        List<QuickCardData> cards,
+        ImmutableArray<QuickCardData> cards,
         int shape,
         int cellW,
         int cellH,
@@ -1311,44 +1312,45 @@ public partial class VcToken : VisualComponentBase
     }
 }
 
-public abstract class PrintedParameters : ComponentParameters
+public abstract record PrintedParameters : ComponentParameters
 {
-    public float Height { get; set; }
-    public float Width { get; set; }
-    public float Thickness { get; set; }
-    public int Shape { get; set; }
-    public VcToken.TokenBuildMode Mode { get; set; }
-    public bool DifferentBack { get; set; }
+    public float Height { get; init; }
+    public float Width { get; init; }
+    public float Thickness { get; init; }
+    public int Shape { get; init; }
+    public VcToken.TokenBuildMode Mode { get; init; }
+    public bool DifferentBack { get; init; }
 
-    public string FrontImage { get; set; } = "";
-    public string BackImage { get; set; } = "";
+    public string FrontImage { get; init; } = "";
+    public string BackImage { get; init; } = "";
 
-    public Color FrontBgColor { get; set; } = Colors.Black;
-    public Color BackBgColor { get; set; } = Colors.Black;
+    public Color FrontBgColor { get; init; } = Colors.Black;
+    public Color BackBgColor { get; init; } = Colors.Black;
 
-    public QuickTextureField QuickFront { get; set; } = new();
-    public QuickTextureField QuickBack { get; set; } = new();
+    public QuickTextureField QuickFront { get; init; } = new();
+    public QuickTextureField QuickBack { get; init; } = new();
 
-    public int FrontFontSize { get; set; }
-    public int BackFontSize { get; set; }
+    public int FrontFontSize { get; init; }
+    public int BackFontSize { get; init; }
 
-    public VcToken.TokenType Type { get; set; }
+    public VcToken.TokenType Type { get; init; }
 
-    public List<QuickCardData> QuickCardData { get; set; } = new();
+    public ImmutableArray<QuickCardData> QuickCardData { get; init; } =
+        ImmutableArray<QuickCardData>.Empty;
 
-    public SnowTag FrontGridImageKey { get; set; }
-    public SnowTag BackGridImageKey { get; set; }
-    public int GridRows { get; set; }
-    public int GridCols { get; set; }
-    public int GridCount { get; set; }
-    public bool GridSingleBack { get; set; }
+    public SnowTag FrontGridImageKey { get; init; }
+    public SnowTag BackGridImageKey { get; init; }
+    public int GridRows { get; init; }
+    public int GridCols { get; init; }
+    public int GridCount { get; init; }
+    public bool GridSingleBack { get; init; }
 
-    public SnowTag FrontTemplate { get; set; }
-    public SnowTag BackTemplate { get; set; }
-    public SnowTag Dataset { get; set; }
+    public SnowTag FrontTemplate { get; init; }
+    public SnowTag BackTemplate { get; init; }
+    public SnowTag Dataset { get; init; }
 }
 
-public sealed class TokenParameters : PrintedParameters
+public sealed record TokenParameters : PrintedParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>

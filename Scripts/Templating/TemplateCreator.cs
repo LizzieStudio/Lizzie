@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Godot;
 using Lizzie.Scripts.Templating;
 
@@ -373,9 +373,6 @@ public partial class TemplateCreator : Window
         if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
-        if (CurrentTemplate != null)
-            UpdateTemplate(CurrentTemplate);
-
         var switched = ProjectService.Instance.GetTemplate(
             new SnowTag(_templateNameSelector.GetItemId((int)index))
         );
@@ -391,14 +388,17 @@ public partial class TemplateCreator : Window
         if (CurrentTemplate == null)
             return;
 
-        CurrentTemplate.SizeTemplate = _curSizeType;
-        CurrentTemplate.Width = _curWidth;
-        CurrentTemplate.Height = _curHeight;
-
-        CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(
-            _hierarchicalElements
-        );
-        ProjectService.Instance.UpdateTemplate(_currentTemplate);
+        CurrentTemplate = CurrentTemplate with
+        {
+            SizeTemplate = _curSizeType,
+            Width = _curWidth,
+            Height = _curHeight,
+            Elements = TemplateEngine
+                .MapTemplateElementsToProjectFormat(_hierarchicalElements)
+                .Select(d => d.ToImmutableDictionary())
+                .ToImmutableArray(),
+        };
+        ProjectService.Instance.Upsert(_currentTemplate);
 
         EventBus.Instance.Publish<ProjectChangedEvent>();
 
@@ -1032,7 +1032,7 @@ public partial class TemplateCreator : Window
 
         _curWidth = size.Item1;
         _curHeight = size.Item2;
-        CurrentTemplate.SizeTemplate = _curSizeType;
+        CurrentTemplate = CurrentTemplate with { SizeTemplate = _curSizeType };
 
         if (_curWidth == 0 && _curHeight == 0)
         {
@@ -1200,19 +1200,18 @@ public partial class TemplateCreator : Window
 
     private void OnNewTemplateOkPressed()
     {
-        //save current template
-        if (CurrentTemplate != null)
-            UpdateTemplate(CurrentTemplate);
-
-        var t = new Template { Name = _newTemplateName.Text, SizeTemplate = _newTemplateSize.Text };
-
         float.TryParse(_newTemplateWidth.Text, out var w);
         float.TryParse(_newTemplateHeight.Text, out var h);
 
-        t.Width = w;
-        t.Height = h;
+        var t = new Template
+        {
+            Name = _newTemplateName.Text,
+            SizeTemplate = _newTemplateSize.Text,
+            Width = w,
+            Height = h,
+        };
 
-        ProjectService.Instance.UpdateTemplate(t);
+        ProjectService.Instance.Upsert(t);
         _templateNameSelector.AddItem(t.Name, t.Id.Value);
         _templateNameSelector.Select(_templateNameSelector.GetItemCount() - 1);
 
@@ -1272,72 +1271,6 @@ public partial class TemplateCreator : Window
         UpdateNewTemplateOkButton();
 
         HeightWidthChange(string.Empty);
-    }
-
-    /*
-    private TemplateElement BuildTemplateElement(Dictionary<string, string> parameters)
-    {
-        TemplateElement te;
-
-        if (!parameters.TryGetValue("Type", out var type)) return null;
-
-        switch (type)
-        {
-            case "Text":
-                te = new TextElement();
-                break;
-            case "Image":
-                te = new ImageElement();
-                break;
-
-            default:
-                return null;
-        }
-
-        te.ElementName = parameters.TryGetValue("Name", out var name) ? name : string.Empty;
-        te.Id = parameters.TryGetValue("Id", out var id) ? int.Parse(id) : 0;
-
-
-        foreach (var kv in parameters)
-        {
-            te.SetParameterValue(kv.Key, kv.Value);
-        }
-
-        return te;
-    }
-    */
-
-    private Dictionary<string, string> ExportTemplateElement(ITemplateElement te)
-    {
-        var parameters = new Dictionary<string, string>();
-
-        parameters.Add("Name", te.ElementName);
-
-        foreach (var p in te.Parameters)
-        {
-            parameters.Add(p.Name, p.Value);
-        }
-
-        var tp = "Text";
-        if (te is ImageElement)
-            tp = "Image";
-
-        parameters.Add("Type", tp);
-
-        return parameters;
-    }
-
-    private void UpdateTemplate(Template template)
-    {
-        template.SizeTemplate = _curSizeType;
-        template.Width = _curWidth;
-        template.Height = _curHeight;
-
-        template.Elements.Clear();
-        foreach (var e in _templateElements)
-        {
-            template.Elements.Add(ExportTemplateElement(e));
-        }
     }
 
     private void UpdateProject()
@@ -1745,11 +1678,11 @@ public partial class TemplateCreator : Window
             _textureContext.DataSet = null;
             _textureContext.CurrentRow = null;
             _pageControl.Hide();
-            CurrentTemplate.DataSet = SnowTag.Empty;
+            CurrentTemplate = CurrentTemplate with { DataSet = SnowTag.Empty };
         }
         else
         {
-            CurrentTemplate.DataSet = datasetRef;
+            CurrentTemplate = CurrentTemplate with { DataSet = datasetRef };
         }
 
         UpdateTextureContext(CurrentTemplate.DataSet);
@@ -1762,7 +1695,7 @@ public partial class TemplateCreator : Window
         var dataset = ProjectService.Instance.GetDataSet(datasetRef);
         if (dataset != null)
         {
-            CurrentTemplate.DataSet = datasetRef;
+            CurrentTemplate = CurrentTemplate with { DataSet = datasetRef };
             _textureContext.DataSet = dataset;
             var rows = ProjectService.Instance.GetRows(datasetRef);
             _textureContext.CurrentRow = rows.Count > 0 ? rows[0] : null;

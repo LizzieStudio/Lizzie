@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
@@ -287,29 +288,28 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         if (int.TryParse(_sidesInput.Text, out var sides))
         {
-            p.SideCount = sides;
+            p = p with { SideCount = sides };
         }
 
         switch (_tabContainer.CurrentTab)
         {
             case 0:
-                p.Mode = VcToken.TokenBuildMode.Quick;
-                p.Sides = PackageSides();
+                p = p with { Mode = VcToken.TokenBuildMode.Quick, Sides = PackageSides() };
                 break;
 
             case 1:
-                p.Mode = VcToken.TokenBuildMode.Custom;
+                p = p with { Mode = VcToken.TokenBuildMode.Custom };
                 break;
 
             case 2:
-                p.Mode = VcToken.TokenBuildMode.Template;
+                p = p with { Mode = VcToken.TokenBuildMode.Template };
 
                 if (_frontTemplate != null)
                 {
-                    p.FrontTemplate = _frontTemplate.Id;
+                    p = p with { FrontTemplate = _frontTemplate.Id };
                 }
 
-                p.Dataset = _textureContext.DataSet?.Id ?? SnowTag.Empty;
+                p = p with { Dataset = _textureContext.DataSet?.Id ?? SnowTag.Empty };
 
                 DataSet = ProjectService.Instance.GetDataSet(
                     _textureContext.DataSet?.Id ?? SnowTag.Empty
@@ -324,10 +324,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         return p;
     }
 
-    private QuickTextureField[] PackageSides()
+    private ImmutableArray<QuickTextureField> PackageSides()
     {
         if (!int.TryParse(_sidesInput.Text, out var sides))
-            return Array.Empty<QuickTextureField>();
+            return ImmutableArray<QuickTextureField>.Empty;
 
         var s = new QuickTextureField[sides];
 
@@ -336,7 +336,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             s[i] = _quickSideEntries[i].GetQuickTextureField();
         }
 
-        return s;
+        return s.ToImmutableArray();
     }
 
     private void UpdatePreview()
@@ -378,7 +378,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _diameterInput.Text = p.Size.ToString();
         _dieColor.Color = p.Color;
 
-        if (p.Sides != null && p.Sides.Length > 0)
+        if (p.Sides.Length > 0)
         {
             var sides = p.Sides;
             for (int i = 0; i < sides.Length && i < _quickSideEntries.Length; i++)

@@ -5,7 +5,7 @@ namespace Lizzie.AssetManagement
     /// <summary>
     /// Represents a cloud-stored asset in the project
     /// </summary>
-    public class Asset : IReplicated
+    public record Asset : IReplicated
     {
         public enum AssetType
         {
@@ -15,70 +15,32 @@ namespace Lizzie.AssetManagement
             Document,
         }
 
-        public AssetType Type { get; set; }
+        public AssetType Type { get; init; }
 
         /// <summary>
         /// Unique identifier for this asset
         /// </summary>
-        public SnowTag Id { get; set; }
+        public SnowTag Id { get; init; }
 
         /// <summary>
         /// Reversible soft-delete flag.
         /// </summary>
-        public bool Deleted { get; set; }
+        public bool Deleted { get; init; }
 
         /// <summary>The id of the last event that updated this asset.</summary>
-        public SnowportId LastUpdateId { get; set; }
+        public SnowportId LastUpdateId { get; init; }
 
         /// <summary>
         /// User-defined name for the asset
         /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Original filename when uploaded
-        /// </summary>
-        public string OriginalFilename { get; set; }
-
-        /// <summary>
-        /// Cloud provider where this asset is stored
-        /// </summary>
-        public CloudProviderType ProviderType { get; set; }
-
-        /// <summary>
-        /// Cloud-specific identifier for retrieving the file
-        /// (e.g., file ID, path, or URL)
-        /// </summary>
-        public string CloudFileId { get; set; }
+        public string Name { get; init; }
 
         /// <summary>
         /// Cloud-specific path or location
         /// </summary>
-        public string CloudPath { get; set; }
+        public string CloudPath { get; init; }
 
-        /// <summary>
-        /// File size in bytes
-        /// </summary>
-        public long FileSize { get; set; }
-
-        /// <summary>
-        /// MIME type of the file
-        /// </summary>
-        public string MimeType { get; set; }
-
-        /// <summary>
-        /// Date when the asset was uploaded
-        /// </summary>
-        public DateTime UploadedDate { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Date when the asset was last modified
-        /// </summary>
-        public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Additional metadata specific to the cloud provider
-        /// </summary>
-        public string ProviderMetadata { get; set; }
+        public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
+            this with { Id = id, LastUpdateId = lastUpdateId };
     }
 }

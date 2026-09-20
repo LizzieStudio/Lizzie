@@ -104,14 +104,14 @@ public partial class VcBag : VisualComponentGroup
     }
 }
 
-public sealed class BagParameters : ComponentParameters
+public sealed record BagParameters : ComponentParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>
         VisualComponentBase.VisualComponentType.Bag;
 
-    public float Height { get; set; }
-    public float Diameter { get; set; }
-    public Color Color { get; set; } = Colors.Black;
-    public bool ShowCount { get; set; }
+    public float Height { get; init; }
+    public float Diameter { get; init; }
+    public Color Color { get; init; } = Colors.Black;
+    public bool ShowCount { get; init; }
 }

@@ -62,14 +62,14 @@ public partial class VcCube : VisualComponentBase
     private Color CubeColor;
 }
 
-public sealed class CubeParameters : ComponentParameters
+public sealed record CubeParameters : ComponentParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>
         VisualComponentBase.VisualComponentType.Cube;
 
-    public float Height { get; set; }
-    public float Width { get; set; }
-    public float Length { get; set; }
-    public Color Color { get; set; } = Colors.Black;
+    public float Height { get; init; }
+    public float Width { get; init; }
+    public float Length { get; init; }
+    public Color Color { get; init; } = Colors.Black;
 }

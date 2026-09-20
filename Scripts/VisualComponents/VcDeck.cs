@@ -356,7 +356,7 @@ public partial class VcDeck : VisualComponentGroup
             case VcToken.TokenBuildMode.QuickDeck:
             {
                 int cardNum = 0;
-                foreach (var q in parameters.QuickCardData ?? new())
+                foreach (var q in parameters.QuickCardData)
                 {
                     foreach (var _ in Utility.ParseValueRanges(q.Caption))
                     {
@@ -827,7 +827,7 @@ public partial class VcDeck : VisualComponentGroup
     #endregion
 }
 
-public sealed class DeckParameters : PrintedParameters
+public sealed record DeckParameters : PrintedParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>

@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json.Serialization;
-using Godot;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(CubeParameters), (int)VisualComponentBase.VisualComponentType.Cube)]
@@ -14,15 +12,13 @@ using Godot;
 [JsonDerivedType(typeof(TrayParameters), (int)VisualComponentBase.VisualComponentType.Tray)]
 [JsonDerivedType(typeof(BagParameters), (int)VisualComponentBase.VisualComponentType.Bag)]
 [JsonDerivedType(typeof(ZoneParameters), (int)VisualComponentBase.VisualComponentType.Zone)]
-public abstract class ComponentParameters
+public abstract record ComponentParameters
 {
-    public string ComponentName { get; set; } = "";
-    public string BaseName { get; set; } = "";
+    public string ComponentName { get; init; } = "";
+    public string BaseName { get; init; } = "";
 
     [JsonIgnore]
     public abstract VisualComponentBase.VisualComponentType ComponentType { get; }
-
-    public ComponentParameters Clone() => (ComponentParameters)MemberwiseClone();
 
     /// <summary>
     /// This is only used so that PrintedPanelDialogResults can convert between decks and single tokens.

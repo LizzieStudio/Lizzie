@@ -288,7 +288,7 @@ public partial class ProjectService : Node
                     break;
                 case UpdateReplicatedEffect<GameState> gsFx when gsFx.Payload != null:
                     clock.ObserveTag(gsFx.Payload.Parent);
-                    foreach (var up in gsFx.Payload.Upserts ?? Array.Empty<ComponentEffect>())
+                    foreach (var up in gsFx.Payload.Upserts)
                         ObserveUpsert(up);
                     break;
                 case UpdateSettingsEffect set when set.Payload != null:
@@ -313,56 +313,12 @@ public partial class ProjectService : Node
         if (CurrentProject == null || entity == null)
             return;
 
-        if (entity.Id == SnowTag.Empty)
-            entity.Id = Snowport.Clock.CreateTag();
-
-        var eventId = Snowport.Clock.Create();
-        entity.LastUpdateId = eventId;
-
-        EventSynchronizer.Instance?.Submit(
-            new TableEvent
-            {
-                Id = eventId,
-                Action = null,
-                Effects = new Effect[]
-                {
-                    new UpdateReplicatedEffect<T> { Id = entity.Id, Payload = entity },
-                },
-            }
-        );
-    }
-
-    /// <summary>
-    /// TODO: obsolete once these definitions become immutable records (use <c>with</c> instead).
-    /// </summary>
-    private static T CloneReplicated<T>(T source)
-        where T : class, IReplicated =>
-        JsonSerializer.Deserialize<T>(
-            JsonSerializer.Serialize(source, LizzieJson.EventOptions),
-            LizzieJson.EventOptions
-        );
-
-    public void UpdateDataSet(DataSet dataset) => Upsert(dataset);
-
-    public void UpdateDataRow(DataRow row) => Upsert(row);
-
-    public void DeleteDataRow(SnowTag rowRef)
-    {
-        if (CurrentProject == null)
-            return;
-        if (!CurrentProject.DataRows.TryGetValue(rowRef, out var row))
-            return;
-
-        var deleted = CloneReplicated(row);
-        deleted.Deleted = true;
-        Upsert(deleted);
+        new UpsertBatch().Add(entity).Submit();
     }
 
     /// <summary>The non-deleted rows of a dataset in order.</summary>
     public List<DataRow> GetRows(SnowTag datasetRef) =>
         CurrentProject?.GetRows(datasetRef) ?? new List<DataRow>();
-
-    public void UpdateTemplate(Template template) => Upsert(template);
 
     public void UpdateGameSettings(ProjectGameSettings settings)
     {
@@ -407,22 +363,6 @@ public partial class ProjectService : Node
         UpdateGameSettings(settings with { Players = builder.ToImmutable() });
     }
 
-    public void UpdatePrototype(Prototype prototype) => Upsert(prototype);
-
-    public void DeletePrototype(SnowTag prototypeRef)
-    {
-        if (CurrentProject == null)
-            return;
-        if (!CurrentProject.Prototypes.TryGetValue(prototypeRef, out var prototype))
-            return;
-
-        var deleted = CloneReplicated(prototype);
-        deleted.Deleted = true;
-        Upsert(deleted);
-    }
-
-    public void UpdateImage(Asset image) => Upsert(image);
-
     /// <summary>
     /// Captures the current table as a new <see cref="GameState"/>.
     /// </summary>
@@ -442,17 +382,17 @@ public partial class ProjectService : Node
         };
 
         var eventId = Snowport.Clock.Create();
-        state.LastUpdateId = eventId;
+        state = state with { LastUpdateId = eventId };
         EventSynchronizer.Instance?.Submit(
             new TableEvent
             {
                 Id = eventId,
                 Action = null,
-                Effects = new Effect[]
-                {
+                Effects =
+                [
                     new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state },
                     new ActiveGameStateEffect { Target = state.Id },
-                },
+                ],
             }
         );
         return state;
@@ -468,15 +408,13 @@ public partial class ProjectService : Node
         if (!CurrentProject.GameStates.TryGetValue(stateRef, out var state) || state.Deleted)
             return;
 
-        var updated = CloneReplicated(state);
-        updated.Upserts = BuildDelta(updated.Parent);
-        Upsert(updated);
+        Upsert(state with { Upserts = BuildDelta(state.Parent) });
     }
 
     /// <summary>
     /// The current table expressed as a delta vs the given parent.
     /// </summary>
-    private ComponentEffect[] BuildDelta(SnowTag parent)
+    private ImmutableArray<ComponentEffect> BuildDelta(SnowTag parent)
     {
         var parentFold = FoldChain(parent);
         var current = (GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
@@ -505,7 +443,7 @@ public partial class ProjectService : Node
                     }
                 );
 
-        return delta.ToArray();
+        return delta.ToImmutableArray();
     }
 
     public void DeleteGameState(SnowTag stateRef)
@@ -522,9 +460,7 @@ public partial class ProjectService : Node
             return;
         }
 
-        var deleted = CloneReplicated(state);
-        deleted.Deleted = true;
-        Upsert(deleted);
+        Upsert(state with { Deleted = true });
     }
 
     /// <summary>
@@ -611,7 +547,8 @@ public partial class ProjectService : Node
         if (!CurrentProject.GameStates.TryGetValue(active, out var state) || state.Deleted)
             return;
 
-        state.Upserts = BuildDelta(state.Parent);
+        // TODO: This needs to be removed and GameStates need to be updated on each event
+        CurrentProject.GameStates[active] = state with { Upserts = BuildDelta(state.Parent) };
     }
 
     /// <summary>
@@ -626,7 +563,7 @@ public partial class ProjectService : Node
             return true;
 
         var current = BuildDelta(state.Parent).ToDictionary(e => e.Id);
-        var stored = (state.Upserts ?? Array.Empty<ComponentEffect>()).ToDictionary(e => e.Id);
+        var stored = state.Upserts.ToDictionary(e => e.Id);
         if (current.Count != stored.Count)
             return false;
         foreach (var (id, ce) in current)
@@ -688,18 +625,18 @@ public partial class ProjectService : Node
 
         if (!CurrentProject.Prototypes.ContainsKey(args.PrototypeRef))
         {
-            var newProto = new Prototype { Id = args.PrototypeRef, Parameters = args.Params };
+            var name = !string.IsNullOrEmpty(args.Params?.ComponentName)
+                ? args.Params.ComponentName
+                : $"Unnamed {args.ComponentType}";
 
-            if (!string.IsNullOrEmpty(args.Params?.ComponentName))
-            {
-                newProto.Name = args.Params.ComponentName;
-            }
-            else
-            {
-                newProto.Name = $"Unnamed {args.ComponentType}";
-            }
-
-            UpdatePrototype(newProto);
+            Upsert(
+                new Prototype
+                {
+                    Id = args.PrototypeRef,
+                    Parameters = args.Params,
+                    Name = name,
+                }
+            );
         }
     }
 
@@ -810,15 +747,6 @@ public partial class ProjectService : Node
         component.NeverHighlight = true;
 
         component.PrototypeRef = prototype.Id;
-
-        //if the name is blank in the parameters, set it
-        if (
-            !string.IsNullOrEmpty(prototype.Parameters.BaseName)
-            && string.IsNullOrWhiteSpace(prototype.Parameters.ComponentName)
-        )
-        {
-            prototype.Parameters.ComponentName = "unbound";
-        }
 
         if (component.Setup(prototype.Id, textureFactory))
         {

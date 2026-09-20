@@ -234,32 +234,6 @@ public interface IEvent { }
 
 #region Event Definitions
 
-// Example events - you can define your own by implementing IEvent
-
-/// <summary>
-/// Example: Event with no data
-/// </summary>
-public class GameStartedEvent : IEvent { }
-
-/// <summary>
-/// Example: Event with data
-/// </summary>
-public class TokenMovedEvent : IEvent
-{
-    public string TokenId { get; set; }
-    public Vector2 OldPosition { get; set; }
-    public Vector2 NewPosition { get; set; }
-}
-
-/// <summary>
-/// Example: Command executed event
-/// </summary>
-public class CommandExecutedEvent : IEvent
-{
-    public string CommandName { get; set; }
-    public bool Success { get; set; }
-}
-
 public class ProjectChangedEvent : IEvent { }
 
 public class ShowTemplateEditor : IEvent

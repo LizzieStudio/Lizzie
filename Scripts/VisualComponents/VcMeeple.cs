@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using Godot;
 
@@ -186,14 +187,15 @@ public partial class VcMeeple : VisualComponentBase
     }
 }
 
-public sealed class MeepleParameters : ComponentParameters
+public sealed record MeepleParameters : ComponentParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>
         VisualComponentBase.VisualComponentType.Meeple;
 
-    public float Height { get; set; }
-    public float Thickness { get; set; }
-    public Color Color { get; set; } = Colors.Black;
-    public bool[][] Grid { get; set; } = Array.Empty<bool[]>();
+    public float Height { get; init; }
+    public float Thickness { get; init; }
+    public Color Color { get; init; } = Colors.Black;
+    public ImmutableArray<ImmutableArray<bool>> Grid { get; init; } =
+        ImmutableArray<ImmutableArray<bool>>.Empty;
 }

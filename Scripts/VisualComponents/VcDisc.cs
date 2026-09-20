@@ -51,13 +51,13 @@ public partial class VcDisc : VisualComponentBase
     private Color DiscColor;
 }
 
-public sealed class DiscParameters : ComponentParameters
+public sealed record DiscParameters : ComponentParameters
 {
     [JsonIgnore]
     public override VisualComponentBase.VisualComponentType ComponentType =>
         VisualComponentBase.VisualComponentType.Disc;
 
-    public float Height { get; set; }
-    public float Diameter { get; set; }
-    public Color Color { get; set; } = Colors.Black;
+    public float Height { get; init; }
+    public float Diameter { get; init; }
+    public Color Color { get; init; } = Colors.Black;
 }
