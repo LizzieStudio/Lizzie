@@ -1440,7 +1440,7 @@ public partial class GameObjects : Node
     /// </summary>
     public void RebuildFromLog()
     {
-        var log = EventSynchronizer.Instance?.Events;
+        var log = EventSynchronizer.Instance?.EventLog;
         if (log == null)
             return;
 
@@ -1448,7 +1448,7 @@ public partial class GameObjects : Node
 
         _clearBarrier = SnowportId.Empty;
         var tags = new HashSet<SnowTag>();
-        foreach (var ev in log)
+        foreach (var ev in log.Values)
         {
             if (
                 !undone.Contains(ev.Id)
@@ -1476,7 +1476,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void ReconstructForUndoRedo(UndoAction undo)
     {
-        var log = EventSynchronizer.Instance?.Events;
+        var log = EventSynchronizer.Instance?.EventLog;
         if (log == null)
             return;
 
@@ -1485,7 +1485,7 @@ public partial class GameObjects : Node
             ReconstructComponent(r, log, undone);
 
         _clearBarrier = SnowportId.Empty;
-        foreach (var ev in log)
+        foreach (var ev in log.Values)
         {
             if (
                 !undone.Contains(ev.Id)
@@ -1510,7 +1510,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void ReconstructComponent(
         SnowTag r,
-        IReadOnlyList<TableEvent> log,
+        OrderedDictionary<SnowportId, TableEvent> log,
         HashSet<SnowportId> undone
     )
     {
@@ -1522,7 +1522,7 @@ public partial class GameObjects : Node
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
-            var e = log[i];
+            var e = log.GetAt(i).Value;
             if (undone.Contains(e.Id))
                 continue;
 

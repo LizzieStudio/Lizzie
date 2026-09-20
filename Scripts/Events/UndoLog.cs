@@ -51,33 +51,28 @@ public static class UndoLog
         return false;
     }
 
-    private static Dictionary<SnowportId, TableEvent> Index(IReadOnlyList<TableEvent> log)
-    {
-        var byId = new Dictionary<SnowportId, TableEvent>(log.Count);
-        foreach (var e in log)
-            byId[e.Id] = e;
-        return byId;
-    }
-
     /// <summary>
     /// Follows an event's undo target chain down to the event it ultimately reverses.
     /// </summary>
-    private static TableEvent ResolveBase(TableEvent e, Dictionary<SnowportId, TableEvent> byId)
+    private static TableEvent ResolveBase(
+        TableEvent e,
+        OrderedDictionary<SnowportId, TableEvent> log
+    )
     {
         while (e is { Action: UndoAction u })
-            byId.TryGetValue(u.Target, out e);
+            log.TryGetValue(u.Target, out e);
         return e;
     }
 
     /// <summary>
     /// The set of event ids that are currently undone.
     /// </summary>
-    public static HashSet<SnowportId> ComputeUndone(IReadOnlyList<TableEvent> log)
+    public static HashSet<SnowportId> ComputeUndone(OrderedDictionary<SnowportId, TableEvent> log)
     {
         var undone = new HashSet<SnowportId>();
         for (int i = log.Count - 1; i >= 0; i--)
         {
-            var e = log[i];
+            var e = log.GetAt(i).Value;
             bool active = !undone.Contains(e.Id);
             if (active && e.Action is UndoAction u)
                 undone.Add(u.Target);
@@ -89,15 +84,17 @@ public static class UndoLog
     /// The undo target for the given source.
     /// The event that should be undone by the Undo action.
     /// </summary>
-    public static SnowportId? ComputeUndoTarget(IReadOnlyList<TableEvent> log, byte source)
+    public static SnowportId? ComputeUndoTarget(
+        OrderedDictionary<SnowportId, TableEvent> log,
+        byte source
+    )
     {
-        var byId = Index(log);
         var undone = new HashSet<SnowportId>();
         bool sawNonUndo = false;
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
-            var e = log[i];
+            var e = log.GetAt(i).Value;
 
             if (e.Id.source != source)
                 continue;
@@ -124,7 +121,7 @@ public static class UndoLog
             if (IsDragEvent(e))
                 continue;
 
-            var @base = ResolveBase(e, byId);
+            var @base = ResolveBase(e, log);
             if (@base != null && IsUndoableEvent(@base))
                 return e.Id;
         }
@@ -136,13 +133,16 @@ public static class UndoLog
     /// The redo target for the given source.
     /// The event that should be redone by the Redo action.
     /// </summary>
-    public static SnowportId? ComputeRedoTarget(IReadOnlyList<TableEvent> log, byte source)
+    public static SnowportId? ComputeRedoTarget(
+        OrderedDictionary<SnowportId, TableEvent> log,
+        byte source
+    )
     {
         var undone = ComputeUndone(log);
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
-            var e = log[i];
+            var e = log.GetAt(i).Value;
 
             if (e.Id.source != source)
                 continue;
@@ -162,16 +162,15 @@ public static class UndoLog
     /// The components whose state an undo of <paramref name="targetId"/> should change.
     /// </summary>
     public static HashSet<SnowTag> ResolveAffectedComponents(
-        IReadOnlyList<TableEvent> log,
+        OrderedDictionary<SnowportId, TableEvent> log,
         SnowportId targetId
     )
     {
         var affected = new HashSet<SnowTag>();
-        var byId = Index(log);
-        if (!byId.TryGetValue(targetId, out var e))
+        if (!log.TryGetValue(targetId, out var e))
             return affected;
 
-        var @base = ResolveBase(e, byId);
+        var @base = ResolveBase(e, log);
         if (@base == null)
             return affected;
 
@@ -182,7 +181,7 @@ public static class UndoLog
         // A table clear "deletes" components without listing them,
         // so reconstructing across it must revisit every component.
         if (HasTableClear(@base))
-            foreach (var ev in log)
+            foreach (var ev in log.Values)
             foreach (var fx in ev.Effects)
                 if (fx is ComponentEffect)
                     affected.Add(fx.Id);
@@ -194,16 +193,15 @@ public static class UndoLog
     /// The dataset rows whose value an undo of <paramref name="targetId"/> should change.
     /// </summary>
     public static HashSet<SnowTag> ResolveAffectedRows(
-        IReadOnlyList<TableEvent> log,
+        OrderedDictionary<SnowportId, TableEvent> log,
         SnowportId targetId
     )
     {
         var affected = new HashSet<SnowTag>();
-        var byId = Index(log);
-        if (!byId.TryGetValue(targetId, out var e))
+        if (!log.TryGetValue(targetId, out var e))
             return affected;
 
-        var @base = ResolveBase(e, byId);
+        var @base = ResolveBase(e, log);
         if (@base == null)
             return affected;
 
@@ -218,7 +216,7 @@ public static class UndoLog
     /// The newest non-undone record for <paramref name="id"/>, or null if none remains.
     /// </summary>
     public static T LatestReplicated<T>(
-        IReadOnlyList<TableEvent> log,
+        OrderedDictionary<SnowportId, TableEvent> log,
         SnowTag id,
         HashSet<SnowportId> undone
     )
@@ -226,7 +224,7 @@ public static class UndoLog
     {
         for (int i = log.Count - 1; i >= 0; i--)
         {
-            var e = log[i];
+            var e = log.GetAt(i).Value;
             if (undone.Contains(e.Id))
                 continue;
 

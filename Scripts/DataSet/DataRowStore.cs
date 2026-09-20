@@ -44,7 +44,7 @@ public partial class DataRowStore : ReplicatedStore<DataRow>
     protected override void OnUndo(UndoAction undo)
     {
         var store = Store;
-        var log = EventSynchronizer.Instance?.Events;
+        var log = EventSynchronizer.Instance?.EventLog;
         if (store == null || log == null)
             return;
 

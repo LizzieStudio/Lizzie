@@ -128,21 +128,18 @@ public partial class DebugConsole : Node
         ImGui.SetNextWindowSize(new SysVec2(360, 480), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("Event Log", ref _eventsOpen))
         {
-            var events = EventSynchronizer.Instance?.Events;
-            int count = events?.Count ?? 0;
+            var eventLog = EventSynchronizer.Instance?.EventLog;
+            int count = eventLog?.Count ?? 0;
 
             ImGui.TextUnformatted($"{count} events");
             ImGui.TextDisabled("amber = undo/redo   dim = undone   sN = source");
             ImGui.Separator();
 
-            var undone = events != null ? UndoLog.ComputeUndone(events) : new HashSet<SnowportId>();
+            var undone =
+                eventLog != null ? UndoLog.ComputeUndone(eventLog) : new HashSet<SnowportId>();
 
             if (ImGui.BeginChild("##eventlist") && count > 0)
             {
-                var indexById = new Dictionary<SnowportId, int>(count);
-                for (int j = 0; j < count; j++)
-                    indexById[events[j].Id] = j;
-
                 var amber = new SysVec4(1f, 0.78f, 0.28f, 1f);
                 var gray = new SysVec4(0.55f, 0.55f, 0.55f, 1f);
 
@@ -154,7 +151,7 @@ public partial class DebugConsole : Node
                 {
                     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                     {
-                        var e = events[i];
+                        var e = eventLog.GetAt(i).Value;
                         int pushed = 0;
                         if (e.Action is UndoAction)
                         {
@@ -169,7 +166,7 @@ public partial class DebugConsole : Node
 
                         string line = $"{i, 5}  s{e.Id.source, -3} {Describe(e)}";
                         if (e.Action is UndoAction u)
-                            line += indexById.TryGetValue(u.Target, out var ti)
+                            line += eventLog.TryGetValue(u.Target, out var ti)
                                 ? $"  → #{ti}"
                                 : "  → #?";
                         ImGui.TextUnformatted(line);

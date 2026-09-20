@@ -11,10 +11,7 @@ public partial class EventSynchronizer : Node
     private static EventSynchronizer _instance;
     public static EventSynchronizer Instance => _instance;
 
-    private readonly EventLog _log = new();
-
-    /// <summary>The recorded events, in SnowportId order. Exposed for debug tooling.</summary>
-    public IReadOnlyList<TableEvent> Events => _log.Events;
+    public readonly OrderedDictionary<SnowportId, TableEvent> EventLog = new();
 
     /// <summary>
     /// While true, events are recorded but not applied to the scene per-event.
@@ -32,11 +29,11 @@ public partial class EventSynchronizer : Node
         _instance = this;
     }
 
-    public void Clear() => _log.Clear();
+    public void Clear() => EventLog.Clear();
 
     public void Submit(TableEvent e)
     {
-        if (_log.TryRecord(e))
+        if (TryRecord(e))
             Dispatch(e);
 
         if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
@@ -48,6 +45,20 @@ public partial class EventSynchronizer : Node
             BroadcastEvent(json);
         else
             RpcId(1, nameof(ServerSubmitEvent), json);
+    }
+
+    private bool TryRecord(TableEvent e)
+    {
+        if (EventLog.ContainsKey(e.Id))
+            return false;
+
+        // insert to maintain SnowportId order
+        // most events arrive in order, so search from the end
+        int i = EventLog.Count - 1;
+        while (i >= 0 && EventLog.GetAt(i).Key.CompareTo(e.Id) > 0)
+            i--;
+        EventLog.Insert(i + 1, e.Id, e);
+        return true;
     }
 
     [Rpc(
@@ -107,7 +118,7 @@ public partial class EventSynchronizer : Node
         // Advance the hybrid clock
         Snowport.Clock.Process(e.Id);
 
-        if (!_log.TryRecord(e))
+        if (!TryRecord(e))
             return;
 
         Dispatch(e);
@@ -128,12 +139,11 @@ public partial class EventSynchronizer : Node
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        var events = _log.Events;
-        for (int i = 0; i < events.Count; i++)
+        foreach (var e in EventLog.Values)
             RpcId(
                 peerId,
                 nameof(ReceiveState),
-                JsonSerializer.Serialize(events[i], LizzieJson.EventOptions)
+                JsonSerializer.Serialize(e, LizzieJson.EventOptions)
             );
     }
 

@@ -135,7 +135,7 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     /// </summary>
     private void RecomputeActive(Project project)
     {
-        var log = EventSynchronizer.Instance?.Events;
+        var log = EventSynchronizer.Instance?.EventLog;
         if (log == null)
             return;
 
@@ -146,7 +146,7 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
-            var ev = log[i];
+            var ev = log.GetAt(i).Value;
             if (undone.Contains(ev.Id))
                 continue;
 

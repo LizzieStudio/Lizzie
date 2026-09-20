@@ -73,7 +73,7 @@ public partial class SceneController : Node3D
     /// <summary>Issues an undo.</summary>
     private void IssueUndo()
     {
-        var log = EventSynchronizer.Instance?.Events;
+        var log = EventSynchronizer.Instance?.EventLog;
         if (log == null)
             return;
         if (UndoLog.ComputeUndoTarget(log, Snowport.Clock.source) is SnowportId target)
@@ -83,7 +83,7 @@ public partial class SceneController : Node3D
     /// <summary>Issues a redo, which is just an undo targeting the most recent active undo.</summary>
     private void IssueRedo()
     {
-        var log = EventSynchronizer.Instance?.Events;
+        var log = EventSynchronizer.Instance?.EventLog;
         if (log == null)
             return;
         if (UndoLog.ComputeRedoTarget(log, Snowport.Clock.source) is SnowportId target)

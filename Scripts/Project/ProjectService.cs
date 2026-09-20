@@ -259,7 +259,7 @@ public partial class ProjectService : Node
     /// </summary>
     private static void SeedTagsFromLog()
     {
-        var log = EventSynchronizer.Instance?.Events;
+        var log = EventSynchronizer.Instance?.EventLog;
         if (log == null)
             return;
 
@@ -273,7 +273,7 @@ public partial class ProjectService : Node
                 clock.ObserveTag(ce.State.ContainerRef);
         }
 
-        foreach (var e in log)
+        foreach (var e in log.Values)
         foreach (var fx in e.Effects)
         {
             clock.ObserveTag(fx.Id);
