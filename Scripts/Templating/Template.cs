@@ -1,8 +1,7 @@
-using System;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
-public record Template : IReplicated
+public record Template : Replicated
 {
     public enum TemplateTarget
     {
@@ -15,18 +14,7 @@ public record Template : IReplicated
         D20,
     }
 
-    public SnowTag Id { get; init; }
-
-    /// <summary>
-    /// Reversible soft-delete flag.
-    /// </summary>
-    public bool Deleted { get; init; }
-
-    /// <summary>The id of the last event that updated this template.</summary>
-    public SnowportId LastUpdateId { get; init; }
-
     public string Name { get; init; }
-    public string Description { get; init; }
 
     public string SizeTemplate { get; init; }
     public float Width { get; init; }
@@ -60,11 +48,4 @@ public record Template : IReplicated
     }
 
     public SnowTag DataSet { get; init; }
-
-    public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-        this with
-        {
-            Id = id,
-            LastUpdateId = lastUpdateId,
-        };
 }

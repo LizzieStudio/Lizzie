@@ -17,16 +17,15 @@ public interface IReplicated
     /// Returns a copy with a replaced id and lastUpdateId
     /// </summary>
     IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId);
+
+    /// <summary>
+    /// A cache key that changes whenever the definition is updated.
+    /// </summary>
+    public string SheetKey();
 }
 
 public static class ReplicatedExtensions
 {
-    /// <summary>
-    /// A cache key that changes whenever the definition is updated.
-    /// </summary>
-    public static string SheetKey(this IReplicated replicated) =>
-        $"{replicated.Id.Value:X8}{replicated.LastUpdateId.Value:X16}";
-
     /// <summary>
     /// A cache key that changes whenever any definition is updated.
     /// </summary>

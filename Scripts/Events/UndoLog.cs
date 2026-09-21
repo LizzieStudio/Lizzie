@@ -5,15 +5,6 @@ using System.Collections.Generic;
 /// </summary>
 public static class UndoLog
 {
-    /// <summary>True when an event affects at least one component, or clears the table.</summary>
-    public static bool IsComponentEvent(TableEvent e)
-    {
-        foreach (var fx in e.Effects)
-            if (fx is ComponentEffect or TableClearEffect)
-                return true;
-        return false;
-    }
-
     /// <summary>
     /// True when an event is something the user can undo:
     /// * component change
