@@ -98,13 +98,15 @@ public partial class TextureFactory : SubViewport
         var project = ProjectService.Instance.CurrentProject;
         if (project != null)
         {
-            var pendingAssets = new System.Collections.Generic.List<Lizzie.AssetManagement.Asset>();
+            var pendingAssets = new List<Lizzie.AssetManagement.Asset>();
             foreach (var obj in definition.Objects)
             {
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
-                    var asset = project.Assets.Values.FirstOrDefault(a => a.Name == imageName);
+                    var asset = project.Assets.Records.Values.FirstOrDefault(a =>
+                        a.Name == imageName
+                    );
                     if (asset != null && !AssetImageCache.Instance.IsDownloaded(asset))
                     {
                         pendingAssets.Add(asset);
@@ -115,7 +117,7 @@ public partial class TextureFactory : SubViewport
             if (pendingAssets.Count > 0)
             {
                 _waitingForAsset = true;
-                var tasks = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+                var tasks = new List<System.Threading.Tasks.Task>();
                 foreach (var asset in pendingAssets)
                 {
                     tasks.Add(ProjectService.Instance.FetchImageAsync(asset));
@@ -493,7 +495,7 @@ public partial class TextureFactory : SubViewport
     private bool IsIconUserDefined(string name)
     {
         if (
-            ProjectService.Instance.CurrentProject.Assets.Any(x =>
+            ProjectService.Instance.CurrentProject.Assets.Records.Any(x =>
                 string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)
             )
         )
@@ -506,37 +508,23 @@ public partial class TextureFactory : SubViewport
         if (string.IsNullOrWhiteSpace(name))
             return _iconLibrary.TextureFromKey(string.Empty);
 
-        if (IsIconUserDefined(name))
+        foreach (var useName in new string[] { name, name.Replace('_', ' ') })
         {
-            var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Assets.Values.FirstOrDefault(a =>
-                string.Equals(a.Name, name, StringComparison.CurrentCultureIgnoreCase)
-            );
-
-            var image = AssetImageCache.Instance.GetImage(asset);
-            if (image != null)
+            if (IsIconUserDefined(useName))
             {
-                return ImageTexture.CreateFromImage(image);
+                var project = ProjectService.Instance.CurrentProject;
+                var asset = project?.Assets.Records.Values.FirstOrDefault(a =>
+                    string.Equals(a.Name, useName, StringComparison.CurrentCultureIgnoreCase)
+                );
+
+                var image = AssetImageCache.Instance.GetImage(asset);
+                if (image != null)
+                {
+                    return ImageTexture.CreateFromImage(image);
+                }
+
+                return _iconLibrary.TextureFromKey(string.Empty);
             }
-
-            return _iconLibrary.TextureFromKey(string.Empty);
-        }
-
-        var uname = name.Replace('_', ' ');
-        if (IsIconUserDefined(uname))
-        {
-            var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Assets.Values.FirstOrDefault(a =>
-                string.Equals(a.Name, uname, StringComparison.CurrentCultureIgnoreCase)
-            );
-
-            var image = AssetImageCache.Instance.GetImage(asset);
-            if (image != null)
-            {
-                return ImageTexture.CreateFromImage(image);
-            }
-
-            return _iconLibrary.TextureFromKey(string.Empty);
         }
 
         // Try exact key first, then case-insensitive search
@@ -1001,7 +989,7 @@ public partial class TextureFactory : SubViewport
         {
             string imageName = obj.Text.Substring(2);
             var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Assets.Values.FirstOrDefault(a => a.Name == imageName);
+            var asset = project?.Assets.Records.Values.FirstOrDefault(a => a.Name == imageName);
             var assetImage = AssetImageCache.Instance.GetImage(asset);
             if (assetImage != null)
             {

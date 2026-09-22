@@ -150,62 +150,10 @@ public class IconLibrary : Dictionary<string, IconEntry>
         }
 
         //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Assets.Count > 0)
+        if (ProjectService.Instance.CurrentProject.Assets.Records.Count > 0)
         {
             button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Assets)
-            {
-                if (img.Value.Deleted)
-                    continue;
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Assets.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Assets)
-            {
-                if (img.Value.Deleted)
-                    continue;
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Assets.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Assets)
-            {
-                if (img.Value.Deleted)
-                    continue;
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Assets.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Assets)
-            {
-                if (img.Value.Deleted)
-                    continue;
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Assets.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Assets)
+            foreach (var img in ProjectService.Instance.CurrentProject.Assets.Records)
             {
                 if (img.Value.Deleted)
                     continue;
@@ -241,14 +189,6 @@ public class IconLibrary : Dictionary<string, IconEntry>
         {
             menu.AddItem(icon, id);
             id++;
-        }
-    }
-
-    public void LoadOptionButtonExtended(OptionButton button)
-    {
-        foreach (var icon in GetExtendedIconList())
-        {
-            button.AddItem(icon);
         }
     }
 }

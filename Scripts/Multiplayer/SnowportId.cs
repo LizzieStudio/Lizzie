@@ -199,6 +199,10 @@ public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
 
     public static bool operator !=(SnowTag left, SnowTag right) => !left.Equals(right);
 
+    public static implicit operator SnowTag(int x) => new SnowTag(x);
+
+    public static implicit operator int(SnowTag x) => x.ID;
+
     public override string ToString() => ID.ToString();
 
     public static SnowTag Parse(string s) => new SnowTag(int.Parse(s));

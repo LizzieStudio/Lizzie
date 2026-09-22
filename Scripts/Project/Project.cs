@@ -12,8 +12,7 @@ public class Project
     public Dictionary<SnowTag, DataSet> Datasets { get; set; } = new();
     public Dictionary<SnowTag, DataRow> DataRows { get; set; } = new();
     public Dictionary<SnowTag, Prototype> Prototypes { get; set; } = new();
-
-    public Dictionary<SnowTag, Asset> Assets { get; set; } = new();
+    public ReplicatedDictionary<Asset> Assets { get; } = new ReplicatedDictionary<Asset>();
 
     /// <summary>
     /// Named scene snapshots the user can save and restore.
@@ -91,15 +90,6 @@ public class Project
             }
         );
         return rows;
-    }
-
-    public Asset GetImage(SnowTag imageRef)
-    {
-        if (imageRef == SnowTag.Empty)
-            return null;
-        if (Assets.TryGetValue(imageRef, out var asset) && !asset.Deleted)
-            return asset;
-        return null;
     }
 
     public GameState GetGameState(SnowTag stateRef)

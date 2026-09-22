@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -17,6 +18,10 @@ public partial class ImageManager : Window
     public LineEdit _nameInput;
 
     private HFlowContainer _tileContainer;
+
+    private readonly Dictionary<SnowTag, ImageTile> _tiles = new();
+
+    private Asset _selected;
 
     private const string _tileScenePath = "res://Scenes/Controls/image_tile.tscn";
 
@@ -42,7 +47,12 @@ public partial class ImageManager : Window
         _urlInput = GetNode<LineEdit>("%UrlInput");
         _nameInput = GetNode<LineEdit>("%NameInput");
 
-        InitializeTiles();
+        ProjectService.Instance.CurrentProject.Assets.Observe(UpdateAssets);
+    }
+
+    public override void _ExitTree()
+    {
+        ProjectService.Instance.CurrentProject?.Assets.Unobserve(UpdateAssets);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -55,7 +65,26 @@ public partial class ImageManager : Window
         Closed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnRemovePressed() { }
+    private void OnRemovePressed()
+    {
+        if (_selected != null)
+            ProjectService.Instance.Upsert(_selected with { Deleted = true });
+    }
+
+    private void OnTileClicked(Asset target)
+    {
+        if (_selected != null && _tiles.TryGetValue(_selected.Id, out var previous))
+        {
+            previous.SetSelected(false);
+        }
+
+        _selected = target;
+
+        if (_tiles.TryGetValue(_selected.Id, out var tile))
+        {
+            tile.SetSelected(true);
+        }
+    }
 
     private void UpdateButtons(bool enable)
     {
@@ -82,8 +111,10 @@ public partial class ImageManager : Window
             CloudPath = _urlInput.Text,
         };
 
-        AddImageTile(asset);
         ProjectService.Instance.Upsert(asset);
+
+        _nameInput.Text = string.Empty;
+        _urlInput.Text = string.Empty;
     }
 
     private void OnCancelImagePressed()
@@ -92,24 +123,40 @@ public partial class ImageManager : Window
         UpdateButtons(true);
     }
 
-    private void AddImageTile(Asset asset)
+    private void AddImageTile(SnowTag id, Asset asset)
     {
         var tileScene = GD.Load<PackedScene>(_tileScenePath);
         var tile = tileScene.Instantiate<ImageTile>();
         tile.SetAsset(asset);
+        tile.Clicked += OnTileClicked;
         _tileContainer.AddChild(tile);
-
-        _nameInput.Text = string.Empty;
-        _urlInput.Text = string.Empty;
+        _tiles[id] = tile;
     }
 
-    private void InitializeTiles()
+    private void UpdateAssets(IReadOnlyDictionary<SnowTag, Asset> assets)
     {
-        foreach (var i in ProjectService.Instance.CurrentProject.Assets)
+        foreach (var (id, asset) in assets)
         {
-            if (i.Value.Deleted)
-                continue;
-            AddImageTile(i.Value);
+            if (_tiles.TryGetValue(id, out var existing))
+            {
+                if (!asset.Deleted)
+                {
+                    existing.SetAsset(asset);
+                    if (_selected.Id == id)
+                        _selected = asset;
+                }
+                else
+                {
+                    existing.QueueFree();
+                    _tiles.Remove(id);
+                    if (_selected.Id == id)
+                        _selected = null;
+                }
+            }
+            else if (!asset.Deleted)
+            {
+                AddImageTile(id, asset);
+            }
         }
     }
 }

@@ -1,5 +1,3 @@
-using System;
-
 namespace Lizzie.AssetManagement
 {
     /// <summary>

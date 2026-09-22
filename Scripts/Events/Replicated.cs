@@ -13,6 +13,5 @@ public abstract record Replicated : IReplicated
             LastUpdateId = lastUpdateId,
         };
 
-    public string SheetKey() =>
-        $"{Id.Value:X8}{LastUpdateId.Value:X16}";
+    public string SheetKey() => $"{Id.Value:X8}{LastUpdateId.Value:X16}";
 }

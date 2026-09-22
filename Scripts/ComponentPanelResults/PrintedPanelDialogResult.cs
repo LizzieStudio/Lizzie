@@ -332,11 +332,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     {
         _gridFrontImageSelector = GetNode<ImageSelector>("%FrontImageSelector");
         _gridFrontImageSelector.ImageSelected += FrontImageSelected;
-        _gridFrontImageSelector.SetProject(ProjectService.Instance.CurrentProject);
 
         _gridBackImageSelector = GetNode<ImageSelector>("%BackImageSelector");
         _gridBackImageSelector.ImageSelected += BackImageSelected;
-        _gridBackImageSelector.SetProject(ProjectService.Instance.CurrentProject);
 
         _gridRowCount = GetNode<LineEdit>("%GridRows");
         _gridRowCount.TextChanged += _ => GenerateGridTokens();
@@ -430,15 +428,15 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private SnowTag _frontGridImage;
     private SnowTag _backGridImage;
 
-    private async void FrontImageSelected(object sender, SelectedEventArgs<Asset> e)
+    private async void FrontImageSelected(SnowTag Id)
     {
-        _frontGridImage = e.SelectedItem?.Id ?? SnowTag.Empty;
+        _frontGridImage = Id;
         UpdatePreview();
     }
 
-    private async void BackImageSelected(object sender, SelectedEventArgs<Asset> e)
+    private async void BackImageSelected(SnowTag Id)
     {
-        _backGridImage = e.SelectedItem?.Id ?? SnowTag.Empty;
+        _backGridImage = Id;
         UpdatePreview();
     }
 
@@ -864,13 +862,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         int.TryParse(_gridCardCount.Text, out _gridCount);
         _preview.ItemCount = _gridCount;
 
-        _frontGridImage = p.FrontGridImageKey;
-        var frontGridAsset = _currentProject?.GetImage(_frontGridImage);
-        _gridFrontImageSelector.SelectedImage = frontGridAsset;
+        _gridFrontImageSelector.SetSelectedImage(p.FrontGridImageKey);
 
-        _backGridImage = p.BackGridImageKey;
-        var backGridAsset = _currentProject?.GetImage(_backGridImage);
-        _gridBackImageSelector.SelectedImage = backGridAsset;
+        _gridBackImageSelector.SetSelectedImage(p.BackGridImageKey);
 
         _gridSingleBack.ButtonPressed = p.GridSingleBack;
 

@@ -6,8 +6,12 @@ public partial class ImageTile : MarginContainer
 {
     private Label _imageName;
     private TextureRect _thumbnail;
+    private Asset _asset;
 
     private bool _refreshRequired;
+    private bool _selected;
+
+    public event Action<Asset> Clicked;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -15,8 +19,8 @@ public partial class ImageTile : MarginContainer
         _imageName = GetNode<Label>("%ImageName");
         _thumbnail = GetNode<TextureRect>("%Thumbnail");
 
-        if (AssetStore.Instance != null)
-            AssetStore.Instance.AssetsChanged += OnAssetsChanged;
+        MouseFilter = MouseFilterEnum.Stop;
+        UpdateSelectedVisual();
 
         if (_refreshRequired)
         {
@@ -25,20 +29,27 @@ public partial class ImageTile : MarginContainer
         }
     }
 
-    private void OnAssetsChanged(int[] ids)
+    public override void _GuiInput(InputEvent @event)
     {
-        if (_asset == null)
-            return;
-
-        foreach (var id in ids)
-            if (id == _asset.Id.Value)
-            {
-                Refresh();
-                return;
-            }
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
+        {
+            Clicked?.Invoke(_asset);
+        }
     }
 
-    private Asset _asset;
+    public void SetSelected(bool selected)
+    {
+        _selected = selected;
+        if (IsNodeReady())
+        {
+            UpdateSelectedVisual();
+        }
+    }
+
+    private void UpdateSelectedVisual()
+    {
+        Modulate = _selected ? new Color(0.6f, 0.8f, 1f) : Colors.White;
+    }
 
     public void SetAsset(Asset asset)
     {

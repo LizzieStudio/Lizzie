@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 
 public record GameState : Replicated
 {
-
     /// <summary>The linked snapshot or <see cref="SnowTag.Empty"/>.</summary>
     public SnowTag Parent { get; init; }
 

@@ -78,12 +78,34 @@ public partial class ProjectService : Node
         set
         {
             if (!ReferenceEquals(_currentProject, value))
+            {
                 TextureCache.Instance.Clear();
+                DetachProjectStores(_currentProject);
+                AttachProjectStores(value);
+            }
             _currentProject = value;
             UpdateWindowTitle();
             EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
             EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
         }
+    }
+
+    /// <summary>
+    /// Sets up a project's replicated stores.
+    /// </summary>
+    private void AttachProjectStores(Project project)
+    {
+        if (project == null || EventSynchronizer.Instance == null)
+            return;
+        project.Assets.Attach(EventSynchronizer.Instance);
+    }
+
+    /// <summary>
+    /// Tears down a project's replicated stores.
+    /// </summary>
+    private void DetachProjectStores(Project project)
+    {
+        project?.Assets.Detach();
     }
 
     /// <summary>
@@ -232,7 +254,7 @@ public partial class ProjectService : Node
         effects.AddRange(UpsertEffects(project.Datasets));
         effects.AddRange(UpsertEffects(project.DataRows));
         effects.AddRange(UpsertEffects(project.Prototypes));
-        effects.AddRange(UpsertEffects(project.Assets));
+        effects.AddRange(UpsertEffects(project.Assets.Records));
         effects.AddRange(UpsertEffects(project.GameStates));
 
         if (project.ActiveGameState != SnowTag.Empty)
@@ -250,7 +272,7 @@ public partial class ProjectService : Node
     }
 
     /// <summary>One upsert effect carrying the current value of every record in the store.</summary>
-    private static IEnumerable<Effect> UpsertEffects<T>(IDictionary<SnowTag, T> store)
+    private static IEnumerable<Effect> UpsertEffects<T>(IReadOnlyDictionary<SnowTag, T> store)
         where T : class, IReplicated =>
         store.Values.Select(r => (Effect)new UpdateReplicatedEffect<T> { Id = r.Id, Payload = r });
 

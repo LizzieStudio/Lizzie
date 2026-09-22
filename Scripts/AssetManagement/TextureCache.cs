@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -22,12 +23,12 @@ public class TextureCache
 
     private readonly Dictionary<string, List<Action<Texture2D>>> _pending = new();
 
-    public Texture2D GetOrCreateAssetTexture(Asset asset)
+    public async Task<Texture2D> GetOrCreateAssetTexture(Asset asset)
     {
         if (asset == null)
             return null;
 
-        var image = AssetImageCache.Instance.GetImage(asset);
+        var image = await ProjectService.Instance.FetchImageAsync(asset);
         if (image == null)
             return null;
 

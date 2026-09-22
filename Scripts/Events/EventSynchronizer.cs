@@ -34,7 +34,7 @@ public partial class EventSynchronizer : Node
     public void Submit(TableEvent e)
     {
         if (TryRecord(e))
-            Dispatch(e);
+            Applied?.Invoke(e);
 
         if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
             return;
@@ -121,11 +121,6 @@ public partial class EventSynchronizer : Node
         if (!TryRecord(e))
             return;
 
-        Dispatch(e);
-    }
-
-    private void Dispatch(TableEvent e)
-    {
         Applied?.Invoke(e);
     }
 

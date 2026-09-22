@@ -91,8 +91,7 @@ public partial class ImageParamControl : HBoxContainer, IParamControl
 
     private void OnOptionSelected(long index)
     {
-        string value = string.Empty;
-        value = _popupMenu.GetItemText((int)index);
+        string value = _popupMenu.GetItemText((int)index);
 
         _parameter.Value = value;
         _value.Text = _parameter.Value;

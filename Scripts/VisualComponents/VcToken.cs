@@ -211,7 +211,7 @@ public partial class VcToken : VisualComponentBase
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Assets.TryGetValue(
+            ProjectService.Instance.CurrentProject.Assets.Records.TryGetValue(
                 _frontGridImageKey,
                 out _frontMasterAsset
             );
@@ -224,7 +224,7 @@ public partial class VcToken : VisualComponentBase
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Assets.TryGetValue(
+            ProjectService.Instance.CurrentProject.Assets.Records.TryGetValue(
                 _backGridImageKey,
                 out _backMasterAsset
             );
@@ -543,11 +543,7 @@ public partial class VcToken : VisualComponentBase
 
     private async Task BuildGridFace(Asset asset)
     {
-        var image = await ProjectService.Instance.FetchImageAsync(asset);
-        if (image == null)
-            return;
-
-        ApplyGridFaceTexture(TextureCache.Instance.GetOrCreateAssetTexture(asset));
+        ApplyGridFaceTexture(await TextureCache.Instance.GetOrCreateAssetTexture(asset));
     }
 
     private void ApplyGridFaceTexture(Texture2D texture)
@@ -560,11 +556,7 @@ public partial class VcToken : VisualComponentBase
 
     private async Task BuildGridBack(Asset asset)
     {
-        var image = await ProjectService.Instance.FetchImageAsync(asset);
-        if (image == null)
-            return;
-
-        ApplyGridBackTexture(TextureCache.Instance.GetOrCreateAssetTexture(asset));
+        ApplyGridBackTexture(await TextureCache.Instance.GetOrCreateAssetTexture(asset));
     }
 
     private void ApplyGridBackTexture(Texture2D texture)
