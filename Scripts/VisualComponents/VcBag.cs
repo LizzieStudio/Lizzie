@@ -28,13 +28,10 @@ public partial class VcBag : VisualComponentGroup
         _componentCount.Text = Children.Count().ToString();
     }
 
-    private TextureFactory _textureFactory;
 
-    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
+    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
     {
-        _textureFactory = textureFactory;
-
-        base.Setup(parameters, textureFactory);
+        base.Setup(parameters, R);
         var p = (BagParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");

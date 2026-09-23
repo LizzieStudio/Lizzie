@@ -194,12 +194,8 @@ public partial class ComponentDefinition : Window
 
         //update the project prototype
 
-        if (
-            !ProjectService.Instance.Prototypes.Records.TryGetValue(
-                _mapPrototype.Id,
-                out var prototype
-            )
-        )
+        var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(_mapPrototype.Id);
+        if (prototype == null)
             return;
 
         var editResult = _panelDictionary[CurName] as ComponentPanelDialogResult;

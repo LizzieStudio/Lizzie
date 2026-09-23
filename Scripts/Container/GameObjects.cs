@@ -254,8 +254,7 @@ public partial class GameObjects : Node
         }
 
         _table.AddChild(component);
-
-        component.Build();
+        ProjectService.Instance.SyncNow(component);
 
         QueueStackingUpdate();
     }
@@ -651,43 +650,6 @@ public partial class GameObjects : Node
         }
         _spawnComponents = null;
         CursorMode = CursorMode.Normal;
-    }
-
-    /// <summary>
-    /// This routine takes a base name (like "Cube") and checks to
-    /// see if there is an object already called that in the scene.
-    /// If there is, it appends (xx) where xx is a unique number
-    /// </summary>
-    /// <param name="baseName"></param>
-    /// <returns></returns>
-    public string CreateUniqueName(string baseName)
-    {
-        if (string.IsNullOrWhiteSpace(baseName))
-            return baseName;
-
-        //for simplicity pull all the existing names into a List
-        var names = new List<string>();
-        foreach (var c in ComponentNodes)
-        {
-            if (c is VisualComponentBase vcb)
-                names.Add(vcb.ComponentName);
-        }
-
-        //if we're already unique, we're done
-        if (names.All(x => x != baseName))
-            return baseName;
-
-        //try to append
-        for (int i = 1; i < 1000; i++)
-        {
-            var newName = $"{baseName}({i})";
-            if (names.All(x => x != newName))
-                return newName;
-        }
-
-        //put the above in a loop to avoid an infinite loop in case of horrible weirdness
-        GD.PrintErr($"Error creating new name for {baseName}");
-        return $"{baseName}(ERROR)";
     }
 
     #endregion
@@ -1309,7 +1271,8 @@ public partial class GameObjects : Node
     /// </summary>
     private bool TryExecuteSpawn(SnowportId writeId, ComponentEffect fx)
     {
-        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(fx.PrototypeRef, out var proto))
+        var proto = ProjectService.Instance.GetIncludingDeleted<Prototype>(fx.PrototypeRef);
+        if (proto == null)
             return false;
 
         var s = fx.State ?? new VcSyncDto();

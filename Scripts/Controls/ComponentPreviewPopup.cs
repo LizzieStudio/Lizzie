@@ -27,12 +27,10 @@ public partial class ComponentPreviewPopup : Window
         {
             _readyNeeded = false;
 
-            if (
-                ProjectService.Instance.Prototypes.Records.TryGetValue(
-                    component.PrototypeRef,
-                    out var prototype
-                )
-            )
+            var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(
+                component.PrototypeRef
+            );
+            if (prototype != null)
             {
                 _preview.Build(
                     prototype,

@@ -59,8 +59,41 @@ public abstract partial class VisualComponentBase : Area3D
     public override void _EnterTree()
     {
         base._EnterTree();
-        ProjectService.Instance.Watch(this, Sync);
+        ProjectService.Instance.Watch(
+            this,
+            R =>
+            {
+                Sync(R);
+                if (TextureFactory != null && GetPrototype(R) != null)
+                    Built?.Invoke();
+            }
+        );
     }
+
+    /// <summary>
+    /// Called after the node is added to the tree and then Sync.
+    /// </summary>
+    public event Action Built;
+
+    private Prototype _draftPrototype;
+
+    /// <summary>
+    /// An unsaved prototype shown instead of <see cref="PrototypeRef"/>.
+    /// Used for the editor preview, since there is no protoype record yet.
+    /// </summary>
+    public Prototype DraftPrototype
+    {
+        get => _draftPrototype;
+        set
+        {
+            _draftPrototype = value;
+            ProjectService.Instance.ForceSync(this);
+        }
+    }
+
+    /// <summary>The prototype this component shows. Possibly a draft or even deleted.</summary>
+    protected Prototype GetPrototype(IRecordReader R) =>
+        DraftPrototype ?? R.GetIncludingDeleted<Prototype>(PrototypeRef);
 
     public override void _Ready()
     {
@@ -112,9 +145,11 @@ public abstract partial class VisualComponentBase : Area3D
         _yTween.TweenProperty(this, "position:y", y, 0.2f);
     }
 
-    public virtual bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
+    /// <summary>
+    /// Builds the component from its prototype's parameters.
+    /// </summary>
+    protected virtual bool Setup(ComponentParameters parameters, IRecordReader R)
     {
-        TextureFactory = textureFactory;
         TextureReady = false;
         ShapeProfiles.Clear();
 
@@ -124,38 +159,18 @@ public abstract partial class VisualComponentBase : Area3D
         return true;
     }
 
-    public virtual bool Setup(SnowTag prototypeRef, TextureFactory textureFactory)
+    private void Sync(IRecordReader R)
     {
-        TextureFactory = textureFactory;
-        TextureReady = false;
-
-        if (ProjectService.Instance.CurrentProject == null)
-            return false;
-
-        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(prototypeRef, out var proto))
-        {
-            return false;
-        }
-
-        PrototypeRef = prototypeRef;
-
-        Setup(proto.Parameters, textureFactory);
-
-        return true;
-    }
-
-    protected virtual void Sync(IRecordReader R)
-    {
-        var proto = R.Get<Prototype>(PrototypeRef);
+        var proto = GetPrototype(R);
         if (proto == null || TextureFactory == null)
             return;
 
-        if (Setup(proto.Parameters, TextureFactory))
-            Build();
+        Setup(proto.Parameters, R);
     }
 
-    public virtual void Build() { }
-
+    /// <summary>
+    /// Applies the spawned state and builds immediately.
+    /// </summary>
     public virtual void SpawnBuild(
         SnowTag prototypeRef,
         VcSyncDto syncDto,
@@ -163,7 +178,9 @@ public abstract partial class VisualComponentBase : Area3D
     )
     {
         syncDto.ApplyToComponent(this);
-        Setup(prototypeRef, textureFactory);
+        PrototypeRef = prototypeRef;
+        TextureFactory = textureFactory;
+        ProjectService.Instance.SyncNow(this);
     }
 
     /// <summary>
@@ -237,7 +254,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public virtual void AnimateFlip(Vector3 targetRotation) { }
 
-    protected TextureFactory TextureFactory;
+    public TextureFactory TextureFactory { get; set; }
 
     public virtual List<MenuCommand> GetMenuCommands()
     {

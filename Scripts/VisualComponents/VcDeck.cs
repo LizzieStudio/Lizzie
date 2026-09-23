@@ -310,7 +310,8 @@ public partial class VcDeck : VisualComponentGroup
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
             yield break;
-        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(PrototypeRef, out var proto))
+        var proto = ProjectService.Instance.GetIncludingDeleted<Prototype>(PrototypeRef);
+        if (proto == null)
             yield break;
         if (proto.Parameters is not PrintedParameters parameters)
             yield break;
@@ -383,9 +384,9 @@ public partial class VcDeck : VisualComponentGroup
         };
     }
 
-    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
+    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
     {
-        base.Setup(parameters, textureFactory);
+        base.Setup(parameters, R);
 
         _frontSprite = GetNode<Sprite3D>("%FrontSprite");
         _backSprite = GetNode<Sprite3D>("%BackSprite");
@@ -457,15 +458,6 @@ public partial class VcDeck : VisualComponentGroup
 
         UpdateDeckSprites();
         return true;
-    }
-
-    protected override void Sync(IRecordReader R)
-    {
-        var proto = R.Get<Prototype>(PrototypeRef);
-        if (proto == null || TextureFactory == null)
-            return;
-
-        Setup(proto.Parameters, TextureFactory);
     }
 
     private ImageTexture _fs;

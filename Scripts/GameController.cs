@@ -80,12 +80,8 @@ public partial class GameController : Node3D
 
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
-        if (
-            !ProjectService.Instance.Prototypes.Records.TryGetValue(
-                e.PrototypeRef,
-                out var prototype
-            )
-        )
+        var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(e.PrototypeRef);
+        if (prototype == null)
         {
             GD.PrintErr($"SpawnPrototype: prototype {e.PrototypeRef} not found");
             return;
@@ -194,6 +190,12 @@ public partial class GameController : Node3D
         SnowTag rowId
     )
     {
+        if (ProjectService.Instance.GetIncludingDeleted<Prototype>(args.PrototypeRef) == null)
+        {
+            GD.PrintErr($"Prototype {args.PrototypeRef} not found");
+            return null;
+        }
+
         VisualComponentBase component = ProjectService.Instance.SpawnComponent(args.PrototypeName);
 
         if (component == null)
@@ -206,28 +208,8 @@ public partial class GameController : Node3D
         component.DataSetRowIndex = rowIndex;
         component.DataSetRowId = rowId;
 
-        //if the name is blank in the parameters, set it
-        if (
-            args.Params != null
-            && !string.IsNullOrEmpty(args.Params.BaseName)
-            && string.IsNullOrWhiteSpace(args.Params.ComponentName)
-        )
-        {
-            args.Params = args.Params with
-            {
-                ComponentName = _mainScene.GameObjects.CreateUniqueName(args.Params.BaseName),
-            };
-        }
-
-        if (component.Setup(args.PrototypeRef, _textureFactory))
-        {
-            return component;
-        }
-        else
-        {
-            GD.PrintErr("Error building component");
-            return null;
-        }
+        component.TextureFactory = _textureFactory;
+        return component;
     }
 
     private void OnSceneModeChange(object sender, SceneModeChangeArgs e)

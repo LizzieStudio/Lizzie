@@ -23,11 +23,6 @@ public partial class VcTray : VisualComponentGroup
 
     public override void _Process(double delta)
     {
-        if (_trayProtoBuildNeeded)
-        {
-            CreateTrayPrototype(TextureFactory);
-        }
-
         foreach (var c in _prototypeSpawnPoint.GetChildren())
         {
             if (c is Node3D n)
@@ -39,21 +34,10 @@ public partial class VcTray : VisualComponentGroup
         }
     }
 
-    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
+    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
     {
-        base.Setup(parameters, textureFactory);
-
-        return Apply((TrayParameters)parameters, ProjectService.Instance);
-    }
-
-    protected override void Sync(IRecordReader R)
-    {
-        var proto = R.Get<Prototype>(PrototypeRef);
-        if (proto == null || TextureFactory == null)
-            return;
-
-        base.Setup(proto.Parameters, TextureFactory);
-        Apply((TrayParameters)proto.Parameters, R);
+        base.Setup(parameters, R);
+        return Apply((TrayParameters)parameters, R);
     }
 
     /// <summary>Sizes the tray and shows the prototype it hands out.</summary>
@@ -92,7 +76,7 @@ public partial class VcTray : VisualComponentGroup
         _prototype = R.Get<Prototype>(p.Prototype);
 
         UpdateNameLabel();
-        CreateTrayPrototype(TextureFactory);
+        CreateTrayPrototype();
 
         return true;
     }
@@ -122,18 +106,8 @@ public partial class VcTray : VisualComponentGroup
         //_nameLabel.Position = new Vector3(0, Height + 0.01f, 0);
     }
 
-    private bool _trayProtoBuildNeeded;
-
-    private void CreateTrayPrototype(TextureFactory textureFactory)
+    private void CreateTrayPrototype()
     {
-        if (!IsNodeReady())
-        {
-            _trayProtoBuildNeeded = true;
-            return;
-        }
-
-        _trayProtoBuildNeeded = false;
-
         foreach (var child in _prototypeSpawnPoint.GetChildren())
             child.QueueFree();
 
@@ -142,10 +116,11 @@ public partial class VcTray : VisualComponentGroup
 
         var c = ProjectService.Instance.SpawnDisconnectedVisualComponent(
             _prototype,
-            textureFactory
+            TextureFactory
         );
-        UpdateChildScale(c);
         _prototypeSpawnPoint.AddChild(c);
+        ProjectService.Instance.SyncNow(c);
+        UpdateChildScale(c);
         c.Position += new Vector3(0, c.YHeight, 0);
     }
 

@@ -104,30 +104,16 @@ public partial class ComponentPreview : Panel
         {
             _component.Rotation += new Vector3(0, (float)delta, 0);
         }
-
-        if (_buildNeeded && _component != null && _component.IsNodeReady())
-        {
-            var proto = ProjectService.Instance.Prototypes.Records.GetValueOrDefault(
-                _component.PrototypeRef
-            );
-            if (proto?.Parameters != null)
-                Build(proto.Parameters, _rowIndex, _rowId, _textureFactory);
-            _buildNeeded = false;
-            AutoZoomComponent(_component);
-        }
     }
 
     private bool _zoomInNeeded;
     private bool _zoomOutNeeded;
 
-    private TextureFactory _textureFactory;
-
     private VisualComponentBase _component;
-    private bool _buildNeeded;
-    private int _rowIndex = -1;
-    private SnowTag _rowId = SnowTag.Empty;
 
     private bool _componentActive;
+
+    private bool _zoomPending;
 
     public void SetComponent(VisualComponentBase component, Vector3 rotation)
     {
@@ -140,8 +126,27 @@ public partial class ComponentPreview : Panel
         _componentActive = true;
         _component.Rotation = rotation;
         _parentNode.Scale = Vector3.One;
+        _zoomPending = true;
+        component.Built += () => OnComponentBuilt(component);
         _parentNode.AddChild(_component);
-        AutoZoomComponent(_component);
+    }
+
+    /// <summary>
+    /// Normalizes the size and zooms to fit it.
+    /// </summary>
+    private void OnComponentBuilt(VisualComponentBase component)
+    {
+        if (component != _component)
+            return;
+
+        var z = component.Aabb.GetLongestAxisSize();
+        _parentNode.Scale = z != 0 ? Vector3.One / z : Vector3.One;
+
+        if (_zoomPending)
+        {
+            _zoomPending = false;
+            AutoZoomComponent(component);
+        }
     }
 
     public VisualComponentBase GetComponent()
@@ -257,17 +262,13 @@ public partial class ComponentPreview : Panel
         TextureFactory textureFactory
     )
     {
-        if (_component != null)
-        {
-            _component.DataSetRowIndex = rowIndex;
-            _component.DataSetRowId = rowId;
-            _component.Setup(parameters, textureFactory);
-            _component.Build();
+        if (_component == null)
+            return;
 
-            var z = _component.Aabb.GetLongestAxisSize();
-            if (z != 0)
-                _parentNode.Scale = Vector3.One / z;
-        }
+        _component.DataSetRowIndex = rowIndex;
+        _component.DataSetRowId = rowId;
+        _component.TextureFactory = textureFactory;
+        _component.DraftPrototype = new Prototype { Parameters = parameters };
     }
 
     public void Build(Prototype prototype, TextureFactory textureFactory)
@@ -283,12 +284,8 @@ public partial class ComponentPreview : Panel
     )
     {
         var c = SpawnComponent(prototype, rowIndex, rowId);
-        _rowIndex = rowIndex;
-        _rowId = rowId;
-        _buildNeeded = true;
-
+        c.TextureFactory = textureFactory;
         SetComponent(c, GetRotationVector(prototype.Type));
-        _textureFactory = textureFactory;
     }
 
     private VisualComponentBase SpawnComponent(Prototype prototype, int rowIndex, SnowTag rowId)

@@ -73,13 +73,6 @@ public partial class VcToken : VisualComponentBase
             ProcessFlip(delta);
         }
 
-        if (_buildRequired)
-        {
-            _buildRequired = false;
-            GD.PrintErr("VcToken's Build was never called.");
-            Build();
-        }
-
         if (_mapFrontTextureRequired)
         {
             MapFrontTexture();
@@ -170,23 +163,10 @@ public partial class VcToken : VisualComponentBase
         QuickDeck, //need to parse the QuickBuild string to pull out the caption
     }
 
-    private bool _buildRequired;
-
-    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
+    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
     {
-        base.Setup(parameters, textureFactory);
-
-        return Apply((PrintedParameters)parameters, ProjectService.Instance);
-    }
-
-    protected override void Sync(IRecordReader R)
-    {
-        var proto = R.Get<Prototype>(PrototypeRef);
-        if (proto == null || TextureFactory == null)
-            return;
-
-        base.Setup(proto.Parameters, TextureFactory);
-        Apply((PrintedParameters)proto.Parameters, R);
+        base.Setup(parameters, R);
+        return Apply((PrintedParameters)parameters, R);
     }
 
     /// <summary>Sizes and textures the token from its parameters and the records they reference.</summary>
@@ -271,18 +251,8 @@ public partial class VcToken : VisualComponentBase
         return true;
     }
 
-    public override void Build() => Build(ProjectService.Instance);
-
     private void Build(IRecordReader R)
     {
-        if (!IsNodeReady())
-        {
-            _buildRequired = true;
-            return;
-        }
-
-        this._buildRequired = false;
-
         BuildToken();
 
         switch (_mode)

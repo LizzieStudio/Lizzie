@@ -67,8 +67,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IRecordReader R)
     {
-        R.Get<Template>(_frontTemplateRef);
-
         var dataset = R.Get<DataSet>(_datasetRef);
         _preview.MultiItemMode = dataset != null;
         if (dataset != null)
@@ -202,8 +200,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/Dice/{shape}");
         var vc = scene.Instantiate<VcDie>();
-
-        vc.Ready += UpdatePreview;
         return vc;
     }
 

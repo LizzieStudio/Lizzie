@@ -78,6 +78,13 @@ public sealed class Watcher : IRecordReader
         return _source.Get<T>(id);
     }
 
+    public T GetIncludingDeleted<T>(SnowTag id)
+        where T : class, IReplicated
+    {
+        Depend(typeof(T), o => o is T record && record.Id == id);
+        return _source.GetIncludingDeleted<T>(id);
+    }
+
     public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
         where T : class, IReplicated
     {

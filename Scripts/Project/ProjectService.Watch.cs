@@ -44,6 +44,18 @@ public partial class ProjectService : IRecordReader
         }
     }
 
+    /// <summary>
+    /// Runs the Node's Watch functions immediately instead of at the end of the frame.
+    /// </summary>
+    public void SyncNow(Node owner)
+    {
+        foreach (var watcher in _watchers.Where(w => w.Owner == owner).ToList())
+        {
+            _dirty.Remove(watcher);
+            watcher.Run();
+        }
+    }
+
     private void Unwatch(Watcher watcher)
     {
         _watchers.Remove(watcher);
@@ -104,6 +116,9 @@ public partial class ProjectService : IRecordReader
     public T Get<T>(SnowTag id)
         where T : class, IReplicated =>
         RecordsOf<T>().TryGetValue(id, out var r) && !r.Deleted ? r : null;
+
+    public T GetIncludingDeleted<T>(SnowTag id)
+        where T : class, IReplicated => RecordsOf<T>().GetValueOrDefault(id);
 
     public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
         where T : class, IReplicated

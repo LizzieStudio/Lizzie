@@ -3,13 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
-/// Reads project records. Soft-deleted records are never returned.
+/// Reads project records.
+/// Soft-deleted records are only returned by <see cref="GetIncludingDeleted{T}"/>.
 /// A reader passed to a watched Sync records every read as a dependency.
 /// </summary>
 public interface IRecordReader
 {
     /// <summary>The record, or null if it is missing or deleted.</summary>
     T Get<T>(SnowTag id)
+        where T : class, IReplicated;
+
+    /// <summary>
+    /// The record even if it is deleted.
+    /// Returns null if the record never existed or if its creation was reversed through an undo action.
+    /// </summary>
+    T GetIncludingDeleted<T>(SnowTag id)
         where T : class, IReplicated;
 
     /// <summary>The records that exist, in the order of <paramref name="ids"/>.</summary>

@@ -106,9 +106,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IRecordReader R)
     {
-        R.Get<Template>(_frontTemplateRef);
-        R.Get<Template>(_backTemplateRef);
-
         var dataset = R.Get<DataSet>(_datasetRef);
         if (_tabs.CurrentTab == 4)
         {
@@ -531,7 +528,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/{sceneName}");
         var vc = scene.Instantiate<VcToken>();
-        vc.Ready += UpdatePreview;
         return vc;
     }
 

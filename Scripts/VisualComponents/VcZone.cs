@@ -51,9 +51,9 @@ public partial class VcZone : VisualComponentBase
             _handleCollision.Position = corner;
     }
 
-    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
+    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
     {
-        base.Setup(parameters, textureFactory);
+        base.Setup(parameters, R);
         var p = (ZoneParameters)parameters;
 
         MainMesh = GetNodeOrNull<GeometryInstance3D>("ObjectMesh");

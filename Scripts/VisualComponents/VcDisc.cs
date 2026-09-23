@@ -14,9 +14,9 @@ public partial class VcDisc : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
+    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
     {
-        base.Setup(parameters, textureFactory);
+        base.Setup(parameters, R);
         var p = (DiscParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");

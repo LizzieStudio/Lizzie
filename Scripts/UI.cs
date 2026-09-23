@@ -752,12 +752,8 @@ public partial class UI : CanvasLayer
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
-        if (
-            !ProjectService.Instance.Prototypes.Records.TryGetValue(
-                editEvent.PrototypeId,
-                out var p
-            )
-        )
+        var p = ProjectService.Instance.GetIncludingDeleted<Prototype>(editEvent.PrototypeId);
+        if (p == null)
         {
             return;
         }

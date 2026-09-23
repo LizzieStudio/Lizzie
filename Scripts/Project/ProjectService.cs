@@ -664,18 +664,10 @@ public partial class ProjectService : Node
         }
 
         component.NeverHighlight = true;
-
         component.PrototypeRef = prototype.Id;
+        component.TextureFactory = textureFactory;
 
-        if (component.Setup(prototype.Id, textureFactory))
-        {
-            return component;
-        }
-        else
-        {
-            GD.PrintErr("Error building component");
-            return null;
-        }
+        return component;
     }
 
     public VisualComponentBase SpawnComponent(string prototypeScene)
