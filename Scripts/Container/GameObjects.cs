@@ -1393,8 +1393,9 @@ public partial class GameObjects : Node
 
         vcb.Reference = fx.Id;
         vcb.PrototypeRef = fx.PrototypeRef;
+        _table.AddChild(vcb);
         vcb.SpawnBuild(fx.PrototypeRef, s, TextureFactory);
-        AddComponentToScene(vcb);
+        QueueStackingUpdate();
 
         vcb.LastMoveId = writeId;
         if (s.ZOrder.Target == ZTarget.Unset)

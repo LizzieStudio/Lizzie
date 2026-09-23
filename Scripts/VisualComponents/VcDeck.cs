@@ -305,24 +305,6 @@ public partial class VcDeck : VisualComponentGroup
         return effects.ToArray();
     }
 
-    public override void SpawnBuild(
-        SnowTag prototypeRef,
-        VcSyncDto syncDto,
-        TextureFactory textureFactory
-    )
-    {
-        if (ProjectService.Instance.CurrentProject == null)
-            return;
-
-        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(prototypeRef, out var proto))
-        {
-            return;
-        }
-
-        syncDto.ApplyToComponent(this);
-        BuildInternal((PrintedParameters)proto.Parameters, textureFactory);
-    }
-
     public override IEnumerable<ComponentEffect> GetSpawnChildEffects(SnowTag containerRef)
     {
         var project = ProjectService.Instance.CurrentProject;
@@ -403,11 +385,6 @@ public partial class VcDeck : VisualComponentGroup
 
     public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
-        return BuildInternal((PrintedParameters)parameters, textureFactory);
-    }
-
-    private bool BuildInternal(PrintedParameters parameters, TextureFactory textureFactory)
-    {
         base.Setup(parameters, textureFactory);
 
         _frontSprite = GetNode<Sprite3D>("%FrontSprite");
@@ -418,7 +395,7 @@ public partial class VcDeck : VisualComponentGroup
 
         _blankLabel = GetNode<Label3D>("%BlankLabel");
 
-        if (!InitializeParameters(parameters))
+        if (!InitializeParameters((PrintedParameters)parameters))
             return false;
 
         _blankLabel.Text = ComponentName;
@@ -767,8 +744,6 @@ public partial class VcDeck : VisualComponentGroup
 
     private void UpdateComponentCount()
     {
-        if (_componentCount == null)
-            return;
         _componentCount.Text = Children.Count().ToString();
     }
 
