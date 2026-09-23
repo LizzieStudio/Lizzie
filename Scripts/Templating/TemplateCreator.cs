@@ -237,6 +237,10 @@ public partial class TemplateCreator : Window
 
     private Template _currentTemplate;
 
+    /// <summary>
+    /// Switches the edited template and rebuilds the whole editor UI from it.
+    /// Edits made from within the editor must go through <see cref="EditCurrentTemplate"/> instead.
+    /// </summary>
     public Template CurrentTemplate
     {
         get => _currentTemplate;
@@ -245,6 +249,13 @@ public partial class TemplateCreator : Window
             _currentTemplate = value;
             MapTemplate();
         }
+    }
+
+    /// <summary>Replaces the current template without rebuiling the editor UI.</summary>
+    private void EditCurrentTemplate(Func<Template, Template> edit)
+    {
+        if (_currentTemplate != null)
+            _currentTemplate = edit(_currentTemplate);
     }
 
     private SnowTag _tempTemplateRef = SnowTag.Empty;
@@ -387,16 +398,18 @@ public partial class TemplateCreator : Window
         if (CurrentTemplate == null)
             return;
 
-        CurrentTemplate = CurrentTemplate with
-        {
-            SizeTemplate = _curSizeType,
-            Width = _curWidth,
-            Height = _curHeight,
-            Elements = TemplateEngine
-                .MapTemplateElementsToProjectFormat(_hierarchicalElements)
-                .Select(d => d.ToImmutableDictionary())
-                .ToImmutableArray(),
-        };
+        EditCurrentTemplate(t =>
+            t with
+            {
+                SizeTemplate = _curSizeType,
+                Width = _curWidth,
+                Height = _curHeight,
+                Elements = TemplateEngine
+                    .MapTemplateElementsToProjectFormat(_hierarchicalElements)
+                    .Select(d => d.ToImmutableDictionary())
+                    .ToImmutableArray(),
+            }
+        );
         ProjectService.Instance.Upsert(_currentTemplate);
 
         EventBus.Instance.Publish<ProjectChangedEvent>();
@@ -1031,7 +1044,7 @@ public partial class TemplateCreator : Window
 
         _curWidth = size.Item1;
         _curHeight = size.Item2;
-        CurrentTemplate = CurrentTemplate with { SizeTemplate = _curSizeType };
+        EditCurrentTemplate(t => t with { SizeTemplate = _curSizeType });
 
         if (_curWidth == 0 && _curHeight == 0)
         {
@@ -1189,6 +1202,7 @@ public partial class TemplateCreator : Window
 
         var t = new Template
         {
+            Id = Snowport.Clock.CreateTag(),
             Name = _newTemplateName.Text,
             SizeTemplate = _newTemplateSize.Text,
             Width = w,
@@ -1649,11 +1663,11 @@ public partial class TemplateCreator : Window
             _textureContext.DataSet = null;
             _textureContext.CurrentRow = null;
             _pageControl.Hide();
-            CurrentTemplate = CurrentTemplate with { DataSet = SnowTag.Empty };
+            EditCurrentTemplate(t => t with { DataSet = SnowTag.Empty });
         }
         else
         {
-            CurrentTemplate = CurrentTemplate with { DataSet = datasetRef };
+            EditCurrentTemplate(t => t with { DataSet = datasetRef });
         }
 
         UpdateTextureContext(CurrentTemplate.DataSet);
@@ -1666,7 +1680,7 @@ public partial class TemplateCreator : Window
         var dataset = ProjectService.Instance.GetDataSet(datasetRef);
         if (dataset != null)
         {
-            CurrentTemplate = CurrentTemplate with { DataSet = datasetRef };
+            EditCurrentTemplate(t => t with { DataSet = datasetRef });
             _textureContext.DataSet = dataset;
             var rows = ProjectService.Instance.GetRows(datasetRef);
             _textureContext.CurrentRow = rows.Count > 0 ? rows[0] : null;

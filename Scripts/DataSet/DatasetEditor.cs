@@ -438,11 +438,13 @@ public partial class DatasetEditor : Window
         if (_currentDataSet == null)
             return;
 
+        var batch = new UpsertBatch();
         for (int i = 0; i < _rows.Count && i < _rowCheckboxes.Count; i++)
         {
             if (_rowCheckboxes[i].ButtonPressed)
-                ProjectService.Instance.Upsert(_rows[i] with { Deleted = true });
+                batch.Add(_rows[i] with { Deleted = true });
         }
+        batch.Submit();
     }
 
     private void OnImportPressed()
