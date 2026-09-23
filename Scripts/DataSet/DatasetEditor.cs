@@ -44,16 +44,14 @@ public partial class DatasetEditor : Window
         InitializeSpreadsheet();
 
         CloseRequested += CloseDialog;
-        if (DataRowStore.Instance != null)
-            DataRowStore.Instance.DataRowsChanged += OnDataRowsChanged;
+        ProjectService.Instance.DataRows.Observe(OnDataRowsChanged);
         ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
     }
 
     public override void _ExitTree()
     {
         ProjectService.Instance.DataSets.Unobserve(OnDataSetsChanged);
-        if (DataRowStore.Instance != null)
-            DataRowStore.Instance.DataRowsChanged -= OnDataRowsChanged;
+        ProjectService.Instance.DataRows.Unobserve(OnDataRowsChanged);
     }
 
     private void InitializeSpreadsheet()
@@ -579,23 +577,19 @@ public partial class DatasetEditor : Window
         }
     }
 
-    private void OnDataRowsChanged(int[] ids)
+    private void OnDataRowsChanged(IReadOnlyDictionary<SnowTag, DataRow> rows)
     {
         if (_currentDataSet == null)
             return;
 
-        foreach (var raw in ids)
-        {
-            var id = new SnowTag(raw);
-            var stored = ProjectService.Instance.CurrentProject?.DataRows.GetValueOrDefault(id);
-            bool shown = _rows.Any(r => r.Id == id);
-            bool belongs =
-                shown
-                || (stored != null && !stored.Deleted && stored.DataSetId == _currentDataSet.Id);
-            if (!belongs)
-                continue;
+        var shownIds = _rows.Select(r => r.Id);
+        var storedIds = rows
+            .Values.Where(r => !r.Deleted && r.DataSetId == _currentDataSet.Id)
+            .Select(r => r.Id);
 
-            if (!RowMatchesShown(id, stored))
+        foreach (var id in shownIds.Union(storedIds))
+        {
+            if (!RowMatchesShown(id, rows.GetValueOrDefault(id)))
             {
                 MapDataSet(_currentDataSet);
                 return;

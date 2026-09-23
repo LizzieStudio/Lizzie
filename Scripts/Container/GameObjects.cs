@@ -63,8 +63,7 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
 
         ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
-        if (DataRowStore.Instance != null)
-            DataRowStore.Instance.DataRowsChanged += OnDataRowsChanged;
+        ProjectService.Instance.DataRows.Observe(OnDataRowsChanged);
         if (TemplateStore.Instance != null)
             TemplateStore.Instance.TemplatesChanged += OnTemplatesChanged;
         if (PrototypeStore.Instance != null)
@@ -106,7 +105,7 @@ public partial class GameObjects : Node
         }
     }
 
-    private void OnDataRowsChanged(int[] ids)
+    private void OnDataRowsChanged(IReadOnlyDictionary<SnowTag, DataRow> rows)
     {
         // TODO: do a more narrow update
         foreach (var c in ComponentNodes)

@@ -369,7 +369,7 @@ public partial class VcDeck : VisualComponentGroup
 
             case VcToken.TokenBuildMode.Template:
             {
-                foreach (var row in project.GetRows(parameters.Dataset))
+                foreach (var row in ProjectService.Instance.GetRows(parameters.Dataset))
                     yield return (-1, row.Id);
                 break;
             }

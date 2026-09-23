@@ -213,7 +213,7 @@ public partial class VcDie : VisualComponentBase
 
     private void BuildTemplate()
     {
-        ProjectService.Instance.CurrentProject.DataRows.TryGetValue(DataSetRowId, out var row);
+        ProjectService.Instance.DataRows.Records.TryGetValue(DataSetRowId, out var row);
 
         var tc = new TextureContext
         {

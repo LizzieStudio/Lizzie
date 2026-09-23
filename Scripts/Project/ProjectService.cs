@@ -77,6 +77,11 @@ public partial class ProjectService : Node
     public ReplicatedDictionary<DataSet> DataSets { get; } = new();
 
     /// <summary>
+    /// The current project's dataset rows.
+    /// </summary>
+    public ReplicatedDictionary<DataRow> DataRows { get; } = new();
+
+    /// <summary>
     /// The current project's images.
     /// </summary>
     public ReplicatedDictionary<Asset> Assets { get; } = new();
@@ -96,6 +101,7 @@ public partial class ProjectService : Node
             {
                 TextureCache.Instance.Clear();
                 DataSets.Clear();
+                DataRows.Clear();
                 Assets.Clear();
             }
 
@@ -113,6 +119,7 @@ public partial class ProjectService : Node
         if (EventSynchronizer.Instance == null)
             return;
         DataSets.Attach(EventSynchronizer.Instance);
+        DataRows.Attach(EventSynchronizer.Instance);
         Assets.Attach(EventSynchronizer.Instance);
     }
 
@@ -190,6 +197,7 @@ public partial class ProjectService : Node
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
         DataSets.FlushBulkLoad();
+        DataRows.FlushBulkLoad();
         Assets.FlushBulkLoad();
 
         HasUnsavedChanges = false;
@@ -262,7 +270,7 @@ public partial class ProjectService : Node
 
         effects.AddRange(UpsertEffects(project.Templates));
         effects.AddRange(UpsertEffects(DataSets.Records));
-        effects.AddRange(UpsertEffects(project.DataRows));
+        effects.AddRange(UpsertEffects(DataRows.Records));
         effects.AddRange(UpsertEffects(project.Prototypes));
         effects.AddRange(UpsertEffects(Assets.Records));
         effects.AddRange(UpsertEffects(project.GameStates));
@@ -349,8 +357,27 @@ public partial class ProjectService : Node
     }
 
     /// <summary>The non-deleted rows of a dataset in order.</summary>
-    public List<DataRow> GetRows(SnowTag datasetRef) =>
-        CurrentProject?.GetRows(datasetRef) ?? new List<DataRow>();
+    public List<DataRow> GetRows(SnowTag datasetRef)
+    {
+        var rows = new List<DataRow>();
+        if (datasetRef == SnowTag.Empty)
+            return rows;
+
+        foreach (var r in DataRows.Records.Values)
+        {
+            if (!r.Deleted && r.DataSetId == datasetRef)
+                rows.Add(r);
+        }
+
+        rows.Sort(
+            (a, b) =>
+            {
+                int c = RowRank.Comparer.Compare(a.Rank, b.Rank);
+                return c != 0 ? c : a.Id.CompareTo(b.Id);
+            }
+        );
+        return rows;
+    }
 
     public void UpdateGameSettings(ProjectGameSettings settings)
     {
