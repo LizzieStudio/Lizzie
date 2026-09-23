@@ -14,7 +14,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private TabContainer _tabContainer;
     private ComponentPreview _preview;
 
-    private OptionButton _frontTemplatePicker;
+    private TemplateSelector _frontTemplatePicker;
     private Button _editFrontTemplateButton;
 
     private DataSetSelector _datasetPicker;
@@ -90,8 +90,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private void InitializeTemplates()
     {
-        _frontTemplatePicker = GetNode<OptionButton>("%FrontTemplateList");
-        _frontTemplatePicker.ItemSelected += OnFrontTemplateChanged;
+        _frontTemplatePicker = GetNode<TemplateSelector>("%FrontTemplateList");
+        _frontTemplatePicker.TemplateSelected += OnFrontTemplateChanged;
         _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
         _editFrontTemplateButton.Pressed += EditFrontTemplate;
 
@@ -101,28 +101,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
         _datasetEditorButton.Pressed += EditDataset;
 
-        UpdateTemplateTab();
+        UpdateTemplateTarget();
     }
 
-    private void UpdateTemplateTab()
+    private void UpdateTemplateTarget()
     {
-        if (CurrentProject == null || _frontTemplatePicker == null)
-            return;
-
-        _frontTemplatePicker.Clear();
-        _frontTemplatePicker.AddItem("(none)", SnowTag.Empty.Value);
-
         int.TryParse(_sidesInput.Text, out var sides);
-        var target = SidesToTarget(sides);
-
-        foreach (
-            var t in ProjectService.Instance.Templates.Records.Where(x =>
-                !x.Value.Deleted && x.Value.Target == target
-            )
-        )
-        {
-            _frontTemplatePicker.AddItem(t.Value.Name, t.Key.Value);
-        }
+        _frontTemplatePicker.Target = SidesToTarget(sides);
     }
 
     private Template.TemplateTarget SidesToTarget(int sides)
@@ -168,9 +153,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private Template _frontTemplate;
 
-    private void OnFrontTemplateChanged(long index)
+    private void OnFrontTemplateChanged(SnowTag templateRef)
     {
-        var templateRef = new SnowTag(_frontTemplatePicker.GetSelectedId());
         if (templateRef == SnowTag.Empty)
         {
             _frontTemplate = null;
@@ -250,6 +234,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private void SidesInputOnItemSelected(long index)
     {
         UpdateQuickSidesVisibility();
+        UpdateTemplateTarget();
         PrototypeIndex = (int)index;
         Activate();
     }
@@ -423,17 +408,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         };
 
         // Restore template
-        _frontTemplatePicker.Select(0);
+        _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
         _frontTemplate = null;
-        if (p.FrontTemplate != SnowTag.Empty)
-        {
-            var idx = _frontTemplatePicker.GetItemIndex(p.FrontTemplate.Value);
-            if (idx >= 0)
-            {
-                _frontTemplatePicker.Select(idx);
-                _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
-            }
-        }
+        if (
+            p.FrontTemplate != SnowTag.Empty
+            && _frontTemplatePicker.SelectedTemplate == p.FrontTemplate
+        )
+            _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
 
         // Restore dataset
         _datasetPicker.SelectedDataSet = p.Dataset;

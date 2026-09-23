@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://ddvtf4fbcgjk4"]
+
+[ext_resource type="Script" uid="uid://bg1yy4lnqo1b7" path="res://Scripts/Controls/TemplateSelector.cs" id="1_10s6f"]
+
+[node name="TemplateSelector" type="OptionButton" unique_id=1226337097]
+custom_minimum_size = Vector2(150, 0)
+script = ExtResource("1_10s6f")

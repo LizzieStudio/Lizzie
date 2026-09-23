@@ -59,9 +59,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private IconLibrary _iconLibrary = new();
 
-    private OptionButton _frontTemplatePicker;
+    private TemplateSelector _frontTemplatePicker;
     private Button _editFrontTemplateButton;
-    private OptionButton _backTemplatePicker;
+    private TemplateSelector _backTemplatePicker;
     private Button _editBackTemplateButton;
     private DataSetSelector _datasetPicker;
     private Button _datasetEditorButton;
@@ -309,13 +309,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void InitializeTemplates()
     {
-        _frontTemplatePicker = GetNode<OptionButton>("%FrontTemplateList");
-        _frontTemplatePicker.ItemSelected += OnFrontTemplateChanged;
+        _frontTemplatePicker = GetNode<TemplateSelector>("%FrontTemplateList");
+        _frontTemplatePicker.TemplateSelected += OnFrontTemplateChanged;
         _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
         _editFrontTemplateButton.Pressed += EditFrontTemplate;
 
-        _backTemplatePicker = GetNode<OptionButton>("%BackTemplateList");
-        _backTemplatePicker.ItemSelected += OnBackTemplateChanged;
+        _backTemplatePicker = GetNode<TemplateSelector>("%BackTemplateList");
+        _backTemplatePicker.TemplateSelected += OnBackTemplateChanged;
         _editBackTemplateButton = GetNode<Button>("%EditBackTemplateButton");
         _editBackTemplateButton.Pressed += EditBackTemplate;
 
@@ -324,8 +324,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
         _datasetEditorButton.Pressed += EditDataset;
-
-        UpdateTemplateTab();
     }
 
     private void InitializeGridBindings()
@@ -494,40 +492,18 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private Template _frontTemplate;
     private Template _backTemplate;
 
-    private void OnFrontTemplateChanged(long index)
+    private void OnFrontTemplateChanged(SnowTag templateRef)
     {
-        var templateRef = new SnowTag(_frontTemplatePicker.GetSelectedId());
         _frontTemplate =
             templateRef == SnowTag.Empty ? null : ProjectService.Instance.GetTemplate(templateRef);
         UpdatePreview();
     }
 
-    private void OnBackTemplateChanged(long index)
+    private void OnBackTemplateChanged(SnowTag templateRef)
     {
-        var templateRef = new SnowTag(_backTemplatePicker.GetSelectedId());
         _backTemplate =
             templateRef == SnowTag.Empty ? null : ProjectService.Instance.GetTemplate(templateRef);
         UpdatePreview();
-    }
-
-    private void UpdateTemplateTab()
-    {
-        if (CurrentProject == null || _frontTemplatePicker == null)
-            return;
-
-        _frontTemplatePicker.Clear();
-        _backTemplatePicker.Clear();
-        _frontTemplatePicker.AddItem("(none)", SnowTag.Empty.Value);
-        _backTemplatePicker.AddItem("(none)", SnowTag.Empty.Value);
-        foreach (
-            var t in ProjectService.Instance.Templates.Records.Where(x =>
-                !x.Value.Deleted && x.Value.Target == Template.TemplateTarget.Flat
-            )
-        )
-        {
-            _frontTemplatePicker.AddItem(t.Value.Name, t.Key.Value);
-            _backTemplatePicker.AddItem(t.Value.Name, t.Key.Value);
-        }
     }
 
     public override void Activate()
@@ -860,29 +836,21 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _gridSingleBack.ButtonPressed = p.GridSingleBack;
 
-        _frontTemplatePicker.Select(0);
+        _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
         _frontTemplate = null;
-        if (p.FrontTemplate != SnowTag.Empty)
-        {
-            var idx = _frontTemplatePicker.GetItemIndex(p.FrontTemplate.Value);
-            if (idx >= 0)
-            {
-                _frontTemplatePicker.Select(idx);
-                _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
-            }
-        }
+        if (
+            p.FrontTemplate != SnowTag.Empty
+            && _frontTemplatePicker.SelectedTemplate == p.FrontTemplate
+        )
+            _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
 
-        _backTemplatePicker.Select(0);
+        _backTemplatePicker.SelectedTemplate = p.BackTemplate;
         _backTemplate = null;
-        if (p.BackTemplate != SnowTag.Empty)
-        {
-            var idx = _backTemplatePicker.GetItemIndex(p.BackTemplate.Value);
-            if (idx >= 0)
-            {
-                _backTemplatePicker.Select(idx);
-                _backTemplate = ProjectService.Instance.GetTemplate(p.BackTemplate);
-            }
-        }
+        if (
+            p.BackTemplate != SnowTag.Empty
+            && _backTemplatePicker.SelectedTemplate == p.BackTemplate
+        )
+            _backTemplate = ProjectService.Instance.GetTemplate(p.BackTemplate);
 
         _datasetPicker.SelectedDataSet = p.Dataset;
         _textureContext.DataSet = null;

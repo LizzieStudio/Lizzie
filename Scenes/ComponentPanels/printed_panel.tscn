@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="4_rdyhr"]
 [ext_resource type="PackedScene" uid="uid://byv8s3wlrrbwb" path="res://Scenes/Controls/ImageSelector.tscn" id="4_vooyf"]
 [ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="5_dssel"]
+[ext_resource type="PackedScene" uid="uid://ddvtf4fbcgjk4" path="res://Scenes/Controls/TemplateSelector.tscn" id="6_tsel"]
 
 [sub_resource type="Theme" id="Theme_vm378"]
 
@@ -619,16 +620,10 @@ custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Front:"
 
-[node name="FrontTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1828835977]
+[node name="FrontTemplateList" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1828835977 instance=ExtResource("6_tsel")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 fit_to_longest_item = false
-item_count = 2
-popup/item_0/text = "Hello"
-popup/item_0/id = 0
-popup/item_1/text = "Goodbye"
-popup/item_1/id = 1
 
 [node name="EditFrontTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=244434395]
 unique_name_in_owner = true
@@ -644,16 +639,10 @@ custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Back:"
 
-[node name="BackTemplateList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=2046169962]
+[node name="BackTemplateList" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=2046169962 instance=ExtResource("6_tsel")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 fit_to_longest_item = false
-item_count = 2
-popup/item_0/text = "Hello"
-popup/item_0/id = 0
-popup/item_1/text = "Goodbye"
-popup/item_1/id = 1
 
 [node name="EditBackTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Template/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=1748829103]
 unique_name_in_owner = true
