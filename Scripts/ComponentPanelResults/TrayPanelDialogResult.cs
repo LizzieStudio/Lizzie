@@ -30,10 +30,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _colorPicker.ColorChanged += ColorPickerOnColorChanged;
 
         _prototypeList = GetNode<OptionButton>("%PrototypeList");
-        LoadPrototypeList();
         _prototypeList.ItemSelected += PrototypeSelected;
-
-        UpdatePrototypeSelection();
 
         _preview = GetNode<ComponentPreview>("%Preview");
     }
@@ -48,13 +45,20 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             _prototypeList.Selected = index;
     }
 
-    private void LoadPrototypeList()
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
+    private void Sync(IRecordReader R)
     {
         _prototypeList.Clear();
         _prototypeList.AddItem("(none)", SnowTag.Empty);
 
-        foreach (var p in ProjectService.Instance.Prototypes.Records.Values)
+        foreach (var p in R.Get<Prototype>())
             _prototypeList.AddItem(p.Name, p.Id);
+
+        UpdatePrototypeSelection();
     }
 
     private void PrototypeSelected(long index)

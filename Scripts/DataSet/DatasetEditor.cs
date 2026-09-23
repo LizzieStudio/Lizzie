@@ -6,13 +6,13 @@ using Godot;
 
 public partial class DatasetEditor : Window
 {
+    private SnowTag _datasetRef = SnowTag.Empty;
     private DataSet _currentDataSet;
 
     private VBoxContainer _mainContainer;
     private Button _deleteButton;
     private Button _newButton;
     private DataSetSelector _datasetList;
-    private SnowTag _pendingDatasetRef = SnowTag.Empty;
     private Button _linkButton;
     private Button _addColumnButton;
     private Button _deleteColumnButton;
@@ -44,14 +44,34 @@ public partial class DatasetEditor : Window
         InitializeSpreadsheet();
 
         CloseRequested += CloseDialog;
-        ProjectService.Instance.DataRows.Observe(OnDataRowsChanged);
-        ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
     }
 
-    public override void _ExitTree()
+    public override void _EnterTree()
     {
-        ProjectService.Instance.DataSets.Unobserve(OnDataSetsChanged);
-        ProjectService.Instance.DataRows.Unobserve(OnDataRowsChanged);
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
+    private void Sync(IRecordReader R)
+    {
+        var ds = R.Get<DataSet>(_datasetRef);
+        if (ds == null)
+        {
+            ds = R.Get<DataSet>().FirstOrDefault();
+            _datasetRef = ds?.Id ?? SnowTag.Empty;
+        }
+
+        _datasetList.SelectedDataSet = _datasetRef;
+        _currentDataSet = ds;
+
+        if (ds == null)
+        {
+            _rows = new List<DataRow>();
+            ClearSpreadsheet();
+            return;
+        }
+
+        _rows = R.GetRows(ds.Id);
+        RebuildGrid();
     }
 
     private void InitializeSpreadsheet()
@@ -91,54 +111,16 @@ public partial class DatasetEditor : Window
         _datasetList.DataSetSelected += OnDatasetSelected;
 
         InitializeNewDatasetDialog();
-        LoadInitial();
     }
 
-    /// <summary>Opens the editor on a specific dataset once the node is ready.</summary>
+    /// <summary>Opens the editor on a specific dataset. Empty opens the first one.</summary>
     public void SetDatasetById(SnowTag id)
     {
-        if (id == SnowTag.Empty)
-            return;
-        if (!IsNodeReady())
-        {
-            _pendingDatasetRef = id;
-            return;
-        }
-        SelectDatasetById(id);
+        _datasetRef = id;
+        ProjectService.Instance.ForceSync(this);
     }
 
-    private void LoadInitial()
-    {
-        if (_datasetList == null)
-            return;
-
-        var target = _pendingDatasetRef != SnowTag.Empty ? _pendingDatasetRef : FirstDataSetId();
-
-        if (target != SnowTag.Empty)
-            SelectDatasetById(target);
-    }
-
-    private SnowTag FirstDataSetId() =>
-        ProjectService.Instance.DataSets.Records.Values.FirstOrDefault(v => !v.Deleted)?.Id
-        ?? SnowTag.Empty;
-
-    private void SelectDatasetById(SnowTag id)
-    {
-        _datasetList.SelectedDataSet = id;
-
-        var ds = ProjectService.Instance.GetDataSet(id);
-        if (ds != null)
-            MapDataSet(ds);
-    }
-
-    private void OnDatasetSelected(SnowTag id)
-    {
-        _currentDataSet = ProjectService.Instance.GetDataSet(id);
-        if (_currentDataSet == null)
-            ClearSpreadsheet();
-        else
-            MapDataSet(_currentDataSet);
-    }
+    private void OnDatasetSelected(SnowTag id) => SetDatasetById(id);
 
     private void OnNewDatasetPressed()
     {
@@ -191,7 +173,7 @@ public partial class DatasetEditor : Window
         var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = name };
         ProjectService.Instance.Upsert(ds);
 
-        SelectDatasetById(ds.Id);
+        SetDatasetById(ds.Id);
     }
 
     public event EventHandler Closed;
@@ -200,18 +182,6 @@ public partial class DatasetEditor : Window
     {
         Closed?.Invoke(this, EventArgs.Empty);
         Hide();
-    }
-
-    private void MapDataSet(DataSet ds)
-    {
-        if (_mainContainer == null || ds == null)
-            return;
-
-        _currentDataSet = ds;
-
-        _rows = ProjectService.Instance.GetRows(ds.Id);
-
-        RebuildGrid();
     }
 
     private void RebuildGrid()
@@ -576,61 +546,6 @@ public partial class DatasetEditor : Window
                     cell.CustomMinimumSize = new Vector2(_columnWidths[columnIndex], RowHeight);
                 }
             }
-        }
-    }
-
-    private void OnDataRowsChanged(IReadOnlyDictionary<SnowTag, DataRow> rows)
-    {
-        if (_currentDataSet == null)
-            return;
-
-        var shownIds = _rows.Select(r => r.Id);
-        var storedIds = rows
-            .Values.Where(r => !r.Deleted && r.DataSetId == _currentDataSet.Id)
-            .Select(r => r.Id);
-
-        foreach (var id in shownIds.Union(storedIds))
-        {
-            if (!RowMatchesShown(id, rows.GetValueOrDefault(id)))
-            {
-                MapDataSet(_currentDataSet);
-                return;
-            }
-        }
-    }
-
-    private bool RowMatchesShown(SnowTag id, DataRow stored)
-    {
-        var shown = _rows.FirstOrDefault(r => r.Id == id);
-        if (stored == null || stored.Deleted)
-            return shown == null;
-        if (shown == null)
-            return false;
-        return stored.Rank == shown.Rank && DataEqual(stored.Data, shown.Data);
-    }
-
-    private void OnDataSetsChanged(IReadOnlyDictionary<SnowTag, DataSet> datasets)
-    {
-        if (_datasetList == null)
-            return;
-
-        var keep = _currentDataSet?.Id ?? SnowTag.Empty;
-        if (keep == SnowTag.Empty)
-            return;
-
-        var cur = datasets.GetValueOrDefault(keep);
-        if (cur is { Deleted: false })
-        {
-            _currentDataSet = cur;
-            RebuildGrid();
-        }
-        else
-        {
-            _currentDataSet = null;
-            ClearSpreadsheet();
-            var first = FirstDataSetId();
-            if (first != SnowTag.Empty)
-                SelectDatasetById(first);
         }
     }
 }

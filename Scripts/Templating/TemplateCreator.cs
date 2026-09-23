@@ -90,6 +90,19 @@ public partial class TemplateCreator : Window
     private bool _hasUnsavedChanges;
 
     // Called when the node enters the scene tree for the first time.
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
+    private void Sync(IRecordReader R)
+    {
+        LoadTemplateNameSelector(R);
+        _templateNameSelector.Select(
+            _templateNameSelector.GetItemIndex(CurrentTemplate?.Id ?? SnowTag.Empty)
+        );
+    }
+
     public override void _Ready()
     {
         InitPreview();
@@ -132,7 +145,6 @@ public partial class TemplateCreator : Window
     private void InitToolbar()
     {
         _templateNameSelector = GetNode<OptionButton>("%TemplateName");
-        LoadTemplateNameSelector();
         _templateNameSelector.ItemSelected += ChangeTemplate;
 
         _newButton = GetNode<Button>("%NewButton");
@@ -383,7 +395,7 @@ public partial class TemplateCreator : Window
         if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
-        var switched = ProjectService.Instance.GetTemplate(
+        var switched = ProjectService.Instance.Get<Template>(
             _templateNameSelector.GetItemId((int)index)
         );
         if (switched != null)
@@ -1208,9 +1220,6 @@ public partial class TemplateCreator : Window
         };
 
         ProjectService.Instance.Upsert(t);
-        _templateNameSelector.AddItem(t.Name, t.Id.Value);
-        _templateNameSelector.Select(_templateNameSelector.GetItemCount() - 1);
-
         CurrentTemplate = t;
 
         _newTemplateName.Clear();
@@ -1222,15 +1231,11 @@ public partial class TemplateCreator : Window
 
     #region Template management
 
-    private void LoadTemplateNameSelector()
+    private void LoadTemplateNameSelector(IRecordReader R)
     {
-        if (_templateNameSelector == null)
-            return;
-
         _templateNameSelector.Clear();
 
-        var templates = ProjectService.Instance.Templates.Records.Values;
-        foreach (var t in templates.Where(v => !v.Deleted).OrderBy(v => v.Name))
+        foreach (var t in R.Get<Template>().OrderBy(v => v.Name))
         {
             _templateNameSelector.AddItem(t.Name, t.Id.Value);
         }
@@ -1261,7 +1266,7 @@ public partial class TemplateCreator : Window
 
     private void UpdateProject()
     {
-        LoadTemplateNameSelector();
+        LoadTemplateNameSelector(ProjectService.Instance);
 
         if (_templateNameSelector.ItemCount == 0)
         {
@@ -1270,7 +1275,7 @@ public partial class TemplateCreator : Window
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = ProjectService.Instance.GetTemplate(_templateNameSelector.GetItemId(0));
+        CurrentTemplate = ProjectService.Instance.Get<Template>(_templateNameSelector.GetItemId(0));
 
         MapDataset();
     }
@@ -1673,7 +1678,7 @@ public partial class TemplateCreator : Window
 
     private void UpdateTextureContext(SnowTag datasetRef)
     {
-        var dataset = ProjectService.Instance.GetDataSet(datasetRef);
+        var dataset = ProjectService.Instance.Get<DataSet>(datasetRef);
         if (dataset != null)
         {
             EditCurrentTemplate(t => t with { DataSet = datasetRef });
@@ -1687,7 +1692,7 @@ public partial class TemplateCreator : Window
     {
         var datasetRef = CurrentTemplate.DataSet;
 
-        if (datasetRef == SnowTag.Empty || ProjectService.Instance.GetDataSet(datasetRef) == null)
+        if (datasetRef == SnowTag.Empty || ProjectService.Instance.Get<DataSet>(datasetRef) == null)
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRow = null;

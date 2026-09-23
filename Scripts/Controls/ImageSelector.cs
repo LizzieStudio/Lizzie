@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -7,6 +6,12 @@ public partial class ImageSelector : Control
 {
     private OptionButton _optionDropdown;
     private Button _imageEditorButton;
+    private SnowTag _selected = SnowTag.Empty;
+
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -16,48 +21,40 @@ public partial class ImageSelector : Control
 
         _imageEditorButton = GetNode<Button>("%ImageManagerButton");
         _imageEditorButton.Pressed += ShowImageEditor;
-
-        ProjectService.Instance.Assets.Observe(UpdateAssets);
-    }
-
-    public override void _ExitTree()
-    {
-        ProjectService.Instance.Assets.Unobserve(UpdateAssets);
     }
 
     private void ShowImageEditor() { }
 
-    private void UpdateAssets(IReadOnlyDictionary<SnowTag, Asset> records)
+    private void Sync(IRecordReader R)
     {
         _optionDropdown.Clear();
+        _optionDropdown.AddItem("(none)", SnowTag.Empty);
 
-        _optionDropdown.AddItem("(none)", 0);
+        foreach (var asset in R.Get<Asset>())
+            _optionDropdown.AddItem(asset.Name, asset.Id);
 
-        foreach (var (key, value) in records)
-        {
-            if (value.Deleted)
-                continue;
-            _optionDropdown.AddItem(value.Name, key);
-        }
+        UpdateSelection();
     }
 
     public void SetSelectedImage(SnowTag Id)
     {
-        if (Id == SnowTag.Empty)
-        {
-            _optionDropdown.Select(0);
-            return;
-        }
+        _selected = Id;
+        UpdateSelection();
+    }
 
-        var index = _optionDropdown.GetItemIndex(Id);
+    private void UpdateSelection()
+    {
+        if (_optionDropdown == null)
+            return;
+
+        var index = _optionDropdown.GetItemIndex(_selected);
         _optionDropdown.Select(index >= 0 ? index : 0);
     }
 
     private void ItemSelected(long index)
     {
-        var id = _optionDropdown.GetItemId((int)index);
-
-        ImageSelected?.Invoke(id);
+        _selected = _optionDropdown.GetItemId((int)index);
+        ImageSelected?.Invoke(_selected);
     }
 
     public event Action<SnowTag> ImageSelected;

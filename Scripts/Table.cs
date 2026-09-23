@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 public partial class Table : StaticBody3D
@@ -11,45 +10,25 @@ public partial class Table : StaticBody3D
     {
         _tableMesh = GetNode<MeshInstance3D>("%TableMesh");
         _mesh = _tableMesh.Mesh as PlaneMesh;
-        _mesh.Size = _size;
-
-        ProjectService.Instance.Settings.Observe(OnProjectSettingsChanged);
     }
 
-    public override void _ExitTree()
+    public override void _EnterTree()
     {
-        ProjectService.Instance.Settings.Unobserve(OnProjectSettingsChanged);
+        ProjectService.Instance.Watch(this, Sync);
     }
 
-    private void OnProjectSettingsChanged(ProjectGameSettings s)
+    private void Sync(IRecordReader R)
     {
-        Vector2 sizeCm =
+        var s = R.Value<ProjectGameSettings>();
+
+        _mesh.Size =
             s.TableUnits == 0 // feet
                 ? new Vector2(s.TableWidth, s.TableHeight) * 12f * 2.54f // convert to cm
                 : new Vector2(s.TableWidth, s.TableHeight) * 100f; // table is in cm
 
-        SetTableSize(sizeCm);
-
         if (_mesh.Material is StandardMaterial3D mat)
         {
             mat.AlbedoColor = s.TableColor;
-        }
-    }
-
-    private Vector2 _size = new Vector2(100, 100);
-
-    public void SetTableSize(Vector2 size)
-    {
-        if (_size == size)
-            return;
-
-        if (IsNodeReady())
-        {
-            _mesh.Size = size;
-        }
-        else
-        {
-            _size = size;
         }
     }
 }

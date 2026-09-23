@@ -29,9 +29,13 @@ public partial class ProjectService : Node
 
     private const string AppName = "Lizzie";
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
         _instance = this;
+    }
+
+    public override void _Ready()
+    {
         GD.Print("ProjectService initialized");
 
         SubscribeWatchers();
@@ -138,7 +142,6 @@ public partial class ProjectService : Node
             }
 
             UpdateWindowTitle();
-            EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
         }
     }
 
@@ -326,9 +329,6 @@ public partial class ProjectService : Node
         new UpsertBatch().Add(entity).Submit();
     }
 
-    /// <summary>The non-deleted rows of a dataset in order.</summary>
-    public List<DataRow> GetRows(SnowTag datasetRef) => ((IRecordReader)this).GetRows(datasetRef);
-
     public void UpdateGameSettings(ProjectGameSettings settings)
     {
         if (CurrentProject == null || settings == null)
@@ -411,7 +411,8 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || stateRef == SnowTag.Empty)
             return;
-        if (!GameStates.Records.TryGetValue(stateRef, out var state) || state.Deleted)
+        var state = Get<GameState>(stateRef);
+        if (state == null)
             return;
 
         Upsert(state with { Upserts = BuildDelta(state.Parent) });
@@ -460,7 +461,7 @@ public partial class ProjectService : Node
             return;
 
         // reject deleting a parent snapshot
-        if (GameStates.Records.Values.Any(g => !g.Deleted && g.Parent == stateRef))
+        if (Get<GameState>(g => g.Parent == stateRef).Count > 0)
         {
             GD.PrintErr($"Cannot delete GameState '{state.Name}': it has child snapshots.");
             return;
@@ -474,7 +475,7 @@ public partial class ProjectService : Node
     /// </summary>
     public void SwitchGameState(SnowTag stateRef)
     {
-        if (CurrentProject == null || GetGameState(stateRef) == null)
+        if (CurrentProject == null || Get<GameState>(stateRef) == null)
             return;
 
         var effects = new List<Effect>
@@ -574,36 +575,6 @@ public partial class ProjectService : Node
                 }
             );
         }
-    }
-
-    /// <summary>
-    /// The non-deleted snapshot or null.
-    /// </summary>
-    public GameState GetGameState(SnowTag stateRef)
-    {
-        if (stateRef == SnowTag.Empty)
-            return null;
-        if (GameStates.Records.TryGetValue(stateRef, out var state) && !state.Deleted)
-            return state;
-        return null;
-    }
-
-    public DataSet GetDataSet(SnowTag datasetRef)
-    {
-        if (datasetRef == SnowTag.Empty || CurrentProject == null)
-            return null;
-        if (DataSets.Records.TryGetValue(datasetRef, out var d) && !d.Deleted)
-            return d;
-        return null;
-    }
-
-    public Template GetTemplate(SnowTag templateRef)
-    {
-        if (templateRef == SnowTag.Empty || CurrentProject == null)
-            return null;
-        if (Templates.Records.TryGetValue(templateRef, out var t) && !t.Deleted)
-            return t;
-        return null;
     }
 
     private readonly Dictionary<SnowTag, Task> _inFlightFetches = new();

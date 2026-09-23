@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -25,6 +26,11 @@ public partial class ImageManager : Window
 
     private const string _tileScenePath = "res://Scenes/Controls/image_tile.tscn";
 
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -46,13 +52,6 @@ public partial class ImageManager : Window
         _cloudServiceOption = GetNode<OptionButton>("%CloudService");
         _urlInput = GetNode<LineEdit>("%UrlInput");
         _nameInput = GetNode<LineEdit>("%NameInput");
-
-        ProjectService.Instance.Assets.Observe(UpdateAssets);
-    }
-
-    public override void _ExitTree()
-    {
-        ProjectService.Instance.Assets.Unobserve(UpdateAssets);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -123,40 +122,35 @@ public partial class ImageManager : Window
         UpdateButtons(true);
     }
 
-    private void AddImageTile(SnowTag id, Asset asset)
+    private void AddImageTile(Asset asset)
     {
         var tileScene = GD.Load<PackedScene>(_tileScenePath);
         var tile = tileScene.Instantiate<ImageTile>();
         tile.SetAsset(asset);
         tile.Clicked += OnTileClicked;
         _tileContainer.AddChild(tile);
-        _tiles[id] = tile;
+        _tiles[asset.Id] = tile;
     }
 
-    private void UpdateAssets(IReadOnlyDictionary<SnowTag, Asset> assets)
+    private void Sync(IRecordReader R)
     {
-        foreach (var (id, asset) in assets)
+        var assets = R.Get<Asset>();
+
+        foreach (var asset in assets)
         {
-            if (_tiles.TryGetValue(id, out var existing))
-            {
-                if (!asset.Deleted)
-                {
-                    existing.SetAsset(asset);
-                    if (_selected.Id == id)
-                        _selected = asset;
-                }
-                else
-                {
-                    existing.QueueFree();
-                    _tiles.Remove(id);
-                    if (_selected.Id == id)
-                        _selected = null;
-                }
-            }
-            else if (!asset.Deleted)
-            {
-                AddImageTile(id, asset);
-            }
+            if (_tiles.TryGetValue(asset.Id, out var existing))
+                existing.SetAsset(asset);
+            else
+                AddImageTile(asset);
         }
+
+        var live = assets.Select(a => a.Id).ToHashSet();
+        foreach (var id in _tiles.Keys.Where(id => !live.Contains(id)).ToList())
+        {
+            _tiles[id].QueueFree();
+            _tiles.Remove(id);
+        }
+
+        _selected = assets.FirstOrDefault(a => a.Id == _selected?.Id);
     }
 }

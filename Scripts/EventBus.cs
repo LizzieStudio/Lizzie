@@ -234,8 +234,6 @@ public interface IEvent { }
 
 #region Event Definitions
 
-public class ProjectChangedEvent : IEvent { }
-
 public class ShowTemplateEditor : IEvent
 {
     public SnowTag TemplateRef { get; set; }

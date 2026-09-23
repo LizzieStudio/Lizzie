@@ -45,55 +45,22 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
 
     #region events
 
-    private HashSet<Action<IReadOnlyDictionary<SnowTag, TEntity>>> observers = new();
-
     public event Action<IReadOnlyList<RecordChange>> Changed;
-
-    /// <summary>
-    /// Immediately calls <paramref name="callback"/> with the full dictionary of records,
-    /// then calls <paramref name="callback"/> with updated records whenever they change.
-    /// </summary>
-    /// <param name="callback">The action to call.</param>
-    public void Observe(Action<IReadOnlyDictionary<SnowTag, TEntity>> callback)
-    {
-        observers.Add(callback);
-        callback(Records);
-    }
-
-    /// <summary>
-    /// Stops calling <paramref name="callback"/> with mass updates.
-    /// </summary>
-    /// <param name="callback">The action to stop calling.</param>
-    public void Unobserve(Action<IReadOnlyDictionary<SnowTag, TEntity>> callback)
-    {
-        observers.Remove(callback);
-    }
 
     private void NotifyChanged(IReadOnlyDictionary<SnowTag, (TEntity Old, TEntity New)> changed)
     {
-        // copies in case a callback unobserves
-        foreach (var callback in observers.ToArray())
-        {
-            callback(dict);
-        }
-
         Changed?.Invoke(changed.Values.Select(c => new RecordChange(c.Old, c.New)).ToArray());
     }
 
     /// <summary>
     /// Removes every record, e.g. when the project is replaced.
-    /// Observers receive an empty dictionary.
+    /// Every removed record is reported as a change to null.
     /// </summary>
     public void Clear()
     {
         var removed = dict.Values.ToArray();
         dict.Clear();
         pending.Clear();
-
-        foreach (var callback in observers.ToArray())
-        {
-            callback(dict);
-        }
 
         Changed?.Invoke(removed.Select(r => new RecordChange(r, null)).ToArray());
     }

@@ -58,11 +58,19 @@ public partial class UI : CanvasLayer
 
     private Node _modalDialogs;
 
-    public override void _ExitTree()
+    public override void _EnterTree()
     {
-        ProjectService.Instance.GameStates.Unobserve(OnGameStatesChanged);
-        ProjectService.Instance.ActiveGameState.Unobserve(OnActiveGameStateChanged);
-        ProjectService.Instance.Settings.Unobserve(OnProjectSettingsChanged);
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
+    private void Sync(IRecordReader R)
+    {
+        var s = R.Value<ProjectGameSettings>();
+        HandManager.Visible = s.EnablePlayerHands;
+        _opponentHands.Visible = s.EnablePlayerHands;
+        _rotationStep.Selected = s.RotationStepIndex;
+
+        RebuildRestoreSnapshotMenu(R);
     }
 
     // Called when the node enters the scene tree for the first time.
@@ -92,7 +100,6 @@ public partial class UI : CanvasLayer
         _fileMenu.AddSeparator();
         _fileMenu.AddItem("Multiplayer...", 10);
         _fileMenu.IdPressed += FileMenuOnIdPressed;
-        _fileMenu.AboutToPopup += RebuildRestoreSnapshotMenu;
 
         _editMenu = GetNode<PopupMenu>("%Edit");
         _editMenu.AddItem("Templates", 1);
@@ -132,28 +139,12 @@ public partial class UI : CanvasLayer
         // Defer position capture until layout is resolved.
         CallDeferred(nameof(InitOpponentHandsPositions));
 
-        EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
-        ProjectService.Instance.ActiveGameState.Observe(OnActiveGameStateChanged);
-        ProjectService.Instance.GameStates.Observe(OnGameStatesChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
         EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
         EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
-        ProjectService.Instance.Settings.Observe(OnProjectSettingsChanged);
         EventBus.Instance.Subscribe<RequestPlayerPositionEvent>(OnRequestPlayerPosition);
-    }
-
-    private void OnProjectSettingsChanged(ProjectGameSettings s)
-    {
-        if (_handManager != null)
-        {
-            HandManager.Visible = s.EnablePlayerHands;
-            _opponentHands.Visible = s.EnablePlayerHands;
-        }
-
-        if (_rotationStep != null)
-            _rotationStep.Selected = s.RotationStepIndex;
     }
 
     private void InitOpponentHandsPositions()
@@ -252,38 +243,15 @@ public partial class UI : CanvasLayer
         }
     }
 
-    private void ProjectChanged(ProjectChangedEvent obj)
+    private void RebuildRestoreSnapshotMenu(IRecordReader R)
     {
-        RebuildRestoreSnapshotMenu();
-    }
-
-    private void OnGameStatesChanged(IReadOnlyDictionary<SnowTag, GameState> states)
-    {
-        RebuildRestoreSnapshotMenu();
-    }
-
-    private void OnActiveGameStateChanged(ActiveGameStateRef _)
-    {
-        RebuildRestoreSnapshotMenu();
-    }
-
-    private void RebuildRestoreSnapshotMenu()
-    {
-        if (_restoreSnapshotMenu == null)
-            return;
-
         _restoreSnapshotMenu.Clear();
-
-        var project = ProjectService.Instance.CurrentProject;
 
         var updateIdx = _fileMenu.GetItemIndex(6);
         if (updateIdx >= 0)
-            _fileMenu.SetItemDisabled(
-                updateIdx,
-                project == null || ProjectService.Instance.ActiveGameState.Value.Id == SnowTag.Empty
-            );
+            _fileMenu.SetItemDisabled(updateIdx, R.Value<ActiveGameStateRef>().Id == SnowTag.Empty);
 
-        var ordered = OrderedGameStates(project);
+        var ordered = OrderedGameStates(R);
         if (ordered.Count == 0)
         {
             _restoreSnapshotMenu.AddItem("(no snapshots)", -1);
@@ -292,19 +260,15 @@ public partial class UI : CanvasLayer
         }
 
         foreach (var (state, _) in ordered)
-            _restoreSnapshotMenu.AddItem(GameStateLabel(project, state), state.Id.Value);
+            _restoreSnapshotMenu.AddItem(GameStateLabel(R, state), state.Id.Value);
     }
 
     /// <summary>Non-deleted snapshots in hierarchical order with depth.</summary>
-    private static List<(GameState State, int Depth)> OrderedGameStates(Project project)
+    private static List<(GameState State, int Depth)> OrderedGameStates(IRecordReader R)
     {
         var result = new List<(GameState, int)>();
-        if (project == null)
-            return result;
 
-        var alive = ProjectService
-            .Instance.GameStates.Records.Values.Where(s => !s.Deleted)
-            .ToList();
+        var alive = R.Get<GameState>();
         var byParent = alive
             .GroupBy(s => s.Parent)
             .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Name).ToList());
@@ -329,14 +293,11 @@ public partial class UI : CanvasLayer
         return result;
     }
 
-    private static string GameStateLabel(Project project, GameState state)
+    private static string GameStateLabel(IRecordReader R, GameState state)
     {
-        var marker = state.Id == ProjectService.Instance.ActiveGameState.Value.Id ? "● " : "";
-        var parens =
-            state.Parent != SnowTag.Empty
-            && ProjectService.Instance.GameStates.Records.TryGetValue(state.Parent, out var parent)
-                ? $" ({parent.Name})"
-                : "";
+        var marker = state.Id == R.Value<ActiveGameStateRef>().Id ? "● " : "";
+        var parent = R.Get<GameState>(state.Parent);
+        var parens = parent != null ? $" ({parent.Name})" : "";
         return marker + state.Name + parens;
     }
 
@@ -365,7 +326,9 @@ public partial class UI : CanvasLayer
         var s = "res://Scenes/Prototypes/PrototypeManifest.tscn";
         _prototypeManifest = GD.Load<PackedScene>(s).Instantiate<PrototypeManifest>();
         _prototypeManifest.TextureFactory = _textureFactory;
-        _prototypeManifest.Refresh(_gameController.MainScene.GameObjects.PrototypeCounts());
+        _prototypeManifest.SetPrototypeCounts(
+            _gameController.MainScene.GameObjects.PrototypeCounts()
+        );
         _prototypeManifest.Closed += PrototypeManifestOnClosed;
 
         _modalDialogs.AddChild(_prototypeManifest);
@@ -630,7 +593,7 @@ public partial class UI : CanvasLayer
         var parent =
             project == null
                 ? null
-                : ProjectService.Instance.GetGameState(
+                : ProjectService.Instance.Get<GameState>(
                     ProjectService.Instance.ActiveGameState.Value.Id
                 );
         CheckBox linkCheck = null;
@@ -691,9 +654,9 @@ public partial class UI : CanvasLayer
         void RefreshList()
         {
             list.Clear();
-            foreach (var (state, _) in OrderedGameStates(project))
+            foreach (var (state, _) in OrderedGameStates(ProjectService.Instance))
             {
-                var idx = list.AddItem(GameStateLabel(project, state));
+                var idx = list.AddItem(GameStateLabel(ProjectService.Instance, state));
                 list.SetItemMetadata(idx, state.Id.Value);
             }
         }

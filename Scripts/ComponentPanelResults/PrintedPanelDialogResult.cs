@@ -99,6 +99,27 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private bool _suppressShapeReset;
 
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
+    private void Sync(IRecordReader R)
+    {
+        R.Get<Template>(_frontTemplateRef);
+        R.Get<Template>(_backTemplateRef);
+
+        var dataset = R.Get<DataSet>(_datasetRef);
+        if (_tabs.CurrentTab == 4)
+        {
+            _preview.MultiItemMode = dataset != null;
+            if (dataset != null)
+                _preview.ItemCount = R.GetRows(_datasetRef).Count;
+        }
+
+        UpdatePreview();
+    }
+
     public override void _Ready()
     {
         ComponentType = VisualComponentBase.VisualComponentType.Token;
@@ -178,6 +199,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         {
             if (tab == 1)
                 GenerateQuickCards();
+            else if (tab == 4)
+                ProjectService.Instance.ForceSync(this);
             UpdatePreview();
         };
 
@@ -454,54 +477,35 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     }
 
     private void EditFrontTemplate() =>
-        EventBus.Instance.Publish(
-            new ShowTemplateEditor { TemplateRef = _frontTemplate?.Id ?? SnowTag.Empty }
-        );
+        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _frontTemplateRef });
 
     private void EditBackTemplate() =>
-        EventBus.Instance.Publish(
-            new ShowTemplateEditor { TemplateRef = _backTemplate?.Id ?? SnowTag.Empty }
-        );
+        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _backTemplateRef });
 
     private void EditDataset() =>
-        EventBus.Instance.Publish(
-            new ShowDatasetEditor { DatasetRef = _textureContext.DataSet?.Id ?? SnowTag.Empty }
-        );
+        EventBus.Instance.Publish(new ShowDatasetEditor { DatasetRef = _datasetRef });
 
-    private TextureContext _textureContext = new();
-    private Project _currentProject => ProjectService.Instance.CurrentProject;
+    private SnowTag _datasetRef = SnowTag.Empty;
 
     private void OnDatasetChanged(SnowTag datasetRef)
     {
-        if (datasetRef == SnowTag.Empty)
-        {
-            _textureContext.DataSet = null;
-            _textureContext.CurrentRow = null;
-            _preview.MultiItemMode = false;
-        }
-        else
-        {
-            _textureContext.DataSet = ProjectService.Instance.GetDataSet(datasetRef);
-            _preview.ItemCount = ProjectService.Instance.GetRows(datasetRef).Count;
-            _preview.MultiItemMode = true;
-        }
-
-        UpdatePreview();
+        _datasetRef = datasetRef;
+        ProjectService.Instance.ForceSync(this);
     }
 
-    private Template _frontTemplate;
-    private Template _backTemplate;
+    private SnowTag _frontTemplateRef = SnowTag.Empty;
+    private SnowTag _backTemplateRef = SnowTag.Empty;
 
     private void OnFrontTemplateChanged(SnowTag templateRef)
     {
-        _frontTemplate = ProjectService.Instance.GetTemplate(templateRef);
-        UpdatePreview();
+        _frontTemplateRef = templateRef;
+        ProjectService.Instance.ForceSync(this);
     }
 
     private void OnBackTemplateChanged(SnowTag templateRef)
     {
-        _backTemplate = ProjectService.Instance.GetTemplate(templateRef);
-        UpdatePreview();
+        _backTemplateRef = templateRef;
+        ProjectService.Instance.ForceSync(this);
     }
 
     public override void Activate()
@@ -660,15 +664,16 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
             case 4:
                 d = d with { Mode = VcToken.TokenBuildMode.Template };
-                if (_frontTemplate != null)
-                    d = d with { FrontTemplate = _frontTemplate.Id };
-                if (_backTemplate != null)
-                    d = d with { BackTemplate = _backTemplate.Id };
-                d = d with { Dataset = _textureContext.DataSet?.Id ?? SnowTag.Empty };
-                if (_textureContext.DataSet != null)
+                d = d with
+                {
+                    FrontTemplate = _frontTemplateRef,
+                    BackTemplate = _backTemplateRef,
+                    Dataset = _datasetRef,
+                };
+                DataSet = ProjectService.Instance.Get<DataSet>(_datasetRef);
+                if (DataSet != null)
                 {
                     spawnAsDeck = true;
-                    DataSet = ProjectService.Instance.GetDataSet(_textureContext.DataSet.Id);
                     WidthHint = width / 10f;
                     HeightHint = height / 10f;
                 }
@@ -708,9 +713,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private (int Index, SnowTag Id) GetRow(int rowNum)
     {
-        if (_tabs.CurrentTab == 1 || _textureContext.DataSet == null)
+        if (_tabs.CurrentTab == 1 || _datasetRef == SnowTag.Empty)
             return (rowNum, SnowTag.Empty);
-        var rows = ProjectService.Instance.GetRows(_textureContext.DataSet.Id);
+        var rows = ProjectService.Instance.GetRows(_datasetRef);
         if (rowNum < 0 || rowNum >= rows.Count)
             return (-1, SnowTag.Empty);
         return (-1, rows[rowNum].Id);
@@ -835,14 +840,14 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _gridSingleBack.ButtonPressed = p.GridSingleBack;
 
         _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
-        _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
+        _frontTemplateRef = p.FrontTemplate;
 
         _backTemplatePicker.SelectedTemplate = p.BackTemplate;
-        _backTemplate = ProjectService.Instance.GetTemplate(p.BackTemplate);
+        _backTemplateRef = p.BackTemplate;
 
         _datasetPicker.SelectedDataSet = p.Dataset;
-        _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
-        _textureContext.CurrentRow = null;
+        _datasetRef = p.Dataset;
+        ProjectService.Instance.ForceSync(this);
 
         UpdateDimensionUI();
         Activate();

@@ -68,18 +68,11 @@ public partial class PrototypeManifest : Window
         _hideUnused = GetNode<Button>("%HideUnused");
 
         InitializePrototypeGrid();
-
-        if (_refreshRequired)
-        {
-            Refresh(_prototypeCounts);
-        }
-
-        ProjectService.Instance.Prototypes.Observe(RefreshSelectedPrototype);
     }
 
-    public override void _ExitTree()
+    public override void _EnterTree()
     {
-        ProjectService.Instance.Prototypes.Unobserve(RefreshSelectedPrototype);
+        ProjectService.Instance.Watch(this, Sync);
     }
 
     public event EventHandler Closed;
@@ -88,28 +81,6 @@ public partial class PrototypeManifest : Window
     {
         Hide();
         Closed?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void RefreshSelectedPrototype(IReadOnlyDictionary<SnowTag, Prototype> prototypes)
-    {
-        SnowTag selectedRef = SnowTag.Empty;
-        var selectedItem = _prototypeTree.GetSelected();
-        if (selectedItem != null)
-            selectedRef = new SnowTag(selectedItem.GetMetadata(0).AsInt32());
-
-        LoadPrototypes(_prototypeCounts);
-
-        if (selectedRef != SnowTag.Empty)
-        {
-            for (var item = _root.GetFirstChild(); item != null; item = item.GetNext())
-            {
-                if (new SnowTag(item.GetMetadata(0).AsInt32()) == selectedRef)
-                {
-                    item.Select(0);
-                    break;
-                }
-            }
-        }
     }
 
     private void InitializePrototypeGrid()
@@ -176,7 +147,6 @@ public partial class PrototypeManifest : Window
         dialog.Confirmed += () =>
         {
             ProjectService.Instance.Upsert(_selectedPrototype with { Deleted = true });
-            Refresh(_prototypeCounts);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;
@@ -191,7 +161,8 @@ public partial class PrototypeManifest : Window
             return;
 
         var existingNames = ProjectService
-            .Instance.Prototypes.Records.Values.Select(p => p.Name)
+            .Instance.Get<Prototype>()
+            .Select(p => p.Name)
             .ToHashSet();
 
         // Strip any existing trailing " (N)" suffix before generating the new name
@@ -217,39 +188,31 @@ public partial class PrototypeManifest : Window
         };
 
         ProjectService.Instance.Upsert(duplicate);
-        Refresh(_prototypeCounts);
     }
 
-    private bool _refreshRequired;
-
-    public void Refresh(Dictionary<SnowTag, int> prototypeCounts)
+    /// <summary>Sets the Qty column, which counts the table's components.</summary>
+    public void SetPrototypeCounts(Dictionary<SnowTag, int> prototypeCounts)
     {
         _prototypeCounts = prototypeCounts;
-
-        if (!IsNodeReady())
-        {
-            _refreshRequired = true;
-            return;
-        }
-        _preview.ClearComponent();
-        _preview.SetComponentVisibility(false);
-        LoadPrototypes(prototypeCounts);
-        _refreshRequired = false;
+        ProjectService.Instance.ForceSync(this);
     }
 
     private Dictionary<SnowTag, int> _prototypeCounts;
 
-    private void LoadPrototypes(Dictionary<SnowTag, int> prototypeCounts)
+    private void Sync(IRecordReader R)
     {
-        if (ProjectService.Instance?.CurrentProject == null)
-            return;
-
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
 
-        var prototypes = ProjectService
-            .Instance.Prototypes.Records.Values.Where(p => !p.Deleted)
-            .ToList();
+        var prototypes = R.Get<Prototype>().ToList();
+
+        var selectedRef = _selectedPrototype?.Id ?? SnowTag.Empty;
+        _selectedPrototype = prototypes.FirstOrDefault(p => p.Id == selectedRef);
+        if (_selectedPrototype == null)
+        {
+            _preview.ClearComponent();
+            _preview.SetComponentVisibility(false);
+        }
 
         if (_sortColumn == 0)
         {
@@ -270,7 +233,10 @@ public partial class PrototypeManifest : Window
             item.SetText(0, prototype.Name ?? "");
             item.SetText(1, prototype.Type.ToString());
 
-            if (prototypeCounts != null && prototypeCounts.TryGetValue(prototype.Id, out var count))
+            if (
+                _prototypeCounts != null
+                && _prototypeCounts.TryGetValue(prototype.Id, out var count)
+            )
             {
                 item.SetText(2, count.ToString());
             }
@@ -281,6 +247,9 @@ public partial class PrototypeManifest : Window
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
             item.SetMetadata(0, prototype.Id.Value);
+
+            if (prototype == _selectedPrototype)
+                item.Select(0);
         }
     }
 
@@ -299,7 +268,7 @@ public partial class PrototypeManifest : Window
             _sortAscending = true;
         }
 
-        LoadPrototypes(_prototypeCounts);
+        ProjectService.Instance.ForceSync(this);
     }
 
     private void OnTreeItemSelected()
@@ -310,10 +279,12 @@ public partial class PrototypeManifest : Window
 
         var prototypeRef = new SnowTag(selectedItem.GetMetadata(0).AsInt32());
 
-        if (ProjectService.Instance.Prototypes.Records.TryGetValue(prototypeRef, out var prototype))
-        {
+        if (prototypeRef == _selectedPrototype?.Id)
+            return;
+
+        var prototype = ProjectService.Instance.Get<Prototype>(prototypeRef);
+        if (prototype != null)
             SelectedPrototype = prototype;
-        }
     }
 
     private void OnPrototypeSelected()

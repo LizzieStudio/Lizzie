@@ -26,9 +26,13 @@ public partial class PlayerHandsPanel : Panel
 
         if (PresenceSynchronizer.Instance != null)
             PresenceSynchronizer.Instance.SeatsChanged += OnModelChanged;
-        EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
 
         Callable.From(ConnectTable).CallDeferred();
+    }
+
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
     }
 
     public override void _ExitTree()
@@ -37,7 +41,6 @@ public partial class PlayerHandsPanel : Panel
             PresenceSynchronizer.Instance.SeatsChanged -= OnModelChanged;
         if (_gameObjects != null && IsInstanceValid(_gameObjects))
             _gameObjects.TableChanged -= OnModelChanged;
-        EventBus.Instance.Unsubscribe<ProjectChangedEvent>(OnProjectChanged);
     }
 
     // -------------------------------------------------------------------------
@@ -49,12 +52,10 @@ public partial class PlayerHandsPanel : Panel
         _gameObjects = ProjectService.Instance?.GameObjects;
         if (_gameObjects != null)
             _gameObjects.TableChanged += OnModelChanged;
-        RebuildOpponentHands();
+        OnModelChanged();
     }
 
-    private void OnModelChanged() => RebuildOpponentHands();
-
-    private void OnProjectChanged(ProjectChangedEvent _) => RebuildOpponentHands();
+    private void OnModelChanged() => ProjectService.Instance.ForceSync(this);
 
     // -------------------------------------------------------------------------
     // Show/hide toggle
@@ -71,11 +72,8 @@ public partial class PlayerHandsPanel : Panel
     // Dynamic opponent-hand rows
     // -------------------------------------------------------------------------
 
-    private void RebuildOpponentHands()
+    private void Sync(IRecordReader R)
     {
-        if (_playerHandsContainer == null)
-            return;
-
         // Remove existing rows
         foreach (var child in _playerHandsContainer.GetChildren())
         {
@@ -83,9 +81,7 @@ public partial class PlayerHandsPanel : Panel
             child.QueueFree();
         }
 
-        var settings = ProjectService.Instance.Settings.Value;
-        if (settings == null)
-            return;
+        var settings = R.Value<ProjectGameSettings>();
 
         int localSeat = PlayerHandService.LocalSeatIndex();
 

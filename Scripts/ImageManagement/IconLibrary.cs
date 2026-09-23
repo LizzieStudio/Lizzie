@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.AssetManagement;
 
 public class IconLibrary : Dictionary<string, IconEntry>
 {
@@ -150,14 +151,13 @@ public class IconLibrary : Dictionary<string, IconEntry>
         }
 
         //put in user-image block
-        if (ProjectService.Instance.Assets.Records.Count > 0)
+        var assets = ProjectService.Instance.Get<Asset>();
+        if (assets.Count > 0)
         {
             button.AddSeparator();
-            foreach (var img in ProjectService.Instance.Assets.Records)
+            foreach (var img in assets)
             {
-                if (img.Value.Deleted)
-                    continue;
-                button.AddItem($"u:{img.Value.Name}", id);
+                button.AddItem($"u:{img.Name}", id);
                 id++;
             }
         }

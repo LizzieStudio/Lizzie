@@ -46,7 +46,7 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
 
     private T _value;
 
-    // the value observers were last notified with
+    // the value last reported by Changed
     private T _notified;
 
     // the id of the event that wrote _value
@@ -62,38 +62,10 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
 
     #region events
 
-    private HashSet<Action<T>> observers = new();
-
     public event Action<IReadOnlyList<RecordChange>> Changed;
-
-    /// <summary>
-    /// Immediately calls <paramref name="callback"/> with the value,
-    /// then calls <paramref name="callback"/> with the updated value whenever it changes.
-    /// </summary>
-    /// <param name="callback">The action to call.</param>
-    public void Observe(Action<T> callback)
-    {
-        observers.Add(callback);
-        callback(_value);
-    }
-
-    /// <summary>
-    /// Stops calling <paramref name="callback"/> with updates.
-    /// </summary>
-    /// <param name="callback">The action to stop calling.</param>
-    public void Unobserve(Action<T> callback)
-    {
-        observers.Remove(callback);
-    }
 
     private void NotifyChanged()
     {
-        // copies in case a callback unobserves
-        foreach (var callback in observers.ToArray())
-        {
-            callback(_value);
-        }
-
         var old = _notified;
         _notified = _value;
         Changed?.Invoke([new RecordChange(old, _value)]);

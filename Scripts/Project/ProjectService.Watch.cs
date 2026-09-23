@@ -101,10 +101,12 @@ public partial class ProjectService : IRecordReader
             ? d.Records
             : throw new InvalidOperationException($"{typeof(T).Name} is not in a dictionary");
 
-    T IRecordReader.Get<T>(SnowTag id) =>
+    public T Get<T>(SnowTag id)
+        where T : class, IReplicated =>
         RecordsOf<T>().TryGetValue(id, out var r) && !r.Deleted ? r : null;
 
-    IReadOnlyList<T> IRecordReader.Get<T>(IEnumerable<SnowTag> ids)
+    public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
+        where T : class, IReplicated
     {
         var records = RecordsOf<T>();
         return ids.Select(id => records.GetValueOrDefault(id))
@@ -112,13 +114,15 @@ public partial class ProjectService : IRecordReader
             .ToArray();
     }
 
-    IReadOnlyList<T> IRecordReader.Get<T>(Func<T, bool> filter) =>
+    public IReadOnlyList<T> Get<T>(Func<T, bool> filter)
+        where T : class, IReplicated =>
         RecordsOf<T>().Values.Where(r => !r.Deleted && filter(r)).ToArray();
 
-    IReadOnlyList<T> IRecordReader.Get<T>() =>
-        RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
+    public IReadOnlyList<T> Get<T>()
+        where T : class, IReplicated => RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
 
-    T IRecordReader.Value<T>() =>
+    public T Value<T>()
+        where T : class =>
         ContainerOf(typeof(T)) is ReplicatedValue<T> v
             ? v.Value
             : throw new InvalidOperationException($"{typeof(T).Name} is not in a value");

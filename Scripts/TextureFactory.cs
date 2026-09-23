@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices.ObjectiveC;
 using Godot;
+using Lizzie.AssetManagement;
 
 public partial class TextureFactory : SubViewport
 {
@@ -104,9 +105,9 @@ public partial class TextureFactory : SubViewport
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
-                    var asset = ProjectService.Instance.Assets.Records.Values.FirstOrDefault(a =>
-                        a.Name == imageName
-                    );
+                    var asset = ProjectService
+                        .Instance.Get<Asset>(a => a.Name == imageName)
+                        .FirstOrDefault();
                     if (asset != null && !AssetImageCache.Instance.IsDownloaded(asset))
                     {
                         pendingAssets.Add(asset);
@@ -495,9 +496,11 @@ public partial class TextureFactory : SubViewport
     private bool IsIconUserDefined(string name)
     {
         if (
-            ProjectService.Instance.Assets.Records.Any(x =>
-                string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)
-            )
+            ProjectService
+                .Instance.Get<Asset>(x =>
+                    string.Equals(x.Name, name, StringComparison.CurrentCultureIgnoreCase)
+                )
+                .Count > 0
         )
             return true;
         return false;
@@ -512,9 +515,11 @@ public partial class TextureFactory : SubViewport
         {
             if (IsIconUserDefined(useName))
             {
-                var asset = ProjectService.Instance.Assets.Records.Values.FirstOrDefault(a =>
-                    string.Equals(a.Name, useName, StringComparison.CurrentCultureIgnoreCase)
-                );
+                var asset = ProjectService
+                    .Instance.Get<Asset>(a =>
+                        string.Equals(a.Name, useName, StringComparison.CurrentCultureIgnoreCase)
+                    )
+                    .FirstOrDefault();
 
                 var image = AssetImageCache.Instance.GetImage(asset);
                 if (image != null)
@@ -987,9 +992,9 @@ public partial class TextureFactory : SubViewport
         if (obj.Text != null && obj.Text.StartsWith("u:"))
         {
             string imageName = obj.Text.Substring(2);
-            var asset = ProjectService.Instance.Assets.Records.Values.FirstOrDefault(a =>
-                a.Name == imageName
-            );
+            var asset = ProjectService
+                .Instance.Get<Asset>(a => a.Name == imageName)
+                .FirstOrDefault();
             var assetImage = AssetImageCache.Instance.GetImage(asset);
             if (assetImage != null)
             {

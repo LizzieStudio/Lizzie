@@ -73,26 +73,22 @@ public partial class ProjectSettingsDialog : Window
         _saveButton.Pressed += OnSavePressed;
         _cancelButton.Pressed += OnClosePressed;
         CloseRequested += OnClosePressed;
-
-        LoadFromProject();
-
-        ProjectService.Instance.Settings.Observe(OnProjectSettingsChanged);
     }
 
-    public override void _ExitTree()
+    public override void _EnterTree()
     {
-        ProjectService.Instance.Settings.Unobserve(OnProjectSettingsChanged);
+        ProjectService.Instance.Watch(this, Sync);
     }
 
-    /// <summary>
-    /// Reconcile the dialog when settings change beneath it.
-    /// Edited fields are preserved, while others update to the incoming value.
-    /// </summary>
-    private void OnProjectSettingsChanged(ProjectGameSettings next)
+    private void Sync(IRecordReader R)
     {
+        var next = R.Value<ProjectGameSettings>();
+        if (next == null)
+            return;
+
         if (_baseline == null)
         {
-            LoadFromProject();
+            Load(next);
             return;
         }
 
@@ -187,12 +183,8 @@ public partial class ProjectSettingsDialog : Window
         Closed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void LoadFromProject()
+    private void Load(ProjectGameSettings s)
     {
-        var s = ProjectService.Instance.Settings.Value;
-        if (s == null)
-            return;
-
         _2dToggle.ButtonPressed = s.StartIn2D;
         _playerHandsToggle.ButtonPressed = s.EnablePlayerHands;
         _tableWidth.Text = s.TableWidth.ToString();

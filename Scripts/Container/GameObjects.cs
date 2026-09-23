@@ -54,14 +54,17 @@ public partial class GameObjects : Node
 
     public CursorMode CursorMode { get; private set; }
 
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     public override void _Ready()
     {
         _table = new Node { Name = "Table" };
         AddChild(_table);
 
         EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
-        EventBus.Instance.Subscribe<ProjectChangedEvent>(_ => RetryPendingSpawns());
-        ProjectService.Instance.Prototypes.Observe(_ => RetryPendingSpawns());
 
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
@@ -1227,7 +1230,7 @@ public partial class GameObjects : Node
         if (c == null)
         {
             if (!TryExecuteSpawn(writeId, fx))
-                _pendingSpawns[r] = new PendingSpawn(writeId, fx);
+                AddPendingSpawn(writeId, fx);
             return;
         }
 
@@ -1341,8 +1344,23 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// Re-attempts to spawn nodes that didn't have the prototype yet.
+    /// Holds a spawn until its prototype arrives.
     /// </summary>
+    private void AddPendingSpawn(SnowportId writeId, ComponentEffect fx)
+    {
+        _pendingSpawns[fx.Id] = new PendingSpawn(writeId, fx);
+        ProjectService.Instance.ForceSync(this);
+    }
+
+    /// <summary>
+    /// Retries pending spawns, then waits on the prototypes that are still missing.
+    /// </summary>
+    private void Sync(IRecordReader R)
+    {
+        RetryPendingSpawns();
+        R.Get<Prototype>(_pendingSpawns.Values.Select(p => p.Effect.PrototypeRef));
+    }
+
     private void RetryPendingSpawns()
     {
         if (_pendingSpawns.Count == 0)
@@ -1547,7 +1565,7 @@ public partial class GameObjects : Node
                 State = s,
             };
             if (!TryExecuteSpawn(wId, spawnFx))
-                _pendingSpawns[r] = new PendingSpawn(wId, spawnFx);
+                AddPendingSpawn(wId, spawnFx);
             return;
         }
 
