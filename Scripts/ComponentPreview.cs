@@ -266,7 +266,7 @@ public partial class ComponentPreview : Panel
 
             var z = _component.Aabb.GetLongestAxisSize();
             if (z != 0)
-                _parentNode.Scale /= z;
+                _parentNode.Scale = Vector3.One / z;
         }
     }
 
