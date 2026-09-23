@@ -1,0 +1,170 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+/// <summary>
+/// A single project-wide value that syncs during multiplayer transactionally.
+/// Written by <see cref="SetReplicatedValueEffect{T}"/>, last writer wins.
+/// </summary>
+public sealed class ReplicatedValue<T>
+{
+    private EventSynchronizer _synchronizer;
+
+    private readonly Func<T> _createDefault;
+
+    public ReplicatedValue(Func<T> createDefault)
+    {
+        _createDefault = createDefault;
+        _value = createDefault();
+    }
+
+    /// <summary>Starts merging events from the synchronizer into this value.</summary>
+    public void Attach(EventSynchronizer synchronizer)
+    {
+        if (synchronizer == null || ReferenceEquals(_synchronizer, synchronizer))
+            return;
+
+        Detach();
+        _synchronizer = synchronizer;
+        _synchronizer.Applied += OnEventApplied;
+    }
+
+    /// <summary>Stops merging events. Safe to call when not attached.</summary>
+    public void Detach()
+    {
+        if (_synchronizer == null)
+            return;
+
+        _synchronizer.Applied -= OnEventApplied;
+        _synchronizer = null;
+    }
+
+    private T _value;
+
+    // the id of the event that wrote _value
+    private SnowportId _writeId = SnowportId.Empty;
+
+    // a change merged while the synchronizer is bulk loading, sent by FlushBulkLoad
+    private bool _pending;
+
+    public T Value
+    {
+        get { return _value; }
+    }
+
+    #region events
+
+    private HashSet<Action<T>> observers = new();
+
+    /// <summary>
+    /// Immediately calls <paramref name="callback"/> with the value,
+    /// then calls <paramref name="callback"/> with the updated value whenever it changes.
+    /// </summary>
+    /// <param name="callback">The action to call.</param>
+    public void Observe(Action<T> callback)
+    {
+        observers.Add(callback);
+        callback(_value);
+    }
+
+    /// <summary>
+    /// Stops calling <paramref name="callback"/> with updates.
+    /// </summary>
+    /// <param name="callback">The action to stop calling.</param>
+    public void Unobserve(Action<T> callback)
+    {
+        observers.Remove(callback);
+    }
+
+    private void NotifyChanged()
+    {
+        // copies in case a callback unobserves
+        foreach (var callback in observers.ToArray())
+        {
+            callback(_value);
+        }
+    }
+
+    /// <summary>
+    /// Resets to the default value, e.g. when the project is replaced.
+    /// </summary>
+    public void Clear()
+    {
+        _value = _createDefault();
+        _writeId = SnowportId.Empty;
+        _pending = false;
+        NotifyChanged();
+    }
+
+    #endregion
+
+    /// <summary>Recomputes the value from the rest of the log if the undone event wrote it.</summary>
+    private void OnUndo(UndoAction undo)
+    {
+        var log = _synchronizer?.EventLog;
+        if (log == null)
+            return;
+
+        if (!UndoLog.ResolveAffectsValue<T>(log, undo.Target))
+            return;
+
+        var undone = UndoLog.ComputeUndone(log);
+        if (UndoLog.LatestValue<T>(log, undone, out var value, out var writeId))
+        {
+            _value = value;
+            _writeId = writeId;
+        }
+        else
+        {
+            _value = _createDefault();
+            _writeId = SnowportId.Empty;
+        }
+
+        Publish();
+    }
+
+    /// <summary>Merges the last value effect in the event, if any.</summary>
+    private void OnEventApplied(TableEvent e)
+    {
+        if (e.Action is UndoAction undo)
+        {
+            OnUndo(undo);
+            return;
+        }
+
+        var fx = e.Effects.OfType<SetReplicatedValueEffect<T>>().LastOrDefault();
+        if (fx == null || fx.Payload is null)
+            return;
+
+        if (e.Id.CompareTo(_writeId) < 0)
+            return;
+
+        _value = fx.Payload;
+        _writeId = e.Id;
+        Publish();
+    }
+
+    private void Publish()
+    {
+        if (_synchronizer?.BulkLoading == true)
+        {
+            _pending = true;
+            return;
+        }
+
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Sends one notification for everything merged during a bulk load.
+    /// Call once the synchronizer stops bulk loading.
+    /// </summary>
+    public void FlushBulkLoad()
+    {
+        if (!_pending)
+            return;
+
+        _pending = false;
+        NotifyChanged();
+    }
+}

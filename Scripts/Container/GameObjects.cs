@@ -757,8 +757,7 @@ public partial class GameObjects : Node
 
     #region Drag
 
-    private static bool HandsEnabled() =>
-        ProjectService.Instance.CurrentProject?.GameSettings?.EnablePlayerHands == true;
+    private static bool HandsEnabled() => ProjectService.Instance.Settings.Value.EnablePlayerHands;
 
     /// <summary>
     /// Recompute per-viewer zone visibility and control for all components each frame so the
@@ -1209,7 +1208,6 @@ public partial class GameObjects : Node
         _clearBarrier = SnowportId.Empty;
         EventSynchronizer.Instance?.Clear();
         PresenceSynchronizer.Instance?.Clear();
-        ActiveGameStateStore.Instance?.ResetForJoin();
     }
 
     /// <summary>

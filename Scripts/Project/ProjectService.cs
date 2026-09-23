@@ -101,6 +101,16 @@ public partial class ProjectService : Node
     /// </summary>
     public ReplicatedDictionary<GameState> GameStates { get; } = new();
 
+    /// <summary>
+    /// The current project's settings, edited via the Project Settings dialog.
+    /// </summary>
+    public ReplicatedValue<ProjectGameSettings> Settings { get; } = new(() => new());
+
+    /// <summary>
+    /// The snapshot currently loaded or <see cref="SnowTag.Empty"/>.
+    /// </summary>
+    public ReplicatedValue<SnowTag> ActiveGameState { get; } = new(() => SnowTag.Empty);
+
     private Project _currentProject;
 
     public Project CurrentProject
@@ -121,11 +131,12 @@ public partial class ProjectService : Node
                 DataRows.Clear();
                 Assets.Clear();
                 GameStates.Clear();
+                Settings.Clear();
+                ActiveGameState.Clear();
             }
 
             UpdateWindowTitle();
             EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
-            EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
         }
     }
 
@@ -142,6 +153,8 @@ public partial class ProjectService : Node
         DataRows.Attach(EventSynchronizer.Instance);
         Assets.Attach(EventSynchronizer.Instance);
         GameStates.Attach(EventSynchronizer.Instance);
+        Settings.Attach(EventSynchronizer.Instance);
+        ActiveGameState.Attach(EventSynchronizer.Instance);
     }
 
     /// <summary>
@@ -213,7 +226,6 @@ public partial class ProjectService : Node
     public void SettleAfterIngest()
     {
         GameObjects?.RebuildFromLog();
-        ActiveGameStateStore.Instance?.RebuildActiveFromLog();
         SeedTagsFromLog();
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
@@ -223,6 +235,8 @@ public partial class ProjectService : Node
         DataRows.FlushBulkLoad();
         Assets.FlushBulkLoad();
         GameStates.FlushBulkLoad();
+        Settings.FlushBulkLoad();
+        ActiveGameState.FlushBulkLoad();
 
         HasUnsavedChanges = false;
     }
@@ -251,7 +265,7 @@ public partial class ProjectService : Node
                 return false;
             }
 
-            foreach (var e in BuildCompactedEvents(project))
+            foreach (var e in BuildCompactedEvents())
                 saveFile.StoreLine(JsonSerializer.Serialize(e, LizzieJson.EventOptions));
         }
 
@@ -285,12 +299,12 @@ public partial class ProjectService : Node
     /// <summary>
     /// Rebuilds the event log as one event holding the current state.
     /// </summary>
-    private IEnumerable<TableEvent> BuildCompactedEvents(Project project)
+    private IEnumerable<TableEvent> BuildCompactedEvents()
     {
-        var effects = new List<Effect>();
-
-        if (project.GameSettings != null)
-            effects.Add(new UpdateSettingsEffect { Payload = project.GameSettings });
+        var effects = new List<Effect>
+        {
+            new SetReplicatedValueEffect<ProjectGameSettings> { Payload = Settings.Value },
+        };
 
         effects.AddRange(UpsertEffects(Templates.Records));
         effects.AddRange(UpsertEffects(DataSets.Records));
@@ -299,8 +313,8 @@ public partial class ProjectService : Node
         effects.AddRange(UpsertEffects(Assets.Records));
         effects.AddRange(UpsertEffects(GameStates.Records));
 
-        if (project.ActiveGameState != SnowTag.Empty)
-            effects.Add(new ActiveGameStateEffect { Target = project.ActiveGameState });
+        if (ActiveGameState.Value != SnowTag.Empty)
+            effects.Add(new SetReplicatedValueEffect<SnowTag> { Payload = ActiveGameState.Value });
 
         effects.AddRange(GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>());
 
@@ -365,7 +379,10 @@ public partial class ProjectService : Node
         if (CurrentProject == null || settings == null)
             return;
         EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(null, new UpdateSettingsEffect { Payload = settings })
+            TableEvent.Now(
+                null,
+                new SetReplicatedValueEffect<ProjectGameSettings> { Payload = settings }
+            )
         );
     }
 
@@ -379,7 +396,7 @@ public partial class ProjectService : Node
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
 
-        var settings = CurrentProject.GameSettings;
+        var settings = Settings.Value;
         var builder = settings.Players.ToBuilder();
         bool changed = false;
         for (int i = 0; i < builder.Count; i++)
@@ -411,7 +428,7 @@ public partial class ProjectService : Node
         if (CurrentProject == null)
             return;
 
-        var parent = link ? CurrentProject.ActiveGameState : SnowTag.Empty;
+        var parent = link ? ActiveGameState.Value : SnowTag.Empty;
         var state = new GameState
         {
             Id = Snowport.Clock.CreateTag(),
@@ -421,7 +438,10 @@ public partial class ProjectService : Node
             Upserts = BuildDelta(parent),
         };
 
-        new UpsertBatch().Add(state).With(new ActiveGameStateEffect { Target = state.Id }).Submit();
+        new UpsertBatch()
+            .Add(state)
+            .With(new SetReplicatedValueEffect<SnowTag> { Payload = state.Id })
+            .Submit();
     }
 
     /// <summary>
@@ -500,7 +520,7 @@ public partial class ProjectService : Node
         var effects = new List<Effect>
         {
             new TableClearEffect(),
-            new ActiveGameStateEffect { Target = stateRef },
+            new SetReplicatedValueEffect<SnowTag> { Payload = stateRef },
         };
         foreach (var ce in FoldChain(stateRef).Values)
         {

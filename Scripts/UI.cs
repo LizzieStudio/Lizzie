@@ -61,6 +61,8 @@ public partial class UI : CanvasLayer
     public override void _ExitTree()
     {
         ProjectService.Instance.GameStates.Unobserve(OnGameStatesChanged);
+        ProjectService.Instance.ActiveGameState.Unobserve(OnActiveGameStateChanged);
+        ProjectService.Instance.Settings.Unobserve(OnProjectSettingsChanged);
     }
 
     // Called when the node enters the scene tree for the first time.
@@ -131,22 +133,19 @@ public partial class UI : CanvasLayer
         CallDeferred(nameof(InitOpponentHandsPositions));
 
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
-        if (ActiveGameStateStore.Instance != null)
-            ActiveGameStateStore.Instance.ActiveGameStateChanged += OnActiveGameStateChanged;
+        ProjectService.Instance.ActiveGameState.Observe(OnActiveGameStateChanged);
         ProjectService.Instance.GameStates.Observe(OnGameStatesChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
         EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
         EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
-        EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+        ProjectService.Instance.Settings.Observe(OnProjectSettingsChanged);
         EventBus.Instance.Subscribe<RequestPlayerPositionEvent>(OnRequestPlayerPosition);
     }
 
-    private void OnProjectSettingsChanged()
+    private void OnProjectSettingsChanged(ProjectGameSettings s)
     {
-        var s = ProjectService.Instance.CurrentProject.GameSettings;
-
         if (_handManager != null)
         {
             HandManager.Visible = s.EnablePlayerHands;
@@ -206,7 +205,7 @@ public partial class UI : CanvasLayer
 
     private void ShowPlayerPositionDialog()
     {
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
+        var settings = ProjectService.Instance.Settings.Value;
         if (settings == null)
             return;
 
@@ -263,7 +262,7 @@ public partial class UI : CanvasLayer
         RebuildRestoreSnapshotMenu();
     }
 
-    private void OnActiveGameStateChanged()
+    private void OnActiveGameStateChanged(SnowTag _)
     {
         RebuildRestoreSnapshotMenu();
     }
@@ -281,7 +280,7 @@ public partial class UI : CanvasLayer
         if (updateIdx >= 0)
             _fileMenu.SetItemDisabled(
                 updateIdx,
-                project == null || project.ActiveGameState == SnowTag.Empty
+                project == null || ProjectService.Instance.ActiveGameState.Value == SnowTag.Empty
             );
 
         var ordered = OrderedGameStates(project);
@@ -332,7 +331,7 @@ public partial class UI : CanvasLayer
 
     private static string GameStateLabel(Project project, GameState state)
     {
-        var marker = state.Id == project.ActiveGameState ? "● " : "";
+        var marker = state.Id == ProjectService.Instance.ActiveGameState.Value ? "● " : "";
         var parens =
             state.Parent != SnowTag.Empty
             && ProjectService.Instance.GameStates.Records.TryGetValue(state.Parent, out var parent)
@@ -493,7 +492,7 @@ public partial class UI : CanvasLayer
 
             case 6:
                 ProjectService.Instance.UpdateGameState(
-                    ProjectService.Instance.CurrentProject?.ActiveGameState ?? SnowTag.Empty
+                    ProjectService.Instance.ActiveGameState.Value
                 );
                 break;
 
@@ -629,7 +628,11 @@ public partial class UI : CanvasLayer
 
         var project = ProjectService.Instance.CurrentProject;
         var parent =
-            project == null ? null : ProjectService.Instance.GetGameState(project.ActiveGameState);
+            project == null
+                ? null
+                : ProjectService.Instance.GetGameState(
+                    ProjectService.Instance.ActiveGameState.Value
+                );
         CheckBox linkCheck = null;
         if (parent != null)
         {

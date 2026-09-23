@@ -126,7 +126,7 @@ public partial class MultiplayerDialog : Window
         if (mm?.IsMultiplayerActive != true)
             return;
 
-        var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
+        var settings = ProjectService.Instance?.Settings.Value;
 
         foreach (var player in mm.Players.Values)
         {

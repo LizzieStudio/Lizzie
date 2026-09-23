@@ -83,7 +83,7 @@ public partial class PlayerHandsPanel : Panel
             child.QueueFree();
         }
 
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
+        var settings = ProjectService.Instance.Settings.Value;
         if (settings == null)
             return;
 

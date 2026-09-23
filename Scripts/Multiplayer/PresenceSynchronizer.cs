@@ -105,7 +105,7 @@ public partial class PresenceSynchronizer : Node
     /// <summary>The durable hand container for a seat, read from the project settings.</summary>
     public SnowTag HandRefForSeat(int seat)
     {
-        var players = ProjectService.Instance?.CurrentProject?.GameSettings?.Players;
+        var players = ProjectService.Instance?.Settings.Value.Players;
         if (players == null || seat < 0 || seat >= players.Value.Length)
             return SnowTag.Empty;
         return players.Value[seat].HandRef;
@@ -114,7 +114,7 @@ public partial class PresenceSynchronizer : Node
     /// <summary>The durable cursor container for a seat, read from the project settings.</summary>
     public SnowTag CursorRefForSeat(int seat)
     {
-        var players = ProjectService.Instance?.CurrentProject?.GameSettings?.Players;
+        var players = ProjectService.Instance?.Settings.Value.Players;
         if (players == null || seat < 0 || seat >= players.Value.Length)
             return SnowTag.Empty;
         return players.Value[seat].CursorRef;
@@ -354,7 +354,7 @@ public partial class PresenceSynchronizer : Node
     {
         if (containerRef == SnowTag.Empty)
             return Unseated;
-        var players = ProjectService.Instance?.CurrentProject?.GameSettings?.Players;
+        var players = ProjectService.Instance?.Settings.Value.Players;
         if (players == null)
             return Unseated;
         for (int i = 0; i < players.Value.Length; i++)
@@ -386,7 +386,7 @@ public partial class PresenceSynchronizer : Node
     private Color GetSeatColor(byte source)
     {
         var seat = GetSeatBySource(source);
-        var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
+        var settings = ProjectService.Instance?.Settings.Value;
         if (settings == null || seat < 0 || seat >= settings.Players.Length)
             return FallbackColor;
 

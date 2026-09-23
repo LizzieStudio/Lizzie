@@ -7,11 +7,6 @@ using Godot;
 /// </summary>
 public record ProjectGameSettings
 {
-    /// <summary>
-    /// The id of the event that last wrote these settings.
-    /// </summary>
-    public SnowportId LastUpdateId { get; init; }
-
     // Setup tab
     public bool StartIn2D { get; init; } = false;
     public bool EnablePlayerHands { get; init; } = false;

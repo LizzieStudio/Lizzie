@@ -214,7 +214,7 @@ public partial class VcDeck : VisualComponentGroup
         Effect[] result;
 
         //if there are player hands, draw to that. Otherwise draw to the table.
-        if (ProjectService.Instance.CurrentProject.GameSettings.EnablePlayerHands)
+        if (ProjectService.Instance.Settings.Value.EnablePlayerHands)
         {
             int seat = PlayerHandService.LocalSeatIndex();
             var toHand = new List<Effect>(cards.Length);
@@ -266,7 +266,7 @@ public partial class VcDeck : VisualComponentGroup
     /// </summary>
     private Effect[] BuildDeal(int countPerPlayer)
     {
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
+        var settings = ProjectService.Instance.Settings.Value;
         if (settings == null || settings.Players.Length == 0)
             return BuildDraw(countPerPlayer); // fall back to draw if no seats defined
 

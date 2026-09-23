@@ -76,24 +76,20 @@ public partial class ProjectSettingsDialog : Window
 
         LoadFromProject();
 
-        EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+        ProjectService.Instance.Settings.Observe(OnProjectSettingsChanged);
     }
 
     public override void _ExitTree()
     {
-        EventBus.Instance.Unsubscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+        ProjectService.Instance.Settings.Unobserve(OnProjectSettingsChanged);
     }
 
     /// <summary>
     /// Reconcile the dialog when settings change beneath it.
     /// Edited fields are preserved, while others update to the incoming value.
     /// </summary>
-    private void OnProjectSettingsChanged()
+    private void OnProjectSettingsChanged(ProjectGameSettings next)
     {
-        var next = ProjectService.Instance.CurrentProject?.GameSettings;
-        if (next == null)
-            return;
-
         if (_baseline == null)
         {
             LoadFromProject();
@@ -193,7 +189,7 @@ public partial class ProjectSettingsDialog : Window
 
     private void LoadFromProject()
     {
-        var s = ProjectService.Instance.CurrentProject?.GameSettings;
+        var s = ProjectService.Instance.Settings.Value;
         if (s == null)
             return;
 
@@ -256,8 +252,7 @@ public partial class ProjectSettingsDialog : Window
     /// </summary>
     private ProjectGameSettings ReadUi()
     {
-        var current =
-            ProjectService.Instance.CurrentProject?.GameSettings ?? new ProjectGameSettings();
+        var current = ProjectService.Instance.Settings.Value;
         return current with
         {
             StartIn2D = _2dToggle.ButtonPressed,

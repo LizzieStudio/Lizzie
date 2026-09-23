@@ -13,12 +13,16 @@ public partial class Table : StaticBody3D
         _mesh = _tableMesh.Mesh as PlaneMesh;
         _mesh.Size = _size;
 
-        EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
+        ProjectService.Instance.Settings.Observe(OnProjectSettingsChanged);
     }
 
-    private void OnProjectSettingsChanged()
+    public override void _ExitTree()
     {
-        var s = ProjectService.Instance.CurrentProject.GameSettings;
+        ProjectService.Instance.Settings.Unobserve(OnProjectSettingsChanged);
+    }
+
+    private void OnProjectSettingsChanged(ProjectGameSettings s)
+    {
         Vector2 sizeCm =
             s.TableUnits == 0 // feet
                 ? new Vector2(s.TableWidth, s.TableHeight) * 12f * 2.54f // convert to cm

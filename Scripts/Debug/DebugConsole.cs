@@ -223,7 +223,8 @@ public partial class DebugConsole : Node
             ComponentEffect { State.Location: VisualComponentBase.ComponentLocation.Deleted } =>
                 "Delete",
             ComponentEffect => "Upsert",
-            UpdateSettingsEffect => "Settings",
+            SetReplicatedValueEffect<ProjectGameSettings> => "Settings",
+            SetReplicatedValueEffect<SnowTag> => "ActiveGameState",
             UpdateReplicatedEffect<Template> => "Template",
             UpdateReplicatedEffect<DataSet> => "DataSet",
             UpdateReplicatedEffect<DataRow> => "DataRow",

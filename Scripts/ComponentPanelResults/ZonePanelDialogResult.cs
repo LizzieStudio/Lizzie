@@ -46,7 +46,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
             child.QueueFree();
         _seatOptions.Clear();
 
-        var settings = (CurrentProject ?? ProjectService.Instance.CurrentProject)?.GameSettings;
+        var settings = ProjectService.Instance.Settings.Value;
         if (settings == null)
             return;
         var players = settings.Players;

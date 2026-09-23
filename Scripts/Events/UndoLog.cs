@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Lizzie.AssetManagement;
 
 /// <summary>
 /// Utility functions on the event log for undo and redo.
@@ -7,28 +6,9 @@ using Lizzie.AssetManagement;
 public static class UndoLog
 {
     /// <summary>
-    /// True when an event is something the user can undo:
-    /// * component change
-    /// * table clear
-    /// * game state, prototype, template, datarow, dataset or asset upsert
+    /// True when an event is something the user can undo, which is any event with an effect.
     /// </summary>
-    public static bool IsUndoableEvent(TableEvent e)
-    {
-        foreach (var fx in e.Effects)
-            if (
-                fx
-                is ComponentEffect
-                    or TableClearEffect
-                    or UpdateReplicatedEffect<GameState>
-                    or UpdateReplicatedEffect<Prototype>
-                    or UpdateReplicatedEffect<Template>
-                    or UpdateReplicatedEffect<DataRow>
-                    or UpdateReplicatedEffect<DataSet>
-                    or UpdateReplicatedEffect<Asset>
-            )
-                return true;
-        return false;
-    }
+    public static bool IsUndoableEvent(TableEvent e) => e.Effects.Length > 0;
 
     /// <summary>True when an event carries a <see cref="TableClearEffect"/>.</summary>
     public static bool HasTableClear(TableEvent e)
@@ -236,5 +216,57 @@ public static class UndoLog
                     return u.Payload;
         }
         return null;
+    }
+
+    /// <summary>
+    /// True when an undo of <paramref name="targetId"/> should change the value of type <typeparamref name="T"/>.
+    /// </summary>
+    public static bool ResolveAffectsValue<T>(
+        OrderedDictionary<SnowportId, TableEvent> log,
+        SnowportId targetId
+    )
+    {
+        if (!log.TryGetValue(targetId, out var e))
+            return false;
+
+        var @base = ResolveBase(e, log);
+        if (@base == null)
+            return false;
+
+        foreach (var fx in @base.Effects)
+            if (fx is SetReplicatedValueEffect<T>)
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// The newest non-undone value of type <typeparamref name="T"/> and the id of the event that wrote it.
+    /// False if none remains.
+    /// </summary>
+    public static bool LatestValue<T>(
+        OrderedDictionary<SnowportId, TableEvent> log,
+        HashSet<SnowportId> undone,
+        out T value,
+        out SnowportId writeId
+    )
+    {
+        for (int i = log.Count - 1; i >= 0; i--)
+        {
+            var e = log.GetAt(i).Value;
+            if (undone.Contains(e.Id))
+                continue;
+
+            for (int j = e.Effects.Length - 1; j >= 0; j--)
+                if (e.Effects[j] is SetReplicatedValueEffect<T> fx && fx.Payload is not null)
+                {
+                    value = fx.Payload;
+                    writeId = e.Id;
+                    return true;
+                }
+        }
+
+        value = default;
+        writeId = SnowportId.Empty;
+        return false;
     }
 }

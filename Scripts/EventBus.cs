@@ -285,8 +285,6 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
     public VisualComponentBase Component { get; set; } = component;
 }
 
-public class ProjectSettingsChangedEvent : IEvent { }
-
 /// <summary>
 /// Published on a client when it has connected to an existing game.
 /// </summary>

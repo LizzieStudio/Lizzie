@@ -13,9 +13,9 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataRow>), "dw")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
-[JsonDerivedType(typeof(UpdateSettingsEffect), "gs")]
+[JsonDerivedType(typeof(SetReplicatedValueEffect<ProjectGameSettings>), "gs")]
 [JsonDerivedType(typeof(TableClearEffect), "clr")]
-[JsonDerivedType(typeof(ActiveGameStateEffect), "ags")]
+[JsonDerivedType(typeof(SetReplicatedValueEffect<SnowTag>), "ags")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>
@@ -57,26 +57,17 @@ public class UpdateReplicatedEffect<T> : Effect
 }
 
 /// <summary>
+/// Sets a project-wide singleton value.
+/// </summary>
+public class SetReplicatedValueEffect<T> : Effect
+{
+    [JsonPropertyName("v")]
+    public T Payload { get; set; }
+}
+
+/// <summary>
 /// Removes every component older than the enclosing event's id.
 /// Upserts from the same event "survive" the clear.
 /// This is used when restoring from a snapshots.
 /// </summary>
 public class TableClearEffect : Effect { }
-
-/// <summary>
-/// Sets which snapshot is the active (loaded) one.
-/// </summary>
-public class ActiveGameStateEffect : Effect
-{
-    [JsonPropertyName("t")]
-    public SnowTag Target { get; set; }
-}
-
-/// <summary>
-/// Creates or updates the project settings.
-/// </summary>
-public class UpdateSettingsEffect : Effect
-{
-    [JsonPropertyName("v")]
-    public ProjectGameSettings Payload { get; set; }
-}

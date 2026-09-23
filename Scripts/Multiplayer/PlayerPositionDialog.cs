@@ -65,7 +65,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         _seatList.Clear();
         _seatIndexMap.Clear();
 
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
+        var settings = ProjectService.Instance.Settings.Value;
         if (settings == null)
             return;
 
