@@ -62,8 +62,7 @@ public partial class GameObjects : Node
         EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
         EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
 
-        if (DataSetStore.Instance != null)
-            DataSetStore.Instance.DataSetsChanged += OnDataSetsChanged;
+        ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
         if (DataRowStore.Instance != null)
             DataRowStore.Instance.DataRowsChanged += OnDataRowsChanged;
         if (TemplateStore.Instance != null)
@@ -95,7 +94,7 @@ public partial class GameObjects : Node
         _modalOpen = true;
     }
 
-    private void OnDataSetsChanged(int[] ids)
+    private void OnDataSetsChanged(IReadOnlyDictionary<SnowTag, DataSet> datasets)
     {
         //naive approach for now
         foreach (var c in ComponentNodes)

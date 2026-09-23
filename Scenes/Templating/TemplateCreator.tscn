@@ -23,6 +23,7 @@
 [ext_resource type="Texture2D" uid="uid://c2xtoa1ewjtfd" path="res://Textures/UI/zoom-in.png" id="11_275yv"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="13_275yv"]
 [ext_resource type="Texture2D" uid="uid://4fhs1s6om6ta" path="res://Textures/Dice/die.png" id="16_uraoc"]
+[ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="17_dssel"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hnkns"]
 bg_color = Color(0.99736375, 0.793054, 0.8017672, 1)
@@ -196,14 +197,9 @@ size_flags_horizontal = 3
 text = "Dataset:  "
 horizontal_alignment = 2
 
-[node name="Dataset" type="OptionButton" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=16413708]
+[node name="Dataset" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=16413708 instance=ExtResource("17_dssel")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-selected = 0
-item_count = 1
-popup/item_0/text = "(none)"
-popup/item_0/id = 0
 
 [node name="PageControl" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=202467306 instance=ExtResource("3_275yv")]
 unique_name_in_owner = true

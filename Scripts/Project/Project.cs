@@ -2,17 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Godot;
-using Lizzie.AssetManagement;
 using TTSS.Scripts.Templating;
 
 public class Project
 {
     public string Filename { get; set; }
     public Dictionary<SnowTag, Template> Templates { get; set; } = new();
-    public Dictionary<SnowTag, DataSet> Datasets { get; set; } = new();
     public Dictionary<SnowTag, DataRow> DataRows { get; set; } = new();
     public Dictionary<SnowTag, Prototype> Prototypes { get; set; } = new();
-    public ReplicatedDictionary<Asset> Assets { get; } = new ReplicatedDictionary<Asset>();
 
     /// <summary>
     /// Named scene snapshots the user can save and restore.
@@ -29,43 +26,6 @@ public class Project
     /// Project-level settings edited via the Project Settings dialog.
     /// </summary>
     public ProjectGameSettings GameSettings { get; set; } = new();
-
-    public Template GetTemplate(SnowTag templateRef)
-    {
-        var t = new Template();
-        if (templateRef == SnowTag.Empty)
-        {
-            return t;
-        }
-
-        if (Templates.TryGetValue(templateRef, out var template) && !template.Deleted)
-        {
-            return template;
-        }
-        else
-        {
-            GD.PrintErr($"Template '{templateRef}' not found in project.");
-            return t;
-        }
-    }
-
-    public DataSet GetDataset(SnowTag datasetRef)
-    {
-        var d = new DataSet();
-        if (datasetRef == SnowTag.Empty)
-        {
-            return d;
-        }
-        if (Datasets.TryGetValue(datasetRef, out var dataset) && !dataset.Deleted)
-        {
-            return dataset;
-        }
-        else
-        {
-            GD.PrintErr($"Dataset '{datasetRef}' not found in project.");
-            return d;
-        }
-    }
 
     /// <summary>
     /// The non-deleted rows of a dataset in order.

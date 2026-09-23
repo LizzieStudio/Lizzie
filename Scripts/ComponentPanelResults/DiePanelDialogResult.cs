@@ -17,7 +17,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private OptionButton _frontTemplatePicker;
     private Button _editFrontTemplateButton;
 
-    private OptionButton _datasetPicker;
+    private DataSetSelector _datasetPicker;
     private Button _datasetEditorButton;
 
     [Export]
@@ -62,8 +62,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         //register for events
         if (TemplateStore.Instance != null)
             TemplateStore.Instance.TemplatesChanged += TemplatesChanged;
-        if (DataSetStore.Instance != null)
-            DataSetStore.Instance.DataSetsChanged += DataSetsChanged;
+        ProjectService.Instance.DataSets.Observe(DataSetsChanged);
+    }
+
+    public override void _ExitTree()
+    {
+        ProjectService.Instance.DataSets.Unobserve(DataSetsChanged);
     }
 
     private int _curDie;
@@ -79,7 +83,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void DataSetsChanged(int[] ids)
+    private void DataSetsChanged(IReadOnlyDictionary<SnowTag, DataSet> datasets)
     {
         UpdatePreview();
     }
@@ -91,8 +95,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
         _editFrontTemplateButton.Pressed += EditFrontTemplate;
 
-        _datasetPicker = GetNode<OptionButton>("%DatasetList");
-        _datasetPicker.ItemSelected += OnDatasetChanged;
+        _datasetPicker = GetNode<DataSetSelector>("%DatasetList");
+        _datasetPicker.DataSetSelected += OnDatasetChanged;
 
         _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
         _datasetEditorButton.Pressed += EditDataset;
@@ -119,13 +123,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         {
             _frontTemplatePicker.AddItem(t.Value.Name, t.Key.Value);
         }
-
-        _datasetPicker.Clear();
-        _datasetPicker.AddItem("(none)", SnowTag.Empty.Value);
-        foreach (var d in CurrentProject.Datasets.Where(x => !x.Value.Deleted))
-        {
-            _datasetPicker.AddItem(d.Value.Name, d.Key.Value);
-        }
     }
 
     private Template.TemplateTarget SidesToTarget(int sides)
@@ -151,9 +148,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private TextureContext _textureContext = new();
 
-    private void OnDatasetChanged(long index)
+    private void OnDatasetChanged(SnowTag datasetRef)
     {
-        var datasetRef = new SnowTag(_datasetPicker.GetSelectedId());
         if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
@@ -440,18 +436,11 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         }
 
         // Restore dataset
-        _datasetPicker.Select(0);
+        _datasetPicker.SelectedDataSet = p.Dataset;
         _textureContext.DataSet = null;
         _textureContext.CurrentRow = null;
-        if (p.Dataset != SnowTag.Empty)
-        {
-            var idx = _datasetPicker.GetItemIndex(p.Dataset.Value);
-            if (idx >= 0)
-            {
-                _datasetPicker.Select(idx);
-                _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
-            }
-        }
+        if (p.Dataset != SnowTag.Empty && _datasetPicker.SelectedDataSet == p.Dataset)
+            _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
     }
 
     public override List<string> ValidateParameters(ComponentParameters parameters)

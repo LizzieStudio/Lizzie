@@ -41,6 +41,7 @@ public partial class ProjectService : Node
     {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.Applied += OnEventApplied;
+        AttachReplicated();
         UpdateWindowTitle();
     }
 
@@ -70,6 +71,16 @@ public partial class ProjectService : Node
         }
     }
 
+    /// <summary>
+    /// The current project's datasets.
+    /// </summary>
+    public ReplicatedDictionary<DataSet> DataSets { get; } = new();
+
+    /// <summary>
+    /// The current project's images.
+    /// </summary>
+    public ReplicatedDictionary<Asset> Assets { get; } = new();
+
     private Project _currentProject;
 
     public Project CurrentProject
@@ -77,13 +88,17 @@ public partial class ProjectService : Node
         get => _currentProject;
         set
         {
-            if (!ReferenceEquals(_currentProject, value))
+            var replaced = !ReferenceEquals(_currentProject, value);
+            _currentProject = value;
+            AttachReplicated();
+
+            if (replaced)
             {
                 TextureCache.Instance.Clear();
-                DetachProjectStores(_currentProject);
-                AttachProjectStores(value);
+                DataSets.Clear();
+                Assets.Clear();
             }
-            _currentProject = value;
+
             UpdateWindowTitle();
             EventBus.Instance.Publish<ProjectChangedEvent>(); //no params means everything has changed
             EventBus.Instance.Publish<ProjectSettingsChangedEvent>();
@@ -91,21 +106,14 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Sets up a project's replicated stores.
+    /// Starts merging events into the replicated stores. Safe to call repeatedly.
     /// </summary>
-    private void AttachProjectStores(Project project)
+    private void AttachReplicated()
     {
-        if (project == null || EventSynchronizer.Instance == null)
+        if (EventSynchronizer.Instance == null)
             return;
-        project.Assets.Attach(EventSynchronizer.Instance);
-    }
-
-    /// <summary>
-    /// Tears down a project's replicated stores.
-    /// </summary>
-    private void DetachProjectStores(Project project)
-    {
-        project?.Assets.Detach();
+        DataSets.Attach(EventSynchronizer.Instance);
+        Assets.Attach(EventSynchronizer.Instance);
     }
 
     /// <summary>
@@ -181,6 +189,8 @@ public partial class ProjectService : Node
         SeedTagsFromLog();
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
+        DataSets.FlushBulkLoad();
+        Assets.FlushBulkLoad();
 
         HasUnsavedChanges = false;
     }
@@ -251,10 +261,10 @@ public partial class ProjectService : Node
             effects.Add(new UpdateSettingsEffect { Payload = project.GameSettings });
 
         effects.AddRange(UpsertEffects(project.Templates));
-        effects.AddRange(UpsertEffects(project.Datasets));
+        effects.AddRange(UpsertEffects(DataSets.Records));
         effects.AddRange(UpsertEffects(project.DataRows));
         effects.AddRange(UpsertEffects(project.Prototypes));
-        effects.AddRange(UpsertEffects(project.Assets.Records));
+        effects.AddRange(UpsertEffects(Assets.Records));
         effects.AddRange(UpsertEffects(project.GameStates));
 
         if (project.ActiveGameState != SnowTag.Empty)
@@ -669,7 +679,7 @@ public partial class ProjectService : Node
     {
         if (datasetRef == SnowTag.Empty || CurrentProject == null)
             return null;
-        if (CurrentProject.Datasets.TryGetValue(datasetRef, out var d) && !d.Deleted)
+        if (DataSets.Records.TryGetValue(datasetRef, out var d) && !d.Deleted)
             return d;
         return null;
     }

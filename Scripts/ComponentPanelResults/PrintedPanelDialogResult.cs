@@ -63,7 +63,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private Button _editFrontTemplateButton;
     private OptionButton _backTemplatePicker;
     private Button _editBackTemplateButton;
-    private OptionButton _datasetPicker;
+    private DataSetSelector _datasetPicker;
     private Button _datasetEditorButton;
 
     private ImageSelector _gridFrontImageSelector;
@@ -319,8 +319,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _editBackTemplateButton = GetNode<Button>("%EditBackTemplateButton");
         _editBackTemplateButton.Pressed += EditBackTemplate;
 
-        _datasetPicker = GetNode<OptionButton>("%DatasetList");
-        _datasetPicker.ItemSelected += OnDatasetChanged;
+        _datasetPicker = GetNode<DataSetSelector>("%DatasetList");
+        _datasetPicker.DataSetSelected += OnDatasetChanged;
 
         _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
         _datasetEditorButton.Pressed += EditDataset;
@@ -473,9 +473,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private TextureContext _textureContext = new();
     private Project _currentProject => ProjectService.Instance.CurrentProject;
 
-    private void OnDatasetChanged(long index)
+    private void OnDatasetChanged(SnowTag datasetRef)
     {
-        var datasetRef = new SnowTag(_datasetPicker.GetSelectedId());
         if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
@@ -528,13 +527,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         {
             _frontTemplatePicker.AddItem(t.Value.Name, t.Key.Value);
             _backTemplatePicker.AddItem(t.Value.Name, t.Key.Value);
-        }
-
-        _datasetPicker.Clear();
-        _datasetPicker.AddItem("(none)", SnowTag.Empty.Value);
-        foreach (var d in CurrentProject.Datasets.Where(x => !x.Value.Deleted))
-        {
-            _datasetPicker.AddItem(d.Value.Name, d.Key.Value);
         }
     }
 
@@ -892,18 +884,11 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             }
         }
 
-        _datasetPicker.Select(0);
+        _datasetPicker.SelectedDataSet = p.Dataset;
         _textureContext.DataSet = null;
         _textureContext.CurrentRow = null;
-        if (p.Dataset != SnowTag.Empty)
-        {
-            var idx = _datasetPicker.GetItemIndex(p.Dataset.Value);
-            if (idx >= 0)
-            {
-                _datasetPicker.Select(idx);
-                _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
-            }
-        }
+        if (p.Dataset != SnowTag.Empty && _datasetPicker.SelectedDataSet == p.Dataset)
+            _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
 
         UpdateDimensionUI();
         Activate();

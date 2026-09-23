@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://dwilf0o810jwb"]
+
+[ext_resource type="Script" uid="uid://d2swc8niy1tuk" path="res://Scripts/Controls/DataSetSelector.cs" id="1_dssel"]
+
+[node name="DataSetSelector" type="OptionButton"]
+custom_minimum_size = Vector2(150, 0)
+script = ExtResource("1_dssel")

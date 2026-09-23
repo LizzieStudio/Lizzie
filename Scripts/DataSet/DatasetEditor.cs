@@ -6,13 +6,12 @@ using Godot;
 
 public partial class DatasetEditor : Window
 {
-    private Project _project;
     private DataSet _currentDataSet;
 
     private VBoxContainer _mainContainer;
     private Button _deleteButton;
     private Button _newButton;
-    private OptionButton _datasetList;
+    private DataSetSelector _datasetList;
     private SnowTag _pendingDatasetRef = SnowTag.Empty;
     private Button _linkButton;
     private Button _addColumnButton;
@@ -42,15 +41,19 @@ public partial class DatasetEditor : Window
 
     public override void _Ready()
     {
-        _project = ProjectService.Instance.CurrentProject;
-
         InitializeSpreadsheet();
 
         CloseRequested += CloseDialog;
         if (DataRowStore.Instance != null)
             DataRowStore.Instance.DataRowsChanged += OnDataRowsChanged;
-        if (DataSetStore.Instance != null)
-            DataSetStore.Instance.DataSetsChanged += OnDataSetsChanged;
+        ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
+    }
+
+    public override void _ExitTree()
+    {
+        ProjectService.Instance.DataSets.Unobserve(OnDataSetsChanged);
+        if (DataRowStore.Instance != null)
+            DataRowStore.Instance.DataRowsChanged -= OnDataRowsChanged;
     }
 
     private void InitializeSpreadsheet()
@@ -86,8 +89,8 @@ public partial class DatasetEditor : Window
         _newButton = GetNode<Button>("%New");
         _newButton.Pressed += OnNewDatasetPressed;
 
-        _datasetList = GetNode<OptionButton>("%DatasetList");
-        _datasetList.ItemSelected += OnDatasetSelected;
+        _datasetList = GetNode<DataSetSelector>("%DatasetList");
+        _datasetList.DataSetSelected += OnDatasetSelected;
 
         InitializeNewDatasetDialog();
         LoadInitial();
@@ -108,55 +111,35 @@ public partial class DatasetEditor : Window
 
     private void LoadInitial()
     {
-        if (_project == null || _datasetList == null)
+        if (_datasetList == null)
             return;
 
-        PopulateDatasetDropdown(SnowTag.Empty);
-
-        var target =
-            _pendingDatasetRef != SnowTag.Empty ? _pendingDatasetRef
-            : _datasetList.ItemCount > 0 ? new SnowTag(_datasetList.GetItemId(0))
-            : SnowTag.Empty;
+        var target = _pendingDatasetRef != SnowTag.Empty ? _pendingDatasetRef : FirstDataSetId();
 
         if (target != SnowTag.Empty)
             SelectDatasetById(target);
     }
 
-    private void PopulateDatasetDropdown(SnowTag select)
-    {
-        _datasetList.Clear();
-        foreach (var d in _project.Datasets.Values.Where(v => !v.Deleted))
-            _datasetList.AddItem(d.Name, d.Id.Value);
-
-        if (select != SnowTag.Empty)
-        {
-            var idx = _datasetList.GetItemIndex(select.Value);
-            if (idx >= 0)
-                _datasetList.Select(idx);
-        }
-    }
+    private SnowTag FirstDataSetId() =>
+        ProjectService.Instance.DataSets.Records.Values.FirstOrDefault(v => !v.Deleted)?.Id
+        ?? SnowTag.Empty;
 
     private void SelectDatasetById(SnowTag id)
     {
-        var idx = _datasetList.GetItemIndex(id.Value);
-        if (idx >= 0)
-            _datasetList.Select(idx);
+        _datasetList.SelectedDataSet = id;
 
         var ds = ProjectService.Instance.GetDataSet(id);
         if (ds != null)
             MapDataSet(ds);
     }
 
-    private void OnDatasetSelected(long index)
+    private void OnDatasetSelected(SnowTag id)
     {
-        if (_project == null || index < 0)
-            return;
-
-        var ds = ProjectService.Instance.GetDataSet(
-            new SnowTag(_datasetList.GetItemId((int)index))
-        );
-        if (ds != null)
-            MapDataSet(ds);
+        _currentDataSet = ProjectService.Instance.GetDataSet(id);
+        if (_currentDataSet == null)
+            ClearSpreadsheet();
+        else
+            MapDataSet(_currentDataSet);
     }
 
     private void OnNewDatasetPressed()
@@ -203,14 +186,11 @@ public partial class DatasetEditor : Window
 
     private void OnNewDatasetConfirmed()
     {
-        if (_project == null)
-            return;
-
         var name = _newDatasetNameInput.Text.Trim();
         if (string.IsNullOrWhiteSpace(name))
             return;
 
-        var ds = new DataSet { Name = name };
+        var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = name };
         ProjectService.Instance.Upsert(ds);
 
         SelectDatasetById(ds.Id);
@@ -599,13 +579,6 @@ public partial class DatasetEditor : Window
         }
     }
 
-    public void SetProject(Project project)
-    {
-        _project = project;
-        if (_mainContainer != null)
-            LoadInitial();
-    }
-
     private void OnDataRowsChanged(int[] ids)
     {
         if (_currentDataSet == null)
@@ -614,7 +587,7 @@ public partial class DatasetEditor : Window
         foreach (var raw in ids)
         {
             var id = new SnowTag(raw);
-            var stored = _project.DataRows.GetValueOrDefault(id);
+            var stored = ProjectService.Instance.CurrentProject?.DataRows.GetValueOrDefault(id);
             bool shown = _rows.Any(r => r.Id == id);
             bool belongs =
                 shown
@@ -640,19 +613,17 @@ public partial class DatasetEditor : Window
         return stored.Rank == shown.Rank && DataEqual(stored.Data, shown.Data);
     }
 
-    private void OnDataSetsChanged(int[] ids)
+    private void OnDataSetsChanged(IReadOnlyDictionary<SnowTag, DataSet> datasets)
     {
-        if (_project == null || _datasetList == null)
+        if (_datasetList == null)
             return;
 
         var keep = _currentDataSet?.Id ?? SnowTag.Empty;
-        PopulateDatasetDropdown(keep);
-
         if (keep == SnowTag.Empty)
             return;
 
-        var cur = ProjectService.Instance.GetDataSet(keep);
-        if (cur != null)
+        var cur = datasets.GetValueOrDefault(keep);
+        if (cur is { Deleted: false })
         {
             _currentDataSet = cur;
             RebuildGrid();
@@ -661,8 +632,9 @@ public partial class DatasetEditor : Window
         {
             _currentDataSet = null;
             ClearSpreadsheet();
-            if (_datasetList.ItemCount > 0)
-                SelectDatasetById(new SnowTag(_datasetList.GetItemId(0)));
+            var first = FirstDataSetId();
+            if (first != SnowTag.Empty)
+                SelectDatasetById(first);
         }
     }
 }

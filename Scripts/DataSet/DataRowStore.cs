@@ -51,7 +51,7 @@ public partial class DataRowStore : ReplicatedStore<DataRow>
         var undone = UndoLog.ComputeUndone(log);
         var changed = new List<SnowTag>();
 
-        foreach (var id in UndoLog.ResolveAffectedRows(log, undo.Target))
+        foreach (var id in UndoLog.ResolveAffected<DataRow>(log, undo.Target))
         {
             var winner = UndoLog.LatestReplicated<DataRow>(log, id, undone);
             if (winner == null)

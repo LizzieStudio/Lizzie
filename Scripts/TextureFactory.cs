@@ -104,7 +104,7 @@ public partial class TextureFactory : SubViewport
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
-                    var asset = project.Assets.Records.Values.FirstOrDefault(a =>
+                    var asset = ProjectService.Instance.Assets.Records.Values.FirstOrDefault(a =>
                         a.Name == imageName
                     );
                     if (asset != null && !AssetImageCache.Instance.IsDownloaded(asset))
@@ -495,7 +495,7 @@ public partial class TextureFactory : SubViewport
     private bool IsIconUserDefined(string name)
     {
         if (
-            ProjectService.Instance.CurrentProject.Assets.Records.Any(x =>
+            ProjectService.Instance.Assets.Records.Any(x =>
                 string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)
             )
         )
@@ -512,8 +512,7 @@ public partial class TextureFactory : SubViewport
         {
             if (IsIconUserDefined(useName))
             {
-                var project = ProjectService.Instance.CurrentProject;
-                var asset = project?.Assets.Records.Values.FirstOrDefault(a =>
+                var asset = ProjectService.Instance.Assets.Records.Values.FirstOrDefault(a =>
                     string.Equals(a.Name, useName, StringComparison.CurrentCultureIgnoreCase)
                 );
 
@@ -988,8 +987,9 @@ public partial class TextureFactory : SubViewport
         if (obj.Text != null && obj.Text.StartsWith("u:"))
         {
             string imageName = obj.Text.Substring(2);
-            var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Assets.Records.Values.FirstOrDefault(a => a.Name == imageName);
+            var asset = ProjectService.Instance.Assets.Records.Values.FirstOrDefault(a =>
+                a.Name == imageName
+            );
             var assetImage = AssetImageCache.Instance.GetImage(asset);
             if (assetImage != null)
             {

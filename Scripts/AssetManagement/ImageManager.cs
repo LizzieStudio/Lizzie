@@ -47,12 +47,12 @@ public partial class ImageManager : Window
         _urlInput = GetNode<LineEdit>("%UrlInput");
         _nameInput = GetNode<LineEdit>("%NameInput");
 
-        ProjectService.Instance.CurrentProject.Assets.Observe(UpdateAssets);
+        ProjectService.Instance.Assets.Observe(UpdateAssets);
     }
 
     public override void _ExitTree()
     {
-        ProjectService.Instance.CurrentProject?.Assets.Unobserve(UpdateAssets);
+        ProjectService.Instance.Assets.Unobserve(UpdateAssets);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.

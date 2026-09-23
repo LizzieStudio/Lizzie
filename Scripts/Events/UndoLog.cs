@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Lizzie.AssetManagement;
 
 /// <summary>
 /// Utility functions on the event log for undo and redo.
@@ -9,12 +10,19 @@ public static class UndoLog
     /// True when an event is something the user can undo:
     /// * component change
     /// * table clear
-    /// * datarow upsert
+    /// * datarow, dataset or asset upsert
     /// </summary>
     public static bool IsUndoableEvent(TableEvent e)
     {
         foreach (var fx in e.Effects)
-            if (fx is ComponentEffect or TableClearEffect or UpdateReplicatedEffect<DataRow>)
+            if (
+                fx
+                is ComponentEffect
+                    or TableClearEffect
+                    or UpdateReplicatedEffect<DataRow>
+                    or UpdateReplicatedEffect<DataSet>
+                    or UpdateReplicatedEffect<Asset>
+            )
                 return true;
         return false;
     }
@@ -181,12 +189,13 @@ public static class UndoLog
     }
 
     /// <summary>
-    /// The dataset rows whose value an undo of <paramref name="targetId"/> should change.
+    /// The records of type <typeparamref name="T"/> whose value an undo of <paramref name="targetId"/> should change.
     /// </summary>
-    public static HashSet<SnowTag> ResolveAffectedRows(
+    public static HashSet<SnowTag> ResolveAffected<T>(
         OrderedDictionary<SnowportId, TableEvent> log,
         SnowportId targetId
     )
+        where T : class, IReplicated
     {
         var affected = new HashSet<SnowTag>();
         if (!log.TryGetValue(targetId, out var e))
@@ -197,7 +206,7 @@ public static class UndoLog
             return affected;
 
         foreach (var fx in @base.Effects)
-            if (fx is UpdateReplicatedEffect<DataRow>)
+            if (fx is UpdateReplicatedEffect<T>)
                 affected.Add(fx.Id);
 
         return affected;

@@ -150,10 +150,10 @@ public class IconLibrary : Dictionary<string, IconEntry>
         }
 
         //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Assets.Records.Count > 0)
+        if (ProjectService.Instance.Assets.Records.Count > 0)
         {
             button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Assets.Records)
+            foreach (var img in ProjectService.Instance.Assets.Records)
             {
                 if (img.Value.Deleted)
                     continue;

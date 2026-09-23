@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="2_6el8t"]
 [ext_resource type="PackedScene" uid="uid://bqjj4fvs81gaw" path="res://Scenes/ComponentPanels/quick_texture_entry.tscn" id="3_ap6wc"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="3_b5pde"]
+[ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="4_dssel"]
 
 [node name="DiePanel" type="MarginContainer" unique_id=1725091934 node_paths=PackedStringArray("_quickSideEntries")]
 anchors_preset = 15
@@ -282,13 +283,9 @@ custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "DataSet:"
 
-[node name="DatasetList" type="OptionButton" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=825345651]
+[node name="DatasetList" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=825345651 instance=ExtResource("4_dssel")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-item_count = 1
-popup/item_0/text = "(none)"
-popup/item_0/id = 0
 
 [node name="EditDatasetButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=225263054]
 unique_name_in_owner = true

@@ -211,7 +211,7 @@ public partial class VcToken : VisualComponentBase
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Assets.Records.TryGetValue(
+            ProjectService.Instance.Assets.Records.TryGetValue(
                 _frontGridImageKey,
                 out _frontMasterAsset
             );
@@ -224,7 +224,7 @@ public partial class VcToken : VisualComponentBase
         }
         else
         {
-            ProjectService.Instance.CurrentProject.Assets.Records.TryGetValue(
+            ProjectService.Instance.Assets.Records.TryGetValue(
                 _backGridImageKey,
                 out _backMasterAsset
             );
@@ -606,10 +606,10 @@ public partial class VcToken : VisualComponentBase
             return;
 
         var curProj = ProjectService.Instance.CurrentProject;
-        var ft = curProj.GetTemplate(_frontTemplateRef);
-        var ds = curProj.GetDataset(_datasetRef);
+        var ft = ProjectService.Instance.GetTemplate(_frontTemplateRef);
+        var ds = ProjectService.Instance.GetDataSet(_datasetRef);
 
-        var bt = curProj.GetTemplate(_backTemplateRef);
+        var bt = ProjectService.Instance.GetTemplate(_backTemplateRef);
         if (bt is null || bt.Id == SnowTag.Empty)
             bt = null;
 

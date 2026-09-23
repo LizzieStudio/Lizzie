@@ -33,6 +33,9 @@ public sealed class ReplicatedDictionary<TEntity>
 
     private Dictionary<SnowTag, TEntity> dict = new();
 
+    // changes merged while the synchronizer is bulk loading, sent by FlushBulkLoad
+    private Dictionary<SnowTag, TEntity> pending = new();
+
     public IReadOnlyDictionary<SnowTag, TEntity> Records
     {
         get { return dict; }
@@ -41,6 +44,7 @@ public sealed class ReplicatedDictionary<TEntity>
     #region events
 
     private HashSet<Action<IReadOnlyDictionary<SnowTag, TEntity>>> observers = new();
+    private Dictionary<SnowTag, Action<TEntity>> observersOfId = new();
 
     /// <summary>
     /// Immediately calls <paramref name="callback"/> with the full dictionary of records,
@@ -54,7 +58,21 @@ public sealed class ReplicatedDictionary<TEntity>
     }
 
     /// <summary>
-    /// Stops calling <paramref name="callback"/> with updates.
+    /// Immediately calls <paramref name="callback"/> with the record,
+    /// then calls <paramref name="callback"/> with the updated record whenever it changes.
+    /// </summary>
+    /// <param name="callback">The action to call.</param>
+    public void Observe(SnowTag Id, Action<TEntity> callback)
+    {
+        observersOfId[Id] = observersOfId.GetValueOrDefault(Id) + callback;
+        if (dict.TryGetValue(Id, out var value))
+        {
+            callback(value);
+        }
+    }
+
+    /// <summary>
+    /// Stops calling <paramref name="callback"/> with mass updates.
     /// </summary>
     /// <param name="callback">The action to stop calling.</param>
     public void Unobserve(Action<IReadOnlyDictionary<SnowTag, TEntity>> callback)
@@ -62,17 +80,74 @@ public sealed class ReplicatedDictionary<TEntity>
         observers.Remove(callback);
     }
 
-    private void NotifyChanged(IReadOnlyDictionary<SnowTag, TEntity> ids)
+    /// <summary>
+    /// Stops calling <paramref name="callback"/> with updates.
+    /// </summary>
+    /// <param name="callback">The action to stop calling.</param>
+    public void Unobserve(SnowTag Id, Action<TEntity> callback)
     {
-        foreach (var callback in observers)
+        observersOfId[Id] = observersOfId.GetValueOrDefault(Id) - callback;
+    }
+
+    private void NotifyChanged(IReadOnlyDictionary<SnowTag, TEntity> changed)
+    {
+        // copies in case a callback unobserves
+        foreach (var callback in observers.ToArray())
         {
             callback(dict);
+        }
+
+        foreach (var (id, entity) in changed)
+        {
+            observersOfId.GetValueOrDefault(id)?.Invoke(entity);
+        }
+    }
+
+    /// <summary>
+    /// Removes every record, e.g. when the project is replaced.
+    /// Observers receive either an empty dictionary or null.
+    /// </summary>
+    public void Clear()
+    {
+        var removed = dict.Keys.ToArray();
+        dict.Clear();
+        pending.Clear();
+
+        foreach (var callback in observers.ToArray())
+        {
+            callback(dict);
+        }
+
+        foreach (var id in removed)
+        {
+            observersOfId.GetValueOrDefault(id)?.Invoke(null);
         }
     }
 
     #endregion
 
-    private void OnUndo(UndoAction undo) { }
+    /// <summary>Recomputes every record the undone event touched from the rest of the log.</summary>
+    private void OnUndo(UndoAction undo)
+    {
+        var log = _synchronizer?.EventLog;
+        if (log == null)
+            return;
+
+        var undone = UndoLog.ComputeUndone(log);
+        var changed = new Dictionary<SnowTag, TEntity>();
+
+        foreach (var id in UndoLog.ResolveAffected<TEntity>(log, undo.Target))
+        {
+            var winner = UndoLog.LatestReplicated<TEntity>(log, id, undone);
+            if (winner == null)
+                dict.Remove(id);
+            else
+                dict[id] = winner;
+            changed[id] = winner;
+        }
+
+        Publish(changed);
+    }
 
     /// <summary>Merges every replicated effect in the event into the store.</summary>
     private void OnEventApplied(TableEvent e)
@@ -101,10 +176,38 @@ public sealed class ReplicatedDictionary<TEntity>
                 continue;
 
             dict[fx.Id] = entity;
-            changed.Add(fx.Id, entity);
+            changed[fx.Id] = entity;
         }
 
-        if (changed.Count > 0)
-            NotifyChanged(changed);
+        Publish(changed);
+    }
+
+    private void Publish(Dictionary<SnowTag, TEntity> changed)
+    {
+        if (changed.Count == 0)
+            return;
+
+        if (_synchronizer?.BulkLoading == true)
+        {
+            foreach (var (id, entity) in changed)
+                pending[id] = entity;
+            return;
+        }
+
+        NotifyChanged(changed);
+    }
+
+    /// <summary>
+    /// Sends one notification for everything merged during a bulk load.
+    /// Call once the synchronizer stops bulk loading.
+    /// </summary>
+    public void FlushBulkLoad()
+    {
+        if (pending.Count == 0)
+            return;
+
+        var changed = pending;
+        pending = new();
+        NotifyChanged(changed);
     }
 }

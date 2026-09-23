@@ -17,12 +17,12 @@ public partial class ImageSelector : Control
         _imageEditorButton = GetNode<Button>("%ImageManagerButton");
         _imageEditorButton.Pressed += ShowImageEditor;
 
-        ProjectService.Instance.CurrentProject.Assets.Observe(UpdateAssets);
+        ProjectService.Instance.Assets.Observe(UpdateAssets);
     }
 
     public override void _ExitTree()
     {
-        ProjectService.Instance.CurrentProject.Assets.Unobserve(UpdateAssets);
+        ProjectService.Instance.Assets.Unobserve(UpdateAssets);
     }
 
     private void ShowImageEditor() { }

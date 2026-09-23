@@ -79,7 +79,7 @@ public partial class TemplateCreator : Window
     private Button _duplicateButton;
     private Button _zoomButton;
     private Panel _previewWindow;
-    private OptionButton _dataSetSelector;
+    private DataSetSelector _dataSetSelector;
 
     private PageControl _pageControl;
 
@@ -165,10 +165,9 @@ public partial class TemplateCreator : Window
         InitializeStandardSizes();
         OnStandardSizeChanged(0);
 
-        _dataSetSelector = GetNode<OptionButton>("%Dataset");
-        _dataSetSelector.ItemSelected += OnDatasetChanged;
-        _dataSetSelector.ItemSelected += _ => SetHasUnsavedChanges();
-        InitializeDataSets();
+        _dataSetSelector = GetNode<DataSetSelector>("%Dataset");
+        _dataSetSelector.DataSetSelected += OnDatasetChanged;
+        _dataSetSelector.DataSetSelected += _ => SetHasUnsavedChanges();
 
         _pageControl = GetNode<PageControl>("%PageControl");
         _pageControl.Hide();
@@ -1133,21 +1132,6 @@ public partial class TemplateCreator : Window
         _previewOverlay.Texture = t2;
     }
 
-    private void InitializeDataSets()
-    {
-        _dataSetSelector.Clear();
-        _dataSetSelector.AddItem("(none)", SnowTag.Empty.Value);
-
-        foreach (
-            var d in ProjectService.Instance.CurrentProject.Datasets.Values.Where(v => !v.Deleted)
-        )
-        {
-            _dataSetSelector.AddItem(d.Name, d.Id.Value);
-        }
-
-        _dataSetSelector.Select(0);
-    }
-
     #endregion
 
     #region New Template Dialog
@@ -1276,8 +1260,6 @@ public partial class TemplateCreator : Window
     private void UpdateProject()
     {
         LoadTemplateNameSelector();
-
-        InitializeDataSets();
 
         if (_templateNameSelector.ItemCount == 0)
         {
@@ -1670,9 +1652,8 @@ public partial class TemplateCreator : Window
     }
 
     //Different dataset has been selected by the user
-    private void OnDatasetChanged(long index)
+    private void OnDatasetChanged(SnowTag datasetRef)
     {
-        var datasetRef = new SnowTag(_dataSetSelector.GetSelectedId());
         if (datasetRef == SnowTag.Empty)
         {
             _textureContext.DataSet = null;
@@ -1710,14 +1691,13 @@ public partial class TemplateCreator : Window
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRow = null;
-            _dataSetSelector.Select(0);
+            _dataSetSelector.SelectedDataSet = SnowTag.Empty;
             _pageControl.Hide();
             _updateRequired = true;
             return;
         }
 
-        var index = _dataSetSelector.GetItemIndex(datasetRef.Value);
-        _dataSetSelector.Select(index < 0 ? 0 : index);
+        _dataSetSelector.SelectedDataSet = datasetRef;
 
         UpdateTextureContext(datasetRef);
 
