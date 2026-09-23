@@ -60,13 +60,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdateQuickSidesVisibility();
 
         //register for events
-        if (TemplateStore.Instance != null)
-            TemplateStore.Instance.TemplatesChanged += TemplatesChanged;
+        ProjectService.Instance.Templates.Observe(TemplatesChanged);
         ProjectService.Instance.DataSets.Observe(DataSetsChanged);
     }
 
     public override void _ExitTree()
     {
+        ProjectService.Instance.Templates.Unobserve(TemplatesChanged);
         ProjectService.Instance.DataSets.Unobserve(DataSetsChanged);
     }
 
@@ -78,7 +78,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    private void TemplatesChanged(int[] ids)
+    private void TemplatesChanged(IReadOnlyDictionary<SnowTag, Template> templates)
     {
         UpdatePreview();
     }
@@ -116,7 +116,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         var target = SidesToTarget(sides);
 
         foreach (
-            var t in CurrentProject.Templates.Where(x =>
+            var t in ProjectService.Instance.Templates.Records.Where(x =>
                 !x.Value.Deleted && x.Value.Target == target
             )
         )

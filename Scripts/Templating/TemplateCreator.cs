@@ -1210,17 +1210,6 @@ public partial class TemplateCreator : Window
 
     #region Template management
 
-    public Dictionary<SnowTag, Template> Templates
-    {
-        get
-        {
-            var p = ProjectService.Instance.CurrentProject;
-            if (p == null)
-                return new();
-            return p.Templates;
-        }
-    }
-
     private void LoadTemplateNameSelector()
     {
         if (_templateNameSelector == null)
@@ -1228,7 +1217,8 @@ public partial class TemplateCreator : Window
 
         _templateNameSelector.Clear();
 
-        foreach (var t in Templates.Values.Where(v => !v.Deleted).OrderBy(v => v.Name))
+        var templates = ProjectService.Instance.Templates.Records.Values;
+        foreach (var t in templates.Where(v => !v.Deleted).OrderBy(v => v.Name))
         {
             _templateNameSelector.AddItem(t.Name, t.Id.Value);
         }

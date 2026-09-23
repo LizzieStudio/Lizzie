@@ -64,8 +64,7 @@ public partial class GameObjects : Node
 
         ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
         ProjectService.Instance.DataRows.Observe(OnDataRowsChanged);
-        if (TemplateStore.Instance != null)
-            TemplateStore.Instance.TemplatesChanged += OnTemplatesChanged;
+        ProjectService.Instance.Templates.Observe(OnTemplatesChanged);
         if (PrototypeStore.Instance != null)
             PrototypeStore.Instance.PrototypesChanged += OnPrototypesChanged;
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
@@ -130,7 +129,7 @@ public partial class GameObjects : Node
         RetryPendingSpawns();
     }
 
-    private void OnTemplatesChanged(int[] ids)
+    private void OnTemplatesChanged(IReadOnlyDictionary<SnowTag, Template> templates)
     {
         //naive approach for now
         foreach (var c in ComponentNodes)

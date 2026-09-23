@@ -520,7 +520,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _frontTemplatePicker.AddItem("(none)", SnowTag.Empty.Value);
         _backTemplatePicker.AddItem("(none)", SnowTag.Empty.Value);
         foreach (
-            var t in CurrentProject.Templates.Where(x =>
+            var t in ProjectService.Instance.Templates.Records.Where(x =>
                 !x.Value.Deleted && x.Value.Target == Template.TemplateTarget.Flat
             )
         )

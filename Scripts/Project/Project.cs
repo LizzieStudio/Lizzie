@@ -7,7 +7,6 @@ using TTSS.Scripts.Templating;
 public class Project
 {
     public string Filename { get; set; }
-    public Dictionary<SnowTag, Template> Templates { get; set; } = new();
     public Dictionary<SnowTag, Prototype> Prototypes { get; set; } = new();
 
     /// <summary>

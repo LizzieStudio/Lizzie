@@ -72,6 +72,11 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
+    /// The current project's templates.
+    /// </summary>
+    public ReplicatedDictionary<Template> Templates { get; } = new();
+
+    /// <summary>
     /// The current project's datasets.
     /// </summary>
     public ReplicatedDictionary<DataSet> DataSets { get; } = new();
@@ -100,6 +105,7 @@ public partial class ProjectService : Node
             if (replaced)
             {
                 TextureCache.Instance.Clear();
+                Templates.Clear();
                 DataSets.Clear();
                 DataRows.Clear();
                 Assets.Clear();
@@ -118,6 +124,7 @@ public partial class ProjectService : Node
     {
         if (EventSynchronizer.Instance == null)
             return;
+        Templates.Attach(EventSynchronizer.Instance);
         DataSets.Attach(EventSynchronizer.Instance);
         DataRows.Attach(EventSynchronizer.Instance);
         Assets.Attach(EventSynchronizer.Instance);
@@ -196,6 +203,7 @@ public partial class ProjectService : Node
         SeedTagsFromLog();
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
+        Templates.FlushBulkLoad();
         DataSets.FlushBulkLoad();
         DataRows.FlushBulkLoad();
         Assets.FlushBulkLoad();
@@ -268,7 +276,7 @@ public partial class ProjectService : Node
         if (project.GameSettings != null)
             effects.Add(new UpdateSettingsEffect { Payload = project.GameSettings });
 
-        effects.AddRange(UpsertEffects(project.Templates));
+        effects.AddRange(UpsertEffects(Templates.Records));
         effects.AddRange(UpsertEffects(DataSets.Records));
         effects.AddRange(UpsertEffects(DataRows.Records));
         effects.AddRange(UpsertEffects(project.Prototypes));
@@ -715,7 +723,7 @@ public partial class ProjectService : Node
     {
         if (templateRef == SnowTag.Empty || CurrentProject == null)
             return null;
-        if (CurrentProject.Templates.TryGetValue(templateRef, out var t) && !t.Deleted)
+        if (Templates.Records.TryGetValue(templateRef, out var t) && !t.Deleted)
             return t;
         return null;
     }
