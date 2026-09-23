@@ -853,10 +853,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             _backTemplate = ProjectService.Instance.GetTemplate(p.BackTemplate);
 
         _datasetPicker.SelectedDataSet = p.Dataset;
-        _textureContext.DataSet = null;
+        _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
         _textureContext.CurrentRow = null;
-        if (p.Dataset != SnowTag.Empty && _datasetPicker.SelectedDataSet == p.Dataset)
-            _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
 
         UpdateDimensionUI();
         Activate();

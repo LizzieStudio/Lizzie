@@ -15,7 +15,7 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
 [JsonDerivedType(typeof(SetReplicatedValueEffect<ProjectGameSettings>), "gs")]
 [JsonDerivedType(typeof(TableClearEffect), "clr")]
-[JsonDerivedType(typeof(SetReplicatedValueEffect<SnowTag>), "ags")]
+[JsonDerivedType(typeof(SetReplicatedValueEffect<ActiveGameStateRef>), "ags")]
 public abstract class Effect
 {
     /// <summary>The component or prototype this effect applies to.</summary>

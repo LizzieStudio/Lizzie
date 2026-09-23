@@ -418,10 +418,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         // Restore dataset
         _datasetPicker.SelectedDataSet = p.Dataset;
-        _textureContext.DataSet = null;
+        _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
         _textureContext.CurrentRow = null;
-        if (p.Dataset != SnowTag.Empty && _datasetPicker.SelectedDataSet == p.Dataset)
-            _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);
     }
 
     public override List<string> ValidateParameters(ComponentParameters parameters)

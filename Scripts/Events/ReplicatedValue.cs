@@ -18,6 +18,7 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
         _createDefault = createDefault;
         _shouldPersist = shouldPersist ?? (_ => true);
         _value = createDefault();
+        _notified = _value;
     }
 
     /// <summary>Starts merging events from the synchronizer into this value.</summary>
@@ -41,7 +42,12 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
         _synchronizer = null;
     }
 
+    public Type RecordType => typeof(T);
+
     private T _value;
+
+    // the value observers were last notified with
+    private T _notified;
 
     // the id of the event that wrote _value
     private SnowportId _writeId = SnowportId.Empty;
@@ -57,6 +63,8 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
     #region events
 
     private HashSet<Action<T>> observers = new();
+
+    public event Action<IReadOnlyList<RecordChange>> Changed;
 
     /// <summary>
     /// Immediately calls <paramref name="callback"/> with the value,
@@ -85,6 +93,10 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
         {
             callback(_value);
         }
+
+        var old = _notified;
+        _notified = _value;
+        Changed?.Invoke([new RecordChange(old, _value)]);
     }
 
     /// <summary>

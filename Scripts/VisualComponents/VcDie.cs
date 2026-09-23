@@ -19,6 +19,12 @@ public partial class VcDie : VisualComponentBase
     private ImmutableArray<QuickTextureField> _sideData;
     private Color _dieColor;
 
+    public override void _EnterTree()
+    {
+        base._EnterTree();
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     public override void _Ready()
     {
         base._Ready();
@@ -120,10 +126,23 @@ public partial class VcDie : VisualComponentBase
     public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
         base.Setup(parameters, textureFactory);
-        var p = (DieParameters)parameters;
-
         _textureFactory = textureFactory;
 
+        return Apply((DieParameters)parameters, ProjectService.Instance);
+    }
+
+    private void Sync(IRecordReader R)
+    {
+        var proto = R.Get<Prototype>(PrototypeRef);
+        if (proto == null || _textureFactory == null)
+            return;
+
+        Apply((DieParameters)proto.Parameters, R);
+    }
+
+    /// <summary>Sizes and textures the die from its parameters and the records they reference.</summary>
+    private bool Apply(DieParameters p, IRecordReader R)
+    {
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
         _sideData = p.Sides;
@@ -155,7 +174,7 @@ public partial class VcDie : VisualComponentBase
             case TokenBuildMode.Custom:
                 break;
             case TokenBuildMode.Template:
-                BuildTemplate();
+                BuildTemplate(R);
                 break;
             default:
                 return false;
@@ -211,9 +230,9 @@ public partial class VcDie : VisualComponentBase
         }
     }
 
-    private void BuildTemplate()
+    private void BuildTemplate(IRecordReader R)
     {
-        ProjectService.Instance.DataRows.Records.TryGetValue(DataSetRowId, out var row);
+        var row = R.Get<DataRow>(DataSetRowId);
 
         var tc = new TextureContext
         {
@@ -227,10 +246,10 @@ public partial class VcDie : VisualComponentBase
             tc.ParentSize = new Vector2(512, 340);
         }
 
-        var ds = ProjectService.Instance.GetDataSet(_datasetRef);
+        var ds = R.Get<DataSet>(_datasetRef);
         tc.DataSet = ds;
 
-        var template = ProjectService.Instance.GetTemplate(_frontTemplateRef);
+        var template = R.Get<Template>(_frontTemplateRef);
         if (template == null)
             return;
 

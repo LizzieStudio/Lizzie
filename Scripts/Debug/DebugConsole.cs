@@ -224,7 +224,7 @@ public partial class DebugConsole : Node
                 "Delete",
             ComponentEffect => "Upsert",
             SetReplicatedValueEffect<ProjectGameSettings> => "Settings",
-            SetReplicatedValueEffect<SnowTag> => "ActiveGameState",
+            SetReplicatedValueEffect<ActiveGameStateRef> => "ActiveGameState",
             UpdateReplicatedEffect<Template> => "Template",
             UpdateReplicatedEffect<DataSet> => "DataSet",
             UpdateReplicatedEffect<DataRow> => "DataRow",

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 /// <summary>
@@ -5,6 +6,12 @@ using System.Collections.Generic;
 /// </summary>
 public interface IReplicatedContainer
 {
+    /// <summary>The type of record held, unique across containers.</summary>
+    Type RecordType { get; }
+
+    /// <summary>Raised with the before and after of every record that changed.</summary>
+    event Action<IReadOnlyList<RecordChange>> Changed;
+
     void Attach(EventSynchronizer synchronizer);
     void Detach();
     void Clear();

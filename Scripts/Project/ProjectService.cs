@@ -34,6 +34,8 @@ public partial class ProjectService : Node
         _instance = this;
         GD.Print("ProjectService initialized");
 
+        SubscribeWatchers();
+
         Callable.From(SubscribeToEventLog).CallDeferred();
     }
 
@@ -109,8 +111,8 @@ public partial class ProjectService : Node
     /// <summary>
     /// The snapshot currently loaded or <see cref="SnowTag.Empty"/>.
     /// </summary>
-    public ReplicatedValue<SnowTag> ActiveGameState { get; } =
-        new(() => SnowTag.Empty, v => v != SnowTag.Empty);
+    public ReplicatedValue<ActiveGameStateRef> ActiveGameState { get; } =
+        new(() => new(), v => v.Id != SnowTag.Empty);
 
     /// <summary>Every replicated container, in compacted-save order. The single registry that
     /// drives attach, clear, bulk-load flush, and save.</summary>
@@ -401,7 +403,7 @@ public partial class ProjectService : Node
         if (CurrentProject == null)
             return;
 
-        var parent = link ? ActiveGameState.Value : SnowTag.Empty;
+        var parent = link ? ActiveGameState.Value.Id : SnowTag.Empty;
         var state = new GameState
         {
             Id = Snowport.Clock.CreateTag(),
@@ -413,7 +415,12 @@ public partial class ProjectService : Node
 
         new UpsertBatch()
             .Add(state)
-            .With(new SetReplicatedValueEffect<SnowTag> { Payload = state.Id })
+            .With(
+                new SetReplicatedValueEffect<ActiveGameStateRef>
+                {
+                    Payload = new() { Id = state.Id },
+                }
+            )
             .Submit();
     }
 
@@ -493,7 +500,7 @@ public partial class ProjectService : Node
         var effects = new List<Effect>
         {
             new TableClearEffect(),
-            new SetReplicatedValueEffect<SnowTag> { Payload = stateRef },
+            new SetReplicatedValueEffect<ActiveGameStateRef> { Payload = new() { Id = stateRef } },
         };
         foreach (var ce in FoldChain(stateRef).Values)
         {

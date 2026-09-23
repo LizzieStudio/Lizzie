@@ -31,10 +31,12 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
         _synchronizer = null;
     }
 
+    public Type RecordType => typeof(TEntity);
+
     private Dictionary<SnowTag, TEntity> dict = new();
 
     // changes merged while the synchronizer is bulk loading, sent by FlushBulkLoad
-    private Dictionary<SnowTag, TEntity> pending = new();
+    private Dictionary<SnowTag, (TEntity Old, TEntity New)> pending = new();
 
     public IReadOnlyDictionary<SnowTag, TEntity> Records
     {
@@ -45,6 +47,8 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
 
     private HashSet<Action<IReadOnlyDictionary<SnowTag, TEntity>>> observers = new();
     private Dictionary<SnowTag, Action<TEntity>> observersOfId = new();
+
+    public event Action<IReadOnlyList<RecordChange>> Changed;
 
     /// <summary>
     /// Immediately calls <paramref name="callback"/> with the full dictionary of records,
@@ -89,7 +93,7 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
         observersOfId[Id] = observersOfId.GetValueOrDefault(Id) - callback;
     }
 
-    private void NotifyChanged(IReadOnlyDictionary<SnowTag, TEntity> changed)
+    private void NotifyChanged(IReadOnlyDictionary<SnowTag, (TEntity Old, TEntity New)> changed)
     {
         // copies in case a callback unobserves
         foreach (var callback in observers.ToArray())
@@ -97,10 +101,12 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
             callback(dict);
         }
 
-        foreach (var (id, entity) in changed)
+        foreach (var (id, change) in changed)
         {
-            observersOfId.GetValueOrDefault(id)?.Invoke(entity);
+            observersOfId.GetValueOrDefault(id)?.Invoke(change.New);
         }
+
+        Changed?.Invoke(changed.Values.Select(c => new RecordChange(c.Old, c.New)).ToArray());
     }
 
     /// <summary>
@@ -109,7 +115,7 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
     /// </summary>
     public void Clear()
     {
-        var removed = dict.Keys.ToArray();
+        var removed = dict.Values.ToArray();
         dict.Clear();
         pending.Clear();
 
@@ -118,10 +124,12 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
             callback(dict);
         }
 
-        foreach (var id in removed)
+        foreach (var entity in removed)
         {
-            observersOfId.GetValueOrDefault(id)?.Invoke(null);
+            observersOfId.GetValueOrDefault(entity.Id)?.Invoke(null);
         }
+
+        Changed?.Invoke(removed.Select(r => new RecordChange(r, null)).ToArray());
     }
 
     #endregion
@@ -134,16 +142,17 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
             return;
 
         var undone = UndoLog.ComputeUndone(log);
-        var changed = new Dictionary<SnowTag, TEntity>();
+        var changed = new Dictionary<SnowTag, (TEntity Old, TEntity New)>();
 
         foreach (var id in UndoLog.ResolveAffected<TEntity>(log, undo.Target))
         {
+            var old = dict.GetValueOrDefault(id);
             var winner = UndoLog.LatestReplicated<TEntity>(log, id, undone);
             if (winner == null)
                 dict.Remove(id);
             else
                 dict[id] = winner;
-            changed[id] = winner;
+            changed[id] = (old, winner);
         }
 
         Publish(changed);
@@ -161,7 +170,7 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
             return;
         }
 
-        var changed = new Dictionary<SnowTag, TEntity>();
+        var changed = new Dictionary<SnowTag, (TEntity Old, TEntity New)>();
 
         foreach (var fx in e.Effects.OfType<UpdateReplicatedEffect<TEntity>>())
         {
@@ -175,22 +184,27 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
             )
                 continue;
 
+            // an earlier effect in this event may have already replaced it
+            var old = changed.TryGetValue(fx.Id, out var prior) ? prior.Old : current;
             dict[fx.Id] = entity;
-            changed[fx.Id] = entity;
+            changed[fx.Id] = (old, entity);
         }
 
         Publish(changed);
     }
 
-    private void Publish(Dictionary<SnowTag, TEntity> changed)
+    private void Publish(Dictionary<SnowTag, (TEntity Old, TEntity New)> changed)
     {
         if (changed.Count == 0)
             return;
 
         if (_synchronizer?.BulkLoading == true)
         {
-            foreach (var (id, entity) in changed)
-                pending[id] = entity;
+            // keeps the value from before the bulk load began
+            foreach (var (id, change) in changed)
+                pending[id] = pending.TryGetValue(id, out var first)
+                    ? (first.Old, change.New)
+                    : change;
             return;
         }
 

@@ -1,50 +1,46 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Godot;
 
 public partial class DataSetSelector : OptionButton
 {
     private SnowTag _selected = SnowTag.Empty;
 
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     public override void _Ready()
     {
         ItemSelected += OnItemSelected;
-
-        ProjectService.Instance.DataSets.Observe(UpdateDataSets);
     }
 
-    public override void _ExitTree()
-    {
-        ProjectService.Instance.DataSets.Unobserve(UpdateDataSets);
-    }
-
-    private void UpdateDataSets(IReadOnlyDictionary<SnowTag, DataSet> datasets)
+    private void Sync(IRecordReader R)
     {
         Clear();
         AddItem("(none)", SnowTag.Empty.Value);
 
-        foreach (var d in datasets.Values.Where(v => !v.Deleted))
+        foreach (var d in R.Get<DataSet>())
         {
             AddItem(d.Name, d.Id.Value);
         }
 
-        SelectItem(_selected);
+        UpdateSelection();
     }
 
     public SnowTag SelectedDataSet
     {
-        get => Selected < 0 ? SnowTag.Empty : new SnowTag(GetSelectedId());
+        get => _selected;
         set
         {
             _selected = value;
-            SelectItem(value);
+            UpdateSelection();
         }
     }
 
-    private void SelectItem(SnowTag id)
+    private void UpdateSelection()
     {
-        var index = id == SnowTag.Empty ? -1 : GetItemIndex(id.Value);
+        var index = GetItemIndex(_selected);
         if (index < 0)
             index = 0;
         Select(index);

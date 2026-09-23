@@ -262,7 +262,7 @@ public partial class UI : CanvasLayer
         RebuildRestoreSnapshotMenu();
     }
 
-    private void OnActiveGameStateChanged(SnowTag _)
+    private void OnActiveGameStateChanged(ActiveGameStateRef _)
     {
         RebuildRestoreSnapshotMenu();
     }
@@ -280,7 +280,7 @@ public partial class UI : CanvasLayer
         if (updateIdx >= 0)
             _fileMenu.SetItemDisabled(
                 updateIdx,
-                project == null || ProjectService.Instance.ActiveGameState.Value == SnowTag.Empty
+                project == null || ProjectService.Instance.ActiveGameState.Value.Id == SnowTag.Empty
             );
 
         var ordered = OrderedGameStates(project);
@@ -331,7 +331,7 @@ public partial class UI : CanvasLayer
 
     private static string GameStateLabel(Project project, GameState state)
     {
-        var marker = state.Id == ProjectService.Instance.ActiveGameState.Value ? "● " : "";
+        var marker = state.Id == ProjectService.Instance.ActiveGameState.Value.Id ? "● " : "";
         var parens =
             state.Parent != SnowTag.Empty
             && ProjectService.Instance.GameStates.Records.TryGetValue(state.Parent, out var parent)
@@ -492,7 +492,7 @@ public partial class UI : CanvasLayer
 
             case 6:
                 ProjectService.Instance.UpdateGameState(
-                    ProjectService.Instance.ActiveGameState.Value
+                    ProjectService.Instance.ActiveGameState.Value.Id
                 );
                 break;
 
@@ -631,7 +631,7 @@ public partial class UI : CanvasLayer
             project == null
                 ? null
                 : ProjectService.Instance.GetGameState(
-                    ProjectService.Instance.ActiveGameState.Value
+                    ProjectService.Instance.ActiveGameState.Value.Id
                 );
         CheckBox linkCheck = null;
         if (parent != null)
