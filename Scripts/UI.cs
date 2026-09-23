@@ -827,7 +827,7 @@ public partial class UI : CanvasLayer
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
         if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+            !ProjectService.Instance.Prototypes.Records.TryGetValue(
                 editEvent.PrototypeId,
                 out var p
             )

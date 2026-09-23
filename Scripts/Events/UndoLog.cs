@@ -10,7 +10,7 @@ public static class UndoLog
     /// True when an event is something the user can undo:
     /// * component change
     /// * table clear
-    /// * template, datarow, dataset or asset upsert
+    /// * prototype, template, datarow, dataset or asset upsert
     /// </summary>
     public static bool IsUndoableEvent(TableEvent e)
     {
@@ -19,6 +19,7 @@ public static class UndoLog
                 fx
                 is ComponentEffect
                     or TableClearEffect
+                    or UpdateReplicatedEffect<Prototype>
                     or UpdateReplicatedEffect<Template>
                     or UpdateReplicatedEffect<DataRow>
                     or UpdateReplicatedEffect<DataSet>

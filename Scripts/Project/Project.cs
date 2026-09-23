@@ -7,7 +7,6 @@ using TTSS.Scripts.Templating;
 public class Project
 {
     public string Filename { get; set; }
-    public Dictionary<SnowTag, Prototype> Prototypes { get; set; } = new();
 
     /// <summary>
     /// Named scene snapshots the user can save and restore.

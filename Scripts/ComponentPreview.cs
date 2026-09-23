@@ -107,7 +107,7 @@ public partial class ComponentPreview : Panel
 
         if (_buildNeeded && _component != null && _component.IsNodeReady())
         {
-            var proto = ProjectService.Instance.CurrentProject?.Prototypes.GetValueOrDefault(
+            var proto = ProjectService.Instance.Prototypes.Records.GetValueOrDefault(
                 _component.PrototypeRef
             );
             if (proto?.Parameters != null)

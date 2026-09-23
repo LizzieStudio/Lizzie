@@ -125,12 +125,7 @@ public abstract partial class VisualComponentBase : Area3D
         if (ProjectService.Instance.CurrentProject == null)
             return false;
 
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var proto
-            )
-        )
+        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(prototypeRef, out var proto))
         {
             return false;
         }

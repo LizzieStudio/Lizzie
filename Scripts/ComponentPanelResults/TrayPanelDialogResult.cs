@@ -63,7 +63,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
 
         int i = 1;
 
-        foreach (var p in ProjectService.Instance.CurrentProject.Prototypes)
+        foreach (var p in ProjectService.Instance.Prototypes.Records)
         {
             _prototypeList.AddItem(p.Value.Name, i);
             _prototypeList.SetItemMetadata(i, p.Key.ToString());
@@ -144,7 +144,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(SnowTag prototypeId)
     {
-        var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+        var prototype = ProjectService.Instance.Prototypes.Records[prototypeId];
         DisplayPrototype(prototype);
     }
 

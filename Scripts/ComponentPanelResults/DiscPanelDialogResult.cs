@@ -89,7 +89,7 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(SnowTag prototypeId)
     {
-        var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
+        var prototype = ProjectService.Instance.Prototypes.Records[prototypeId];
         DisplayPrototype(prototype);
     }
 

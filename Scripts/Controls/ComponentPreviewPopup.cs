@@ -28,7 +28,7 @@ public partial class ComponentPreviewPopup : Window
             _readyNeeded = false;
 
             if (
-                ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+                ProjectService.Instance.Prototypes.Records.TryGetValue(
                     component.PrototypeRef,
                     out var prototype
                 )

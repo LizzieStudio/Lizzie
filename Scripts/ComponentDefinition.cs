@@ -195,7 +195,7 @@ public partial class ComponentDefinition : Window
         //update the project prototype
 
         if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+            !ProjectService.Instance.Prototypes.Records.TryGetValue(
                 _mapPrototype.Id,
                 out var prototype
             )

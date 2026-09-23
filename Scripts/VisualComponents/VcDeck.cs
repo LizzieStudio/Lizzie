@@ -314,12 +314,7 @@ public partial class VcDeck : VisualComponentGroup
         if (ProjectService.Instance.CurrentProject == null)
             return;
 
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var proto
-            )
-        )
+        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(prototypeRef, out var proto))
         {
             return;
         }
@@ -333,7 +328,7 @@ public partial class VcDeck : VisualComponentGroup
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
             yield break;
-        if (!project.Prototypes.TryGetValue(PrototypeRef, out var proto))
+        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(PrototypeRef, out var proto))
             yield break;
         if (proto.Parameters is not PrintedParameters parameters)
             yield break;

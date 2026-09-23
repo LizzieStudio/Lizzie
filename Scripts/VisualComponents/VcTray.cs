@@ -80,7 +80,7 @@ public partial class VcTray : VisualComponentGroup
 
         if (SnowTag.TryParse(p.Prototype, out var gKey))
         {
-            ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(gKey, out _prototype);
+            ProjectService.Instance.Prototypes.Records.TryGetValue(gKey, out _prototype);
         }
 
         UpdateNameLabel();

@@ -74,8 +74,12 @@ public partial class PrototypeManifest : Window
             Refresh(_prototypeCounts);
         }
 
-        if (PrototypeStore.Instance != null)
-            PrototypeStore.Instance.PrototypesChanged += RefreshSelectedPrototype;
+        ProjectService.Instance.Prototypes.Observe(RefreshSelectedPrototype);
+    }
+
+    public override void _ExitTree()
+    {
+        ProjectService.Instance.Prototypes.Unobserve(RefreshSelectedPrototype);
     }
 
     public event EventHandler Closed;
@@ -86,7 +90,7 @@ public partial class PrototypeManifest : Window
         Closed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void RefreshSelectedPrototype(int[] ids)
+    private void RefreshSelectedPrototype(IReadOnlyDictionary<SnowTag, Prototype> prototypes)
     {
         SnowTag selectedRef = SnowTag.Empty;
         var selectedItem = _prototypeTree.GetSelected();
@@ -187,7 +191,7 @@ public partial class PrototypeManifest : Window
             return;
 
         var existingNames = ProjectService
-            .Instance.CurrentProject.Prototypes.Values.Select(p => p.Name)
+            .Instance.Prototypes.Records.Values.Select(p => p.Name)
             .ToHashSet();
 
         // Strip any existing trailing " (N)" suffix before generating the new name
@@ -244,7 +248,7 @@ public partial class PrototypeManifest : Window
         _root = _prototypeTree.CreateItem();
 
         var prototypes = ProjectService
-            .Instance.CurrentProject.Prototypes.Values.Where(p => !p.Deleted)
+            .Instance.Prototypes.Records.Values.Where(p => !p.Deleted)
             .ToList();
 
         if (_sortColumn == 0)
@@ -306,12 +310,7 @@ public partial class PrototypeManifest : Window
 
         var prototypeRef = new SnowTag(selectedItem.GetMetadata(0).AsInt32());
 
-        if (
-            ProjectService.Instance?.CurrentProject?.Prototypes.TryGetValue(
-                prototypeRef,
-                out var prototype
-            ) == true
-        )
+        if (ProjectService.Instance.Prototypes.Records.TryGetValue(prototypeRef, out var prototype))
         {
             SelectedPrototype = prototype;
         }

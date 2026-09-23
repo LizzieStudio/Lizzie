@@ -81,7 +81,7 @@ public partial class GameController : Node3D
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
         if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
+            !ProjectService.Instance.Prototypes.Records.TryGetValue(
                 e.PrototypeRef,
                 out var prototype
             )

@@ -65,8 +65,7 @@ public partial class GameObjects : Node
         ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
         ProjectService.Instance.DataRows.Observe(OnDataRowsChanged);
         ProjectService.Instance.Templates.Observe(OnTemplatesChanged);
-        if (PrototypeStore.Instance != null)
-            PrototypeStore.Instance.PrototypesChanged += OnPrototypesChanged;
+        ProjectService.Instance.Prototypes.Observe(OnPrototypesChanged);
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
@@ -141,14 +140,15 @@ public partial class GameObjects : Node
         }
     }
 
-    private void OnPrototypesChanged(int[] ids)
+    private void OnPrototypesChanged(IReadOnlyDictionary<SnowTag, Prototype> prototypes)
     {
-        foreach (var raw in ids)
+        //naive approach for now
+        foreach (var c in ComponentNodes)
         {
-            var prototypeId = new SnowTag(raw);
-            foreach (var c in ComponentNodes)
-                if (c is VisualComponentBase vc && vc.PrototypeRef == prototypeId)
-                    vc.ProcessCommand(VisualCommand.Refresh);
+            if (c is VisualComponentBase vc)
+            {
+                vc.ProcessCommand(VisualCommand.Refresh);
+            }
         }
 
         RetryPendingSpawns();
@@ -1374,12 +1374,7 @@ public partial class GameObjects : Node
     /// </summary>
     private bool TryExecuteSpawn(SnowportId writeId, ComponentEffect fx)
     {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                fx.PrototypeRef,
-                out var proto
-            )
-        )
+        if (!ProjectService.Instance.Prototypes.Records.TryGetValue(fx.PrototypeRef, out var proto))
             return false;
 
         var s = fx.State ?? new VcSyncDto();

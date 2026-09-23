@@ -113,7 +113,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(SnowTag prototypeId)
     {
-        DisplayPrototype(ProjectService.Instance.CurrentProject.Prototypes[prototypeId]);
+        DisplayPrototype(ProjectService.Instance.Prototypes.Records[prototypeId]);
     }
 
     public override void DisplayPrototype(Prototype prototype)

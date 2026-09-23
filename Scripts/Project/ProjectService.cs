@@ -77,6 +77,11 @@ public partial class ProjectService : Node
     public ReplicatedDictionary<Template> Templates { get; } = new();
 
     /// <summary>
+    /// The current project's prototypes.
+    /// </summary>
+    public ReplicatedDictionary<Prototype> Prototypes { get; } = new();
+
+    /// <summary>
     /// The current project's datasets.
     /// </summary>
     public ReplicatedDictionary<DataSet> DataSets { get; } = new();
@@ -106,6 +111,7 @@ public partial class ProjectService : Node
             {
                 TextureCache.Instance.Clear();
                 Templates.Clear();
+                Prototypes.Clear();
                 DataSets.Clear();
                 DataRows.Clear();
                 Assets.Clear();
@@ -125,6 +131,7 @@ public partial class ProjectService : Node
         if (EventSynchronizer.Instance == null)
             return;
         Templates.Attach(EventSynchronizer.Instance);
+        Prototypes.Attach(EventSynchronizer.Instance);
         DataSets.Attach(EventSynchronizer.Instance);
         DataRows.Attach(EventSynchronizer.Instance);
         Assets.Attach(EventSynchronizer.Instance);
@@ -204,6 +211,7 @@ public partial class ProjectService : Node
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
         Templates.FlushBulkLoad();
+        Prototypes.FlushBulkLoad();
         DataSets.FlushBulkLoad();
         DataRows.FlushBulkLoad();
         Assets.FlushBulkLoad();
@@ -279,7 +287,7 @@ public partial class ProjectService : Node
         effects.AddRange(UpsertEffects(Templates.Records));
         effects.AddRange(UpsertEffects(DataSets.Records));
         effects.AddRange(UpsertEffects(DataRows.Records));
-        effects.AddRange(UpsertEffects(project.Prototypes));
+        effects.AddRange(UpsertEffects(Prototypes.Records));
         effects.AddRange(UpsertEffects(Assets.Records));
         effects.AddRange(UpsertEffects(project.GameStates));
 
@@ -693,7 +701,7 @@ public partial class ProjectService : Node
         if (CurrentProject == null)
             return;
 
-        if (!CurrentProject.Prototypes.ContainsKey(args.PrototypeRef))
+        if (!Prototypes.Records.ContainsKey(args.PrototypeRef))
         {
             var name = !string.IsNullOrEmpty(args.Params?.ComponentName)
                 ? args.Params.ComponentName
