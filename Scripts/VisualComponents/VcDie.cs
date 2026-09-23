@@ -19,12 +19,6 @@ public partial class VcDie : VisualComponentBase
     private ImmutableArray<QuickTextureField> _sideData;
     private Color _dieColor;
 
-    public override void _EnterTree()
-    {
-        base._EnterTree();
-        ProjectService.Instance.Watch(this, Sync);
-    }
-
     public override void _Ready()
     {
         base._Ready();
@@ -131,12 +125,13 @@ public partial class VcDie : VisualComponentBase
         return Apply((DieParameters)parameters, ProjectService.Instance);
     }
 
-    private void Sync(IRecordReader R)
+    protected override void Sync(IRecordReader R)
     {
         var proto = R.Get<Prototype>(PrototypeRef);
         if (proto == null || _textureFactory == null)
             return;
 
+        base.Setup(proto.Parameters, _textureFactory);
         Apply((DieParameters)proto.Parameters, R);
     }
 

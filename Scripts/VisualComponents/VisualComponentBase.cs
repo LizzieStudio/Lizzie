@@ -56,6 +56,12 @@ public abstract partial class VisualComponentBase : Area3D
     public const int TooltipTime = 1000;
     private float _curScale = 1;
 
+    public override void _EnterTree()
+    {
+        base._EnterTree();
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     public override void _Ready()
     {
         _curScale = 1;
@@ -110,6 +116,7 @@ public abstract partial class VisualComponentBase : Area3D
     {
         TextureFactory = textureFactory;
         TextureReady = false;
+        ShapeProfiles.Clear();
 
         if (parameters != null && !string.IsNullOrEmpty(parameters.ComponentName))
             ComponentName = parameters.ComponentName;
@@ -135,6 +142,14 @@ public abstract partial class VisualComponentBase : Area3D
         Setup(proto.Parameters, textureFactory);
 
         return true;
+    }
+
+    protected virtual void Sync(IRecordReader R)
+    {
+        if (R.Get<Prototype>(PrototypeRef) == null || TextureFactory == null)
+            return;
+
+        Refresh(TextureFactory);
     }
 
     public virtual void Build() { }

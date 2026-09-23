@@ -176,8 +176,22 @@ public partial class VcToken : VisualComponentBase
     {
         base.Setup(parameters, textureFactory);
 
-        var p = (PrintedParameters)parameters;
+        return Apply((PrintedParameters)parameters, ProjectService.Instance);
+    }
 
+    protected override void Sync(IRecordReader R)
+    {
+        var proto = R.Get<Prototype>(PrototypeRef);
+        if (proto == null || TextureFactory == null)
+            return;
+
+        base.Setup(proto.Parameters, TextureFactory);
+        Apply((PrintedParameters)proto.Parameters, R);
+    }
+
+    /// <summary>Sizes and textures the token from its parameters and the records they reference.</summary>
+    private bool Apply(PrintedParameters p, IRecordReader R)
+    {
         if (p.Height <= 0)
             return false;
         _height = p.Height / 10f;
@@ -205,30 +219,10 @@ public partial class VcToken : VisualComponentBase
 
         //Grid Parameters
         _frontGridImageKey = p.FrontGridImageKey;
-        if (_frontGridImageKey == SnowTag.Empty)
-        {
-            _frontMasterAsset = null;
-        }
-        else
-        {
-            ProjectService.Instance.Assets.Records.TryGetValue(
-                _frontGridImageKey,
-                out _frontMasterAsset
-            );
-        }
+        _frontMasterAsset = R.Get<Asset>(_frontGridImageKey);
 
         _backGridImageKey = p.BackGridImageKey;
-        if (_backGridImageKey == SnowTag.Empty)
-        {
-            _backMasterAsset = null;
-        }
-        else
-        {
-            ProjectService.Instance.Assets.Records.TryGetValue(
-                _backGridImageKey,
-                out _backMasterAsset
-            );
-        }
+        _backMasterAsset = R.Get<Asset>(_backGridImageKey);
 
         _gridRows = p.GridRows;
         _gridCols = p.GridCols;
@@ -272,12 +266,14 @@ public partial class VcToken : VisualComponentBase
             }
         }
 
-        Build();
+        Build(R);
 
         return true;
     }
 
-    public override void Build()
+    public override void Build() => Build(ProjectService.Instance);
+
+    private void Build(IRecordReader R)
     {
         if (!IsNodeReady())
         {
@@ -304,7 +300,7 @@ public partial class VcToken : VisualComponentBase
                 break;
 
             case TokenBuildMode.Template:
-                BuildTemplate(TextureFactory);
+                BuildTemplate(TextureFactory, R);
                 break;
 
             case TokenBuildMode.Nandeck:
@@ -595,7 +591,7 @@ public partial class VcToken : VisualComponentBase
     private SnowTag _backTemplateRef;
     private SnowTag _datasetRef;
 
-    private void BuildTemplate(TextureFactory textureFactory)
+    private void BuildTemplate(TextureFactory textureFactory, IRecordReader R)
     {
         _differentBack = true;
 
@@ -605,18 +601,14 @@ public partial class VcToken : VisualComponentBase
         if (_frontTemplateRef == SnowTag.Empty)
             return;
 
-        var curProj = ProjectService.Instance.CurrentProject;
-        var ft = ProjectService.Instance.GetTemplate(_frontTemplateRef);
-        var ds = ProjectService.Instance.GetDataSet(_datasetRef);
-
-        var bt = ProjectService.Instance.GetTemplate(_backTemplateRef);
-        if (bt is null || bt.Id == SnowTag.Empty)
-            bt = null;
+        var ft = R.Get<Template>(_frontTemplateRef);
+        var ds = R.Get<DataSet>(_datasetRef);
+        var bt = R.Get<Template>(_backTemplateRef);
 
         if (ft is null || ds is null)
             return;
 
-        var rows = ProjectService.Instance.GetRows(_datasetRef);
+        var rows = R.GetRows(_datasetRef);
         int n = rows.Count;
         if (n == 0)
             return;

@@ -445,9 +445,6 @@ public partial class VcDeck : VisualComponentGroup
                 throw new ArgumentOutOfRangeException();
         }
 
-        _frontView.Ready += RegisterInitializedViews;
-        _backView.Ready += RegisterInitializedViews;
-
         //place all cards below the table so they get rendered;
 
         int h = (int)Math.Floor(_height * 20);
@@ -460,6 +457,15 @@ public partial class VcDeck : VisualComponentGroup
 
         UpdateDeckSprites();
         return true;
+    }
+
+    protected override void Sync(IRecordReader R)
+    {
+        var proto = R.Get<Prototype>(PrototypeRef);
+        if (proto == null || TextureFactory == null)
+            return;
+
+        Setup(proto.Parameters, TextureFactory);
     }
 
     public override bool Refresh(TextureFactory textureFactory)
@@ -573,16 +579,6 @@ public partial class VcDeck : VisualComponentGroup
     }
 
     private int _spriteUpdateCountdown;
-
-    private int _viewsInitialized = 0;
-
-    private void RegisterInitializedViews()
-    {
-        _viewsInitialized++;
-
-        if (_viewsInitialized == 2)
-            UpdateDeckSprites();
-    }
 
     private bool _frontTextureReady;
     private bool _backTextureReady;

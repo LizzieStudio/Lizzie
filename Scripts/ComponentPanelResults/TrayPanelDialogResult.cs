@@ -11,7 +11,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
     private ColorPickerButton _colorPicker;
     private ComponentPreview _preview;
     private OptionButton _prototypeList;
-    private string _selectedPrototypeKey;
+    private SnowTag _selectedPrototypeKey = SnowTag.Empty;
 
     public override void _Ready()
     {
@@ -43,37 +43,23 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         if (_prototypeList == null)
             return;
 
-        if (!string.IsNullOrEmpty(_selectedPrototypeKey))
-        {
-            for (int i = 0; i < _prototypeList.GetItemCount(); i++)
-            {
-                if (_prototypeList.GetItemMetadata(i).ToString() == _selectedPrototypeKey)
-                {
-                    _prototypeList.Selected = i;
-                    break;
-                }
-            }
-        }
+        var index = _prototypeList.GetItemIndex(_selectedPrototypeKey);
+        if (index >= 0)
+            _prototypeList.Selected = index;
     }
 
     private void LoadPrototypeList()
     {
         _prototypeList.Clear();
-        _prototypeList.AddItem("(none)", 0);
+        _prototypeList.AddItem("(none)", SnowTag.Empty);
 
-        int i = 1;
-
-        foreach (var p in ProjectService.Instance.Prototypes.Records)
-        {
-            _prototypeList.AddItem(p.Value.Name, i);
-            _prototypeList.SetItemMetadata(i, p.Key.ToString());
-            i++;
-        }
+        foreach (var p in ProjectService.Instance.Prototypes.Records.Values)
+            _prototypeList.AddItem(p.Name, p.Id);
     }
 
     private void PrototypeSelected(long index)
     {
-        _selectedPrototypeKey = _prototypeList.GetItemMetadata((int)index).ToString();
+        _selectedPrototypeKey = _prototypeList.GetItemId((int)index);
         UpdatePreview();
     }
 
@@ -157,7 +143,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _lengthInput.Text = p.Length.ToString();
         _colorPicker.Color = p.Color;
 
-        _selectedPrototypeKey = p.Prototype ?? string.Empty;
+        _selectedPrototypeKey = p.Prototype;
 
         UpdatePrototypeSelection();
 
@@ -177,7 +163,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             ret.Add("Width must be > 0");
         if ((p?.Length ?? 0) <= 0)
             ret.Add("Length must be > 0");
-        if (string.IsNullOrEmpty(p?.Prototype))
+        if ((p?.Prototype ?? SnowTag.Empty) == SnowTag.Empty)
             ret.Add("Component must be specified");
 
         return ret;

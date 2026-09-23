@@ -327,27 +327,7 @@ public partial class ProjectService : Node
     }
 
     /// <summary>The non-deleted rows of a dataset in order.</summary>
-    public List<DataRow> GetRows(SnowTag datasetRef)
-    {
-        var rows = new List<DataRow>();
-        if (datasetRef == SnowTag.Empty)
-            return rows;
-
-        foreach (var r in DataRows.Records.Values)
-        {
-            if (!r.Deleted && r.DataSetId == datasetRef)
-                rows.Add(r);
-        }
-
-        rows.Sort(
-            (a, b) =>
-            {
-                int c = RowRank.Comparer.Compare(a.Rank, b.Rank);
-                return c != 0 ? c : a.Id.CompareTo(b.Id);
-            }
-        );
-        return rows;
-    }
+    public List<DataRow> GetRows(SnowTag datasetRef) => ((IRecordReader)this).GetRows(datasetRef);
 
     public void UpdateGameSettings(ProjectGameSettings settings)
     {

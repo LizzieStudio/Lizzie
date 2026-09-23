@@ -46,8 +46,23 @@ public partial class VcTray : VisualComponentGroup
         _textureFactory = textureFactory;
 
         base.Setup(parameters, textureFactory);
-        var p = (TrayParameters)parameters;
 
+        return Apply((TrayParameters)parameters, ProjectService.Instance);
+    }
+
+    protected override void Sync(IRecordReader R)
+    {
+        var proto = R.Get<Prototype>(PrototypeRef);
+        if (proto == null || _textureFactory == null)
+            return;
+
+        base.Setup(proto.Parameters, _textureFactory);
+        Apply((TrayParameters)proto.Parameters, R);
+    }
+
+    /// <summary>Sizes the tray and shows the prototype it hands out.</summary>
+    private bool Apply(TrayParameters p, IRecordReader R)
+    {
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
@@ -78,13 +93,10 @@ public partial class VcTray : VisualComponentGroup
 
         ShapeProfiles.Add(new OffsetShape2D(r));
 
-        if (SnowTag.TryParse(p.Prototype, out var gKey))
-        {
-            ProjectService.Instance.Prototypes.Records.TryGetValue(gKey, out _prototype);
-        }
+        _prototype = R.Get<Prototype>(p.Prototype);
 
         UpdateNameLabel();
-        CreateTrayPrototype(textureFactory);
+        CreateTrayPrototype(_textureFactory);
 
         return true;
     }
@@ -192,5 +204,5 @@ public sealed record TrayParameters : ComponentParameters
     public float Length { get; init; }
     public Color Color { get; init; } = Colors.Black;
 
-    public string Prototype { get; init; } = "";
+    public SnowTag Prototype { get; init; } = SnowTag.Empty;
 }
