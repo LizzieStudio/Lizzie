@@ -314,12 +314,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         return rows[rowNum].Id;
     }
 
-    public override void DisplayPrototype(SnowTag prototypeId)
-    {
-        var prototype = ProjectService.Instance.Prototypes.Records[prototypeId];
-        DisplayPrototype(prototype);
-    }
-
     public override void DisplayPrototype(Prototype prototype)
     {
         var p = (DieParameters)prototype.Parameters;

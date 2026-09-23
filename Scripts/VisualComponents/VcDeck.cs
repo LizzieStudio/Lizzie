@@ -384,7 +384,7 @@ public partial class VcDeck : VisualComponentGroup
         };
     }
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
 
@@ -397,7 +397,7 @@ public partial class VcDeck : VisualComponentGroup
         _blankLabel = GetNode<Label3D>("%BlankLabel");
 
         if (!InitializeParameters((PrintedParameters)parameters))
-            return false;
+            return;
 
         _blankLabel.Text = ComponentName;
 
@@ -457,7 +457,6 @@ public partial class VcDeck : VisualComponentGroup
         _showFace = IsFaceUp(Rotation);
 
         UpdateDeckSprites();
-        return true;
     }
 
     private ImageTexture _fs;

@@ -34,20 +34,20 @@ public partial class VcTray : VisualComponentGroup
         }
     }
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
-        return Apply((TrayParameters)parameters, R);
+        Apply((TrayParameters)parameters, R);
     }
 
     /// <summary>Sizes the tray and shows the prototype it hands out.</summary>
-    private bool Apply(TrayParameters p, IRecordReader R)
+    private void Apply(TrayParameters p, IRecordReader R)
     {
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         if (p.Height <= 0)
-            return false;
+            return;
 
         Height = p.Height / 10f;
         Width = p.Width / 10f;
@@ -77,8 +77,6 @@ public partial class VcTray : VisualComponentGroup
 
         UpdateNameLabel();
         CreateTrayPrototype();
-
-        return true;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

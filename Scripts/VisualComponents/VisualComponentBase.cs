@@ -59,19 +59,11 @@ public abstract partial class VisualComponentBase : Area3D
     public override void _EnterTree()
     {
         base._EnterTree();
-        ProjectService.Instance.Watch(
-            this,
-            R =>
-            {
-                Sync(R);
-                if (TextureFactory != null && GetPrototype(R) != null)
-                    Built?.Invoke();
-            }
-        );
+        ProjectService.Instance.Watch(this, Sync);
     }
 
     /// <summary>
-    /// Called after the node is added to the tree and then Sync.
+    /// Raised after each Sync that builds the component.
     /// </summary>
     public event Action Built;
 
@@ -148,15 +140,13 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Builds the component from its prototype's parameters.
     /// </summary>
-    protected virtual bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected virtual void Setup(ComponentParameters parameters, IRecordReader R)
     {
         TextureReady = false;
         ShapeProfiles.Clear();
 
         if (parameters != null && !string.IsNullOrEmpty(parameters.ComponentName))
             ComponentName = parameters.ComponentName;
-
-        return true;
     }
 
     private void Sync(IRecordReader R)
@@ -166,6 +156,7 @@ public abstract partial class VisualComponentBase : Area3D
             return;
 
         Setup(proto.Parameters, R);
+        Built?.Invoke();
     }
 
     /// <summary>

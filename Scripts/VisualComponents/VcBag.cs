@@ -28,8 +28,7 @@ public partial class VcBag : VisualComponentGroup
         _componentCount.Text = Children.Count().ToString();
     }
 
-
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
         var p = (BagParameters)parameters;
@@ -38,7 +37,7 @@ public partial class VcBag : VisualComponentGroup
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         if (p.Height <= 0)
-            return false;
+            return;
 
         Height = p.Height / 10f;
         Diameter = p.Diameter / 10f;
@@ -64,8 +63,6 @@ public partial class VcBag : VisualComponentGroup
         c.Radius = Diameter / 2;
 
         ShapeProfiles.Add(new OffsetShape2D(c));
-
-        return true;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

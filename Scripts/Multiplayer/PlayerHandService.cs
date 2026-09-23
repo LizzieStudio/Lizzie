@@ -10,13 +10,8 @@ public partial class PlayerHandService : Node
     private static PlayerHandService _instance;
     public static PlayerHandService Instance => _instance;
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
-        if (_instance != null && _instance != this)
-        {
-            QueueFree();
-            return;
-        }
         _instance = this;
     }
 

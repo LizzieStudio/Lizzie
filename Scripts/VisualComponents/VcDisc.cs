@@ -14,7 +14,7 @@ public partial class VcDisc : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
         var p = (DiscParameters)parameters;
@@ -23,7 +23,7 @@ public partial class VcDisc : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         if (p.Height <= 0)
-            return false;
+            return;
 
         Height = p.Height / 10f;
         Diameter = p.Diameter / 10f;
@@ -38,8 +38,6 @@ public partial class VcDisc : VisualComponentBase
         var c = new CircleShape2D();
         c.Radius = Diameter / 2f;
         ShapeProfiles.Add(new OffsetShape2D(c));
-
-        return true;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

@@ -93,12 +93,6 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
         _preview.Build(p, TextureFactory);
     }
 
-    public override void DisplayPrototype(SnowTag prototypeId)
-    {
-        var prototype = ProjectService.Instance.Prototypes.Records[prototypeId];
-        DisplayPrototype(prototype);
-    }
-
     public override void DisplayPrototype(Prototype prototype)
     {
         var p = (CubeParameters)prototype.Parameters;

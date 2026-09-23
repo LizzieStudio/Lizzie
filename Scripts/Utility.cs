@@ -10,9 +10,13 @@ public partial class Utility : Node
 
     private TokenTextureSubViewport _textureCreator;
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
         Instance = this;
+    }
+
+    public override void _Ready()
+    {
         _textureCreator = GetNode<TokenTextureSubViewport>("TextureCreator");
     }
 

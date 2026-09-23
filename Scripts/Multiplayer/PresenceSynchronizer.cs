@@ -53,7 +53,7 @@ public partial class PresenceSynchronizer : Node
     /// </summary>
     public SnowTag LocalCursorRef => CursorRefForSeat(GetSeatBySource(Snowport.Clock.source));
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
         _instance = this;
     }

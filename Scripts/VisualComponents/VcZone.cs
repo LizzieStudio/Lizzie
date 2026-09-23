@@ -51,7 +51,7 @@ public partial class VcZone : VisualComponentBase
             _handleCollision.Position = corner;
     }
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
         var p = (ZoneParameters)parameters;
@@ -71,8 +71,6 @@ public partial class VcZone : VisualComponentBase
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
 
         PositionHandle();
-
-        return true;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

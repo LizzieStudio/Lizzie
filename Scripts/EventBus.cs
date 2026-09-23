@@ -28,10 +28,9 @@ public partial class EventBus : Node
     // Dictionary to store event subscriptions by event type
     private readonly Dictionary<Type, Delegate> _eventDelegates = new();
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
         _instance = this;
-        GD.Print("EventBus initialized");
     }
 
     #region Subscribe/Unsubscribe

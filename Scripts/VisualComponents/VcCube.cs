@@ -14,7 +14,7 @@ public partial class VcCube : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
         var p = (CubeParameters)parameters;
@@ -23,7 +23,7 @@ public partial class VcCube : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         if (p.Height <= 0)
-            return false;
+            return;
 
         Height = p.Height / 10f;
         Width = p.Width / 10f;
@@ -48,8 +48,6 @@ public partial class VcCube : VisualComponentBase
         r.Size = new Vector2(Width, Length);
 
         ShapeProfiles.Add(new OffsetShape2D(r));
-
-        return true;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;

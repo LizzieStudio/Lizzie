@@ -163,17 +163,17 @@ public partial class VcToken : VisualComponentBase
         QuickDeck, //need to parse the QuickBuild string to pull out the caption
     }
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
-        return Apply((PrintedParameters)parameters, R);
+        Apply((PrintedParameters)parameters, R);
     }
 
     /// <summary>Sizes and textures the token from its parameters and the records they reference.</summary>
-    private bool Apply(PrintedParameters p, IRecordReader R)
+    private void Apply(PrintedParameters p, IRecordReader R)
     {
         if (p.Height <= 0)
-            return false;
+            return;
         _height = p.Height / 10f;
 
         _width = p.Width / 10;
@@ -247,8 +247,6 @@ public partial class VcToken : VisualComponentBase
         }
 
         Build(R);
-
-        return true;
     }
 
     private void Build(IRecordReader R)

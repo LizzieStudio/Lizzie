@@ -39,15 +39,13 @@ public partial class MultiplayerManager : Node
     public int LocalPlayerId => _localPlayerId;
     public IReadOnlyDictionary<int, PlayerInfo> Players => _players;
 
+    public override void _EnterTree()
+    {
+        _instance = this;
+    }
+
     public override void _Ready()
     {
-        if (_instance != null && _instance != this)
-        {
-            QueueFree();
-            return;
-        }
-        _instance = this;
-
         Multiplayer.PeerConnected += OnPeerConnected;
         Multiplayer.PeerDisconnected += OnPeerDisconnected;
         Multiplayer.ConnectedToServer += OnConnectedToServer;

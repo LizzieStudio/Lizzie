@@ -13,9 +13,6 @@ public partial class ComponentPreviewPopup : Window
         _closeButton = GetNode<Button>("%CloseButton");
         _closeButton.Pressed += OnCloseClick;
         CloseRequested += OnCloseClick;
-
-        if (_readyNeeded)
-            ShowComponent(_pendingComponent, _textureFactory);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -23,36 +20,21 @@ public partial class ComponentPreviewPopup : Window
 
     public void ShowComponent(VisualComponentBase component, TextureFactory textureFactory)
     {
-        if (IsNodeReady())
-        {
-            _readyNeeded = false;
+        var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(
+            component.PrototypeRef
+        );
+        if (prototype == null)
+            return;
 
-            var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(
-                component.PrototypeRef
-            );
-            if (prototype != null)
-            {
-                _preview.Build(
-                    prototype,
-                    component.DataSetRowIndex,
-                    component.DataSetRowId,
-                    textureFactory
-                );
-                _preview.SpinStop();
-                Show();
-            }
-        }
-        else
-        {
-            _readyNeeded = true;
-            _pendingComponent = component;
-            _textureFactory = textureFactory;
-        }
+        _preview.Build(
+            prototype,
+            component.DataSetRowIndex,
+            component.DataSetRowId,
+            textureFactory
+        );
+        _preview.SpinStop();
+        Show();
     }
-
-    private bool _readyNeeded;
-    private VisualComponentBase _pendingComponent;
-    private TextureFactory _textureFactory;
 
     public event EventHandler<EventArgs> CloseDialog;
 

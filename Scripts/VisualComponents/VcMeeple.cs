@@ -15,7 +15,7 @@ public partial class VcMeeple : VisualComponentBase
         HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
         var p = (MeepleParameters)parameters;
@@ -83,8 +83,6 @@ public partial class VcMeeple : VisualComponentBase
         YHeight = t;
 
         SetColor(c);
-
-        return true;
     }
 
     #region Shape Profiles

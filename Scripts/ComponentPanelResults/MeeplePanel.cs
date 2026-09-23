@@ -327,12 +327,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         _preview.Build(p, TextureFactory);
     }
 
-    public override void DisplayPrototype(SnowTag prototypeId)
-    {
-        var prototype = ProjectService.Instance.Prototypes.Records[prototypeId];
-        DisplayPrototype(prototype);
-    }
-
     public override void DisplayPrototype(Prototype prototype)
     {
         var p = (MeepleParameters)prototype.Parameters;

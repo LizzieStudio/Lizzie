@@ -116,14 +116,14 @@ public partial class VcDie : VisualComponentBase
 
     private TokenBuildMode _mode;
 
-    protected override bool Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);
-        return Apply((DieParameters)parameters, R);
+        Apply((DieParameters)parameters, R);
     }
 
     /// <summary>Sizes and textures the die from its parameters and the records they reference.</summary>
-    private bool Apply(DieParameters p, IRecordReader R)
+    private void Apply(DieParameters p, IRecordReader R)
     {
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
@@ -140,7 +140,7 @@ public partial class VcDie : VisualComponentBase
         _dieColor = p.Color;
 
         if (p.Size <= 0)
-            return false;
+            return;
 
         float size = p.Size / 10f;
 
@@ -159,15 +159,13 @@ public partial class VcDie : VisualComponentBase
                 BuildTemplate(R);
                 break;
             default:
-                return false;
+                return;
         }
 
         if (_mainMesh.GetSurfaceOverrideMaterial(0) is StandardMaterial3D material)
         {
             material.AlbedoColor = dieColor;
         }
-
-        return true;
     }
 
     private void BuildQuick()

@@ -24,7 +24,7 @@ public partial class EventSynchronizer : Node
     /// </summary>
     public event Action<TableEvent> Applied;
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
         _instance = this;
     }

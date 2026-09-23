@@ -76,8 +76,6 @@ public abstract partial class ComponentPanelDialogResult : Control
     public float WidthHint { get; set; }
     public float HeightHint { get; set; }
 
-    public virtual void DisplayPrototype(SnowTag prototypeId) { }
-
     public virtual void DisplayPrototype(Prototype prototype) { }
 
     public abstract List<string> ValidateParameters(ComponentParameters parameters);

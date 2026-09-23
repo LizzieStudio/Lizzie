@@ -728,12 +728,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         UpdatePreview();
     }
 
-    public override void DisplayPrototype(SnowTag prototypeId)
-    {
-        var prototype = ProjectService.Instance.Prototypes.Records[prototypeId];
-        DisplayPrototype(prototype);
-    }
-
     public override void DisplayPrototype(Prototype prototype)
     {
         var p = (PrintedParameters)prototype.Parameters;

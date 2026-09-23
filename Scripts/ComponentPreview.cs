@@ -106,9 +106,6 @@ public partial class ComponentPreview : Panel
         }
     }
 
-    private bool _zoomInNeeded;
-    private bool _zoomOutNeeded;
-
     private VisualComponentBase _component;
 
     private bool _componentActive;
