@@ -109,7 +109,13 @@ public partial class ProjectService : Node
     /// <summary>
     /// The snapshot currently loaded or <see cref="SnowTag.Empty"/>.
     /// </summary>
-    public ReplicatedValue<SnowTag> ActiveGameState { get; } = new(() => SnowTag.Empty);
+    public ReplicatedValue<SnowTag> ActiveGameState { get; } =
+        new(() => SnowTag.Empty, v => v != SnowTag.Empty);
+
+    /// <summary>Every replicated container, in compacted-save order. The single registry that
+    /// drives attach, clear, bulk-load flush, and save.</summary>
+    private IReadOnlyList<IReplicatedContainer> Containers =>
+        [Settings, Templates, DataSets, DataRows, Prototypes, Assets, GameStates, ActiveGameState];
 
     private Project _currentProject;
 
@@ -125,14 +131,8 @@ public partial class ProjectService : Node
             if (replaced)
             {
                 TextureCache.Instance.Clear();
-                Templates.Clear();
-                Prototypes.Clear();
-                DataSets.Clear();
-                DataRows.Clear();
-                Assets.Clear();
-                GameStates.Clear();
-                Settings.Clear();
-                ActiveGameState.Clear();
+                foreach (var c in Containers)
+                    c.Clear();
             }
 
             UpdateWindowTitle();
@@ -147,14 +147,8 @@ public partial class ProjectService : Node
     {
         if (EventSynchronizer.Instance == null)
             return;
-        Templates.Attach(EventSynchronizer.Instance);
-        Prototypes.Attach(EventSynchronizer.Instance);
-        DataSets.Attach(EventSynchronizer.Instance);
-        DataRows.Attach(EventSynchronizer.Instance);
-        Assets.Attach(EventSynchronizer.Instance);
-        GameStates.Attach(EventSynchronizer.Instance);
-        Settings.Attach(EventSynchronizer.Instance);
-        ActiveGameState.Attach(EventSynchronizer.Instance);
+        foreach (var c in Containers)
+            c.Attach(EventSynchronizer.Instance);
     }
 
     /// <summary>
@@ -229,14 +223,8 @@ public partial class ProjectService : Node
         SeedTagsFromLog();
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
-        Templates.FlushBulkLoad();
-        Prototypes.FlushBulkLoad();
-        DataSets.FlushBulkLoad();
-        DataRows.FlushBulkLoad();
-        Assets.FlushBulkLoad();
-        GameStates.FlushBulkLoad();
-        Settings.FlushBulkLoad();
-        ActiveGameState.FlushBulkLoad();
+        foreach (var c in Containers)
+            c.FlushBulkLoad();
 
         HasUnsavedChanges = false;
     }
@@ -301,30 +289,15 @@ public partial class ProjectService : Node
     /// </summary>
     private IEnumerable<TableEvent> BuildCompactedEvents()
     {
-        var effects = new List<Effect>
-        {
-            new SetReplicatedValueEffect<ProjectGameSettings> { Payload = Settings.Value },
-        };
+        var effects = new List<Effect>();
 
-        effects.AddRange(UpsertEffects(Templates.Records));
-        effects.AddRange(UpsertEffects(DataSets.Records));
-        effects.AddRange(UpsertEffects(DataRows.Records));
-        effects.AddRange(UpsertEffects(Prototypes.Records));
-        effects.AddRange(UpsertEffects(Assets.Records));
-        effects.AddRange(UpsertEffects(GameStates.Records));
-
-        if (ActiveGameState.Value != SnowTag.Empty)
-            effects.Add(new SetReplicatedValueEffect<SnowTag> { Payload = ActiveGameState.Value });
+        foreach (var c in Containers)
+            effects.AddRange(c.EnumerateSaveEffects());
 
         effects.AddRange(GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>());
 
         return [TableEvent.Now(null, effects.ToArray())];
     }
-
-    /// <summary>One upsert effect carrying the current value of every record in the store.</summary>
-    private static IEnumerable<Effect> UpsertEffects<T>(IReadOnlyDictionary<SnowTag, T> store)
-        where T : class, IReplicated =>
-        store.Values.Select(r => (Effect)new UpdateReplicatedEffect<T> { Id = r.Id, Payload = r });
 
     /// <summary>
     /// Advances the tag counter past every SnowTag in the log.

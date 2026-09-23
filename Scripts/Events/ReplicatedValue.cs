@@ -3,18 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
-/// A single project-wide value that syncs during multiplayer transactionally.
-/// Written by <see cref="SetReplicatedValueEffect{T}"/>, last writer wins.
+/// Storage for a single <see cref="IReplicated"/> object that syncs during multiplayer transactionally.
 /// </summary>
-public sealed class ReplicatedValue<T>
+public sealed class ReplicatedValue<T> : IReplicatedContainer
 {
     private EventSynchronizer _synchronizer;
 
     private readonly Func<T> _createDefault;
 
-    public ReplicatedValue(Func<T> createDefault)
+    private readonly Func<T, bool> _shouldPersist;
+
+    public ReplicatedValue(Func<T> createDefault, Func<T, bool> shouldPersist = null)
     {
         _createDefault = createDefault;
+        _shouldPersist = shouldPersist ?? (_ => true);
         _value = createDefault();
     }
 
@@ -166,5 +168,13 @@ public sealed class ReplicatedValue<T>
 
         _pending = false;
         NotifyChanged();
+    }
+
+    /// <summary>The effect carrying the current value, unless it should not be persisted.</summary>
+    public IEnumerable<Effect> EnumerateSaveEffects()
+    {
+        if (_value is null || !_shouldPersist(_value))
+            yield break;
+        yield return new SetReplicatedValueEffect<T> { Payload = _value };
     }
 }

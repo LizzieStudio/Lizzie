@@ -5,7 +5,7 @@ using System.Linq;
 /// <summary>
 /// Storage for <see cref="IReplicated"/> objects that syncs during multiplayer transactionally.
 /// </summary>
-public sealed class ReplicatedDictionary<TEntity>
+public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
     where TEntity : class, IReplicated
 {
     private EventSynchronizer _synchronizer;
@@ -210,4 +210,10 @@ public sealed class ReplicatedDictionary<TEntity>
         pending = new();
         NotifyChanged(changed);
     }
+
+    /// <summary>One upsert effect carrying the current value of every record.</summary>
+    public IEnumerable<Effect> EnumerateSaveEffects() =>
+        dict.Values.Select(r =>
+            (Effect)new UpdateReplicatedEffect<TEntity> { Id = r.Id, Payload = r }
+        );
 }
