@@ -20,8 +20,6 @@ public partial class VcDeck : VisualComponentGroup
     private Node3D _spinnyBits;
     private Label3D _blankLabel;
 
-    private Node3D SpinnyBits => _spinnyBits ??= GetNode<Node3D>("SpinnyBits");
-
     /// <summary>
     /// A deck's orientation is split across two nodes.
     /// X and Y rotate the whole thing, but Z only spins the deck model.
@@ -31,12 +29,12 @@ public partial class VcDeck : VisualComponentGroup
         get
         {
             var node = base.Rotation;
-            return new Vector3(node.X, node.Y, SpinnyBits.Rotation.Z);
+            return new Vector3(node.X, node.Y, _spinnyBits.Rotation.Z);
         }
         set
         {
             base.Rotation = new Vector3(value.X, value.Y, 0f);
-            SpinnyBits.Rotation = new Vector3(0f, 0f, value.Z);
+            _spinnyBits.Rotation = new Vector3(0f, 0f, value.Z);
         }
     }
 
@@ -50,7 +48,7 @@ public partial class VcDeck : VisualComponentGroup
         _backSprite = GetNode<Sprite3D>("%BackSprite");
         _sideMesh = GetNode<MeshInstance3D>("%SideMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
-        _spinnyBits ??= GetNode<Node3D>("SpinnyBits");
+        _spinnyBits = GetNode<Node3D>("SpinnyBits");
         DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
         _blankLabel = GetNode<Label3D>("%BlankLabel");
         UpdateComponentCount();
@@ -162,7 +160,7 @@ public partial class VcDeck : VisualComponentGroup
 
     private void ProcessFlip(double delta)
     {
-        var curZ = SpinnyBits.RotationDegrees.Z;
+        var curZ = _spinnyBits.RotationDegrees.Z;
         float newZ = curZ + (_flipRate * (float)delta * _rotMult);
         if (_showFace)
         {
@@ -181,7 +179,7 @@ public partial class VcDeck : VisualComponentGroup
             }
         }
 
-        SpinnyBits.RotationDegrees = new Vector3(0f, 0f, newZ);
+        _spinnyBits.RotationDegrees = new Vector3(0f, 0f, newZ);
     }
 
     /// <summary>

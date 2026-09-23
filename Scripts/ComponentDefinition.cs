@@ -44,44 +44,14 @@ public partial class ComponentDefinition : Window
         _updateButton = GetNode<Button>("%UpdateButton");
         _updateButton.Pressed += UpdateClicked;
 
-        if (_initRequired)
-        {
-            LocalInit();
-        }
-        if (_editMode)
-            SetEditMode();
+        buttonPanel = GetNode<VBoxContainer>("%CompButtonStrip");
+        _componentPanel = GetNode<Panel>("%ComponentPanel");
     }
-
-    private bool _initRequired;
-
-    private bool _isInitialized;
 
     public void Initialize(Project curProject)
     {
         CurrentProject = curProject;
-        if (IsNodeReady())
-        {
-            LocalInit();
-        }
-        else
-        {
-            _initRequired = true;
-        }
-    }
-
-    private void LocalInit()
-    {
-        _initRequired = false;
-
         Visible = true;
-
-        if (_isInitialized)
-            return;
-
-        _isInitialized = true;
-
-        buttonPanel = GetNode<VBoxContainer>("%CompButtonStrip");
-        _componentPanel = GetNode<Panel>("%ComponentPanel");
 
         var bg = new ButtonGroup();
 
@@ -110,16 +80,6 @@ public partial class ComponentDefinition : Window
                 CurName = c.ComponentName;
                 firstButton = false;
             }
-
-            if (_editMode)
-            {
-                UpdatePanelVisibility(CurName);
-            }
-        }
-
-        if (_editMode && _mapPrototype != null)
-        {
-            MapPrototypeToPanel(_mapPrototype);
         }
     }
 
@@ -323,13 +283,8 @@ public partial class ComponentDefinition : Window
             return;
 
         _mapPrototype = prototype;
-        var t = TypeToName(prototype.Type);
-        CurName = t;
-
-        if (IsNodeReady())
-        {
-            MapPrototypeToPanel(prototype);
-        }
+        CurName = TypeToName(prototype.Type);
+        MapPrototypeToPanel(prototype);
     }
 
     private void MapPrototypeToPanel(Prototype prototype)
@@ -349,12 +304,9 @@ public partial class ComponentDefinition : Window
     public void SetEditMode()
     {
         _editMode = true;
-        if (IsNodeReady())
-        {
-            _updateButton.Visible = true;
-            _createButton.Visible = false;
-            buttonPanel.Visible = false;
-        }
+        _updateButton.Visible = true;
+        _createButton.Visible = false;
+        buttonPanel.Visible = false;
     }
 }
 

@@ -155,11 +155,11 @@ public partial class ProjectSettingsDialog : Window
 
                 var newPd = GD.Load<PackedScene>(_playerDefinitionScene)
                     .Instantiate<PlayerDefinition>();
+                _playerDefinitionContainer.AddChild(newPd);
                 newPd.SetPlayerInfo(
                     i + 1,
                     new ProjectPlayerSettings { Name = $"Player {i + 1}", Color = _playerColors[i] }
                 );
-                _playerDefinitionContainer.AddChild(newPd);
             }
         }
         else

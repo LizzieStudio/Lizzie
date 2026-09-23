@@ -126,9 +126,9 @@ public partial class ImageManager : Window
     {
         var tileScene = GD.Load<PackedScene>(_tileScenePath);
         var tile = tileScene.Instantiate<ImageTile>();
-        tile.SetAsset(asset);
         tile.Clicked += OnTileClicked;
         _tileContainer.AddChild(tile);
+        tile.SetAsset(asset);
         _tiles[asset.Id] = tile;
     }
 

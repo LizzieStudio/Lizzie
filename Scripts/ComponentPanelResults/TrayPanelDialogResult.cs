@@ -37,9 +37,6 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
 
     private void UpdatePrototypeSelection()
     {
-        if (_prototypeList == null)
-            return;
-
         var index = _prototypeList.GetItemIndex(_selectedPrototypeKey);
         if (index >= 0)
             _prototypeList.Selected = index;

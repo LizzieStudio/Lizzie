@@ -127,11 +127,6 @@ public partial class TemplateCreator : Window
         this.CloseRequested += RequestClose;
 
         UpdateProject();
-
-        if (_tempTemplateRef != SnowTag.Empty)
-        {
-            SetTemplateById(_tempTemplateRef);
-        }
     }
 
     public override void _Process(double delta)
@@ -270,18 +265,10 @@ public partial class TemplateCreator : Window
             _currentTemplate = edit(_currentTemplate);
     }
 
-    private SnowTag _tempTemplateRef = SnowTag.Empty;
-
     public void SetTemplateById(SnowTag id)
     {
         if (id == SnowTag.Empty)
             return;
-
-        if (!IsNodeReady())
-        {
-            _tempTemplateRef = id;
-            return;
-        }
 
         var idx = _templateNameSelector.GetItemIndex(id.Value);
         if (idx >= 0)

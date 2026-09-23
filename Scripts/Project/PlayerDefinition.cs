@@ -15,32 +15,14 @@ public partial class PlayerDefinition : HBoxContainer
         _playerName = GetNode<LineEdit>("%PlayerName");
         _playerColor = GetNode<ColorPickerButton>("%PlayerColor");
         _playerAdmin = GetNode<CheckBox>("%PlayerAdmin");
-
-        _playerNumber.Text = _pNumber;
-        _playerName.Text = _pName;
-        _playerColor.Color = _pColor;
-        _playerAdmin.ButtonPressed = _pAdmin;
     }
-
-    private string _pNumber;
-    private string _pName;
-    private Color _pColor;
-    private bool _pAdmin;
 
     public void SetPlayerInfo(int playerNumber, ProjectPlayerSettings settings)
     {
-        _pNumber = $"Player {playerNumber}";
-        _pName = settings.Name;
-        _pColor = settings.Color;
-        _pAdmin = settings.IsAdmin;
-
-        if (IsNodeReady())
-        {
-            _playerNumber.Text = _pNumber;
-            _playerName.Text = _pName;
-            _playerColor.Color = _pColor;
-            _playerAdmin.ButtonPressed = _pAdmin;
-        }
+        _playerNumber.Text = $"Player {playerNumber}";
+        _playerName.Text = settings.Name;
+        _playerColor.Color = settings.Color;
+        _playerAdmin.ButtonPressed = settings.IsAdmin;
     }
 
     public (string, Color, bool) GetPlayerInfo()

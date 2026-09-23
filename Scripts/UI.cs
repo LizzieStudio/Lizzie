@@ -312,13 +312,12 @@ public partial class UI : CanvasLayer
     {
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
         _componentDefinition = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _componentDefinition.Initialize(ProjectService.Instance.CurrentProject);
-        _componentDefinition.SetTextureFactory(_textureFactory);
-
         _componentDefinition.CreateObject += OnCreateObject;
         _componentDefinition.CancelDialog += OnCancelCreate;
-
         _modalDialogs.AddChild(_componentDefinition);
+
+        _componentDefinition.SetTextureFactory(_textureFactory);
+        _componentDefinition.Initialize(ProjectService.Instance.CurrentProject);
     }
 
     private void ShowPrototypeManifest()
@@ -352,8 +351,8 @@ public partial class UI : CanvasLayer
         _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
         _templateCreator.TextureFactory = _textureFactory;
         _templateCreator.Closed += TemplateCreatorOnClosed;
-        _templateCreator.SetTemplateById(e.TemplateRef);
         _modalDialogs.AddChild(_templateCreator);
+        _templateCreator.SetTemplateById(e.TemplateRef);
     }
 
     private void TemplateCreatorOnClosed(object sender, EventArgs e)
@@ -373,9 +372,8 @@ public partial class UI : CanvasLayer
         string s = "res://Scenes/DataSet/DatasetEditor.tscn";
         _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
         _datasetEditor.Closed += DatasetEditorOnClosed;
-        _datasetEditor.SetDatasetById(e.DatasetRef);
-
         _modalDialogs.AddChild(_datasetEditor);
+        _datasetEditor.SetDatasetById(e.DatasetRef);
     }
 
     private void DatasetEditorOnClosed(object sender, EventArgs e)
@@ -761,14 +759,14 @@ public partial class UI : CanvasLayer
 
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
         _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _editPanel.SetEditMode();
-        _editPanel.SetTextureFactory(_textureFactory);
-        _editPanel.DisplayPrototype(p);
-        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
-
         _editPanel.CancelDialog += CloseComponentEditDialog;
         _editPanel.CloseDialog += CloseComponentEditDialog;
         _modalDialogs.AddChild(_editPanel);
+
+        _editPanel.SetEditMode();
+        _editPanel.SetTextureFactory(_textureFactory);
+        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
+        _editPanel.DisplayPrototype(p);
     }
 
     private void CloseComponentEditDialog(object sender, EventArgs e)

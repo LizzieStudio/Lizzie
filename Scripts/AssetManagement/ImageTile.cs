@@ -8,7 +8,6 @@ public partial class ImageTile : MarginContainer
     private TextureRect _thumbnail;
     private Asset _asset;
 
-    private bool _refreshRequired;
     private bool _selected;
 
     public event Action<Asset> Clicked;
@@ -21,12 +20,6 @@ public partial class ImageTile : MarginContainer
 
         MouseFilter = MouseFilterEnum.Stop;
         UpdateSelectedVisual();
-
-        if (_refreshRequired)
-        {
-            Refresh();
-            _refreshRequired = false;
-        }
     }
 
     public override void _GuiInput(InputEvent @event)
@@ -40,10 +33,7 @@ public partial class ImageTile : MarginContainer
     public void SetSelected(bool selected)
     {
         _selected = selected;
-        if (IsNodeReady())
-        {
-            UpdateSelectedVisual();
-        }
+        UpdateSelectedVisual();
     }
 
     private void UpdateSelectedVisual()
@@ -54,15 +44,7 @@ public partial class ImageTile : MarginContainer
     public void SetAsset(Asset asset)
     {
         _asset = asset;
-
-        if (IsNodeReady())
-        {
-            Refresh();
-        }
-        else
-        {
-            _refreshRequired = true;
-        }
+        Refresh();
     }
 
     public async void Refresh()

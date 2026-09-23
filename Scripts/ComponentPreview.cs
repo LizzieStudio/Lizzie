@@ -121,11 +121,11 @@ public partial class ComponentPreview : Panel
 
         _component = component;
         _componentActive = true;
-        _component.Rotation = rotation;
         _parentNode.Scale = Vector3.One;
         _zoomPending = true;
         component.Built += () => OnComponentBuilt(component);
         _parentNode.AddChild(_component);
+        _component.Rotation = rotation;
     }
 
     /// <summary>

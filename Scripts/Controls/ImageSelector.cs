@@ -44,9 +44,6 @@ public partial class ImageSelector : Control
 
     private void UpdateSelection()
     {
-        if (_optionDropdown == null)
-            return;
-
         var index = _optionDropdown.GetItemIndex(_selected);
         _optionDropdown.Select(index >= 0 ? index : 0);
     }
