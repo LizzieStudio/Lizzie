@@ -55,7 +55,6 @@ public enum VisualCommand
     Shuffle,
     Draw,
     Deal,
-    Refresh,
     MakeUnique,
     MaximumVC,
 }

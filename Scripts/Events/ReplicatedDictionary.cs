@@ -46,7 +46,6 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
     #region events
 
     private HashSet<Action<IReadOnlyDictionary<SnowTag, TEntity>>> observers = new();
-    private Dictionary<SnowTag, Action<TEntity>> observersOfId = new();
 
     public event Action<IReadOnlyList<RecordChange>> Changed;
 
@@ -62,35 +61,12 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
     }
 
     /// <summary>
-    /// Immediately calls <paramref name="callback"/> with the record,
-    /// then calls <paramref name="callback"/> with the updated record whenever it changes.
-    /// </summary>
-    /// <param name="callback">The action to call.</param>
-    public void Observe(SnowTag Id, Action<TEntity> callback)
-    {
-        observersOfId[Id] = observersOfId.GetValueOrDefault(Id) + callback;
-        if (dict.TryGetValue(Id, out var value))
-        {
-            callback(value);
-        }
-    }
-
-    /// <summary>
     /// Stops calling <paramref name="callback"/> with mass updates.
     /// </summary>
     /// <param name="callback">The action to stop calling.</param>
     public void Unobserve(Action<IReadOnlyDictionary<SnowTag, TEntity>> callback)
     {
         observers.Remove(callback);
-    }
-
-    /// <summary>
-    /// Stops calling <paramref name="callback"/> with updates.
-    /// </summary>
-    /// <param name="callback">The action to stop calling.</param>
-    public void Unobserve(SnowTag Id, Action<TEntity> callback)
-    {
-        observersOfId[Id] = observersOfId.GetValueOrDefault(Id) - callback;
     }
 
     private void NotifyChanged(IReadOnlyDictionary<SnowTag, (TEntity Old, TEntity New)> changed)
@@ -101,17 +77,12 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
             callback(dict);
         }
 
-        foreach (var (id, change) in changed)
-        {
-            observersOfId.GetValueOrDefault(id)?.Invoke(change.New);
-        }
-
         Changed?.Invoke(changed.Values.Select(c => new RecordChange(c.Old, c.New)).ToArray());
     }
 
     /// <summary>
     /// Removes every record, e.g. when the project is replaced.
-    /// Observers receive either an empty dictionary or null.
+    /// Observers receive an empty dictionary.
     /// </summary>
     public void Clear()
     {
@@ -122,11 +93,6 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
         foreach (var callback in observers.ToArray())
         {
             callback(dict);
-        }
-
-        foreach (var entity in removed)
-        {
-            observersOfId.GetValueOrDefault(entity.Id)?.Invoke(null);
         }
 
         Changed?.Invoke(removed.Select(r => new RecordChange(r, null)).ToArray());

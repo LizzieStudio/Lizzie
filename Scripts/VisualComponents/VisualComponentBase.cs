@@ -146,10 +146,12 @@ public abstract partial class VisualComponentBase : Area3D
 
     protected virtual void Sync(IRecordReader R)
     {
-        if (R.Get<Prototype>(PrototypeRef) == null || TextureFactory == null)
+        var proto = R.Get<Prototype>(PrototypeRef);
+        if (proto == null || TextureFactory == null)
             return;
 
-        Refresh(TextureFactory);
+        if (Setup(proto.Parameters, TextureFactory))
+            Build();
     }
 
     public virtual void Build() { }
@@ -184,20 +186,6 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// Updates the textures, size, etc, without recreating any child objects.
-    /// </summary>
-    /// <param name="parameters"></param>
-    /// <param name="textureFactory"></param>
-    /// <returns></returns>
-    public virtual bool Refresh(TextureFactory textureFactory)
-    {
-        var result = Setup(PrototypeRef, textureFactory);
-        if (result)
-            Build();
-        return result;
-    }
-
-    /// <summary>
     /// Processes legacy events and returns effects for everything else.
     /// </summary>
     public virtual Effect[] ProcessCommand(VisualCommand command)
@@ -210,12 +198,6 @@ public abstract partial class VisualComponentBase : Area3D
 
         if (command == VisualCommand.RotateCw)
             return [BuildRotation(-1 * ProjectService.Instance.RotationStep)];
-
-        if (command == VisualCommand.Refresh)
-        {
-            Refresh(TextureFactory);
-            return [];
-        }
 
         if (command == VisualCommand.Duplicate)
         {
@@ -264,7 +246,6 @@ public abstract partial class VisualComponentBase : Area3D
         l.Add(new MenuCommand(VisualCommand.RotateCw));
         l.Add(new MenuCommand(VisualCommand.RotateCcw));
         l.Add(new MenuCommand(VisualCommand.Delete));
-        l.Add(new MenuCommand(VisualCommand.Refresh));
         l.Add(new MenuCommand(VisualCommand.Duplicate));
         l.Add(new MenuCommand(VisualCommand.Edit));
         l.Add(new MenuCommand(VisualCommand.MakeUnique));

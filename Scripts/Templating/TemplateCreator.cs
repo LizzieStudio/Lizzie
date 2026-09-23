@@ -412,8 +412,6 @@ public partial class TemplateCreator : Window
         );
         ProjectService.Instance.Upsert(_currentTemplate);
 
-        EventBus.Instance.Publish<ProjectChangedEvent>();
-
         _hasUnsavedChanges = false;
     }
 

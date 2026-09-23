@@ -15,7 +15,6 @@ public partial class VcDie : VisualComponentBase
 
     private MeshInstance3D _mainMesh;
 
-    private TextureFactory _textureFactory;
     private ImmutableArray<QuickTextureField> _sideData;
     private Color _dieColor;
 
@@ -120,7 +119,6 @@ public partial class VcDie : VisualComponentBase
     public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
         base.Setup(parameters, textureFactory);
-        _textureFactory = textureFactory;
 
         return Apply((DieParameters)parameters, ProjectService.Instance);
     }
@@ -128,10 +126,10 @@ public partial class VcDie : VisualComponentBase
     protected override void Sync(IRecordReader R)
     {
         var proto = R.Get<Prototype>(PrototypeRef);
-        if (proto == null || _textureFactory == null)
+        if (proto == null || TextureFactory == null)
             return;
 
-        base.Setup(proto.Parameters, _textureFactory);
+        base.Setup(proto.Parameters, TextureFactory);
         Apply((DieParameters)proto.Parameters, R);
     }
 
@@ -191,35 +189,35 @@ public partial class VcDie : VisualComponentBase
             {
                 var tx = D6TextureDefinition(_sideData, _dieColor);
 
-                _textureFactory.GenerateTexture(tx, TextureDone);
+                TextureFactory.GenerateTexture(tx, TextureDone);
                 return;
             }
 
             if (_sideData.Length == 8)
             {
                 var tx = D8TextureDefinition(_sideData, _dieColor);
-                _textureFactory.GenerateTexture(tx, TextureDone);
+                TextureFactory.GenerateTexture(tx, TextureDone);
                 return;
             }
 
             if (_sideData.Length == 10)
             {
                 var tx = D10TextureDefinition(_sideData, _dieColor);
-                _textureFactory.GenerateTexture(tx, TextureDone);
+                TextureFactory.GenerateTexture(tx, TextureDone);
                 return;
             }
 
             if (_sideData.Length == 12)
             {
                 var tx = D12TextureDefinition(_sideData, _dieColor);
-                _textureFactory.GenerateTexture(tx, TextureDone);
+                TextureFactory.GenerateTexture(tx, TextureDone);
                 return;
             }
 
             if (_sideData.Length == 20)
             {
                 var tx = D20TextureDefinition(_sideData, _dieColor);
-                _textureFactory.GenerateTexture(tx, TextureDone);
+                TextureFactory.GenerateTexture(tx, TextureDone);
                 return;
             }
         }
@@ -249,7 +247,7 @@ public partial class VcDie : VisualComponentBase
             return;
 
         var tx = TemplateEngine.GenerateTextureDefinition(template, tc);
-        _textureFactory.GenerateTexture(tx, TextureDone);
+        TextureFactory.GenerateTexture(tx, TextureDone);
     }
 
     private SnowTag _frontTemplateRef;

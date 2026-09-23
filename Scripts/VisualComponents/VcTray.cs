@@ -25,7 +25,7 @@ public partial class VcTray : VisualComponentGroup
     {
         if (_trayProtoBuildNeeded)
         {
-            CreateTrayPrototype(_textureFactory);
+            CreateTrayPrototype(TextureFactory);
         }
 
         foreach (var c in _prototypeSpawnPoint.GetChildren())
@@ -39,12 +39,8 @@ public partial class VcTray : VisualComponentGroup
         }
     }
 
-    private TextureFactory _textureFactory;
-
     public override bool Setup(ComponentParameters parameters, TextureFactory textureFactory)
     {
-        _textureFactory = textureFactory;
-
         base.Setup(parameters, textureFactory);
 
         return Apply((TrayParameters)parameters, ProjectService.Instance);
@@ -53,10 +49,10 @@ public partial class VcTray : VisualComponentGroup
     protected override void Sync(IRecordReader R)
     {
         var proto = R.Get<Prototype>(PrototypeRef);
-        if (proto == null || _textureFactory == null)
+        if (proto == null || TextureFactory == null)
             return;
 
-        base.Setup(proto.Parameters, _textureFactory);
+        base.Setup(proto.Parameters, TextureFactory);
         Apply((TrayParameters)proto.Parameters, R);
     }
 
@@ -96,7 +92,7 @@ public partial class VcTray : VisualComponentGroup
         _prototype = R.Get<Prototype>(p.Prototype);
 
         UpdateNameLabel();
-        CreateTrayPrototype(_textureFactory);
+        CreateTrayPrototype(TextureFactory);
 
         return true;
     }

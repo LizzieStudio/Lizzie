@@ -60,12 +60,9 @@ public partial class GameObjects : Node
         AddChild(_table);
 
         EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
-        EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
+        EventBus.Instance.Subscribe<ProjectChangedEvent>(_ => RetryPendingSpawns());
+        ProjectService.Instance.Prototypes.Observe(_ => RetryPendingSpawns());
 
-        ProjectService.Instance.DataSets.Observe(OnDataSetsChanged);
-        ProjectService.Instance.DataRows.Observe(OnDataRowsChanged);
-        ProjectService.Instance.Templates.Observe(OnTemplatesChanged);
-        ProjectService.Instance.Prototypes.Observe(OnPrototypesChanged);
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
         EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
@@ -89,69 +86,6 @@ public partial class GameObjects : Node
     private void OnModalOpened()
     {
         _modalOpen = true;
-    }
-
-    private void OnDataSetsChanged(IReadOnlyDictionary<SnowTag, DataSet> datasets)
-    {
-        //naive approach for now
-        foreach (var c in ComponentNodes)
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-    }
-
-    private void OnDataRowsChanged(IReadOnlyDictionary<SnowTag, DataRow> rows)
-    {
-        // TODO: do a more narrow update
-        foreach (var c in ComponentNodes)
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-    }
-
-    private void OnProjectChanged(ProjectChangedEvent obj)
-    {
-        //naive approach for now
-        foreach (var c in ComponentNodes)
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-        RetryPendingSpawns();
-    }
-
-    private void OnTemplatesChanged(IReadOnlyDictionary<SnowTag, Template> templates)
-    {
-        //naive approach for now
-        foreach (var c in ComponentNodes)
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-    }
-
-    private void OnPrototypesChanged(IReadOnlyDictionary<SnowTag, Prototype> prototypes)
-    {
-        //naive approach for now
-        foreach (var c in ComponentNodes)
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-
-        RetryPendingSpawns();
     }
 
     public VisualComponentBase GetComponent(SnowTag reference)

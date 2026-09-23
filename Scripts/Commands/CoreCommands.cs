@@ -6,16 +6,6 @@ using System.Threading.Tasks;
 
 namespace Lizzie.Scripts.Commands
 {
-    [Command(VisualCommand.Refresh)]
-    public class RefreshCommand : CommandBase
-    {
-        public RefreshCommand()
-        {
-            Caption = "Refresh";
-            Command = VisualCommand.Refresh;
-        }
-    }
-
     [Command(VisualCommand.Duplicate)]
     public class DuplicateCommand : CommandBase
     {

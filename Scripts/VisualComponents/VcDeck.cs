@@ -468,18 +468,6 @@ public partial class VcDeck : VisualComponentGroup
         Setup(proto.Parameters, TextureFactory);
     }
 
-    public override bool Refresh(TextureFactory textureFactory)
-    {
-        foreach (var c in Children)
-        {
-            var comp = ProjectService.Instance.GameObjects.GetComponent(c);
-            if (comp is VcToken card)
-                card.Refresh(textureFactory);
-        }
-
-        return true;
-    }
-
     private ImageTexture _fs;
 
     private Vector2[] CalcHexPointVertices()
