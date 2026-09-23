@@ -313,7 +313,7 @@ public partial class ProjectService : Node
         store.Values.Select(r => (Effect)new UpdateReplicatedEffect<T> { Id = r.Id, Payload = r });
 
     /// <summary>
-    /// Advances the tag counter past every SnowTag.
+    /// Advances the tag counter past every SnowTag in the log.
     /// </summary>
     private static void SeedTagsFromLog()
     {
@@ -321,45 +321,8 @@ public partial class ProjectService : Node
         if (log == null)
             return;
 
-        var clock = Snowport.Clock;
-
-        void ObserveUpsert(ComponentEffect ce)
-        {
-            clock.ObserveTag(ce.Id);
-            clock.ObserveTag(ce.PrototypeRef);
-            if (ce.State != null)
-                clock.ObserveTag(ce.State.ContainerRef);
-        }
-
         foreach (var e in log.Values)
-        foreach (var fx in e.Effects)
-        {
-            clock.ObserveTag(fx.Id);
-
-            switch (fx)
-            {
-                case ComponentEffect ce:
-                    ObserveUpsert(ce);
-                    break;
-                case ActiveGameStateEffect ags:
-                    clock.ObserveTag(ags.Target);
-                    break;
-                case UpdateReplicatedEffect<GameState> gsFx when gsFx.Payload != null:
-                    clock.ObserveTag(gsFx.Payload.Parent);
-                    foreach (var up in gsFx.Payload.Upserts)
-                        ObserveUpsert(up);
-                    break;
-                case UpdateSettingsEffect set when set.Payload != null:
-                    var players = set.Payload.Players;
-                    if (!players.IsDefaultOrEmpty)
-                        foreach (var p in players)
-                        {
-                            clock.ObserveTag(p.HandRef);
-                            clock.ObserveTag(p.CursorRef);
-                        }
-                    break;
-            }
-        }
+            SnowTagWalker.Visit(e, Snowport.Clock.ObserveTag);
     }
 
     /// <summary>
