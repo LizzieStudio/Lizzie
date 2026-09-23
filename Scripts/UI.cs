@@ -13,7 +13,6 @@ public partial class UI : CanvasLayer
     private Color baseFontColor;
 
     private HBoxContainer modeButtons;
-    private Button _editModeButton;
 
     public event EventHandler<SceneModeChangeArgs> SceneModeChange;
 
@@ -59,6 +58,11 @@ public partial class UI : CanvasLayer
 
     private Node _modalDialogs;
 
+    public override void _ExitTree()
+    {
+        ProjectService.Instance.GameStates.Unobserve(OnGameStatesChanged);
+    }
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -70,10 +74,6 @@ public partial class UI : CanvasLayer
         baseFontColor = new Color(1, 1, 1, 1);
 
         SetSceneMode(Config.Registry.Get<SceneMode>("SceneMode"));
-
-        _editModeButton = new Button { Text = "Edit Snapshot", ToggleMode = true };
-        _editModeButton.Toggled += OnEditModeButtonToggled;
-        modeButtons.AddChild(_editModeButton);
 
         _fileMenu = GetNode<PopupMenu>("%File");
         _fileMenu.AddSeparator();
@@ -131,8 +131,9 @@ public partial class UI : CanvasLayer
         CallDeferred(nameof(InitOpponentHandsPositions));
 
         EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
-        if (GameStatesStore.Instance != null)
-            GameStatesStore.Instance.GameStatesChanged += OnGameStateChanged;
+        if (ActiveGameStateStore.Instance != null)
+            ActiveGameStateStore.Instance.ActiveGameStateChanged += OnActiveGameStateChanged;
+        ProjectService.Instance.GameStates.Observe(OnGameStatesChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
         EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
@@ -255,59 +256,16 @@ public partial class UI : CanvasLayer
     private void ProjectChanged(ProjectChangedEvent obj)
     {
         RebuildRestoreSnapshotMenu();
-        UpdateEditModeButton(GameStatesStore.Instance?.EditMode ?? false);
     }
 
-    private void OnGameStateChanged(bool editing)
+    private void OnGameStatesChanged(IReadOnlyDictionary<SnowTag, GameState> states)
     {
         RebuildRestoreSnapshotMenu();
-        UpdateEditModeButton(editing);
-        _gameController?.MainScene?.Table?.SetEditMode(editing);
     }
 
-    private void UpdateEditModeButton(bool editing)
+    private void OnActiveGameStateChanged()
     {
-        if (_editModeButton == null)
-            return;
-
-        _editModeButton.SetPressedNoSignal(editing);
-        _editModeButton.Text = editing ? "Editing Snapshot" : "Edit Snapshot";
-
-        bool hasActive =
-            (ProjectService.Instance?.CurrentProject?.ActiveGameState ?? SnowTag.Empty)
-            != SnowTag.Empty;
-        _editModeButton.Disabled = !editing && !hasActive;
-    }
-
-    private void OnEditModeButtonToggled(bool on)
-    {
-        // open a confirmation dialogue if there's unsaved changes
-        if (on && !ProjectService.Instance.ActiveTableMatchesSnapshot())
-        {
-            var confirm = new ConfirmationDialog
-            {
-                Title = "Enter Edit Mode",
-                DialogText =
-                    "Editing loads the snapshot and resets the table for all players. "
-                    + "Discard the current play state?",
-                OkButtonText = "Edit",
-            };
-            confirm.Confirmed += () =>
-            {
-                ProjectService.Instance.SetEditMode(true);
-                confirm.QueueFree();
-            };
-            confirm.Canceled += () =>
-            {
-                _editModeButton.SetPressedNoSignal(false); // revert the toggle
-                confirm.QueueFree();
-            };
-            _modalDialogs.AddChild(confirm);
-            confirm.PopupCentered();
-            return;
-        }
-
-        ProjectService.Instance.SetEditMode(on);
+        RebuildRestoreSnapshotMenu();
     }
 
     private void RebuildRestoreSnapshotMenu()
@@ -319,12 +277,11 @@ public partial class UI : CanvasLayer
 
         var project = ProjectService.Instance.CurrentProject;
 
-        var editing = GameStatesStore.Instance?.EditMode ?? false;
         var updateIdx = _fileMenu.GetItemIndex(6);
         if (updateIdx >= 0)
             _fileMenu.SetItemDisabled(
                 updateIdx,
-                editing || project == null || project.ActiveGameState == SnowTag.Empty
+                project == null || project.ActiveGameState == SnowTag.Empty
             );
 
         var ordered = OrderedGameStates(project);
@@ -346,7 +303,9 @@ public partial class UI : CanvasLayer
         if (project == null)
             return result;
 
-        var alive = project.GameStates.Values.Where(s => !s.Deleted).ToList();
+        var alive = ProjectService
+            .Instance.GameStates.Records.Values.Where(s => !s.Deleted)
+            .ToList();
         var byParent = alive
             .GroupBy(s => s.Parent)
             .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Name).ToList());
@@ -376,7 +335,7 @@ public partial class UI : CanvasLayer
         var marker = state.Id == project.ActiveGameState ? "● " : "";
         var parens =
             state.Parent != SnowTag.Empty
-            && project.GameStates.TryGetValue(state.Parent, out var parent)
+            && ProjectService.Instance.GameStates.Records.TryGetValue(state.Parent, out var parent)
                 ? $" ({parent.Name})"
                 : "";
         return marker + state.Name + parens;
@@ -669,7 +628,8 @@ public partial class UI : CanvasLayer
         vbox.AddChild(descInput);
 
         var project = ProjectService.Instance.CurrentProject;
-        var parent = project?.GetGameState(project.ActiveGameState);
+        var parent =
+            project == null ? null : ProjectService.Instance.GetGameState(project.ActiveGameState);
         CheckBox linkCheck = null;
         if (parent != null)
         {

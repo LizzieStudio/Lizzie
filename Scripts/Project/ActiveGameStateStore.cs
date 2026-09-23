@@ -1,29 +1,20 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
 /// <summary>
-/// Tracks and synchronizes saved game states and the active-snapshot pointer.
+/// Tracks and synchronizes the active-snapshot pointer.
 /// </summary>
-public partial class GameStatesStore : ReplicatedStore<GameState>
+public partial class ActiveGameStateStore : Node
 {
-    private static GameStatesStore _instance;
-    public static GameStatesStore Instance => _instance;
+    private static ActiveGameStateStore _instance;
+    public static ActiveGameStateStore Instance => _instance;
 
-    /// <summary>Raised after the game-state registry or the edit-mode flag changes.</summary>
+    /// <summary>Raised after the active snapshot changes.</summary>
     [Signal]
-    public delegate void GameStatesChangedEventHandler(bool editing);
+    public delegate void ActiveGameStateChangedEventHandler();
 
     /// <summary>The id of the last event that wrote <see cref="Project.ActiveGameState"/>.</summary>
     private SnowportId _activeWriteId = SnowportId.Empty;
-
-    /// <summary>
-    /// Whether the table is in snapshot edit mode.
-    /// </summary>
-    public bool EditMode { get; private set; }
-
-    private bool _capturePending;
 
     public override void _Ready()
     {
@@ -47,24 +38,12 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
             _instance = null;
     }
 
-    protected override IDictionary<SnowTag, GameState> Store =>
-        ProjectService.Instance?.CurrentProject?.GameStates;
-
-    protected override void NotifyChanged(IReadOnlyList<SnowTag> ids)
-    {
-        EmitSignal(SignalName.GameStatesChanged, EditMode);
-    }
-
-    /// <summary>Merges game-state records and sets the active-snapshot.</summary>
+    /// <summary>Sets the active-snapshot.</summary>
     private void HandleApplied(TableEvent e)
     {
-        OnEventApplied(e);
-
         var project = ProjectService.Instance?.CurrentProject;
         if (project == null)
             return;
-
-        MaybeScheduleCapture(e);
 
         if (e.Action is UndoAction)
         {
@@ -78,46 +57,7 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
 
         _activeWriteId = e.Id;
         project.ActiveGameState = fx.Target;
-        SetEditModeFlag(fx.Editing);
-    }
-
-    /// <summary>Applies an edit-mode transition.</summary>
-    private void SetEditModeFlag(bool editing)
-    {
-        EditMode = editing;
-        EmitSignal(SignalName.GameStatesChanged, EditMode);
-    }
-
-    /// <summary>
-    /// While in edit mode, re-derive the active snapshot from the table after any real table change.
-    /// </summary>
-    private void MaybeScheduleCapture(TableEvent e)
-    {
-        if (!EditMode)
-            return;
-        if (EventSynchronizer.Instance?.BulkLoading == true)
-            return;
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project == null || project.ActiveGameState == SnowTag.Empty)
-            return;
-        if (e.Action is GameStateSwitchAction)
-            return;
-        if (e.Effects.OfType<UpdateReplicatedEffect<GameState>>().Any())
-            return;
-        if (!(e.Action is UndoAction || e.Effects.OfType<ComponentEffect>().Any()))
-            return;
-
-        if (_capturePending)
-            return;
-        _capturePending = true;
-        Callable.From(RunCapture).CallDeferred();
-    }
-
-    private void RunCapture()
-    {
-        _capturePending = false;
-        if (EditMode)
-            ProjectService.Instance?.CaptureActiveSnapshotLocal();
+        EmitSignal(SignalName.ActiveGameStateChanged);
     }
 
     /// <summary>
@@ -142,7 +82,6 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
         var undone = UndoLog.ComputeUndone(log);
         var active = SnowTag.Empty;
         var writeId = SnowportId.Empty;
-        var editing = false;
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
@@ -155,14 +94,13 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
             {
                 active = fx.Target;
                 writeId = ev.Id;
-                editing = fx.Editing;
                 break;
             }
         }
 
         _activeWriteId = writeId;
         project.ActiveGameState = active;
-        SetEditModeFlag(editing);
+        EmitSignal(SignalName.ActiveGameStateChanged);
     }
 
     /// <summary>
@@ -171,6 +109,5 @@ public partial class GameStatesStore : ReplicatedStore<GameState>
     public void ResetForJoin()
     {
         _activeWriteId = SnowportId.Empty;
-        EditMode = false;
     }
 }

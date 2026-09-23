@@ -1209,7 +1209,7 @@ public partial class GameObjects : Node
         _clearBarrier = SnowportId.Empty;
         EventSynchronizer.Instance?.Clear();
         PresenceSynchronizer.Instance?.Clear();
-        GameStatesStore.Instance?.ResetForJoin();
+        ActiveGameStateStore.Instance?.ResetForJoin();
     }
 
     /// <summary>

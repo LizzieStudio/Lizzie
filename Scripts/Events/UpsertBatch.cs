@@ -21,6 +21,14 @@ public sealed class UpsertBatch
         return this;
     }
 
+    /// <summary>Adds another effect to the same event.</summary>
+    public UpsertBatch With(Effect effect)
+    {
+        if (effect != null)
+            _effects.Add(effect);
+        return this;
+    }
+
     /// <summary>Submits the collected effects as one event. A no-op when nothing was added.</summary>
     public void Submit()
     {

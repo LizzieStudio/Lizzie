@@ -96,6 +96,11 @@ public partial class ProjectService : Node
     /// </summary>
     public ReplicatedDictionary<Asset> Assets { get; } = new();
 
+    /// <summary>
+    /// The current project's saved snapshots.
+    /// </summary>
+    public ReplicatedDictionary<GameState> GameStates { get; } = new();
+
     private Project _currentProject;
 
     public Project CurrentProject
@@ -115,6 +120,7 @@ public partial class ProjectService : Node
                 DataSets.Clear();
                 DataRows.Clear();
                 Assets.Clear();
+                GameStates.Clear();
             }
 
             UpdateWindowTitle();
@@ -135,6 +141,7 @@ public partial class ProjectService : Node
         DataSets.Attach(EventSynchronizer.Instance);
         DataRows.Attach(EventSynchronizer.Instance);
         Assets.Attach(EventSynchronizer.Instance);
+        GameStates.Attach(EventSynchronizer.Instance);
     }
 
     /// <summary>
@@ -206,7 +213,7 @@ public partial class ProjectService : Node
     public void SettleAfterIngest()
     {
         GameObjects?.RebuildFromLog();
-        GameStatesStore.Instance?.RebuildActiveFromLog();
+        ActiveGameStateStore.Instance?.RebuildActiveFromLog();
         SeedTagsFromLog();
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
@@ -215,6 +222,7 @@ public partial class ProjectService : Node
         DataSets.FlushBulkLoad();
         DataRows.FlushBulkLoad();
         Assets.FlushBulkLoad();
+        GameStates.FlushBulkLoad();
 
         HasUnsavedChanges = false;
     }
@@ -289,16 +297,10 @@ public partial class ProjectService : Node
         effects.AddRange(UpsertEffects(DataRows.Records));
         effects.AddRange(UpsertEffects(Prototypes.Records));
         effects.AddRange(UpsertEffects(Assets.Records));
-        effects.AddRange(UpsertEffects(project.GameStates));
+        effects.AddRange(UpsertEffects(GameStates.Records));
 
         if (project.ActiveGameState != SnowTag.Empty)
-            effects.Add(
-                new ActiveGameStateEffect
-                {
-                    Target = project.ActiveGameState,
-                    Editing = GameStatesStore.Instance?.EditMode ?? false,
-                }
-            );
+            effects.Add(new ActiveGameStateEffect { Target = project.ActiveGameState });
 
         effects.AddRange(GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>());
 
@@ -441,10 +443,10 @@ public partial class ProjectService : Node
     /// <summary>
     /// Captures the current table as a new <see cref="GameState"/>.
     /// </summary>
-    public GameState SaveGameState(string name, string description = "", bool link = false)
+    public void SaveGameState(string name, string description = "", bool link = false)
     {
         if (CurrentProject == null)
-            return null;
+            return;
 
         var parent = link ? CurrentProject.ActiveGameState : SnowTag.Empty;
         var state = new GameState
@@ -456,21 +458,7 @@ public partial class ProjectService : Node
             Upserts = BuildDelta(parent),
         };
 
-        var eventId = Snowport.Clock.Create();
-        state = state with { LastUpdateId = eventId };
-        EventSynchronizer.Instance?.Submit(
-            new TableEvent
-            {
-                Id = eventId,
-                Action = null,
-                Effects =
-                [
-                    new UpdateReplicatedEffect<GameState> { Id = state.Id, Payload = state },
-                    new ActiveGameStateEffect { Target = state.Id },
-                ],
-            }
-        );
-        return state;
+        new UpsertBatch().Add(state).With(new ActiveGameStateEffect { Target = state.Id }).Submit();
     }
 
     /// <summary>
@@ -480,7 +468,7 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || stateRef == SnowTag.Empty)
             return;
-        if (!CurrentProject.GameStates.TryGetValue(stateRef, out var state) || state.Deleted)
+        if (!GameStates.Records.TryGetValue(stateRef, out var state) || state.Deleted)
             return;
 
         Upsert(state with { Upserts = BuildDelta(state.Parent) });
@@ -525,11 +513,11 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null)
             return;
-        if (!CurrentProject.GameStates.TryGetValue(stateRef, out var state))
+        if (!GameStates.Records.TryGetValue(stateRef, out var state))
             return;
 
         // reject deleting a parent snapshot
-        if (CurrentProject.GameStates.Values.Any(g => !g.Deleted && g.Parent == stateRef))
+        if (GameStates.Records.Values.Any(g => !g.Deleted && g.Parent == stateRef))
         {
             GD.PrintErr($"Cannot delete GameState '{state.Name}': it has child snapshots.");
             return;
@@ -539,17 +527,17 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Switches every client to a saved game state, optionally entering edit mode.
+    /// Switches every client to a saved game state.
     /// </summary>
-    public void SwitchGameState(SnowTag stateRef, bool editing = false)
+    public void SwitchGameState(SnowTag stateRef)
     {
-        if (CurrentProject?.GetGameState(stateRef) == null)
+        if (CurrentProject == null || GetGameState(stateRef) == null)
             return;
 
         var effects = new List<Effect>
         {
             new TableClearEffect(),
-            new ActiveGameStateEffect { Target = stateRef, Editing = editing },
+            new ActiveGameStateEffect { Target = stateRef },
         };
         foreach (var ce in FoldChain(stateRef).Values)
         {
@@ -582,86 +570,13 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Enters or leaves snapshot edit mode across all clients.
-    /// </summary>
-    public void SetEditMode(bool editing)
-    {
-        if (CurrentProject == null)
-            return;
-        if ((GameStatesStore.Instance?.EditMode ?? false) == editing)
-            return;
-
-        var active = CurrentProject.ActiveGameState;
-        if (editing)
-        {
-            if (active == SnowTag.Empty)
-            {
-                GD.PrintErr("Edit mode needs an active snapshot.");
-                return;
-            }
-            SwitchGameState(active, editing: true);
-        }
-        else
-        {
-            EventSynchronizer.Instance?.Submit(
-                TableEvent.Now(null, new ActiveGameStateEffect { Target = active, Editing = false })
-            );
-        }
-    }
-
-    /// <summary>
-    /// Re-captures the active snapshot from the live table in place.
-    /// </summary>
-    public void CaptureActiveSnapshotLocal()
-    {
-        if (CurrentProject == null)
-            return;
-        var active = CurrentProject.ActiveGameState;
-        if (active == SnowTag.Empty)
-            return;
-        if (!CurrentProject.GameStates.TryGetValue(active, out var state) || state.Deleted)
-            return;
-
-        // TODO: This needs to be removed and GameStates need to be updated on each event
-        CurrentProject.GameStates[active] = state with
-        {
-            Upserts = BuildDelta(state.Parent),
-        };
-    }
-
-    /// <summary>
-    /// True when the live table matches the active snapshot.
-    /// </summary>
-    public bool ActiveTableMatchesSnapshot()
-    {
-        if (CurrentProject == null)
-            return true;
-        var state = CurrentProject.GetGameState(CurrentProject.ActiveGameState);
-        if (state == null)
-            return true;
-
-        var current = BuildDelta(state.Parent).ToDictionary(e => e.Id);
-        var stored = state.Upserts.ToDictionary(e => e.Id);
-        if (current.Count != stored.Count)
-            return false;
-        foreach (var (id, ce) in current)
-            if (!stored.TryGetValue(id, out var prev) || !StateEquals(prev.State, ce.State))
-                return false;
-        return true;
-    }
-
-    /// <summary>
     /// Collect a snapshot's ancestory into a set of component upserts.
     /// </summary>
     private Dictionary<SnowTag, ComponentEffect> FoldChain(SnowTag stateRef)
     {
         var chain = new List<GameState>();
         var cursor = stateRef;
-        while (
-            cursor != SnowTag.Empty
-            && CurrentProject != null
-            && CurrentProject.GameStates.TryGetValue(cursor, out var gs)
-        )
+        while (cursor != SnowTag.Empty && GameStates.Records.TryGetValue(cursor, out var gs))
         {
             chain.Add(gs);
             cursor = gs.Parent;
@@ -716,6 +631,18 @@ public partial class ProjectService : Node
                 }
             );
         }
+    }
+
+    /// <summary>
+    /// The non-deleted snapshot or null.
+    /// </summary>
+    public GameState GetGameState(SnowTag stateRef)
+    {
+        if (stateRef == SnowTag.Empty)
+            return null;
+        if (GameStates.Records.TryGetValue(stateRef, out var state) && !state.Deleted)
+            return state;
+        return null;
     }
 
     public DataSet GetDataSet(SnowTag datasetRef)
