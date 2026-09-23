@@ -494,15 +494,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void OnFrontTemplateChanged(SnowTag templateRef)
     {
-        _frontTemplate =
-            templateRef == SnowTag.Empty ? null : ProjectService.Instance.GetTemplate(templateRef);
+        _frontTemplate = ProjectService.Instance.GetTemplate(templateRef);
         UpdatePreview();
     }
 
     private void OnBackTemplateChanged(SnowTag templateRef)
     {
-        _backTemplate =
-            templateRef == SnowTag.Empty ? null : ProjectService.Instance.GetTemplate(templateRef);
+        _backTemplate = ProjectService.Instance.GetTemplate(templateRef);
         UpdatePreview();
     }
 
@@ -837,20 +835,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _gridSingleBack.ButtonPressed = p.GridSingleBack;
 
         _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
-        _frontTemplate = null;
-        if (
-            p.FrontTemplate != SnowTag.Empty
-            && _frontTemplatePicker.SelectedTemplate == p.FrontTemplate
-        )
-            _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
+        _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
 
         _backTemplatePicker.SelectedTemplate = p.BackTemplate;
-        _backTemplate = null;
-        if (
-            p.BackTemplate != SnowTag.Empty
-            && _backTemplatePicker.SelectedTemplate == p.BackTemplate
-        )
-            _backTemplate = ProjectService.Instance.GetTemplate(p.BackTemplate);
+        _backTemplate = ProjectService.Instance.GetTemplate(p.BackTemplate);
 
         _datasetPicker.SelectedDataSet = p.Dataset;
         _textureContext.DataSet = ProjectService.Instance.GetDataSet(p.Dataset);

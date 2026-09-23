@@ -31,6 +31,19 @@ public partial class ProjectService : IRecordReader
         MarkDirty(watcher);
     }
 
+    /// <summary>
+    /// Forces a rerun of the Node's Watch functions at the end of the frame.
+    /// Does nothing if the Node is not in the tree.
+    /// </summary>
+    public void ForceSync(Node owner)
+    {
+        foreach (var watcher in _watchers)
+        {
+            if (watcher.Owner == owner)
+                MarkDirty(watcher);
+        }
+    }
+
     private void Unwatch(Watcher watcher)
     {
         _watchers.Remove(watcher);

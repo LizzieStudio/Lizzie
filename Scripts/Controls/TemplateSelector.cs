@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Godot;
 
 public partial class TemplateSelector : OptionButton
@@ -8,16 +6,14 @@ public partial class TemplateSelector : OptionButton
     private SnowTag _selected = SnowTag.Empty;
     private Template.TemplateTarget _target = Template.TemplateTarget.Flat;
 
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     public override void _Ready()
     {
         ItemSelected += OnItemSelected;
-
-        ProjectService.Instance.Templates.Observe(UpdateTemplates);
-    }
-
-    public override void _ExitTree()
-    {
-        ProjectService.Instance.Templates.Unobserve(UpdateTemplates);
     }
 
     /// <summary>
@@ -28,40 +24,40 @@ public partial class TemplateSelector : OptionButton
         get => _target;
         set
         {
-            if (_target == value)
-                return;
-            _target = value;
-            if (IsInsideTree())
-                UpdateTemplates(ProjectService.Instance.Templates.Records);
+            if (_target != value)
+            {
+                _target = value;
+                ProjectService.Instance.ForceSync(this);
+            }
         }
     }
 
-    private void UpdateTemplates(IReadOnlyDictionary<SnowTag, Template> templates)
+    private void Sync(IRecordReader R)
     {
         Clear();
-        AddItem("(none)", SnowTag.Empty.Value);
+        AddItem("(none)", SnowTag.Empty);
 
-        foreach (var t in templates.Values.Where(v => !v.Deleted && v.Target == _target))
+        foreach (var t in R.Get<Template>(t => t.Target == _target))
         {
-            AddItem(t.Name, t.Id.Value);
+            AddItem(t.Name, t.Id);
         }
 
-        SelectItem(_selected);
+        UpdateSelection();
     }
 
     public SnowTag SelectedTemplate
     {
-        get => Selected < 0 ? SnowTag.Empty : new SnowTag(GetSelectedId());
+        get => _selected;
         set
         {
             _selected = value;
-            SelectItem(value);
+            UpdateSelection();
         }
     }
 
-    private void SelectItem(SnowTag id)
+    private void UpdateSelection()
     {
-        var index = id == SnowTag.Empty ? -1 : GetItemIndex(id.Value);
+        var index = GetItemIndex(_selected);
         if (index < 0)
             index = 0;
         Select(index);
@@ -69,7 +65,7 @@ public partial class TemplateSelector : OptionButton
 
     private void OnItemSelected(long index)
     {
-        _selected = new SnowTag(GetItemId((int)index));
+        _selected = GetItemId((int)index);
         TemplateSelected?.Invoke(_selected);
     }
 

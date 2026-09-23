@@ -384,7 +384,7 @@ public partial class TemplateCreator : Window
             return;
 
         var switched = ProjectService.Instance.GetTemplate(
-            new SnowTag(_templateNameSelector.GetItemId((int)index))
+            _templateNameSelector.GetItemId((int)index)
         );
         if (switched != null)
         {
@@ -1272,9 +1272,7 @@ public partial class TemplateCreator : Window
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = ProjectService.Instance.GetTemplate(
-            new SnowTag(_templateNameSelector.GetItemId(0))
-        );
+        CurrentTemplate = ProjectService.Instance.GetTemplate(_templateNameSelector.GetItemId(0));
 
         MapDataset();
     }

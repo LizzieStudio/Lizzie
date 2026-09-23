@@ -107,7 +107,14 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private void UpdateTemplateTarget()
     {
         int.TryParse(_sidesInput.Text, out var sides);
-        _frontTemplatePicker.Target = SidesToTarget(sides);
+        var target = SidesToTarget(sides);
+        _frontTemplatePicker.Target = target;
+
+        if (_frontTemplate != null && _frontTemplate.Target != target)
+        {
+            _frontTemplate = null;
+            _frontTemplatePicker.SelectedTemplate = SnowTag.Empty;
+        }
     }
 
     private Template.TemplateTarget SidesToTarget(int sides)
@@ -409,12 +416,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         // Restore template
         _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
-        _frontTemplate = null;
-        if (
-            p.FrontTemplate != SnowTag.Empty
-            && _frontTemplatePicker.SelectedTemplate == p.FrontTemplate
-        )
-            _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
+        _frontTemplate = ProjectService.Instance.GetTemplate(p.FrontTemplate);
 
         // Restore dataset
         _datasetPicker.SelectedDataSet = p.Dataset;
