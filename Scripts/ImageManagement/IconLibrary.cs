@@ -140,7 +140,7 @@ public class IconLibrary : Dictionary<string, IconEntry>
         return ResourceLoader.Load(BaseFolder + this[key].FileName) as Texture2D;
     }
 
-    public void LoadOptionButton(OptionButton button)
+    public void LoadOptionButton(OptionButton button, IRecordReader R)
     {
         int id = 0;
 
@@ -151,7 +151,7 @@ public class IconLibrary : Dictionary<string, IconEntry>
         }
 
         //put in user-image block
-        var assets = ProjectService.Instance.Get<Asset>();
+        var assets = R.Get<Asset>();
         if (assets.Count > 0)
         {
             button.AddSeparator();

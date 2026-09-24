@@ -20,8 +20,9 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
     private CheckBox _hiddenWhenExcluded;
     private VBoxContainer _seatList;
 
-    // seatIndex -> the per-seat option button
-    private readonly Dictionary<int, OptionButton> _seatOptions = new();
+    private readonly List<(Label Label, OptionButton Option)> _seatRows = new();
+
+    private readonly Dictionary<int, int> _seatChoices = new();
 
     public override void _Ready()
     {
@@ -35,50 +36,68 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         _seatList = GetNode<VBoxContainer>("%SeatList");
     }
 
-    public override void Activate()
+    public override void _EnterTree()
     {
-        RebuildSeatList();
+        ProjectService.Instance.Watch(this, Sync);
     }
 
-    private void RebuildSeatList()
+    private void Sync(IRecordReader R)
     {
-        foreach (var child in _seatList.GetChildren())
-            child.QueueFree();
-        _seatOptions.Clear();
+        var players = R.Value<ProjectGameSettings>().Players;
 
-        var settings = ProjectService.Instance.Settings.Value;
-        if (settings == null)
-            return;
-        var players = settings.Players;
+        while (_seatRows.Count > players.Length)
+        {
+            _seatRows[^1].Label.GetParent().QueueFree();
+            _seatRows.RemoveAt(_seatRows.Count - 1);
+        }
+
+        while (_seatRows.Count < players.Length)
+            _seatRows.Add(AddSeatRow(_seatRows.Count));
 
         for (int i = 0; i < players.Length; i++)
         {
-            var row = new HBoxContainer();
-
-            var label = new Label
-            {
-                Text = string.IsNullOrEmpty(players[i].Name) ? $"Seat {i + 1}" : players[i].Name,
-                CustomMinimumSize = new Vector2(150, 0),
-                TooltipText = "Sets the permissions for this seat.",
-                MouseFilter = Control.MouseFilterEnum.Pass,
-            };
-            row.AddChild(label);
-
-            var option = new OptionButton { TooltipText = "Sets the permissions for this seat." };
-            option.AddItem("Default", OptDefault);
-            option.SetItemTooltip(OptDefault, "Follow the zone's 'Allow by default' setting.");
-            option.AddItem("Allowed", OptIncluded);
-            option.SetItemTooltip(OptIncluded, "This player can see and move the zone's contents.");
-            option.AddItem("Block", OptExcluded);
-            option.SetItemTooltip(
-                OptExcluded,
-                "This player cannot move the zone's contents.\nThey can still see the contents unless 'Hide contents' is checked."
-            );
-            row.AddChild(option);
-
-            _seatList.AddChild(row);
-            _seatOptions[i] = option;
+            _seatRows[i].Label.Text = string.IsNullOrEmpty(players[i].Name)
+                ? $"Seat {i + 1}"
+                : players[i].Name;
         }
+
+        ShowSeatChoices();
+    }
+
+    private (Label, OptionButton) AddSeatRow(int seat)
+    {
+        var row = new HBoxContainer();
+
+        var label = new Label
+        {
+            CustomMinimumSize = new Vector2(150, 0),
+            TooltipText = "Sets the permissions for this seat.",
+            MouseFilter = Control.MouseFilterEnum.Pass,
+        };
+        row.AddChild(label);
+
+        var option = new OptionButton { TooltipText = "Sets the permissions for this seat." };
+        option.AddItem("Default", OptDefault);
+        option.SetItemTooltip(OptDefault, "Follow the zone's 'Allow by default' setting.");
+        option.AddItem("Allowed", OptIncluded);
+        option.SetItemTooltip(OptIncluded, "This player can see and move the zone's contents.");
+        option.AddItem("Block", OptExcluded);
+        option.SetItemTooltip(
+            OptExcluded,
+            "This player cannot move the zone's contents.\nThey can still see the contents unless 'Hide contents' is checked."
+        );
+        row.AddChild(option);
+
+        _seatList.AddChild(row);
+        option.ItemSelected += index => _seatChoices[seat] = option.GetItemId((int)index);
+
+        return (label, option);
+    }
+
+    private void ShowSeatChoices()
+    {
+        for (int i = 0; i < _seatRows.Count; i++)
+            _seatRows[i].Option.Select(_seatChoices.GetValueOrDefault(i, OptDefault));
     }
 
     public override ComponentParameters GetParams()
@@ -86,15 +105,15 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         var included = ImmutableArray.CreateBuilder<int>();
         var excluded = ImmutableArray.CreateBuilder<int>();
 
-        foreach (var kv in _seatOptions)
+        for (int seat = 0; seat < _seatRows.Count; seat++)
         {
-            switch (kv.Value.GetSelectedId())
+            switch (_seatChoices.GetValueOrDefault(seat, OptDefault))
             {
                 case OptIncluded:
-                    included.Add(kv.Key);
+                    included.Add(seat);
                     break;
                 case OptExcluded:
-                    excluded.Add(kv.Key);
+                    excluded.Add(seat);
                     break;
             }
         }
@@ -113,8 +132,6 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     public override void DisplayPrototype(Prototype prototype)
     {
-        RebuildSeatList();
-
         var p = (ZoneParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
         _widthInput.Text = p.Width.ToString();
@@ -122,18 +139,13 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         _defaultIncluded.ButtonPressed = p.DefaultIncluded;
         _hiddenWhenExcluded.ButtonPressed = p.HiddenWhenExcluded;
 
-        var included = new HashSet<int>(p.IncludedSeats);
-        var excluded = new HashSet<int>(p.ExcludedSeats);
+        _seatChoices.Clear();
+        foreach (var seat in p.IncludedSeats)
+            _seatChoices[seat] = OptIncluded;
+        foreach (var seat in p.ExcludedSeats)
+            _seatChoices[seat] = OptExcluded;
 
-        foreach (var kv in _seatOptions)
-        {
-            if (excluded.Contains(kv.Key))
-                kv.Value.Select(OptExcluded);
-            else if (included.Contains(kv.Key))
-                kv.Value.Select(OptIncluded);
-            else
-                kv.Value.Select(OptDefault);
-        }
+        ShowSeatChoices();
     }
 
     public override List<string> ValidateParameters(ComponentParameters parameters)

@@ -12,6 +12,11 @@ public partial class QuickTextureEntry : BoxContainer
 
     private bool _initializing;
 
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -56,7 +61,29 @@ public partial class QuickTextureEntry : BoxContainer
     public void SetIcons(IconLibrary icons)
     {
         _icons = icons;
-        _icons.LoadOptionButton(_iconList);
+        ProjectService.Instance.ForceSync(this);
+    }
+
+    private void Sync(IRecordReader R)
+    {
+        if (_icons == null)
+            return;
+
+        _iconList.Clear();
+        _icons.LoadOptionButton(_iconList, R);
+        ShowSelectedIcon();
+    }
+
+    private void ShowSelectedIcon()
+    {
+        for (int i = 0; i < _iconList.ItemCount; i++)
+        {
+            if (_iconList.GetItemText(i) == _selectedIcon)
+            {
+                _iconList.Select(i);
+                return;
+            }
+        }
     }
 
     private void TypeChanged(long index)
@@ -146,21 +173,11 @@ public partial class QuickTextureEntry : BoxContainer
             case TextureFactory.TextureObjectType.CoreShape:
                 _optionTypes.Select(1);
                 _selectedIcon = field.Caption ?? "Circle";
-                if (_iconList != null)
-                {
-                    for (int i = 0; i < _iconList.ItemCount; i++)
-                    {
-                        if (_iconList.GetItemText(i) == _selectedIcon)
-                        {
-                            _iconList.Select(i);
-                            break;
-                        }
-                    }
-                }
+                ShowSelectedIcon();
                 break;
         }
 
-        if (_qtyPicker != null && field.Quantity > 0)
+        if (field.Quantity > 0)
         {
             _qtyPicker.Select(field.Quantity - 1);
         }

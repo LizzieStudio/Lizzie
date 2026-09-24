@@ -587,25 +587,8 @@ public partial class UI : CanvasLayer
         descInput.WrapMode = TextEdit.LineWrappingMode.Boundary;
         vbox.AddChild(descInput);
 
-        var project = ProjectService.Instance.CurrentProject;
-        var parent =
-            project == null
-                ? null
-                : ProjectService.Instance.Get<GameState>(
-                    ProjectService.Instance.ActiveGameState.Value.Id
-                );
-        CheckBox linkCheck = null;
-        if (parent != null)
-        {
-            linkCheck = new CheckBox
-            {
-                Text = $"link to {parent.Name}",
-                ButtonPressed = false,
-                TooltipText =
-                    $"When checked, this snapshot will copy updates to components in {parent.Name}.",
-            };
-            vbox.AddChild(linkCheck);
-        }
+        var linkCheck = new CheckBox { ButtonPressed = false };
+        vbox.AddChild(linkCheck);
 
         dialog.AddChild(vbox);
 
@@ -616,13 +599,28 @@ public partial class UI : CanvasLayer
                 ProjectService.Instance.SaveGameState(
                     name,
                     descInput.Text.Trim(),
-                    linkCheck?.ButtonPressed ?? false
+                    linkCheck.Visible && linkCheck.ButtonPressed
                 );
             dialog.QueueFree();
         };
         dialog.Canceled += () => dialog.QueueFree();
 
         _modalDialogs.AddChild(dialog);
+
+        ProjectService.Instance.Watch(
+            dialog,
+            R =>
+            {
+                var parent = R.Get<GameState>(R.Value<ActiveGameStateRef>().Id);
+                linkCheck.Visible = parent != null;
+                if (parent == null)
+                    return;
+                linkCheck.Text = $"link to {parent.Name}";
+                linkCheck.TooltipText =
+                    $"When checked, this snapshot will copy updates to components in {parent.Name}.";
+            }
+        );
+
         dialog.PopupCentered();
     }
 
@@ -648,18 +646,6 @@ public partial class UI : CanvasLayer
         var list = new ItemList();
         list.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         vbox.AddChild(list);
-
-        void RefreshList()
-        {
-            list.Clear();
-            foreach (var (state, _) in OrderedGameStates(ProjectService.Instance))
-            {
-                var idx = list.AddItem(GameStateLabel(ProjectService.Instance, state));
-                list.SetItemMetadata(idx, state.Id.Value);
-            }
-        }
-
-        RefreshList();
 
         SnowTag SelectedRef()
         {
@@ -690,7 +676,6 @@ public partial class UI : CanvasLayer
             if (stateRef == SnowTag.Empty)
                 return;
             ProjectService.Instance.DeleteGameState(stateRef);
-            RefreshList();
         };
         hbox.AddChild(deleteBtn);
 
@@ -702,6 +687,23 @@ public partial class UI : CanvasLayer
         dialog.CloseRequested += () => dialog.QueueFree();
 
         _modalDialogs.AddChild(dialog);
+
+        ProjectService.Instance.Watch(
+            dialog,
+            R =>
+            {
+                var selected = SelectedRef();
+                list.Clear();
+                foreach (var (state, _) in OrderedGameStates(R))
+                {
+                    var idx = list.AddItem(GameStateLabel(R, state));
+                    list.SetItemMetadata(idx, state.Id.Value);
+                    if (state.Id == selected)
+                        list.Select(idx);
+                }
+            }
+        );
+
         dialog.PopupCentered();
     }
 

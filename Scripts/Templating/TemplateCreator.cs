@@ -101,6 +101,8 @@ public partial class TemplateCreator : Window
         _templateNameSelector.Select(
             _templateNameSelector.GetItemIndex(CurrentTemplate?.Id ?? SnowTag.Empty)
         );
+
+        SyncDataset(R);
     }
 
     public override void _Ready()
@@ -1636,67 +1638,49 @@ public partial class TemplateCreator : Window
 
     #region Datasets
 
-    private void ChangePage(object sender, ItemSelectedEventArgs e)
-    {
-        var rows = ProjectService.Instance.GetRows(CurrentTemplate.DataSet);
-        _textureContext.CurrentRow = e.Index >= 0 && e.Index < rows.Count ? rows[e.Index] : null;
-        _updateRequired = true;
-    }
+    private void ChangePage(object sender, ItemSelectedEventArgs e) =>
+        ProjectService.Instance.ForceSync(this);
 
     //Different dataset has been selected by the user
     private void OnDatasetChanged(SnowTag datasetRef)
     {
-        if (datasetRef == SnowTag.Empty)
-        {
-            _textureContext.DataSet = null;
-            _textureContext.CurrentRow = null;
-            _pageControl.Hide();
-            EditCurrentTemplate(t => t with { DataSet = SnowTag.Empty });
-        }
-        else
-        {
-            EditCurrentTemplate(t => t with { DataSet = datasetRef });
-        }
-
-        UpdateTextureContext(CurrentTemplate.DataSet);
-
-        _updateRequired = true;
-    }
-
-    private void UpdateTextureContext(SnowTag datasetRef)
-    {
-        var dataset = ProjectService.Instance.Get<DataSet>(datasetRef);
-        if (dataset != null)
-        {
-            EditCurrentTemplate(t => t with { DataSet = datasetRef });
-            _textureContext.DataSet = dataset;
-            var rows = ProjectService.Instance.GetRows(datasetRef);
-            _textureContext.CurrentRow = rows.Count > 0 ? rows[0] : null;
-        }
+        EditCurrentTemplate(t => t with { DataSet = datasetRef });
+        _pageControl.CurrentItem = 0;
+        ProjectService.Instance.ForceSync(this);
     }
 
     private void MapDataset()
     {
-        var datasetRef = CurrentTemplate.DataSet;
+        _dataSetSelector.SelectedDataSet = CurrentTemplate.DataSet;
+        _pageControl.CurrentItem = 0;
+        ProjectService.Instance.ForceSync(this);
+    }
 
-        if (datasetRef == SnowTag.Empty || ProjectService.Instance.Get<DataSet>(datasetRef) == null)
+    private void SyncDataset(IRecordReader R)
+    {
+        _updateRequired = true;
+
+        var datasetRef = CurrentTemplate?.DataSet ?? SnowTag.Empty;
+        var dataset = R.Get<DataSet>(datasetRef);
+        if (dataset == null)
         {
             _textureContext.DataSet = null;
             _textureContext.CurrentRow = null;
-            _dataSetSelector.SelectedDataSet = SnowTag.Empty;
             _pageControl.Hide();
-            _updateRequired = true;
             return;
         }
 
-        _dataSetSelector.SelectedDataSet = datasetRef;
-
-        UpdateTextureContext(datasetRef);
-
-        _pageControl.SetItemCount(ProjectService.Instance.GetRows(datasetRef).Count);
+        var rows = R.GetRows(datasetRef);
+        _pageControl.CurrentItem = Math.Clamp(
+            _pageControl.CurrentItem,
+            0,
+            Math.Max(rows.Count - 1, 0)
+        );
+        _pageControl.SetItemCount(rows.Count);
         _pageControl.Show();
 
-        _updateRequired = true;
+        _textureContext.DataSet = dataset;
+        _textureContext.CurrentRow = rows.Count > 0 ? rows[_pageControl.CurrentItem] : null;
     }
 
     #endregion

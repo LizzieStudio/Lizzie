@@ -37,8 +37,11 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         if (PresenceSynchronizer.Instance != null)
             PresenceSynchronizer.Instance.SeatsChanged += OnSeatsChanged;
         EventBus.Instance?.Subscribe<RequestPlayerPositionEvent>(OnReprompt);
+    }
 
-        PopulateList();
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
     }
 
     public override void _ExitTree()
@@ -60,14 +63,15 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     // Internal
     // -------------------------------------------------------------------------
 
-    private void PopulateList()
+    private void Sync(IRecordReader R)
     {
+        var selected = _seatList.GetSelectedItems();
+        int? selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : null;
+
         _seatList.Clear();
         _seatIndexMap.Clear();
 
-        var settings = ProjectService.Instance.Settings.Value;
-        if (settings == null)
-            return;
+        var settings = R.Value<ProjectGameSettings>();
 
         for (int i = 0; i < settings.Players.Length; i++)
         {
@@ -93,7 +97,15 @@ public partial class PlayerPositionDialog : ConfirmationDialog
             _seatIndexMap.Add(-1);
         }
 
-        // Pre-select first available entry
+        // Keep the player's choice selected while it's still available
+        var kept = selectedSeat is int seat ? _seatIndexMap.IndexOf(seat) : -1;
+        if (kept >= 0 && !_seatList.IsItemDisabled(kept))
+        {
+            _seatList.Select(kept);
+            return;
+        }
+
+        // Otherwise pre-select the first available entry
         for (int i = 0; i < _seatList.ItemCount; i++)
         {
             if (!_seatList.IsItemDisabled(i))
@@ -128,12 +140,12 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         QueueFree();
     }
 
-    private void OnSeatsChanged() => PopulateList();
+    private void OnSeatsChanged() => ProjectService.Instance.ForceSync(this);
 
     private void OnReprompt(RequestPlayerPositionEvent _)
     {
         // Another player claimed a seat; refresh availability.
-        PopulateList();
+        ProjectService.Instance.ForceSync(this);
     }
 
     private void ShowStatus(string message)

@@ -43,6 +43,11 @@ public partial class MultiplayerDialog : Window
         UpdateUI();
     }
 
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
+
     public override void _ExitTree()
     {
         // Unsubscribe from events
@@ -104,7 +109,6 @@ public partial class MultiplayerDialog : Window
         if (!isConnected)
         {
             _statusLabel.Text = "Not connected";
-            _playerList.Clear();
         }
         else if (isServer)
         {
@@ -115,10 +119,10 @@ public partial class MultiplayerDialog : Window
             _statusLabel.Text = $"Connected to {_addressInput.Text}:{_clientPortInput.Text}";
         }
 
-        UpdatePlayerList();
+        ProjectService.Instance.ForceSync(this);
     }
 
-    private void UpdatePlayerList()
+    private void Sync(IRecordReader R)
     {
         _playerList.Clear();
 
@@ -126,7 +130,7 @@ public partial class MultiplayerDialog : Window
         if (mm?.IsMultiplayerActive != true)
             return;
 
-        var settings = ProjectService.Instance?.Settings.Value;
+        var settings = R.Value<ProjectGameSettings>();
 
         foreach (var player in mm.Players.Values)
         {
