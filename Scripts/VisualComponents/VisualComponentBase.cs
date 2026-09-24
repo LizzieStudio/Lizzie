@@ -234,9 +234,11 @@ public abstract partial class VisualComponentBase : Area3D
     public virtual Effect[] ProcessCommandWithQuantity(VisualCommand command, int quantity) => [];
 
     /// <summary>
-    /// Implemented by flippable components.
+    /// Animates toward <paramref name="state"/> using the <see cref="ComponentState.Transition"/>.
+    /// <paramref name="MsecSinceStart"/> is how many milliseconds ago the write was made.
+    /// Returns false when there's nothing to animate, so the state is applied immediately.
     /// </summary>
-    public virtual void AnimateFlip(Vector3 targetRotation) { }
+    public virtual bool PlayTransition(ComponentState state, long MsecSinceStart) => false;
 
     public TextureFactory TextureFactory { get; set; }
 

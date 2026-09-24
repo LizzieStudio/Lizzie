@@ -133,14 +133,19 @@ public partial class VcToken : VisualComponentBase
                     s.Rotation.Y,
                     Mathf.DegToRad(targetFaceUp ? 0f : 180f)
                 ),
+                Transition = Transition.Flip,
             }
         );
     }
 
-    public override void AnimateFlip(Vector3 targetRotation)
+    public override bool PlayTransition(ComponentState s, long MsecSinceStart)
     {
+        if (s.Transition != Transition.Flip || MsecSinceStart >= 180f / _flipRate)
+            return false;
+
         _flipInProcess = true;
-        _targetZ = Mathf.RadToDeg(targetRotation.Z);
+        _targetZ = Mathf.RadToDeg(s.Rotation.Z);
+        return true;
     }
 
     private void ProcessFlip(double delta)

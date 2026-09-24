@@ -3,6 +3,16 @@ using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
+/// The animation a component plays when a write is applied.
+/// </summary>
+public enum Transition
+{
+    None,
+    Flip,
+    Roll,
+}
+
+/// <summary>
 /// A component's full replicated state. Every component write carries all of it.
 /// </summary>
 public record ComponentState
@@ -61,6 +71,13 @@ public record ComponentState
     /// <summary>Reversible soft-delete flag.</summary>
     [JsonPropertyName("x")]
     public bool Deleted { get; init; }
+
+    /// <summary>
+    /// How this write animates. It starts when the write was made and is never copied
+    /// forward, so it only ever describes the write that set it.
+    /// </summary>
+    [JsonPropertyName("t")]
+    public Transition Transition { get; init; }
 
     public void ApplyToComponent(VisualComponentBase component)
     {

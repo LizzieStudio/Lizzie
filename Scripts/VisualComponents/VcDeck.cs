@@ -35,6 +35,9 @@ public partial class VcDeck : VisualComponentGroup
         {
             base.Rotation = new Vector3(value.X, value.Y, 0f);
             _spinnyBits.Rotation = new Vector3(0f, 0f, value.Z);
+            // snapping ends any flip in progress
+            _showFace = IsFaceUp(value);
+            _flipInProcess = false;
         }
     }
 
@@ -143,16 +146,21 @@ public partial class VcDeck : VisualComponentGroup
             s with
             {
                 Rotation = new Vector3(s.Rotation.X, s.Rotation.Y, _showFace ? Mathf.Pi : 0f),
+                Transition = Transition.Flip,
             }
         );
     }
 
-    public override void AnimateFlip(Vector3 targetRotation)
+    public override bool PlayTransition(ComponentState s, long MsecSinceStart)
     {
+        if (s.Transition != Transition.Flip || MsecSinceStart >= 180f / _flipRate)
+            return false;
+
         _flipInProcess = true;
-        _showFace = IsFaceUp(targetRotation);
+        _showFace = IsFaceUp(s.Rotation);
         _rotMult = _showFace ? -1 : 1;
         _targetZ = _showFace ? 0 : 180;
+        return true;
     }
 
     private static bool IsFaceUp(Vector3 rotation) =>

@@ -1124,34 +1124,18 @@ public partial class GameObjects : Node
             return;
         }
 
-        // Roll and flip animate, so don't snap to their transform.
-        var animated = e.Action is RollAction or FlipAction;
-
         foreach (var effect in e.Effects)
             if (effect is ComponentEffect ce)
-                ApplyUpsert(e.Id, ce, animated);
+                ApplyUpsert(e.Id, ce);
 
         RebuildContainerCaches();
-
-        switch (e.Action)
-        {
-            case RollAction:
-                foreach (var fx in e.Effects.OfType<ComponentEffect>())
-                    if (GetComponent(fx.Id) is VcDie die)
-                        die.AnimateRoll(fx.State.Rotation);
-                break;
-            case FlipAction:
-                foreach (var fx in e.Effects.OfType<ComponentEffect>())
-                    GetComponent(fx.Id)?.AnimateFlip(fx.State.Rotation);
-                break;
-        }
 
         QueueStackingUpdate();
 
         EmitSignal(SignalName.TableChanged);
     }
 
-    private void ApplyUpsert(SnowportId eventId, ComponentEffect fx, bool animated)
+    private void ApplyUpsert(SnowportId eventId, ComponentEffect fx)
     {
         var s = fx.State;
         var r = fx.Id;
@@ -1177,7 +1161,7 @@ public partial class GameObjects : Node
             return;
         }
 
-        ApplyStateToComponent(c, s, animated);
+        ApplyStateToComponent(c, s, eventId);
     }
 
     /// <summary>
@@ -1191,8 +1175,14 @@ public partial class GameObjects : Node
         c.QueueFree();
     }
 
-    /// <summary>Applies a transform to a component.</summary>
-    private static void ApplyStateToComponent(VisualComponentBase c, ComponentState s, bool animated)
+    /// <summary>
+    /// Applies a write to a component, animating its transition if the write is recent enough.
+    /// </summary>
+    private static void ApplyStateToComponent(
+        VisualComponentBase c,
+        ComponentState s,
+        SnowportId writeId
+    )
     {
         c.Location = s.Location;
         c.ContainerRef = s.ContainerRef;
@@ -1201,7 +1191,10 @@ public partial class GameObjects : Node
             c.CursorOffset = s.Position;
         else
             c.Position = s.Position;
-        if (!animated)
+        if (
+            s.Transition == Transition.None
+            || !c.PlayTransition(s, Snowport.Clock.MsecSince(writeId))
+        )
             c.Rotation = s.Rotation;
         c.ZOrder = s.ZOrder;
     }
@@ -1373,7 +1366,7 @@ public partial class GameObjects : Node
             return;
         }
 
-        ApplyStateToComponent(live, winner.State, animated: false);
+        ApplyStateToComponent(live, winner.State, winnerId);
     }
 
     #endregion

@@ -94,14 +94,18 @@ public partial class VcDie : VisualComponentBase
         if (side <= _sideRotations.Length)
             s = s with { Rotation = _sideRotations[side - 1] * (3.14159f / 180f) }; // degrees to radians
 
-        return new ComponentEffect(s);
+        return new ComponentEffect(s with { Transition = Transition.Roll });
     }
 
-    public void AnimateRoll(Vector3 targetRotation)
+    public override bool PlayTransition(ComponentState s, long MsecSinceStart)
     {
-        _rollTargetRotation = targetRotation;
+        if (s.Transition != Transition.Roll || MsecSinceStart >= _rollDuration)
+            return false;
+
+        _rollTargetRotation = s.Rotation;
         _rollInProcess = true;
-        _rollTime = 0;
+        _rollTime = Math.Max(MsecSinceStart, 0);
+        return true;
     }
 
     private ComponentEffect ShowSide(int side)

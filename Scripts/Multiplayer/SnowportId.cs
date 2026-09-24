@@ -41,6 +41,15 @@ public class Snowport
         };
     }
 
+    /// <summary>The table's shared time, in milliseconds.</summary>
+    private ulong GameTimeMsec => Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
+
+    /// <summary>
+    /// The milliseconds since <paramref name="id"/> was created. Negative when it's in the future.
+    /// </summary>
+    public long MsecSince(SnowportId id) =>
+        (long)GameTimeMsec - (long)(id.logicClock >> 8);
+
     /// <summary>
     /// Create a new SnowportId.
     /// </summary>
@@ -48,8 +57,7 @@ public class Snowport
     public SnowportId Create()
     {
         // If the game time has advanced, update the hybrid clock to match.
-        var gameTime = Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
-        _useLogicClock = Math.Max(gameTime << 8, _useLogicClock);
+        _useLogicClock = Math.Max(GameTimeMsec << 8, _useLogicClock);
         var id = (_useLogicClock << 8) | source;
         _useLogicClock++;
         return new SnowportId(id);
@@ -85,7 +93,7 @@ public class Snowport
     {
         // If the ID's time appears to be in the future,
         // adjust the local time to match it.
-        var gameTime = Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
+        var gameTime = GameTimeMsec;
         var otherClock = id.logicClock >> 8;
         if (otherClock > gameTime)
             _globalOffsetMsec += otherClock - gameTime;
