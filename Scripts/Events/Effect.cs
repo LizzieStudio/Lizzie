@@ -14,7 +14,6 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
 [JsonDerivedType(typeof(SetReplicatedValueEffect<ProjectGameSettings>), "gs")]
-[JsonDerivedType(typeof(TableClearEffect), "clr")]
 [JsonDerivedType(typeof(SetReplicatedValueEffect<ActiveGameStateRef>), "ags")]
 public abstract class Effect
 {
@@ -64,10 +63,3 @@ public class SetReplicatedValueEffect<T> : Effect
     [JsonPropertyName("v")]
     public T Payload { get; set; }
 }
-
-/// <summary>
-/// Removes every component older than the enclosing event's id.
-/// Upserts from the same event "survive" the clear.
-/// This is used when restoring from a snapshots.
-/// </summary>
-public class TableClearEffect : Effect { }

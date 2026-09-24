@@ -260,12 +260,6 @@ public abstract partial class VisualComponentBase : Area3D
     public virtual SnowTag Reference { get; set; } = Snowport.Clock.CreateTag();
 
     /// <summary>
-    /// The id of the most recent event that moved this component.
-    /// When an outdated move event arrives, it will be ignored.
-    /// </summary>
-    public SnowportId LastMoveId { get; set; } = SnowportId.Empty;
-
-    /// <summary>
     /// The container that holds this component or
     /// <see cref="SnowTag.Empty"/>.
     /// </summary>

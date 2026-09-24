@@ -229,7 +229,6 @@ public partial class DebugConsole : Node
             UpdateReplicatedEffect<DataRow> => "DataRow",
             UpdateReplicatedEffect<Prototype> => "Prototype",
             UpdateReplicatedEffect<GameState> => "GameState",
-            TableClearEffect => "Clear",
             _ => Trim(fx.GetType().Name, "Effect"),
         };
 

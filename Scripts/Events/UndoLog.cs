@@ -10,15 +10,6 @@ public static class UndoLog
     /// </summary>
     public static bool IsUndoableEvent(TableEvent e) => e.Effects.Length > 0;
 
-    /// <summary>True when an event carries a <see cref="TableClearEffect"/>.</summary>
-    public static bool HasTableClear(TableEvent e)
-    {
-        foreach (var fx in e.Effects)
-            if (fx is TableClearEffect)
-                return true;
-        return false;
-    }
-
     /// <summary>
     /// True when an event has at least one drag or drop.
     /// </summary>
@@ -159,14 +150,6 @@ public static class UndoLog
         foreach (var fx in @base.Effects)
             if (fx is ComponentEffect)
                 affected.Add(fx.Id);
-
-        // A table clear "deletes" components without listing them,
-        // so reconstructing across it must revisit every component.
-        if (HasTableClear(@base))
-            foreach (var ev in log.Values)
-            foreach (var fx in ev.Effects)
-                if (fx is ComponentEffect)
-                    affected.Add(fx.Id);
 
         return affected;
     }

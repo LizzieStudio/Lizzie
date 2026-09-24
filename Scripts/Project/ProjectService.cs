@@ -299,7 +299,7 @@ public partial class ProjectService : Node
         foreach (var c in Containers)
             effects.AddRange(c.EnumerateSaveEffects());
 
-        effects.AddRange(GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>());
+        effects.AddRange(GameObjects?.GenerateCatchupEffects() ?? []);
 
         return [TableEvent.Now(null, effects.ToArray())];
     }
@@ -424,15 +424,13 @@ public partial class ProjectService : Node
     private ImmutableArray<ComponentEffect> BuildDelta(SnowTag parent)
     {
         var parentFold = FoldChain(parent);
-        var current = (GameObjects?.GenerateCatchupEffects() ?? Array.Empty<Effect>())
-            .OfType<ComponentEffect>()
-            .ToDictionary(e => e.Id);
+        var current = (GameObjects?.GenerateCatchupEffects() ?? []).ToDictionary(e => e.Id);
 
         var delta = new List<ComponentEffect>();
 
         // added or transformed components
         foreach (var (id, ce) in current)
-            if (!parentFold.TryGetValue(id, out var prev) || !StateEquals(prev.State, ce.State))
+            if (!parentFold.TryGetValue(id, out var prev) || prev.State != ce.State)
                 delta.Add(ce);
 
         // removed components
@@ -470,13 +468,17 @@ public partial class ProjectService : Node
 
         var effects = new List<Effect>
         {
-            new TableClearEffect(),
             new SetReplicatedValueEffect<ActiveGameStateRef> { Payload = new() { Id = stateRef } },
         };
+        var fold = FoldChain(stateRef);
+
+        // delete every component that isn't in the snapshot
+        foreach (var ce in GameObjects?.GenerateCatchupEffects() ?? [])
+            if (!fold.ContainsKey(ce.Id))
+                effects.Add(new ComponentEffect(ce.State with { Deleted = true }));
+
         // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
-        // Clear LastMoveId so ApplyUpsert falls back to this event's id and wins LWW.
-        foreach (var ce in FoldChain(stateRef).Values)
-            effects.Add(new ComponentEffect(ce.State with { LastMoveId = SnowportId.Empty }));
+        effects.AddRange(fold.Values);
 
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(new GameStateSwitchAction { Target = stateRef }, effects.ToArray())
@@ -508,10 +510,6 @@ public partial class ProjectService : Node
         }
         return fold;
     }
-
-    /// <summary>Compares two component states, ignoring the transient last-move id.</summary>
-    private static bool StateEquals(ComponentState a, ComponentState b) =>
-        a with { LastMoveId = SnowportId.Empty } == b with { LastMoveId = SnowportId.Empty };
 
     public void AddPrototypeToManifest(CreateObjectEventArgs args)
     {

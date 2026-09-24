@@ -62,12 +62,6 @@ public record ComponentState
     [JsonPropertyName("x")]
     public bool Deleted { get; init; }
 
-    /// <summary>
-    /// The last event that moved this component with a transform.
-    /// </summary>
-    [JsonPropertyName("m")]
-    public SnowportId LastMoveId { get; init; } = SnowportId.Empty;
-
     public void ApplyToComponent(VisualComponentBase component)
     {
         component.PrototypeRef = PrototypeRef;
@@ -83,6 +77,5 @@ public record ComponentState
         component.DataSetRowId = DataSetRowId;
         component.Location = Location;
         component.ContainerRef = ContainerRef;
-        component.LastMoveId = LastMoveId;
     }
 }

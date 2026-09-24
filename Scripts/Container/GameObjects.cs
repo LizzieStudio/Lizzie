@@ -29,18 +29,12 @@ public partial class GameObjects : Node
     /// <summary>
     /// Upserts whose prototype aren't yet available.
     /// </summary>
-    private readonly Dictionary<SnowTag, PendingSpawn> _pendingSpawns = new();
+    private readonly Dictionary<SnowTag, ComponentEffect> _pendingSpawns = new();
 
     /// <summary>
-    /// Each component's latest applied transform.
+    /// The id of the event that last wrote each component.
     /// </summary>
     private readonly Dictionary<SnowTag, SnowportId> _lastWrite = new();
-
-    /// <summary>
-    /// The id of the most recent <see cref="TableClearEffect"/>.
-    /// Any transform older than this is rejected.
-    /// </summary>
-    private SnowportId _clearBarrier = SnowportId.Empty;
 
     private GameController _gameController;
 
@@ -294,13 +288,14 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// Captures the current table as a set of creation effects for a late joiner.
+    /// Captures every component on the table, including spawns waiting on their prototype.
     /// </summary>
-    public Effect[] GenerateCatchupEffects()
+    public ComponentEffect[] GenerateCatchupEffects()
     {
         return ComponentNodes
             .OfType<VisualComponentBase>()
-            .Select(component => (Effect)ComponentEffect.Capture(component))
+            .Select(ComponentEffect.Capture)
+            .Concat(_pendingSpawns.Values)
             .ToArray();
     }
 
@@ -1102,7 +1097,6 @@ public partial class GameObjects : Node
 
         _pendingSpawns.Clear();
         _lastWrite.Clear();
-        _clearBarrier = SnowportId.Empty;
         EventSynchronizer.Instance?.Clear();
         PresenceSynchronizer.Instance?.Clear();
     }
@@ -1137,12 +1131,6 @@ public partial class GameObjects : Node
             if (effect is ComponentEffect ce)
                 ApplyUpsert(e.Id, ce, animated);
 
-        // We clear the table after upserts because the table clear ignores nodes
-        // from the same event as it. This means that nodes that exist before and
-        // after aren't recreated from scratch, but just kept.
-        if (e.Effects.Any(fx => fx is TableClearEffect))
-            ApplyTableClear(e.Id);
-
         RebuildContainerCaches();
 
         switch (e.Action)
@@ -1167,16 +1155,11 @@ public partial class GameObjects : Node
     {
         var s = fx.State;
         var r = fx.Id;
-        var writeId = s.LastMoveId == SnowportId.Empty ? eventId : s.LastMoveId;
 
-        // reject anything before a GameStateSwitchAction (for late arrivals)
-        if (writeId.CompareTo(_clearBarrier) < 0)
+        // Reject if it's older than the most recent write.
+        if (_lastWrite.TryGetValue(r, out var last) && eventId.CompareTo(last) < 0)
             return;
-
-        // Reject if it's older than the most recent transform.
-        if (_lastWrite.TryGetValue(r, out var last) && writeId.CompareTo(last) < 0)
-            return;
-        _lastWrite[r] = writeId;
+        _lastWrite[r] = eventId;
 
         var c = GetComponent(r);
 
@@ -1189,41 +1172,12 @@ public partial class GameObjects : Node
 
         if (c == null)
         {
-            if (!TryExecuteSpawn(writeId, fx))
-                AddPendingSpawn(writeId, fx);
+            if (!TryExecuteSpawn(fx))
+                AddPendingSpawn(fx);
             return;
         }
 
-        ApplyStateToComponent(c, writeId, s, animated);
-    }
-
-    /// <summary>
-    /// Removes every component older than the clear event and sets the clear barrier so
-    /// late arriving upserts are rejected.
-    /// </summary>
-    private void ApplyTableClear(SnowportId eventId)
-    {
-        if (_clearBarrier.CompareTo(eventId) < 0)
-            _clearBarrier = eventId;
-
-        foreach (var c in ComponentNodes.OfType<VisualComponentBase>().ToList())
-        {
-            if (c.LastMoveId.CompareTo(eventId) >= 0)
-                continue;
-            var r = c.Reference;
-            RemoveComponent(c);
-            _lastWrite.Remove(r);
-            _pendingSpawns.Remove(r);
-        }
-
-        // clear buffered spawns too
-        foreach (
-            var key in _pendingSpawns
-                .Where(kv => kv.Value.WriteId.CompareTo(eventId) < 0)
-                .Select(kv => kv.Key)
-                .ToList()
-        )
-            _pendingSpawns.Remove(key);
+        ApplyStateToComponent(c, s, animated);
     }
 
     /// <summary>
@@ -1238,14 +1192,8 @@ public partial class GameObjects : Node
     }
 
     /// <summary>Applies a transform to a component.</summary>
-    private static void ApplyStateToComponent(
-        VisualComponentBase c,
-        SnowportId writeId,
-        ComponentState s,
-        bool animated
-    )
+    private static void ApplyStateToComponent(VisualComponentBase c, ComponentState s, bool animated)
     {
-        c.LastMoveId = writeId;
         c.Location = s.Location;
         c.ContainerRef = s.ContainerRef;
         // While held, Position carries the cursor-relative offset.
@@ -1261,7 +1209,7 @@ public partial class GameObjects : Node
     /// <summary>
     /// Spawns a component from a transform.
     /// </summary>
-    private bool TryExecuteSpawn(SnowportId writeId, ComponentEffect fx)
+    private bool TryExecuteSpawn(ComponentEffect fx)
     {
         var s = fx.State;
         var proto = ProjectService.Instance.GetIncludingDeleted<Prototype>(s.PrototypeRef);
@@ -1288,17 +1236,15 @@ public partial class GameObjects : Node
         vcb.SpawnBuild(s, TextureFactory);
         QueueStackingUpdate();
 
-        vcb.LastMoveId = writeId;
-
         return true;
     }
 
     /// <summary>
     /// Holds a spawn until its prototype arrives.
     /// </summary>
-    private void AddPendingSpawn(SnowportId writeId, ComponentEffect fx)
+    private void AddPendingSpawn(ComponentEffect fx)
     {
-        _pendingSpawns[fx.Id] = new PendingSpawn(writeId, fx);
+        _pendingSpawns[fx.Id] = fx;
         ProjectService.Instance.ForceSync(this);
     }
 
@@ -1308,7 +1254,7 @@ public partial class GameObjects : Node
     private void Sync(IRecordReader R)
     {
         RetryPendingSpawns();
-        R.Get<Prototype>(_pendingSpawns.Values.Select(p => p.Effect.State.PrototypeRef));
+        R.Get<Prototype>(_pendingSpawns.Values.Select(p => p.State.PrototypeRef));
     }
 
     private void RetryPendingSpawns()
@@ -1320,11 +1266,9 @@ public partial class GameObjects : Node
         _pendingSpawns.Clear();
 
         foreach (var p in pending)
-            if (!TryExecuteSpawn(p.WriteId, p.Effect))
-                _pendingSpawns[p.Effect.Id] = p; // prototype still not available
+            if (!TryExecuteSpawn(p))
+                _pendingSpawns[p.Id] = p; // prototype still not available
     }
-
-    private record PendingSpawn(SnowportId WriteId, ComponentEffect Effect);
 
     #region Undo
 
@@ -1339,21 +1283,11 @@ public partial class GameObjects : Node
 
         var undone = UndoLog.ComputeUndone(log);
 
-        _clearBarrier = SnowportId.Empty;
         var tags = new HashSet<SnowTag>();
         foreach (var ev in log.Values)
-        {
-            if (
-                !undone.Contains(ev.Id)
-                && UndoLog.HasTableClear(ev)
-                && _clearBarrier.CompareTo(ev.Id) < 0
-            )
-                _clearBarrier = ev.Id;
-
-            foreach (var fx in ev.Effects)
-                if (fx is ComponentEffect ce)
-                    tags.Add(ce.Id);
-        }
+        foreach (var fx in ev.Effects)
+            if (fx is ComponentEffect ce)
+                tags.Add(ce.Id);
 
         foreach (var r in tags)
             ReconstructComponent(r, log, undone);
@@ -1377,29 +1311,13 @@ public partial class GameObjects : Node
         foreach (var r in UndoLog.ResolveAffectedComponents(log, undo.Target))
             ReconstructComponent(r, log, undone);
 
-        _clearBarrier = SnowportId.Empty;
-        foreach (var ev in log.Values)
-        {
-            if (
-                !undone.Contains(ev.Id)
-                && UndoLog.HasTableClear(ev)
-                && _clearBarrier.CompareTo(ev.Id) < 0
-            )
-            {
-                _clearBarrier = ev.Id;
-            }
-        }
-
         RebuildContainerCaches();
         QueueStackingUpdate();
         EmitSignal(SignalName.TableChanged);
     }
 
-    private static SnowportId WriteIdOf(ComponentEffect ce, SnowportId eventId) =>
-        ce.State.LastMoveId == SnowportId.Empty ? eventId : ce.State.LastMoveId;
-
     /// <summary>
-    /// Reconstructs one component from the log by scanning backward for the most recent transforms.
+    /// Reconstructs one component from the log by scanning backward for its most recent write.
     /// </summary>
     private void ReconstructComponent(
         SnowTag r,
@@ -1409,73 +1327,53 @@ public partial class GameObjects : Node
     {
         ComponentEffect winner = null;
         SnowportId winnerId = SnowportId.Empty;
-        SnowportId barrier = SnowportId.Empty;
 
-        for (int i = log.Count - 1; i >= 0; i--)
+        // The log is sorted, so the first write found is the newest.
+        for (int i = log.Count - 1; i >= 0 && winner == null; i--)
         {
             var e = log.GetAt(i).Value;
             if (undone.Contains(e.Id))
                 continue;
 
-            bool clearHere = UndoLog.HasTableClear(e);
-            if (clearHere && barrier.CompareTo(e.Id) < 0)
-                barrier = e.Id;
-
-            ComponentEffect ce = null;
             foreach (var fx in e.Effects)
-                if (fx is ComponentEffect x && x.Id == r)
-                {
-                    ce = x;
-                    break;
-                }
-
-            if (ce != null && ce.State.Location != VisualComponentBase.ComponentLocation.Cursor)
-            {
                 if (
-                    winner == null
-                    || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(winner, winnerId)) > 0
+                    fx is ComponentEffect ce
+                    && ce.Id == r
+                    && ce.State.Location != VisualComponentBase.ComponentLocation.Cursor
                 )
                 {
                     winner = ce;
                     winnerId = e.Id;
+                    break;
                 }
-            }
-
-            if (winner != null)
-                break;
-            if (clearHere)
-                break;
         }
 
         _pendingSpawns.Remove(r);
         var live = GetComponent(r);
 
-        var wId = winner == null ? SnowportId.Empty : WriteIdOf(winner, winnerId);
-        var cleared = winner != null && barrier.CompareTo(wId) > 0;
-
-        if (winner == null || cleared || winner.State.Deleted)
+        if (winner == null)
         {
             RemoveComponent(live);
-            if (winner == null || cleared)
-                _lastWrite.Remove(r);
-            else
-                _lastWrite[r] = wId;
+            _lastWrite.Remove(r);
             return;
         }
 
-        _lastWrite[r] = wId;
+        _lastWrite[r] = winnerId;
 
-        var s = winner.State with { LastMoveId = wId };
+        if (winner.State.Deleted)
+        {
+            RemoveComponent(live);
+            return;
+        }
 
         if (live == null)
         {
-            var spawnFx = new ComponentEffect(s);
-            if (!TryExecuteSpawn(wId, spawnFx))
-                AddPendingSpawn(wId, spawnFx);
+            if (!TryExecuteSpawn(winner))
+                AddPendingSpawn(winner);
             return;
         }
 
-        ApplyStateToComponent(live, wId, s, animated: false);
+        ApplyStateToComponent(live, winner.State, animated: false);
     }
 
     #endregion
