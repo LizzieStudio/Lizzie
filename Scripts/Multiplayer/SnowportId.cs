@@ -47,8 +47,7 @@ public class Snowport
     /// <summary>
     /// The milliseconds since <paramref name="id"/> was created. Negative when it's in the future.
     /// </summary>
-    public long MsecSince(SnowportId id) =>
-        (long)GameTimeMsec - (long)(id.logicClock >> 8);
+    public long MsecSince(SnowportId id) => (long)GameTimeMsec - (long)(id.logicClock >> 8);
 
     /// <summary>
     /// Create a new SnowportId.

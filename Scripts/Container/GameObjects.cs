@@ -1188,9 +1188,9 @@ public partial class GameObjects : Node
         c.ContainerRef = s.ContainerRef;
         // While held, Position carries the cursor-relative offset.
         if (s.Location == VisualComponentBase.ComponentLocation.Cursor)
-            c.CursorOffset = s.Position;
+            c.CursorOffset = s.PositionAt(c.CursorOffset.Y);
         else
-            c.Position = s.Position;
+            c.Position = s.PositionAt(c.Position.Y);
         if (
             s.Transition == Transition.None
             || !c.PlayTransition(s, Snowport.Clock.MsecSince(writeId))
@@ -1227,6 +1227,7 @@ public partial class GameObjects : Node
         vcb.PrototypeRef = s.PrototypeRef;
         _table.AddChild(vcb);
         vcb.SpawnBuild(s, TextureFactory);
+        vcb.Position = s.PositionAt(vcb.YHeight / 2f);
         QueueStackingUpdate();
 
         return true;

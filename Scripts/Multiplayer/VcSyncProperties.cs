@@ -43,8 +43,43 @@ public record ComponentState
     [JsonPropertyName("pr")]
     public SnowTag PrototypeRef { get; init; }
 
-    [JsonPropertyName("p")]
-    public Vector3 Position { get; init; }
+    /// <summary>
+    /// X on the table, in tenths of a millimeter.
+    /// </summary>
+    [JsonPropertyName("px")]
+    public int X { get; init; }
+
+    /// <summary>
+    /// Z on the table, in tenths of a millimeter.
+    /// </summary>
+    [JsonPropertyName("pz")]
+    public int Z { get; init; }
+
+    /// <summary>
+    /// Sets <see cref="X"/> and <see cref="Z"/> from a node position, rounding to the nearest
+    /// tenth of a millimeter. Y is dropped since stacking derives height.
+    /// </summary>
+    [JsonIgnore]
+    public Vector3 Position
+    {
+        init
+        {
+            X = CmToTenthMm(value.X);
+            Z = CmToTenthMm(value.Z);
+        }
+    }
+
+    /// <summary>
+    /// The node position for this state with the provided <paramref name="y"/>.
+    /// </summary>
+    public Vector3 PositionAt(float y) => new(TenthMmToCm(X), y, TenthMmToCm(Z));
+
+    // Node units are centimeters.
+    private const float TenthMmPerUnit = 100f;
+
+    private static int CmToTenthMm(float v) => (int)(v * TenthMmPerUnit);
+
+    private static float TenthMmToCm(int v) => v / TenthMmPerUnit;
 
     [JsonPropertyName("r")]
     public Vector3 Rotation { get; init; }
@@ -85,9 +120,9 @@ public record ComponentState
         // While dragged, Position carries the cursor-relative offset.
         // This might be a bad idea if it becomes hard to keep in-sync.
         if (Location == VisualComponentBase.ComponentLocation.Cursor)
-            component.CursorOffset = Position;
+            component.CursorOffset = PositionAt(component.CursorOffset.Y);
         else
-            component.Position = Position;
+            component.Position = PositionAt(component.Position.Y);
         component.Rotation = Rotation;
         component.ZOrder = ZOrder;
         component.DataSetRowIndex = DataSetRowIndex;
