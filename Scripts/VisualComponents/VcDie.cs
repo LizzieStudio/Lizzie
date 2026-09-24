@@ -99,12 +99,12 @@ public partial class VcDie : VisualComponentBase
 
     public override bool PlayTransition(ComponentState s, long MsecSinceStart)
     {
-        if (s.Transition != Transition.Roll || MsecSinceStart >= _rollDuration)
+        if (s.Transition != Transition.Roll || MsecSinceStart >= _rollDuration * 1000)
             return false;
 
         _rollTargetRotation = s.Rotation;
         _rollInProcess = true;
-        _rollTime = Math.Max(MsecSinceStart, 0);
+        _rollTime = Math.Max(MsecSinceStart, 0) / 1000.0;
         return true;
     }
 

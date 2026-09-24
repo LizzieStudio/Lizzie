@@ -13,10 +13,6 @@ public partial class TextureFactory : SubViewport
     private Texture2D _rectShape;
     private Texture2D _hexPointShape;
     private Texture2D _hexFlatShape;
-    private Texture2D _roundedRectShape;
-    private Texture2D _triangleShape;
-    private Texture2D _starShape;
-    private Texture2D _pentagonShape;
     private IconLibrary _iconLibrary = new();
 
     // Called when the node enters the scene tree for the first time.
@@ -28,11 +24,6 @@ public partial class TextureFactory : SubViewport
         _rectShape = ResourceLoader.Load("res://Textures/Shapes/square.png") as Texture2D;
         _hexPointShape = ResourceLoader.Load("res://Textures/Shapes/hex.png") as Texture2D;
         _hexFlatShape = ResourceLoader.Load("res://Textures/Shapes/hexflat.png") as Texture2D;
-        _roundedRectShape =
-            ResourceLoader.Load("res://Textures/Shapes/RoundedRectangle.png") as Texture2D;
-        _triangleShape = ResourceLoader.Load("res://Textures/Shapes/triangle.png") as Texture2D;
-        _starShape = ResourceLoader.Load("res://Textures/Shapes/star.png") as Texture2D;
-        _pentagonShape = ResourceLoader.Load("res://Textures/Shapes/pentagon.png") as Texture2D;
     }
 
     private int _frameCount;
@@ -157,9 +148,6 @@ public partial class TextureFactory : SubViewport
                 break;
             case TokenShape.HexFlat:
                 texture = _hexFlatShape;
-                break;
-            case TokenShape.RoundedRect:
-                texture = _roundedRectShape;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -1130,15 +1118,6 @@ public partial class TextureFactory : SubViewport
         ExtendedShape,
         UserShape,
         RectangleFrame,
-        /*
-        RectangleShape,
-        CircleShape,
-        HexFlatUpShape,
-        HexPointUpShape,
-        TriangleShape,
-        StarShape,
-        PentagonShape
-        */
     }
 
     public enum TokenShape
@@ -1147,7 +1126,6 @@ public partial class TextureFactory : SubViewport
         Circle = 1,
         HexPoint = 2,
         HexFlat = 3,
-        RoundedRect = 4,
     }
 
     public class TextureDefinition

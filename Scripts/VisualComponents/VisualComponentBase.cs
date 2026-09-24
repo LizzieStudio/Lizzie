@@ -126,13 +126,18 @@ public abstract partial class VisualComponentBase : Area3D
         base._InputEvent(camera, @event, eventPosition, normal, shapeIdx);
     }
 
-    // bug prevention: two events in rapid succession can fight each other
     private Tween _yTween;
+    private float _targetY;
 
     public void MoveToTargetY(float y)
     {
+        bool tweening = IsInstanceValid(_yTween) && _yTween.IsRunning();
+        if (Mathf.IsEqualApprox(tweening ? _targetY : Position.Y, y))
+            return;
+
         if (IsInstanceValid(_yTween))
             _yTween.Kill();
+        _targetY = y;
         _yTween = GetTree().CreateTween();
         _yTween.TweenProperty(this, "position:y", y, 0.2f);
     }
@@ -170,10 +175,11 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// Produce the effects for any contained components.
-    /// <param name="containerRef">the id of the container to these children</param>
+    /// The components to spawn as a stack on top of this one, bottom first.
+    /// <strong>Their ZOrders do not come assigned.</strong>
     /// </summary>
-    public virtual IEnumerable<ComponentEffect> GetSpawnChildEffects(SnowTag containerRef)
+    /// <param name="self">The state this component spawns with.</param>
+    public virtual IEnumerable<ComponentState> GetSpawnStack(ComponentState self)
     {
         yield break;
     }
@@ -531,6 +537,11 @@ public abstract partial class VisualComponentBase : Area3D
     /// While this component is being dragged, the relative position to the cursor.
     /// </summary>
     public Vector3 CursorOffset { get; set; }
+
+    /// <summary>
+    /// Local-only. While dragged, the height this component rests at within its dragged group.
+    /// </summary>
+    public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
     public bool IsDragging => Location == ComponentLocation.Cursor;

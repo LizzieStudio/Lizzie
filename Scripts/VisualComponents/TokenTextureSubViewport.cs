@@ -10,11 +10,7 @@ public partial class TokenTextureSubViewport : SubViewport
 
     private List<Texture2D> _shapeTextures;
 
-    private ColorRect _square;
     private Label _label;
-    private TextureRect _hexPoint;
-    private TextureRect _hexFlat;
-    private TextureRect _circle;
     private LabelSettings _labelSettings;
 
     private TextureRect _clipRect;
@@ -25,8 +21,6 @@ public partial class TokenTextureSubViewport : SubViewport
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        //_square = GetNode<ColorRect>("ColorRect");
-
         _label = GetNode<Label>("Label");
         _labelSettings = new LabelSettings();
         _labelSettings.FontSize = 24;
@@ -99,19 +93,11 @@ public partial class TokenTextureSubViewport : SubViewport
         Circle = 1,
         HexPoint = 2,
         HexFlat = 3,
-        RoundedRect = 4,
     }
 
     public void SetShape(TokenShape shape)
     {
         _clipRect.Texture = _shapeTextures[(int)shape];
-
-        /*
-        _square.Visible = (shape == TokenShape.Square);
-        _circle.Visible = (shape == TokenShape.Circle);
-        _hexPoint.Visible = (shape == TokenShape.HexPoint);
-        _hexFlat.Visible = (shape == TokenShape.HexFlat);
-        */
     }
 
     public void SetSize(float width, float height)

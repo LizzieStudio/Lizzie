@@ -261,20 +261,25 @@ public partial class GameObjects : Node
 
         foreach (var component in components)
         {
-            var containerRef = Snowport.Clock.CreateTag();
+            var self = ComponentState.Capture(component) with
+            {
+                Id = Snowport.Clock.CreateTag(),
+                ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
+            };
+            effects.Add(new ComponentEffect(self));
 
-            var childEffects = component.GetSpawnChildEffects(containerRef).ToList();
-
-            effects.AddRange(childEffects);
-            effects.Add(
-                new ComponentEffect(
-                    ComponentState.Capture(component) with
-                    {
-                        Id = containerRef,
-                        ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
-                    }
-                )
-            );
+            // The stack goes above the component, bottom first.
+            foreach (var s in component.GetSpawnStack(self))
+            {
+                effects.Add(
+                    new ComponentEffect(
+                        s with
+                        {
+                            ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
+                        }
+                    )
+                );
+            }
         }
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
@@ -304,7 +309,12 @@ public partial class GameObjects : Node
         Dictionary<SnowTag, int> counts = new();
         foreach (var c in ComponentNodes)
         {
-            if (c is VisualComponentBase vcb && vcb.PrototypeRef != SnowTag.Empty && vcb.Visible)
+            if (
+                c is VisualComponentBase vcb
+                && vcb.PrototypeRef != SnowTag.Empty
+                && vcb.Visible
+                && !vcb.IsCardInstance
+            )
             {
                 if (!counts.TryAdd(vcb.PrototypeRef, 1))
                 {
@@ -313,6 +323,24 @@ public partial class GameObjects : Node
             }
         }
         return counts;
+    }
+
+    /// <summary>
+    /// The cards stacked exactly on top of <paramref name="bottom"/>.
+    /// </summary>
+    public List<VisualComponentBase> GetStack(VisualComponentBase bottom)
+    {
+        var key = ComponentState.TableKey(bottom.Position);
+        return ComponentNodes
+            .OfType<VcToken>()
+            .Where(c =>
+                c.Location == VisualComponentBase.ComponentLocation.Table
+                && c.ZOrder > bottom.ZOrder
+                && ComponentState.TableKey(c.Position) == key
+            )
+            .OrderByDescending(c => c.ZOrder)
+            .Cast<VisualComponentBase>()
+            .ToList();
     }
 
     #endregion
@@ -419,114 +447,168 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// Determines the maximum y-stacking height for the dragged objects.
+    /// The table's footprints from the last stacking pass with the height of each one's top,
+    /// highest first. Drags use it to find what they're passing over.
     /// </summary>
-    /// <returns></returns>
-    private float GetDragHeight()
-    {
-        var _dragObjects = GetDraggingObjects().ToList();
-        if (!_dragObjects.Any())
-            return 0;
+    private List<(Footprint Footprint, float Top)> _tableTops = new();
 
-        var children = ComponentNodes;
-
-        //make a list of all the objects that are 'in line' with the shapes of the moving objects
-        float maxFloor = 0;
-
-        foreach (var d in _dragObjects)
-        {
-            foreach (var c in children)
-            {
-                if (c is VisualComponentBase vcb)
-                {
-                    if (_dragObjects.Contains(vcb))
-                        continue;
-
-                    if (CheckOverlap(d, vcb))
-                    {
-                        maxFloor = Mathf.Max(maxFloor, vcb.Position.Y + vcb.YHeight / 2);
-                    }
-                }
-            }
-        }
-
-        return maxFloor;
-    }
-
+    /// <summary>
+    /// Rests each table component on the highest top among the components below it.
+    /// </summary>
     private void UpdateStackingHeights()
     {
-        //var children = ComponentNodes;
-        var children = GetNotDraggingObjects().ToArray();
+        var table = GetNotDraggingObjects().ToArray();
+        var floors = StackFloors(table, out var footprints);
 
-        //this dictionary keeps track of objects that are below a certain object. The key is the object id
-        //(in the children array), and the list elements are the object ids of the things that are under it.
-        Dictionary<int, List<int>> underneath = new();
-        for (int i = 0; i < children.Length; i++)
+        _tableTops = footprints
+            .Select(f => (f, floors[f.Index] + f.YHeight))
+            .OrderByDescending(t => t.Item2)
+            .ToList();
+
+        for (int i = 0; i < table.Length; i++)
+            table[i].MoveToTargetY(floors[i] + (table[i].YHeight / 2f));
+    }
+
+    /// <summary>
+    /// Stacks each cursor's dragged components among themselves, so a dragged deck keeps its shape.
+    /// </summary>
+    private void UpdateDragFloors()
+    {
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.ContainerRef))
         {
-            var ci = children[i] as VisualComponentBase;
+            var dragged = group.ToArray();
+            var floors = StackFloors(dragged, out _);
+            for (int i = 0; i < dragged.Length; i++)
+                dragged[i].DragFloor = floors[i];
+        }
+    }
 
-            if (ci == null)
+    /// <summary>
+    /// The height each component rests at when the components are stacked on the table, which is
+    /// the highest top among the components below it that it overlaps.
+    /// </summary>
+    /// <param name="footprints">The footprints of the components that have a shape, by X.</param>
+    private static float[] StackFloors(
+        IReadOnlyList<VisualComponentBase> components,
+        out List<Footprint> footprints
+    )
+    {
+        var below = new List<int>[components.Count];
+
+        // Only components with a shape stack.
+        footprints = new List<Footprint>(components.Count);
+        for (int i = 0; i < components.Count; i++)
+            if (components[i].ShapeProfiles.Count > 0)
+                footprints.Add(new Footprint(i, components[i]));
+
+        // Sort by X to at least skip any components that don't overlap horizontally.
+        footprints.Sort((a, b) => a.Bounds.Position.X.CompareTo(b.Bounds.Position.X));
+        for (int a = 0; a < footprints.Count; a++)
+        {
+            var fa = footprints[a];
+            for (int b = a + 1; b < footprints.Count; b++)
             {
-                GD.PrintErr($"{children[i].Name} not VCB");
-                continue;
-            }
-
-            if (ci.ShapeProfiles.Count == 0)
-                continue;
-
-            for (int j = 0; j < children.Length; j++)
-            {
-                var cj = children[j];
-
-                if (cj == null)
-                {
-                    GD.PrintErr($"{children[j].Name} not VCB");
+                var fb = footprints[b];
+                if (fb.Bounds.Position.X > fa.Bounds.End.X)
+                    break;
+                if (!fa.Bounds.Intersects(fb.Bounds, includeBorders: true))
                     continue;
-                }
+                // Components with the same center always overlap.
+                if (fa.Key != fb.Key && !CheckOverlap(fa.Component, fb.Component))
+                    continue;
 
-                if (cj.ZOrder < ci.ZOrder && CheckOverlap(ci, cj)) //lower zOrders are below other items
-                {
-                    //GD.PrintErr($"Area {i} overlaps Area {j}");
-                    //add to dictionary
-                    if (underneath.ContainsKey(i))
-                    {
-                        underneath[i].Add(j);
-                    }
-                    else
-                    {
-                        underneath.Add(i, new List<int> { j });
-                    }
-                }
+                if (fa.ZOrder < fb.ZOrder)
+                    (below[fb.Index] ??= new()).Add(fa.Index);
+                else if (fb.ZOrder < fa.ZOrder)
+                    (below[fa.Index] ??= new()).Add(fb.Index);
             }
         }
 
-        //loop through all the objects and check the dictionary (which is in Z order) and stack
-        //The y coordinate is set to the sum of all of the YHeight values below it.
-        //We loop through all the children (and not just the UNDERNEATH dictionary entries)
-        //in case there's nothing underneath them. The dictionary only contains items with something below
-        //them
-
-        for (int i = 0; i < children.Length; i++)
+        // Settle from the bottom up so everything below is placed first.
+        var floors = new float[components.Count];
+        var top = new float[components.Count];
+        foreach (int i in Enumerable.Range(0, components.Count).OrderBy(i => components[i].ZOrder))
         {
-            var ci = children[i] as VisualComponentBase;
-            if (ci is null)
+            float floor = 0;
+            if (below[i] != null)
+                foreach (int j in below[i])
+                    floor = Mathf.Max(floor, top[j]);
+
+            floors[i] = floor;
+            top[i] = floor + components[i].YHeight;
+        }
+
+        return floors;
+    }
+
+    /// <summary>
+    /// The highest top among the table components under a dragged group, which it floats above.
+    /// </summary>
+    private float DragLift(List<VisualComponentBase> dragged)
+    {
+        var footprints = dragged
+            .Where(c => c.ShapeProfiles.Count > 0)
+            .Select(c => new Footprint(0, c))
+            .ToList();
+        if (footprints.Count == 0)
+            return 0;
+
+        var bounds = footprints[0].Bounds;
+        foreach (var f in footprints)
+            bounds = bounds.Merge(f.Bounds);
+
+        // Highest first, so the first overlap found is the answer.
+        foreach (var (table, top) in _tableTops)
+        {
+            if (!bounds.Intersects(table.Bounds, includeBorders: true))
+                continue;
+            var c = table.Component;
+            if (!IsInstanceValid(c) || c.Location != VisualComponentBase.ComponentLocation.Table)
                 continue;
 
-            float floor = 0;
+            foreach (var f in footprints)
+                if (
+                    f.Bounds.Intersects(table.Bounds, includeBorders: true)
+                    && CheckOverlap(f.Component, c)
+                )
+                    return top;
+        }
 
-            if (underneath.TryGetValue(i, out var elements))
+        return 0;
+    }
+
+    /// <summary>
+    /// A component's footprint on the table, read once for the stacking pass.
+    /// </summary>
+    private readonly struct Footprint
+    {
+        public readonly int Index;
+        public readonly VisualComponentBase Component;
+        public readonly (int X, int Z) Key;
+        public readonly Rect2 Bounds;
+        public readonly ZOrder ZOrder;
+        public readonly float YHeight;
+
+        public Footprint(int index, VisualComponentBase c)
+        {
+            Index = index;
+            Component = c;
+            var position = c.Position;
+            Key = ComponentState.TableKey(position);
+            ZOrder = c.ZOrder;
+            YHeight = c.YHeight;
+
+            float angle = c.Rotation.Y;
+            var center = new Vector2(position.X, position.Z);
+            Bounds = default;
+            bool first = true;
+            foreach (var profile in c.ShapeProfiles)
             {
-                foreach (var o in elements)
-                {
-                    if (children[o] is VisualComponentBase co)
-                        floor += co.YHeight;
-                }
+                var t = new Transform2D(angle, center + profile.Offset.Rotated(angle));
+                var rect = t * profile.Shape.GetRect();
+                Bounds = first ? rect : Bounds.Merge(rect);
+                first = false;
             }
-
-            //GD.Print($"New pos for {i}: {floor + (ci.YHeight / 2f)}");
-
-            ci.MoveToTargetY(floor + (ci.YHeight / 2f));
-            //ci.Position = new Vector3(ci.Position.X, floor + (ci.YHeight / 2f), ci.Position.Z);
         }
     }
 
@@ -664,7 +746,13 @@ public partial class GameObjects : Node
 
         var startCursor = _dragPlane.GetCursorProjection();
 
-        BeginDrag(GetSelectedObjects().Where(o => o.CanDrag), startCursor);
+        // A deck carries the cards stacked on it.
+        var dragged = GetSelectedObjects()
+            .Where(o => o.CanDrag)
+            .SelectMany(o => o is VcDeck deck ? GetStack(deck).Append(deck) : [o])
+            .Distinct();
+
+        BeginDrag(dragged, startCursor);
     }
 
     /// <summary>
@@ -958,24 +1046,67 @@ public partial class GameObjects : Node
     {
         _localDragOverHand = false;
 
+        var ordered = dragged.OrderBy(c => c.ZOrder).ToList();
+        var (snapX, snapZ) = SnapDelta(ordered);
+
         var stamp = Snowport.Clock.Create();
-        var dropped = dragged
-            .Select(
-                (component, index) =>
-                    new ComponentEffect(
-                        ComponentState.Capture(component) with
-                        {
-                            Location = VisualComponentBase.ComponentLocation.Table,
-                            ContainerRef = SnowTag.Empty,
-                            Position = component.Position,
-                            ZOrder = new ZOrder(ZTarget.Top, index, stamp),
-                        }
-                    )
-            )
-            .ToArray();
+        var dropped = new Effect[ordered.Count];
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var s = ComponentState.Capture(ordered[i]) with
+            {
+                Location = VisualComponentBase.ComponentLocation.Table,
+                ContainerRef = SnowTag.Empty,
+                Position = ordered[i].Position,
+                ZOrder = new ZOrder(ZTarget.Top, i, stamp),
+            };
+            dropped[i] = new ComponentEffect(s with { X = s.X + snapX, Z = s.Z + snapZ });
+        }
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), dropped));
     }
+
+    /// <summary>
+    /// The offset that snapping should apply to the components.
+    /// If a candidate VcToken or deck is found, this offset will snap to a stacked position.
+    /// If no candidate is found, returns (0, 0).
+    /// </summary>
+    private (int X, int Z) SnapDelta(List<VisualComponentBase> dragged)
+    {
+        var targets = GetNotDraggingObjects()
+            .Where(c => c is VcToken or VcDeck)
+            .Select(c => ComponentState.TableKey(c.Position))
+            .ToList();
+
+        foreach (var card in dragged.OfType<VcToken>())
+        {
+            var from = ComponentState.TableKey(card.Position);
+            var found = false;
+            (int X, int Z) nearest = (0, 0);
+            long nearestDistance = (long)SnapRange * SnapRange;
+
+            foreach (var to in targets)
+            {
+                long dx = to.X - from.X;
+                long dz = to.Z - from.Z;
+                long distance = dx * dx + dz * dz;
+                if (distance <= nearestDistance)
+                {
+                    found = true;
+                    nearest = (to.X - from.X, to.Z - from.Z);
+                    nearestDistance = distance;
+                }
+            }
+
+            if (found)
+                return nearest;
+        }
+
+        return (0, 0);
+    }
+
+    /// <summary>How close a dropped card must be to snap, in tenths of a millimeter.</summary>
+    private const int SnapRange = 250;
 
     /// <summary>
     /// Submits the event to send components to the hand.
@@ -1247,7 +1378,11 @@ public partial class GameObjects : Node
     /// </summary>
     private void Sync(IRecordReader R)
     {
-        RetryPendingSpawns();
+        if (_pendingSpawns.Count > 0)
+        {
+            RetryPendingSpawns();
+            RebuildContainerCaches();
+        }
         R.Get<Prototype>(_pendingSpawns.Values.Select(p => p.State.PrototypeRef));
     }
 
@@ -1373,46 +1508,66 @@ public partial class GameObjects : Node
     #endregion
 
     /// <summary>
-    /// Refreshes every container's child cache from the source-of-truth,
-    /// <see cref="VisualComponentBase.ContainerRef"/>.
+    /// Refreshes every container's child cache and every deck's count.
     /// </summary>
     private void RebuildContainerCaches()
     {
         var all = ComponentNodes.OfType<VisualComponentBase>().ToList();
         foreach (var group in all.OfType<VisualComponentGroup>())
             group.RebuildCache(all);
+        UpdateDeckCounts(all);
+        UpdateDragFloors();
+    }
+
+    /// <summary>
+    /// Sets each deck's card count.
+    /// </summary>
+    private static void UpdateDeckCounts(List<VisualComponentBase> all)
+    {
+        var stacks = all.OfType<VcToken>()
+            .Where(c => c.Location == VisualComponentBase.ComponentLocation.Table)
+            .ToLookup(c => ComponentState.TableKey(c.Position), c => c.ZOrder);
+
+        foreach (var deck in all.OfType<VcDeck>())
+            deck.SetCount(
+                stacks[ComponentState.TableKey(deck.Position)].Count(z => z > deck.ZOrder)
+            );
     }
 
     private bool _localDragOverHand;
 
     private void ProcessActiveDrags()
     {
-        var dragHeight = GetDragHeight();
         var cursors = PresenceSynchronizer.Instance;
         if (cursors == null)
             return;
 
         var localCursorRef = cursors.LocalCursorRef;
 
-        foreach (var n in ComponentNodes)
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.ContainerRef))
         {
-            if (n is not VisualComponentBase { IsDragging: true } c)
-                continue;
-
-            bool isLocal = localCursorRef != SnowTag.Empty && c.ContainerRef == localCursorRef;
-
+            bool isLocal = localCursorRef != SnowTag.Empty && group.Key == localCursorRef;
             if (isLocal && _localDragOverHand)
                 continue;
 
-            if (!cursors.TryGetCursorByContainer(c.ContainerRef, out var cursor))
+            if (!cursors.TryGetCursorByContainer(group.Key, out var cursor))
                 continue;
 
-            c.Position = new Vector3(
-                cursor.X + c.CursorOffset.X,
-                dragHeight + c.YHeight,
-                cursor.Z + c.CursorOffset.Z
-            );
-            c.LogicalVisible = true;
+            // Follow the cursor, then float the group, keeping its shape, above what's below.
+            var dragged = group.ToList();
+            foreach (var c in dragged)
+                c.Position = new Vector3(
+                    cursor.X + c.CursorOffset.X,
+                    c.Position.Y,
+                    cursor.Z + c.CursorOffset.Z
+                );
+
+            float lift = DragLift(dragged);
+            foreach (var c in dragged)
+            {
+                c.Position = c.Position with { Y = lift + c.DragFloor + c.YHeight };
+                c.LogicalVisible = true;
+            }
         }
     }
 

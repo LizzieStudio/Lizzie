@@ -74,10 +74,16 @@ public record ComponentState
     /// </summary>
     public Vector3 PositionAt(float y) => new(TenthMmToCm(X), y, TenthMmToCm(Z));
 
+    /// <summary>
+    /// A node's table position in tenths of a millimeter.
+    /// </summary>
+    public static (int X, int Z) TableKey(Vector3 nodePosition) =>
+        (CmToTenthMm(nodePosition.X), CmToTenthMm(nodePosition.Z));
+
     // Node units are centimeters.
     private const float TenthMmPerUnit = 100f;
 
-    private static int CmToTenthMm(float v) => (int)(v * TenthMmPerUnit);
+    private static int CmToTenthMm(float v) => (int)MathF.Round(v * TenthMmPerUnit);
 
     private static float TenthMmToCm(int v) => v / TenthMmPerUnit;
 

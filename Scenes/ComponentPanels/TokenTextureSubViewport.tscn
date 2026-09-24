@@ -15,7 +15,7 @@ size = Vector2i(128, 128)
 size_2d_override = Vector2i(128, 128)
 render_target_update_mode = 4
 script = ExtResource("1_7wv8o")
-_shapes = PackedStringArray("res://Textures/Shapes/square.png", "res://Textures/Shapes/circle.png", "res://Textures/Shapes/hex.png", "res://Textures/Shapes/hexflat.png", "res://Textures/Shapes/RoundedRectangle.png")
+_shapes = PackedStringArray("res://Textures/Shapes/square.png", "res://Textures/Shapes/circle.png", "res://Textures/Shapes/hex.png", "res://Textures/Shapes/hexflat.png")
 
 [node name="ClipRect" type="TextureRect" parent="."]
 anchors_preset = 15

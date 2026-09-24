@@ -120,27 +120,30 @@ public partial class VcToken : VisualComponentBase
     private float _targetZ;
     private bool _flipInProcess;
 
-    private ComponentEffect BuildFlip()
+    private ComponentEffect BuildFlip() => new(BuildFlipState());
+
+    /// <summary>
+    /// This token's state turned over, animating the flip.
+    /// </summary>
+    public ComponentState BuildFlipState()
     {
         bool targetFaceUp = RotationDegrees.Z >= 90;
 
         var s = ComponentState.Capture(this);
-        return new ComponentEffect(
-            s with
-            {
-                Rotation = new Vector3(
-                    s.Rotation.X,
-                    s.Rotation.Y,
-                    Mathf.DegToRad(targetFaceUp ? 0f : 180f)
-                ),
-                Transition = Transition.Flip,
-            }
-        );
+        return s with
+        {
+            Rotation = new Vector3(
+                s.Rotation.X,
+                s.Rotation.Y,
+                Mathf.DegToRad(targetFaceUp ? 0f : 180f)
+            ),
+            Transition = Transition.Flip,
+        };
     }
 
     public override bool PlayTransition(ComponentState s, long MsecSinceStart)
     {
-        if (s.Transition != Transition.Flip || MsecSinceStart >= 180f / _flipRate)
+        if (s.Transition != Transition.Flip || MsecSinceStart >= 1000f * 180f / _flipRate)
             return false;
 
         _flipInProcess = true;
@@ -299,13 +302,14 @@ public partial class VcToken : VisualComponentBase
         YHeight = _thickness;
         Scale = new Vector3(_width, _thickness, _height);
 
+        // Scissor keeps faces in the opaque pass, so covered faces in a stack are skipped.
         _frontMaterial = new StandardMaterial3D
         {
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor,
         };
         _backMaterial = new StandardMaterial3D
         {
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor,
         };
         var sideMaterial = new StandardMaterial3D
         {
@@ -329,31 +333,42 @@ public partial class VcToken : VisualComponentBase
         HighlightMesh.MaterialOverride = highlightMat;
 
         ShapeProfiles.Clear();
-        switch (shape)
-        {
-            case TokenTextureSubViewport.TokenShape.Square:
-                ShapeProfiles.Add(
-                    new OffsetShape2D(new RectangleShape2D { Size = new Vector2(_width, _height) })
-                );
-                break;
-            case TokenTextureSubViewport.TokenShape.Circle:
-                ShapeProfiles.Add(new OffsetShape2D(new CircleShape2D { Radius = _width / 2f }));
-                break;
-            case TokenTextureSubViewport.TokenShape.HexPoint:
-            case TokenTextureSubViewport.TokenShape.HexFlat:
-                var poly = new ConvexPolygonShape2D();
-                poly.Points = ring.Select(v => new Vector2(v.X, v.Z)).ToArray();
-                ShapeProfiles.Add(new OffsetShape2D(poly));
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        ShapeProfiles.Add(ShapeProfile(shape, _width, _height));
     }
 
-    public float Height => _height;
-    public float Width => _width;
+    /// <summary>
+    /// The table footprint of a <paramref name="width"/> by <paramref name="height"/> token, used
+    /// for stacking.
+    /// </summary>
+    public static OffsetShape2D ShapeProfile(
+        TokenTextureSubViewport.TokenShape shape,
+        float width,
+        float height
+    ) =>
+        shape switch
+        {
+            TokenTextureSubViewport.TokenShape.Square => new(
+                new RectangleShape2D { Size = new Vector2(width, height) }
+            ),
+            TokenTextureSubViewport.TokenShape.Circle => new(
+                new CircleShape2D { Radius = width / 2f }
+            ),
+            TokenTextureSubViewport.TokenShape.HexPoint
+            or TokenTextureSubViewport.TokenShape.HexFlat => new(
+                new ConvexPolygonShape2D
+                {
+                    Points = GetFaceRing(shape)
+                        .Select(v => new Vector2(
+                            v.X / (2 * FaceR) * width,
+                            v.Z / (2 * FaceR) * height
+                        ))
+                        .ToArray(),
+                }
+            ),
+            _ => throw new ArgumentOutOfRangeException(nameof(shape)),
+        };
 
-    private Vector3[] GetFaceRing(TokenTextureSubViewport.TokenShape shape) =>
+    private static Vector3[] GetFaceRing(TokenTextureSubViewport.TokenShape shape) =>
         shape switch
         {
             TokenTextureSubViewport.TokenShape.Square => new[]
