@@ -124,14 +124,17 @@ public partial class VcToken : VisualComponentBase
     {
         bool targetFaceUp = RotationDegrees.Z >= 90;
 
-        var e = ComponentEffect.Capture(this);
-        e.State.Rotation = new Vector3(
-            e.State.Rotation.X,
-            e.State.Rotation.Y,
-            Mathf.DegToRad(targetFaceUp ? 0f : 180f)
+        var s = ComponentState.Capture(this);
+        return new ComponentEffect(
+            s with
+            {
+                Rotation = new Vector3(
+                    s.Rotation.X,
+                    s.Rotation.Y,
+                    Mathf.DegToRad(targetFaceUp ? 0f : 180f)
+                ),
+            }
         );
-
-        return e;
     }
 
     public override void AnimateFlip(Vector3 targetRotation)

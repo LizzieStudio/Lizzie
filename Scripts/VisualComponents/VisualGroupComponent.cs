@@ -52,14 +52,16 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
         var transformed = compArr
             .Select(
                 (c, i) =>
-                {
-                    var e = ComponentEffect.Capture(c);
-                    e.State.Location = ComponentLocation.Container;
-                    e.State.ContainerRef = Reference;
-                    e.State.Position = c.Position;
-                    e.State.ZOrder = new ZOrder(target, i, stamp);
-                    return (Effect)e;
-                }
+                    (Effect)
+                        new ComponentEffect(
+                            ComponentState.Capture(c) with
+                            {
+                                Location = ComponentLocation.Container,
+                                ContainerRef = Reference,
+                                Position = c.Position,
+                                ZOrder = new ZOrder(target, i, stamp),
+                            }
+                        )
             )
             .ToArray();
 
@@ -77,11 +79,9 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             yield return effect;
 
         foreach (var child in Children)
-            yield return new ComponentEffect
-            {
-                Id = child,
-                State = new VcSyncDto { Location = ComponentLocation.Deleted },
-            };
+            if (ProjectService.Instance.GameObjects.GetComponent(child) is { } c)
+                foreach (var effect in c.GetDespawnEffects())
+                    yield return effect;
     }
 
     /// <summary>
@@ -156,9 +156,14 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             if (comp == null)
                 continue;
 
-            var e = ComponentEffect.Capture(comp);
-            e.State.ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, stamp);
-            effects.Add(e);
+            effects.Add(
+                new ComponentEffect(
+                    ComponentState.Capture(comp) with
+                    {
+                        ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, stamp),
+                    }
+                )
+            );
         }
 
         return effects.ToArray();

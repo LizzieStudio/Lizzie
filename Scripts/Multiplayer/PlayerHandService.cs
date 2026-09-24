@@ -36,14 +36,15 @@ public partial class PlayerHandService : Node
         int seatIndex,
         int suborder,
         SnowportId stamp
-    )
-    {
-        var e = ComponentEffect.Capture(card);
-        e.State.Location = VisualComponentBase.ComponentLocation.Hand;
-        e.State.ContainerRef = HandContainer(seatIndex);
-        e.State.ZOrder = new ZOrder(ZTarget.Top, suborder, stamp);
-        return e;
-    }
+    ) =>
+        new(
+            ComponentState.Capture(card) with
+            {
+                Location = VisualComponentBase.ComponentLocation.Hand,
+                ContainerRef = HandContainer(seatIndex),
+                ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
+            }
+        );
 
     /// <summary>
     /// Returns the cards in a given seat's hand, ordered by their ZOrder.

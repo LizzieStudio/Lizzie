@@ -3,36 +3,18 @@ using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
-/// This class captures all the properties that need to be synced across the network for a visual component. This is used to ensure that all clients have the same state for each component, and to minimize the amount of data that needs to be sent over the network by only syncing relevant properties.
+/// A component's full replicated state. Every component write carries all of it.
 /// </summary>
-public class VcSyncDto
+public record ComponentState
 {
     /// <summary>
-    /// Need a parameterless constructor for JSON deserialization. This is used when receiving data from the network and creating a new instance of this class to apply the properties to a visual component.
+    /// Captures a component's live state.
     /// </summary>
-    public VcSyncDto() { }
-
-    public VcSyncDto(VisualComponentBase component)
-    {
-        Position =
-            component.Location == VisualComponentBase.ComponentLocation.Cursor
-                ? component.CursorOffset
-                : component.Position;
-        Rotation = component.Rotation;
-        ZOrder = component.ZOrder;
-        DataSetRowIndex = component.DataSetRowIndex;
-        DataSetRowId = component.DataSetRowId;
-        Location = component.Location;
-        ContainerRef = component.ContainerRef;
-        LastMoveId = component.LastMoveId;
-    }
-
-    /// <summary>
-    /// Captures a component's live transform.
-    /// </summary>
-    public static VcSyncDto CaptureLive(VisualComponentBase c) =>
+    public static ComponentState Capture(VisualComponentBase c) =>
         new()
         {
+            Id = c.Reference,
+            PrototypeRef = c.PrototypeRef,
             Position =
                 c.Location == VisualComponentBase.ComponentLocation.Cursor
                     ? c.CursorOffset
@@ -43,42 +25,52 @@ public class VcSyncDto
             Location = c.Location,
             ContainerRef = c.ContainerRef,
             ZOrder = c.ZOrder,
-            LastMoveId = SnowportId.Empty,
         };
 
+    [JsonPropertyName("i")]
+    public SnowTag Id { get; init; }
+
+    [JsonPropertyName("pr")]
+    public SnowTag PrototypeRef { get; init; }
+
     [JsonPropertyName("p")]
-    public Vector3 Position { get; set; }
+    public Vector3 Position { get; init; }
 
     [JsonPropertyName("r")]
-    public Vector3 Rotation { get; set; }
+    public Vector3 Rotation { get; init; }
 
     [JsonPropertyName("z")]
-    public ZOrder ZOrder { get; set; }
+    public ZOrder ZOrder { get; init; }
 
     [JsonPropertyName("di")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public int DataSetRowIndex { get; set; } = -1;
+    public int DataSetRowIndex { get; init; } = -1;
 
     [JsonPropertyName("dr")]
-    public SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
+    public SnowTag DataSetRowId { get; init; } = SnowTag.Empty;
 
     [JsonPropertyName("l")]
-    public VisualComponentBase.ComponentLocation Location { get; set; }
+    public VisualComponentBase.ComponentLocation Location { get; init; }
 
     /// <summary>
     /// The container that holds this component or <see cref="SnowTag.Empty"/>.
     /// </summary>
     [JsonPropertyName("c")]
-    public SnowTag ContainerRef { get; set; } = SnowTag.Empty;
+    public SnowTag ContainerRef { get; init; } = SnowTag.Empty;
+
+    /// <summary>Reversible soft-delete flag.</summary>
+    [JsonPropertyName("x")]
+    public bool Deleted { get; init; }
 
     /// <summary>
     /// The last event that moved this component with a transform.
     /// </summary>
     [JsonPropertyName("m")]
-    public SnowportId LastMoveId { get; set; } = SnowportId.Empty;
+    public SnowportId LastMoveId { get; init; } = SnowportId.Empty;
 
     public void ApplyToComponent(VisualComponentBase component)
     {
+        component.PrototypeRef = PrototypeRef;
         // While dragged, Position carries the cursor-relative offset.
         // This might be a bad idea if it becomes hard to keep in-sync.
         if (Location == VisualComponentBase.ComponentLocation.Cursor)

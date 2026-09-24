@@ -162,14 +162,9 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Applies the spawned state and builds immediately.
     /// </summary>
-    public virtual void SpawnBuild(
-        SnowTag prototypeRef,
-        VcSyncDto syncDto,
-        TextureFactory textureFactory
-    )
+    public virtual void SpawnBuild(ComponentState syncDto, TextureFactory textureFactory)
     {
         syncDto.ApplyToComponent(this);
-        PrototypeRef = prototypeRef;
         TextureFactory = textureFactory;
         ProjectService.Instance.SyncNow(this);
     }
@@ -188,9 +183,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public virtual IEnumerable<ComponentEffect> GetDespawnEffects()
     {
-        var e = ComponentEffect.Capture(this);
-        e.State.Location = ComponentLocation.Deleted;
-        yield return e;
+        yield return new ComponentEffect(ComponentState.Capture(this) with { Deleted = true });
     }
 
     /// <summary>
@@ -520,7 +513,6 @@ public abstract partial class VisualComponentBase : Area3D
         Container,
         Hand,
         Cursor,
-        Deleted,
     }
 
     private ComponentLocation _location;
@@ -553,12 +545,13 @@ public abstract partial class VisualComponentBase : Area3D
         && PresenceSynchronizer.Instance is { } cursors
         && ContainerRef == cursors.LocalCursorRef;
 
-    private ComponentEffect BuildRotation(float degreesAboutY)
-    {
-        var e = ComponentEffect.Capture(this);
-        e.State.Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
-        return e;
-    }
+    private ComponentEffect BuildRotation(float degreesAboutY) =>
+        new(
+            ComponentState.Capture(this) with
+            {
+                Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0),
+            }
+        );
 
     private bool _logicalVisible = true;
 

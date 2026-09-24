@@ -271,19 +271,15 @@ public partial class GameObjects : Node
 
             var childEffects = component.GetSpawnChildEffects(containerRef).ToList();
 
-            var state = new VcSyncDto(component)
-            {
-                ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
-            };
-
             effects.AddRange(childEffects);
             effects.Add(
-                new ComponentEffect
-                {
-                    Id = containerRef,
-                    PrototypeRef = component.PrototypeRef,
-                    State = state,
-                }
+                new ComponentEffect(
+                    ComponentState.Capture(component) with
+                    {
+                        Id = containerRef,
+                        ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
+                    }
+                )
             );
         }
 
@@ -302,23 +298,10 @@ public partial class GameObjects : Node
     /// </summary>
     public Effect[] GenerateCatchupEffects()
     {
-        var effects = new List<Effect>();
-
-        effects.AddRange(
-            ComponentNodes
-                .OfType<VisualComponentBase>()
-                .Select(component =>
-                    (Effect)
-                        new ComponentEffect
-                        {
-                            Id = component.Reference,
-                            PrototypeRef = component.PrototypeRef,
-                            State = new VcSyncDto(component),
-                        }
-                )
-        );
-
-        return effects.ToArray();
+        return ComponentNodes
+            .OfType<VisualComponentBase>()
+            .Select(component => (Effect)ComponentEffect.Capture(component))
+            .ToArray();
     }
 
     public Dictionary<SnowTag, int> PrototypeCounts()
@@ -430,11 +413,12 @@ public partial class GameObjects : Node
         var stamp = Snowport.Clock.Create();
         var arr = new Effect[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
-        {
-            var e = ComponentEffect.Capture(ordered[i]);
-            e.State.ZOrder = new ZOrder(target, i, stamp);
-            arr[i] = e;
-        }
+            arr[i] = new ComponentEffect(
+                ComponentState.Capture(ordered[i]) with
+                {
+                    ZOrder = new ZOrder(target, i, stamp),
+                }
+            );
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, arr));
     }
@@ -708,15 +692,19 @@ public partial class GameObjects : Node
             if (c == null)
                 continue;
 
-            var e = ComponentEffect.Capture(c);
-            e.State.Location = VisualComponentBase.ComponentLocation.Cursor;
-            e.State.ContainerRef = cursorContainer;
-            // Position is the cursor-relative offset while held.
-            e.State.Position = c.SpawnDelta;
-            if (rotation != null)
-                e.State.Rotation = rotation(c);
-            e.State.ZOrder = new ZOrder(ZTarget.Top, effects.Count, stamp);
-            effects.Add(e);
+            effects.Add(
+                new ComponentEffect(
+                    ComponentState.Capture(c) with
+                    {
+                        Location = VisualComponentBase.ComponentLocation.Cursor,
+                        ContainerRef = cursorContainer,
+                        // Position is the cursor-relative offset while held.
+                        Position = c.SpawnDelta,
+                        Rotation = rotation?.Invoke(c) ?? c.Rotation,
+                        ZOrder = new ZOrder(ZTarget.Top, effects.Count, stamp),
+                    }
+                )
+            );
         }
 
         return effects.Count == 0 ? null : TableEvent.Now(new MoveAction(), effects.ToArray());
@@ -741,15 +729,15 @@ public partial class GameObjects : Node
 
         var dragged = components
             .Where(o => o != null)
-            .Select(o =>
-            {
-                var e = ComponentEffect.Capture(o);
-                e.State.Location = VisualComponentBase.ComponentLocation.Cursor;
-                e.State.ContainerRef = cursorContainer;
-                // Position with a cursor container is relative to the cursor.
-                e.State.Position = o.Position - cursor;
-                return e;
-            })
+            .Select(o => new ComponentEffect(
+                ComponentState.Capture(o) with
+                {
+                    Location = VisualComponentBase.ComponentLocation.Cursor,
+                    ContainerRef = cursorContainer,
+                    // Position with a cursor container is relative to the cursor.
+                    Position = o.Position - cursor,
+                }
+            ))
             .ToArray();
         if (dragged.Length == 0)
             return;
@@ -979,14 +967,15 @@ public partial class GameObjects : Node
         var dropped = dragged
             .Select(
                 (component, index) =>
-                {
-                    var effect = ComponentEffect.Capture(component);
-                    effect.State.Location = VisualComponentBase.ComponentLocation.Table;
-                    effect.State.ContainerRef = SnowTag.Empty;
-                    effect.State.Position = component.Position;
-                    effect.State.ZOrder = new ZOrder(ZTarget.Top, index, stamp);
-                    return effect;
-                }
+                    new ComponentEffect(
+                        ComponentState.Capture(component) with
+                        {
+                            Location = VisualComponentBase.ComponentLocation.Table,
+                            ContainerRef = SnowTag.Empty,
+                            Position = component.Position,
+                            ZOrder = new ZOrder(ZTarget.Top, index, stamp),
+                        }
+                    )
             )
             .ToArray();
 
@@ -1011,14 +1000,17 @@ public partial class GameObjects : Node
             effects.Add(PlayerHandService.Instance.MoveEffect(toHand[i], seat, i, stamp));
 
         for (int i = 0; i < toBoard.Count; i++)
-        {
-            var effect = ComponentEffect.Capture(toBoard[i]);
-            effect.State.Location = VisualComponentBase.ComponentLocation.Table;
-            effect.State.ContainerRef = SnowTag.Empty;
-            effect.State.Position = toBoard[i].Position;
-            effect.State.ZOrder = new ZOrder(ZTarget.Top, i, stamp);
-            effects.Add(effect);
-        }
+            effects.Add(
+                new ComponentEffect(
+                    ComponentState.Capture(toBoard[i]) with
+                    {
+                        Location = VisualComponentBase.ComponentLocation.Table,
+                        ContainerRef = SnowTag.Empty,
+                        Position = toBoard[i].Position,
+                        ZOrder = new ZOrder(ZTarget.Top, i, stamp),
+                    }
+                )
+            );
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), effects.ToArray()));
     }
@@ -1173,7 +1165,7 @@ public partial class GameObjects : Node
 
     private void ApplyUpsert(SnowportId eventId, ComponentEffect fx, bool animated)
     {
-        var s = fx.State ?? new VcSyncDto();
+        var s = fx.State;
         var r = fx.Id;
         var writeId = s.LastMoveId == SnowportId.Empty ? eventId : s.LastMoveId;
 
@@ -1188,7 +1180,7 @@ public partial class GameObjects : Node
 
         var c = GetComponent(r);
 
-        if (s.Location == VisualComponentBase.ComponentLocation.Deleted)
+        if (s.Deleted)
         {
             RemoveComponent(c);
             _pendingSpawns.Remove(r);
@@ -1249,7 +1241,7 @@ public partial class GameObjects : Node
     private static void ApplyStateToComponent(
         VisualComponentBase c,
         SnowportId writeId,
-        VcSyncDto s,
+        ComponentState s,
         bool animated
     )
     {
@@ -1271,11 +1263,10 @@ public partial class GameObjects : Node
     /// </summary>
     private bool TryExecuteSpawn(SnowportId writeId, ComponentEffect fx)
     {
-        var proto = ProjectService.Instance.GetIncludingDeleted<Prototype>(fx.PrototypeRef);
+        var s = fx.State;
+        var proto = ProjectService.Instance.GetIncludingDeleted<Prototype>(s.PrototypeRef);
         if (proto == null)
             return false;
-
-        var s = fx.State ?? new VcSyncDto();
 
         var path = Utility.ComponentTypeToScenePath(
             proto.Type,
@@ -1287,14 +1278,14 @@ public partial class GameObjects : Node
 
         if (scene is not VisualComponentBase vcb)
         {
-            GD.PrintErr($"Spawned scene for {fx.PrototypeRef} is not a VisualComponentBase");
+            GD.PrintErr($"Spawned scene for {s.PrototypeRef} is not a VisualComponentBase");
             return true;
         }
 
         vcb.Reference = fx.Id;
-        vcb.PrototypeRef = fx.PrototypeRef;
+        vcb.PrototypeRef = s.PrototypeRef;
         _table.AddChild(vcb);
-        vcb.SpawnBuild(fx.PrototypeRef, s, TextureFactory);
+        vcb.SpawnBuild(s, TextureFactory);
         QueueStackingUpdate();
 
         vcb.LastMoveId = writeId;
@@ -1317,7 +1308,7 @@ public partial class GameObjects : Node
     private void Sync(IRecordReader R)
     {
         RetryPendingSpawns();
-        R.Get<Prototype>(_pendingSpawns.Values.Select(p => p.Effect.PrototypeRef));
+        R.Get<Prototype>(_pendingSpawns.Values.Select(p => p.Effect.State.PrototypeRef));
     }
 
     private void RetryPendingSpawns()
@@ -1438,10 +1429,7 @@ public partial class GameObjects : Node
                     break;
                 }
 
-            if (
-                ce?.State != null
-                && ce.State.Location != VisualComponentBase.ComponentLocation.Cursor
-            )
+            if (ce != null && ce.State.Location != VisualComponentBase.ComponentLocation.Cursor)
             {
                 if (
                     winner == null
@@ -1465,11 +1453,7 @@ public partial class GameObjects : Node
         var wId = winner == null ? SnowportId.Empty : WriteIdOf(winner, winnerId);
         var cleared = winner != null && barrier.CompareTo(wId) > 0;
 
-        if (
-            winner == null
-            || cleared
-            || winner.State.Location == VisualComponentBase.ComponentLocation.Deleted
-        )
+        if (winner == null || cleared || winner.State.Deleted)
         {
             RemoveComponent(live);
             if (winner == null || cleared)
@@ -1481,26 +1465,11 @@ public partial class GameObjects : Node
 
         _lastWrite[r] = wId;
 
-        var s = new VcSyncDto
-        {
-            Position = winner.State.Position,
-            Rotation = winner.State.Rotation,
-            DataSetRowIndex = winner.State.DataSetRowIndex,
-            DataSetRowId = winner.State.DataSetRowId,
-            Location = winner.State.Location,
-            ContainerRef = winner.State.ContainerRef,
-            ZOrder = winner.State.ZOrder,
-            LastMoveId = wId,
-        };
+        var s = winner.State with { LastMoveId = wId };
 
         if (live == null)
         {
-            var spawnFx = new ComponentEffect
-            {
-                Id = r,
-                PrototypeRef = winner.PrototypeRef,
-                State = s,
-            };
+            var spawnFx = new ComponentEffect(s);
             if (!TryExecuteSpawn(wId, spawnFx))
                 AddPendingSpawn(wId, spawnFx);
             return;

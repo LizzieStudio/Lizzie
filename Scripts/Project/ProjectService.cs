@@ -438,17 +438,7 @@ public partial class ProjectService : Node
         // removed components
         foreach (var (id, prev) in parentFold)
             if (!current.ContainsKey(id))
-                delta.Add(
-                    new ComponentEffect
-                    {
-                        Id = id,
-                        PrototypeRef = prev.PrototypeRef,
-                        State = new VcSyncDto
-                        {
-                            Location = VisualComponentBase.ComponentLocation.Deleted,
-                        },
-                    }
-                );
+                delta.Add(new ComponentEffect(prev.State with { Deleted = true }));
 
         return delta.ToImmutableArray();
     }
@@ -483,30 +473,10 @@ public partial class ProjectService : Node
             new TableClearEffect(),
             new SetReplicatedValueEffect<ActiveGameStateRef> { Payload = new() { Id = stateRef } },
         };
+        // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
+        // Clear LastMoveId so ApplyUpsert falls back to this event's id and wins LWW.
         foreach (var ce in FoldChain(stateRef).Values)
-        {
-            var s = ce.State ?? new VcSyncDto();
-            // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
-            // Clear LastMoveId so ApplyUpsert falls back to this event's id and wins LWW.
-            effects.Add(
-                new ComponentEffect
-                {
-                    Id = ce.Id,
-                    PrototypeRef = ce.PrototypeRef,
-                    State = new VcSyncDto
-                    {
-                        Position = s.Position,
-                        Rotation = s.Rotation,
-                        DataSetRowIndex = s.DataSetRowIndex,
-                        DataSetRowId = s.DataSetRowId,
-                        Location = s.Location,
-                        ContainerRef = s.ContainerRef,
-                        ZOrder = s.ZOrder,
-                        LastMoveId = SnowportId.Empty,
-                    },
-                }
-            );
-        }
+            effects.Add(new ComponentEffect(ce.State with { LastMoveId = SnowportId.Empty }));
 
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(new GameStateSwitchAction { Target = stateRef }, effects.ToArray())
@@ -531,7 +501,7 @@ public partial class ProjectService : Node
         foreach (var gs in chain)
         foreach (var up in gs.Upserts)
         {
-            if (up.State?.Location == VisualComponentBase.ComponentLocation.Deleted)
+            if (up.State.Deleted)
                 fold.Remove(up.Id);
             else
                 fold[up.Id] = up;
@@ -540,20 +510,8 @@ public partial class ProjectService : Node
     }
 
     /// <summary>Compares two component states, ignoring the transient last-move id.</summary>
-    private static bool StateEquals(VcSyncDto a, VcSyncDto b)
-    {
-        if (a == null || b == null)
-            return a == b;
-        return a.Position == b.Position
-            && a.Rotation == b.Rotation
-            && a.Location == b.Location
-            && a.ContainerRef == b.ContainerRef
-            && a.DataSetRowIndex == b.DataSetRowIndex
-            && a.DataSetRowId == b.DataSetRowId
-            && a.ZOrder.Target == b.ZOrder.Target
-            && a.ZOrder.Suborder == b.ZOrder.Suborder
-            && a.ZOrder.Stamp == b.ZOrder.Stamp;
-    }
+    private static bool StateEquals(ComponentState a, ComponentState b) =>
+        a with { LastMoveId = SnowportId.Empty } == b with { LastMoveId = SnowportId.Empty };
 
     public void AddPrototypeToManifest(CreateObjectEventArgs args)
     {

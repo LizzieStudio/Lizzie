@@ -28,22 +28,22 @@ public abstract class Effect
 /// </summary>
 public class ComponentEffect : Effect
 {
-    [JsonPropertyName("p")]
-    public SnowTag PrototypeRef { get; set; }
+    public ComponentEffect() { }
+
+    public ComponentEffect(ComponentState state)
+    {
+        Id = state.Id;
+        State = state;
+    }
 
     [JsonPropertyName("s")]
-    public VcSyncDto State { get; set; }
+    public ComponentState State { get; init; }
 
     /// <summary>
     /// Captures a component's state.
     /// </summary>
     public static ComponentEffect Capture(VisualComponentBase component) =>
-        new()
-        {
-            Id = component.Reference,
-            PrototypeRef = component.PrototypeRef,
-            State = VcSyncDto.CaptureLive(component),
-        };
+        new(ComponentState.Capture(component));
 }
 
 /// <summary>

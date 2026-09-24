@@ -138,13 +138,13 @@ public partial class VcDeck : VisualComponentGroup
 
     private ComponentEffect BuildFlip()
     {
-        var e = ComponentEffect.Capture(this);
-        e.State.Rotation = new Vector3(
-            e.State.Rotation.X,
-            e.State.Rotation.Y,
-            _showFace ? Mathf.Pi : 0f
+        var s = ComponentState.Capture(this);
+        return new(
+            s with
+            {
+                Rotation = new Vector3(s.Rotation.X, s.Rotation.Y, _showFace ? Mathf.Pi : 0f),
+            }
         );
-        return e;
     }
 
     public override void AnimateFlip(Vector3 targetRotation)
@@ -242,14 +242,19 @@ public partial class VcDeck : VisualComponentGroup
 
                 float deltaX = Position.X + (_width * (1.5f + i));
 
-                var e = ComponentEffect.Capture(comp);
-                e.State.Location = ComponentLocation.Table;
-                e.State.ContainerRef = SnowTag.Empty;
-                e.State.Position = new Vector3(deltaX, Position.Y, Position.Z);
-                e.State.Rotation = DrawnRotation(comp);
-                // Splayed cards land on top, in draw order.
-                e.State.ZOrder = new ZOrder(ZTarget.Top, i, stamp);
-                transformed.Add(e);
+                transformed.Add(
+                    new ComponentEffect(
+                        ComponentState.Capture(comp) with
+                        {
+                            Location = ComponentLocation.Table,
+                            ContainerRef = SnowTag.Empty,
+                            Position = new Vector3(deltaX, Position.Y, Position.Z),
+                            Rotation = DrawnRotation(comp),
+                            // Splayed cards land on top, in draw order.
+                            ZOrder = new ZOrder(ZTarget.Top, i, stamp),
+                        }
+                    )
+                );
             }
 
             result = transformed.ToArray();
@@ -369,21 +374,19 @@ public partial class VcDeck : VisualComponentGroup
         SnowportId stamp
     )
     {
-        var id = Snowport.Clock.CreateTag();
-        return new ComponentEffect
-        {
-            Id = id,
-            PrototypeRef = PrototypeRef,
-            State = new VcSyncDto
+        return new ComponentEffect(
+            new ComponentState
             {
+                Id = Snowport.Clock.CreateTag(),
+                PrototypeRef = PrototypeRef,
                 DataSetRowIndex = row.Index,
                 DataSetRowId = row.Id,
                 Location = ComponentLocation.Container,
                 ContainerRef = containerRef,
                 // First enumerated card are at the top.
                 ZOrder = new ZOrder(ZTarget.Top, -zIndex, stamp),
-            },
-        };
+            }
+        );
     }
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)

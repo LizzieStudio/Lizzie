@@ -144,21 +144,18 @@ public partial class VcTray : VisualComponentGroup
         if (PresenceSynchronizer.Instance is not { } cursors)
             return null;
 
-        var id = Snowport.Clock.CreateTag();
-
         return TableEvent.Now(
             null,
-            new ComponentEffect
-            {
-                Id = id,
-                PrototypeRef = _prototype.Id,
-                State = new VcSyncDto
+            new ComponentEffect(
+                new ComponentState
                 {
+                    Id = Snowport.Clock.CreateTag(),
+                    PrototypeRef = _prototype.Id,
                     Location = ComponentLocation.Cursor,
                     ContainerRef = cursors.LocalCursorRef,
                     ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
-                },
-            }
+                }
+            )
         );
     }
 }
