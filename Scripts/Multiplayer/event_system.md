@@ -36,12 +36,12 @@ Projects are saved as a list of record update events in a JSON-lines file (a fil
 
 The new ZOrder, the total ordering of components used to determine stack order, is likely the most esoteric part of the system. It is designed to keep events from having to touch uninvolved components when moving components to the top or bottom of the stack. When a component is in a container, like a deck, its ZOrder specifies its position in the container. When a component is on the table, its ZOrder sets its stacking order among the components on the table.
 
-The ZOrder uses three properties. First, there is the ZTarget enum of Top or Bottom, which specifies whether or not the component was most recently moved to the top or bottom of the ZOrder. Then there is the LastZEvent, which holds the SnowportId of the last event which changed the components ZOrder (sending it to the top or bottom). Finally, there is the ZSuborder, which is used by events to set the ZOrder of the list of components that it changed. The ZSuborder must have a total ordering of the components in that event. The ZTarget enum will also have an Unset option, which allows Transform events to avoid changing a components ZOrder.
+The ZOrder uses three properties. First, there is the ZTarget enum of Top or Bottom, which specifies whether or not the component was most recently moved to the top or bottom of the ZOrder. Then there is the Stamp, a SnowportId created when the components were moved to the Top or Bottom. Every component moved together as part of the same reorder should share the same Stamp. Finally, there is the ZSuborder, which is used by events to set the ZOrder of all components that share a Stamp. The ZSuborder should be unique among components with the same Stamp.
 
 The effective ZOrder is then
 1. Top components are higher than Bottom components.
-2. For Top components, newer (greater) LastZEvent is higher than older LastZEvent.
-3. For Bottom components, older (lower) LastZEvent is higher than newer LastZEvent.
+2. For Top components, a newer (greater) Stamp is higher than an older Stamp.
+3. For Bottom components, an older (lower) Stamp is higher than a newer Stamp.
 4. If all of these were equal, higher ZSuborder components are higher than lower ZSuborder components.
 
 ## Tracking Children

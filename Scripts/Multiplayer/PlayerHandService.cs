@@ -29,13 +29,19 @@ public partial class PlayerHandService : Node
 
     /// <summary>
     /// Builds a transform effect that moves a card into a seat's hand at the top of its order.
+    /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
-    public ComponentEffect MoveEffect(VisualComponentBase card, int seatIndex, int suborder)
+    public ComponentEffect MoveEffect(
+        VisualComponentBase card,
+        int seatIndex,
+        int suborder,
+        SnowportId stamp
+    )
     {
         var e = ComponentEffect.Capture(card);
         e.State.Location = VisualComponentBase.ComponentLocation.Hand;
         e.State.ContainerRef = HandContainer(seatIndex);
-        e.State.ZOrder = new ZOrder(ZTarget.Top, suborder, SnowportId.Empty);
+        e.State.ZOrder = new ZOrder(ZTarget.Top, suborder, stamp);
         return e;
     }
 

@@ -47,6 +47,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             return null;
 
         var target = addToTop ? ZTarget.Top : ZTarget.Bottom;
+        var stamp = Snowport.Clock.Create();
 
         var transformed = compArr
             .Select(
@@ -56,7 +57,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
                     e.State.Location = ComponentLocation.Container;
                     e.State.ContainerRef = Reference;
                     e.State.Position = c.Position;
-                    e.State.ZOrder = new ZOrder(target, i, SnowportId.Empty);
+                    e.State.ZOrder = new ZOrder(target, i, stamp);
                     return (Effect)e;
                 }
             )
@@ -148,6 +149,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     protected Effect[] BuildReorder(IReadOnlyList<SnowTag> orderedIds)
     {
         var effects = new List<Effect>(orderedIds.Count);
+        var stamp = Snowport.Clock.Create();
         for (int i = 0; i < orderedIds.Count; i++)
         {
             var comp = ProjectService.Instance.GameObjects.GetComponent(orderedIds[i]);
@@ -155,7 +157,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
                 continue;
 
             var e = ComponentEffect.Capture(comp);
-            e.State.ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, SnowportId.Empty);
+            e.State.ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, stamp);
             effects.Add(e);
         }
 

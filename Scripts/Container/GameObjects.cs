@@ -262,6 +262,8 @@ public partial class GameObjects : Node
     public void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
         var effects = new List<Effect>();
+        var stamp = Snowport.Clock.Create();
+        int suborder = 0;
 
         foreach (var component in components)
         {
@@ -269,7 +271,10 @@ public partial class GameObjects : Node
 
             var childEffects = component.GetSpawnChildEffects(containerRef).ToList();
 
-            var state = new VcSyncDto(component);
+            var state = new VcSyncDto(component)
+            {
+                ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
+            };
 
             effects.AddRange(childEffects);
             effects.Add(
@@ -418,18 +423,16 @@ public partial class GameObjects : Node
     /// </summary>
     private void Reorder(IEnumerable<VisualComponentBase> components, ZTarget target)
     {
-        if (target == ZTarget.Unset)
-            return;
-
         var ordered = components.Where(c => c is not VcZone).OrderBy(c => c.ZOrder).ToList();
         if (ordered.Count == 0)
             return;
 
+        var stamp = Snowport.Clock.Create();
         var arr = new Effect[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
         {
             var e = ComponentEffect.Capture(ordered[i]);
-            e.State.ZOrder = new ZOrder(target, i, SnowportId.Empty);
+            e.State.ZOrder = new ZOrder(target, i, stamp);
             arr[i] = e;
         }
 
@@ -698,6 +701,7 @@ public partial class GameObjects : Node
         var cursorContainer = PresenceSynchronizer.Instance.LocalCursorRef;
 
         var effects = new List<Effect>();
+        var stamp = Snowport.Clock.Create();
         foreach (var r in componentRefs)
         {
             var c = GetComponent(r);
@@ -711,7 +715,7 @@ public partial class GameObjects : Node
             e.State.Position = c.SpawnDelta;
             if (rotation != null)
                 e.State.Rotation = rotation(c);
-            e.State.ZOrder = new ZOrder(ZTarget.Top, effects.Count, SnowportId.Empty);
+            e.State.ZOrder = new ZOrder(ZTarget.Top, effects.Count, stamp);
             effects.Add(e);
         }
 
@@ -971,6 +975,7 @@ public partial class GameObjects : Node
     {
         _localDragOverHand = false;
 
+        var stamp = Snowport.Clock.Create();
         var dropped = dragged
             .Select(
                 (component, index) =>
@@ -979,7 +984,7 @@ public partial class GameObjects : Node
                     effect.State.Location = VisualComponentBase.ComponentLocation.Table;
                     effect.State.ContainerRef = SnowTag.Empty;
                     effect.State.Position = component.Position;
-                    effect.State.ZOrder = new ZOrder(ZTarget.Top, index, SnowportId.Empty);
+                    effect.State.ZOrder = new ZOrder(ZTarget.Top, index, stamp);
                     return effect;
                 }
             )
@@ -1000,9 +1005,10 @@ public partial class GameObjects : Node
         _localDragOverHand = false;
 
         var effects = new List<Effect>(toHand.Count + toBoard.Count);
+        var stamp = Snowport.Clock.Create();
 
         for (int i = 0; i < toHand.Count; i++)
-            effects.Add(PlayerHandService.Instance.MoveEffect(toHand[i], seat, i));
+            effects.Add(PlayerHandService.Instance.MoveEffect(toHand[i], seat, i, stamp));
 
         for (int i = 0; i < toBoard.Count; i++)
         {
@@ -1010,7 +1016,7 @@ public partial class GameObjects : Node
             effect.State.Location = VisualComponentBase.ComponentLocation.Table;
             effect.State.ContainerRef = SnowTag.Empty;
             effect.State.Position = toBoard[i].Position;
-            effect.State.ZOrder = new ZOrder(ZTarget.Top, i, SnowportId.Empty);
+            effect.State.ZOrder = new ZOrder(ZTarget.Top, i, stamp);
             effects.Add(effect);
         }
 
@@ -1257,13 +1263,7 @@ public partial class GameObjects : Node
             c.Position = s.Position;
         if (!animated)
             c.Rotation = s.Rotation;
-
-        // Only restack when the transform sets a zorder.
-        if (s.ZOrder.Target != ZTarget.Unset)
-            c.ZOrder =
-                s.ZOrder.LastEvent == SnowportId.Empty
-                    ? new ZOrder(s.ZOrder.Target, s.ZOrder.Suborder, writeId)
-                    : s.ZOrder;
+        c.ZOrder = s.ZOrder;
     }
 
     /// <summary>
@@ -1298,10 +1298,6 @@ public partial class GameObjects : Node
         QueueStackingUpdate();
 
         vcb.LastMoveId = writeId;
-        if (s.ZOrder.Target == ZTarget.Unset)
-            vcb.ZOrder = new ZOrder(ZTarget.Top, 0, writeId);
-        else if (s.ZOrder.LastEvent == SnowportId.Empty)
-            vcb.ZOrder = new ZOrder(s.ZOrder.Target, s.ZOrder.Suborder, writeId);
 
         return true;
     }
@@ -1422,8 +1418,6 @@ public partial class GameObjects : Node
     {
         ComponentEffect winner = null;
         SnowportId winnerId = SnowportId.Empty;
-        ComponentEffect zwin = null;
-        SnowportId zwinId = SnowportId.Empty;
         SnowportId barrier = SnowportId.Empty;
 
         for (int i = log.Count - 1; i >= 0; i--)
@@ -1457,17 +1451,9 @@ public partial class GameObjects : Node
                     winner = ce;
                     winnerId = e.Id;
                 }
-                if (
-                    ce.State.ZOrder.Target != ZTarget.Unset
-                    && (zwin == null || WriteIdOf(ce, e.Id).CompareTo(WriteIdOf(zwin, zwinId)) > 0)
-                )
-                {
-                    zwin = ce;
-                    zwinId = e.Id;
-                }
             }
 
-            if (winner != null && zwin != null)
+            if (winner != null)
                 break;
             if (clearHere)
                 break;
@@ -1495,18 +1481,6 @@ public partial class GameObjects : Node
 
         _lastWrite[r] = wId;
 
-        var z =
-            zwin != null
-                ? (
-                    zwin.State.ZOrder.LastEvent == SnowportId.Empty
-                        ? new ZOrder(
-                            zwin.State.ZOrder.Target,
-                            zwin.State.ZOrder.Suborder,
-                            WriteIdOf(zwin, zwinId)
-                        )
-                        : zwin.State.ZOrder
-                )
-                : new ZOrder(ZTarget.Top, 0, wId);
         var s = new VcSyncDto
         {
             Position = winner.State.Position,
@@ -1515,7 +1489,7 @@ public partial class GameObjects : Node
             DataSetRowId = winner.State.DataSetRowId,
             Location = winner.State.Location,
             ContainerRef = winner.State.ContainerRef,
-            ZOrder = z,
+            ZOrder = winner.State.ZOrder,
             LastMoveId = wId,
         };
 

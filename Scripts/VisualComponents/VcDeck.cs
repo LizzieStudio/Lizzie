@@ -210,6 +210,7 @@ public partial class VcDeck : VisualComponentGroup
         }
 
         Effect[] result;
+        var stamp = Snowport.Clock.Create();
 
         //if there are player hands, draw to that. Otherwise draw to the table.
         if (ProjectService.Instance.Settings.Value.EnablePlayerHands)
@@ -222,7 +223,7 @@ public partial class VcDeck : VisualComponentGroup
                 var comp = ProjectService.Instance.GameObjects.GetComponent(cards[i]);
                 if (comp == null)
                     continue;
-                toHand.Add(PlayerHandService.Instance.MoveEffect(comp, seat, i));
+                toHand.Add(PlayerHandService.Instance.MoveEffect(comp, seat, i, stamp));
             }
 
             result = toHand.ToArray();
@@ -247,7 +248,7 @@ public partial class VcDeck : VisualComponentGroup
                 e.State.Position = new Vector3(deltaX, Position.Y, Position.Z);
                 e.State.Rotation = DrawnRotation(comp);
                 // Splayed cards land on top, in draw order.
-                e.State.ZOrder = new ZOrder(ZTarget.Top, i, SnowportId.Empty);
+                e.State.ZOrder = new ZOrder(ZTarget.Top, i, stamp);
                 transformed.Add(e);
             }
 
@@ -291,13 +292,14 @@ public partial class VcDeck : VisualComponentGroup
         // Deal round-robin.
         var effects = new List<Effect>(total);
         var suborder = new int[seatCount];
+        var stamp = Snowport.Clock.Create();
         for (int i = 0; i < total; i++)
         {
             int seat = activeSeats[i % activeSeats.Count];
             var comp = ProjectService.Instance.GameObjects.GetComponent(order[i]);
             if (comp == null)
                 continue;
-            effects.Add(handService.MoveEffect(comp, seat, suborder[seat]++));
+            effects.Add(handService.MoveEffect(comp, seat, suborder[seat]++, stamp));
         }
 
         return effects.ToArray();
@@ -314,10 +316,11 @@ public partial class VcDeck : VisualComponentGroup
         if (proto.Parameters is not PrintedParameters parameters)
             yield break;
 
+        var stamp = Snowport.Clock.Create();
         int index = 0;
         foreach (var row in EnumerateCardRows(parameters, project))
         {
-            yield return CreateCardEffect(row, containerRef, index);
+            yield return CreateCardEffect(row, containerRef, index, stamp);
             index++;
         }
     }
@@ -362,7 +365,8 @@ public partial class VcDeck : VisualComponentGroup
     private ComponentEffect CreateCardEffect(
         (int Index, SnowTag Id) row,
         SnowTag containerRef,
-        int zIndex
+        int zIndex,
+        SnowportId stamp
     )
     {
         var id = Snowport.Clock.CreateTag();
@@ -377,7 +381,7 @@ public partial class VcDeck : VisualComponentGroup
                 Location = ComponentLocation.Container,
                 ContainerRef = containerRef,
                 // First enumerated card are at the top.
-                ZOrder = new ZOrder(ZTarget.Top, -zIndex, SnowportId.Empty),
+                ZOrder = new ZOrder(ZTarget.Top, -zIndex, stamp),
             },
         };
     }

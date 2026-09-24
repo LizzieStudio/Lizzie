@@ -156,6 +156,7 @@ public partial class VcTray : VisualComponentGroup
                 {
                     Location = ComponentLocation.Cursor,
                     ContainerRef = cursors.LocalCursorRef,
+                    ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
                 },
             }
         );

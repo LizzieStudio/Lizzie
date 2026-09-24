@@ -42,7 +42,7 @@ public class VcSyncDto
             DataSetRowId = c.DataSetRowId,
             Location = c.Location,
             ContainerRef = c.ContainerRef,
-            ZOrder = new ZOrder(ZTarget.Unset, 0, SnowportId.Empty),
+            ZOrder = c.ZOrder,
             LastMoveId = SnowportId.Empty,
         };
 

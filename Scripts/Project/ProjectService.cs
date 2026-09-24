@@ -552,7 +552,7 @@ public partial class ProjectService : Node
             && a.DataSetRowId == b.DataSetRowId
             && a.ZOrder.Target == b.ZOrder.Target
             && a.ZOrder.Suborder == b.ZOrder.Suborder
-            && a.ZOrder.LastEvent == b.ZOrder.LastEvent;
+            && a.ZOrder.Stamp == b.ZOrder.Stamp;
     }
 
     public void AddPrototypeToManifest(CreateObjectEventArgs args)

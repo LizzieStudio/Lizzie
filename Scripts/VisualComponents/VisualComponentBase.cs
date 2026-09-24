@@ -310,9 +310,7 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// The component's stacking order. Computed from a <see cref="global::ZOrder"/> rather than a
-    /// dense integer; components are created on top (their creation event id) and reordered by
-    /// transform events. Higher sits physically on top.
+    /// The component's stacking order.
     /// </summary>
     private ZOrder _zOrder = new(ZTarget.Top, 0, SnowportId.Empty);
 
