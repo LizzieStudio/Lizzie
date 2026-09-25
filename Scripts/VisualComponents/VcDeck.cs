@@ -91,7 +91,7 @@ public partial class VcDeck : VisualComponentBase
         {
             if (cards[i] is VcToken card)
             {
-                var z = cards[cards.Count - 1 - i].ZOrder;
+                var z = cards[cards.Count - 1 - i].State.ZOrder;
                 effects.Add(Effect.Upsert(card.BuildFlipState() with { ZOrder = z }));
             }
         }
@@ -105,7 +105,7 @@ public partial class VcDeck : VisualComponentBase
     private Effect[] BuildShuffle()
     {
         var cards = Stack();
-        var orders = cards.Select(c => c.ZOrder).ToList();
+        var orders = cards.Select(c => c.State.ZOrder).ToList();
 
         for (int n = orders.Count - 1; n > 0; n--)
         {

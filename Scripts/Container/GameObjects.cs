@@ -97,13 +97,16 @@ public partial class GameObjects : Node
     /// All components contained in <paramref name="containerRef"/> in ZOrder.
     /// Works for containers and player hands.
     /// </summary>
-    public IEnumerable<VisualComponentBase> GetContainedComponents(SnowTag containerRef)
-    {
-        return ComponentNodes
-            .OfType<VisualComponentBase>()
-            .Where(vc => vc.ContainerRef == containerRef)
-            .OrderBy(vc => vc.ZOrder);
-    }
+    public IEnumerable<VisualComponentBase> GetContainedComponents(SnowTag containerRef) =>
+        Nodes(
+            ProjectService
+                .Instance.Get<ComponentState>(s => s.ContainerRef == containerRef)
+                .OrderBy(s => s.ZOrder)
+        );
+
+    /// <summary>The nodes for the given records, skipping any that have none yet.</summary>
+    private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentState> records) =>
+        records.Select(s => GetComponent(s.Id)).Where(c => c != null);
 
     public override void _PhysicsProcess(double delta)
     {
@@ -301,16 +304,21 @@ public partial class GameObjects : Node
     /// </summary>
     public List<VisualComponentBase> GetStack(VisualComponentBase bottom)
     {
-        var key = ComponentState.TableKey(bottom.Position);
-        return ComponentNodes
-            .OfType<VcToken>()
-            .Where(c =>
-                c.Location == VisualComponentBase.ComponentLocation.Table
-                && c.ZOrder > bottom.ZOrder
-                && ComponentState.TableKey(c.Position) == key
+        var b = bottom.State;
+        if (b == null)
+            return [];
+
+        return Nodes(
+                ProjectService
+                    .Instance.Get<ComponentState>(s =>
+                        s.Location == VisualComponentBase.ComponentLocation.Table
+                        && s.X == b.X
+                        && s.Z == b.Z
+                        && s.ZOrder > b.ZOrder
+                    )
+                    .OrderByDescending(s => s.ZOrder)
             )
-            .OrderByDescending(c => c.ZOrder)
-            .Cast<VisualComponentBase>()
+            .Where(c => c is VcToken)
             .ToList();
     }
 
@@ -400,7 +408,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void Reorder(IEnumerable<VisualComponentBase> components, ZTarget target)
     {
-        var ordered = components.Where(c => c is not VcZone).OrderBy(c => c.ZOrder).ToList();
+        var ordered = components.Where(c => c is not VcZone).OrderBy(c => c.State.ZOrder).ToList();
         if (ordered.Count == 0)
             return;
 
@@ -445,7 +453,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void UpdateDragFloors()
     {
-        foreach (var group in GetDraggingObjects().GroupBy(DraggingSourceOf))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Holder))
         {
             var dragged = group.ToArray();
             var floors = StackFloors(dragged, out _);
@@ -498,7 +506,9 @@ public partial class GameObjects : Node
         // Settle from the bottom up so everything below is placed first.
         var floors = new float[components.Count];
         var top = new float[components.Count];
-        foreach (int i in Enumerable.Range(0, components.Count).OrderBy(i => components[i].ZOrder))
+        foreach (
+            int i in Enumerable.Range(0, components.Count).OrderBy(i => StackOrder(components[i]))
+        )
         {
             float floor = 0;
             if (below[i] != null)
@@ -534,7 +544,10 @@ public partial class GameObjects : Node
             if (!bounds.Intersects(table.Bounds, includeBorders: true))
                 continue;
             var c = table.Component;
-            if (!IsInstanceValid(c) || c.Location != VisualComponentBase.ComponentLocation.Table)
+            if (
+                !IsInstanceValid(c)
+                || c.State?.Location != VisualComponentBase.ComponentLocation.Table
+            )
                 continue;
 
             foreach (var f in footprints)
@@ -566,7 +579,7 @@ public partial class GameObjects : Node
             Component = c;
             var position = c.Position;
             Key = ComponentState.TableKey(position);
-            ZOrder = c.ZOrder;
+            ZOrder = StackOrder(c);
             YHeight = c.YHeight;
 
             float angle = c.Rotation.Y;
@@ -582,6 +595,12 @@ public partial class GameObjects : Node
             }
         }
     }
+
+    /// <summary>
+    /// The order a component stacks in. Zones always sit below everything else.
+    /// </summary>
+    private static ZOrder StackOrder(VisualComponentBase c) =>
+        c is VcZone ? ZOrder.Floor : c.State?.ZOrder ?? ZOrder.Floor;
 
     private void QueueStackingUpdate()
     {
@@ -945,42 +964,17 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// The source dragging a component.
-    /// </summary>
-    private static byte DraggingSourceOf(VisualComponentBase c) =>
-        ProjectService.Instance.GetIncludingDeleted<ComponentState>(c.Reference)?.Holder
-        ?? c.Holder;
-
-    /// <summary>
     /// The dragged components.
     /// </summary>
-    private IEnumerable<VisualComponentBase> GetDraggingObjects()
-    {
-        foreach (var s in ProjectService.Instance.Components.Records.Values)
-        {
-            if (
-                !s.Deleted
-                && s.Location == VisualComponentBase.ComponentLocation.Cursor
-                && GetComponent(s.Id) is { } c
-            )
-            {
-                yield return c;
-            }
-        }
-    }
+    private IEnumerable<VisualComponentBase> GetDraggingObjects() =>
+        ComponentsAt(VisualComponentBase.ComponentLocation.Cursor);
 
-    private IEnumerable<VisualComponentBase> GetNotDraggingObjects()
-    {
-        foreach (var n in ComponentNodes)
-        {
-            if (
-                n is VisualComponentBase { Location: VisualComponentBase.ComponentLocation.Table } p
-            )
-            {
-                yield return p;
-            }
-        }
-    }
+    private IEnumerable<VisualComponentBase> GetNotDraggingObjects() =>
+        ComponentsAt(VisualComponentBase.ComponentLocation.Table);
+
+    private IEnumerable<VisualComponentBase> ComponentsAt(
+        VisualComponentBase.ComponentLocation location
+    ) => Nodes(ProjectService.Instance.Get<ComponentState>(s => s.Location == location));
 
     private void EndDrag()
     {
@@ -1045,7 +1039,7 @@ public partial class GameObjects : Node
     {
         _localDragOverHand = false;
 
-        var ordered = dragged.OrderBy(c => c.ZOrder).ToList();
+        var ordered = dragged.OrderBy(c => c.State.ZOrder).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
 
         var stamp = Snowport.Clock.Create();
@@ -1247,26 +1241,28 @@ public partial class GameObjects : Node
     /// </summary>
     private void RebuildContainerCaches()
     {
-        var all = ComponentNodes.OfType<VisualComponentBase>().ToList();
-        foreach (var group in all.OfType<VisualComponentGroup>())
-            group.RebuildCache(all);
-        UpdateDeckCounts(all);
+        foreach (var group in ComponentNodes.OfType<VisualComponentGroup>())
+            group.RebuildCache();
+        UpdateDeckCounts();
         UpdateDragFloors();
     }
 
     /// <summary>
     /// Sets each deck's card count.
     /// </summary>
-    private static void UpdateDeckCounts(List<VisualComponentBase> all)
+    private void UpdateDeckCounts()
     {
-        var stacks = all.OfType<VcToken>()
-            .Where(c => c.Location == VisualComponentBase.ComponentLocation.Table)
-            .ToLookup(c => ComponentState.TableKey(c.Position), c => c.ZOrder);
+        var table = GetNotDraggingObjects().ToList();
+        var stacks = table
+            .OfType<VcToken>()
+            .Select(c => c.State)
+            .ToLookup(s => (s.X, s.Z), s => s.ZOrder);
 
-        foreach (var deck in all.OfType<VcDeck>())
-            deck.SetCount(
-                stacks[ComponentState.TableKey(deck.Position)].Count(z => z > deck.ZOrder)
-            );
+        foreach (var deck in table.OfType<VcDeck>())
+        {
+            var d = deck.State;
+            deck.SetCount(stacks[(d.X, d.Z)].Count(z => z > d.ZOrder));
+        }
     }
 
     private bool _localDragOverHand;
@@ -1277,7 +1273,7 @@ public partial class GameObjects : Node
         if (cursors == null)
             return;
 
-        foreach (var group in GetDraggingObjects().GroupBy(DraggingSourceOf))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Holder))
         {
             if (group.Key == Snowport.Clock.source && _localDragOverHand)
                 continue;
@@ -1289,10 +1285,7 @@ public partial class GameObjects : Node
             var dragged = group.ToList();
             foreach (var c in dragged)
             {
-                var s = ProjectService.Instance.GetIncludingDeleted<ComponentState>(c.Reference);
-                if (s == null)
-                    continue;
-                var offset = s.PositionAt(0);
+                var offset = c.State.PositionAt(0);
                 c.Position = new Vector3(cursor.X + offset.X, c.Position.Y, cursor.Z + offset.Z);
             }
 

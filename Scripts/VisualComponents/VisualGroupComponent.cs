@@ -6,8 +6,8 @@ using Godot;
 public abstract partial class VisualComponentGroup : VisualComponentBase
 {
     /// <summary>
-    /// A cache of this container's contents.
-    /// The source-of-truth is <see cref="VisualComponentBase.ContainerRef"/>.
+    /// A cache of this container's contents, top first.
+    /// The source-of-truth is <see cref="ComponentState.ContainerRef"/>.
     /// </summary>
     protected readonly List<SnowTag> Children = new();
 
@@ -16,13 +16,14 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     public CollisionShape3D DragDropCollider { get; set; }
 
     /// <summary>
-    /// Recomputes the child cache from the <see cref="VisualComponentBase.ContainerRef"/> of children.
+    /// Recomputes the child cache from the records this container holds.
     /// </summary>
-    public void RebuildCache(IEnumerable<VisualComponentBase> all)
+    public void RebuildCache()
     {
-        var ordered = all.Where(c => c.ContainerRef == Reference)
-            .OrderByDescending(c => c.ZOrder)
-            .Select(c => c.Reference)
+        var ordered = ProjectService
+            .Instance.Get<ComponentState>(s => s.ContainerRef == Reference)
+            .OrderByDescending(s => s.ZOrder)
+            .Select(s => s.Id)
             .ToList();
 
         if (ordered.Count == Children.Count && ordered.SequenceEqual(Children))

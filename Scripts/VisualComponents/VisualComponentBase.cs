@@ -183,6 +183,9 @@ public abstract partial class VisualComponentBase : Area3D
     // whether SyncState has placed the node yet
     private bool _placed;
 
+    // whether the last record SyncState applied was held
+    private bool _held;
+
     /// <summary>
     /// Applies the component's record, animating its transition if the write is recent enough.
     /// </summary>
@@ -192,18 +195,24 @@ public abstract partial class VisualComponentBase : Area3D
         if (s == null)
             return;
 
-        Location = s.Location;
-        ContainerRef = s.ContainerRef;
-        Holder = s.Holder;
+        var held = s.Location == ComponentLocation.Cursor;
+        LogicalVisible = s.Location is ComponentLocation.Table or ComponentLocation.Cursor;
+        // The cursor may have left it while it was held, which doesn't unhover it.
+        if (_held && !held)
+        {
+            IsMouseSelected = false;
+            IsHovered = false;
+        }
+        _held = held;
+
         // A held node is placed by its holder's cursor.
-        if (s.Location != ComponentLocation.Cursor)
+        if (!held)
             Position = s.PositionAt(_placed ? Position.Y : YHeight / 2f);
         if (
             s.Transition == Transition.None
             || !PlayTransition(s, Snowport.Clock.MsecSince(s.LastUpdateId))
         )
             Rotation = s.Rotation;
-        ZOrder = s.ZOrder;
         _placed = true;
 
         GetParentOrNull<Table>()?.NotifyChanged();
@@ -317,10 +326,10 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// The container that holds this component or
-    /// <see cref="SnowTag.Empty"/>.
+    /// The component's record, or null for a node without one, such as a spawn preview.
     /// </summary>
-    public SnowTag ContainerRef { get; set; } = SnowTag.Empty;
+    public ComponentState State =>
+        ProjectService.Instance.GetIncludingDeleted<ComponentState>(Reference);
 
     /// <summary>
     /// Index for grid and quick deck cards.
@@ -332,11 +341,6 @@ public abstract partial class VisualComponentBase : Area3D
     /// The dataset row that supplies this card's templating data. Defaults to <see cref="SnowTag.Empty"/>.
     /// </summary>
     public virtual SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
-
-    /// <summary>
-    /// True when this instance is an individual card rather than a deck container.
-    /// </summary>
-    public bool IsCardInstance => DataSetRowIndex >= 0 || DataSetRowId != SnowTag.Empty;
 
     public virtual Polygon2D YProjection { get; private set; }
 
@@ -351,17 +355,6 @@ public abstract partial class VisualComponentBase : Area3D
             return 0;
         }
         protected set => _yHeight = value;
-    }
-
-    /// <summary>
-    /// The component's stacking order.
-    /// </summary>
-    private ZOrder _zOrder = new(ZTarget.Top, 0, SnowportId.Empty);
-
-    public virtual ZOrder ZOrder
-    {
-        get => _zOrder;
-        set => _zOrder = value;
     }
 
     /// <summary>
@@ -566,41 +559,17 @@ public abstract partial class VisualComponentBase : Area3D
         Cursor,
     }
 
-    private ComponentLocation _location;
-
-    public ComponentLocation Location
-    {
-        get => _location;
-        set
-        {
-            var released =
-                _location == ComponentLocation.Cursor && value != ComponentLocation.Cursor;
-            _location = value;
-            LogicalVisible = value is ComponentLocation.Table or ComponentLocation.Cursor;
-            // The cursor may have left it while it was held, which doesn't unhover it.
-            if (released)
-            {
-                IsMouseSelected = false;
-                IsHovered = false;
-            }
-        }
-    }
-
-    /// <summary>
-    /// While <see cref="ComponentLocation.Cursor"/>, the Snowport source of the player holding it.
-    /// </summary>
-    public byte Holder { get; set; }
-
     /// <summary>
     /// Local-only. While dragged, the height this component rests at within its dragged group.
     /// </summary>
     public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
-    public bool IsDragging => Location == ComponentLocation.Cursor;
+    public bool IsDragging => State?.Location == ComponentLocation.Cursor;
 
     /// <summary>True while this component is being held by the local player's cursor.</summary>
-    public bool IsHeldByLocal => IsDragging && Holder == Snowport.Clock.source;
+    public bool IsHeldByLocal =>
+        State is { Location: ComponentLocation.Cursor } s && s.Holder == Snowport.Clock.source;
 
     private Effect BuildRotation(float degreesAboutY)
     {

@@ -77,13 +77,6 @@ public partial class VcZone : VisualComponentBase
 
     public override float MaxAxisSize => Math.Max(_width, _depth);
 
-    // Zones always sit below everything else.
-    public override ZOrder ZOrder
-    {
-        get => ZOrder.Floor;
-        set { }
-    }
-
     /// <summary>
     /// True if the given world position falls within this zone's footprint on the XZ plane.
     /// </summary>

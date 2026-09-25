@@ -23,7 +23,7 @@ public record ComponentState : Replicated
     public static ComponentState Of(VisualComponentBase c)
     {
         var s =
-            ProjectService.Instance.GetIncludingDeleted<ComponentState>(c.Reference)
+            c.State
             ?? throw new InvalidOperationException(
                 $"Component {c.Reference} has no written state."
             );
@@ -42,10 +42,6 @@ public record ComponentState : Replicated
             Rotation = c.Rotation,
             DataSetRowIndex = c.DataSetRowIndex,
             DataSetRowId = c.DataSetRowId,
-            Location = c.Location,
-            ContainerRef = c.ContainerRef,
-            Holder = c.Holder,
-            ZOrder = c.ZOrder,
         };
 
     [JsonPropertyName("pr")]
