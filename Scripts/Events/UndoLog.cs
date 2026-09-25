@@ -207,7 +207,7 @@ public static class UndoLog
 
             foreach (var fx in e.Effects)
                 if (fx is UpdateReplicatedEffect<T> u && u.Id == id)
-                    return u.Payload;
+                    return (T)u.Payload?.WithIdentity(id, e.Id);
         }
         return null;
     }

@@ -107,9 +107,9 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
 
         foreach (var fx in e.Effects.OfType<UpdateReplicatedEffect<TEntity>>())
         {
-            var entity = fx.Payload;
-            if (entity == null)
+            if (fx.Payload == null)
                 continue;
+            var entity = (TEntity)fx.Payload.WithIdentity(fx.Id, e.Id);
 
             if (
                 dict.TryGetValue(fx.Id, out var current)

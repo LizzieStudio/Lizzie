@@ -1,9 +1,12 @@
+using System.Text.Json.Serialization;
+
 public abstract record Replicated : IReplicated
 {
     public SnowTag Id { get; init; }
 
     public bool Deleted { get; init; }
 
+    [JsonIgnore]
     public SnowportId LastUpdateId { get; init; }
 
     public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
