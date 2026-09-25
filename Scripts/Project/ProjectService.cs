@@ -336,7 +336,7 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(
                 null,
-                new SetReplicatedValueEffect<ProjectGameSettings> { Payload = settings }
+                [new SetReplicatedValueEffect<ProjectGameSettings> { Payload = settings }]
             )
         );
     }

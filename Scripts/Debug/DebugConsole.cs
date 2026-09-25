@@ -158,7 +158,7 @@ public partial class DebugConsole : Node
                             ImGui.PushStyleColor(ImGuiCol.Text, amber);
                             pushed = 1;
                         }
-                        else if (undone.Contains(e.Id))
+                        else if (UndoLog.IsUndone(e, undone))
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, gray);
                             pushed = 1;

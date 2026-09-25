@@ -798,6 +798,7 @@ public partial class GameObjects : Node
         if (drawEvent == null)
             return;
 
+        EventSynchronizer.Instance?.BeginGroup();
         EventSynchronizer.Instance?.Submit(drawEvent);
 
         CursorMode = CursorMode.Drag;
@@ -828,6 +829,7 @@ public partial class GameObjects : Node
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
 
+        EventSynchronizer.Instance?.BeginGroup();
         EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), dragged));
     }
 
@@ -1063,7 +1065,8 @@ public partial class GameObjects : Node
             dropped[i] = new ComponentEffect(s with { X = s.X + snapX, Z = s.Z + snapZ });
         }
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), dropped));
+        var drop = TableEvent.Now(new MoveAction(), dropped, true);
+        EventSynchronizer.Instance?.Submit(drop);
     }
 
     /// <summary>
@@ -1138,7 +1141,8 @@ public partial class GameObjects : Node
                 )
             );
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), effects.ToArray()));
+        var drop = TableEvent.Now(new MoveAction(), effects.ToArray(), true);
+        EventSynchronizer.Instance?.Submit(drop);
     }
 
     #endregion
@@ -1461,15 +1465,11 @@ public partial class GameObjects : Node
         for (int i = log.Count - 1; i >= 0 && winner == null; i--)
         {
             var e = log.GetAt(i).Value;
-            if (undone.Contains(e.Id))
+            if (UndoLog.IsUndone(e, undone))
                 continue;
 
             foreach (var fx in e.Effects)
-                if (
-                    fx is ComponentEffect ce
-                    && ce.Id == r
-                    && ce.State.Location != VisualComponentBase.ComponentLocation.Cursor
-                )
+                if (fx is ComponentEffect ce && ce.Id == r)
                 {
                     winner = ce;
                     winnerId = e.Id;

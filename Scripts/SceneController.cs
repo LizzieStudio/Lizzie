@@ -69,7 +69,8 @@ public partial class SceneController : Node3D
     private void IssueUndo()
     {
         var log = EventSynchronizer.Instance?.EventLog;
-        if (log == null)
+        // Nothing is undone in the middle of a gesture.
+        if (log == null || EventSynchronizer.Instance.InGroup)
             return;
         if (UndoLog.ComputeUndoTarget(log, Snowport.Clock.source) is SnowportId target)
             EventSynchronizer.Instance.Submit(TableEvent.Now(new UndoAction { Target = target }));
@@ -79,7 +80,8 @@ public partial class SceneController : Node3D
     private void IssueRedo()
     {
         var log = EventSynchronizer.Instance?.EventLog;
-        if (log == null)
+        // Nothing is undone in the middle of a gesture.
+        if (log == null || EventSynchronizer.Instance.InGroup)
             return;
         if (UndoLog.ComputeRedoTarget(log, Snowport.Clock.source) is SnowportId target)
             EventSynchronizer.Instance.Submit(

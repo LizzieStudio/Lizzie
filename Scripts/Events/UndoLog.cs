@@ -6,23 +6,21 @@ using System.Collections.Generic;
 public static class UndoLog
 {
     /// <summary>
-    /// True when an event is something the user can undo, which is any event with an effect.
+    /// True when the events are something the user can undo, which is when any has an effect.
     /// </summary>
-    public static bool IsUndoableEvent(TableEvent e) => e.Effects.Length > 0;
-
-    /// <summary>
-    /// True when an event has at least one drag or drop.
-    /// </summary>
-    public static bool IsDragEvent(TableEvent e)
+    private static bool IsUndoable(IEnumerable<TableEvent> events)
     {
-        foreach (var fx in e.Effects)
-            if (
-                fx is ComponentEffect c
-                && c.State?.Location == VisualComponentBase.ComponentLocation.Cursor
-            )
+        foreach (var e in events)
+            if (e.Effects.Length > 0)
                 return true;
         return false;
     }
+
+    /// <summary>
+    /// True when the event is undone.
+    /// </summary>
+    public static bool IsUndone(TableEvent e, HashSet<SnowportId> undone) =>
+        undone.Contains(e.Unit);
 
     /// <summary>
     /// Follows an event's undo target chain down to the event it ultimately reverses.
@@ -38,7 +36,42 @@ public static class UndoLog
     }
 
     /// <summary>
-    /// The set of event ids that are currently undone.
+    /// The events an undo of <paramref name="targetId"/> reverses.
+    /// </summary>
+    private static List<TableEvent> ResolveEvents(
+        OrderedDictionary<SnowportId, TableEvent> log,
+        SnowportId targetId
+    )
+    {
+        var events = new List<TableEvent>();
+        if (!log.TryGetValue(targetId, out var e))
+            return events;
+
+        var @base = ResolveBase(e, log);
+        if (@base == null)
+            return events;
+
+        // A group's events all come after the event that names it.
+        var unit = @base.Unit;
+        int start = log.IndexOf(unit);
+        if (start < 0)
+            return events;
+
+        for (int i = start; i < log.Count; i++)
+        {
+            var member = log.GetAt(i).Value;
+            if (member.Unit != unit)
+                continue;
+            events.Add(member);
+            if (member.Close)
+                break;
+        }
+
+        return events;
+    }
+
+    /// <summary>
+    /// The set of undone units, which are group ids or the ids of ungrouped events.
     /// </summary>
     public static HashSet<SnowportId> ComputeUndone(OrderedDictionary<SnowportId, TableEvent> log)
     {
@@ -46,8 +79,7 @@ public static class UndoLog
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
-            bool active = !undone.Contains(e.Id);
-            if (active && e.Action is UndoAction u)
+            if (!IsUndone(e, undone) && e.Action is UndoAction u)
                 undone.Add(u.Target);
         }
         return undone;
@@ -76,27 +108,18 @@ public static class UndoLog
             {
                 if (e.Action is UndoAction u)
                 {
-                    if (!undone.Contains(e.Id))
+                    if (!IsUndone(e, undone))
                         undone.Add(u.Target);
                     continue;
                 }
                 sawNonUndo = true;
             }
 
-            if (undone.Contains(e.Id))
-            {
-                undone.Remove(e.Id);
-                continue;
-            }
-
-            // drag events are ignored
-            // only the drop event is undone
-            if (IsDragEvent(e))
+            if (IsUndone(e, undone))
                 continue;
 
-            var @base = ResolveBase(e, log);
-            if (@base != null && IsUndoableEvent(@base))
-                return e.Id;
+            if (IsUndoable(ResolveEvents(log, e.Unit)))
+                return e.Unit;
         }
 
         return null;
@@ -124,7 +147,7 @@ public static class UndoLog
             if (e.Action is not UndoAction u)
                 return null;
 
-            if (!undone.Contains(e.Id) && !u.Redo)
+            if (!IsUndone(e, undone) && !u.Redo)
                 return e.Id;
         }
 
@@ -140,14 +163,8 @@ public static class UndoLog
     )
     {
         var affected = new HashSet<SnowTag>();
-        if (!log.TryGetValue(targetId, out var e))
-            return affected;
-
-        var @base = ResolveBase(e, log);
-        if (@base == null)
-            return affected;
-
-        foreach (var fx in @base.Effects)
+        foreach (var e in ResolveEvents(log, targetId))
+        foreach (var fx in e.Effects)
             if (fx is ComponentEffect)
                 affected.Add(fx.Id);
 
@@ -164,14 +181,8 @@ public static class UndoLog
         where T : class, IReplicated
     {
         var affected = new HashSet<SnowTag>();
-        if (!log.TryGetValue(targetId, out var e))
-            return affected;
-
-        var @base = ResolveBase(e, log);
-        if (@base == null)
-            return affected;
-
-        foreach (var fx in @base.Effects)
+        foreach (var e in ResolveEvents(log, targetId))
+        foreach (var fx in e.Effects)
             if (fx is UpdateReplicatedEffect<T>)
                 affected.Add(fx.Id);
 
@@ -191,7 +202,7 @@ public static class UndoLog
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
-            if (undone.Contains(e.Id))
+            if (IsUndone(e, undone))
                 continue;
 
             foreach (var fx in e.Effects)
@@ -209,14 +220,8 @@ public static class UndoLog
         SnowportId targetId
     )
     {
-        if (!log.TryGetValue(targetId, out var e))
-            return false;
-
-        var @base = ResolveBase(e, log);
-        if (@base == null)
-            return false;
-
-        foreach (var fx in @base.Effects)
+        foreach (var e in ResolveEvents(log, targetId))
+        foreach (var fx in e.Effects)
             if (fx is SetReplicatedValueEffect<T>)
                 return true;
         return false;
@@ -236,7 +241,7 @@ public static class UndoLog
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
-            if (undone.Contains(e.Id))
+            if (IsUndone(e, undone))
                 continue;
 
             for (int j = e.Effects.Length - 1; j >= 0; j--)

@@ -29,10 +29,54 @@ public partial class EventSynchronizer : Node
         _instance = this;
     }
 
-    public void Clear() => EventLog.Clear();
-
-    public void Submit(TableEvent e)
+    public void Clear()
     {
+        EventLog.Clear();
+        _openGroup = SnowportId.Empty;
+    }
+
+    private SnowportId _openGroup = SnowportId.Empty;
+
+    /// <summary>True while the local player's events are being collected into one undo.</summary>
+    public bool InGroup => _openGroup != SnowportId.Empty;
+
+    /// <summary>
+    /// Collects the local player's events into one undo.
+    /// Stops collecting when an event with <see cref="TableEvent.Close"/> is submitted.
+    /// The first event submitted sets the SnowportId of the group.
+    /// </summary>
+    public void BeginGroup()
+    {
+        _openGroup = SnowportId.Empty;
+    }
+
+    public void Submit(TableEvent e, bool startGroup = false)
+    {
+        // Currentlly, all events submitted during a drag will be undone with it.
+        // For now, this is correct, since it's just things like flip and rotate.
+        // This could change in the future, though, and might be incorrect now.
+        // TODO: track gestures separately, so events can be in or out of the group.
+        if (startGroup)
+        {
+            if (InGroup)
+                throw new Exception("you cannot start a group while one is running");
+            _openGroup = e.Id;
+        }
+
+        if (InGroup && e.Action is not UndoAction)
+        {
+            e.Group = _openGroup;
+
+            if (e.Close)
+            {
+                _openGroup = SnowportId.Empty;
+            }
+        }
+        else
+        {
+            e.Close = false;
+        }
+
         if (TryRecord(e))
             Applied?.Invoke(e);
 

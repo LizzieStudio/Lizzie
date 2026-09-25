@@ -146,16 +146,18 @@ public partial class VcTray : VisualComponentGroup
 
         return TableEvent.Now(
             null,
-            new ComponentEffect(
-                new ComponentState
-                {
-                    Id = Snowport.Clock.CreateTag(),
-                    PrototypeRef = _prototype.Id,
-                    Location = ComponentLocation.Cursor,
-                    ContainerRef = cursors.LocalCursorRef,
-                    ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
-                }
-            )
+            [
+                new ComponentEffect(
+                    new ComponentState
+                    {
+                        Id = Snowport.Clock.CreateTag(),
+                        PrototypeRef = _prototype.Id,
+                        Location = ComponentLocation.Cursor,
+                        ContainerRef = cursors.LocalCursorRef,
+                        ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
+                    }
+                ),
+            ]
         );
     }
 }
