@@ -37,12 +37,6 @@ public class ComponentEffect : Effect
 
     [JsonPropertyName("s")]
     public ComponentState State { get; init; }
-
-    /// <summary>
-    /// Captures a component's state.
-    /// </summary>
-    public static ComponentEffect Capture(VisualComponentBase component) =>
-        new(ComponentState.Capture(component));
 }
 
 /// <summary>

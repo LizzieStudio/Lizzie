@@ -90,7 +90,7 @@ public partial class VcDie : VisualComponentBase
         // The rolling client picks the target face
         var side = (int)(GD.Randi() % _sides + 1);
 
-        var s = ComponentState.Capture(this);
+        var s = ComponentState.Of(this);
         if (side <= _sideRotations.Length)
             s = s with { Rotation = _sideRotations[side - 1] * (3.14159f / 180f) }; // degrees to radians
 
@@ -114,7 +114,7 @@ public partial class VcDie : VisualComponentBase
             return null;
 
         return new ComponentEffect(
-            ComponentState.Capture(this) with
+            ComponentState.Of(this) with
             {
                 Rotation = _sideRotations[side - 1] * (3.14159f / 180f), //convert to radians
             }

@@ -38,7 +38,7 @@ public partial class PlayerHandService : Node
         SnowportId stamp
     ) =>
         new(
-            ComponentState.Capture(card) with
+            ComponentState.Of(card) with
             {
                 Location = VisualComponentBase.ComponentLocation.Hand,
                 ContainerRef = HandContainer(seatIndex),

@@ -116,8 +116,7 @@ public partial class VcDeck : VisualComponentBase
         return cards
             .Select(
                 (c, i) =>
-                    (Effect)
-                        new ComponentEffect(ComponentState.Capture(c) with { ZOrder = orders[i] })
+                    (Effect)new ComponentEffect(ComponentState.Of(c) with { ZOrder = orders[i] })
             )
             .ToArray();
     }
@@ -131,14 +130,10 @@ public partial class VcDeck : VisualComponentBase
         return Stack()
             .Append(this)
             .Select(c =>
-                (Effect)
-                    new ComponentEffect(
-                        ComponentState.Capture(c) with
-                        {
-                            Rotation = c.Rotation + step,
-                        }
-                    )
-            )
+            {
+                var s = ComponentState.Of(c);
+                return (Effect)new ComponentEffect(s with { Rotation = s.Rotation + step });
+            })
             .ToArray();
     }
 
@@ -157,18 +152,15 @@ public partial class VcDeck : VisualComponentBase
         }
 
         //splay onto the board
+        var frame = ComponentState.Of(this).PositionAt(0);
         return cards
             .Select(
                 (c, i) =>
                     (Effect)
                         new ComponentEffect(
-                            ComponentState.Capture(c) with
+                            ComponentState.Of(c) with
                             {
-                                Position = new Vector3(
-                                    Position.X + (_width * (1.5f + i)),
-                                    Position.Y,
-                                    Position.Z
-                                ),
+                                Position = frame + new Vector3(_width * (1.5f + i), 0, 0),
                                 // Splayed cards land on top, in draw order.
                                 ZOrder = new ZOrder(ZTarget.Top, i, stamp),
                             }
@@ -220,7 +212,7 @@ public partial class VcDeck : VisualComponentBase
     public override IEnumerable<ComponentEffect> GetDespawnEffects() =>
         Stack()
             .Append(this)
-            .Select(c => new ComponentEffect(ComponentState.Capture(c) with { Deleted = true }));
+            .Select(c => new ComponentEffect(ComponentState.Of(c) with { Deleted = true }));
 
     /// <summary>
     /// The deck's cards, face-down on the frame, with the first token on top.

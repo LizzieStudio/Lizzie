@@ -54,7 +54,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
                 (c, i) =>
                     (Effect)
                         new ComponentEffect(
-                            ComponentState.Capture(c) with
+                            ComponentState.Of(c) with
                             {
                                 Location = ComponentLocation.Container,
                                 ContainerRef = Reference,
@@ -158,7 +158,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
             effects.Add(
                 new ComponentEffect(
-                    ComponentState.Capture(comp) with
+                    ComponentState.Of(comp) with
                     {
                         ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, stamp),
                     }

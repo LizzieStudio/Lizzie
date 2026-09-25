@@ -127,9 +127,9 @@ public partial class VcToken : VisualComponentBase
     /// </summary>
     public ComponentState BuildFlipState()
     {
-        bool targetFaceUp = RotationDegrees.Z >= 90;
+        var s = ComponentState.Of(this);
+        bool targetFaceUp = Mathf.RadToDeg(s.Rotation.Z) >= 90;
 
-        var s = ComponentState.Capture(this);
         return s with
         {
             Rotation = new Vector3(

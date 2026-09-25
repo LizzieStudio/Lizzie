@@ -301,14 +301,13 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// Captures every component on the table, including spawns waiting on their prototype.
+    /// The written state of every component, including spawns waiting on their prototype.
     /// </summary>
     public ComponentEffect[] GenerateCatchupEffects()
     {
-        return ComponentNodes
-            .OfType<VisualComponentBase>()
-            .Select(ComponentEffect.Capture)
-            .Concat(_pendingSpawns.Values)
+        return _lastWrite
+            .Values.Where(w => !w.State.Deleted)
+            .Select(w => new ComponentEffect(w.State with { Transition = Transition.None }))
             .ToArray();
     }
 
@@ -445,7 +444,7 @@ public partial class GameObjects : Node
         var arr = new Effect[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
             arr[i] = new ComponentEffect(
-                ComponentState.Capture(ordered[i]) with
+                ComponentState.Of(ordered[i]) with
                 {
                     ZOrder = new ZOrder(target, i, stamp),
                 }
@@ -780,16 +779,17 @@ public partial class GameObjects : Node
             if (c == null)
                 continue;
 
+            var s = ComponentState.Of(c);
             effects.Add(
                 new ComponentEffect(
-                    ComponentState.Capture(c) with
+                    s with
                     {
                         Location = VisualComponentBase.ComponentLocation.Cursor,
                         ContainerRef = SnowTag.Empty,
                         Holder = Snowport.Clock.source,
                         // Held under the cursor.
                         Position = Vector3.Zero,
-                        Rotation = rotation?.Invoke(c) ?? c.Rotation,
+                        Rotation = rotation?.Invoke(c) ?? s.Rotation,
                         ZOrder = new ZOrder(ZTarget.Top, effects.Count, stamp),
                     }
                 )
@@ -816,7 +816,7 @@ public partial class GameObjects : Node
         var dragged = components
             .Where(o => o != null)
             .Select(o => new ComponentEffect(
-                ComponentState.Capture(o) with
+                ComponentState.Of(o) with
                 {
                     Location = VisualComponentBase.ComponentLocation.Cursor,
                     ContainerRef = SnowTag.Empty,
@@ -1061,7 +1061,7 @@ public partial class GameObjects : Node
         var dropped = new Effect[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
         {
-            var s = ComponentState.Capture(ordered[i]) with
+            var s = ComponentState.Of(ordered[i]) with
             {
                 Location = VisualComponentBase.ComponentLocation.Table,
                 ContainerRef = SnowTag.Empty,
@@ -1137,7 +1137,7 @@ public partial class GameObjects : Node
         for (int i = 0; i < toBoard.Count; i++)
             effects.Add(
                 new ComponentEffect(
-                    ComponentState.Capture(toBoard[i]) with
+                    ComponentState.Of(toBoard[i]) with
                     {
                         Location = VisualComponentBase.ComponentLocation.Table,
                         ContainerRef = SnowTag.Empty,

@@ -18,11 +18,20 @@ public enum Transition
 public record ComponentState
 {
     /// <summary>
-    /// Captures a component's live state.
+    /// The state last written for a component, minus the transition.
     /// </summary>
-    public static ComponentState Capture(VisualComponentBase c)
+    public static ComponentState Of(VisualComponentBase c)
     {
-        var s = new ComponentState
+        if (!ProjectService.Instance.GameObjects.TryGetState(c.Reference, out var s))
+            throw new InvalidOperationException($"Component {c.Reference} has no written state.");
+        return s with { Transition = Transition.None };
+    }
+
+    /// <summary>
+    /// Captures a node that hasn't been written yet, such as a spawn preview.
+    /// </summary>
+    public static ComponentState Capture(VisualComponentBase c) =>
+        new()
         {
             Id = c.Reference,
             PrototypeRef = c.PrototypeRef,
@@ -35,16 +44,6 @@ public record ComponentState
             Holder = c.Holder,
             ZOrder = c.ZOrder,
         };
-
-        // A held node follows the cursor, so we shouldn't use its actual table position.
-        if (
-            c.IsDragging
-            && ProjectService.Instance.GameObjects.TryGetState(c.Reference, out var written)
-        )
-            s = s with { X = written.X, Z = written.Z };
-
-        return s;
-    }
 
     [JsonPropertyName("i")]
     public SnowTag Id { get; init; }

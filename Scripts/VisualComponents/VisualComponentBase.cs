@@ -189,7 +189,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public virtual IEnumerable<ComponentEffect> GetDespawnEffects()
     {
-        yield return new ComponentEffect(ComponentState.Capture(this) with { Deleted = true });
+        yield return new ComponentEffect(ComponentState.Of(this) with { Deleted = true });
     }
 
     /// <summary>
@@ -553,13 +553,12 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>True while this component is being held by the local player's cursor.</summary>
     public bool IsHeldByLocal => IsDragging && Holder == Snowport.Clock.source;
 
-    private ComponentEffect BuildRotation(float degreesAboutY) =>
-        new(
-            ComponentState.Capture(this) with
-            {
-                Rotation = Rotation + new Vector3(0, Mathf.DegToRad(degreesAboutY), 0),
-            }
-        );
+    private ComponentEffect BuildRotation(float degreesAboutY)
+    {
+        var s = ComponentState.Of(this);
+        var step = new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
+        return new(s with { Rotation = s.Rotation + step });
+    }
 
     private bool _logicalVisible = true;
 
