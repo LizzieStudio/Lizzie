@@ -61,7 +61,7 @@ public partial class QuickTextureEntry : BoxContainer
     public void SetIcons(IconLibrary icons)
     {
         _icons = icons;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private void Sync(IRecordReader R)

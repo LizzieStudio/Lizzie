@@ -140,12 +140,12 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         QueueFree();
     }
 
-    private void OnSeatsChanged() => ProjectService.Instance.ForceSync(this);
+    private void OnSeatsChanged() => ProjectService.Instance.QueueSync(this);
 
     private void OnReprompt(RequestPlayerPositionEvent _)
     {
         // Another player claimed a seat; refresh availability.
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private void ShowStatus(string message)

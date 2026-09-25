@@ -194,7 +194,7 @@ public partial class PrototypeManifest : Window
     public void SetPrototypeCounts(Dictionary<SnowTag, int> prototypeCounts)
     {
         _prototypeCounts = prototypeCounts;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private Dictionary<SnowTag, int> _prototypeCounts;
@@ -268,7 +268,7 @@ public partial class PrototypeManifest : Window
             _sortAscending = true;
         }
 
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private void OnTreeItemSelected()

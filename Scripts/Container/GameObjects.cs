@@ -1380,7 +1380,7 @@ public partial class GameObjects : Node
     private void AddPendingSpawn(ComponentEffect fx)
     {
         _pendingSpawns[fx.Id] = fx;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     /// <summary>

@@ -117,7 +117,7 @@ public partial class DatasetEditor : Window
     public void SetDatasetById(SnowTag id)
     {
         _datasetRef = id;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private void OnDatasetSelected(SnowTag id) => SetDatasetById(id);

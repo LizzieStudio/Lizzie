@@ -1639,21 +1639,21 @@ public partial class TemplateCreator : Window
     #region Datasets
 
     private void ChangePage(object sender, ItemSelectedEventArgs e) =>
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
 
     //Different dataset has been selected by the user
     private void OnDatasetChanged(SnowTag datasetRef)
     {
         EditCurrentTemplate(t => t with { DataSet = datasetRef });
         _pageControl.CurrentItem = 0;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private void MapDataset()
     {
         _dataSetSelector.SelectedDataSet = CurrentTemplate.DataSet;
         _pageControl.CurrentItem = 0;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private void SyncDataset(IRecordReader R)

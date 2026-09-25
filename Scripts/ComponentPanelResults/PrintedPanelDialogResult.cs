@@ -197,7 +197,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             if (tab == 1)
                 GenerateQuickCards();
             else if (tab == 4)
-                ProjectService.Instance.ForceSync(this);
+                ProjectService.Instance.QueueSync(this);
             UpdatePreview();
         };
 
@@ -487,7 +487,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private void OnDatasetChanged(SnowTag datasetRef)
     {
         _datasetRef = datasetRef;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private SnowTag _frontTemplateRef = SnowTag.Empty;
@@ -496,13 +496,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private void OnFrontTemplateChanged(SnowTag templateRef)
     {
         _frontTemplateRef = templateRef;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     private void OnBackTemplateChanged(SnowTag templateRef)
     {
         _backTemplateRef = templateRef;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
     }
 
     public override void Activate()
@@ -837,7 +837,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _datasetPicker.SelectedDataSet = p.Dataset;
         _datasetRef = p.Dataset;
-        ProjectService.Instance.ForceSync(this);
+        ProjectService.Instance.QueueSync(this);
 
         UpdateDimensionUI();
         Activate();

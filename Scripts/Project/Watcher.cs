@@ -15,6 +15,12 @@ public sealed class Watcher : IRecordReader
     // per record type, predicates that are true for records this watcher read
     private readonly Dictionary<Type, List<Func<object, bool>>> _dependencies = new();
 
+    // per record type, the values its Project returned on the previous run
+    private readonly Dictionary<Type, object> _projections = new();
+
+    // record types projected during the current run
+    private readonly HashSet<Type> _projected = new();
+
     public Node Owner { get; }
 
     public Watcher(Node owner, Action<IRecordReader> sync, IRecordReader source)
@@ -50,6 +56,7 @@ public sealed class Watcher : IRecordReader
     public void Run()
     {
         _dependencies.Clear();
+        _projected.Clear();
         try
         {
             _sync(this);
@@ -113,5 +120,39 @@ public sealed class Watcher : IRecordReader
     {
         Depend(typeof(T), _ => true);
         return _source.Value<T>();
+    }
+
+    public Projection<K> Project<T, K>(Func<IRecordReader, T, K?> projection)
+        where T : class, IReplicated
+        where K : struct
+    {
+        if (!_projected.Add(typeof(T)))
+            throw new InvalidOperationException(
+                $"You cannot Project {typeof(T).Name} twice during the same Sync."
+            );
+
+        var records = Get<T>();
+        var previous = _projections.TryGetValue(typeof(T), out var p)
+            ? (Dictionary<SnowTag, K>)p
+            : new Dictionary<SnowTag, K>();
+        var current = new Dictionary<SnowTag, K>();
+        foreach (var record in records)
+            if (projection(this, record) is K value)
+                current[record.Id] = value;
+
+        var deleted = new List<(SnowTag, K)>();
+        var created = new List<(SnowTag, K)>();
+        var comparer = EqualityComparer<K>.Default;
+
+        // a missing entry counts as a null projection
+        foreach (var (id, old) in previous)
+            if (!current.TryGetValue(id, out var value) || !comparer.Equals(old, value))
+                deleted.Add((id, old));
+        foreach (var (id, value) in current)
+            if (!previous.TryGetValue(id, out var old) || !comparer.Equals(old, value))
+                created.Add((id, value));
+
+        _projections[typeof(T)] = current;
+        return new Projection<K>(deleted, created);
     }
 }

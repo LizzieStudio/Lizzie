@@ -18,6 +18,7 @@ public partial class ProjectService : IRecordReader
     /// <summary>
     /// Runs <paramref name="sync"/> at the end of the frame, then again whenever a record it
     /// read changes, until <paramref name="owner"/> leaves the tree. Call from _EnterTree.
+    /// The first run is deferred so callers can configure the node after adding it.
     /// </summary>
     public void Watch(Node owner, Action<IRecordReader> sync)
     {
@@ -32,24 +33,24 @@ public partial class ProjectService : IRecordReader
     }
 
     /// <summary>
-    /// Forces a rerun of the Node's Watch functions at the end of the frame.
+    /// Schedules a rerun of the Node's Watch functions at the end of the frame.
     /// Does nothing if the Node is not in the tree.
     /// </summary>
-    public void ForceSync(Node owner)
+    public void QueueSync(Node owner)
     {
-        foreach (var watcher in _watchers)
+        foreach (var watcher in _watchers.Where(w => w.Owner == owner))
         {
-            if (watcher.Owner == owner)
-                MarkDirty(watcher);
+            MarkDirty(watcher);
         }
     }
 
     /// <summary>
-    /// Runs the Node's Watch functions immediately instead of at the end of the frame.
+    /// Runs the Node's Watch functions immediately.
+    /// Useful if you need to measure the node as soon as it's added.
     /// </summary>
     public void SyncNow(Node owner)
     {
-        foreach (var watcher in _watchers.Where(w => w.Owner == owner).ToList())
+        foreach (var watcher in _watchers.Where(w => w.Owner == owner))
         {
             _dirty.Remove(watcher);
             watcher.Run();
@@ -88,9 +89,13 @@ public partial class ProjectService : IRecordReader
         _dirty.Add(watcher);
     }
 
+    /// <summary>
+    /// Runs the dirty watchers, parents before their descendants, so a parent removes or
+    /// replaces a child before the child can sync a record that no longer fits it.
+    /// </summary>
     private void FlushWatchers()
     {
-        var batch = _dirty.ToArray();
+        var batch = _dirty.OrderBy(w => Depth(w.Owner)).ToArray();
         _dirty.Clear();
 
         foreach (var watcher in batch)
@@ -98,6 +103,17 @@ public partial class ProjectService : IRecordReader
             if (_watchers.Contains(watcher) && IsInstanceValid(watcher.Owner))
                 watcher.Run();
         }
+    }
+
+    private static int Depth(Node node)
+    {
+        if (!IsInstanceValid(node))
+            return 0;
+
+        int depth = 0;
+        for (var n = node.GetParent(); n != null; n = n.GetParent())
+            depth++;
+        return depth;
     }
 
     #region IRecordReader
@@ -141,6 +157,16 @@ public partial class ProjectService : IRecordReader
         ContainerOf(typeof(T)) is ReplicatedValue<T> v
             ? v.Value
             : throw new InvalidOperationException($"{typeof(T).Name} is not in a value");
+
+    /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
+    public Projection<K> Project<T, K>(Func<IRecordReader, T, K?> projection)
+        where T : class, IReplicated
+        where K : struct
+    {
+        throw new InvalidOperationException(
+            "Project can only be called on the IRecordReader provided to the Watch(fn)."
+        );
+    }
 
     #endregion
 }

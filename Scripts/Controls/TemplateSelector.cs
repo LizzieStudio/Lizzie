@@ -27,7 +27,7 @@ public partial class TemplateSelector : OptionButton
             if (_target != value)
             {
                 _target = value;
-                ProjectService.Instance.ForceSync(this);
+                ProjectService.Instance.QueueSync(this);
             }
         }
     }

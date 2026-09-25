@@ -79,7 +79,7 @@ public abstract partial class VisualComponentBase : Area3D
         set
         {
             _draftPrototype = value;
-            ProjectService.Instance.ForceSync(this);
+            ProjectService.Instance.QueueSync(this);
         }
     }
 

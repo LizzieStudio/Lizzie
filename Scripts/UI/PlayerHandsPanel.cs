@@ -55,7 +55,7 @@ public partial class PlayerHandsPanel : Panel
         OnModelChanged();
     }
 
-    private void OnModelChanged() => ProjectService.Instance.ForceSync(this);
+    private void OnModelChanged() => ProjectService.Instance.QueueSync(this);
 
     // -------------------------------------------------------------------------
     // Show/hide toggle
