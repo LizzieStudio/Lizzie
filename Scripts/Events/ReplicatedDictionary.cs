@@ -74,13 +74,16 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
         if (log == null)
             return;
 
-        var undone = UndoLog.ComputeUndone(log);
+        var affected = UndoLog.ResolveAffected<TEntity>(log, undo.Target);
+        if (affected.Count == 0)
+            return;
+
+        var winners = UndoLog.LatestReplicated<TEntity>(log, affected);
         var changed = new Dictionary<SnowTag, (TEntity Old, TEntity New)>();
 
-        foreach (var id in UndoLog.ResolveAffected<TEntity>(log, undo.Target))
+        foreach (var (id, winner) in winners)
         {
             var old = dict.GetValueOrDefault(id);
-            var winner = UndoLog.LatestReplicated<TEntity>(log, id, undone);
             if (winner == null)
                 dict.Remove(id);
             else

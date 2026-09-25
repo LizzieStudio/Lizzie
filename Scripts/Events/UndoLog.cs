@@ -3,6 +3,10 @@ using System.Collections.Generic;
 /// <summary>
 /// Utility functions on the event log for undo and redo.
 /// </summary>
+/// <remarks>
+/// Whether an event is undone depends only on the undo events after it,
+/// so a scan from newest to oldest can track the undone set as it goes and stop early.
+/// </remarks>
 public static class UndoLog
 {
     /// <summary>
@@ -21,6 +25,19 @@ public static class UndoLog
     /// </summary>
     public static bool IsUndone(TableEvent e, HashSet<SnowportId> undone) =>
         undone.Contains(e.Unit);
+
+    /// <summary>
+    /// Call on each event while walking the log from newest to oldest.
+    /// False when the event is undone. Records the target of each live undo.
+    /// </summary>
+    public static bool Visit(TableEvent e, HashSet<SnowportId> undone)
+    {
+        if (IsUndone(e, undone))
+            return false;
+        if (e.Action is UndoAction u)
+            undone.Add(u.Target);
+        return true;
+    }
 
     /// <summary>
     /// Follows an event's undo target chain down to the event it ultimately reverses.
@@ -51,13 +68,19 @@ public static class UndoLog
         if (@base == null)
             return events;
 
-        // A group's events all come after the event that names it.
         var unit = @base.Unit;
-        int start = log.IndexOf(unit);
-        if (start < 0)
+        if (!log.TryGetValue(unit, out var first))
             return events;
 
-        for (int i = start; i < log.Count; i++)
+        // an ungrouped event is its own unit
+        if (first.Group == SnowportId.Empty)
+        {
+            events.Add(first);
+            return events;
+        }
+
+        // A group's events all come after the event that names it.
+        for (int i = log.IndexOf(unit); i < log.Count; i++)
         {
             var member = log.GetAt(i).Value;
             if (member.Unit != unit)
@@ -68,21 +91,6 @@ public static class UndoLog
         }
 
         return events;
-    }
-
-    /// <summary>
-    /// The set of undone units, which are group ids or the ids of ungrouped events.
-    /// </summary>
-    public static HashSet<SnowportId> ComputeUndone(OrderedDictionary<SnowportId, TableEvent> log)
-    {
-        var undone = new HashSet<SnowportId>();
-        for (int i = log.Count - 1; i >= 0; i--)
-        {
-            var e = log.GetAt(i).Value;
-            if (!IsUndone(e, undone) && e.Action is UndoAction u)
-                undone.Add(u.Target);
-        }
-        return undone;
     }
 
     /// <summary>
@@ -134,11 +142,12 @@ public static class UndoLog
         byte source
     )
     {
-        var undone = ComputeUndone(log);
+        var undone = new HashSet<SnowportId>();
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
+            bool live = Visit(e, undone);
 
             if (e.Id.source != source)
                 continue;
@@ -147,7 +156,7 @@ public static class UndoLog
             if (e.Action is not UndoAction u)
                 return null;
 
-            if (!IsUndone(e, undone) && !u.Redo)
+            if (live && !u.Redo)
                 return e.Id;
         }
 
@@ -173,26 +182,33 @@ public static class UndoLog
     }
 
     /// <summary>
-    /// The newest non-undone record for <paramref name="id"/>, or null if none remains.
+    /// The newest non-undone record for each of <paramref name="ids"/>, or null where none remains.
     /// </summary>
-    public static T LatestReplicated<T>(
+    public static Dictionary<SnowTag, T> LatestReplicated<T>(
         OrderedDictionary<SnowportId, TableEvent> log,
-        SnowTag id,
-        HashSet<SnowportId> undone
+        IReadOnlyCollection<SnowTag> ids
     )
         where T : class, IReplicated
     {
-        for (int i = log.Count - 1; i >= 0; i--)
+        var winners = new Dictionary<SnowTag, T>(ids.Count);
+        var pending = new HashSet<SnowTag>(ids);
+        var undone = new HashSet<SnowportId>();
+
+        for (int i = log.Count - 1; i >= 0 && pending.Count > 0; i--)
         {
             var e = log.GetAt(i).Value;
-            if (IsUndone(e, undone))
+            if (!Visit(e, undone))
                 continue;
 
             foreach (var fx in e.Effects)
-                if (fx is UpdateReplicatedEffect<T> u && u.Id == id)
-                    return (T)u.Payload?.WithIdentity(id, e.Id);
+                if (fx is UpdateReplicatedEffect<T> u && pending.Remove(u.Id))
+                    winners[u.Id] = (T)u.Payload?.WithIdentity(u.Id, e.Id);
         }
-        return null;
+
+        foreach (var id in pending)
+            winners[id] = null;
+
+        return winners;
     }
 
     /// <summary>
@@ -216,15 +232,16 @@ public static class UndoLog
     /// </summary>
     public static bool LatestValue<T>(
         OrderedDictionary<SnowportId, TableEvent> log,
-        HashSet<SnowportId> undone,
         out T value,
         out SnowportId writeId
     )
     {
+        var undone = new HashSet<SnowportId>();
+
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
-            if (IsUndone(e, undone))
+            if (!Visit(e, undone))
                 continue;
 
             for (int j = e.Effects.Length - 1; j >= 0; j--)

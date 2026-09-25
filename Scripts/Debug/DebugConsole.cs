@@ -176,7 +176,9 @@ public partial class DebugConsole : Node
             ProjectService.Instance.EndBulkLoad();
         }
 
-        Log($"Added {count} events in {watch.ElapsedMilliseconds} ms ({sync.EventLog.Count} total).");
+        Log(
+            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({sync.EventLog.Count} total)."
+        );
     }
 
     private void Log(string line)
@@ -229,11 +231,7 @@ public partial class DebugConsole : Node
         }
 
         while (_undoneScannedTo > index)
-        {
-            var e = log.GetAt(--_undoneScannedTo).Value;
-            if (!UndoLog.IsUndone(e, _undone) && e.Action is UndoAction u)
-                _undone.Add(u.Target);
-        }
+            UndoLog.Visit(log.GetAt(--_undoneScannedTo).Value, _undone);
     }
 
     /// <summary>

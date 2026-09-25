@@ -94,8 +94,7 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
         if (!UndoLog.ResolveAffectsValue<T>(log, undo.Target))
             return;
 
-        var undone = UndoLog.ComputeUndone(log);
-        if (UndoLog.LatestValue<T>(log, undone, out var value, out var writeId))
+        if (UndoLog.LatestValue<T>(log, out var value, out var writeId))
         {
             _value = value;
             _writeId = writeId;
