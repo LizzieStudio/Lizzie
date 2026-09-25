@@ -190,21 +190,20 @@ public partial class PrototypeManifest : Window
         ProjectService.Instance.Upsert(duplicate);
     }
 
-    /// <summary>Sets the Qty column, which counts the table's components.</summary>
-    public void SetPrototypeCounts(Dictionary<SnowTag, int> prototypeCounts)
-    {
-        _prototypeCounts = prototypeCounts;
-        ProjectService.Instance.QueueSync(this);
-    }
-
-    private Dictionary<SnowTag, int> _prototypeCounts;
-
     private void Sync(IRecordReader R)
     {
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
 
         var prototypes = R.Get<Prototype>().ToList();
+
+        // The Qty column. A deck's cards carry the deck's prototype and a data row, so only
+        // components without a row are counted, which counts each deck once.
+        var counts = R.Get<ComponentState>(s =>
+                s.DataSetRowIndex < 0 && s.DataSetRowId == SnowTag.Empty
+            )
+            .GroupBy(s => s.PrototypeRef)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         var selectedRef = _selectedPrototype?.Id ?? SnowTag.Empty;
         _selectedPrototype = prototypes.FirstOrDefault(p => p.Id == selectedRef);
@@ -233,17 +232,7 @@ public partial class PrototypeManifest : Window
             item.SetText(0, prototype.Name ?? "");
             item.SetText(1, prototype.Type.ToString());
 
-            if (
-                _prototypeCounts != null
-                && _prototypeCounts.TryGetValue(prototype.Id, out var count)
-            )
-            {
-                item.SetText(2, count.ToString());
-            }
-            else
-            {
-                item.SetText(2, "0");
-            }
+            item.SetText(2, counts.GetValueOrDefault(prototype.Id).ToString());
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
             item.SetMetadata(0, prototype.Id.Value);

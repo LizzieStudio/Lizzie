@@ -296,27 +296,6 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
     }
 
-    public Dictionary<SnowTag, int> PrototypeCounts()
-    {
-        Dictionary<SnowTag, int> counts = new();
-        foreach (var c in ComponentNodes)
-        {
-            if (
-                c is VisualComponentBase vcb
-                && vcb.PrototypeRef != SnowTag.Empty
-                && vcb.Visible
-                && !vcb.IsCardInstance
-            )
-            {
-                if (!counts.TryAdd(vcb.PrototypeRef, 1))
-                {
-                    counts[vcb.PrototypeRef]++;
-                }
-            }
-        }
-        return counts;
-    }
-
     /// <summary>
     /// The cards stacked exactly on top of <paramref name="bottom"/>.
     /// </summary>

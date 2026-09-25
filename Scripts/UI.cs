@@ -325,9 +325,6 @@ public partial class UI : CanvasLayer
         var s = "res://Scenes/Prototypes/PrototypeManifest.tscn";
         _prototypeManifest = GD.Load<PackedScene>(s).Instantiate<PrototypeManifest>();
         _prototypeManifest.TextureFactory = _textureFactory;
-        _prototypeManifest.SetPrototypeCounts(
-            _gameController.MainScene.GameObjects.PrototypeCounts()
-        );
         _prototypeManifest.Closed += PrototypeManifestOnClosed;
 
         _modalDialogs.AddChild(_prototypeManifest);
