@@ -44,6 +44,10 @@ public partial class ImageSelector : Control
 
     private void UpdateSelection()
     {
+        // Not synced yet; Sync reapplies _selected once the list is populated.
+        if (_optionDropdown.ItemCount == 0)
+            return;
+
         var index = _optionDropdown.GetItemIndex(_selected);
         _optionDropdown.Select(index >= 0 ? index : 0);
     }
