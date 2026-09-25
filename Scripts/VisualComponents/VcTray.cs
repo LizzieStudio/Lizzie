@@ -141,9 +141,6 @@ public partial class VcTray : VisualComponentGroup
         if (_prototype == null)
             return null;
 
-        if (PresenceSynchronizer.Instance is not { } cursors)
-            return null;
-
         return TableEvent.Now(
             null,
             [
@@ -153,7 +150,7 @@ public partial class VcTray : VisualComponentGroup
                         Id = Snowport.Clock.CreateTag(),
                         PrototypeRef = _prototype.Id,
                         Location = ComponentLocation.Cursor,
-                        ContainerRef = cursors.LocalCursorRef,
+                        Holder = Snowport.Clock.source,
                         ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
                     }
                 ),

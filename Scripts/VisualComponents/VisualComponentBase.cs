@@ -524,19 +524,23 @@ public abstract partial class VisualComponentBase : Area3D
         get => _location;
         set
         {
-            var leavingCursor =
+            var released =
                 _location == ComponentLocation.Cursor && value != ComponentLocation.Cursor;
             _location = value;
             LogicalVisible = value is ComponentLocation.Table or ComponentLocation.Cursor;
-            if (leavingCursor)
+            // The cursor may have left it while it was held, which doesn't unhover it.
+            if (released)
+            {
                 IsMouseSelected = false;
+                IsHovered = false;
+            }
         }
     }
 
     /// <summary>
-    /// While this component is being dragged, the relative position to the cursor.
+    /// While <see cref="ComponentLocation.Cursor"/>, the Snowport source of the player holding it.
     /// </summary>
-    public Vector3 CursorOffset { get; set; }
+    public byte Holder { get; set; }
 
     /// <summary>
     /// Local-only. While dragged, the height this component rests at within its dragged group.
@@ -547,10 +551,7 @@ public abstract partial class VisualComponentBase : Area3D
     public bool IsDragging => Location == ComponentLocation.Cursor;
 
     /// <summary>True while this component is being held by the local player's cursor.</summary>
-    public bool IsHeldByLocal =>
-        IsDragging
-        && PresenceSynchronizer.Instance is { } cursors
-        && ContainerRef == cursors.LocalCursorRef;
+    public bool IsHeldByLocal => IsDragging && Holder == Snowport.Clock.source;
 
     private ComponentEffect BuildRotation(float degreesAboutY) =>
         new(
@@ -603,11 +604,6 @@ public abstract partial class VisualComponentBase : Area3D
     {
         Visible = _logicalVisible && !_zoneHidden;
     }
-
-    /// <summary>
-    /// The delta from the cursor prosition for this object in spawn mode
-    /// </summary>
-    public Vector3 SpawnDelta { get; set; } = Vector3.Zero;
 }
 
 public class OffsetShape2D(Shape2D shape, Vector2 offset)

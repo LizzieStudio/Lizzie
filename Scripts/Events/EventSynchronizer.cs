@@ -40,16 +40,6 @@ public partial class EventSynchronizer : Node
     /// <summary>True while the local player's events are being collected into one undo.</summary>
     public bool InGroup => _openGroup != SnowportId.Empty;
 
-    /// <summary>
-    /// Collects the local player's events into one undo.
-    /// Stops collecting when an event with <see cref="TableEvent.Close"/> is submitted.
-    /// The first event submitted sets the SnowportId of the group.
-    /// </summary>
-    public void BeginGroup()
-    {
-        _openGroup = SnowportId.Empty;
-    }
-
     public void Submit(TableEvent e, bool startGroup = false)
     {
         // Currentlly, all events submitted during a drag will be undone with it.

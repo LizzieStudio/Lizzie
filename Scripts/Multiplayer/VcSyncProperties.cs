@@ -20,22 +20,31 @@ public record ComponentState
     /// <summary>
     /// Captures a component's live state.
     /// </summary>
-    public static ComponentState Capture(VisualComponentBase c) =>
-        new()
+    public static ComponentState Capture(VisualComponentBase c)
+    {
+        var s = new ComponentState
         {
             Id = c.Reference,
             PrototypeRef = c.PrototypeRef,
-            Position =
-                c.Location == VisualComponentBase.ComponentLocation.Cursor
-                    ? c.CursorOffset
-                    : c.Position,
+            Position = c.Position,
             Rotation = c.Rotation,
             DataSetRowIndex = c.DataSetRowIndex,
             DataSetRowId = c.DataSetRowId,
             Location = c.Location,
             ContainerRef = c.ContainerRef,
+            Holder = c.Holder,
             ZOrder = c.ZOrder,
         };
+
+        // A held node follows the cursor, so we shouldn't use its actual table position.
+        if (
+            c.IsDragging
+            && ProjectService.Instance.GameObjects.TryGetState(c.Reference, out var written)
+        )
+            s = s with { X = written.X, Z = written.Z };
+
+        return s;
+    }
 
     [JsonPropertyName("i")]
     public SnowTag Id { get; init; }
@@ -44,13 +53,13 @@ public record ComponentState
     public SnowTag PrototypeRef { get; init; }
 
     /// <summary>
-    /// X on the table, in tenths of a millimeter.
+    /// X relative to either the table or player cursor, in tenths of a millimeter.
     /// </summary>
     [JsonPropertyName("px")]
     public int X { get; init; }
 
     /// <summary>
-    /// Z on the table, in tenths of a millimeter.
+    /// Z relative to either the table or player cursor, in tenths of a millimeter.
     /// </summary>
     [JsonPropertyName("pz")]
     public int Z { get; init; }
@@ -109,6 +118,13 @@ public record ComponentState
     [JsonPropertyName("c")]
     public SnowTag ContainerRef { get; init; } = SnowTag.Empty;
 
+    /// <summary>
+    /// While <see cref="VisualComponentBase.ComponentLocation.Cursor"/>, the Snowport source of the
+    /// player holding it.
+    /// </summary>
+    [JsonPropertyName("h")]
+    public byte Holder { get; init; }
+
     /// <summary>Reversible soft-delete flag.</summary>
     [JsonPropertyName("x")]
     public bool Deleted { get; init; }
@@ -123,11 +139,8 @@ public record ComponentState
     public void ApplyToComponent(VisualComponentBase component)
     {
         component.PrototypeRef = PrototypeRef;
-        // While dragged, Position carries the cursor-relative offset.
-        // This might be a bad idea if it becomes hard to keep in-sync.
-        if (Location == VisualComponentBase.ComponentLocation.Cursor)
-            component.CursorOffset = PositionAt(component.CursorOffset.Y);
-        else
+        // A held node is placed by its holder's cursor.
+        if (Location != VisualComponentBase.ComponentLocation.Cursor)
             component.Position = PositionAt(component.Position.Y);
         component.Rotation = Rotation;
         component.ZOrder = ZOrder;
@@ -135,5 +148,6 @@ public record ComponentState
         component.DataSetRowId = DataSetRowId;
         component.Location = Location;
         component.ContainerRef = ContainerRef;
+        component.Holder = Holder;
     }
 }

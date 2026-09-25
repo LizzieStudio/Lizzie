@@ -119,7 +119,7 @@ public partial class SceneController : Node3D
         //d.SavePng(@"c:\winwam5\tfTest.png");
     }
 
-    public void EnterSpawnMode(List<VisualComponentBase> components)
+    public void EnterSpawnMode(List<(VisualComponentBase Component, Vector3 Delta)> components)
     {
         _gameObjects.EnterSpawnMode(components);
     }

@@ -48,11 +48,6 @@ public partial class PresenceSynchronizer : Node
     public bool TryGetCursor(byte source, out Vector3 pos) =>
         _positions.TryGetValue(source, out pos);
 
-    /// <summary>
-    /// The cursor container of the seat the local player currently occupies.
-    /// </summary>
-    public SnowTag LocalCursorRef => CursorRefForSeat(GetSeatBySource(Snowport.Clock.source));
-
     public override void _EnterTree()
     {
         _instance = this;
@@ -109,15 +104,6 @@ public partial class PresenceSynchronizer : Node
         if (players == null || seat < 0 || seat >= players.Value.Length)
             return SnowTag.Empty;
         return players.Value[seat].HandRef;
-    }
-
-    /// <summary>The durable cursor container for a seat, read from the project settings.</summary>
-    public SnowTag CursorRefForSeat(int seat)
-    {
-        var players = ProjectService.Instance?.Settings.Value.Players;
-        if (players == null || seat < 0 || seat >= players.Value.Length)
-            return SnowTag.Empty;
-        return players.Value[seat].CursorRef;
     }
 
     /// <summary>
@@ -332,37 +318,6 @@ public partial class PresenceSynchronizer : Node
         _positions[source] = pos;
     }
 
-    /// <summary>
-    /// Resolves the live cursor position for a seat's cursor container.
-    /// </summary>
-    public bool TryGetCursorByContainer(SnowTag containerRef, out Vector3 pos)
-    {
-        pos = default;
-
-        int seat = SeatForCursorRef(containerRef);
-        if (seat < 0)
-            return false;
-
-        foreach (var kv in _seats)
-            if (kv.Value == seat)
-                return _positions.TryGetValue(kv.Key, out pos);
-
-        return false;
-    }
-
-    private static int SeatForCursorRef(SnowTag containerRef)
-    {
-        if (containerRef == SnowTag.Empty)
-            return Unseated;
-        var players = ProjectService.Instance?.Settings.Value.Players;
-        if (players == null)
-            return Unseated;
-        for (int i = 0; i < players.Value.Length; i++)
-            if (players.Value[i].CursorRef == containerRef)
-                return i;
-        return Unseated;
-    }
-
     private Sprite3D CreateCursorSprite()
     {
         _cursorTexture ??= GD.Load<Texture2D>(CursorTexturePath);
@@ -435,6 +390,6 @@ public partial class PresenceSynchronizer : Node
         _cursors.Clear();
         _positions.Clear();
     }
-}
 
     #endregion
+}

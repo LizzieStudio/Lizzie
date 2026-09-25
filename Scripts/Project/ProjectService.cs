@@ -342,7 +342,7 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Assigns hand and cursor container SnowTags to any seat that lacks one.
+    /// Assigns a hand container SnowTag to any seat that lacks one.
     /// </summary>
     public void EnsureSeatContainers()
     {
@@ -359,12 +359,6 @@ public partial class ProjectService : Node
             if (builder[i].HandRef == SnowTag.Empty)
             {
                 builder[i] = builder[i] with { HandRef = Snowport.Clock.CreateTag() };
-                changed = true;
-            }
-
-            if (builder[i].CursorRef == SnowTag.Empty)
-            {
-                builder[i] = builder[i] with { CursorRef = Snowport.Clock.CreateTag() };
                 changed = true;
             }
         }

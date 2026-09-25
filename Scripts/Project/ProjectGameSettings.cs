@@ -58,10 +58,4 @@ public record ProjectPlayerSettings
     /// The hand belongs to the seat, not the player.
     /// </summary>
     public SnowTag HandRef { get; init; } = SnowTag.Empty;
-
-    /// <summary>
-    /// The container id for this seat's cursor.
-    /// The cursor belongs to the seat, not the player.
-    /// </summary>
-    public SnowTag CursorRef { get; init; } = SnowTag.Empty;
 }

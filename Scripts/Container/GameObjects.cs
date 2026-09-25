@@ -32,9 +32,17 @@ public partial class GameObjects : Node
     private readonly Dictionary<SnowTag, ComponentEffect> _pendingSpawns = new();
 
     /// <summary>
-    /// The id of the event that last wrote each component.
+    /// The event that last wrote each component and the state it wrote.
     /// </summary>
-    private readonly Dictionary<SnowTag, SnowportId> _lastWrite = new();
+    private readonly Dictionary<SnowTag, (SnowportId Id, ComponentState State)> _lastWrite = new();
+
+    /// <summary>The state last written for a component.</summary>
+    public bool TryGetState(SnowTag reference, out ComponentState state)
+    {
+        var found = _lastWrite.TryGetValue(reference, out var last);
+        state = last.State;
+        return found;
+    }
 
     private GameController _gameController;
 
@@ -184,7 +192,7 @@ public partial class GameObjects : Node
         {
             if (@event.IsActionPressed("spawn_component"))
             {
-                CreateComponents(_spawnComponents);
+                CreateComponents(_spawnComponents.Select(s => s.Component));
                 QueueStackingUpdate();
                 GetViewport().SetInputAsHandled();
             }
@@ -474,7 +482,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void UpdateDragFloors()
     {
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.ContainerRef))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.Holder))
         {
             var dragged = group.ToArray();
             var floors = StackFloors(dragged, out _);
@@ -675,9 +683,10 @@ public partial class GameObjects : Node
     #endregion
 
     #region Spawn
-    private List<VisualComponentBase> _spawnComponents;
+    /// <summary>The spawn previews and their offsets from the cursor.</summary>
+    private List<(VisualComponentBase Component, Vector3 Delta)> _spawnComponents;
 
-    public void EnterSpawnMode(List<VisualComponentBase> components)
+    public void EnterSpawnMode(List<(VisualComponentBase Component, Vector3 Delta)> components)
     {
         if (_spawnComponents != null)
             ExitSpawnMode();
@@ -686,7 +695,7 @@ public partial class GameObjects : Node
 
         _spawnComponents = components;
 
-        foreach (var c in components)
+        foreach (var (c, _) in components)
         {
             c.DimMode(true);
             c.NeverHighlight = true;
@@ -698,9 +707,9 @@ public partial class GameObjects : Node
     {
         var p = _dragPlane.GetCursorProjection();
 
-        foreach (var c in _spawnComponents)
+        foreach (var (c, delta) in _spawnComponents)
         {
-            c.Position = new Vector3(p.X, c.YHeight / 2f, p.Z) + c.SpawnDelta;
+            c.Position = new Vector3(p.X, c.YHeight / 2f, p.Z) + delta;
         }
     }
 
@@ -708,7 +717,7 @@ public partial class GameObjects : Node
 
     private void ExitSpawnMode()
     {
-        foreach (var c in _spawnComponents)
+        foreach (var (c, _) in _spawnComponents)
         {
             c.QueueFree();
         }
@@ -756,17 +765,13 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// Builds the event that draws the given components into the local cursor container.
+    /// Builds the event that draws the given components into the local player's hold.
     /// </summary>
     public TableEvent BuildDrawEvent(
         IEnumerable<SnowTag> componentRefs,
         Func<VisualComponentBase, Vector3> rotation = null
     )
     {
-        if (PresenceSynchronizer.Instance == null)
-            return null;
-        var cursorContainer = PresenceSynchronizer.Instance.LocalCursorRef;
-
         var effects = new List<Effect>();
         var stamp = Snowport.Clock.Create();
         foreach (var r in componentRefs)
@@ -780,9 +785,10 @@ public partial class GameObjects : Node
                     ComponentState.Capture(c) with
                     {
                         Location = VisualComponentBase.ComponentLocation.Cursor,
-                        ContainerRef = cursorContainer,
-                        // Position is the cursor-relative offset while held.
-                        Position = c.SpawnDelta,
+                        ContainerRef = SnowTag.Empty,
+                        Holder = Snowport.Clock.source,
+                        // Held under the cursor.
+                        Position = Vector3.Zero,
                         Rotation = rotation?.Invoke(c) ?? c.Rotation,
                         ZOrder = new ZOrder(ZTarget.Top, effects.Count, stamp),
                     }
@@ -798,8 +804,8 @@ public partial class GameObjects : Node
         if (drawEvent == null)
             return;
 
-        EventSynchronizer.Instance?.BeginGroup();
-        EventSynchronizer.Instance?.Submit(drawEvent);
+        // The draw and its drop undo together.
+        EventSynchronizer.Instance?.Submit(drawEvent, startGroup: true);
 
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
@@ -807,18 +813,15 @@ public partial class GameObjects : Node
 
     private void BeginDrag(IEnumerable<VisualComponentBase> components, Vector3 cursor)
     {
-        if (PresenceSynchronizer.Instance == null)
-            return;
-        var cursorContainer = PresenceSynchronizer.Instance.LocalCursorRef;
-
         var dragged = components
             .Where(o => o != null)
             .Select(o => new ComponentEffect(
                 ComponentState.Capture(o) with
                 {
                     Location = VisualComponentBase.ComponentLocation.Cursor,
-                    ContainerRef = cursorContainer,
-                    // Position with a cursor container is relative to the cursor.
+                    ContainerRef = SnowTag.Empty,
+                    Holder = Snowport.Clock.source,
+                    // Held positions are relative to the cursor.
                     Position = o.Position - cursor,
                 }
             ))
@@ -829,8 +832,11 @@ public partial class GameObjects : Node
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
 
-        EventSynchronizer.Instance?.BeginGroup();
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(new MoveAction(), dragged));
+        // The drag and its drop undo together.
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Now(new MoveAction(), dragged),
+            startGroup: true
+        );
     }
 
     private VisualComponentGroup _currentDragDropTarget;
@@ -1276,9 +1282,9 @@ public partial class GameObjects : Node
         var r = fx.Id;
 
         // Reject if it's older than the most recent write.
-        if (_lastWrite.TryGetValue(r, out var last) && eventId.CompareTo(last) < 0)
+        if (_lastWrite.TryGetValue(r, out var last) && eventId.CompareTo(last.Id) < 0)
             return;
-        _lastWrite[r] = eventId;
+        _lastWrite[r] = (eventId, s);
 
         var c = GetComponent(r);
 
@@ -1321,10 +1327,9 @@ public partial class GameObjects : Node
     {
         c.Location = s.Location;
         c.ContainerRef = s.ContainerRef;
-        // While held, Position carries the cursor-relative offset.
-        if (s.Location == VisualComponentBase.ComponentLocation.Cursor)
-            c.CursorOffset = s.PositionAt(c.CursorOffset.Y);
-        else
+        c.Holder = s.Holder;
+        // A held node is placed by its holder's cursor.
+        if (s.Location != VisualComponentBase.ComponentLocation.Cursor)
             c.Position = s.PositionAt(c.Position.Y);
         if (
             s.Transition == Transition.None
@@ -1362,7 +1367,8 @@ public partial class GameObjects : Node
         vcb.PrototypeRef = s.PrototypeRef;
         _table.AddChild(vcb);
         vcb.SpawnBuild(s, TextureFactory);
-        vcb.Position = s.PositionAt(vcb.YHeight / 2f);
+        if (s.Location != VisualComponentBase.ComponentLocation.Cursor)
+            vcb.Position = s.PositionAt(vcb.YHeight / 2f);
         QueueStackingUpdate();
 
         return true;
@@ -1487,7 +1493,7 @@ public partial class GameObjects : Node
             return;
         }
 
-        _lastWrite[r] = winnerId;
+        _lastWrite[r] = (winnerId, winner.State);
 
         if (winner.State.Deleted)
         {
@@ -1542,25 +1548,23 @@ public partial class GameObjects : Node
         if (cursors == null)
             return;
 
-        var localCursorRef = cursors.LocalCursorRef;
-
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.ContainerRef))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.Holder))
         {
-            bool isLocal = localCursorRef != SnowTag.Empty && group.Key == localCursorRef;
-            if (isLocal && _localDragOverHand)
+            if (group.Key == Snowport.Clock.source && _localDragOverHand)
                 continue;
 
-            if (!cursors.TryGetCursorByContainer(group.Key, out var cursor))
+            if (!cursors.TryGetCursor(group.Key, out var cursor))
                 continue;
 
             // Follow the cursor, then float the group, keeping its shape, above what's below.
             var dragged = group.ToList();
             foreach (var c in dragged)
-                c.Position = new Vector3(
-                    cursor.X + c.CursorOffset.X,
-                    c.Position.Y,
-                    cursor.Z + c.CursorOffset.Z
-                );
+            {
+                if (!TryGetState(c.Reference, out var s))
+                    continue;
+                var offset = s.PositionAt(0);
+                c.Position = new Vector3(cursor.X + offset.X, c.Position.Y, cursor.Z + offset.Z);
+            }
 
             float lift = DragLift(dragged);
             foreach (var c in dragged)

@@ -256,7 +256,7 @@ public partial class ProjectSettingsDialog : Window
             RotationStepIndex = _rotationStep.Selected,
             AllowObservers = _observerToggle.ButtonPressed,
             MaxPlayers = ParseInt(_maxPlayers.Text, current.MaxPlayers),
-            Players = ReadPlayersFromUi(),
+            Players = ReadPlayersFromUi(current.Players),
             GameTitle = _gameTitle.Text,
             Designers = _designers.Text,
             GraphicDesign = _graphicDesign.Text,
@@ -266,7 +266,12 @@ public partial class ProjectSettingsDialog : Window
         };
     }
 
-    private ImmutableArray<ProjectPlayerSettings> ReadPlayersFromUi()
+    /// <summary>
+    /// Reads the seats from the UI, keeping each existing seat's hand container.
+    /// </summary>
+    private ImmutableArray<ProjectPlayerSettings> ReadPlayersFromUi(
+        ImmutableArray<ProjectPlayerSettings> current
+    )
     {
         var builder = ImmutableArray.CreateBuilder<ProjectPlayerSettings>();
         foreach (var c in _playerDefinitionContainer.GetChildren())
@@ -274,12 +279,17 @@ public partial class ProjectSettingsDialog : Window
             if (c is PlayerDefinition pd)
             {
                 var (name, color, isAdmin) = pd.GetPlayerInfo();
+                var seat = builder.Count;
                 builder.Add(
                     new ProjectPlayerSettings
                     {
                         Name = name,
                         Color = color,
                         IsAdmin = isAdmin,
+                        HandRef =
+                            seat < current.Length
+                                ? current[seat].HandRef
+                                : Snowport.Clock.CreateTag(),
                     }
                 );
             }

@@ -54,7 +54,7 @@ public partial class GameController : Node3D
         //Add to Prototype Manifest if it's not already there
         ProjectService.Instance.AddPrototypeToManifest(args);
 
-        var components = new List<VisualComponentBase>();
+        var components = new List<(VisualComponentBase, Vector3)>();
 
         if (args.MultipleCreateMode)
         {
@@ -72,7 +72,7 @@ public partial class GameController : Node3D
         {
             var sc = SingleComponentSpawn(args, -1, SnowTag.Empty);
             if (sc != null)
-                components.Add(sc);
+                components.Add((sc, Vector3.Zero));
         }
 
         _mainScene.EnterSpawnMode(components);
@@ -104,12 +104,12 @@ public partial class GameController : Node3D
 
         var component = SingleComponentSpawn(args, e.DataSetRowIndex, e.DataSetRowId);
         if (component != null)
-            _mainScene.EnterSpawnMode(new List<VisualComponentBase> { component });
+            _mainScene.EnterSpawnMode([(component, Vector3.Zero)]);
     }
 
     private void SpawnGridMultiples(
         CreateObjectEventArgs args,
-        List<VisualComponentBase> components
+        List<(VisualComponentBase, Vector3)> components
     )
     {
         var printed = args.Params as PrintedParameters;
@@ -133,10 +133,7 @@ public partial class GameController : Node3D
             var mc = SingleComponentSpawn(args, cardNum, SnowTag.Empty);
 
             if (mc != null)
-            {
-                mc.SpawnDelta = new Vector3(w * ci, 0, h * cj);
-                components.Add(mc);
-            }
+                components.Add((mc, new Vector3(w * ci, 0, h * cj)));
 
             cardNum++;
             if (cardNum >= cardCount)
@@ -153,7 +150,7 @@ public partial class GameController : Node3D
 
     private void SpawnDataSetMultiples(
         CreateObjectEventArgs args,
-        List<VisualComponentBase> components
+        List<(VisualComponentBase, Vector3)> components
     )
     {
         var rows = ProjectService.Instance.GetRows(args.DataSet.Id);
@@ -171,15 +168,13 @@ public partial class GameController : Node3D
 
             if (mc != null)
             {
-                mc.SpawnDelta = new Vector3(w * i, 0, h * j);
+                components.Add((mc, new Vector3(w * i, 0, h * j)));
                 i++;
                 if (i == cols)
                 {
                     i = 0;
                     j++;
                 }
-
-                components.Add(mc);
             }
         }
     }
