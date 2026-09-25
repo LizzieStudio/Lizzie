@@ -220,8 +220,8 @@ public partial class DebugConsole : Node
     private static string EffectLabel(Effect fx) =>
         fx switch
         {
-            ComponentEffect { State.Deleted: true } => "Delete",
-            ComponentEffect => "Upsert",
+            UpdateReplicatedEffect<ComponentState> { Payload.Deleted: true } => "Delete",
+            UpdateReplicatedEffect<ComponentState> => "Upsert",
             SetReplicatedValueEffect<ProjectGameSettings> => "Settings",
             SetReplicatedValueEffect<ActiveGameStateRef> => "ActiveGameState",
             UpdateReplicatedEffect<Template> => "Template",

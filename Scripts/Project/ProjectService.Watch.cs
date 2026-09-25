@@ -47,7 +47,8 @@ public partial class ProjectService : IRecordReader
     /// </summary>
     public void SyncNow(Node owner)
     {
-        foreach (var watcher in _watchers.Where(w => w.Owner == owner))
+        // Copied, since a Sync can add or remove watchers, e.g. a tray adding its display node.
+        foreach (var watcher in _watchers.Where(w => w.Owner == owner).ToList())
         {
             _dirty.Remove(watcher);
             watcher.Run();
@@ -89,10 +90,11 @@ public partial class ProjectService : IRecordReader
     /// <summary>
     /// Runs the dirty watchers, parents before their descendants, so a parent removes or
     /// replaces a child before the child can sync a record that no longer fits it.
+    /// Watchers at the same depth run in the order they were registered.
     /// </summary>
     private void FlushWatchers()
     {
-        var batch = _dirty.OrderBy(w => Depth(w.Owner)).ToArray();
+        var batch = _dirty.OrderBy(w => Depth(w.Owner)).ThenBy(w => w.Sequence).ToArray();
         _dirty.Clear();
 
         foreach (var watcher in batch)

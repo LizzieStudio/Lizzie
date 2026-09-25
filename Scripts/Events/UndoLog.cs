@@ -155,23 +155,6 @@ public static class UndoLog
     }
 
     /// <summary>
-    /// The components whose state an undo of <paramref name="targetId"/> should change.
-    /// </summary>
-    public static HashSet<SnowTag> ResolveAffectedComponents(
-        OrderedDictionary<SnowportId, TableEvent> log,
-        SnowportId targetId
-    )
-    {
-        var affected = new HashSet<SnowTag>();
-        foreach (var e in ResolveEvents(log, targetId))
-        foreach (var fx in e.Effects)
-            if (fx is ComponentEffect)
-                affected.Add(fx.Id);
-
-        return affected;
-    }
-
-    /// <summary>
     /// The records of type <typeparamref name="T"/> whose value an undo of <paramref name="targetId"/> should change.
     /// </summary>
     public static HashSet<SnowTag> ResolveAffected<T>(

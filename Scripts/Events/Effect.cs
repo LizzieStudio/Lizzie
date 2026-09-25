@@ -6,7 +6,7 @@ using Godot;
 /// The effects of a TableAction.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
-[JsonDerivedType(typeof(ComponentEffect), "c")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<ComponentState>), "c")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "p")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
@@ -20,23 +20,10 @@ public abstract class Effect
     /// <summary>The component or prototype this effect applies to.</summary>
     [JsonPropertyName("i")]
     public SnowTag Id { get; set; }
-}
 
-/// <summary>
-/// A component upsert for creating, moving, reordering, and deleting a component.
-/// </summary>
-public class ComponentEffect : Effect
-{
-    public ComponentEffect() { }
-
-    public ComponentEffect(ComponentState state)
-    {
-        Id = state.Id;
-        State = state;
-    }
-
-    [JsonPropertyName("s")]
-    public ComponentState State { get; init; }
+    /// <summary>Creates, updates or reversibly deletes a record with its whole value.</summary>
+    public static UpdateReplicatedEffect<T> Upsert<T>(T record)
+        where T : class, IReplicated => new() { Id = record.Id, Payload = record };
 }
 
 /// <summary>

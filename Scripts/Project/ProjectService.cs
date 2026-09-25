@@ -108,6 +108,11 @@ public partial class ProjectService : Node
     public ReplicatedDictionary<GameState> GameStates { get; } = new();
 
     /// <summary>
+    /// The current game's components.
+    /// </summary>
+    public ReplicatedDictionary<ComponentState> Components { get; } = new();
+
+    /// <summary>
     /// The current project's settings, edited via the Project Settings dialog.
     /// </summary>
     public ReplicatedValue<ProjectGameSettings> Settings { get; } = new(() => new());
@@ -121,7 +126,17 @@ public partial class ProjectService : Node
     /// <summary>Every replicated container, in compacted-save order. The single registry that
     /// drives attach, clear, bulk-load flush, and save.</summary>
     private IReadOnlyList<IReplicatedContainer> Containers =>
-        [Settings, Templates, DataSets, DataRows, Prototypes, Assets, GameStates, ActiveGameState];
+        [
+            Settings,
+            Templates,
+            DataSets,
+            DataRows,
+            Prototypes,
+            Assets,
+            GameStates,
+            ActiveGameState,
+            Components,
+        ];
 
     private Project _currentProject;
 
@@ -224,7 +239,6 @@ public partial class ProjectService : Node
 
     public void SettleAfterIngest()
     {
-        GameObjects?.RebuildFromLog();
         SeedTagsFromLog();
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
@@ -298,8 +312,6 @@ public partial class ProjectService : Node
 
         foreach (var c in Containers)
             effects.AddRange(c.EnumerateSaveEffects());
-
-        effects.AddRange(GameObjects?.GenerateCatchupEffects() ?? []);
 
         return [TableEvent.Now(null, effects.ToArray())];
     }
@@ -415,25 +427,35 @@ public partial class ProjectService : Node
     /// <summary>
     /// The current table expressed as a delta vs the given parent.
     /// </summary>
-    private ImmutableArray<ComponentEffect> BuildDelta(SnowTag parent)
+    private ImmutableArray<ComponentState> BuildDelta(SnowTag parent)
     {
         var parentFold = FoldChain(parent);
-        var current = (GameObjects?.GenerateCatchupEffects() ?? []).ToDictionary(e => e.Id);
+        var current = Get<ComponentState>().ToDictionary(s => s.Id, Snapshot);
 
-        var delta = new List<ComponentEffect>();
+        var delta = new List<ComponentState>();
 
         // added or transformed components
-        foreach (var (id, ce) in current)
-            if (!parentFold.TryGetValue(id, out var prev) || prev.State != ce.State)
-                delta.Add(ce);
+        foreach (var (id, s) in current)
+            if (!parentFold.TryGetValue(id, out var prev) || Snapshot(prev) != s)
+                delta.Add(s);
 
         // removed components
         foreach (var (id, prev) in parentFold)
             if (!current.ContainsKey(id))
-                delta.Add(new ComponentEffect(prev.State with { Deleted = true }));
+                delta.Add(prev with { Deleted = true });
 
         return delta.ToImmutableArray();
     }
+
+    /// <summary>
+    /// A component's state as a snapshot stores it: without its write id or animation.
+    /// </summary>
+    private static ComponentState Snapshot(ComponentState s) =>
+        s with
+        {
+            LastUpdateId = SnowportId.Empty,
+            Transition = Transition.None,
+        };
 
     public void DeleteGameState(SnowTag stateRef)
     {
@@ -467,12 +489,12 @@ public partial class ProjectService : Node
         var fold = FoldChain(stateRef);
 
         // delete every component that isn't in the snapshot
-        foreach (var ce in GameObjects?.GenerateCatchupEffects() ?? [])
-            if (!fold.ContainsKey(ce.Id))
-                effects.Add(new ComponentEffect(ce.State with { Deleted = true }));
+        foreach (var s in Get<ComponentState>())
+            if (!fold.ContainsKey(s.Id))
+                effects.Add(Effect.Upsert(s with { Deleted = true }));
 
         // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
-        effects.AddRange(fold.Values);
+        effects.AddRange(fold.Values.Select(Effect.Upsert));
 
         EventSynchronizer.Instance?.Submit(
             TableEvent.Now(new GameStateSwitchAction { Target = stateRef }, effects.ToArray())
@@ -482,7 +504,7 @@ public partial class ProjectService : Node
     /// <summary>
     /// Collect a snapshot's ancestory into a set of component upserts.
     /// </summary>
-    private Dictionary<SnowTag, ComponentEffect> FoldChain(SnowTag stateRef)
+    private Dictionary<SnowTag, ComponentState> FoldChain(SnowTag stateRef)
     {
         var chain = new List<GameState>();
         var cursor = stateRef;
@@ -493,11 +515,11 @@ public partial class ProjectService : Node
         }
         chain.Reverse(); // root first
 
-        var fold = new Dictionary<SnowTag, ComponentEffect>();
+        var fold = new Dictionary<SnowTag, ComponentState>();
         foreach (var gs in chain)
         foreach (var up in gs.Upserts)
         {
-            if (up.State.Deleted)
+            if (up.Deleted)
                 fold.Remove(up.Id);
             else
                 fold[up.Id] = up;

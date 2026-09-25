@@ -275,8 +275,6 @@ public class SpawnPrototypeEvent : IEvent
     public SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
 }
 
-public class QueueStackingUpdateEvent : IEvent { }
-
 public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IEvent
 {
     public VisualComponentBase Component { get; set; } = component;

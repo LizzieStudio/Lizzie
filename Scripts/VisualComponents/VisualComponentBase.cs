@@ -59,7 +59,20 @@ public abstract partial class VisualComponentBase : Area3D
     public override void _EnterTree()
     {
         base._EnterTree();
+
+        // Normal nodes never change, since the Table replaces the node when they do.
+        // Previews have no record and keep their own.
+        var record = ProjectService.Instance.GetIncludingDeleted<ComponentState>(Reference);
+        if (record != null)
+        {
+            PrototypeRef = record.PrototypeRef;
+            DataSetRowIndex = record.DataSetRowIndex;
+            DataSetRowId = record.DataSetRowId;
+        }
+
+        // Builds first, so the first placement knows the component's height.
         ProjectService.Instance.Watch(this, Sync);
+        ProjectService.Instance.Watch(this, SyncState);
     }
 
     /// <summary>
@@ -162,16 +175,38 @@ public abstract partial class VisualComponentBase : Area3D
 
         Setup(proto.Parameters, R);
         Built?.Invoke();
+
+        // A rebuild can change the component's size, so the table restacks.
+        GetParentOrNull<Table>()?.NotifyChanged();
     }
 
+    // whether SyncState has placed the node yet
+    private bool _placed;
+
     /// <summary>
-    /// Applies the spawned state and builds immediately.
+    /// Applies the component's record, animating its transition if the write is recent enough.
     /// </summary>
-    public virtual void SpawnBuild(ComponentState syncDto, TextureFactory textureFactory)
+    private void SyncState(IRecordReader R)
     {
-        syncDto.ApplyToComponent(this);
-        TextureFactory = textureFactory;
-        ProjectService.Instance.SyncNow(this);
+        var s = R.Get<ComponentState>(Reference);
+        if (s == null)
+            return;
+
+        Location = s.Location;
+        ContainerRef = s.ContainerRef;
+        Holder = s.Holder;
+        // A held node is placed by its holder's cursor.
+        if (s.Location != ComponentLocation.Cursor)
+            Position = s.PositionAt(_placed ? Position.Y : YHeight / 2f);
+        if (
+            s.Transition == Transition.None
+            || !PlayTransition(s, Snowport.Clock.MsecSince(s.LastUpdateId))
+        )
+            Rotation = s.Rotation;
+        ZOrder = s.ZOrder;
+        _placed = true;
+
+        GetParentOrNull<Table>()?.NotifyChanged();
     }
 
     /// <summary>
@@ -187,9 +222,9 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Produce the effects to delete this component.
     /// </summary>
-    public virtual IEnumerable<ComponentEffect> GetDespawnEffects()
+    public virtual IEnumerable<Effect> GetDespawnEffects()
     {
-        yield return new ComponentEffect(ComponentState.Of(this) with { Deleted = true });
+        yield return Effect.Upsert(ComponentState.Of(this) with { Deleted = true });
     }
 
     /// <summary>
@@ -265,7 +300,21 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual SnowTag PrototypeRef { get; set; }
 
-    public virtual SnowTag Reference { get; set; } = Snowport.Clock.CreateTag();
+    private SnowTag _reference = Snowport.Clock.CreateTag();
+
+    /// <summary>
+    /// The component record this node shows. Must be set before adding the node to the tree.
+    /// </summary>
+    public SnowTag Reference
+    {
+        get => _reference;
+        set
+        {
+            if (IsInsideTree())
+                throw new InvalidOperationException("Reference can't change once in the tree.");
+            _reference = value;
+        }
+    }
 
     /// <summary>
     /// The container that holds this component or
@@ -553,11 +602,11 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>True while this component is being held by the local player's cursor.</summary>
     public bool IsHeldByLocal => IsDragging && Holder == Snowport.Clock.source;
 
-    private ComponentEffect BuildRotation(float degreesAboutY)
+    private Effect BuildRotation(float degreesAboutY)
     {
         var s = ComponentState.Of(this);
         var step = new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
-        return new(s with { Rotation = s.Rotation + step });
+        return Effect.Upsert(s with { Rotation = s.Rotation + step });
     }
 
     private bool _logicalVisible = true;

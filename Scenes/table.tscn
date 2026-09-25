@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://8ts0q3rup6h6"]
 
-[ext_resource type="Script" uid="uid://bqsarkxj7oemw" path="res://Scripts/Table.cs" id="1_4ppvu"]
+[ext_resource type="Script" uid="uid://bqsarkxj7oemw" path="res://Scripts/TableSurface.cs" id="1_4ppvu"]
 [ext_resource type="Texture2D" uid="uid://cw6pgclsp7ody" path="res://Textures/TableSurface/Fabric034_1K-PNG_Color.png" id="1_dil0j"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]

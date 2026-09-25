@@ -85,7 +85,7 @@ public partial class VcDie : VisualComponentBase
         return l;
     }
 
-    private ComponentEffect BuildRoll()
+    private Effect BuildRoll()
     {
         // The rolling client picks the target face
         var side = (int)(GD.Randi() % _sides + 1);
@@ -94,7 +94,7 @@ public partial class VcDie : VisualComponentBase
         if (side <= _sideRotations.Length)
             s = s with { Rotation = _sideRotations[side - 1] * (3.14159f / 180f) }; // degrees to radians
 
-        return new ComponentEffect(s with { Transition = Transition.Roll });
+        return Effect.Upsert(s with { Transition = Transition.Roll });
     }
 
     public override bool PlayTransition(ComponentState s, long MsecSinceStart)
@@ -108,12 +108,12 @@ public partial class VcDie : VisualComponentBase
         return true;
     }
 
-    private ComponentEffect ShowSide(int side)
+    private Effect ShowSide(int side)
     {
         if (side > _sideRotations.Length)
             return null;
 
-        return new ComponentEffect(
+        return Effect.Upsert(
             ComponentState.Of(this) with
             {
                 Rotation = _sideRotations[side - 1] * (3.14159f / 180f), //convert to radians

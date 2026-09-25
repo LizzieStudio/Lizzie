@@ -17,6 +17,6 @@ public record GameState : Replicated
     /// * one upsert for each transformed component
     /// * one delete upsert for each removed component
     /// </summary>
-    public ImmutableArray<ComponentEffect> Upserts { get; init; } =
-        ImmutableArray<ComponentEffect>.Empty;
+    public ImmutableArray<ComponentState> Upserts { get; init; } =
+        ImmutableArray<ComponentState>.Empty;
 }

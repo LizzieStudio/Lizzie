@@ -53,7 +53,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             .Select(
                 (c, i) =>
                     (Effect)
-                        new ComponentEffect(
+                        Effect.Upsert(
                             ComponentState.Of(c) with
                             {
                                 Location = ComponentLocation.Container,
@@ -73,7 +73,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
     protected abstract void OnChildrenChanged();
 
-    public override IEnumerable<ComponentEffect> GetDespawnEffects()
+    public override IEnumerable<Effect> GetDespawnEffects()
     {
         foreach (var effect in base.GetDespawnEffects())
             yield return effect;
@@ -157,7 +157,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
                 continue;
 
             effects.Add(
-                new ComponentEffect(
+                Effect.Upsert(
                     ComponentState.Of(comp) with
                     {
                         ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, stamp),

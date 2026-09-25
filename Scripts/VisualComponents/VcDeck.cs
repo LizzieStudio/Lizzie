@@ -92,7 +92,7 @@ public partial class VcDeck : VisualComponentBase
             if (cards[i] is VcToken card)
             {
                 var z = cards[cards.Count - 1 - i].ZOrder;
-                effects.Add(new ComponentEffect(card.BuildFlipState() with { ZOrder = z }));
+                effects.Add(Effect.Upsert(card.BuildFlipState() with { ZOrder = z }));
             }
         }
 
@@ -115,8 +115,7 @@ public partial class VcDeck : VisualComponentBase
 
         return cards
             .Select(
-                (c, i) =>
-                    (Effect)new ComponentEffect(ComponentState.Of(c) with { ZOrder = orders[i] })
+                (c, i) => (Effect)Effect.Upsert(ComponentState.Of(c) with { ZOrder = orders[i] })
             )
             .ToArray();
     }
@@ -132,7 +131,7 @@ public partial class VcDeck : VisualComponentBase
             .Select(c =>
             {
                 var s = ComponentState.Of(c);
-                return (Effect)new ComponentEffect(s with { Rotation = s.Rotation + step });
+                return (Effect)Effect.Upsert(s with { Rotation = s.Rotation + step });
             })
             .ToArray();
     }
@@ -157,7 +156,7 @@ public partial class VcDeck : VisualComponentBase
             .Select(
                 (c, i) =>
                     (Effect)
-                        new ComponentEffect(
+                        Effect.Upsert(
                             ComponentState.Of(c) with
                             {
                                 Position = frame + new Vector3(_width * (1.5f + i), 0, 0),
@@ -209,10 +208,10 @@ public partial class VcDeck : VisualComponentBase
         return effects.ToArray();
     }
 
-    public override IEnumerable<ComponentEffect> GetDespawnEffects() =>
+    public override IEnumerable<Effect> GetDespawnEffects() =>
         Stack()
             .Append(this)
-            .Select(c => new ComponentEffect(ComponentState.Of(c) with { Deleted = true }));
+            .Select(c => Effect.Upsert(ComponentState.Of(c) with { Deleted = true }));
 
     /// <summary>
     /// The deck's cards, face-down on the frame, with the first token on top.
@@ -294,7 +293,6 @@ public partial class VcDeck : VisualComponentBase
 
         YHeight = Thickness + 0.03f;
         Scale = new Vector3(_width, Thickness, _height);
-        EventBus.Instance.Publish(new QueueStackingUpdateEvent());
 
         ShapeProfiles.Add(
             VcToken.ShapeProfile((TokenTextureSubViewport.TokenShape)p.Shape, _width, _height)

@@ -18,62 +18,60 @@ public partial class GameObjects : Node
     public delegate void CameraActivationEventHandler(bool cameraActivated);
 
     /// <summary>
-    /// Raised after an event has been fully applied to the table.
-    /// Signals to views to update their state.
+    /// Raised the frame after components change, once they have synced and the table's
+    /// caches are rebuilt. Signals to views to update their state.
     /// </summary>
     [Signal]
     public delegate void TableChangedEventHandler();
 
     private int _stackingUpdateRequired;
 
-    /// <summary>
-    /// Upserts whose prototype aren't yet available.
-    /// </summary>
-    private readonly Dictionary<SnowTag, ComponentEffect> _pendingSpawns = new();
-
-    /// <summary>
-    /// The event that last wrote each component and the state it wrote.
-    /// </summary>
-    private readonly Dictionary<SnowTag, (SnowportId Id, ComponentState State)> _lastWrite = new();
-
-    /// <summary>The state last written for a component.</summary>
-    public bool TryGetState(SnowTag reference, out ComponentState state)
-    {
-        var found = _lastWrite.TryGetValue(reference, out var last);
-        state = last.State;
-        return found;
-    }
+    // set when a component changes, and handled once at the start of the next frame
+    private bool _tableChanged;
 
     private GameController _gameController;
 
     /// <summary>
-    /// Container which contains all components for the current game.
+    /// Holds the nodes for the current game's components, and any spawn previews.
     /// </summary>
-    private Node _table;
+    private Table _table;
 
     /// <summary>The current game's components.</summary>
     private Godot.Collections.Array<Node> ComponentNodes => _table.GetChildren();
 
     public CursorMode CursorMode { get; private set; }
 
-    public override void _EnterTree()
-    {
-        ProjectService.Instance.Watch(this, Sync);
-    }
-
     public override void _Ready()
     {
-        _table = new Node { Name = "Table" };
-        AddChild(_table);
+        _table = CreateTable();
 
         EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
 
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
-        EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
+    }
 
-        if (EventSynchronizer.Instance != null)
-            EventSynchronizer.Instance.Applied += ApplyEvent;
+    private Table CreateTable()
+    {
+        var table = new Table { Name = "Table", TextureFactory = TextureFactory };
+        table.Changed += () => _tableChanged = true;
+        table.ComponentRemoved += OnComponentRemoved;
+        AddChild(table);
+        return table;
+    }
+
+    /// <summary>
+    /// Forgets a removed component so nothing touches its freed node.
+    /// </summary>
+    private void OnComponentRemoved(VisualComponentBase c)
+    {
+        if (_currentDragDropTarget == c)
+            _currentDragDropTarget = null;
+        if (_hoveredComponent == c)
+        {
+            _hoveredComponent = null;
+            HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(null));
+        }
     }
 
     public void SetGameController(GameController gameController)
@@ -93,12 +91,7 @@ public partial class GameObjects : Node
         _modalOpen = true;
     }
 
-    public VisualComponentBase GetComponent(SnowTag reference)
-    {
-        return ComponentNodes
-            .OfType<VisualComponentBase>()
-            .FirstOrDefault(c => c.Reference == reference);
-    }
+    public VisualComponentBase GetComponent(SnowTag reference) => _table.GetComponent(reference);
 
     /// <summary>
     /// All components contained in <paramref name="containerRef"/> in ZOrder.
@@ -130,6 +123,15 @@ public partial class GameObjects : Node
     public override void _Process(double delta)
     {
         base._Process(delta);
+
+        // Components sync at the end of a frame, so their changes are handled in the next.
+        if (_tableChanged)
+        {
+            _tableChanged = false;
+            RebuildContainerCaches();
+            QueueStackingUpdate();
+            EmitSignal(SignalName.TableChanged);
+        }
 
         ProcessActiveDrags();
         RecomputeZones();
@@ -193,7 +195,6 @@ public partial class GameObjects : Node
             if (@event.IsActionPressed("spawn_component"))
             {
                 CreateComponents(_spawnComponents.Select(s => s.Component));
-                QueueStackingUpdate();
                 GetViewport().SetInputAsHandled();
             }
             else if (@event.IsActionPressed("exit_mode"))
@@ -274,18 +275,13 @@ public partial class GameObjects : Node
                 Id = Snowport.Clock.CreateTag(),
                 ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
             };
-            effects.Add(new ComponentEffect(self));
+            effects.Add(Effect.Upsert(self));
 
             // The stack goes above the component, bottom first.
             foreach (var s in component.GetSpawnStack(self))
             {
                 effects.Add(
-                    new ComponentEffect(
-                        s with
-                        {
-                            ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
-                        }
-                    )
+                    Effect.Upsert(s with { ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp) })
                 );
             }
         }
@@ -298,17 +294,6 @@ public partial class GameObjects : Node
         var effects = components.SelectMany(c => c.GetDespawnEffects());
 
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
-    }
-
-    /// <summary>
-    /// The written state of every component, including spawns waiting on their prototype.
-    /// </summary>
-    public ComponentEffect[] GenerateCatchupEffects()
-    {
-        return _lastWrite
-            .Values.Where(w => !w.State.Deleted)
-            .Select(w => new ComponentEffect(w.State with { Transition = Transition.None }))
-            .ToArray();
     }
 
     public Dictionary<SnowTag, int> PrototypeCounts()
@@ -443,7 +428,7 @@ public partial class GameObjects : Node
         var stamp = Snowport.Clock.Create();
         var arr = new Effect[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
-            arr[i] = new ComponentEffect(
+            arr[i] = Effect.Upsert(
                 ComponentState.Of(ordered[i]) with
                 {
                     ZOrder = new ZOrder(target, i, stamp),
@@ -481,7 +466,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void UpdateDragFloors()
     {
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.Holder))
+        foreach (var group in GetDraggingObjects().GroupBy(DraggingSourceOf))
         {
             var dragged = group.ToArray();
             var floors = StackFloors(dragged, out _);
@@ -712,7 +697,18 @@ public partial class GameObjects : Node
         }
     }
 
-    public TextureFactory TextureFactory { get; set; }
+    private TextureFactory _textureFactory;
+
+    public TextureFactory TextureFactory
+    {
+        get => _textureFactory;
+        set
+        {
+            _textureFactory = value;
+            if (_table != null)
+                _table.TextureFactory = value;
+        }
+    }
 
     private void ExitSpawnMode()
     {
@@ -781,7 +777,7 @@ public partial class GameObjects : Node
 
             var s = ComponentState.Of(c);
             effects.Add(
-                new ComponentEffect(
+                Effect.Upsert(
                     s with
                     {
                         Location = VisualComponentBase.ComponentLocation.Cursor,
@@ -815,16 +811,18 @@ public partial class GameObjects : Node
     {
         var dragged = components
             .Where(o => o != null)
-            .Select(o => new ComponentEffect(
-                ComponentState.Of(o) with
-                {
-                    Location = VisualComponentBase.ComponentLocation.Cursor,
-                    ContainerRef = SnowTag.Empty,
-                    Holder = Snowport.Clock.source,
-                    // Held positions are relative to the cursor.
-                    Position = o.Position - cursor,
-                }
-            ))
+            .Select(o =>
+                Effect.Upsert(
+                    ComponentState.Of(o) with
+                    {
+                        Location = VisualComponentBase.ComponentLocation.Cursor,
+                        ContainerRef = SnowTag.Empty,
+                        Holder = Snowport.Clock.source,
+                        // Held positions are relative to the cursor.
+                        Position = o.Position - cursor,
+                    }
+                )
+            )
             .ToArray();
         if (dragged.Length == 0)
             return;
@@ -967,13 +965,27 @@ public partial class GameObjects : Node
         return group;
     }
 
+    /// <summary>
+    /// The source dragging a component.
+    /// </summary>
+    private static byte DraggingSourceOf(VisualComponentBase c) =>
+        ProjectService.Instance.GetIncludingDeleted<ComponentState>(c.Reference)?.Holder
+        ?? c.Holder;
+
+    /// <summary>
+    /// The dragged components.
+    /// </summary>
     private IEnumerable<VisualComponentBase> GetDraggingObjects()
     {
-        foreach (var n in ComponentNodes)
+        foreach (var s in ProjectService.Instance.Components.Records.Values)
         {
-            if (n is VisualComponentBase { IsDragging: true } p)
+            if (
+                !s.Deleted
+                && s.Location == VisualComponentBase.ComponentLocation.Cursor
+                && GetComponent(s.Id) is { } c
+            )
             {
-                yield return p;
+                yield return c;
             }
         }
     }
@@ -1068,7 +1080,7 @@ public partial class GameObjects : Node
                 Position = ordered[i].Position,
                 ZOrder = new ZOrder(ZTarget.Top, i, stamp),
             };
-            dropped[i] = new ComponentEffect(s with { X = s.X + snapX, Z = s.Z + snapZ });
+            dropped[i] = Effect.Upsert(s with { X = s.X + snapX, Z = s.Z + snapZ });
         }
 
         var drop = TableEvent.Now(new MoveAction(), dropped, true);
@@ -1136,7 +1148,7 @@ public partial class GameObjects : Node
 
         for (int i = 0; i < toBoard.Count; i++)
             effects.Add(
-                new ComponentEffect(
+                Effect.Upsert(
                     ComponentState.Of(toBoard[i]) with
                     {
                         Location = VisualComponentBase.ComponentLocation.Table,
@@ -1225,10 +1237,12 @@ public partial class GameObjects : Node
     /// </summary>
     public void ResetForLoad()
     {
+        // Removed now so its watch stops before the new table's starts.
         var old = _table;
-        _table = new Node { Name = "Table" };
-        AddChild(_table);
+        RemoveChild(old);
         old.QueueFree();
+        _table = CreateTable();
+        _tableChanged = false;
 
         CursorMode = CursorMode.Normal;
         _spawnComponents = null;
@@ -1236,8 +1250,6 @@ public partial class GameObjects : Node
         _hoveredComponent = null;
         _stackingUpdateRequired = 0;
 
-        _pendingSpawns.Clear();
-        _lastWrite.Clear();
         EventSynchronizer.Instance?.Clear();
         PresenceSynchronizer.Instance?.Clear();
     }
@@ -1250,268 +1262,6 @@ public partial class GameObjects : Node
         ResetForLoad();
         ProjectService.Instance?.NewGame();
     }
-
-    /// <summary>
-    /// The single entry point for the events.
-    /// </summary>
-    private void ApplyEvent(TableEvent e)
-    {
-        if (EventSynchronizer.Instance?.BulkLoading == true)
-            return;
-
-        if (e.Action is UndoAction undo)
-        {
-            ReconstructForUndoRedo(undo);
-            return;
-        }
-
-        foreach (var effect in e.Effects)
-            if (effect is ComponentEffect ce)
-                ApplyUpsert(e.Id, ce);
-
-        RebuildContainerCaches();
-
-        QueueStackingUpdate();
-
-        EmitSignal(SignalName.TableChanged);
-    }
-
-    private void ApplyUpsert(SnowportId eventId, ComponentEffect fx)
-    {
-        var s = fx.State;
-        var r = fx.Id;
-
-        // Reject if it's older than the most recent write.
-        if (_lastWrite.TryGetValue(r, out var last) && eventId.CompareTo(last.Id) < 0)
-            return;
-        _lastWrite[r] = (eventId, s);
-
-        var c = GetComponent(r);
-
-        if (s.Deleted)
-        {
-            RemoveComponent(c);
-            _pendingSpawns.Remove(r);
-            return;
-        }
-
-        if (c == null)
-        {
-            if (!TryExecuteSpawn(fx))
-                AddPendingSpawn(fx);
-            return;
-        }
-
-        ApplyStateToComponent(c, s, eventId);
-    }
-
-    /// <summary>
-    /// Detaches a component from the scene synchronously.
-    /// </summary>
-    private void RemoveComponent(VisualComponentBase c)
-    {
-        if (c == null)
-            return;
-        c.GetParent()?.RemoveChild(c);
-        c.QueueFree();
-    }
-
-    /// <summary>
-    /// Applies a write to a component, animating its transition if the write is recent enough.
-    /// </summary>
-    private static void ApplyStateToComponent(
-        VisualComponentBase c,
-        ComponentState s,
-        SnowportId writeId
-    )
-    {
-        c.Location = s.Location;
-        c.ContainerRef = s.ContainerRef;
-        c.Holder = s.Holder;
-        // A held node is placed by its holder's cursor.
-        if (s.Location != VisualComponentBase.ComponentLocation.Cursor)
-            c.Position = s.PositionAt(c.Position.Y);
-        if (
-            s.Transition == Transition.None
-            || !c.PlayTransition(s, Snowport.Clock.MsecSince(writeId))
-        )
-            c.Rotation = s.Rotation;
-        c.ZOrder = s.ZOrder;
-    }
-
-    /// <summary>
-    /// Spawns a component from a transform.
-    /// </summary>
-    private bool TryExecuteSpawn(ComponentEffect fx)
-    {
-        var s = fx.State;
-        var proto = ProjectService.Instance.GetIncludingDeleted<Prototype>(s.PrototypeRef);
-        if (proto == null)
-            return false;
-
-        var path = Utility.ComponentTypeToScenePath(
-            proto.Type,
-            proto.Parameters,
-            s.DataSetRowIndex,
-            s.DataSetRowId
-        );
-        var scene = GD.Load<PackedScene>(path).Instantiate();
-
-        if (scene is not VisualComponentBase vcb)
-        {
-            GD.PrintErr($"Spawned scene for {s.PrototypeRef} is not a VisualComponentBase");
-            return true;
-        }
-
-        vcb.Reference = fx.Id;
-        vcb.PrototypeRef = s.PrototypeRef;
-        _table.AddChild(vcb);
-        vcb.SpawnBuild(s, TextureFactory);
-        if (s.Location != VisualComponentBase.ComponentLocation.Cursor)
-            vcb.Position = s.PositionAt(vcb.YHeight / 2f);
-        QueueStackingUpdate();
-
-        return true;
-    }
-
-    /// <summary>
-    /// Holds a spawn until its prototype arrives.
-    /// </summary>
-    private void AddPendingSpawn(ComponentEffect fx)
-    {
-        _pendingSpawns[fx.Id] = fx;
-        ProjectService.Instance.QueueSync(this);
-    }
-
-    /// <summary>
-    /// Retries pending spawns, then waits on the prototypes that are still missing.
-    /// </summary>
-    private void Sync(IRecordReader R)
-    {
-        if (_pendingSpawns.Count > 0)
-        {
-            RetryPendingSpawns();
-            RebuildContainerCaches();
-        }
-        R.Get<Prototype>(_pendingSpawns.Values.Select(p => p.State.PrototypeRef));
-    }
-
-    private void RetryPendingSpawns()
-    {
-        if (_pendingSpawns.Count == 0)
-            return;
-
-        var pending = _pendingSpawns.Values.ToList();
-        _pendingSpawns.Clear();
-
-        foreach (var p in pending)
-            if (!TryExecuteSpawn(p))
-                _pendingSpawns[p.Id] = p; // prototype still not available
-    }
-
-    #region Undo
-
-    /// <summary>
-    /// Rebuilds the whole table from the event log.
-    /// </summary>
-    public void RebuildFromLog()
-    {
-        var log = EventSynchronizer.Instance?.EventLog;
-        if (log == null)
-            return;
-
-        var undone = UndoLog.ComputeUndone(log);
-
-        var tags = new HashSet<SnowTag>();
-        foreach (var ev in log.Values)
-        foreach (var fx in ev.Effects)
-            if (fx is ComponentEffect ce)
-                tags.Add(ce.Id);
-
-        foreach (var r in tags)
-            ReconstructComponent(r, log, undone);
-
-        RetryPendingSpawns();
-        RebuildContainerCaches();
-        QueueStackingUpdate();
-        EmitSignal(SignalName.TableChanged);
-    }
-
-    /// <summary>
-    /// Applies an undo or redo by searching backwards for the components that need updating.
-    /// </summary>
-    private void ReconstructForUndoRedo(UndoAction undo)
-    {
-        var log = EventSynchronizer.Instance?.EventLog;
-        if (log == null)
-            return;
-
-        var undone = UndoLog.ComputeUndone(log);
-        foreach (var r in UndoLog.ResolveAffectedComponents(log, undo.Target))
-            ReconstructComponent(r, log, undone);
-
-        RebuildContainerCaches();
-        QueueStackingUpdate();
-        EmitSignal(SignalName.TableChanged);
-    }
-
-    /// <summary>
-    /// Reconstructs one component from the log by scanning backward for its most recent write.
-    /// </summary>
-    private void ReconstructComponent(
-        SnowTag r,
-        OrderedDictionary<SnowportId, TableEvent> log,
-        HashSet<SnowportId> undone
-    )
-    {
-        ComponentEffect winner = null;
-        SnowportId winnerId = SnowportId.Empty;
-
-        // The log is sorted, so the first write found is the newest.
-        for (int i = log.Count - 1; i >= 0 && winner == null; i--)
-        {
-            var e = log.GetAt(i).Value;
-            if (UndoLog.IsUndone(e, undone))
-                continue;
-
-            foreach (var fx in e.Effects)
-                if (fx is ComponentEffect ce && ce.Id == r)
-                {
-                    winner = ce;
-                    winnerId = e.Id;
-                    break;
-                }
-        }
-
-        _pendingSpawns.Remove(r);
-        var live = GetComponent(r);
-
-        if (winner == null)
-        {
-            RemoveComponent(live);
-            _lastWrite.Remove(r);
-            return;
-        }
-
-        _lastWrite[r] = (winnerId, winner.State);
-
-        if (winner.State.Deleted)
-        {
-            RemoveComponent(live);
-            return;
-        }
-
-        if (live == null)
-        {
-            if (!TryExecuteSpawn(winner))
-                AddPendingSpawn(winner);
-            return;
-        }
-
-        ApplyStateToComponent(live, winner.State, winnerId);
-    }
-
-    #endregion
 
     /// <summary>
     /// Refreshes every container's child cache and every deck's count.
@@ -1548,7 +1298,7 @@ public partial class GameObjects : Node
         if (cursors == null)
             return;
 
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.Holder))
+        foreach (var group in GetDraggingObjects().GroupBy(DraggingSourceOf))
         {
             if (group.Key == Snowport.Clock.source && _localDragOverHand)
                 continue;
@@ -1560,7 +1310,8 @@ public partial class GameObjects : Node
             var dragged = group.ToList();
             foreach (var c in dragged)
             {
-                if (!TryGetState(c.Reference, out var s))
+                var s = ProjectService.Instance.GetIncludingDeleted<ComponentState>(c.Reference);
+                if (s == null)
                     continue;
                 var offset = s.PositionAt(0);
                 c.Position = new Vector3(cursor.X + offset.X, c.Position.Y, cursor.Z + offset.Z);

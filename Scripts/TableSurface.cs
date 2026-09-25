@@ -1,6 +1,6 @@
 using Godot;
 
-public partial class Table : StaticBody3D
+public partial class TableSurface : StaticBody3D
 {
     private MeshInstance3D _tableMesh;
     private PlaneMesh _mesh;

@@ -15,15 +15,18 @@ public enum Transition
 /// <summary>
 /// A component's full replicated state. Every component write carries all of it.
 /// </summary>
-public record ComponentState
+public record ComponentState : Replicated
 {
     /// <summary>
     /// The state last written for a component, minus the transition.
     /// </summary>
     public static ComponentState Of(VisualComponentBase c)
     {
-        if (!ProjectService.Instance.GameObjects.TryGetState(c.Reference, out var s))
-            throw new InvalidOperationException($"Component {c.Reference} has no written state.");
+        var s =
+            ProjectService.Instance.GetIncludingDeleted<ComponentState>(c.Reference)
+            ?? throw new InvalidOperationException(
+                $"Component {c.Reference} has no written state."
+            );
         return s with { Transition = Transition.None };
     }
 
@@ -44,9 +47,6 @@ public record ComponentState
             Holder = c.Holder,
             ZOrder = c.ZOrder,
         };
-
-    [JsonPropertyName("i")]
-    public SnowTag Id { get; init; }
 
     [JsonPropertyName("pr")]
     public SnowTag PrototypeRef { get; init; }
@@ -124,29 +124,10 @@ public record ComponentState
     [JsonPropertyName("h")]
     public byte Holder { get; init; }
 
-    /// <summary>Reversible soft-delete flag.</summary>
-    [JsonPropertyName("x")]
-    public bool Deleted { get; init; }
-
     /// <summary>
     /// How this write animates. It starts when the write was made and is never copied
     /// forward, so it only ever describes the write that set it.
     /// </summary>
     [JsonPropertyName("t")]
     public Transition Transition { get; init; }
-
-    public void ApplyToComponent(VisualComponentBase component)
-    {
-        component.PrototypeRef = PrototypeRef;
-        // A held node is placed by its holder's cursor.
-        if (Location != VisualComponentBase.ComponentLocation.Cursor)
-            component.Position = PositionAt(component.Position.Y);
-        component.Rotation = Rotation;
-        component.ZOrder = ZOrder;
-        component.DataSetRowIndex = DataSetRowIndex;
-        component.DataSetRowId = DataSetRowId;
-        component.Location = Location;
-        component.ContainerRef = ContainerRef;
-        component.Holder = Holder;
-    }
 }

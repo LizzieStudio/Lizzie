@@ -144,7 +144,7 @@ public partial class VcTray : VisualComponentGroup
         return TableEvent.Now(
             null,
             [
-                new ComponentEffect(
+                Effect.Upsert(
                     new ComponentState
                     {
                         Id = Snowport.Clock.CreateTag(),

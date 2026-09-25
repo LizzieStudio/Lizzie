@@ -17,6 +17,7 @@ public partial class HandManager : Panel
     private Button _openCloseButton;
 
     private List<VcToken> _cards = new();
+    private GameObjects _gameObjects;
     private HBoxContainer _handContainer;
 
     private Texture2D _openIcon;
@@ -39,8 +40,7 @@ public partial class HandManager : Panel
 
         _handContainer = GetNode<HBoxContainer>("%HandContainer");
 
-        if (EventSynchronizer.Instance != null)
-            EventSynchronizer.Instance.Applied += OnEventApplied;
+        Callable.From(ConnectTable).CallDeferred();
 
         _openIcon = ResourceLoader.Load<Texture2D>(OpenIcon);
         _closeIcon = ResourceLoader.Load<Texture2D>(CloseIcon);
@@ -59,15 +59,20 @@ public partial class HandManager : Panel
 
     public override void _ExitTree()
     {
-        if (EventSynchronizer.Instance != null)
-            EventSynchronizer.Instance.Applied -= OnEventApplied;
+        if (_gameObjects != null && IsInstanceValid(_gameObjects))
+            _gameObjects.TableChanged -= RefreshDisplay;
     }
 
     /// <summary>
-    /// Subscribe to all events to catch hand changes.
-    /// Deferred to run after GameObjects. (should be changed)
+    /// Refreshes the hand whenever the table changes, once its components have synced.
     /// </summary>
-    private void OnEventApplied(TableEvent e) => Callable.From(RefreshDisplay).CallDeferred();
+    private void ConnectTable()
+    {
+        _gameObjects = ProjectService.Instance?.GameObjects;
+        if (_gameObjects != null)
+            _gameObjects.TableChanged += RefreshDisplay;
+        RefreshDisplay();
+    }
 
     public override void _Input(InputEvent @event)
     {

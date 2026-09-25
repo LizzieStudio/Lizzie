@@ -120,7 +120,7 @@ public partial class VcToken : VisualComponentBase
     private float _targetZ;
     private bool _flipInProcess;
 
-    private ComponentEffect BuildFlip() => new(BuildFlipState());
+    private Effect BuildFlip() => Effect.Upsert(BuildFlipState());
 
     /// <summary>
     /// This token's state turned over, animating the flip.

@@ -31,13 +31,13 @@ public partial class PlayerHandService : Node
     /// Builds a transform effect that moves a card into a seat's hand at the top of its order.
     /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
-    public ComponentEffect MoveEffect(
+    public Effect MoveEffect(
         VisualComponentBase card,
         int seatIndex,
         int suborder,
         SnowportId stamp
     ) =>
-        new(
+        Effect.Upsert(
             ComponentState.Of(card) with
             {
                 Location = VisualComponentBase.ComponentLocation.Hand,

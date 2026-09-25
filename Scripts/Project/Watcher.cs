@@ -23,6 +23,11 @@ public sealed class Watcher : IRecordReader
 
     public Node Owner { get; }
 
+    private static long _nextSequence;
+
+    /// <summary>Registration order, which breaks ties between watchers at the same depth.</summary>
+    public long Sequence { get; } = _nextSequence++;
+
     public Watcher(Node owner, Action<IRecordReader> sync, IRecordReader source)
     {
         Owner = owner;
