@@ -254,9 +254,6 @@ public partial class VcDie : VisualComponentBase
         var mat = new StandardMaterial3D();
         mat.AlbedoTexture = texture;
         _mainMesh.MaterialOverride = mat;
-
-        var d = texture.GetImage();
-        //d.SavePng(@"c:\winwam5\d8.png");
     }
 
     private TextureFactory.TextureDefinition D6TextureDefinition(
