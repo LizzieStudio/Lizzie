@@ -6,11 +6,28 @@ public partial class ImageTile : MarginContainer
 {
     private Label _imageName;
     private TextureRect _thumbnail;
-    private Asset _asset;
 
     private bool _selected;
 
-    public event Action<Asset> Clicked;
+    private SnowTag _reference;
+
+    /// <summary>The asset this tile shows.</summary>
+    public SnowTag Reference
+    {
+        get => _reference;
+        set
+        {
+            _reference = value;
+            ProjectService.Instance.QueueSync(this);
+        }
+    }
+
+    public event Action<SnowTag> Clicked;
+
+    public override void _EnterTree()
+    {
+        ProjectService.Instance.Watch(this, Sync);
+    }
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -26,7 +43,7 @@ public partial class ImageTile : MarginContainer
     {
         if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
         {
-            Clicked?.Invoke(_asset);
+            Clicked?.Invoke(Reference);
         }
     }
 
@@ -41,16 +58,17 @@ public partial class ImageTile : MarginContainer
         Modulate = _selected ? new Color(0.6f, 0.8f, 1f) : Colors.White;
     }
 
-    public void SetAsset(Asset asset)
+    private async void Sync(IRecordReader R)
     {
-        _asset = asset;
-        Refresh();
-    }
+        var asset = R.Get<Asset>(Reference);
+        if (asset == null)
+            return;
 
-    public async void Refresh()
-    {
-        _imageName.Text = _asset.Name;
-        var image = await ProjectService.Instance.FetchImageAsync(_asset);
+        _imageName.Text = asset.Name;
+        var image = await ProjectService.Instance.FetchImageAsync(asset);
+        // The tile may have been removed or retargeted while the image loaded.
+        if (!IsInstanceValid(this) || asset.Id != Reference)
+            return;
         if (image != null)
             _thumbnail.Texture = ImageTexture.CreateFromImage(image);
     }

@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-/// <summary>
-/// Untracked record reads, and watchers that rerun when the records they read change.
-/// </summary>
 public partial class ProjectService : IRecordReader
 {
     private Dictionary<Type, IReplicatedContainer> _containersByType;
@@ -46,7 +43,7 @@ public partial class ProjectService : IRecordReader
 
     /// <summary>
     /// Runs the Node's Watch functions immediately.
-    /// Useful if you need to measure the node as soon as it's added.
+    /// Useful if you need to measure the node.
     /// </summary>
     public void SyncNow(Node owner)
     {
@@ -159,12 +156,21 @@ public partial class ProjectService : IRecordReader
             : throw new InvalidOperationException($"{typeof(T).Name} is not in a value");
 
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
-    public Projection<K> Project<T, K>(Func<IRecordReader, T, K?> projection)
+    public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
         where T : class, IReplicated
         where K : struct
     {
         throw new InvalidOperationException(
-            "Project can only be called on the IRecordReader provided to the Watch(fn)."
+            "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."
+        );
+    }
+
+    /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
+    public SwapLists GetChanged<T>()
+        where T : class, IReplicated
+    {
+        throw new InvalidOperationException(
+            "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."
         );
     }
 

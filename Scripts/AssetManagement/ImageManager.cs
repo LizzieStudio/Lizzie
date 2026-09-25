@@ -22,7 +22,7 @@ public partial class ImageManager : Window
 
     private readonly Dictionary<SnowTag, ImageTile> _tiles = new();
 
-    private Asset _selected;
+    private SnowTag _selected = SnowTag.Empty;
 
     private const string _tileScenePath = "res://Scenes/Controls/image_tile.tscn";
 
@@ -66,20 +66,21 @@ public partial class ImageManager : Window
 
     private void OnRemovePressed()
     {
-        if (_selected != null)
-            ProjectService.Instance.Upsert(_selected with { Deleted = true });
+        var selected = ProjectService.Instance.Get<Asset>(_selected);
+        if (selected != null)
+            ProjectService.Instance.Upsert(selected with { Deleted = true });
     }
 
-    private void OnTileClicked(Asset target)
+    private void OnTileClicked(SnowTag target)
     {
-        if (_selected != null && _tiles.TryGetValue(_selected.Id, out var previous))
+        if (_tiles.TryGetValue(_selected, out var previous))
         {
             previous.SetSelected(false);
         }
 
         _selected = target;
 
-        if (_tiles.TryGetValue(_selected.Id, out var tile))
+        if (_tiles.TryGetValue(_selected, out var tile))
         {
             tile.SetSelected(true);
         }
@@ -122,35 +123,35 @@ public partial class ImageManager : Window
         UpdateButtons(true);
     }
 
-    private void AddImageTile(Asset asset)
+    /// <summary>Keeps one tile per image. Each tile shows its own asset.</summary>
+    private void Sync(IRecordReader R)
+    {
+        var (deleted, created) = R.GetChanged<Asset>();
+
+        foreach (var id in deleted)
+            RemoveImageTile(id);
+        foreach (var id in created)
+            AddImageTile(id);
+    }
+
+    private void AddImageTile(SnowTag id)
     {
         var tileScene = GD.Load<PackedScene>(_tileScenePath);
         var tile = tileScene.Instantiate<ImageTile>();
+        tile.Reference = id;
         tile.Clicked += OnTileClicked;
         _tileContainer.AddChild(tile);
-        tile.SetAsset(asset);
-        _tiles[asset.Id] = tile;
+        _tiles[id] = tile;
     }
 
-    private void Sync(IRecordReader R)
+    private void RemoveImageTile(SnowTag id)
     {
-        var assets = R.Get<Asset>();
+        if (!_tiles.Remove(id, out var tile))
+            return;
+        _tileContainer.RemoveChild(tile);
+        tile.QueueFree();
 
-        foreach (var asset in assets)
-        {
-            if (_tiles.TryGetValue(asset.Id, out var existing))
-                existing.SetAsset(asset);
-            else
-                AddImageTile(asset);
-        }
-
-        var live = assets.Select(a => a.Id).ToHashSet();
-        foreach (var id in _tiles.Keys.Where(id => !live.Contains(id)).ToList())
-        {
-            _tiles[id].QueueFree();
-            _tiles.Remove(id);
-        }
-
-        _selected = assets.FirstOrDefault(a => a.Id == _selected?.Id);
+        if (_selected == id)
+            _selected = SnowTag.Empty;
     }
 }

@@ -38,29 +38,51 @@ public interface IRecordReader
 
     /// <summary>
     /// <para>
-    /// Maps every live record of <typeparamref name="T"/> to a key, then uses those keys to produce two lists of records: deletions and creations.
-    /// To determine presence in a list, the key for each record is compared with the previous key generated for that record when Project was last called.
+    /// Maps every live record of <typeparamref name="T"/> to a key, then uses those keys to produce two lists of SnowTags and keys: deletions and creations.
+    /// Deletions carry the previous key and creations carry the new one.
+    /// To determine presence in a list, the key for each record is compared with the previous key generated for that record.
     /// </para>
     /// <list type="bullet">
     /// <item>If the two keys are different and the previous key wasn't null, the record appears in deletions.</item>
     /// <item>If the two keys are different and the new key isn't null, the record appears in creations.</item>
     /// </list>
     /// <para>The expectation is that you will delete the nodes in deletions and create the nodes in creations.</para>
-    /// When <paramref name="projection"/> returns null, this effectively means "no child".
+    /// When <paramref name="keyFn"/> returns null, this effectively means "no child".
     /// If both projections returned a non-null key but the keys are different, that record appears in both deletions and creations.
-    /// <strong>Only one call per record type per Sync.</strong>
+    /// <strong>Only one call of GetChanged per record type per Sync.</strong>
     /// </summary>
-    Projection<K> Project<T, K>(Func<IRecordReader, T, K?> projection)
+    SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
         where T : class, IReplicated
         where K : struct;
+
+    /// <summary>
+    /// <para>
+    /// Produces two lists of SnowTags: deletions and creations.
+    /// A record that existed previously but was since deleted or undone will be included in deletions.
+    /// A record that did not exist or was deleted previously will be included in creations.
+    /// </para>
+    /// <para>The expectation is that you will delete the nodes in deletions and create the nodes in creations.</para>
+    /// <strong>Only one call of GetChanged per record type per Sync.</strong>
+    /// </summary>
+    SwapLists GetChanged<T>()
+        where T : class, IReplicated;
 }
 
 /// <summary>
-/// The children a parent should delete and the children a parent should create, from <see cref="IRecordReader.Project"/>.
+/// The children a parent should delete and the children a parent should create, from <see cref="IRecordReader.GetChanged{T}"/>.
 /// </summary>
-public readonly record struct Projection<K>(
-    IReadOnlyList<(SnowTag Id, K Value)> Deleted,
-    IReadOnlyList<(SnowTag Id, K Value)> Created
+public readonly record struct SwapLists(
+    IReadOnlyList<SnowTag> Deleted,
+    IReadOnlyList<SnowTag> Created
+);
+
+/// <summary>
+/// The children a parent should delete, with their previous keys, and the children a parent
+/// should create, with their new keys, from <see cref="IRecordReader.GetChanged{T, K}"/>.
+/// </summary>
+public readonly record struct SwapLists<K>(
+    IReadOnlyList<(SnowTag Id, K Key)> Deleted,
+    IReadOnlyList<(SnowTag Id, K Key)> Created
 );
 
 public static class RecordReaderExtensions

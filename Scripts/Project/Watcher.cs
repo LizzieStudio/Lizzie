@@ -122,13 +122,13 @@ public sealed class Watcher : IRecordReader
         return _source.Value<T>();
     }
 
-    public Projection<K> Project<T, K>(Func<IRecordReader, T, K?> projection)
+    public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
         where T : class, IReplicated
         where K : struct
     {
         if (!_projected.Add(typeof(T)))
             throw new InvalidOperationException(
-                $"You cannot Project {typeof(T).Name} twice during the same Sync."
+                $"GetChanged was already called for {typeof(T).Name} during this Sync."
             );
 
         var records = Get<T>();
@@ -137,14 +137,14 @@ public sealed class Watcher : IRecordReader
             : new Dictionary<SnowTag, K>();
         var current = new Dictionary<SnowTag, K>();
         foreach (var record in records)
-            if (projection(this, record) is K value)
+            if (keyFn(this, record) is K value)
                 current[record.Id] = value;
 
         var deleted = new List<(SnowTag, K)>();
         var created = new List<(SnowTag, K)>();
         var comparer = EqualityComparer<K>.Default;
 
-        // a missing entry counts as a null projection
+        // a missing entry counts as a null key
         foreach (var (id, old) in previous)
             if (!current.TryGetValue(id, out var value) || !comparer.Equals(old, value))
                 deleted.Add((id, old));
@@ -153,6 +153,16 @@ public sealed class Watcher : IRecordReader
                 created.Add((id, value));
 
         _projections[typeof(T)] = current;
-        return new Projection<K>(deleted, created);
+        return new SwapLists<K>(deleted, created);
+    }
+
+    public SwapLists GetChanged<T>()
+        where T : class, IReplicated
+    {
+        var (deleted, created) = GetChanged<T, bool>((R, value) => true);
+        return new SwapLists(
+            deleted.Select(d => d.Id).ToArray(),
+            created.Select(c => c.Id).ToArray()
+        );
     }
 }
