@@ -54,6 +54,8 @@ public partial class DebugConsole : Node
 
     private void DrawConsole()
     {
+        string submitted = null;
+
         ImGui.SetNextWindowSize(new SysVec2(520, 320), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("Console", ref _consoleOpen))
         {
@@ -84,12 +86,16 @@ public partial class DebugConsole : Node
             ImGui.SetNextItemWidth(-1);
             if (ImGui.InputText("##cmd", ref _input, 256, ImGuiInputTextFlags.EnterReturnsTrue))
             {
-                RunCommand(_input);
+                submitted = _input;
                 _input = "";
                 _focusInput = true;
             }
         }
         ImGui.End();
+
+        // Commands run outside the window, so one that throws can't leave it unended.
+        if (submitted != null)
+            RunCommand(submitted);
     }
 
     private void RunCommand(string raw)
@@ -99,6 +105,29 @@ public partial class DebugConsole : Node
             return;
 
         Log("> " + cmd);
+        try
+        {
+            ExecuteCommand(cmd);
+        }
+        catch (Exception e)
+        {
+            Log($"Failed: {e.Message}");
+            GD.PushError($"Console command '{cmd}' failed: {e}");
+        }
+    }
+
+    private void ExecuteCommand(string cmd)
+    {
+        if (cmd.StartsWith("/spam"))
+        {
+            var arg = cmd["/spam".Length..].Trim();
+            if (int.TryParse(arg.Length == 0 ? "1000" : arg, out int count) && count > 0)
+                Spam(count);
+            else
+                Log("Usage: /spam [count]");
+            return;
+        }
+
         switch (cmd)
         {
             case "/events":
@@ -106,12 +135,48 @@ public partial class DebugConsole : Node
                 Log("Opened the event log inspector.");
                 break;
             case "/help":
-                Log("Commands: /events, /help");
+                Log("Commands: /events, /spam [count], /help");
                 break;
             default:
                 Log($"Unknown command: {cmd}");
                 break;
         }
+    }
+
+    /// <summary>
+    /// Fills the event log with undoable no-op events for performance testing.
+    /// Each rewrites a component with its current state.
+    /// </summary>
+    private void Spam(int count)
+    {
+        var sync = EventSynchronizer.Instance;
+        var states = ProjectService
+            .Instance?.Components.Records.Values.Where(s => !s.Deleted)
+            .Select(s => s with { Transition = Transition.None })
+            .ToArray();
+        if (sync == null || states == null || states.Length == 0)
+        {
+            Log("Spam needs at least one component on the table.");
+            return;
+        }
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+        // bulk loading sends one change notification at the end instead of one per event
+        sync.BulkLoading = true;
+        try
+        {
+            for (int i = 0; i < count; i++)
+                sync.Submit(
+                    TableEvent.Now(new MoveAction(), [Effect.Upsert(states[i % states.Length])])
+                );
+        }
+        finally
+        {
+            ProjectService.Instance.EndBulkLoad();
+        }
+
+        Log($"Added {count} events in {watch.ElapsedMilliseconds} ms ({sync.EventLog.Count} total).");
     }
 
     private void Log(string line)
@@ -121,7 +186,59 @@ public partial class DebugConsole : Node
     }
 
     /// <summary>
-    /// Infinite-scrolling list of events.
+    /// The most recent <see cref="DebugTimings"/>, newest first.
+    /// </summary>
+    private static void DrawTimings()
+    {
+        if (!ImGui.CollapsingHeader("Timings"))
+            return;
+
+        if (DebugTimings.Recent.Count == 0)
+            ImGui.TextDisabled("Nothing timed yet.");
+
+        foreach (var t in DebugTimings.Recent.Reverse())
+            ImGui.TextUnformatted(
+                $"{t.Label, -6} {t.Milliseconds, 9:F2} ms   at {t.EventCount} events"
+            );
+
+        ImGui.Separator();
+    }
+
+    // Undone units found by scanning back from the newest event, only as deep as rows are shown.
+    private readonly HashSet<SnowportId> _undone = new();
+
+    // the lowest log index the undone scan has visited
+    private int _undoneScannedTo;
+
+    // identifies the log the undone scan was made from, to restart it when the log changes
+    private (int Count, SnowportId Newest) _undoneLog;
+
+    /// <summary>
+    /// Extends the undone scan down to <paramref name="index"/>, restarting it if the log changed.
+    /// Whether an event is undone depends only on the events after it, so rows near the top
+    /// never need the rest of the log.
+    /// </summary>
+    private void ScanUndoneTo(OrderedDictionary<SnowportId, TableEvent> log, int index)
+    {
+        var current = (log.Count, log.Count > 0 ? log.GetAt(log.Count - 1).Key : SnowportId.Empty);
+        if (current != _undoneLog)
+        {
+            _undoneLog = current;
+            _undone.Clear();
+            _undoneScannedTo = log.Count;
+        }
+
+        while (_undoneScannedTo > index)
+        {
+            var e = log.GetAt(--_undoneScannedTo).Value;
+            if (!UndoLog.IsUndone(e, _undone) && e.Action is UndoAction u)
+                _undone.Add(u.Target);
+        }
+    }
+
+    /// <summary>
+    /// Infinite-scrolling list of events, newest first.
+    /// Only the rows on screen are read from the log.
     /// </summary>
     private unsafe void DrawEvents()
     {
@@ -135,8 +252,7 @@ public partial class DebugConsole : Node
             ImGui.TextDisabled("amber = undo/redo   dim = undone   sN = source");
             ImGui.Separator();
 
-            var undone =
-                eventLog != null ? UndoLog.ComputeUndone(eventLog) : new HashSet<SnowportId>();
+            DrawTimings();
 
             if (ImGui.BeginChild("##eventlist") && count > 0)
             {
@@ -149,8 +265,12 @@ public partial class DebugConsole : Node
                 clipper.Begin(count);
                 while (clipper.Step())
                 {
-                    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                    // row 0 is the newest event
+                    ScanUndoneTo(eventLog, count - clipper.DisplayEnd);
+
+                    for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
                     {
+                        int i = count - 1 - row;
                         var e = eventLog.GetAt(i).Value;
                         int pushed = 0;
                         if (e.Action is UndoAction)
@@ -158,7 +278,7 @@ public partial class DebugConsole : Node
                             ImGui.PushStyleColor(ImGuiCol.Text, amber);
                             pushed = 1;
                         }
-                        else if (UndoLog.IsUndone(e, undone))
+                        else if (UndoLog.IsUndone(e, _undone))
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, gray);
                             pushed = 1;
@@ -166,9 +286,10 @@ public partial class DebugConsole : Node
 
                         string line = $"{i, 5}  s{e.Id.source, -3} {Describe(e)}";
                         if (e.Action is UndoAction u)
-                            line += eventLog.TryGetValue(u.Target, out var ti)
-                                ? $"  → #{ti}"
-                                : "  → #?";
+                        {
+                            int target = eventLog.IndexOf(u.Target);
+                            line += target >= 0 ? $"  → #{target}" : "  → #?";
+                        }
                         ImGui.TextUnformatted(line);
 
                         if (pushed > 0)

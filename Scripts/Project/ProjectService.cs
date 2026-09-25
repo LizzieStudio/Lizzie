@@ -240,12 +240,20 @@ public partial class ProjectService : Node
     public void SettleAfterIngest()
     {
         SeedTagsFromLog();
+        EndBulkLoad();
+
+        HasUnsavedChanges = false;
+    }
+
+    /// <summary>
+    /// Stops bulk loading and sends each container's one notification for everything it merged.
+    /// </summary>
+    public void EndBulkLoad()
+    {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
         foreach (var c in Containers)
             c.FlushBulkLoad();
-
-        HasUnsavedChanges = false;
     }
 
     public bool SaveProject(Project project)
