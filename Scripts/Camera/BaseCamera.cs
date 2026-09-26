@@ -108,7 +108,7 @@ public abstract partial class BaseCamera : Node3D, ICamera
     {
         if (AcceptsInput && Shortcuts.Pressed(e, "component_zoom"))
         {
-            ZoomComponent(_gameObjects.GetMouseSelectedObject());
+            ZoomComponent(_gameObjects.GetHoveredObject());
             GetViewport().SetInputAsHandled();
         }
     }

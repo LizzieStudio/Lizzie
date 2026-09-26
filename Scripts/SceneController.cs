@@ -145,7 +145,7 @@ public partial class SceneController : Node3D
     #region Commands
     public void SendCommandToSelected(VisualCommand command)
     {
-        SendCommandToComponents(command, _gameObjects.GetSelectedObjects());
+        SendCommandToComponents(command, _gameObjects.GetPrimaryObjects());
     }
 
     public void SendCommandToComponents(

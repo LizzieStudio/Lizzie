@@ -131,6 +131,7 @@ public partial class GameObjects : Node
         if (_tableChanged)
         {
             _tableChanged = false;
+            ShowSelection();
             RebuildContainerCaches();
             QueueStackingUpdate();
             EmitSignal(SignalName.TableChanged);
@@ -220,7 +221,7 @@ public partial class GameObjects : Node
             }
             else if (buttonEvent.ButtonIndex == MouseButton.Left)
             {
-                var go = GetMouseSelectedObject();
+                var go = GetHoveredObject();
                 if (go == null)
                 {
                     DeselectComponents();
@@ -347,59 +348,78 @@ public partial class GameObjects : Node
     #endregion
 
     #region Selection
-    public bool IsAnyObjectSelected()
+    /// <summary>The selected components.</summary>
+    private readonly HashSet<SnowTag> _selection = new();
+
+    public IReadOnlySet<SnowTag> Selection => _selection;
+
+    /// <summary>Called when the selection changes.</summary>
+    public event Action SelectionChanged;
+
+    /// <summary>Replaces the selection.</summary>
+    public void SetSelection(IEnumerable<SnowTag> components)
     {
-        return ComponentNodes.Any(n => n is VisualComponentBase { IsSelected: true });
+        var next = components.ToHashSet();
+        if (next.SetEquals(_selection))
+            return;
+
+        foreach (var id in _selection)
+            if (GetComponent(id) is { } c)
+                c.IsSelected = false;
+        _selection.Clear();
+        _selection.UnionWith(next);
+        ShowSelection();
+        SelectionChanged?.Invoke();
     }
 
-    public bool IsAnyObjectMouseSelected()
+    /// <summary>
+    /// Marks the selected nodes, including any the table just rebuilt,
+    /// and drops components that left the table.
+    /// </summary>
+    private void ShowSelection()
     {
-        return ComponentNodes.Any(n => n is VisualComponentBase { IsMouseSelected: true });
+        if (_selection.RemoveWhere(id => GetComponent(id) == null) > 0)
+            SelectionChanged?.Invoke();
+        foreach (var id in _selection)
+            GetComponent(id).IsSelected = true;
     }
 
-    public VisualComponentBase GetSelectedObject()
-    {
-        return ComponentNodes.FirstOrDefault(n => n is VisualComponentBase { IsSelected: true })
-            as VisualComponentBase;
-    }
-
+    /// <summary>The selected components in table order.</summary>
     public IEnumerable<VisualComponentBase> GetSelectedObjects()
     {
         return ComponentNodes
-            .Where(n => n is VisualComponentBase { IsSelected: true })
-            .Cast<VisualComponentBase>();
+            .OfType<VisualComponentBase>()
+            .Where(c => _selection.Contains(c.Reference));
     }
 
-    public VisualComponentBase GetMouseSelectedObject()
+    /// <summary>
+    /// What commands act on: the selection, or the hovered component when nothing is selected.
+    /// </summary>
+    public List<VisualComponentBase> GetPrimaryObjects()
     {
-        return ComponentNodes.FirstOrDefault(n =>
-                n is VisualComponentBase { IsMouseSelected: true }
-            ) as VisualComponentBase;
+        var selected = GetSelectedObjects().ToList();
+        if (selected.Count == 0 && GetHoveredObject() is { } hovered)
+            selected.Add(hovered);
+        return selected;
     }
 
     public void SelectComponents(Rect2 area)
     {
-        foreach (var go in ComponentNodes)
-        {
-            // Zones and hidden components are not selected by marquee selection.
-            if (go is VisualComponentBase vcb and not VcZone && vcb.Visible)
-            {
-                var screenPos = GetViewport().GetCamera3D().UnprojectPosition(vcb.Position);
-                vcb.IsClickSelected = PointInRect(screenPos, area);
-            }
-        }
+        var camera = GetViewport().GetCamera3D();
+        // Zones and hidden components are not selected by marquee selection.
+        SetSelection(
+            ComponentNodes
+                .OfType<VisualComponentBase>()
+                .Where(c =>
+                    c is not VcZone
+                    && c.Visible
+                    && PointInRect(camera.UnprojectPosition(c.Position), area)
+                )
+                .Select(c => c.Reference)
+        );
     }
 
-    public void DeselectComponents()
-    {
-        foreach (var go in ComponentNodes)
-        {
-            if (go is VisualComponentBase v)
-            {
-                v.IsClickSelected = false;
-            }
-        }
-    }
+    public void DeselectComponents() => SetSelection([]);
     #endregion
 
     #region Stacking
@@ -632,11 +652,11 @@ public partial class GameObjects : Node
             return;
 
         if (Shortcuts.Pressed(e, "move_to_top"))
-            Reorder(GetSelectedObjects(), ZTarget.Top);
+            Reorder(GetPrimaryObjects(), ZTarget.Top);
         else if (Shortcuts.Pressed(e, "move_to_bottom"))
-            Reorder(GetSelectedObjects(), ZTarget.Bottom);
+            Reorder(GetPrimaryObjects(), ZTarget.Bottom);
         else if (Shortcuts.Pressed(e, "component_delete"))
-            DeleteComponents(GetSelectedObjects());
+            DeleteComponents(GetPrimaryObjects());
         else
             return;
         GetViewport().SetInputAsHandled();
@@ -656,11 +676,7 @@ public partial class GameObjects : Node
         Vector2 mouse = GetViewport().GetMousePosition();
         Vector2I v = new((int)Math.Floor(mouse.X), (int)Math.Floor(mouse.Y));
 
-        var vch = GetSelectedObjects();
-        if (!vch.Any() && GetHoveredObject() != null)
-        {
-            vch = Enumerable.Repeat(GetHoveredObject(), 1);
-        }
+        var vch = GetPrimaryObjects();
 
         //EmitSignal(SignalName.ShowComponentPopup, v, new Godot.Collections.Array<VisualComponentBase>(vch));
         ShowComponentPopup?.Invoke(this, new ShowComponentPopupEventArgs(v, vch));
@@ -751,6 +767,10 @@ public partial class GameObjects : Node
 
     private void EnterDragMode(VisualComponentBase go)
     {
+        // Clicking outside the selection replaces it.
+        if (!_selection.Contains(go.Reference))
+            SetSelection([go.Reference]);
+
         // Zone control gate.
         if (!go.LocallyMovable)
         {
@@ -889,16 +909,10 @@ public partial class GameObjects : Node
             {
                 _currentDragDropTarget?.DragOverExit();
                 if (_currentDragDropTarget != null)
-                {
                     _currentDragDropTarget.IsHovered = false;
-                    _currentDragDropTarget.IsMouseSelected = false;
-                }
                 _currentDragDropTarget = dragTarget;
                 if (_currentDragDropTarget != null)
-                {
                     _currentDragDropTarget.IsHovered = true;
-                    _currentDragDropTarget.IsMouseSelected = true;
-                }
             }
 
             if (dragTarget != null && dragTarget.DragOver(GetDraggingObjects()))
@@ -1022,7 +1036,6 @@ public partial class GameObjects : Node
 
             _currentDragDropTarget.DragOverExit();
             _currentDragDropTarget.IsHovered = false;
-            _currentDragDropTarget.IsMouseSelected = false;
             _currentDragDropTarget = null;
         }
         else
@@ -1228,6 +1241,7 @@ public partial class GameObjects : Node
         old.QueueFree();
         _table = CreateTable();
         _tableChanged = false;
+        _selection.Clear();
 
         CursorMode = CursorMode.Normal;
         _spawnComponents = null;

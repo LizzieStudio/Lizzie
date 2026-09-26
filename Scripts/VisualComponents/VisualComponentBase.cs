@@ -104,8 +104,6 @@ public abstract partial class VisualComponentBase : Area3D
     {
         _curScale = 1;
 
-        IsMouseSelected = false;
-
         //MouseEntered += _on_mouse_entered;
         MouseExited += _on_mouse_exited;
 
@@ -200,7 +198,6 @@ public abstract partial class VisualComponentBase : Area3D
         // The cursor may have left it while it was held, which doesn't unhover it.
         if (_held && !held)
         {
-            IsMouseSelected = false;
             IsHovered = false;
         }
         _held = held;
@@ -362,22 +359,6 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public virtual Shape3D[] Bounds { get; protected set; }
 
-    private bool _isMouseSelected;
-
-    public virtual bool IsMouseSelected
-    {
-        get => _isMouseSelected;
-        set
-        {
-            if (_isMouseSelected == value)
-                return;
-
-            _isMouseSelected = value;
-
-            UpdateHighlight();
-        }
-    }
-
     private bool _isDrawSelected;
 
     //Component is selected for drawing tokens, cards, etc. Relevant for containers.
@@ -391,32 +372,48 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    public virtual bool IsHovered { get; set; }
+    private bool _isHovered;
 
-    private bool _isClickSelected;
-
-    public virtual bool IsClickSelected
+    /// <summary>Whether the mouse is over the component, or it's the target of a drag.</summary>
+    public bool IsHovered
     {
-        get => _isClickSelected;
+        get => _isHovered;
         set
         {
-            if (_isClickSelected == value)
+            if (_isHovered == value)
                 return;
 
-            _isClickSelected = value;
+            _isHovered = value;
 
             UpdateHighlight();
         }
     }
 
-    public bool IsSelected => IsMouseSelected || IsClickSelected;
+    private bool _isSelected;
+
+    /// <summary>
+    /// Shows whether the component is in the <see cref="GameObjects"/> selection, which owns it.
+    /// </summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+
+            _isSelected = value;
+
+            UpdateHighlight();
+        }
+    }
 
     protected virtual void UpdateHighlight()
     {
         if (HighlightMesh == null)
             return;
 
-        HighlightMesh.Visible = IsSelected && !NeverHighlight;
+        HighlightMesh.Visible = (IsSelected || IsHovered) && !NeverHighlight;
     }
 
     public Aabb Aabb
@@ -436,7 +433,6 @@ public abstract partial class VisualComponentBase : Area3D
 
     private void _on_mouse_entered()
     {
-        IsMouseSelected = true;
         IsHovered = true;
     }
 
@@ -444,7 +440,6 @@ public abstract partial class VisualComponentBase : Area3D
     {
         if (!IsHeldByLocal)
         {
-            IsMouseSelected = false;
             IsHovered = false;
         }
 
