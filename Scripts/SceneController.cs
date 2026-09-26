@@ -33,11 +33,17 @@ public partial class SceneController : Node3D
         _gameObjects.TextureFactory = _textureFactory;
 
         PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
+
+        ShortcutRelay.Install(GetTree());
+        Shortcuts.Undo += IssueUndo;
+        Shortcuts.Redo += IssueRedo;
     }
 
     public override void _ExitTree()
     {
         PresenceSynchronizer.Instance?.ClearContext();
+        Shortcuts.Undo -= IssueUndo;
+        Shortcuts.Redo -= IssueRedo;
     }
 
     private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)
@@ -49,28 +55,17 @@ public partial class SceneController : Node3D
 
     public GameObjects GameObjects => _gameObjects;
 
-    public override void _Process(double delta)
-    {
-        base._Process(delta);
-        if (
-            _gameObjects.CursorMode != CursorMode.DragSelect
-            && _gameObjects.CursorMode != CursorMode.PopupMenu
-        )
-        {
-            CheckForCommands();
-            if (Input.IsActionJustPressed("ui_undo"))
-                IssueUndo();
-            if (Input.IsActionJustPressed("ui_redo"))
-                IssueRedo();
-        }
-    }
+    /// <summary>False while drag selecting or while a context menu is open.</summary>
+    private bool AcceptsShortcuts =>
+        _gameObjects.CursorMode != CursorMode.DragSelect
+        && _gameObjects.CursorMode != CursorMode.PopupMenu;
 
     /// <summary>Issues an undo.</summary>
     private void IssueUndo()
     {
         var log = EventSynchronizer.Instance?.EventLog;
         // Nothing is undone in the middle of a gesture.
-        if (log == null || EventSynchronizer.Instance.InGroup)
+        if (log == null || EventSynchronizer.Instance.InGroup || !AcceptsShortcuts)
             return;
         using var _ = DebugTimings.Measure("Undo");
         if (UndoLog.ComputeUndoTarget(log, Snowport.Clock.source) is SnowportId target)
@@ -82,7 +77,7 @@ public partial class SceneController : Node3D
     {
         var log = EventSynchronizer.Instance?.EventLog;
         // Nothing is undone in the middle of a gesture.
-        if (log == null || EventSynchronizer.Instance.InGroup)
+        if (log == null || EventSynchronizer.Instance.InGroup || !AcceptsShortcuts)
             return;
         using var _ = DebugTimings.Measure("Redo");
         if (UndoLog.ComputeRedoTarget(log, Snowport.Clock.source) is SnowportId target)
@@ -202,58 +197,50 @@ public partial class SceneController : Node3D
         };
     }
 
-    private void CheckForCommands()
+    /// <summary>The table's shortcuts and the command they send.</summary>
+    private static readonly (StringName Action, VisualCommand Command)[] CommandShortcuts =
+    [
+        ("flip", VisualCommand.Flip),
+        ("num_1", VisualCommand.Num1),
+        ("num_2", VisualCommand.Num2),
+        ("num_3", VisualCommand.Num3),
+        ("num_4", VisualCommand.Num4),
+        ("num_5", VisualCommand.Num5),
+        ("num_6", VisualCommand.Num6),
+        ("num_7", VisualCommand.Num7),
+        ("num_8", VisualCommand.Num8),
+        ("num_9", VisualCommand.Num9),
+        ("num_10", VisualCommand.Num10),
+        ("num_11", VisualCommand.Num11),
+        ("num_12", VisualCommand.Num12),
+        ("num_13", VisualCommand.Num13),
+        ("num_14", VisualCommand.Num14),
+        ("num_15", VisualCommand.Num15),
+        ("num_16", VisualCommand.Num16),
+        ("num_17", VisualCommand.Num17),
+        ("num_18", VisualCommand.Num18),
+        ("num_19", VisualCommand.Num19),
+        ("num_20", VisualCommand.Num20),
+        ("roll", VisualCommand.Roll),
+        ("rotate_cw", VisualCommand.RotateCw),
+        ("rotate_ccw", VisualCommand.RotateCcw),
+    ];
+
+    // _ShortcutInput only runs for shortcuts made on the table, so a focused dialog doesn't trigger this.
+    public override void _ShortcutInput(InputEvent e)
     {
-        if (Input.IsActionJustPressed("flip"))
-            SendCommandToSelected(VisualCommand.Flip);
+        if (!AcceptsShortcuts)
+            return;
 
-        if (Input.IsActionJustPressed("num_1"))
-            SendCommandToSelected(VisualCommand.Num1);
-        if (Input.IsActionJustPressed("num_2"))
-            SendCommandToSelected(VisualCommand.Num2);
-        if (Input.IsActionJustPressed("num_3"))
-            SendCommandToSelected(VisualCommand.Num3);
-        if (Input.IsActionJustPressed("num_4"))
-            SendCommandToSelected(VisualCommand.Num4);
-        if (Input.IsActionJustPressed("num_5"))
-            SendCommandToSelected(VisualCommand.Num5);
-        if (Input.IsActionJustPressed("num_6"))
-            SendCommandToSelected(VisualCommand.Num6);
-        if (Input.IsActionJustPressed("num_7"))
-            SendCommandToSelected(VisualCommand.Num7);
-        if (Input.IsActionJustPressed("num_8"))
-            SendCommandToSelected(VisualCommand.Num8);
-        if (Input.IsActionJustPressed("num_9"))
-            SendCommandToSelected(VisualCommand.Num9);
-        if (Input.IsActionJustPressed("num_10"))
-            SendCommandToSelected(VisualCommand.Num10);
-        if (Input.IsActionJustPressed("num_11"))
-            SendCommandToSelected(VisualCommand.Num11);
-        if (Input.IsActionJustPressed("num_12"))
-            SendCommandToSelected(VisualCommand.Num12);
-        if (Input.IsActionJustPressed("num_13"))
-            SendCommandToSelected(VisualCommand.Num13);
-        if (Input.IsActionJustPressed("num_14"))
-            SendCommandToSelected(VisualCommand.Num14);
-        if (Input.IsActionJustPressed("num_15"))
-            SendCommandToSelected(VisualCommand.Num15);
-        if (Input.IsActionJustPressed("num_16"))
-            SendCommandToSelected(VisualCommand.Num16);
-        if (Input.IsActionJustPressed("num_17"))
-            SendCommandToSelected(VisualCommand.Num17);
-        if (Input.IsActionJustPressed("num_18"))
-            SendCommandToSelected(VisualCommand.Num18);
-        if (Input.IsActionJustPressed("num_19"))
-            SendCommandToSelected(VisualCommand.Num19);
-        if (Input.IsActionJustPressed("num_20"))
-            SendCommandToSelected(VisualCommand.Num20);
-
-        if (Input.IsActionJustPressed("roll"))
-            SendCommandToSelected(VisualCommand.Roll);
-        if (Input.IsActionJustPressed("rotate_cw"))
-            SendCommandToSelected(VisualCommand.RotateCw);
-        if (Input.IsActionJustPressed("rotate_ccw"))
-            SendCommandToSelected(VisualCommand.RotateCcw);
+        foreach (var (action, command) in CommandShortcuts)
+        {
+            if (Shortcuts.Pressed(e, action))
+            {
+                SendCommandToSelected(command);
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+        }
     }
     #endregion
 }

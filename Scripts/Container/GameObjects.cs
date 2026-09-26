@@ -193,6 +193,7 @@ public partial class GameObjects : Node
     public override void _UnhandledInput(InputEvent @event)
     {
         base._UnhandledInput(@event);
+
         if (CursorMode == CursorMode.Spawn)
         {
             if (@event.IsActionPressed("spawn_component"))
@@ -622,12 +623,23 @@ public partial class GameObjects : Node
         {
             Input.SetDefaultCursorShape(Input.CursorShape.PointingHand);
         }
-        if (Input.IsActionJustPressed("move_to_top"))
+    }
+
+    // _ShortcutInput only runs for shortcuts made on the table, so a focused dialog doesn't trigger this.
+    public override void _ShortcutInput(InputEvent e)
+    {
+        if (CursorMode != CursorMode.Normal)
+            return;
+
+        if (Shortcuts.Pressed(e, "move_to_top"))
             Reorder(GetSelectedObjects(), ZTarget.Top);
-        if (Input.IsActionJustPressed("move_to_bottom"))
+        else if (Shortcuts.Pressed(e, "move_to_bottom"))
             Reorder(GetSelectedObjects(), ZTarget.Bottom);
-        if (Input.IsActionJustPressed("component_delete"))
+        else if (Shortcuts.Pressed(e, "component_delete"))
             DeleteComponents(GetSelectedObjects());
+        else
+            return;
+        GetViewport().SetInputAsHandled();
     }
     #endregion
 

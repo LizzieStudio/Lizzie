@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using Godot;
 
@@ -49,42 +50,91 @@ public abstract partial class BaseCamera : Node3D, ICamera
     private void OnModalOpened()
     {
         _modalOpen = true;
+        _held.Clear();
     }
+
+    private bool AcceptsInput =>
+        !_modalOpen
+        && Current
+        && _gameObjects.CursorMode != CursorMode.DragSelect
+        && _gameObjects.CursorMode != CursorMode.PopupMenu;
+
+    /// <summary>The keys that move the camera while held.</summary>
+    private static readonly StringName[] HeldActions =
+    [
+        "zoom_in",
+        "zoom_out",
+        "pan_left",
+        "pan_right",
+        "pan_up",
+        "pan_down",
+        "reset_view",
+    ];
+
+    /// <summary>
+    /// The held actions, like holding W to move the camera forward.
+    /// </summary>
+    private readonly HashSet<StringName> _held = new();
+
+    private bool Held(StringName action) => _held.Contains(action);
 
     public override void _Process(double delta)
     {
         base._Process(delta);
 
-        if (_modalOpen)
-            return;
-
-        if (
-            !Current
-            || _gameObjects.CursorMode == CursorMode.DragSelect
-            || _gameObjects.CursorMode == CursorMode.PopupMenu
-        )
+        if (!AcceptsInput)
             return;
 
         // Handle Zoom
-        if (Input.IsActionPressed("zoom_in"))
+        if (Held("zoom_in"))
             UpdateZoom((float)-delta * ContinuousZoomSpeed);
-        if (Input.IsActionPressed("zoom_out"))
+        if (Held("zoom_out"))
             UpdateZoom((float)delta * ContinuousZoomSpeed);
-        if (Input.IsActionJustPressed("component_zoom"))
-            ZoomComponent(_gameObjects.GetMouseSelectedObject());
 
         // Handle Pan
-        UpdatePan(Input.GetVector("pan_left", "pan_right", "pan_up", "pan_down") * (float)delta);
+        var pan = new Vector2(
+            (Held("pan_right") ? 1 : 0) - (Held("pan_left") ? 1 : 0),
+            (Held("pan_down") ? 1 : 0) - (Held("pan_up") ? 1 : 0)
+        );
+        UpdatePan(pan.LimitLength() * (float)delta);
 
         // Reset
-        if (Input.IsActionPressed("reset_view"))
+        if (Held("reset_view"))
             Reset();
     }
 
-    // Controls that use the mouse a better handled in the _Input method because of engine quirks (like Mouse wheel not having a pressed event).
+    // Only the main viewport's shortcuts reach here, so inputs targeting a dialogue never move the camera.
+    public override void _ShortcutInput(InputEvent e)
+    {
+        if (AcceptsInput && Shortcuts.Pressed(e, "component_zoom"))
+        {
+            ZoomComponent(_gameObjects.GetMouseSelectedObject());
+            GetViewport().SetInputAsHandled();
+        }
+    }
+
+    public override void _UnhandledKeyInput(InputEvent e)
+    {
+        foreach (var action in HeldActions)
+            if (Shortcuts.Pressed(e, action))
+                _held.Add(action);
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationApplicationFocusOut)
+            _held.Clear();
+    }
+
+    // Controls that use the mouse are better handled in the _Input method because of engine quirks (like Mouse wheel not having a pressed event).
     public override void _Input(InputEvent @event)
     {
         base._Input(@event);
+
+        // Releasing a key is always visible, regardless of propogation.
+        foreach (var action in HeldActions)
+            if (@event.IsActionReleased(action))
+                _held.Remove(action);
 
         if (
             !Current
