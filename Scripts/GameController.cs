@@ -41,7 +41,7 @@ public partial class GameController : Node3D
 
     private void MainSceneOnShowComponentPopup2(object sender, ShowComponentPopupEventArgs e)
     {
-        ShowComponentPopup(e.Position, e.Components);
+        ShowComponentPopup(e.Position, _mainScene.BuildContext() ?? new CommandContext());
     }
 
     private void MainSceneOnHoveredNameChange(object sender, HoveredComponentChangeEventArgs e)
@@ -228,9 +228,9 @@ public partial class GameController : Node3D
 
     public SceneController MainScene => _mainScene;
 
-    public void ShowComponentPopup(Vector2I position, IEnumerable<VisualComponentBase> selected)
+    public void ShowComponentPopup(Vector2I position, CommandContext context)
     {
-        _uiController.BuildPopupMenu(selected.ToList());
+        _uiController.BuildPopupMenu(context);
         _uiController.ShowComponentPopup(position);
     }
 
@@ -244,27 +244,6 @@ public partial class GameController : Node3D
     public void ComponentPopupClosed()
     {
         _mainScene.PopupClosed();
-    }
-
-    public void ProcessPopupCommand(VisualCommand command, List<VisualComponentBase> components)
-    {
-        _mainScene.SendCommandToComponents(command, components);
-        ComponentPopupClosed();
-    }
-
-    /// <summary>
-    /// Processes a popup command that carries a quantity (e.g. Draw 3, Deal All).
-    /// The quantity is forwarded to each component via SendCommandToComponents using
-    /// the pre-existing Num1–Num5 commands, or the base command with Int32.MaxValue for "All".
-    /// </summary>
-    public void ProcessPopupCommandWithQuantity(
-        VisualCommand command,
-        List<VisualComponentBase> components,
-        int quantity
-    )
-    {
-        _mainScene.SendCommandToComponentsWithQuantity(command, components, quantity);
-        ComponentPopupClosed();
     }
 
     public float HandY => _uiController.HandY;

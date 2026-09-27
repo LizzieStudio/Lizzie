@@ -71,20 +71,6 @@ public partial class VcDie : VisualComponentBase
         return base.ProcessCommand(command);
     }
 
-    public override List<MenuCommand> GetMenuCommands()
-    {
-        var l = new List<MenuCommand>();
-
-        foreach (var i in base.GetMenuCommands())
-        {
-            l.Add(i);
-        }
-
-        l.Add(new MenuCommand(VisualCommand.Roll));
-
-        return l;
-    }
-
     private Effect BuildRoll()
     {
         // The rolling client picks the target face

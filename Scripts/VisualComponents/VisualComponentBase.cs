@@ -275,16 +275,6 @@ public abstract partial class VisualComponentBase : Area3D
             return [];
         }
 
-        if (command == VisualCommand.Edit)
-        {
-            EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = PrototypeRef });
-        }
-
-        if (command == VisualCommand.MakeUnique)
-        {
-            EventBus.Instance.Publish(new MakePrototypeUniqueEvent { PrototypeId = PrototypeRef });
-        }
-
         return [];
     }
 
@@ -303,19 +293,6 @@ public abstract partial class VisualComponentBase : Area3D
     public virtual bool PlayTransition(ComponentState state, long MsecSinceStart) => false;
 
     public TextureFactory TextureFactory { get; set; }
-
-    public virtual List<MenuCommand> GetMenuCommands()
-    {
-        var l = new List<MenuCommand>();
-
-        l.Add(new MenuCommand(VisualCommand.RotateCw));
-        l.Add(new MenuCommand(VisualCommand.RotateCcw));
-        l.Add(new MenuCommand(VisualCommand.Delete));
-        l.Add(new MenuCommand(VisualCommand.Duplicate));
-        l.Add(new MenuCommand(VisualCommand.Edit));
-        l.Add(new MenuCommand(VisualCommand.MakeUnique));
-        return l;
-    }
 
     public virtual string ComponentName { get; set; }
 

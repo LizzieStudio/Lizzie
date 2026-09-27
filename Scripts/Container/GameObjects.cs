@@ -189,6 +189,9 @@ public partial class GameObjects : Node
 
     public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange;
 
+    // where the right button went down over the empty table, until it's released
+    private Vector2? _tableRightPress;
+
     // Specific function to handle normal mode mouse event only outside of GUI elements
     public override void _UnhandledInput(InputEvent @event)
     {
@@ -210,13 +213,30 @@ public partial class GameObjects : Node
         }
         else if (
             CursorMode == CursorMode.Normal
+            && @event is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false } release
+        )
+        {
+            // The table's menu opens on release, since dragging with the right button turns the camera.
+            if (
+                _tableRightPress is Vector2 pressedAt
+                // Moving less than Godot's drag threshold is a click, not a camera turn.
+                && pressedAt.DistanceTo(release.Position) < GetViewport().GuiDragThreshold
+            )
+                StartPopupMenu();
+            _tableRightPress = null;
+        }
+        else if (
+            CursorMode == CursorMode.Normal
             && @event is InputEventMouseButton buttonEvent
             && buttonEvent.Pressed
         )
         {
-            if (buttonEvent.ButtonIndex == MouseButton.Right && IsAnyObjectHovered())
+            if (buttonEvent.ButtonIndex == MouseButton.Right)
             {
-                StartPopupMenu();
+                if (IsAnyObjectHovered())
+                    StartPopupMenu();
+                else
+                    _tableRightPress = buttonEvent.Position;
             }
             else if (buttonEvent.ButtonIndex == MouseButton.Left)
             {
@@ -396,7 +416,7 @@ public partial class GameObjects : Node
     /// <summary>
     /// Sends the components to the top or bottom of the ZOrder.
     /// </summary>
-    private void Reorder(IEnumerable<VisualComponentBase> components, ZTarget target)
+    public void Reorder(IEnumerable<VisualComponentBase> components, ZTarget target)
     {
         var ordered = components.Where(c => c is not VcZone).OrderBy(c => c.State.ZOrder).ToList();
         if (ordered.Count == 0)
@@ -613,23 +633,6 @@ public partial class GameObjects : Node
             Input.SetDefaultCursorShape(Input.CursorShape.PointingHand);
         }
     }
-
-    // _ShortcutInput only runs for shortcuts made on the table, so a focused dialog doesn't trigger this.
-    public override void _ShortcutInput(InputEvent e)
-    {
-        if (CursorMode != CursorMode.Normal)
-            return;
-
-        if (Shortcuts.Pressed(e, "move_to_top"))
-            Reorder(GetPrimaryObjects(), ZTarget.Top);
-        else if (Shortcuts.Pressed(e, "move_to_bottom"))
-            Reorder(GetPrimaryObjects(), ZTarget.Bottom);
-        else if (Shortcuts.Pressed(e, "component_delete"))
-            DeleteComponents(GetPrimaryObjects());
-        else
-            return;
-        GetViewport().SetInputAsHandled();
-    }
     #endregion
 
     #region Popup Menu
@@ -645,10 +648,7 @@ public partial class GameObjects : Node
         Vector2 mouse = GetViewport().GetMousePosition();
         Vector2I v = new((int)Math.Floor(mouse.X), (int)Math.Floor(mouse.Y));
 
-        var vch = GetPrimaryObjects();
-
-        //EmitSignal(SignalName.ShowComponentPopup, v, new Godot.Collections.Array<VisualComponentBase>(vch));
-        ShowComponentPopup?.Invoke(this, new ShowComponentPopupEventArgs(v, vch));
+        ShowComponentPopup?.Invoke(this, new ShowComponentPopupEventArgs(v));
     }
 
     public event EventHandler<ShowComponentPopupEventArgs> ShowComponentPopup;
@@ -1303,17 +1303,12 @@ public partial class GameObjects : Node
 
 public class ShowComponentPopupEventArgs : EventArgs
 {
-    public ShowComponentPopupEventArgs(
-        Vector2I position,
-        IEnumerable<VisualComponentBase> components
-    )
+    public ShowComponentPopupEventArgs(Vector2I position)
     {
         Position = position;
-        Components = components;
     }
 
     public Vector2I Position { get; set; }
-    public IEnumerable<VisualComponentBase> Components { get; set; }
 }
 
 public class HoveredComponentChangeEventArgs : EventArgs

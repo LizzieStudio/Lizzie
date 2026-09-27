@@ -26,7 +26,6 @@ public enum VisualCommand
     RotateCcw,
     Delete,
     Duplicate,
-    Edit,
     MoveDown,
     MoveToBottom,
     MoveUp,
@@ -55,6 +54,4 @@ public enum VisualCommand
     Shuffle,
     Draw,
     Deal,
-    MakeUnique,
-    MaximumVC,
 }

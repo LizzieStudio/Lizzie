@@ -668,6 +668,5 @@ public partial class ProjectService : Node
         return null;
     }
 
-    public CommandDictionary CommandDictionary => new CommandDictionary();
     public float RotationStep { get; set; } = 15;
 }

@@ -253,11 +253,6 @@ public class EditPrototypeEvent : IEvent
     public SnowTag PrototypeId { get; set; }
 }
 
-public class MakePrototypeUniqueEvent : IEvent
-{
-    public SnowTag PrototypeId { get; set; }
-}
-
 /// <summary>
 /// When a dialog is opened, this event is published to disable inputs
 /// </summary>

@@ -70,16 +70,6 @@ public partial class VcDeck : VisualComponentBase
         return base.ProcessCommandWithQuantity(command, quantity);
     }
 
-    public override List<MenuCommand> GetMenuCommands()
-    {
-        var l = base.GetMenuCommands();
-        l.Add(new MenuCommand(VisualCommand.Flip));
-        l.Add(new MenuCommand(VisualCommand.Shuffle));
-        l.Add(new MenuCommand(VisualCommand.Draw) { AddQtySubmenu = true, SingleOnly = true });
-        l.Add(new MenuCommand(VisualCommand.Deal) { AddQtySubmenu = true, SingleOnly = true });
-        return l;
-    }
-
     /// <summary>
     /// Turns each card over and reverses their order by swapping their existing ZOrders.
     /// </summary>

@@ -8,9 +8,6 @@ using Godot;
 /// </summary>
 public static class Shortcuts
 {
-    public static event Action Undo;
-    public static event Action Redo;
-
     /// <summary>
     /// True when the event presses the action with exactly its modifiers.
     /// Extra held modifiers never trigger a smaller binding: Shift+1 isn't 1.
@@ -18,22 +15,13 @@ public static class Shortcuts
     public static bool Pressed(InputEvent e, StringName action) =>
         e.IsActionPressed(action, allowEcho: false, exactMatch: true);
 
-    /// <summary>Runs the shortcuts that apply in every window. True when one ran.</summary>
-    public static bool Dispatch(InputEvent e)
-    {
-        if (Pressed(e, "undo"))
-        {
-            Undo?.Invoke();
-            return true;
-        }
-        else if (Pressed(e, "redo"))
-        {
-            Redo?.Invoke();
-            return true;
-        }
-
-        return false;
-    }
+    /// <summary>
+    /// Runs the commands bound to the key, in the view that has the viewport's focus.
+    /// True when the key belongs to a command.
+    /// </summary>
+    public static bool Dispatch(InputEvent e, Viewport viewport) =>
+        e is InputEventKey
+        && CommandList.RunShortcut(e, CommandViews.Find(viewport)?.BuildContext());
 }
 
 /// <summary>
@@ -77,7 +65,7 @@ public partial class ShortcutRelay : Node
 
     public override void _ShortcutInput(InputEvent e)
     {
-        if (Shortcuts.Dispatch(e))
+        if (Shortcuts.Dispatch(e, GetViewport()))
             GetViewport().SetInputAsHandled();
     }
 

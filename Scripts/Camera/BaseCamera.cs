@@ -104,15 +104,6 @@ public abstract partial class BaseCamera : Node3D, ICamera
     }
 
     // Only the main viewport's shortcuts reach here, so inputs targeting a dialogue never move the camera.
-    public override void _ShortcutInput(InputEvent e)
-    {
-        if (AcceptsInput && Shortcuts.Pressed(e, "component_zoom"))
-        {
-            ZoomComponent(_gameObjects.GetHoveredObject());
-            GetViewport().SetInputAsHandled();
-        }
-    }
-
     public override void _UnhandledKeyInput(InputEvent e)
     {
         foreach (var action in HeldActions)
@@ -166,6 +157,9 @@ public abstract partial class BaseCamera : Node3D, ICamera
     protected abstract void UpdateZoom(float zoomValue);
     protected abstract void UpdateRotation(Vector2 mousePosition);
     protected abstract void ZoomComponent(VisualComponentBase component);
+
+    /// <summary>Frames the component.</summary>
+    public void ZoomTo(VisualComponentBase component) => ZoomComponent(component);
 
     protected virtual void Reset()
     {

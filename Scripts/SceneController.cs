@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
+using System.Collections.Immutable;
+using System.Linq;
 using Godot;
-using Lizzie.AssetManagement;
 
-public partial class SceneController : Node3D
+public partial class SceneController : Node3D, ICommandView
 {
     [Signal]
     public delegate void ShowComponentPopupEventHandler(
@@ -35,15 +34,14 @@ public partial class SceneController : Node3D
         PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
 
         ShortcutRelay.Install(GetTree());
-        Shortcuts.Undo += IssueUndo;
-        Shortcuts.Redo += IssueRedo;
+        // The table takes the main window's commands.
+        CommandViews.Attach(GetTree().Root, this);
     }
 
     public override void _ExitTree()
     {
         PresenceSynchronizer.Instance?.ClearContext();
-        Shortcuts.Undo -= IssueUndo;
-        Shortcuts.Redo -= IssueRedo;
+        CommandViews.Detach(GetTree().Root);
     }
 
     private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)
@@ -55,35 +53,26 @@ public partial class SceneController : Node3D
 
     public GameObjects GameObjects => _gameObjects;
 
-    /// <summary>False while drag selecting or while a context menu is open.</summary>
-    private bool AcceptsShortcuts =>
-        _gameObjects.CursorMode != CursorMode.DragSelect
-        && _gameObjects.CursorMode != CursorMode.PopupMenu;
-
-    /// <summary>Issues an undo.</summary>
-    private void IssueUndo()
+    /// <summary>
+    /// Build a context menu for the selected components or the hovered component.
+    /// Add in the prototypes as secondary context.
+    /// </summary>
+    public CommandContext BuildContext()
     {
-        var log = EventSynchronizer.Instance?.EventLog;
-        // Nothing is undone in the middle of a gesture.
-        if (log == null || EventSynchronizer.Instance.InGroup || !AcceptsShortcuts)
-            return;
-        using var _ = DebugTimings.Measure("Undo");
-        if (UndoLog.ComputeUndoTarget(log, Snowport.Clock.source) is SnowportId target)
-            EventSynchronizer.Instance.Submit(TableEvent.Now(new UndoAction { Target = target }));
-    }
+        // While dragging a selection box, don't build any context.
+        if (_gameObjects.CursorMode == CursorMode.DragSelect)
+            return null;
 
-    /// <summary>Issues a redo, which is just an undo targeting the most recent active undo.</summary>
-    private void IssueRedo()
-    {
-        var log = EventSynchronizer.Instance?.EventLog;
-        // Nothing is undone in the middle of a gesture.
-        if (log == null || EventSynchronizer.Instance.InGroup || !AcceptsShortcuts)
-            return;
-        using var _ = DebugTimings.Measure("Redo");
-        if (UndoLog.ComputeRedoTarget(log, Snowport.Clock.source) is SnowportId target)
-            EventSynchronizer.Instance.Submit(
-                TableEvent.Now(new UndoAction { Target = target, Redo = true })
-            );
+        var primary = _gameObjects
+            .GetPrimaryObjects()
+            .Select(c => new RecordTarget(c.Reference));
+
+        var secondary = primary
+            .Select(t => ProjectService.Instance.Get<ComponentState>(t.Id)?.PrototypeRef ?? SnowTag.Empty)
+            .Where(id => id != SnowTag.Empty)
+            .Select(p => new RecordTarget(p.Value));
+
+        return new CommandContext { Primary = primary.ToImmutableHashSet<Target>(), Secondary = secondary.ToImmutableHashSet<Target>() };
     }
 
     public TextureFactory TextureFactory => _textureFactory;
@@ -140,107 +129,5 @@ public partial class SceneController : Node3D
     }
 
     public event EventHandler<ShowComponentPopupEventArgs> ShowComponentPopup2;
-    #endregion
-
-    #region Commands
-    public void SendCommandToSelected(VisualCommand command)
-    {
-        SendCommandToComponents(command, _gameObjects.GetPrimaryObjects());
-    }
-
-    public void SendCommandToComponents(
-        VisualCommand command,
-        IEnumerable<VisualComponentBase> components
-    )
-    {
-        var effects = new List<Effect>();
-        foreach (var c in components)
-            effects.AddRange(c.ProcessCommand(command));
-
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(ActionFor(command), effects.ToArray()));
-    }
-
-    /// <summary>
-    /// Sends a command with an associated quantity to each component.
-    /// Each component receives ProcessCommandWithQuantity; if it doesn't override that,
-    /// we fall back to the Num1–Num5 VisualCommands for quantities 1–5, or the
-    /// base command for quantities > 5 (treated as "all" by the component).
-    /// </summary>
-    public void SendCommandToComponentsWithQuantity(
-        VisualCommand command,
-        IEnumerable<VisualComponentBase> components,
-        int quantity
-    )
-    {
-        var effects = new List<Effect>();
-        foreach (var c in components)
-            effects.AddRange(c.ProcessCommandWithQuantity(command, quantity));
-
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(ActionFor(command), effects.ToArray()));
-    }
-
-    private static TableAction ActionFor(VisualCommand command)
-    {
-        // Number keys draw that many cards off a deck, which still works.
-        // TODO We need to decouple drawing cards from setting the die face somehow.
-        if ((int)command >= (int)VisualCommand.Num1 && (int)command <= (int)VisualCommand.Num20)
-            return new DrawAction();
-
-        return command switch
-        {
-            VisualCommand.Flip => new FlipAction(),
-            VisualCommand.Roll => new RollAction(),
-            VisualCommand.Shuffle => new ShuffleAction(),
-            VisualCommand.Draw => new DrawAction(),
-            VisualCommand.Deal => new DealAction(),
-            _ => null,
-        };
-    }
-
-    /// <summary>The table's shortcuts and the command they send.</summary>
-    private static readonly (StringName Action, VisualCommand Command)[] CommandShortcuts =
-    [
-        ("flip", VisualCommand.Flip),
-        ("num_1", VisualCommand.Num1),
-        ("num_2", VisualCommand.Num2),
-        ("num_3", VisualCommand.Num3),
-        ("num_4", VisualCommand.Num4),
-        ("num_5", VisualCommand.Num5),
-        ("num_6", VisualCommand.Num6),
-        ("num_7", VisualCommand.Num7),
-        ("num_8", VisualCommand.Num8),
-        ("num_9", VisualCommand.Num9),
-        ("num_10", VisualCommand.Num10),
-        ("num_11", VisualCommand.Num11),
-        ("num_12", VisualCommand.Num12),
-        ("num_13", VisualCommand.Num13),
-        ("num_14", VisualCommand.Num14),
-        ("num_15", VisualCommand.Num15),
-        ("num_16", VisualCommand.Num16),
-        ("num_17", VisualCommand.Num17),
-        ("num_18", VisualCommand.Num18),
-        ("num_19", VisualCommand.Num19),
-        ("num_20", VisualCommand.Num20),
-        ("roll", VisualCommand.Roll),
-        ("rotate_cw", VisualCommand.RotateCw),
-        ("rotate_ccw", VisualCommand.RotateCcw),
-    ];
-
-    // _ShortcutInput only runs for shortcuts made on the table, so a focused dialog doesn't trigger this.
-    public override void _ShortcutInput(InputEvent e)
-    {
-        if (!AcceptsShortcuts)
-            return;
-
-        foreach (var (action, command) in CommandShortcuts)
-        {
-            if (Shortcuts.Pressed(e, action))
-            {
-                SendCommandToSelected(command);
-                GetViewport().SetInputAsHandled();
-                return;
-            }
-        }
-    }
     #endregion
 }

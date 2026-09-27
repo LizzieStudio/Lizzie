@@ -102,20 +102,6 @@ public partial class VcToken : VisualComponentBase
         return base.ProcessCommand(command);
     }
 
-    public override List<MenuCommand> GetMenuCommands()
-    {
-        var l = new List<MenuCommand>();
-
-        foreach (var i in base.GetMenuCommands())
-        {
-            l.Add(i);
-        }
-
-        l.Add(new MenuCommand(VisualCommand.Flip));
-
-        return l;
-    }
-
     private float _flipRate = 720; //degrees per second
     private float _targetZ;
     private bool _flipInProcess;

@@ -827,173 +827,75 @@ public partial class UI : CanvasLayer
         GetParent<GameController>().ComponentPopupClosed();
     }
 
-    private void AddItemToPopupMenu(
-        PopupMenu popup,
-        VisualCommand command,
-        string caption,
-        string icon,
-        bool enabled = true,
-        bool checkable = false,
-        bool isChecked = false,
-        bool addQtySubmenu = false
-    )
+    public const int MAX_CARD_DEAL = 8;
+
+    // the commands in the open menu, by item id, with what each acts on
+    private readonly List<(Command Command, IReadOnlyList<Target> Targets)> _popupItems = new();
+
+    /// <summary>
+    /// Fills the context menu with the commands for what was right-clicked.
+    /// Each item shows its shortcut, and quantity commands get a submenu.
+    /// </summary>
+    public void BuildPopupMenu(CommandContext context)
     {
-        int index = -1;
-        int id = (int)command;
-
-        if (checkable)
+        foreach (var sub in _componentPopup.GetChildren().OfType<PopupMenu>())
         {
-            if (!string.IsNullOrEmpty(icon))
-            {
-                popup.AddCheckItem(caption, id);
-            }
-            else
-            {
-                //TODO Enable icon
-                popup.AddCheckItem(caption, id);
-            }
-
-            index = popup.GetItemIndex(id);
-            popup.SetItemChecked(index, isChecked);
+            _componentPopup.RemoveChild(sub);
+            sub.QueueFree();
         }
-        else
+        _componentPopup.Clear();
+        _popupItems.Clear();
+
+        System.Type previousKind = null;
+        foreach (var (command, targets) in CommandList.ForMenu(context))
         {
-            if (!string.IsNullOrEmpty(icon))
-            {
-                popup.AddItem(caption, id);
-            }
-            else
-            {
-                //TODO Enable icon
-                popup.AddItem(caption, id);
-            }
+            // Commands on different kinds of target are separated.
+            if (previousKind != null && command.GetType() != previousKind)
+                _componentPopup.AddSeparator();
+            previousKind = command.GetType();
 
-            index = popup.GetItemIndex(id);
-        }
+            int id = _popupItems.Count;
+            _popupItems.Add((command, targets));
+            _componentPopup.AddItem(command.Label(targets.Count), id);
+            int index = _componentPopup.GetItemIndex(id);
 
-        popup.SetItemDisabled(index, !enabled);
+            if (command.ShortcutLabel() is { } shortcut)
+                _componentPopup.SetItemShortcut(index, shortcut);
 
-        if (addQtySubmenu)
-        {
-            // Submenu item IDs are encoded as: baseId * 100 + qty
-            // qty 1-5 = draw that many; qty 0 = draw all
-            var sub = new PopupMenu();
-            sub.Name = $"QtySubmenu_{id}";
-
-            for (int qty = 1; qty <= MAX_CARD_DEAL; qty++)
-                sub.AddItem(qty.ToString(), id * 100 + qty);
-            sub.AddItem("All", id * 100 + 0);
-
-            sub.IdPressed += OnQtySubmenuItemSelected;
-            popup.AddChild(sub);
-            popup.SetItemSubmenu(index, sub.Name);
+            if (command.AsksQuantity)
+                AddQuantitySubmenu(index, id);
         }
     }
 
-    public const int MAX_CARD_DEAL = 8;
-
-    //we need to save which components are being affected by the right-click menu when it pops up
-    private List<VisualComponentBase> _popupComponents;
-
-    public void BuildPopupMenu(List<VisualComponentBase> components)
+    // Submenu item ids are the command's id * 100 + the quantity, where 0 means all.
+    private void AddQuantitySubmenu(int index, int id)
     {
-        if (components.Count == 0)
-            return; //TODO Right click menu for table surface?
+        var sub = new PopupMenu { Name = $"QtySubmenu_{id}" };
+        for (int qty = 1; qty <= MAX_CARD_DEAL; qty++)
+            sub.AddItem(qty.ToString(), id * 100 + qty);
+        sub.AddItem("All", id * 100);
 
-        _popupComponents = components;
-
-        bool excludeSingle = components.Count > 1;
-        var comDic = new Dictionary<VisualCommand, int>();
-
-        var fullCommands = new List<MenuCommand>();
-
-        foreach (var c in components)
-        {
-            var cList = c.GetMenuCommands();
-            foreach (var m in cList)
-            {
-                if (m.SingleOnly && excludeSingle)
-                    continue; //skip commands that are single only if we have more than one comp selected
-
-                fullCommands.Add(m);
-                if (comDic.ContainsKey(m.Command))
-                {
-                    comDic[m.Command]++;
-                }
-                else
-                {
-                    comDic.Add(m.Command, 1);
-                }
-            }
-        }
-
-        //only include menu commands that are valid for all selected items
-        var commands = comDic.Where(x => x.Value == components.Count).Select(y => y.Key);
-
-        _componentPopup.Clear();
-
-        // Build a menu from the commands that are valid for all selected items
-        foreach (var command in commands)
-        {
-            var menuCommand = fullCommands.First(x => x.Command == command); // Get the MenuCommand object to access IsChecked and other properties
-
-            switch (command)
-            {
-                case VisualCommand.Deal:
-                case VisualCommand.Draw:
-                    AddItemToPopupMenu(
-                        _componentPopup,
-                        command,
-                        menuCommand.Caption,
-                        string.Empty,
-                        true,
-                        false,
-                        false,
-                        addQtySubmenu: true
-                    );
-                    break;
-
-                default:
-                    AddItemToPopupMenu(
-                        _componentPopup,
-                        command,
-                        menuCommand.Caption,
-                        string.Empty, // Icon path, currently empty
-                        true, // Enabled by default, handled by command logic
-                        false
-                    ); // Not checkable
-                    break;
-            }
-        }
+        sub.IdPressed += OnQtySubmenuItemSelected;
+        _componentPopup.AddChild(sub);
+        _componentPopup.SetItemSubmenuNode(index, sub);
     }
 
     private void PopupMenuCommandSelected(long id)
     {
-        // Submenu items handled by OnQtySubmenuItemSelected; skip raw command IDs
-        // that belong to commands with qty submenus (they are parent labels, not actions).
-        if (id >= (int)VisualCommand.MaximumVC)
+        var (command, targets) = _popupItems[(int)id];
+        // A quantity command's item only opens its submenu.
+        if (command.AsksQuantity)
             return;
-
-        VisualCommand vc = (VisualCommand)id;
-        if (GetParent() is GameController gc)
-        {
-            gc.ProcessPopupCommand(vc, _popupComponents);
-        }
+        command.Run(targets, 1);
+        ComponentPopupClosed();
     }
 
     private void OnQtySubmenuItemSelected(long encodedId)
     {
-        // Decode: baseId * 100 + qty  (qty 0 = All)
+        var (command, targets) = _popupItems[(int)(encodedId / 100)];
         int qty = (int)(encodedId % 100);
-        VisualCommand vc = (VisualCommand)(encodedId / 100);
-
-        if (qty == 0)
-            qty = int.MaxValue; // sentinel meaning "all"
-
-        if (GetParent() is GameController gc)
-        {
-            gc.ProcessPopupCommandWithQuantity(vc, _popupComponents, qty);
-        }
+        command.Run(targets, qty == 0 ? int.MaxValue : qty);
+        ComponentPopupClosed();
     }
 
     private void OnHelpMenuSelection(long id)
@@ -1066,10 +968,22 @@ public partial class UI : CanvasLayer
     private bool _popupShown;
     private ProjectSettingsDialog _projectSettings;
 
+    /// <summary>
+    /// Opens the context menu at the mouse.
+    /// </summary>
     public void ShowComponentPopup(Vector2I position)
     {
         _componentPopup.Visible = true;
-        _componentPopup.Position = position;
+        // Fits the menu to its items, which change each time it opens.
+        _componentPopup.ResetSize();
+
+        var size = _componentPopup.Size;
+        var window = (Vector2I)GetViewport().GetVisibleRect().Size;
+        if (position.X + size.X > window.X)
+            position.X -= size.X;
+        if (position.Y + size.Y > window.Y)
+            position.Y -= size.Y;
+        _componentPopup.Position = position.Clamp(Vector2I.Zero, (window - size).Max(Vector2I.Zero));
         _popupShown = true;
     }
 
