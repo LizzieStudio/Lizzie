@@ -16,7 +16,6 @@ material = ExtResource("3_fd6t4")
 
 [node name="Tray" type="Area3D" unique_id=769039983]
 script = ExtResource("1_vtnvu")
-_highlightScale = null
 
 [node name="ObjectMesh" type="MeshInstance3D" parent="." unique_id=1689779289]
 mesh = ExtResource("2_vtnvu")

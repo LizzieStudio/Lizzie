@@ -292,6 +292,18 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
+    // The outline material every component shares.
+    private static readonly Material HighlightMaterial = GD.Load<Material>(
+        "res://Materials/Highlight.material"
+    );
+
+    /// <summary>
+    /// How much larger the outline is than the token.
+    /// Tokens build their own mesh, so the outline is that mesh scaled up.
+    /// </summary>
+    [Export]
+    private float _highlightScale = 1.04f;
+
     private void BuildToken()
     {
         _mainMesh = GetNode<MeshInstance3D>("SideMesh");
@@ -325,12 +337,9 @@ public partial class VcToken : VisualComponentBase
         CommitSideSurface(mesh, sideMaterial, ring);
         _mainMesh.Mesh = mesh;
 
-        var highlightShader = GD.Load<Shader>("res://Shaders/outline2.gdshader");
-        var highlightMat = new ShaderMaterial { Shader = highlightShader };
-        highlightMat.SetShaderParameter("outline_color", Colors.White);
-        highlightMat.SetShaderParameter("border_width", 0.04f);
         HighlightMesh.Mesh = mesh;
-        HighlightMesh.MaterialOverride = highlightMat;
+        HighlightMesh.MaterialOverride = HighlightMaterial;
+        HighlightMesh.Scale = Vector3.One * _highlightScale;
 
         ShapeProfiles.Clear();
         ShapeProfiles.Add(ShapeProfile(shape, _width, _height));

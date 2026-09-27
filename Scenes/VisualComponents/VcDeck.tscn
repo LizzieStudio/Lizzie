@@ -13,7 +13,6 @@ material = ExtResource("3_5wibl")
 
 [node name="Deck" type="Area3D" unique_id=449063618]
 script = ExtResource("1_7r5pi")
-_highlightScale = null
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1991276807]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6439891, 0.5023112, 0)

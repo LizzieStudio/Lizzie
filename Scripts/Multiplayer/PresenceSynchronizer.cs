@@ -338,7 +338,8 @@ public partial class PresenceSynchronizer : Node
         return sprite;
     }
 
-    private Color GetSeatColor(byte source)
+    /// <summary>The colour of the seat a player sits in.</summary>
+    public Color GetSeatColor(byte source)
     {
         var seat = GetSeatBySource(source);
         var settings = ProjectService.Instance?.Settings.Value;

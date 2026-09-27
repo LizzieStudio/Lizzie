@@ -50,9 +50,6 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    [Export]
-    private float _highlightScale = 1.1f;
-
     public const int TooltipTime = 1000;
     private float _curScale = 1;
 
@@ -73,6 +70,24 @@ public abstract partial class VisualComponentBase : Area3D
         // Builds first, so the first placement knows the component's height.
         ProjectService.Instance.Watch(this, Sync);
         ProjectService.Instance.Watch(this, SyncState);
+        ProjectService.Instance.Watch(this, SyncSelection);
+    }
+
+    /// <summary>Shows which players have this component selected.</summary>
+    private void SyncSelection(IRecordReader R)
+    {
+        var target = new RecordTarget(Reference);
+        var selections = R.Get<Selection>(s => s.Targets.Contains(target));
+        var local = Snowport.Clock.source;
+
+        _isSelected = selections.Any(s => s.Player == local);
+        // Another player's selection shows in their colour. The newest wins.
+        var remote = selections.Where(s => s.Player != local).MaxBy(s => s.LastUpdateId);
+        _remoteSelectionColor =
+            remote == null
+                ? null
+                : PresenceSynchronizer.Instance?.GetSeatColor(remote.Player) ?? Colors.Gray;
+        UpdateHighlight();
     }
 
     /// <summary>
@@ -122,13 +137,13 @@ public abstract partial class VisualComponentBase : Area3D
         {
             if (shapeIdx == 0)
             {
-                SetHighlightColor(Colors.White);
+                HoverColor = Colors.White;
                 CanDrag = true;
                 IsDrawSelected = false;
             }
             else
             {
-                SetHighlightColor(Colors.CornflowerBlue);
+                HoverColor = Colors.CornflowerBlue;
                 IsDrawSelected = true;
                 CanDrag = false;
             }
@@ -391,29 +406,64 @@ public abstract partial class VisualComponentBase : Area3D
 
     private bool _isSelected;
 
+    /// <summary>Whether the local player has this component selected.</summary>
+    public bool IsSelected => _isSelected;
+
+    // the colour of another player who has this component selected, or null
+    private Color? _remoteSelectionColor;
+
+    private bool? _previewSelected;
+
     /// <summary>
-    /// Shows whether the component is in the <see cref="GameObjects"/> selection, which owns it.
+    /// Whether a box selection in progress will select this component.
+    /// Shown in place of <see cref="IsSelected"/> until the box is released. Null when not boxing.
     /// </summary>
-    public bool IsSelected
+    public bool? PreviewSelected
     {
-        get => _isSelected;
+        get => _previewSelected;
         set
         {
-            if (_isSelected == value)
+            if (_previewSelected == value)
                 return;
 
-            _isSelected = value;
+            _previewSelected = value;
 
             UpdateHighlight();
         }
     }
 
+    private Color _hoverColor = Colors.White;
+
+    /// <summary>The outline colour while hovered, e.g. yellow over a drop target.</summary>
+    protected Color HoverColor
+    {
+        get => _hoverColor;
+        set
+        {
+            _hoverColor = value;
+            UpdateHighlight();
+        }
+    }
+
+    /// <summary>
+    /// Outlines the component when it's hovered or selected by anyone.
+    /// Hover shows its own colour, the local selection is white, and another player's is their colour.
+    /// </summary>
     protected virtual void UpdateHighlight()
     {
         if (HighlightMesh == null)
             return;
 
-        HighlightMesh.Visible = (IsSelected || IsHovered) && !NeverHighlight;
+        var selected = PreviewSelected ?? IsSelected;
+        HighlightMesh.Visible =
+            (IsHovered || selected || _remoteSelectionColor != null) && !NeverHighlight;
+
+        if (IsHovered)
+            SetHighlightColor(HoverColor);
+        else if (selected)
+            SetHighlightColor(Colors.White);
+        else if (_remoteSelectionColor is Color remote)
+            SetHighlightColor(remote);
     }
 
     public Aabb Aabb
@@ -443,8 +493,8 @@ public abstract partial class VisualComponentBase : Area3D
             IsHovered = false;
         }
 
-        //TODO only call this when necessary
-        SetHighlightColor(Colors.White); //reset in case we were a drag target
+        // reset in case we were a drag target
+        HoverColor = Colors.White;
     }
 
     private bool _neverHighlight = false;
@@ -469,7 +519,7 @@ public abstract partial class VisualComponentBase : Area3D
     {
         if (CanObjectsBeDropped(dragObjects))
         {
-            SetHighlightColor(Colors.Yellow);
+            HoverColor = Colors.Yellow;
             return true;
         }
 
@@ -478,7 +528,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public void DragOverExit()
     {
-        SetHighlightColor(Colors.White);
+        HoverColor = Colors.White;
     }
 
     public virtual bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
@@ -502,14 +552,9 @@ public abstract partial class VisualComponentBase : Area3D
         objMesh.MaterialOverride = mat;
     }
 
-    public virtual void SetHighlightColor(Color color)
-    {
-        var mat = _highlightMesh.GetActiveMaterial(0);
-        if (mat is ShaderMaterial sm)
-        {
-            sm.SetShaderParameter("outline_color", color);
-        }
-    }
+    // An instance uniform, so components share the highlight material but not its colour.
+    private void SetHighlightColor(Color color) =>
+        _highlightMesh.SetInstanceShaderParameter("outline_color", color);
 
     protected ImageTexture LoadTexture(string filename)
     {

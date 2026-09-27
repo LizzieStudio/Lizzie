@@ -113,6 +113,11 @@ public partial class ProjectService : Node
     public ReplicatedDictionary<ComponentState> Components { get; } = new();
 
     /// <summary>
+    /// What each player has selected. Not saved.
+    /// </summary>
+    public ReplicatedDictionary<Selection> Selections { get; } = new();
+
+    /// <summary>
     /// The current project's settings, edited via the Project Settings dialog.
     /// </summary>
     public ReplicatedValue<ProjectGameSettings> Settings { get; } = new(() => new());
@@ -136,6 +141,7 @@ public partial class ProjectService : Node
             GameStates,
             ActiveGameState,
             Components,
+            Selections,
         ];
 
     private Project _currentProject;
@@ -318,7 +324,8 @@ public partial class ProjectService : Node
     {
         var effects = new List<Effect>();
 
-        foreach (var c in Containers)
+        // A loaded project starts with nothing selected.
+        foreach (var c in Containers.Where(c => c != Selections))
             effects.AddRange(c.EnumerateSaveEffects());
 
         return [TableEvent.Now(null, effects.ToArray())];

@@ -103,4 +103,13 @@ public static class RecordReaderExtensions
         );
         return rows;
     }
+
+    /// <summary>
+    /// True if <paramref name="id"/> is of type <typeparamref name="T"/>.
+    /// </summary>
+    /// <typeparam name="T">The type to check against.</typeparam>
+    /// <param name="id">The record to check.</param>
+    /// <returns>Whether or not <paramref name="id"/> is of type <typeparamref name="T"/></returns>
+    public static bool Is<T>(this IRecordReader R, SnowTag id)
+        where T : class, IReplicated => R.GetIncludingDeleted<T>(id) != null;
 }

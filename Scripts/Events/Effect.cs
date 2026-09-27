@@ -13,6 +13,7 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<DataRow>), "dw")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Selection>), "sl")]
 [JsonDerivedType(typeof(SetReplicatedValueEffect<ProjectGameSettings>), "gs")]
 [JsonDerivedType(typeof(SetReplicatedValueEffect<ActiveGameStateRef>), "ags")]
 public abstract class Effect

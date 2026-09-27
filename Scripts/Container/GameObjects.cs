@@ -131,7 +131,6 @@ public partial class GameObjects : Node
         if (_tableChanged)
         {
             _tableChanged = false;
-            ShowSelection();
             RebuildContainerCaches();
             QueueStackingUpdate();
             EmitSignal(SignalName.TableChanged);
@@ -224,7 +223,6 @@ public partial class GameObjects : Node
                 var go = GetHoveredObject();
                 if (go == null)
                 {
-                    DeselectComponents();
                     StartDragSelection();
                 }
                 else
@@ -348,48 +346,21 @@ public partial class GameObjects : Node
     #endregion
 
     #region Selection
-    /// <summary>The selected components.</summary>
-    private readonly HashSet<SnowTag> _selection = new();
+    /// <summary>The components the local player has selected, read from their selection record.</summary>
+    public HashSet<SnowTag> Selection =>
+        ProjectService.Instance.GetSelection<ComponentState>().ToHashSet();
 
-    public IReadOnlySet<SnowTag> Selection => _selection;
-
-    /// <summary>Called when the selection changes.</summary>
-    public event Action SelectionChanged;
-
-    /// <summary>Replaces the selection.</summary>
-    public void SetSelection(IEnumerable<SnowTag> components)
-    {
-        var next = components.ToHashSet();
-        if (next.SetEquals(_selection))
-            return;
-
-        foreach (var id in _selection)
-            if (GetComponent(id) is { } c)
-                c.IsSelected = false;
-        _selection.Clear();
-        _selection.UnionWith(next);
-        ShowSelection();
-        SelectionChanged?.Invoke();
-    }
-
-    /// <summary>
-    /// Marks the selected nodes, including any the table just rebuilt,
-    /// and drops components that left the table.
-    /// </summary>
-    private void ShowSelection()
-    {
-        if (_selection.RemoveWhere(id => GetComponent(id) == null) > 0)
-            SelectionChanged?.Invoke();
-        foreach (var id in _selection)
-            GetComponent(id).IsSelected = true;
-    }
+    /// <summary>Replaces the local player's selected components.</summary>
+    public void SetSelection(IEnumerable<SnowTag> components) =>
+        ProjectService.Instance.SetSelection<ComponentState>(components);
 
     /// <summary>The selected components in table order.</summary>
     public IEnumerable<VisualComponentBase> GetSelectedObjects()
     {
+        var selection = Selection;
         return ComponentNodes
             .OfType<VisualComponentBase>()
-            .Where(c => _selection.Contains(c.Reference));
+            .Where(c => selection.Contains(c.Reference));
     }
 
     /// <summary>
@@ -403,23 +374,21 @@ public partial class GameObjects : Node
         return selected;
     }
 
-    public void SelectComponents(Rect2 area)
+    /// <summary>
+    /// Previews a box selection on the nodes. Nothing is written until <see cref="EndDragSelection"/>.
+    /// </summary>
+    private void PreviewSelection(Rect2 area)
     {
         var camera = GetViewport().GetCamera3D();
-        // Zones and hidden components are not selected by marquee selection.
-        SetSelection(
-            ComponentNodes
-                .OfType<VisualComponentBase>()
-                .Where(c =>
-                    c is not VcZone
-                    && c.Visible
-                    && PointInRect(camera.UnprojectPosition(c.Position), area)
-                )
-                .Select(c => c.Reference)
-        );
+        foreach (var c in ComponentNodes.OfType<VisualComponentBase>())
+        {
+            // Zones and hidden components are not selected by marquee selection.
+            c.PreviewSelected =
+                c is not VcZone
+                && c.Visible
+                && PointInRect(camera.UnprojectPosition(c.Position), area);
+        }
     }
-
-    public void DeselectComponents() => SetSelection([]);
     #endregion
 
     #region Stacking
@@ -768,7 +737,7 @@ public partial class GameObjects : Node
     private void EnterDragMode(VisualComponentBase go)
     {
         // Clicking outside the selection replaces it.
-        if (!_selection.Contains(go.Reference))
+        if (!Selection.Contains(go.Reference))
             SetSelection([go.Reference]);
 
         // Zone control gate.
@@ -1174,7 +1143,7 @@ public partial class GameObjects : Node
     {
         if (Input.IsMouseButtonPressed(MouseButton.Left))
         {
-            SelectComponents(_selectionRectangle.CurRectangle);
+            PreviewSelection(_selectionRectangle.CurRectangle);
         }
         else
         {
@@ -1182,10 +1151,16 @@ public partial class GameObjects : Node
         }
     }
 
+    /// <summary>Selects what the box covers in one event. A click without a drag deselects.</summary>
     private void EndDragSelection()
     {
         CursorMode = CursorMode.Normal;
         _selectionRectangle.StopDragSelect();
+
+        var nodes = ComponentNodes.OfType<VisualComponentBase>().ToList();
+        SetSelection(nodes.Where(c => c.PreviewSelected == true).Select(c => c.Reference));
+        foreach (var c in nodes)
+            c.PreviewSelected = null;
     }
     #endregion
 
@@ -1241,7 +1216,6 @@ public partial class GameObjects : Node
         old.QueueFree();
         _table = CreateTable();
         _tableChanged = false;
-        _selection.Clear();
 
         CursorMode = CursorMode.Normal;
         _spawnComponents = null;

@@ -13,7 +13,6 @@ radius = 0.85791016
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_4nge1"]
 render_priority = 0
 shader = ExtResource("3_7dijs")
-shader_parameter/outline_color = Color(1, 1, 1, 1)
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_72lon"]
 material = SubResource("ShaderMaterial_4nge1")
