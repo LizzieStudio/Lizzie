@@ -208,7 +208,7 @@ public abstract partial class VisualComponentBase : Area3D
         if (s == null)
             return;
 
-        var held = s.Location == ComponentLocation.Cursor;
+        var held = s.IsHeld;
         LogicalVisible = s.Location is ComponentLocation.Table or ComponentLocation.Cursor;
         // The cursor may have left it while it was held, which doesn't unhover it.
         if (_held && !held)
@@ -239,51 +239,6 @@ public abstract partial class VisualComponentBase : Area3D
     {
         yield break;
     }
-
-    /// <summary>
-    /// Produce the effects to delete this component.
-    /// </summary>
-    public virtual IEnumerable<Effect> GetDespawnEffects()
-    {
-        yield return Effect.Upsert(ComponentState.Of(this) with { Deleted = true });
-    }
-
-    /// <summary>
-    /// Processes legacy events and returns effects for everything else.
-    /// </summary>
-    public virtual Effect[] ProcessCommand(VisualCommand command)
-    {
-        if (command == VisualCommand.Delete)
-            return GetDespawnEffects().ToArray();
-
-        if (command == VisualCommand.RotateCcw)
-            return [BuildRotation(ProjectService.Instance.RotationStep)];
-
-        if (command == VisualCommand.RotateCw)
-            return [BuildRotation(-1 * ProjectService.Instance.RotationStep)];
-
-        if (command == VisualCommand.Duplicate)
-        {
-            EventBus.Instance.Publish(
-                new SpawnPrototypeEvent
-                {
-                    PrototypeRef = PrototypeRef,
-                    DataSetRowIndex = DataSetRowIndex,
-                    DataSetRowId = DataSetRowId,
-                }
-            );
-            return [];
-        }
-
-        return [];
-    }
-
-    /// <summary>
-    /// Override in subclasses that support quantity-based commands (e.g. Draw N, Deal N).
-    /// The base implementation produces no effects.
-    /// <paramref name="quantity"/> is Int32.MaxValue when the user chose "All".
-    /// </summary>
-    public virtual Effect[] ProcessCommandWithQuantity(VisualCommand command, int quantity) => [];
 
     /// <summary>
     /// Animates toward <paramref name="state"/> using the <see cref="ComponentState.Transition"/>.
@@ -582,18 +537,10 @@ public abstract partial class VisualComponentBase : Area3D
     public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
-    public bool IsDragging => State?.Location == ComponentLocation.Cursor;
+    public bool IsDragging => State?.IsHeld == true;
 
     /// <summary>True while this component is being held by the local player's cursor.</summary>
-    public bool IsHeldByLocal =>
-        State is { Location: ComponentLocation.Cursor } s && s.Holder == Snowport.Clock.source;
-
-    private Effect BuildRotation(float degreesAboutY)
-    {
-        var s = ComponentState.Of(this);
-        var step = new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
-        return Effect.Upsert(s with { Rotation = s.Rotation + step });
-    }
+    public bool IsHeldByLocal => State is { IsHeld: true } s && s.Holder == Snowport.Clock.source;
 
     private bool _logicalVisible = true;
 

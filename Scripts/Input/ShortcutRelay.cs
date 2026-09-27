@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 
 /// <summary>
@@ -14,6 +15,28 @@ public static class Shortcuts
     /// </summary>
     public static bool Pressed(InputEvent e, StringName action) =>
         e.IsActionPressed(action, allowEcho: false, exactMatch: true);
+
+    /// <summary>The action's first key, to show beside a menu item, or null.</summary>
+    public static Shortcut Label(StringName action)
+    {
+        if (action == null || !InputMap.HasAction(action))
+            return null;
+        var key = InputMap.ActionGetEvents(action).OfType<InputEventKey>().FirstOrDefault();
+        if (key == null)
+            return null;
+
+        // Bindings by physical key have no label of their own, so show the key it types.
+        if (key.Keycode == Key.None && key.PhysicalKeycode != Key.None)
+        {
+            key = (InputEventKey)key.Duplicate();
+            key.Keycode = DisplayServer.KeyboardGetKeycodeFromPhysical(key.PhysicalKeycode);
+            key.PhysicalKeycode = Key.None;
+        }
+        return new Shortcut { Events = [key] };
+    }
+
+    /// <summary>The action for number key <paramref name="n"/>, from 1 to 20.</summary>
+    public static StringName Number(int n) => $"num_{n}";
 
     /// <summary>
     /// Runs the commands bound to the key, in the view that has the viewport's focus.

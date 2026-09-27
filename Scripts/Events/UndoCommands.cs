@@ -1,12 +1,12 @@
-/// <summary>Commands that work anywhere, with no targets.</summary>
-public static partial class CommandList
+/// <summary>Undo and redo, which work anywhere with no targets.</summary>
+public static class UndoCommands
 {
     public static readonly Command Undo = new GlobalCommand
     {
         Id = new("app.undo"),
         Caption = "Undo",
         Shortcut = "undo",
-        Action = IssueUndo,
+        SideEffects = IssueUndo,
     };
 
     public static readonly Command Redo = new GlobalCommand
@@ -14,7 +14,7 @@ public static partial class CommandList
         Id = new("app.redo"),
         Caption = "Redo",
         Shortcut = "redo",
-        Action = IssueRedo,
+        SideEffects = IssueRedo,
     };
 
     private static void IssueUndo()

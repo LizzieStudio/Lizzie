@@ -228,18 +228,8 @@ public partial class GameController : Node3D
 
     public SceneController MainScene => _mainScene;
 
-    public void ShowComponentPopup(Vector2I position, CommandContext context)
-    {
-        _uiController.BuildPopupMenu(context);
-        _uiController.ShowComponentPopup(position);
-    }
-
-    /*
-    public void HideComponentPopup()
-    {
-        _uiController.HideComponentPopup();
-    }
-*/
+    public void ShowComponentPopup(Vector2I position, CommandContext context) =>
+        _uiController.ShowComponentPopup(position, context);
 
     public void ComponentPopupClosed()
     {

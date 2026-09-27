@@ -10,6 +10,7 @@ public partial class VcDie : VisualComponentBase
     [Export]
     private int _sides;
 
+    /// <summary>The rotation in degrees that shows each face up, face 1 first.</summary>
     [Export]
     private Vector3[] _sideRotations;
 
@@ -52,36 +53,38 @@ public partial class VcDie : VisualComponentBase
         }
     }
 
+    // each die scene's face rotations, by scene path
+    private static readonly Dictionary<string, Vector3[]> FacesByScene = new();
+
+    /// <summary>
+    /// The rotation in degrees that shows each face up, face 1 first, read from the die's scene.
+    /// Empty for a die no scene shows.
+    /// </summary>
+    public static Vector3[] Faces(DieParameters p)
+    {
+        var path = Utility.DieScene(p);
+        if (string.IsNullOrEmpty(path))
+            return [];
+        if (FacesByScene.TryGetValue(path, out var faces))
+            return faces;
+
+        // Read from the scene's root without instancing it.
+        faces = [];
+        var state = GD.Load<PackedScene>(path).GetState();
+        for (int i = 0; i < state.GetNodePropertyCount(0); i++)
+            if (state.GetNodePropertyName(0, i) == PropertyName._sideRotations)
+                faces = state.GetNodePropertyValue(0, i).AsVector3Array();
+        return FacesByScene[path] = faces;
+    }
+
+    /// <summary>The rotation that shows <paramref name="face"/> up, counting from 1, or null if there's no such face.</summary>
+    public static Vector3? FaceRotation(DieParameters p, int face) =>
+        Faces(p) is var faces && face >= 1 && face <= faces.Length
+            ? faces[face - 1] * (3.14159f / 180f) //convert to radians
+            : null;
+
     public override float MaxAxisSize => Scale.X;
     public override GeometryInstance3D DragMesh => _mainMesh;
-
-    public override Effect[] ProcessCommand(VisualCommand command)
-    {
-        // As long as the commands stay in order, this will work.
-        if ((int)command >= (int)VisualCommand.Num1 && (int)command <= (int)VisualCommand.Num20)
-        {
-            int side = (int)command + 1 - (int)VisualCommand.Num1;
-            var t = ShowSide(side);
-            return t != null ? [t] : base.ProcessCommand(command);
-        }
-
-        if (command == VisualCommand.Roll)
-            return [BuildRoll()];
-
-        return base.ProcessCommand(command);
-    }
-
-    private Effect BuildRoll()
-    {
-        // The rolling client picks the target face
-        var side = (int)(GD.Randi() % _sides + 1);
-
-        var s = ComponentState.Of(this);
-        if (side <= _sideRotations.Length)
-            s = s with { Rotation = _sideRotations[side - 1] * (3.14159f / 180f) }; // degrees to radians
-
-        return Effect.Upsert(s with { Transition = Transition.Roll });
-    }
 
     public override bool PlayTransition(ComponentState s, long MsecSinceStart)
     {
@@ -92,19 +95,6 @@ public partial class VcDie : VisualComponentBase
         _rollInProcess = true;
         _rollTime = Math.Max(MsecSinceStart, 0) / 1000.0;
         return true;
-    }
-
-    private Effect ShowSide(int side)
-    {
-        if (side > _sideRotations.Length)
-            return null;
-
-        return Effect.Upsert(
-            ComponentState.Of(this) with
-            {
-                Rotation = _sideRotations[side - 1] * (3.14159f / 180f), //convert to radians
-            }
-        );
     }
 
     private TokenBuildMode _mode;

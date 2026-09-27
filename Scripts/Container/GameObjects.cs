@@ -213,7 +213,8 @@ public partial class GameObjects : Node
         }
         else if (
             CursorMode == CursorMode.Normal
-            && @event is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false } release
+            && @event
+                is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false } release
         )
         {
             // The table's menu opens on release, since dragging with the right button turns the camera.
@@ -312,35 +313,11 @@ public partial class GameObjects : Node
         EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
     }
 
-    public void DeleteComponents(IEnumerable<VisualComponentBase> components)
-    {
-        var effects = components.SelectMany(c => c.GetDespawnEffects());
-
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
-    }
-
     /// <summary>
-    /// The cards stacked exactly on top of <paramref name="bottom"/>.
+    /// The nodes of the cards stacked exactly on the deck, top first.
     /// </summary>
-    public List<VisualComponentBase> GetStack(VisualComponentBase bottom)
-    {
-        var b = bottom.State;
-        if (b == null)
-            return [];
-
-        return Nodes(
-                ProjectService
-                    .Instance.Get<ComponentState>(s =>
-                        s.Location == VisualComponentBase.ComponentLocation.Table
-                        && s.X == b.X
-                        && s.Z == b.Z
-                        && s.ZOrder > b.ZOrder
-                    )
-                    .OrderByDescending(s => s.ZOrder)
-            )
-            .Where(c => c is VcToken)
-            .ToList();
-    }
+    public List<VisualComponentBase> GetStack(VcDeck deck) =>
+        deck.State is { } s ? Nodes(ProjectService.Instance.TokensOn(s)).ToList() : [];
 
     #endregion
 
@@ -386,7 +363,7 @@ public partial class GameObjects : Node
     /// <summary>
     /// What commands act on: the selection, or the hovered component when nothing is selected.
     /// </summary>
-    public List<VisualComponentBase> GetPrimaryObjects()
+    public List<VisualComponentBase> GetTargetedObjects()
     {
         var selected = GetSelectedObjects().ToList();
         if (selected.Count == 0 && GetHoveredObject() is { } hovered)
@@ -412,28 +389,6 @@ public partial class GameObjects : Node
     #endregion
 
     #region Stacking
-
-    /// <summary>
-    /// Sends the components to the top or bottom of the ZOrder.
-    /// </summary>
-    public void Reorder(IEnumerable<VisualComponentBase> components, ZTarget target)
-    {
-        var ordered = components.Where(c => c is not VcZone).OrderBy(c => c.State.ZOrder).ToList();
-        if (ordered.Count == 0)
-            return;
-
-        var stamp = Snowport.Clock.Create();
-        var arr = new Effect[ordered.Count];
-        for (int i = 0; i < ordered.Count; i++)
-            arr[i] = Effect.Upsert(
-                ComponentState.Of(ordered[i]) with
-                {
-                    ZOrder = new ZOrder(target, i, stamp),
-                }
-            );
-
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, arr));
-    }
 
     /// <summary>
     /// The table's footprints from the last stacking pass with the height of each one's top,
@@ -657,7 +612,10 @@ public partial class GameObjects : Node
 
     private void EndPopupMenu()
     {
-        CursorMode = CursorMode.Normal;
+        // Only while still in popup mode, so a command the menu ran keeps its own mode,
+        // like Duplicate entering spawn mode, whenever the menu reports closing.
+        if (CursorMode == CursorMode.PopupMenu)
+            CursorMode = CursorMode.Normal;
     }
     #endregion
 
@@ -1111,7 +1069,16 @@ public partial class GameObjects : Node
         var stamp = Snowport.Clock.Create();
 
         for (int i = 0; i < toHand.Count; i++)
-            effects.Add(PlayerHandService.Instance.MoveEffect(toHand[i], seat, i, stamp));
+            effects.Add(
+                Effect.Upsert(
+                    PlayerHandService.Instance.MovedToHand(
+                        ComponentState.Of(toHand[i]),
+                        seat,
+                        i,
+                        stamp
+                    )
+                )
+            );
 
         for (int i = 0; i < toBoard.Count; i++)
             effects.Add(
@@ -1252,17 +1219,10 @@ public partial class GameObjects : Node
     /// </summary>
     private void UpdateDeckCounts()
     {
-        var table = GetNotDraggingObjects().ToList();
-        var stacks = table
-            .OfType<VcToken>()
-            .Select(c => c.State)
-            .ToLookup(s => (s.X, s.Z), s => s.ZOrder);
-
-        foreach (var deck in table.OfType<VcDeck>())
-        {
-            var d = deck.State;
-            deck.SetCount(stacks[(d.X, d.Z)].Count(z => z > d.ZOrder));
-        }
+        // A held deck keeps its count, since its cards leave the table with it.
+        foreach (var deck in ComponentNodes.OfType<VcDeck>())
+            if (deck.State is { IsHeld: false } d)
+                deck.SetCount(ProjectService.Instance.TokensOn(d).Count);
     }
 
     private bool _localDragOverHand;

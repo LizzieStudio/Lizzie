@@ -112,4 +112,54 @@ public static class RecordReaderExtensions
     /// <returns>Whether or not <paramref name="id"/> is of type <typeparamref name="T"/></returns>
     public static bool Is<T>(this IRecordReader R, SnowTag id)
         where T : class, IReplicated => R.GetIncludingDeleted<T>(id) != null;
+
+    /// <summary>
+    /// What a component shows as. A deck's cards share the deck's prototype but show as tokens,
+    /// as the table does when it picks a component's scene.
+    /// </summary>
+    public static VisualComponentBase.VisualComponentType Kind(
+        this IRecordReader R,
+        ComponentState s
+    )
+    {
+        var type =
+            R.GetIncludingDeleted<Prototype>(s.PrototypeRef)?.Type
+            ?? VisualComponentBase.VisualComponentType.Unset;
+        return type == VisualComponentBase.VisualComponentType.Deck && s.IsCard
+            ? VisualComponentBase.VisualComponentType.Token
+            : type;
+    }
+
+    /// <summary>The VcTokens stacked exactly on a deck, top first.</summary>
+    public static List<ComponentState> TokensOn(this IRecordReader R, ComponentState deck) =>
+        R.Get<ComponentState>(s =>
+                s.Location == VisualComponentBase.ComponentLocation.Table
+                && s.X == deck.X
+                && s.Z == deck.Z
+                && s.ZOrder > deck.ZOrder
+            )
+            .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Token)
+            .OrderByDescending(s => s.ZOrder)
+            .ToList();
+
+    /// <summary>
+    /// The contents of a component like a deck or bag.
+    /// </summary>
+    public static IEnumerable<ComponentState> Contents(this IRecordReader R, ComponentState s)
+    {
+        IEnumerable<ComponentState> inside = R.Kind(s) switch
+        {
+            VisualComponentBase.VisualComponentType.Deck => R.TokensOn(s),
+            VisualComponentBase.VisualComponentType.Bag => R.Get<ComponentState>(c =>
+                c.ContainerRef == s.Id
+            ),
+            _ => [],
+        };
+        foreach (var c in inside)
+        {
+            yield return c;
+            foreach (var d in R.Contents(c))
+                yield return d;
+        }
+    }
 }

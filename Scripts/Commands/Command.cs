@@ -9,13 +9,12 @@ using Godot;
 /// </summary>
 public readonly record struct CommandId(string Id);
 
-/// <summary>How many targets a command can act on.</summary>
+/// <summary>How many targets a <see cref="RecordCommand{T}"/> can act on.</summary>
 public enum TargetCount
 {
-    /// <summary>Doesn't handle any targets, such as the global Undo.</summary>
-    None,
     /// <summary>Can only handle one target, such as Edit Prototype.</summary>
     One,
+
     /// <summary>Can handle many targets, such as Delete.</summary>
     Many,
 }
@@ -24,16 +23,28 @@ public enum TargetCount
 public sealed class CommandContext
 {
     /// <summary>
-    /// Targets that are reachable through a context menu <strong>and</strong> keyboard commands.
-    /// Usually the record being selected, like the component record when selecting a node.
+    /// What the user targeted. Usually the selection, but can also be the hovered target.
+    /// Matching commands will act on these.
     /// </summary>
-    public ImmutableHashSet<Target> Primary { get; init; } = ImmutableHashSet<Target>.Empty;
+    public ImmutableHashSet<Target> Selected { get; init; } = ImmutableHashSet<Target>.Empty;
 
     /// <summary>
-    /// Targets that are reachable through a context menu, but not keyboard commands.
-    /// For example, the delete key should delete a selected component record, but not its prototype.
+    /// Records that are contained within the selected targets, like a deck's cards or a DataSet's rows.
+    /// Matching commands will act on these if configured to do so with <see cref="Command.IncludesContents"/>.
     /// </summary>
-    public ImmutableHashSet<Target> Secondary { get; init; } = ImmutableHashSet<Target>.Empty;
+    public ImmutableHashSet<Target> Contents { get; init; } = ImmutableHashSet<Target>.Empty;
+
+    /// <summary>
+    /// What the selected targets refer to, like a component's prototype.
+    /// Matching commands will only act on these if triggered from the context menu, not from keyboard shortcuts.
+    /// </summary>
+    public ImmutableHashSet<Target> Referenced { get; init; } = ImmutableHashSet<Target>.Empty;
+
+    /// <summary>
+    /// Custom commands for this viewport, like the table's Zoom to Component.
+    /// They appear the same as other commands.
+    /// </summary>
+    public IReadOnlyList<Command> Local { get; init; } = [];
 }
 
 /// <summary>A window or panel that commands run in. It says what they act on.</summary>
@@ -45,145 +56,213 @@ public interface ICommandView
 
 /// <summary>
 /// Something the user runs from a context menu or a keyboard shortcut.
-/// Every command is defined once, in <see cref="CommandList"/>.
+/// Every command is defined once, in a class for what it acts on, and listed in <see cref="CommandList"/>.
 /// </summary>
 public abstract class Command
 {
     public CommandId Id { get; init; }
 
     /// <summary>
-    /// The menu label, which names the kind of target, e.g. "Edit Prototype".
-    /// With a <see cref="Noun"/>, "{0}" is the counted targets: "Delete {0}" shows "Delete 5 Components".
+    /// The menu label, e.g. "Edit Prototype".
+    /// "{0}" is the number of targets: "Delete {0}" shows "Delete 5".
+    /// With a <see cref="Noun"/>, it's followed by what they are: "Delete 5 Components".
     /// </summary>
     public string Caption { get; init; }
 
-    /// <summary>What one target is called, and several, when the caption counts them.</summary>
+    /// <summary>What one target is called, and several, after the count in the caption. Null for none.</summary>
     public (string One, string Many)? Noun { get; init; }
 
     /// <summary>The menu label for <paramref name="count"/> targets.</summary>
     public string Label(int count) =>
-        Noun is var (one, many)
-            ? string.Format(Caption, $"{count} {(count == 1 ? one : many)}")
-            : Caption;
+        string.Format(
+            Caption,
+            Noun is var (one, many) ? $"{count} {(count == 1 ? one : many)}" : count.ToString()
+        );
 
     /// <summary>The input action that runs it, or null.</summary>
     public StringName Shortcut { get; init; }
 
-    public TargetCount Count { get; init; } = TargetCount.Many;
-
+    /// <summary>
+    /// Set to false to avoid showing this command in the context menu.
+    /// </summary>
     public bool ShowInMenu { get; init; } = true;
 
-    /// <summary>The menu asks how many through a submenu.</summary>
-    public bool AsksQuantity { get; init; }
+    /// <summary>Set to true to ask for a number through a submenu, such as how many cards to draw.</summary>
+    public bool AsksForNumber { get; init; }
 
-    /// <summary>The number keys run it, giving their number as the quantity.</summary>
+    /// <summary>
+    /// When <see cref="AsksForNumber"/> = true, an extra choice after the numbers, such as "All",
+    /// which runs the command with <see cref="int.MaxValue"/>. Null for none.
+    /// </summary>
+    public string InfiniteOption { get; init; }
+
+    /// <summary>
+    /// Set to true to have the number keys serve as keyboard shortcuts.
+    /// </summary>
     public bool NumberKeys { get; init; }
 
-    /// <summary>The targets of the kind this command acts on.</summary>
-    public abstract IEnumerable<Target> OfKind(IEnumerable<Target> targets);
-
-    /// <summary>Whether it can act on this target of its kind, e.g. only decks shuffle.</summary>
-    public virtual bool Applies(Target target) => true;
-
     /// <summary>
-    /// Acts on the targets. <paramref name="quantity"/> is 1 unless the command asks for one,
-    /// and <see cref="int.MaxValue"/> means all.
+    /// Set to true to include <see cref="CommandContext.Contents"/> in the targets.
     /// </summary>
-    public abstract void Run(IReadOnlyList<Target> targets, int quantity);
+    public bool IncludesContents { get; init; }
 
     /// <summary>
-    /// Whether the key event runs this command, and the quantity it gives.
+    /// The path of an icon shown in the menu's left column, or null for none.
+    /// Commands for one kind of component use the icon the component creation dialog shows for it.
+    /// </summary>
+    public string Icon { get; init; }
+
+    /// <summary>
+    /// Returns true if this command can act on <paramref name="target"/>:
+    /// a record of the kind it's for, that it has behavior for.
+    /// </summary>
+    public abstract bool Applies(Target target);
+
+    /// <summary>Whether it can act on <paramref name="count"/> targets that it applies to.</summary>
+    public abstract bool Fits(int count);
+
+    /// <summary>
+    /// When <see cref="AsksForNumber"/> = true, the highest number worth offering for these targets,
+    /// like a die's face count, or null for the menu's default.
+    /// </summary>
+    public virtual int? MaxNumber(IReadOnlyList<Target> targets) => null;
+
+    /// <summary>
+    /// Acts on the targets. <paramref name="number"/> is 1 unless the command asks for one,
+    /// and <see cref="int.MaxValue"/> is its <see cref="InfiniteOption"/>.
+    /// </summary>
+    public abstract void Run(IReadOnlyList<Target> targets, int number);
+
+    /// <summary>
+    /// Returns true if <paramref name="e"/> runs this command, and the number it gives.
     /// Modifiers must match exactly.
     /// </summary>
-    public bool Matches(InputEvent e, out int quantity)
+    public bool Matches(InputEvent e, out int number)
     {
-        quantity = 1;
+        number = 1;
         if (Shortcut != null && Shortcuts.Pressed(e, Shortcut))
             return true;
         if (!NumberKeys)
             return false;
         for (int n = 1; n <= 20; n++)
         {
-            if (Shortcuts.Pressed(e, $"num_{n}"))
+            if (Shortcuts.Pressed(e, Shortcuts.Number(n)))
             {
-                quantity = n;
+                number = n;
                 return true;
             }
         }
         return false;
     }
 
-    /// <summary>The key to show beside it in a menu, or null.</summary>
-    public Shortcut ShortcutLabel()
-    {
-        if (Shortcut == null || !InputMap.HasAction(Shortcut))
-            return null;
-        var key = InputMap.ActionGetEvents(Shortcut).OfType<InputEventKey>().FirstOrDefault();
-        if (key == null)
-            return null;
+    /// <summary>
+    /// The keyboard shortcut to show beside this command in a menu, or null.
+    /// </summary>
+    public Shortcut ShortcutLabel() => Shortcuts.Label(Shortcut);
 
-        // Bindings by physical key have no label of their own, so show the key it types.
-        if (key.Keycode == Key.None && key.PhysicalKeycode != Key.None)
-        {
-            key = (InputEventKey)key.Duplicate();
-            key.Keycode = DisplayServer.KeyboardGetKeycodeFromPhysical(key.PhysicalKeycode);
-            key.PhysicalKeycode = Key.None;
-        }
-        return new Shortcut { Events = [key] };
-    }
-}
-
-/// <summary>A command on table components, run through their nodes.</summary>
-public sealed class ComponentCommand : Command
-{
-    /// <summary>Whether it can act on the component.</summary>
-    public Func<VisualComponentBase, bool> AppliesTo { get; init; } = _ => true;
-
-    /// <summary>Acts on the components with the quantity.</summary>
-    public Action<List<VisualComponentBase>, int> Action { get; init; }
-
-    public override IEnumerable<Target> OfKind(IEnumerable<Target> targets) =>
-        targets.Where(t => Node(t) != null);
-
-    public override bool Applies(Target target) => Node(target) is { } n && AppliesTo(n);
-
-    public override void Run(IReadOnlyList<Target> targets, int quantity) =>
-        Action(targets.Select(Node).Where(n => n != null).ToList(), quantity);
-
-    private static VisualComponentBase Node(Target target) =>
-        target is RecordTarget r ? ProjectService.Instance?.GameObjects?.GetComponent(r.Id) : null;
+    /// <summary>
+    /// The number key to show beside <paramref name="number"/> in the menu's number submenu,
+    /// or null when the number keys don't run it.
+    /// </summary>
+    public Shortcut NumberLabel(int number) =>
+        NumberKeys ? Shortcuts.Label(Shortcuts.Number(number)) : null;
 }
 
 /// <summary>A command on records of one type.</summary>
 public sealed class RecordCommand<T> : Command
     where T : class, IReplicated
 {
-    public Action<List<T>> Action { get; init; }
+    /// <summary>
+    /// Determines whether this command can operate on a given <paramref name="record"/>.
+    /// </summary>
+    /// <param name="reader">The record reader to pull data.</param>
+    /// <param name="record">The record that this command may apply to.</param>
+    /// <returns>True if this command has behavior for the given <paramref name="record"/>.</returns>
+    public delegate bool AppliesToDelegate(IRecordReader reader, T record);
 
-    public override IEnumerable<Target> OfKind(IEnumerable<Target> targets) =>
-        targets.Where(t => Record(t) != null);
+    /// <summary>
+    /// <para>Returns true if this command has behavior for the given record.</para>
+    /// <para>For example, Shuffle only applies to decks.</para>
+    /// </summary>
+    public AppliesToDelegate AppliesTo { get; init; } = (_, _) => true;
 
-    public override void Run(IReadOnlyList<Target> targets, int quantity) =>
-        Action(targets.Select(Record).Where(r => r != null).ToList());
+    public TargetCount Count { get; init; } = TargetCount.Many;
+
+    /// <summary>
+    /// Produces the <see cref="Effect"/>s from this command.
+    /// </summary>
+    /// <param name="reader">The record reader to pull data.</param>
+    /// <param name="records">The records that were targeted with this command.</param>
+    /// <param name="number">When <see cref="Command.AsksForNumber"/> is true, the number provided by the user.</param>
+    /// <returns>The effects, submitted as one event.</returns>
+    public delegate IEnumerable<Effect> EffectsDelegate(
+        IRecordReader reader,
+        IReadOnlyList<T> records,
+        int number
+    );
+
+    /// <summary>
+    /// Generates the effects from this command on the given records.
+    /// Returning null or an empty collection will not fire an event.
+    /// The third parameter provides a number if <see cref="Command.AsksForNumber"/> is true, like with setting a die face.
+    /// </summary>
+    public EffectsDelegate Effects { get; init; }
+
+    /// <summary>
+    /// Run so that this command can perform actions other than change records, such as opening an editor.
+    /// The second parameter provides a number if <see cref="Command.AsksForNumber"/> is true, like with setting a die face.
+    /// </summary>
+    public Action<IReadOnlyList<T>, int> SideEffects { get; init; }
+
+    /// <summary>
+    /// When <see cref="Command.AsksForNumber"/> is true, the highest number worth offering for the records,
+    /// such as a die's face count or a deck's card count. Null offers the menu's default.
+    /// </summary>
+    public Func<IRecordReader, IReadOnlyList<T>, int> NumberLimit { get; init; }
+
+    public override bool Applies(Target target) => Record(target) is { } r && AppliesTo(Reader, r);
+
+    public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
+
+    public override int? MaxNumber(IReadOnlyList<Target> targets) =>
+        NumberLimit?.Invoke(Reader, Records(targets));
+
+    public override void Run(IReadOnlyList<Target> targets, int number)
+    {
+        var records = Records(targets);
+        SideEffects?.Invoke(records, number);
+        if (Effects == null)
+            return;
+
+        var effects = Effects(Reader, records, number)?.ToArray() ?? [];
+        if (effects.Length > 0)
+            EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects));
+    }
+
+    private static IRecordReader Reader => ProjectService.Instance;
 
     private static T Record(Target target) =>
-        target is RecordTarget r ? ProjectService.Instance?.Get<T>(r.Id) : null;
+        target is RecordTarget r ? Reader?.Get<T>(r.Id) : null;
+
+    // A record may be gone since the menu opened.
+    private static List<T> Records(IReadOnlyList<Target> targets) =>
+        targets.Select(Record).Where(r => r != null).ToList();
 }
 
-/// <summary>A command with no targets, such as undo.</summary>
+/// <summary>A command that does not act on selected targets, such as undo.</summary>
 public sealed class GlobalCommand : Command
 {
-    public GlobalCommand() => Count = TargetCount.None;
+    public override bool Applies(Target target) => false;
 
-    public Action Action { get; init; }
+    public override bool Fits(int count) => count == 0;
 
-    public override IEnumerable<Target> OfKind(IEnumerable<Target> targets) => [];
+    public Action SideEffects { get; init; }
 
-    public override void Run(IReadOnlyList<Target> targets, int quantity) => Action();
+    public override void Run(IReadOnlyList<Target> targets, int number) => SideEffects();
 }
 
 /// <summary>
-/// Utilities to attach <see cref="ICommandView"> to a <see cref="Node">.
+/// Utilities to attach <see cref="ICommandView"/> to a <see cref="Node"/>.
 /// </summary>
 public static class CommandViews
 {

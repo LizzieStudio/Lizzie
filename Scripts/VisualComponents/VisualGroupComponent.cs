@@ -74,17 +74,6 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
 
     protected abstract void OnChildrenChanged();
 
-    public override IEnumerable<Effect> GetDespawnEffects()
-    {
-        foreach (var effect in base.GetDespawnEffects())
-            yield return effect;
-
-        foreach (var child in Children)
-            if (ProjectService.Instance.GameObjects.GetComponent(child) is { } c)
-                foreach (var effect in c.GetDespawnEffects())
-                    yield return effect;
-    }
-
     /// <summary>
     /// Returns the top <paramref name="quantity"/> child ids, but does not remove them.
     /// </summary>

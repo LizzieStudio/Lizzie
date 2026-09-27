@@ -10,8 +10,6 @@ public partial class VcDeck : VisualComponentBase
     private Label3D _componentCount;
     private Label3D _blankLabel;
 
-    private readonly RandomNumberGenerator _rnd = new();
-
     public override void _Ready()
     {
         base._Ready();
@@ -27,9 +25,6 @@ public partial class VcDeck : VisualComponentBase
 
     public override float MaxAxisSize => Math.Max(_height, _width);
 
-    /// <summary>The cards on this deck, top first.</summary>
-    private List<VisualComponentBase> Stack() => ProjectService.Instance.GameObjects.GetStack(this);
-
     /// <summary>
     /// For showing how many cards are on this deck.
     /// </summary>
@@ -37,171 +32,6 @@ public partial class VcDeck : VisualComponentBase
     {
         _componentCount.Text = count.ToString();
     }
-
-    public override Effect[] ProcessCommand(VisualCommand command)
-    {
-        if (command == VisualCommand.Flip)
-            return BuildFlip();
-
-        if (command == VisualCommand.Shuffle)
-            return BuildShuffle();
-
-        if (command == VisualCommand.RotateCcw)
-            return BuildRotation(ProjectService.Instance.RotationStep);
-
-        if (command == VisualCommand.RotateCw)
-            return BuildRotation(-1 * ProjectService.Instance.RotationStep);
-
-        // this will work as long as the number commands remain in order
-        if ((int)command >= (int)VisualCommand.Num1 && (int)command <= (int)VisualCommand.Num20)
-            return BuildDraw((int)command + 1 - (int)VisualCommand.Num1);
-
-        return base.ProcessCommand(command);
-    }
-
-    public override Effect[] ProcessCommandWithQuantity(VisualCommand command, int quantity)
-    {
-        // quantity == int.MaxValue means "All"; BuildDraw/BuildDeal clamp to deck size.
-        if (command is VisualCommand.Draw)
-            return BuildDraw(quantity);
-        if (command is VisualCommand.Deal)
-            return BuildDeal(quantity);
-
-        return base.ProcessCommandWithQuantity(command, quantity);
-    }
-
-    /// <summary>
-    /// Turns each card over and reverses their order by swapping their existing ZOrders.
-    /// </summary>
-    private Effect[] BuildFlip()
-    {
-        var cards = Stack();
-        var effects = new List<Effect>(cards.Count);
-        for (int i = 0; i < cards.Count; i++)
-        {
-            if (cards[i] is VcToken card)
-            {
-                var z = cards[cards.Count - 1 - i].State.ZOrder;
-                effects.Add(Effect.Upsert(card.BuildFlipState() with { ZOrder = z }));
-            }
-        }
-
-        return effects.ToArray();
-    }
-
-    /// <summary>
-    /// Permutes the cards' existing ZOrders using Fisher-Yates.
-    /// </summary>
-    private Effect[] BuildShuffle()
-    {
-        var cards = Stack();
-        var orders = cards.Select(c => c.State.ZOrder).ToList();
-
-        for (int n = orders.Count - 1; n > 0; n--)
-        {
-            var r = _rnd.RandiRange(0, n);
-            (orders[r], orders[n]) = (orders[n], orders[r]);
-        }
-
-        return cards
-            .Select(
-                (c, i) => (Effect)Effect.Upsert(ComponentState.Of(c) with { ZOrder = orders[i] })
-            )
-            .ToArray();
-    }
-
-    /// <summary>
-    /// Rotates the frame and its cards together.
-    /// </summary>
-    private Effect[] BuildRotation(float degreesAboutY)
-    {
-        var step = new Vector3(0, Mathf.DegToRad(degreesAboutY), 0);
-        return Stack()
-            .Append(this)
-            .Select(c =>
-            {
-                var s = ComponentState.Of(c);
-                return (Effect)Effect.Upsert(s with { Rotation = s.Rotation + step });
-            })
-            .ToArray();
-    }
-
-    private Effect[] BuildDraw(int count)
-    {
-        var cards = Stack().Take(count).ToList();
-        var stamp = Snowport.Clock.Create();
-
-        //if there are player hands, draw to that. Otherwise draw to the table.
-        if (ProjectService.Instance.Settings.Value.EnablePlayerHands)
-        {
-            int seat = PlayerHandService.LocalSeatIndex();
-            return cards
-                .Select((c, i) => (Effect)PlayerHandService.Instance.MoveEffect(c, seat, i, stamp))
-                .ToArray();
-        }
-
-        //splay onto the board
-        var frame = ComponentState.Of(this).PositionAt(0);
-        return cards
-            .Select(
-                (c, i) =>
-                    (Effect)
-                        Effect.Upsert(
-                            ComponentState.Of(c) with
-                            {
-                                Position = frame + new Vector3(_width * (1.5f + i), 0, 0),
-                                // Splayed cards land on top, in draw order.
-                                ZOrder = new ZOrder(ZTarget.Top, i, stamp),
-                            }
-                        )
-            )
-            .ToArray();
-    }
-
-    /// <summary>
-    /// Deals <paramref name="countPerPlayer"/> cards to every active player seat in turn,
-    /// like a real deal (seat 0 gets a card, seat 1 gets a card, …, repeat).
-    /// If the deck runs out before all rounds are complete the remaining seats get fewer cards.
-    /// </summary>
-    private Effect[] BuildDeal(int countPerPlayer)
-    {
-        var settings = ProjectService.Instance.Settings.Value;
-        if (settings == null || settings.Players.Length == 0)
-            return BuildDraw(countPerPlayer); // fall back to draw if no seats defined
-
-        int seatCount = settings.Players.Length;
-        var order = Stack();
-        var handService = PlayerHandService.Instance;
-
-        var activeSeats = new List<int>(seatCount);
-        for (int seat = 0; seat < seatCount; seat++)
-        {
-            if (handService.HandContainer(seat) != SnowTag.Empty)
-                activeSeats.Add(seat);
-        }
-
-        if (activeSeats.Count == 0)
-            return [];
-
-        int total = (int)Math.Min((long)countPerPlayer * activeSeats.Count, order.Count);
-
-        // Deal round-robin.
-        var effects = new List<Effect>(total);
-        var suborder = new int[seatCount];
-        var stamp = Snowport.Clock.Create();
-        for (int i = 0; i < total; i++)
-        {
-            int seat = activeSeats[i % activeSeats.Count];
-            effects.Add(handService.MoveEffect(order[i], seat, suborder[seat]++, stamp));
-        }
-
-        return effects.ToArray();
-    }
-
-    public override IEnumerable<Effect> GetDespawnEffects() =>
-        Stack()
-            .Append(this)
-            .Select(c => Effect.Upsert(ComponentState.Of(c) with { Deleted = true }));
 
     /// <summary>
     /// The deck's cards, face-down on the frame, with the first token on top.

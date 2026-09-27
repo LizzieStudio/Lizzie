@@ -240,7 +240,8 @@ public partial class Utility : Node
         return $"res://Scenes/VisualComponents/{shape}";
     }
 
-    private static string DieScene(ComponentParameters parameters)
+    /// <summary>The scene that shows a die, or empty for a number of sides no die has.</summary>
+    public static string DieScene(ComponentParameters parameters)
     {
         var sides = parameters is DieParameters die
             ? die.Sides

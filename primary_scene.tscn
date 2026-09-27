@@ -6,8 +6,6 @@
 [ext_resource type="Script" uid="uid://3274wuq0qfvx" path="res://Scripts/HandManager.cs" id="3_h6pmi"]
 [ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="4_n88ql"]
 [ext_resource type="PackedScene" uid="uid://s4e3sjhq6cm1" path="res://Scenes/Controls/player_hands_panel.tscn" id="8_sly7x"]
-[ext_resource type="Texture2D" uid="uid://41ftdwu6bvkv" path="res://Textures/UI/lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="19_mftnr"]
-[ext_resource type="Texture2D" uid="uid://b0ghdcbyhne5f" path="res://Textures/UI/flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg" id="20_7j0c8"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
 
 [node name="PrimaryScene" type="Node3D" unique_id=410470090 node_paths=PackedStringArray("_textureFactory")]
@@ -148,28 +146,6 @@ text = "Play 2D"
 [node name="Play3D" type="Button" parent="UI/Mode" unique_id=1596224388]
 layout_mode = 2
 text = "Play 3D"
-
-[node name="ComponentPopup" type="PopupMenu" parent="UI" unique_id=1851200208]
-oversampling_override = 1.0
-size = Vector2i(163, 174)
-item_count = 7
-item_0/text = "Lock"
-item_0/icon = ExtResource("19_mftnr")
-item_0/checkable = 1
-item_0/id = 0
-item_1/text = "Flip"
-item_1/icon = ExtResource("20_7j0c8")
-item_1/id = 1
-item_2/id = 6
-item_2/separator = true
-item_3/text = "Rotate CW"
-item_3/id = 2
-item_4/text = "Rotate CCW"
-item_4/id = 3
-item_5/id = 5
-item_5/separator = true
-item_6/text = "Delete"
-item_6/id = 4
 
 [node name="ComponentName" type="Label" parent="UI" unique_id=843150342]
 unique_name_in_owner = true

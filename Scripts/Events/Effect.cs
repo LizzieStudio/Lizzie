@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
@@ -25,6 +27,10 @@ public abstract class Effect
     /// <summary>Creates, updates or reversibly deletes a record with its whole value.</summary>
     public static UpdateReplicatedEffect<T> Upsert<T>(T record)
         where T : class, IReplicated => new() { Id = record.Id, Payload = record };
+
+    /// <summary>An upsert for each record.</summary>
+    public static IEnumerable<Effect> UpsertAll<T>(IEnumerable<T> records)
+        where T : class, IReplicated => records.Select(r => (Effect)Upsert(r));
 }
 
 /// <summary>

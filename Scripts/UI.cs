@@ -24,7 +24,6 @@ public partial class UI : CanvasLayer
     private PopupMenu _helpMenu;
     private PopupMenu _fileMenu;
 
-    private PopupMenu _componentPopup;
     private PopupMenu _restoreSnapshotMenu;
     private Label _componentName;
 
@@ -121,10 +120,6 @@ public partial class UI : CanvasLayer
 
         _rotationStep = GetNode<OptionButton>("%RotationStep");
         _rotationStep.ItemSelected += RotationStepSelected;
-
-        _componentPopup = GetNode<PopupMenu>("ComponentPopup");
-        _componentPopup.IdPressed += PopupMenuCommandSelected;
-        _componentPopup.CloseRequested += ComponentPopupClosed;
 
         _componentName = GetNode<Label>("%ComponentName");
 
@@ -777,14 +772,6 @@ public partial class UI : CanvasLayer
 
     public override void _Process(double delta)
     {
-        //Below is a hack to work around the CloseRequested signal not getting fired properly
-
-        if (_popupShown && _componentPopup.Visible)
-        {
-            _popupShown = false;
-            ComponentPopupClosed();
-        }
-
         if (_modalDialogs == null)
         {
             ModalDialogShown = false;
@@ -827,75 +814,125 @@ public partial class UI : CanvasLayer
         GetParent<GameController>().ComponentPopupClosed();
     }
 
-    public const int MAX_CARD_DEAL = 8;
+    // the open context menu, or null
+    private PopupMenu _componentPopup;
 
-    // the commands in the open menu, by item id, with what each acts on
-    private readonly List<(Command Command, IReadOnlyList<Target> Targets)> _popupItems = new();
+    // Icons are drawn at text size, whatever size they're made at.
+    private const int MenuIconSize = 20;
 
     /// <summary>
-    /// Fills the context menu with the commands for what was right-clicked.
-    /// Each item shows its shortcut, and quantity commands get a submenu.
+    /// Opens a context menu at <paramref name="position"/> with the commands for what was right-clicked.
+    /// Each item shows its shortcut, and commands that ask for a number get a submenu.
+    /// The menu is built for this opening and freed when it closes.
     /// </summary>
-    public void BuildPopupMenu(CommandContext context)
+    public void ShowComponentPopup(Vector2I position, CommandContext context)
     {
-        foreach (var sub in _componentPopup.GetChildren().OfType<PopupMenu>())
-        {
-            _componentPopup.RemoveChild(sub);
-            sub.QueueFree();
-        }
-        _componentPopup.Clear();
-        _popupItems.Clear();
+        // A menu still open is replaced. Only the current menu ends popup mode when it closes.
+        _componentPopup?.QueueFree();
+        var menu = new PopupMenu { Name = "ComponentPopup" };
+        _componentPopup = menu;
 
-        System.Type previousKind = null;
+        // the command for each item id, with what it acts on
+        var items = new List<(Command Command, IReadOnlyList<Target> Targets)>();
+        Type previousKind = null;
         foreach (var (command, targets) in CommandList.ForMenu(context))
         {
             // Commands on different kinds of target are separated.
             if (previousKind != null && command.GetType() != previousKind)
-                _componentPopup.AddSeparator();
+                menu.AddSeparator();
             previousKind = command.GetType();
 
-            int id = _popupItems.Count;
-            _popupItems.Add((command, targets));
-            _componentPopup.AddItem(command.Label(targets.Count), id);
-            int index = _componentPopup.GetItemIndex(id);
+            // Ids skip the separators, so they index the items.
+            int id = items.Count;
+            items.Add((command, targets));
+            menu.AddItem(command.Label(targets.Count), id);
+            int index = menu.GetItemIndex(id);
 
             if (command.ShortcutLabel() is { } shortcut)
-                _componentPopup.SetItemShortcut(index, shortcut);
+                menu.SetItemShortcut(index, shortcut);
 
-            if (command.AsksQuantity)
-                AddQuantitySubmenu(index, id);
+            if (command.Icon != null)
+            {
+                menu.SetItemIcon(index, GD.Load<Texture2D>(command.Icon));
+                menu.SetItemIconMaxWidth(index, MenuIconSize);
+            }
+
+            if (command.AsksForNumber)
+                AddNumberSubmenu(menu, command, targets, index);
         }
+
+        menu.IdPressed += id =>
+        {
+            var (command, targets) = items[(int)id];
+            // The item of a command that asks for a number only opens its submenu.
+            if (!command.AsksForNumber)
+                RunFromMenu(command, targets, 1);
+        };
+        menu.PopupHide += () =>
+        {
+            menu.QueueFree();
+            if (_componentPopup != menu)
+                return;
+            _componentPopup = null;
+            ComponentPopupClosed();
+        };
+
+        AddChild(menu);
+        menu.Visible = true;
+        // Fits the menu to its items before placing it.
+        menu.ResetSize();
+
+        // Opens away from the edges it would overflow, and stays in the window.
+        var size = menu.Size;
+        var window = (Vector2I)GetViewport().GetVisibleRect().Size;
+        if (position.X + size.X > window.X)
+            position.X -= size.X;
+        if (position.Y + size.Y > window.Y)
+            position.Y -= size.Y;
+        menu.Position = position.Clamp(Vector2I.Zero, (window - size).Max(Vector2I.Zero));
     }
 
-    // Submenu item ids are the command's id * 100 + the quantity, where 0 means all.
-    private void AddQuantitySubmenu(int index, int id)
-    {
-        var sub = new PopupMenu { Name = $"QtySubmenu_{id}" };
-        for (int qty = 1; qty <= MAX_CARD_DEAL; qty++)
-            sub.AddItem(qty.ToString(), id * 100 + qty);
-        sub.AddItem("All", id * 100);
+    // The submenu offers the top row of number keys, 1 through 9, unless the command gives its own limit.
+    private const int SubmenuNumbers = 9;
 
-        sub.IdPressed += OnQtySubmenuItemSelected;
-        _componentPopup.AddChild(sub);
-        _componentPopup.SetItemSubmenuNode(index, sub);
+    // It never offers more numbers than there are number keys, even with a higher limit.
+    private const int MaxSubmenuNumbers = 20;
+
+    // The submenu is built with its menu, so it runs its own command directly.
+    private void AddNumberSubmenu(
+        PopupMenu menu,
+        Command command,
+        IReadOnlyList<Target> targets,
+        int index
+    )
+    {
+        var sub = new PopupMenu { Name = $"NumberSubmenu_{index}" };
+        var numbers = new List<int>();
+        int last = Math.Min(command.MaxNumber(targets) ?? SubmenuNumbers, MaxSubmenuNumbers);
+        for (int n = 1; n <= last; n++)
+        {
+            sub.AddItem(n.ToString());
+            numbers.Add(n);
+            // The number keys run it with that number, so they show as its shortcuts.
+            if (command.NumberLabel(n) is { } shortcut)
+                sub.SetItemShortcut(sub.ItemCount - 1, shortcut);
+        }
+        if (command.InfiniteOption != null)
+        {
+            sub.AddItem(command.InfiniteOption);
+            numbers.Add(int.MaxValue);
+        }
+
+        sub.IndexPressed += i => RunFromMenu(command, targets, numbers[(int)i]);
+        menu.AddChild(sub);
+        menu.SetItemSubmenuNode(index, sub);
     }
 
-    private void PopupMenuCommandSelected(long id)
+    private void RunFromMenu(Command command, IReadOnlyList<Target> targets, int number)
     {
-        var (command, targets) = _popupItems[(int)id];
-        // A quantity command's item only opens its submenu.
-        if (command.AsksQuantity)
-            return;
-        command.Run(targets, 1);
+        // Closed first, so a command can change the cursor mode, like Duplicate entering spawn mode.
         ComponentPopupClosed();
-    }
-
-    private void OnQtySubmenuItemSelected(long encodedId)
-    {
-        var (command, targets) = _popupItems[(int)(encodedId / 100)];
-        int qty = (int)(encodedId % 100);
-        command.Run(targets, qty == 0 ? int.MaxValue : qty);
-        ComponentPopupClosed();
+        command.Run(targets, number);
     }
 
     private void OnHelpMenuSelection(long id)
@@ -965,32 +1002,7 @@ public partial class UI : CanvasLayer
         _componentDefinition.QueueFree();
     }
 
-    private bool _popupShown;
     private ProjectSettingsDialog _projectSettings;
-
-    /// <summary>
-    /// Opens the context menu at the mouse.
-    /// </summary>
-    public void ShowComponentPopup(Vector2I position)
-    {
-        _componentPopup.Visible = true;
-        // Fits the menu to its items, which change each time it opens.
-        _componentPopup.ResetSize();
-
-        var size = _componentPopup.Size;
-        var window = (Vector2I)GetViewport().GetVisibleRect().Size;
-        if (position.X + size.X > window.X)
-            position.X -= size.X;
-        if (position.Y + size.Y > window.Y)
-            position.Y -= size.Y;
-        _componentPopup.Position = position.Clamp(Vector2I.Zero, (window - size).Max(Vector2I.Zero));
-        _popupShown = true;
-    }
-
-    public void HideComponentPopup()
-    {
-        _componentPopup.Visible = false;
-    }
 
     private void SetSceneMode(SceneMode mode)
     {

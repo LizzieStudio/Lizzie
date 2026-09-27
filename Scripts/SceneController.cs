@@ -54,8 +54,8 @@ public partial class SceneController : Node3D, ICommandView
     public GameObjects GameObjects => _gameObjects;
 
     /// <summary>
-    /// Build a context menu for the selected components or the hovered component.
-    /// Add in the prototypes as secondary context.
+    /// The context for the selected components, or the hovered component.
+    /// Their contents, like a deck's cards, come along, and their prototypes are referenced.
     /// </summary>
     public CommandContext BuildContext()
     {
@@ -63,17 +63,67 @@ public partial class SceneController : Node3D, ICommandView
         if (_gameObjects.CursorMode == CursorMode.DragSelect)
             return null;
 
-        var primary = _gameObjects
-            .GetPrimaryObjects()
-            .Select(c => new RecordTarget(c.Reference));
+        var R = ProjectService.Instance;
+        var selected = _gameObjects
+            .GetTargetedObjects()
+            .Select(c => R.Get<ComponentState>(c.Reference))
+            .Where(s => s != null)
+            .ToList();
 
-        var secondary = primary
-            .Select(t => ProjectService.Instance.Get<ComponentState>(t.Id)?.PrototypeRef ?? SnowTag.Empty)
-            .Where(id => id != SnowTag.Empty)
-            .Select(p => new RecordTarget(p.Value));
-
-        return new CommandContext { Primary = primary.ToImmutableHashSet<Target>(), Secondary = secondary.ToImmutableHashSet<Target>() };
+        return new CommandContext
+        {
+            Selected = selected.Select(s => new RecordTarget(s.Id)).ToImmutableHashSet<Target>(),
+            Contents = selected
+                .SelectMany(s => R.Contents(s))
+                .Select(s => new RecordTarget(s.Id))
+                .ToImmutableHashSet<Target>(),
+            Referenced = selected
+                .Select(s => new RecordTarget(s.PrototypeRef))
+                .ToImmutableHashSet<Target>(),
+            Local = TableCommands,
+        };
     }
+
+    #region Table commands
+    // These act on the table rather than on records, so only the table offers them.
+
+    private static readonly Command DuplicateComponent = new RecordCommand<ComponentState>
+    {
+        Id = new("table.duplicate"),
+        Caption = "Duplicate Component",
+        Count = TargetCount.One,
+        // Picks up a copy to place, as if spawning its prototype.
+        SideEffects = (cs, _) =>
+            EventBus.Instance.Publish(
+                new SpawnPrototypeEvent
+                {
+                    PrototypeRef = cs[0].PrototypeRef,
+                    DataSetRowIndex = cs[0].DataSetRowIndex,
+                    DataSetRowId = cs[0].DataSetRowId,
+                }
+            ),
+    };
+
+    private static readonly Command ZoomToComponent = new RecordCommand<ComponentState>
+    {
+        Id = new("table.zoom"),
+        Caption = "Zoom to Component",
+        Shortcut = "component_zoom",
+        Count = TargetCount.One,
+        SideEffects = (cs, _) =>
+        {
+            if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)
+                CameraManager.Instance?.ZoomTo(node);
+        },
+    };
+
+    // After the commands, since static fields are set in order.
+    private static readonly IReadOnlyList<Command> TableCommands =
+    [
+        DuplicateComponent,
+        ZoomToComponent,
+    ];
+    #endregion
 
     public TextureFactory TextureFactory => _textureFactory;
 

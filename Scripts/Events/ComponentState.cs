@@ -27,8 +27,13 @@ public record ComponentState : Replicated
             ?? throw new InvalidOperationException(
                 $"Component {c.Reference} has no written state."
             );
-        return s with { Transition = Transition.None };
+        return s.Settled();
     }
+
+    /// <summary>
+    /// This state minus the transition, to build the next write from.
+    /// </summary>
+    public ComponentState Settled() => this with { Transition = Transition.None };
 
     /// <summary>
     /// Captures a node that hasn't been written yet, such as a spawn preview.
@@ -119,6 +124,18 @@ public record ComponentState : Replicated
     /// </summary>
     [JsonPropertyName("h")]
     public byte Holder { get; init; }
+
+    /// <summary>Whether a player's cursor is holding it.</summary>
+    [JsonIgnore]
+    public bool IsHeld => Location == VisualComponentBase.ComponentLocation.Cursor;
+
+    /// <summary>Whether it's inside a container, such as a bag or a player's hand.</summary>
+    [JsonIgnore]
+    public bool IsContained => ContainerRef != SnowTag.Empty;
+
+    /// <summary>Whether it's one of a deck's cards, rather than the deck itself.</summary>
+    [JsonIgnore]
+    public bool IsCard => DataSetRowIndex >= 0 || DataSetRowId != SnowTag.Empty;
 
     /// <summary>
     /// How this write animates. It starts when the write was made and is never copied

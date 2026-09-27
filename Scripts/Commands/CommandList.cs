@@ -1,39 +1,31 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using Godot;
 
 /// <summary>
-/// Every command, defined once, in the partial file for its domain.
+/// Every command, each defined once in a class for what it acts on, like <see cref="DeckCommands"/>.
 /// Menus and keyboard shortcuts both run them from here.
 /// </summary>
-public static partial class CommandList
+public static class CommandList
 {
-    private static IReadOnlyList<Command> _all;
-
     /// <summary>Every command, in menu order.</summary>
-    // Built on first use: static fields in other partial files may not be set yet at type initialization.
-    public static IReadOnlyList<Command> All =>
-        _all ??= Checked(
-        [
-            FlipComponent,
-            RotateComponentCw,
-            RotateComponentCcw,
-            RollDie,
-            ShuffleDeck,
-            DrawCards,
-            DealCards,
-            SetDieFace,
-            MoveComponentToTop,
-            MoveComponentToBottom,
-            DuplicateComponent,
-            DeleteComponent,
-            ZoomToComponent,
-            EditPrototype,
-            Undo,
-            Redo,
-        ]);
+    public static readonly IReadOnlyList<Command> All = Checked([
+        ComponentCommands.Flip,
+        ComponentCommands.RotateCw,
+        ComponentCommands.RotateCcw,
+        DieCommands.Roll,
+        DeckCommands.Shuffle,
+        DeckCommands.Draw,
+        DeckCommands.Deal,
+        DieCommands.SetFace,
+        ComponentCommands.MoveToTop,
+        ComponentCommands.MoveToBottom,
+        ComponentCommands.Delete,
+        PrototypeCommands.Edit,
+        UndoCommands.Undo,
+        UndoCommands.Redo,
+    ]);
 
     /// <summary>
     /// Reports any command that isn't in <see cref="All"/>, which nothing could run,
@@ -42,10 +34,15 @@ public static partial class CommandList
     private static IReadOnlyList<Command> Checked(IReadOnlyList<Command> all)
     {
         var listed = all.ToHashSet();
-        foreach (var field in typeof(CommandList).GetFields(BindingFlags.Public | BindingFlags.Static))
+        var fields = typeof(CommandList)
+            .Assembly.GetTypes()
+            .Where(t => !t.ContainsGenericParameters)
+            .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))
+            .Where(f => f.FieldType == typeof(Command));
+        foreach (var field in fields)
             if (field.GetValue(null) is Command command && !listed.Contains(command))
                 GD.PushError(
-                    $"CommandList.{field.Name} is not in CommandList.All, so no menu or shortcut can run it."
+                    $"{field.DeclaringType.Name}.{field.Name} is not in CommandList.All, so no menu or shortcut can run it."
                 );
 
         foreach (var id in all.GroupBy(c => c.Id).Where(g => g.Count() > 1))
@@ -56,58 +53,89 @@ public static partial class CommandList
 
     /// <summary>
     /// The commands a menu offers, with what each acts on.
-    /// A command shows when it can act on every target of its kind, primary or secondary.
+    /// A command shows when it can act on any of the targets, and acts on just those.
     /// </summary>
     public static IEnumerable<(Command Command, IReadOnlyList<Target> Targets)> ForMenu(
         CommandContext context
     )
     {
-        var all = context.Primary.Union(context.Secondary);
-        foreach (var command in All.Where(c => c.ShowInMenu))
+        foreach (var command in MenuOrder(context.Local).Where(c => c.ShowInMenu))
         {
-            if (command.Count == TargetCount.None)
-            {
-                yield return (command, []);
-                continue;
-            }
-
-            var targets = command.OfKind(all).ToList();
-            if (Fits(command, targets.Count) && targets.All(command.Applies))
+            // A global command applies to no target, so it fits with none and always shows.
+            var targets = TargetsFor(command, context, withReferenced: true);
+            if (command.Fits(targets.Count))
                 yield return (command, targets);
         }
     }
 
     /// <summary>
-    /// Runs the commands the key is bound to, on the primary targets they can act on.
+    /// Runs the commands the key is bound to, on the selected targets they can act on.
     /// With no context, only commands without targets run.
     /// True when the key belongs to a command, even if there was nothing to act on.
     /// </summary>
     public static bool RunShortcut(InputEvent e, CommandContext context)
     {
         bool matched = false;
-        foreach (var command in All)
+        foreach (var command in All.Concat(context?.Local ?? []))
         {
-            if (context == null && command.Count != TargetCount.None)
+            if (context == null && command is not GlobalCommand)
                 continue;
-            if (!command.Matches(e, out int quantity))
+            if (!command.Matches(e, out int number))
                 continue;
             matched = true;
 
             var targets =
-                context == null
-                    ? []
-                    : command.OfKind(context.Primary).Where(command.Applies).ToList();
-            if (command.Count == TargetCount.None || Fits(command, targets.Count))
-                command.Run(targets, quantity);
+                context == null ? [] : TargetsFor(command, context, withReferenced: false);
+            if (command.Fits(targets.Count))
+                command.Run(targets, number);
         }
         return matched;
     }
 
-    private static bool Fits(Command command, int count) =>
-        command.Count switch
+    /// <summary>
+    /// <para>The targets for this command.</para>
+    /// <para>
+    /// First we take the following context:
+    /// <list type="bullet">
+    /// <item>the selected targets always</item>
+    /// <item>the contents if the command is configured to include them</item>
+    /// <item>the referenced targets when asked (yes for the menu, no for the keyboard)</item>
+    /// </list>
+    /// </para>
+    /// <para>Then we keep the ones the command applies to: <see cref="Command.Applies"/>.</para>
+    /// </summary>
+    private static List<Target> TargetsFor(
+        Command command,
+        CommandContext context,
+        bool withReferenced
+    )
+    {
+        var targets = context.Selected;
+        if (command.IncludesContents)
+            targets = targets.Union(context.Contents);
+        if (withReferenced)
+            targets = targets.Union(context.Referenced);
+        return targets.Where(command.Applies).ToList();
+    }
+
+    /// <summary>
+    /// Every command in menu order. A view's own commands go after the shared ones
+    /// on the same kind of target, or before the ones without targets.
+    /// </summary>
+    private static List<Command> MenuOrder(IReadOnlyList<Command> local)
+    {
+        var order = All.ToList();
+        foreach (var command in local)
         {
-            TargetCount.One => count == 1,
-            TargetCount.Many => count > 0,
-            _ => count == 0,
-        };
+            int last = order.FindLastIndex(c => c.GetType() == command.GetType());
+            int firstGlobal = order.FindIndex(c => c is GlobalCommand);
+            order.Insert(
+                last >= 0 ? last + 1
+                    : firstGlobal >= 0 ? firstGlobal
+                    : order.Count,
+                command
+            );
+        }
+        return order;
+    }
 }

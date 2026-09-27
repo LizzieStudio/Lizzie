@@ -94,38 +94,9 @@ public partial class VcToken : VisualComponentBase
     public override GeometryInstance3D DragMesh => _mainMesh;
     public override float MaxAxisSize => Math.Max(_height, _width);
 
-    public override Effect[] ProcessCommand(VisualCommand command)
-    {
-        if (command == VisualCommand.Flip)
-            return [BuildFlip()];
-
-        return base.ProcessCommand(command);
-    }
-
     private float _flipRate = 720; //degrees per second
     private float _targetZ;
     private bool _flipInProcess;
-
-    private Effect BuildFlip() => Effect.Upsert(BuildFlipState());
-
-    /// <summary>
-    /// This token's state turned over, animating the flip.
-    /// </summary>
-    public ComponentState BuildFlipState()
-    {
-        var s = ComponentState.Of(this);
-        bool targetFaceUp = Mathf.RadToDeg(s.Rotation.Z) >= 90;
-
-        return s with
-        {
-            Rotation = new Vector3(
-                s.Rotation.X,
-                s.Rotation.Y,
-                Mathf.DegToRad(targetFaceUp ? 0f : 180f)
-            ),
-            Transition = Transition.Flip,
-        };
-    }
 
     public override bool PlayTransition(ComponentState s, long MsecSinceStart)
     {

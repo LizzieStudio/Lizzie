@@ -28,23 +28,21 @@ public partial class PlayerHandService : Node
         PresenceSynchronizer.Instance?.HandRefForSeat(seatIndex) ?? SnowTag.Empty;
 
     /// <summary>
-    /// Builds a transform effect that moves a card into a seat's hand at the top of its order.
+    /// The card moved into a seat's hand at the top of its order.
     /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
-    public Effect MoveEffect(
-        VisualComponentBase card,
+    public ComponentState MovedToHand(
+        ComponentState card,
         int seatIndex,
         int suborder,
         SnowportId stamp
     ) =>
-        Effect.Upsert(
-            ComponentState.Of(card) with
-            {
-                Location = VisualComponentBase.ComponentLocation.Hand,
-                ContainerRef = HandContainer(seatIndex),
-                ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
-            }
-        );
+        card.Settled() with
+        {
+            Location = VisualComponentBase.ComponentLocation.Hand,
+            ContainerRef = HandContainer(seatIndex),
+            ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
+        };
 
     /// <summary>
     /// Returns the cards in a given seat's hand, ordered by their ZOrder.
