@@ -79,8 +79,19 @@ public abstract class Command
             Noun is var (one, many) ? $"{count} {(count == 1 ? one : many)}" : count.ToString()
         );
 
-    /// <summary>The input action that runs it, or null.</summary>
-    public StringName Shortcut { get; init; }
+    /// <summary>
+    /// The keys that run it, made with <see cref="Shortcuts.Key"/> or <see cref="Shortcuts.Ctrl"/>.
+    /// The first one shows in menus.
+    /// </summary>
+    public IReadOnlyList<InputEventKey> Keys { get; init; } = [];
+
+    private StringName _action;
+
+    /// <summary>
+    /// The <see cref="InputMap"/> action holding its <see cref="Keys"/>, named by its id,
+    /// so the keys can be changed while the game runs. Null when it has no keys.
+    /// </summary>
+    public StringName Action => Keys.Count == 0 ? null : _action ??= Id.Id;
 
     /// <summary>
     /// Set to false to avoid showing this command in the context menu.
@@ -140,11 +151,11 @@ public abstract class Command
     public bool Matches(InputEvent e, out int number)
     {
         number = 1;
-        if (Shortcut != null && Shortcuts.Pressed(e, Shortcut))
+        if (Action != null && Shortcuts.Pressed(e, Action))
             return true;
         if (!NumberKeys)
             return false;
-        for (int n = 1; n <= 20; n++)
+        for (int n = 1; n <= Shortcuts.NumberCount; n++)
         {
             if (Shortcuts.Pressed(e, Shortcuts.Number(n)))
             {
@@ -158,7 +169,7 @@ public abstract class Command
     /// <summary>
     /// The keyboard shortcut to show beside this command in a menu, or null.
     /// </summary>
-    public Shortcut ShortcutLabel() => Shortcuts.Label(Shortcut);
+    public Shortcut ShortcutLabel() => Shortcuts.Label(Action);
 
     /// <summary>
     /// The number key to show beside <paramref name="number"/> in the menu's number submenu,

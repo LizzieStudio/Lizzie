@@ -1,3 +1,5 @@
+using Godot;
+
 /// <summary>Undo and redo, which work anywhere with no targets.</summary>
 public static class UndoCommands
 {
@@ -5,7 +7,7 @@ public static class UndoCommands
     {
         Id = new("app.undo"),
         Caption = "Undo",
-        Shortcut = "undo",
+        Keys = [Shortcuts.Ctrl(Key.Z)],
         SideEffects = IssueUndo,
     };
 
@@ -13,7 +15,7 @@ public static class UndoCommands
     {
         Id = new("app.redo"),
         Caption = "Redo",
-        Shortcut = "redo",
+        Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
         SideEffects = IssueRedo,
     };
 

@@ -33,6 +33,7 @@ public partial class SceneController : Node3D, ICommandView
 
         PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
 
+        CommandList.Register(CommandList.All.Concat(TableCommands));
         ShortcutRelay.Install(GetTree());
         // The table takes the main window's commands.
         CommandViews.Attach(GetTree().Root, this);
@@ -90,6 +91,8 @@ public partial class SceneController : Node3D, ICommandView
     private static readonly Command DuplicateComponent = new RecordCommand<ComponentState>
     {
         Id = new("table.duplicate"),
+        // The prototype manifest's clone icon.
+        Icon = UI.TextureUI_ContentCopy,
         Caption = "Duplicate Component",
         Count = TargetCount.One,
         // Picks up a copy to place, as if spawning its prototype.
@@ -107,8 +110,9 @@ public partial class SceneController : Node3D, ICommandView
     private static readonly Command ZoomToComponent = new RecordCommand<ComponentState>
     {
         Id = new("table.zoom"),
+        Icon = "res://Textures/UI/zoom.svg",
         Caption = "Zoom to Component",
-        Shortcut = "component_zoom",
+        Keys = [Shortcuts.Key(Key.Z)],
         Count = TargetCount.One,
         SideEffects = (cs, _) =>
         {

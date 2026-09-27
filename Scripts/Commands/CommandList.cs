@@ -51,6 +51,60 @@ public static class CommandList
         return all;
     }
 
+    // the actions this adds to the InputMap, and the commands they belong to
+    private static readonly HashSet<StringName> OwnActions = [];
+    private static readonly List<Command> Registered = [];
+
+    /// <summary>
+    /// Adds each command's keys to the <see cref="InputMap"/> as an action named by its id,
+    /// and the number keys once. Views call it for the commands they offer themselves.
+    /// Reports a key that would run two commands on the same kind of target,
+    /// and a command key that another input action in the project also uses.
+    /// </summary>
+    public static void Register(IEnumerable<Command> commands)
+    {
+        for (int n = 1; n <= Shortcuts.NumberCount; n++)
+        {
+            if (OwnActions.Add(Shortcuts.Number(n)))
+                Shortcuts.AddAction(Shortcuts.Number(n), Shortcuts.NumberKeys(n));
+        }
+
+        foreach (var command in commands.Where(c => c.Keys.Count > 0 && !Registered.Contains(c)))
+        {
+            ReportClashes(command);
+            Shortcuts.AddAction(command.Action, command.Keys);
+            OwnActions.Add(command.Action);
+            Registered.Add(command);
+        }
+    }
+
+    private static void ReportClashes(Command command)
+    {
+        foreach (var key in command.Keys)
+        {
+            // Commands on different kinds of target may share a key, since each runs on its own
+            // targets. The number keys are shared on purpose and aren't in Keys.
+            foreach (var other in Registered.Where(o => o.GetType() == command.GetType()))
+            {
+                if (other.Keys.Any(k => k.IsMatch(key)))
+                    GD.PushError(
+                        $"Commands {other.Id.Id} and {command.Id.Id} both use {key.AsText()} on the same kind of target."
+                    );
+            }
+
+            // Godot's own ui_ actions belong to text boxes and buttons, which take keys first.
+            foreach (var action in InputMap.GetActions())
+            {
+                if (OwnActions.Contains(action) || action.ToString().StartsWith("ui_"))
+                    continue;
+                if (InputMap.ActionGetEvents(action).Any(e => e.IsMatch(key)))
+                    GD.PushError(
+                        $"Command {command.Id.Id} uses {key.AsText()}, which the input action {action} also uses."
+                    );
+            }
+        }
+    }
+
     /// <summary>
     /// The commands a menu offers, with what each acts on.
     /// A command shows when it can act on any of the targets, and acts on just those.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -26,17 +27,86 @@ public static class Shortcuts
             return null;
 
         // Bindings by physical key have no label of their own, so show the key it types.
-        if (key.Keycode == Key.None && key.PhysicalKeycode != Key.None)
+        if (key.Keycode == Godot.Key.None && key.PhysicalKeycode != Godot.Key.None)
         {
             key = (InputEventKey)key.Duplicate();
             key.Keycode = DisplayServer.KeyboardGetKeycodeFromPhysical(key.PhysicalKeycode);
-            key.PhysicalKeycode = Key.None;
+            key.PhysicalKeycode = Godot.Key.None;
         }
         return new Shortcut { Events = [key] };
     }
 
-    /// <summary>The action for number key <paramref name="n"/>, from 1 to 20.</summary>
+    /// <summary>
+    /// A key by its place on the keyboard, whatever it types on the player's layout.
+    /// Game keys work this way, so they stay together on any layout.
+    /// </summary>
+    public static InputEventKey Key(Key key, bool shift = false) =>
+        new() { PhysicalKeycode = key, ShiftPressed = shift };
+
+    /// <summary>A key by what it types, held with Ctrl, or Cmd on macOS.</summary>
+    public static InputEventKey Ctrl(Key key, bool shift = false, bool alt = false) =>
+        // Autoremap picks Ctrl or Cmd, and setting Ctrl as well is an error.
+        new()
+        {
+            Keycode = key,
+            CommandOrControlAutoremap = true,
+            ShiftPressed = shift,
+            AltPressed = alt,
+        };
+
+    /// <summary>How many numbers the number keys give.</summary>
+    public const int NumberCount = 20;
+
+    /// <summary>The action for number key <paramref name="n"/>, from 1 to <see cref="NumberCount"/>.</summary>
     public static StringName Number(int n) => $"num_{n}";
+
+    // 1–9 and 0 on the top row and the keypad give 1–10, and with Shift, 11–20.
+    private static readonly Key[] TopRow =
+    [
+        Godot.Key.Key1,
+        Godot.Key.Key2,
+        Godot.Key.Key3,
+        Godot.Key.Key4,
+        Godot.Key.Key5,
+        Godot.Key.Key6,
+        Godot.Key.Key7,
+        Godot.Key.Key8,
+        Godot.Key.Key9,
+        Godot.Key.Key0,
+    ];
+
+    private static readonly Key[] Keypad =
+    [
+        Godot.Key.Kp1,
+        Godot.Key.Kp2,
+        Godot.Key.Kp3,
+        Godot.Key.Kp4,
+        Godot.Key.Kp5,
+        Godot.Key.Kp6,
+        Godot.Key.Kp7,
+        Godot.Key.Kp8,
+        Godot.Key.Kp9,
+        Godot.Key.Kp0,
+    ];
+
+    /// <summary>The keys that give number <paramref name="n"/>.</summary>
+    public static IEnumerable<InputEventKey> NumberKeys(int n)
+    {
+        bool shift = n > 10;
+        int i = (n - 1) % 10;
+        yield return Key(TopRow[i], shift);
+        yield return Key(Keypad[i], shift);
+    }
+
+    /// <summary>Adds an action to the <see cref="InputMap"/> with <paramref name="keys"/>, replacing any it had.</summary>
+    public static void AddAction(StringName action, IEnumerable<InputEventKey> keys)
+    {
+        if (InputMap.HasAction(action))
+            InputMap.EraseAction(action);
+        InputMap.AddAction(action);
+        foreach (var key in keys)
+            InputMap.ActionAddEvent(action, key);
+    }
 
     /// <summary>
     /// Runs the commands bound to the key, in the view that has the viewport's focus.

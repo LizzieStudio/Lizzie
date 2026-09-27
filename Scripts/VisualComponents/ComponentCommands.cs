@@ -14,12 +14,19 @@ public static class ComponentCommands
     private const string TokenIcon =
         "res://Textures/UI/crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
 
+    private const string FlipIcon = "res://Textures/UI/flip.svg";
+    private const string RotateRightIcon = "res://Textures/UI/rotate_right.svg";
+    private const string RotateLeftIcon = "res://Textures/UI/rotate_left.svg";
+    private const string SendToTopIcon = "res://Textures/UI/send_to_top.svg";
+    private const string SendToBottomIcon = "res://Textures/UI/send_to_bottom.svg";
+    private const string DeleteIcon = "res://Textures/UI/delete.svg";
+
     public static readonly Command Flip = new RecordCommand<ComponentState>
     {
         Id = new("component.flip"),
-        Icon = TokenIcon,
+        Icon = FlipIcon,
         Caption = "Flip {0}",
-        Shortcut = "flip",
+        Keys = [Shortcuts.Key(Key.F)],
         IncludesContents = true,
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !c.IsContained,
         Effects = (R, cs, _) => Effect.UpsertAll(Flipped(cs)),
@@ -28,8 +35,9 @@ public static class ComponentCommands
     public static readonly Command RotateCw = new RecordCommand<ComponentState>
     {
         Id = new("component.rotate_cw"),
-        Caption = "Rotate {0} CW",
-        Shortcut = "rotate_cw",
+        Icon = RotateRightIcon,
+        Caption = "Rotate {0} Right",
+        Keys = [Shortcuts.Key(Key.E)],
         IncludesContents = true,
         AppliesTo = NotContained,
         Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rotated(c, -RotationStep))),
@@ -38,8 +46,9 @@ public static class ComponentCommands
     public static readonly Command RotateCcw = new RecordCommand<ComponentState>
     {
         Id = new("component.rotate_ccw"),
-        Caption = "Rotate {0} CCW",
-        Shortcut = "rotate_ccw",
+        Icon = RotateLeftIcon,
+        Caption = "Rotate {0} Left",
+        Keys = [Shortcuts.Key(Key.Q)],
         IncludesContents = true,
         AppliesTo = NotContained,
         Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rotated(c, RotationStep))),
@@ -48,8 +57,9 @@ public static class ComponentCommands
     public static readonly Command MoveToTop = new RecordCommand<ComponentState>
     {
         Id = new("component.move_to_top"),
+        Icon = SendToTopIcon,
         Caption = "Move {0} to Top",
-        Shortcut = "move_to_top",
+        Keys = [Shortcuts.Key(Key.T)],
         IncludesContents = true,
         AppliesTo = Restackable,
         Effects = (R, cs, _) => Effect.UpsertAll(Reordered(cs, ZTarget.Top)),
@@ -58,8 +68,9 @@ public static class ComponentCommands
     public static readonly Command MoveToBottom = new RecordCommand<ComponentState>
     {
         Id = new("component.move_to_bottom"),
+        Icon = SendToBottomIcon,
         Caption = "Move {0} to Bottom",
-        Shortcut = "move_to_bottom",
+        Keys = [Shortcuts.Key(Key.B)],
         IncludesContents = true,
         AppliesTo = Restackable,
         Effects = (R, cs, _) => Effect.UpsertAll(Reordered(cs, ZTarget.Bottom)),
@@ -68,8 +79,9 @@ public static class ComponentCommands
     public static readonly Command Delete = new RecordCommand<ComponentState>
     {
         Id = new("component.delete"),
+        Icon = DeleteIcon,
         Caption = "Delete {0}",
-        Shortcut = "component_delete",
+        Keys = [Shortcuts.Key(Key.Delete)],
         IncludesContents = true,
         AppliesTo = NotHeld,
         Effects = (R, cs, _) =>

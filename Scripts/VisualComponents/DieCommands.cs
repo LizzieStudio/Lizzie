@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Godot;
 using static VisualComponentBase;
 
 /// <summary>Commands for dice.</summary>
@@ -15,7 +16,7 @@ public static class DieCommands
         Icon = DieIcon,
         Caption = "Roll {0}",
         Noun = ("Die", "Dice"),
-        Shortcut = "roll",
+        Keys = [Shortcuts.Key(Key.R)],
         AppliesTo = IsDie,
         Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rolled(R, c))),
     };
