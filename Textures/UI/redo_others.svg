@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-234,0)">
+        <g id="redo_others" transform="matrix(-1,0,0,1,492,0)">
+            <rect x="234" y="0" width="24" height="24" style="fill:none;"/>
+            <g transform="matrix(0.867197,0,0,1.057795,92.683972,0.347666)">
+                <g transform="matrix(-1.15314,0,0,0.945363,190.632567,-0.328671)">
+                    <path d="M16.614,3.216L22.417,7.569L16.614,11.921L16.614,3.216Z" style="fill:white;"/>
+                    <path d="M18.102,16.431C13.693,15.893 10.463,12.958 10.463,11.958C10.463,10.958 13.439,7.569 17.775,7.569" style="fill:none;stroke:white;stroke-width:1.93px;"/>
+                </g>
+            </g>
+            <g transform="matrix(1.557522,0,0,0.772277,-28.258202,6.072591)">
+                <path d="M181.372,10.184L182.805,20.43L177.073,20.43L178.506,10.184L181.372,10.184Z" style="fill:white;"/>
+            </g>
+            <g transform="matrix(1.449601,0,0,1.280167,-7.62576,-4.508934)">
+                <ellipse cx="179.102" cy="11.477" rx="1.725" ry="1.953" style="fill:white;"/>
+            </g>
+        </g>
+    </g>
+</svg>

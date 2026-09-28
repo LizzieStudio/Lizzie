@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 119 119" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-149,0)">
-        <g id="rotate_right" transform="matrix(1,0,0,1,149.246231,0)">
+<svg width="100%" height="100%" viewBox="0 0 25 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-55,0)">
+        <g id="rotate_right" transform="matrix(0.2032,0,0,0.2032,55.135995,0)">
             <rect x="0" y="0" width="118.11" height="118.11" style="fill:none;"/>
             <g transform="matrix(-1.184948,0,0,1.184948,118.970557,30.733044)">
-                <g transform="matrix(-0.843919,0,0,0.843919,100.609271,-25.936189)">
-                    <path d="M62.236,80.628L108.777,87.277L102.129,40.735L62.236,80.628Z" style="fill:white;"/>
-                    <path d="M87.501,66.001C78.92,57.42 67.069,52.109 53.987,52.109C40.905,52.109 29.053,57.42 20.472,66.001" style="fill:none;stroke:white;stroke-width:15.67px;"/>
+                <g transform="matrix(-4.153143,0,0,4.153143,100.966279,-25.936189)">
+                    <path d="M12.732,16.384L22.19,17.735L20.838,8.277L12.732,16.384Z" style="fill:white;"/>
+                    <path d="M17.866,13.411C16.123,11.668 13.714,10.589 11.056,10.589C8.398,10.589 5.99,11.668 4.246,13.411" style="fill:none;stroke:white;stroke-width:3.18px;"/>
                 </g>
             </g>
         </g>

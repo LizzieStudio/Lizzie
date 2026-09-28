@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using Godot;
 
-public partial class DatasetEditor : Window
+public partial class DatasetEditor : Window, ICommandView
 {
     /// <summary>One displayed row. <see cref="Row"/> is null for the blank row at the bottom.</summary>
     private sealed class RowView
@@ -89,6 +89,11 @@ public partial class DatasetEditor : Window
         ProjectService.Instance.Watch(this, Sync);
     }
 
+    /// <summary>Undo walks the shown dataset's edits and its rows'.</summary>
+    public bool UndoScope(Effect fx) =>
+        fx is UpdateReplicatedEffect<DataSet> ds && ds.Id == _datasetRef
+        || fx is UpdateReplicatedEffect<DataRow> row && row.Payload?.DataSetId == _datasetRef;
+
     public override void _Process(double delta)
     {
         if (_dragAt is not Vector2 at)
@@ -139,7 +144,9 @@ public partial class DatasetEditor : Window
     private void Sync(IRecordReader R)
     {
         var ds = R.Get<DataSet>(_datasetRef);
-        if (ds == null)
+        // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
+        // so the editor stays on it, where redo brings it back.
+        if (_datasetRef == SnowTag.Empty)
         {
             ds = R.Get<DataSet>().FirstOrDefault();
             _datasetRef = ds?.Id ?? SnowTag.Empty;

@@ -41,7 +41,7 @@ public partial class GameController : Node3D
 
     private void MainSceneOnShowComponentPopup2(object sender, ShowComponentPopupEventArgs e)
     {
-        ShowComponentPopup(e.Position, _mainScene.BuildContext() ?? new CommandContext());
+        ShowComponentPopup(e.Position, _mainScene);
     }
 
     private void MainSceneOnHoveredNameChange(object sender, HoveredComponentChangeEventArgs e)
@@ -228,8 +228,8 @@ public partial class GameController : Node3D
 
     public SceneController MainScene => _mainScene;
 
-    public void ShowComponentPopup(Vector2I position, CommandContext context) =>
-        _uiController.ShowComponentPopup(position, context);
+    public void ShowComponentPopup(Vector2I position, ICommandView view) =>
+        _uiController.ShowComponentPopup(position, view);
 
     public void ComponentPopupClosed()
     {

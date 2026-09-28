@@ -47,11 +47,23 @@ public sealed class CommandContext
     public IReadOnlyList<Command> Local { get; init; } = [];
 }
 
-/// <summary>A window or panel that commands run in. It says what they act on.</summary>
+/// <summary>
+/// A window or panel that commands run in.
+/// </summary>
 public interface ICommandView
 {
-    /// <summary>What commands act on, or null while the view isn't taking commands.</summary>
-    CommandContext BuildContext();
+    /// <summary>
+    /// The selection context for commands, or null while the view isn't taking commands.
+    /// A view with nothing to act on leaves it empty.
+    /// </summary>
+    CommandContext BuildContext() => new();
+
+    /// <summary>
+    /// Whether an undo or redo issued here should target <paramref name="effect"/>.
+    /// If the <paramref name="effect"/> is targeting records managed here, return true.
+    /// Returning false will cause the next <see cref="Effect"/> to be checked until a valid target is found or the UndoLog runs out.
+    /// </summary>
+    bool UndoScope(Effect effect);
 }
 
 /// <summary>
@@ -141,8 +153,9 @@ public abstract class Command
     /// <summary>
     /// Acts on the targets. <paramref name="number"/> is 1 unless the command asks for one,
     /// and <see cref="int.MaxValue"/> is its <see cref="InfiniteOption"/>.
+    /// <paramref name="view"/> is where it runs, or null outside any view.
     /// </summary>
-    public abstract void Run(IReadOnlyList<Target> targets, int number);
+    public abstract void Run(IReadOnlyList<Target> targets, int number, ICommandView view);
 
     /// <summary>
     /// Returns true if <paramref name="e"/> runs this command, and the number it gives.
@@ -238,7 +251,7 @@ public sealed class RecordCommand<T> : Command
     public override int? MaxNumber(IReadOnlyList<Target> targets) =>
         NumberLimit?.Invoke(Reader, Records(targets));
 
-    public override void Run(IReadOnlyList<Target> targets, int number)
+    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
     {
         var records = Records(targets);
         SideEffects?.Invoke(records, number);
@@ -267,9 +280,11 @@ public sealed class GlobalCommand : Command
 
     public override bool Fits(int count) => count == 0;
 
-    public Action SideEffects { get; init; }
+    /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
+    public Action<ICommandView> SideEffects { get; init; }
 
-    public override void Run(IReadOnlyList<Target> targets, int number) => SideEffects();
+    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view) =>
+        SideEffects(view);
 }
 
 /// <summary>
@@ -281,6 +296,18 @@ public static class CommandViews
 
     /// <summary>Makes <paramref name="view"/> take the commands for everything under <paramref name="node"/>.</summary>
     public static void Attach(Node node, ICommandView view) => Attached[node] = view;
+
+    /// <summary>
+    /// Makes everything under <paramref name="node"/> a view with nothing to act on,
+    /// where undo walks through <paramref name="undoScope"/>.
+    /// </summary>
+    public static void Attach(Node node, Func<Effect, bool> undoScope) =>
+        Attach(node, new ScopeView(undoScope));
+
+    private sealed class ScopeView(Func<Effect, bool> undoScope) : ICommandView
+    {
+        public bool UndoScope(Effect fx) => undoScope(fx);
+    }
 
     public static void Detach(Node node) => Attached.Remove(node);
 

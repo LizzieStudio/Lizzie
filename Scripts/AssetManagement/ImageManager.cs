@@ -4,7 +4,7 @@ using System.Linq;
 using Godot;
 using Lizzie.AssetManagement;
 
-public partial class ImageManager : Window
+public partial class ImageManager : Window, ICommandView
 {
     private Button _addNewButton;
     private Button _removeButton;
@@ -30,6 +30,9 @@ public partial class ImageManager : Window
     {
         ProjectService.Instance.Watch(this, Sync);
     }
+
+    /// <summary>Undo walks the edits to every image.</summary>
+    public bool UndoScope(Effect fx) => fx is UpdateReplicatedEffect<Asset>;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-public partial class PrototypeManifest : Window
+public partial class PrototypeManifest : Window, ICommandView
 {
     private SplitContainer _mainContainer;
     private Tree _prototypeTree;
@@ -34,6 +34,9 @@ public partial class PrototypeManifest : Window
 
     private int _sortColumn = 0;
     private bool _sortAscending = true;
+
+    /// <summary>Undo walks the edits to every prototype.</summary>
+    public bool UndoScope(Effect fx) => fx is UpdateReplicatedEffect<Prototype>;
 
     public override void _Ready()
     {
@@ -140,7 +143,7 @@ public partial class PrototypeManifest : Window
         var dialog = new ConfirmationDialog
         {
             Title = "Delete Prototype",
-            DialogText = $"Delete \"{_selectedPrototype.Name}\"? This cannot be undone.",
+            DialogText = $"Delete \"{_selectedPrototype.Name}\"?",
             OkButtonText = "Delete",
         };
 

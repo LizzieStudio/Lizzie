@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 119 119" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g id="rotate_left" transform="matrix(1,0,0,1,354.330709,0)">
+<svg width="100%" height="100%" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g id="rotate_left" transform="matrix(0.2032,0,0,0.2032,72,0)">
         <rect x="-354.331" y="0" width="118.11" height="118.11" style="fill:none;"/>
         <g transform="matrix(1.184948,0,0,1.184948,-355.191029,30.733044)">
-            <g transform="matrix(0.843919,-0,-0,0.843919,0.72604,-25.936189)">
-                <path d="M16.228,40.735L9.579,87.277L56.121,80.628L16.228,40.735Z" style="fill:white;"/>
-                <path d="M30.855,66.001C39.436,57.42 51.288,52.109 64.37,52.109C77.452,52.109 89.303,57.42 97.884,66.001" style="fill:none;stroke:white;stroke-width:15.67px;"/>
+            <g transform="matrix(4.153143,-0,-0,4.153143,0.72604,-25.936189)">
+                <path d="M3.298,8.277L1.946,17.735L11.404,16.384L3.298,8.277Z" style="fill:white;"/>
+                <path d="M6.27,13.411C8.013,11.668 10.422,10.589 13.08,10.589C15.738,10.589 18.146,11.668 19.89,13.411" style="fill:none;stroke:white;stroke-width:3.18px;"/>
             </g>
         </g>
     </g>

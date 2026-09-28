@@ -231,7 +231,7 @@ public partial class DebugConsole : Node
         }
 
         while (_undoneScannedTo > index)
-            UndoLog.Visit(log.GetAt(--_undoneScannedTo).Value, _undone);
+            UndoLog.VisitAndTrackUndone(log.GetAt(--_undoneScannedTo).Value, _undone);
     }
 
     /// <summary>
@@ -276,7 +276,7 @@ public partial class DebugConsole : Node
                             ImGui.PushStyleColor(ImGuiCol.Text, amber);
                             pushed = 1;
                         }
-                        else if (UndoLog.IsUndone(e, _undone))
+                        else if (_undone.Contains(e.Unit))
                         {
                             ImGui.PushStyleColor(ImGuiCol.Text, gray);
                             pushed = 1;

@@ -1,4 +1,22 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+
+/// <summary>
+/// Whose actions an undo or redo walks through. Only the player's own undos walk back and forth;
+/// anything another player does, undos included, is an action of theirs.
+/// </summary>
+public enum UndoStream
+{
+    /// <summary>The player's own actions, and their undos of them.</summary>
+    Own,
+
+    /// <summary>Other players' actions, and the player's undos of them.</summary>
+    Others,
+
+    /// <summary>Everyone's actions, and the player's undos of them.</summary>
+    Anyone,
+}
 
 /// <summary>
 /// Utility functions on the event log for undo and redo.
@@ -21,18 +39,12 @@ public static class UndoLog
     }
 
     /// <summary>
-    /// True when the event is undone.
-    /// </summary>
-    public static bool IsUndone(TableEvent e, HashSet<SnowportId> undone) =>
-        undone.Contains(e.Unit);
-
-    /// <summary>
     /// Call on each event while walking the log from newest to oldest.
     /// False when the event is undone. Records the target of each live undo.
     /// </summary>
-    public static bool Visit(TableEvent e, HashSet<SnowportId> undone)
+    public static bool VisitAndTrackUndone(TableEvent e, HashSet<SnowportId> undone)
     {
-        if (IsUndone(e, undone))
+        if (undone.Contains(e.Unit))
             return false;
         if (e.Action is UndoAction u)
             undone.Add(u.Target);
@@ -41,8 +53,9 @@ public static class UndoLog
 
     /// <summary>
     /// Follows an event's undo target chain down to the event it ultimately reverses.
+    /// As in, if an Undo targets an Undo, where does it stop?
     /// </summary>
-    private static TableEvent ResolveBase(
+    private static TableEvent RealEventTarget(
         TableEvent e,
         OrderedDictionary<SnowportId, TableEvent> log
     )
@@ -54,79 +67,129 @@ public static class UndoLog
 
     /// <summary>
     /// The events an undo of <paramref name="targetId"/> reverses.
+    /// Either one event or the group if it belongs to one.
     /// </summary>
-    private static List<TableEvent> ResolveEvents(
+    private static List<TableEvent> AllTargetEvents(
         OrderedDictionary<SnowportId, TableEvent> log,
         SnowportId targetId
     )
     {
-        var events = new List<TableEvent>();
         if (!log.TryGetValue(targetId, out var e))
-            return events;
+            return [];
 
-        var @base = ResolveBase(e, log);
-        if (@base == null)
-            return events;
+        var baseEvent = RealEventTarget(e, log);
+        if (baseEvent == null)
+            return [];
 
-        var unit = @base.Unit;
+        var unit = baseEvent.Unit;
         if (!log.TryGetValue(unit, out var first))
-            return events;
+            return [];
 
         // an ungrouped event is its own unit
         if (first.Group == SnowportId.Empty)
-        {
-            events.Add(first);
-            return events;
-        }
+            return [first];
+
+        var events = new List<TableEvent>();
 
         // A group's events all come after the event that names it.
         for (int i = log.IndexOf(unit); i < log.Count; i++)
         {
             var member = log.GetAt(i).Value;
-            if (member.Unit != unit)
-                continue;
-            events.Add(member);
-            if (member.Close)
-                break;
+            if (member.Unit == unit)
+            {
+                events.Add(member);
+                if (member.Close)
+                    break;
+            }
         }
 
         return events;
     }
 
     /// <summary>
-    /// The undo target for the given source.
-    /// The event that should be undone by the Undo action.
+    /// Whether an event is in <paramref name="stream"/> for <paramref name="localSource"/>,
+    /// and changes something in <paramref name="scope"/>.
+    /// An undo is judged by what it reverses, and a group as a whole.
+    /// </summary>
+    private static bool InStream(
+        OrderedDictionary<SnowportId, TableEvent> log,
+        TableEvent e,
+        byte localSource,
+        Func<Effect, bool> scope,
+        UndoStream stream,
+        Dictionary<SnowportId, bool> scoped
+    )
+    {
+        if (stream != UndoStream.Anyone)
+        {
+            TableEvent action = e;
+            // follows the undo chain for as long as they were issued by the local player
+            while (action is { Action: UndoAction u } && action.Id.source == localSource)
+                log.TryGetValue(u.Target, out action);
+            if (action == null)
+                return false; // the undo chain didn't resolve to an event
+            if (action.Id.source == localSource && stream != UndoStream.Own)
+                return false;
+            if (action.Id.source != localSource && stream == UndoStream.Own)
+                return false;
+        }
+
+        var baseEvent = RealEventTarget(e, log);
+        if (baseEvent == null)
+            return false;
+
+        // get the cached result for baseEvent
+        var wasCached = scoped.TryGetValue(baseEvent.Unit, out bool inScope);
+
+        if (!wasCached)
+        {
+            inScope = AllTargetEvents(log, baseEvent.Unit).Any(m => m.Effects.Any(scope));
+            scoped[baseEvent.Unit] = inScope;
+        }
+
+        return inScope;
+    }
+
+    /// <summary>
+    /// The event that Undo should reverse: the newest one in <paramref name="stream"/>
+    /// that changes something in <paramref name="scope"/>.
     /// </summary>
     public static SnowportId? ComputeUndoTarget(
         OrderedDictionary<SnowportId, TableEvent> log,
-        byte source
+        byte localSource,
+        Func<Effect, bool> scope,
+        UndoStream stream = UndoStream.Own
     )
     {
         var undone = new HashSet<SnowportId>();
-        bool sawNonUndo = false;
+        var scoped = new Dictionary<SnowportId, bool>();
+        bool inUndoRedo = true;
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
 
-            if (e.Id.source != source)
+            // check to see if this event hasn't been undone by anyone
+            bool live = VisitAndTrackUndone(e, undone);
+
+            // skip events outside this stream or scope
+            if (!InStream(log, e, localSource, scope, stream, scoped))
                 continue;
 
-            if (!sawNonUndo)
+            if (inUndoRedo)
             {
-                if (e.Action is UndoAction u)
-                {
-                    if (!IsUndone(e, undone))
-                        undone.Add(u.Target);
+                // if this is a local undo, continue to the next potential target (undo/redo chain)
+                if (e.Action is UndoAction && e.Id.source == localSource)
                     continue;
-                }
-                sawNonUndo = true;
+                // once you see any event that isn't a local undo, stop checking (unfold the chain)
+                inUndoRedo = false;
             }
 
-            if (IsUndone(e, undone))
+            // if the event has already been undone by anyone, continue to the next potential target
+            if (!live)
                 continue;
 
-            if (IsUndoable(ResolveEvents(log, e.Unit)))
+            if (IsUndoable(AllTargetEvents(log, e.Unit)))
                 return e.Unit;
         }
 
@@ -134,30 +197,34 @@ public static class UndoLog
     }
 
     /// <summary>
-    /// The redo target for the given source.
-    /// The event that should be redone by the Redo action.
+    /// The undo that Redo should reverse, in the same stream as <see cref="ComputeUndoTarget"/>.
+    /// A newer event in the stream that isn't an undo means there's nothing to redo.
     /// </summary>
     public static SnowportId? ComputeRedoTarget(
         OrderedDictionary<SnowportId, TableEvent> log,
-        byte source
+        byte localSource,
+        Func<Effect, bool> scope,
+        UndoStream stream = UndoStream.Own
     )
     {
         var undone = new HashSet<SnowportId>();
+        var scoped = new Dictionary<SnowportId, bool>();
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
-            bool live = Visit(e, undone);
+            bool live = VisitAndTrackUndone(e, undone);
 
-            if (e.Id.source != source)
-                continue;
+            if (InStream(log, e, localSource, scope, stream, scoped))
+            {
+                // A newer action, including another player's undo, prevents the Redo action.
+                if (e.Action is not UndoAction || e.Id.source != localSource)
+                    return null;
+                var u = (UndoAction)e.Action;
 
-            // any regular action prevents the Redo action
-            if (e.Action is not UndoAction u)
-                return null;
-
-            if (live && !u.Redo)
-                return e.Id;
+                if (live && !u.Redo)
+                    return e.Id;
+            }
         }
 
         return null;
@@ -173,7 +240,7 @@ public static class UndoLog
         where T : class, IReplicated
     {
         var affected = new HashSet<SnowTag>();
-        foreach (var e in ResolveEvents(log, targetId))
+        foreach (var e in AllTargetEvents(log, targetId))
         foreach (var fx in e.Effects)
             if (fx is UpdateReplicatedEffect<T>)
                 affected.Add(fx.Id);
@@ -197,7 +264,7 @@ public static class UndoLog
         for (int i = log.Count - 1; i >= 0 && pending.Count > 0; i--)
         {
             var e = log.GetAt(i).Value;
-            if (!Visit(e, undone))
+            if (!VisitAndTrackUndone(e, undone))
                 continue;
 
             foreach (var fx in e.Effects)
@@ -219,7 +286,7 @@ public static class UndoLog
         SnowportId targetId
     )
     {
-        foreach (var e in ResolveEvents(log, targetId))
+        foreach (var e in AllTargetEvents(log, targetId))
         foreach (var fx in e.Effects)
             if (fx is SetReplicatedValueEffect<T>)
                 return true;
@@ -241,7 +308,7 @@ public static class UndoLog
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
-            if (!Visit(e, undone))
+            if (!VisitAndTrackUndone(e, undone))
                 continue;
 
             for (int j = e.Effects.Length - 1; j >= 0; j--)

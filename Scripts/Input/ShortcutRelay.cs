@@ -113,8 +113,7 @@ public static class Shortcuts
     /// True when the key belongs to a command.
     /// </summary>
     public static bool Dispatch(InputEvent e, Viewport viewport) =>
-        e is InputEventKey
-        && CommandList.RunShortcut(e, CommandViews.Find(viewport)?.BuildContext());
+        e is InputEventKey && CommandList.RunShortcut(e, CommandViews.Find(viewport));
 }
 
 /// <summary>

@@ -680,6 +680,18 @@ public partial class UI : CanvasLayer
 
         _modalDialogs.AddChild(dialog);
 
+        // Undo walks the snapshots and which one is active.
+        CommandViews.Attach(
+            dialog,
+            fx =>
+            {
+                return fx
+                    is UpdateReplicatedEffect<GameState>
+                        or SetReplicatedValueEffect<ActiveGameStateRef>;
+            }
+        );
+        dialog.TreeExiting += () => CommandViews.Detach(dialog);
+
         ProjectService.Instance.Watch(
             dialog,
             R =>
@@ -825,8 +837,9 @@ public partial class UI : CanvasLayer
     /// Each item shows its shortcut, and commands that ask for a number get a submenu.
     /// The menu is built for this opening and freed when it closes.
     /// </summary>
-    public void ShowComponentPopup(Vector2I position, CommandContext context)
+    public void ShowComponentPopup(Vector2I position, ICommandView view)
     {
+        var context = view.BuildContext() ?? new CommandContext();
         // A menu still open is replaced. Only the current menu ends popup mode when it closes.
         _componentPopup?.QueueFree();
         var menu = new PopupMenu { Name = "ComponentPopup" };
@@ -858,7 +871,7 @@ public partial class UI : CanvasLayer
             }
 
             if (command.AsksForNumber)
-                AddNumberSubmenu(menu, command, targets, index);
+                AddNumberSubmenu(menu, command, targets, index, view);
         }
 
         menu.IdPressed += id =>
@@ -866,7 +879,7 @@ public partial class UI : CanvasLayer
             var (command, targets) = items[(int)id];
             // The item of a command that asks for a number only opens its submenu.
             if (!command.AsksForNumber)
-                RunFromMenu(command, targets, 1);
+                RunFromMenu(command, targets, 1, view);
         };
         menu.PopupHide += () =>
         {
@@ -903,7 +916,8 @@ public partial class UI : CanvasLayer
         PopupMenu menu,
         Command command,
         IReadOnlyList<Target> targets,
-        int index
+        int index,
+        ICommandView view
     )
     {
         var sub = new PopupMenu { Name = $"NumberSubmenu_{index}" };
@@ -923,16 +937,21 @@ public partial class UI : CanvasLayer
             numbers.Add(int.MaxValue);
         }
 
-        sub.IndexPressed += i => RunFromMenu(command, targets, numbers[(int)i]);
+        sub.IndexPressed += i => RunFromMenu(command, targets, numbers[(int)i], view);
         menu.AddChild(sub);
         menu.SetItemSubmenuNode(index, sub);
     }
 
-    private void RunFromMenu(Command command, IReadOnlyList<Target> targets, int number)
+    private void RunFromMenu(
+        Command command,
+        IReadOnlyList<Target> targets,
+        int number,
+        ICommandView view
+    )
     {
         // Closed first, so a command can change the cursor mode, like Duplicate entering spawn mode.
         ComponentPopupClosed();
-        command.Run(targets, number);
+        command.Run(targets, number, view);
     }
 
     private void OnHelpMenuSelection(long id)

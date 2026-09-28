@@ -22,9 +22,12 @@ public static class CommandList
         ComponentCommands.MoveToTop,
         ComponentCommands.MoveToBottom,
         ComponentCommands.Delete,
+        UndoCommands.UndoComponentChanges,
         PrototypeCommands.Edit,
         UndoCommands.Undo,
         UndoCommands.Redo,
+        UndoCommands.UndoOthers,
+        UndoCommands.RedoOthers,
     ]);
 
     /// <summary>
@@ -123,12 +126,13 @@ public static class CommandList
     }
 
     /// <summary>
-    /// Runs the commands the key is bound to, on the selected targets they can act on.
-    /// With no context, only commands without targets run.
+    /// Runs the commands the key is bound to, on the targets in <paramref name="view"/> they can act on.
+    /// Without a view, or while it isn't taking commands, only commands without targets run.
     /// True when the key belongs to a command, even if there was nothing to act on.
     /// </summary>
-    public static bool RunShortcut(InputEvent e, CommandContext context)
+    public static bool RunShortcut(InputEvent e, ICommandView view)
     {
+        var context = view?.BuildContext();
         bool matched = false;
         foreach (var command in All.Concat(context?.Local ?? []))
         {
@@ -141,7 +145,7 @@ public static class CommandList
             var targets =
                 context == null ? [] : TargetsFor(command, context, withReferenced: false);
             if (command.Fits(targets.Count))
-                command.Run(targets, number);
+                command.Run(targets, number, view);
         }
         return matched;
     }
