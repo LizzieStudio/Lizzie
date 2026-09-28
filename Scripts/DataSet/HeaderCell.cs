@@ -18,7 +18,8 @@ public partial class HeaderCell : PanelContainer
 
     public SnowTag ColumnId { get; set; }
 
-    public event Action<SnowTag> Clicked;
+    /// <summary>A click on the name, with the modifiers held.</summary>
+    public event Action<SnowTag, InputEventMouseButton> Clicked;
     public event Action<SnowTag, Vector2> ContextRequested;
     public event Action<SnowTag, float> WidthDragged;
     public event Action<SnowTag, string> NameCommitted;
@@ -43,13 +44,14 @@ public partial class HeaderCell : PanelContainer
         var drag = new DragGesture(_label);
         drag.Moved += at => ColumnDragMoved?.Invoke(ColumnId, at);
         drag.Dropped += at => ColumnDropped?.Invoke(ColumnId, at);
-        drag.Clicked += () => Clicked?.Invoke(ColumnId);
+        drag.Clicked += click => Clicked?.Invoke(ColumnId, click);
         drag.DoubleClicked += BeginRename;
         _label.GuiInput += e =>
         {
-            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } b)
+            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right } b)
             {
-                ContextRequested?.Invoke(ColumnId, b.GlobalPosition);
+                if (ClickRouting.OpensMenu(b))
+                    ContextRequested?.Invoke(ColumnId, b.GlobalPosition);
                 _label.AcceptEvent();
             }
         };
@@ -80,17 +82,6 @@ public partial class HeaderCell : PanelContainer
         _headerText = text ?? string.Empty;
         if (_label != null)
             _label.Text = _headerText;
-    }
-
-    public void SetSelected(bool selected)
-    {
-        if (selected)
-            AddThemeStyleboxOverride(
-                "panel",
-                new StyleBoxFlat { BgColor = Color.FromHtml("8cb1ff") with { A = 0.35f } }
-            );
-        else
-            RemoveThemeStyleboxOverride("panel");
     }
 
     /// <summary>Swaps the name for a text box with the whole name selected.</summary>

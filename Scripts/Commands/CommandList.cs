@@ -24,6 +24,12 @@ public static class CommandList
         ComponentCommands.Delete,
         UndoCommands.UndoComponentChanges,
         PrototypeCommands.Edit,
+        DataSetCommands.DeleteRow,
+        DataSetCommands.DeleteColumn,
+        DataSetCommands.ClearCells,
+        DataSetCommands.CutCells,
+        DataSetCommands.CopyCells,
+        DataSetCommands.PasteCells,
         UndoCommands.Undo,
         UndoCommands.Redo,
         UndoCommands.UndoOthers,
@@ -149,6 +155,14 @@ public static class CommandList
         }
         return matched;
     }
+
+    /// <summary>
+    /// Whether the command's keys would run it in <paramref name="context"/>, as <see cref="RunShortcut"/> decides:
+    /// it must fit the targets keys act on, which leave out the referenced ones.
+    /// Menus show a command's shortcut only then.
+    /// </summary>
+    public static bool RunsFromKeys(Command command, CommandContext context) =>
+        command.Fits(TargetsFor(command, context, withReferenced: false).Count);
 
     /// <summary>
     /// <para>The targets for this command.</para>

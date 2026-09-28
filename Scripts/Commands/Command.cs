@@ -190,6 +190,14 @@ public abstract class Command
     /// </summary>
     public Shortcut NumberLabel(int number) =>
         NumberKeys ? Shortcuts.Label(Shortcuts.Number(number)) : null;
+
+    /// <summary>Submits the effects as one event, or nothing when there are none.</summary>
+    protected static void Submit(IEnumerable<Effect> effects)
+    {
+        var all = effects?.ToArray() ?? [];
+        if (all.Length > 0)
+            EventSynchronizer.Instance?.Submit(TableEvent.Now(null, all));
+    }
 }
 
 /// <summary>A command on records of one type.</summary>
@@ -258,9 +266,7 @@ public sealed class RecordCommand<T> : Command
         if (Effects == null)
             return;
 
-        var effects = Effects(Reader, records, number)?.ToArray() ?? [];
-        if (effects.Length > 0)
-            EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects));
+        Submit(Effects(Reader, records, number));
     }
 
     private static IRecordReader Reader => ProjectService.Instance;
@@ -271,6 +277,46 @@ public sealed class RecordCommand<T> : Command
     // A record may be gone since the menu opened.
     private static List<T> Records(IReadOnlyList<Target> targets) =>
         targets.Select(Record).Where(r => r != null).ToList();
+}
+
+/// <summary>
+/// A command on targets that are part of a record, like a dataset's columns.
+/// </summary>
+public sealed class TargetCommand<T> : Command
+    where T : Target
+{
+    /// <summary>
+    /// Returns true if this command has behavior for the target.
+    /// A target can outlive what it points at, so this also checks that it's still there.
+    /// </summary>
+    public Func<IRecordReader, T, bool> AppliesTo { get; init; } = (_, _) => true;
+
+    public TargetCount Count { get; init; } = TargetCount.Many;
+
+    /// <summary>
+    /// Generates the effects from this command on the given targets, submitted as one event.
+    /// Returning null or an empty collection will not fire an event.
+    /// </summary>
+    public Func<IRecordReader, IReadOnlyList<T>, int, IEnumerable<Effect>> Effects { get; init; }
+
+    /// <summary>
+    /// Run so that this command can perform actions other than change records, such as starting a rename.
+    /// </summary>
+    public Action<IReadOnlyList<T>, int> SideEffects { get; init; }
+
+    public override bool Applies(Target target) => target is T t && AppliesTo(Reader, t);
+
+    public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
+
+    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
+    {
+        var typed = targets.OfType<T>().ToList();
+        SideEffects?.Invoke(typed, number);
+        if (Effects != null)
+            Submit(Effects(Reader, typed, number));
+    }
+
+    private static IRecordReader Reader => ProjectService.Instance;
 }
 
 /// <summary>A command that does not act on selected targets, such as undo.</summary>

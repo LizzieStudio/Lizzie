@@ -14,4 +14,11 @@ public record DataRow : Replicated
     /// <summary>Cell values keyed by <see cref="Column.Id"/>.</summary>
     public ImmutableDictionary<SnowTag, string> Data { get; init; } =
         ImmutableDictionary<SnowTag, string>.Empty;
+
+    /// <summary>The row with a cell set to <paramref name="value"/>. An empty value removes the cell.</summary>
+    public DataRow WithCell(SnowTag column, string value) =>
+        this with
+        {
+            Data = value.Length == 0 ? Data.Remove(column) : Data.SetItem(column, value),
+        };
 }

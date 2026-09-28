@@ -17,6 +17,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 1
 theme_override_styles/panel = ExtResource("2_o5pyl")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=1832742373]
@@ -55,6 +56,11 @@ size_flags_horizontal = 3
 [node name="Toolbar" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=1866594890]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
+
+[node name="AddRow" type="Button" parent="Panel/VBoxContainer/Toolbar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add Row"
 
 [node name="DeleteRow" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=922142654]
 unique_name_in_owner = true

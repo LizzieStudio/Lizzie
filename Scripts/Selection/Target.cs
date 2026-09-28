@@ -14,13 +14,17 @@ public abstract record Target;
 /// </summary>
 public sealed record RecordTarget([property: JsonPropertyName("i")] SnowTag Id) : Target;
 
-/// <summary>A dataset column, which lives inside its dataset.</summary>
+/// <summary>
+/// A dataset column, which lives inside its dataset.
+/// </summary>
 public sealed record ColumnTarget(
     [property: JsonPropertyName("d")] SnowTag DataSetId,
     [property: JsonPropertyName("i")] SnowTag ColumnId
 ) : Target;
 
-/// <summary>One cell of a dataset row.</summary>
+/// <summary>
+/// One cell of a dataset row.
+/// </summary>
 public sealed record CellTarget(
     [property: JsonPropertyName("r")] SnowTag RowId,
     [property: JsonPropertyName("i")] SnowTag ColumnId

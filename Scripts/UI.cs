@@ -826,133 +826,17 @@ public partial class UI : CanvasLayer
         GetParent<GameController>().ComponentPopupClosed();
     }
 
-    // the open context menu, or null
-    private PopupMenu _componentPopup;
-
-    // Icons are drawn at text size, whatever size they're made at.
-    private const int MenuIconSize = 20;
-
     /// <summary>
-    /// Opens a context menu at <paramref name="position"/> with the commands for what was right-clicked.
-    /// Each item shows its shortcut, and commands that ask for a number get a submenu.
-    /// The menu is built for this opening and freed when it closes.
+    /// Opens the context menu at <paramref name="position"/> with the commands for what was right-clicked.
     /// </summary>
-    public void ShowComponentPopup(Vector2I position, ICommandView view)
-    {
-        var context = view.BuildContext() ?? new CommandContext();
-        // A menu still open is replaced. Only the current menu ends popup mode when it closes.
-        _componentPopup?.QueueFree();
-        var menu = new PopupMenu { Name = "ComponentPopup" };
-        _componentPopup = menu;
-
-        // the command for each item id, with what it acts on
-        var items = new List<(Command Command, IReadOnlyList<Target> Targets)>();
-        Type previousKind = null;
-        foreach (var (command, targets) in CommandList.ForMenu(context))
-        {
-            // Commands on different kinds of target are separated.
-            if (previousKind != null && command.GetType() != previousKind)
-                menu.AddSeparator();
-            previousKind = command.GetType();
-
-            // Ids skip the separators, so they index the items.
-            int id = items.Count;
-            items.Add((command, targets));
-            menu.AddItem(command.Label(targets.Count), id);
-            int index = menu.GetItemIndex(id);
-
-            if (command.ShortcutLabel() is { } shortcut)
-                menu.SetItemShortcut(index, shortcut);
-
-            if (command.Icon != null)
-            {
-                menu.SetItemIcon(index, GD.Load<Texture2D>(command.Icon));
-                menu.SetItemIconMaxWidth(index, MenuIconSize);
-            }
-
-            if (command.AsksForNumber)
-                AddNumberSubmenu(menu, command, targets, index, view);
-        }
-
-        menu.IdPressed += id =>
-        {
-            var (command, targets) = items[(int)id];
-            // The item of a command that asks for a number only opens its submenu.
-            if (!command.AsksForNumber)
-                RunFromMenu(command, targets, 1, view);
-        };
-        menu.PopupHide += () =>
-        {
-            menu.QueueFree();
-            if (_componentPopup != menu)
-                return;
-            _componentPopup = null;
-            ComponentPopupClosed();
-        };
-
-        AddChild(menu);
-        menu.Visible = true;
-        // Fits the menu to its items before placing it.
-        menu.ResetSize();
-
-        // Opens away from the edges it would overflow, and stays in the window.
-        var size = menu.Size;
-        var window = (Vector2I)GetViewport().GetVisibleRect().Size;
-        if (position.X + size.X > window.X)
-            position.X -= size.X;
-        if (position.Y + size.Y > window.Y)
-            position.Y -= size.Y;
-        menu.Position = position.Clamp(Vector2I.Zero, (window - size).Max(Vector2I.Zero));
-    }
-
-    // The submenu offers the top row of number keys, 1 through 9, unless the command gives its own limit.
-    private const int SubmenuNumbers = 9;
-
-    // It never offers more numbers than there are number keys, even with a higher limit.
-    private const int MaxSubmenuNumbers = 20;
-
-    // The submenu is built with its menu, so it runs its own command directly.
-    private void AddNumberSubmenu(
-        PopupMenu menu,
-        Command command,
-        IReadOnlyList<Target> targets,
-        int index,
-        ICommandView view
-    )
-    {
-        var sub = new PopupMenu { Name = $"NumberSubmenu_{index}" };
-        var numbers = new List<int>();
-        int last = Math.Min(command.MaxNumber(targets) ?? SubmenuNumbers, MaxSubmenuNumbers);
-        for (int n = 1; n <= last; n++)
-        {
-            sub.AddItem(n.ToString());
-            numbers.Add(n);
-            // The number keys run it with that number, so they show as its shortcuts.
-            if (command.NumberLabel(n) is { } shortcut)
-                sub.SetItemShortcut(sub.ItemCount - 1, shortcut);
-        }
-        if (command.InfiniteOption != null)
-        {
-            sub.AddItem(command.InfiniteOption);
-            numbers.Add(int.MaxValue);
-        }
-
-        sub.IndexPressed += i => RunFromMenu(command, targets, numbers[(int)i], view);
-        menu.AddChild(sub);
-        menu.SetItemSubmenuNode(index, sub);
-    }
-
-    private void RunFromMenu(
-        Command command,
-        IReadOnlyList<Target> targets,
-        int number,
-        ICommandView view
-    )
-    {
-        // Closed first, so a command can change the cursor mode, like Duplicate entering spawn mode.
-        ComponentPopupClosed();
-        command.Run(targets, number, view);
-    }
+    public void ShowComponentPopup(Vector2I position, ICommandView view) =>
+        CommandMenu.Show(
+            position,
+            view.BuildContext() ?? new CommandContext(),
+            view,
+            // Ends popup mode, before a command runs so it can change the cursor mode, like Duplicate entering spawn mode.
+            closed: ComponentPopupClosed
+        );
 
     private void OnHelpMenuSelection(long id)
     {

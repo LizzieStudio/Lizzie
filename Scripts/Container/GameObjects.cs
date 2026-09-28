@@ -189,9 +189,6 @@ public partial class GameObjects : Node
 
     public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange;
 
-    // where the right button went down over the empty table, until it's released
-    private Vector2? _tableRightPress;
-
     // Specific function to handle normal mode mouse event only outside of GUI elements
     public override void _UnhandledInput(InputEvent @event)
     {
@@ -211,35 +208,19 @@ public partial class GameObjects : Node
                 GetViewport().SetInputAsHandled();
             }
         }
+        // Right-clicking while the menu is open opens it again where the click is.
         else if (
-            CursorMode == CursorMode.Normal
-            && @event
-                is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false } release
+            CursorMode is CursorMode.Normal or CursorMode.PopupMenu
+            && ClickRouting.OpensMenu(@event)
         )
-        {
-            // The table's menu opens on release, since dragging with the right button turns the camera.
-            if (
-                _tableRightPress is Vector2 pressedAt
-                // Moving less than Godot's drag threshold is a click, not a camera turn.
-                && pressedAt.DistanceTo(release.Position) < GetViewport().GuiDragThreshold
-            )
-                StartPopupMenu();
-            _tableRightPress = null;
-        }
+            StartPopupMenu();
         else if (
             CursorMode == CursorMode.Normal
             && @event is InputEventMouseButton buttonEvent
             && buttonEvent.Pressed
         )
         {
-            if (buttonEvent.ButtonIndex == MouseButton.Right)
-            {
-                if (IsAnyObjectHovered())
-                    StartPopupMenu();
-                else
-                    _tableRightPress = buttonEvent.Position;
-            }
-            else if (buttonEvent.ButtonIndex == MouseButton.Left)
+            if (buttonEvent.ButtonIndex == MouseButton.Left)
             {
                 var go = GetHoveredObject();
                 if (go == null)
@@ -322,11 +303,6 @@ public partial class GameObjects : Node
     #endregion
 
     #region Hover
-    public bool IsAnyObjectHovered()
-    {
-        return ComponentNodes.Any(n => n is VisualComponentBase { IsHovered: true });
-    }
-
     public VisualComponentBase GetHoveredObject()
     {
         return ComponentNodes.FirstOrDefault(n => n is VisualComponentBase { IsHovered: true })
@@ -598,12 +574,11 @@ public partial class GameObjects : Node
 
     private void StartPopupMenu()
     {
-        CursorMode = CursorMode.PopupMenu;
-
         Vector2 mouse = GetViewport().GetMousePosition();
         Vector2I v = new((int)Math.Floor(mouse.X), (int)Math.Floor(mouse.Y));
 
         ShowComponentPopup?.Invoke(this, new ShowComponentPopupEventArgs(v));
+        CursorMode = CursorMode.PopupMenu;
     }
 
     public event EventHandler<ShowComponentPopupEventArgs> ShowComponentPopup;

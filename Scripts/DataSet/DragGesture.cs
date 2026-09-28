@@ -16,7 +16,9 @@ public sealed class DragGesture
 
     public event Action<Vector2> Moved;
     public event Action<Vector2> Dropped;
-    public event Action Clicked;
+
+    /// <summary>A press and release without a drag, given the release.</summary>
+    public event Action<InputEventMouseButton> Clicked;
     public event Action DoubleClicked;
 
     public DragGesture(Control control)
@@ -50,7 +52,7 @@ public sealed class DragGesture
                     if (_dragging)
                         Dropped?.Invoke(button.GlobalPosition);
                     else if (_pressed)
-                        Clicked?.Invoke();
+                        Clicked?.Invoke(button);
                     _pressed = _dragging = false;
                 }
                 break;

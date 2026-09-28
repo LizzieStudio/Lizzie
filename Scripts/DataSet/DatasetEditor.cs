@@ -2,25 +2,28 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using Godot;
 
 public partial class DatasetEditor : Window, ICommandView
 {
-    /// <summary>One displayed row. <see cref="Row"/> is null for the blank row at the bottom.</summary>
+    /// <summary>One displayed row.</summary>
     private sealed class RowView
     {
         public HBoxContainer Box;
+        public PanelContainer Header;
         public Label Number;
-        public CheckBox Check;
         public readonly List<LineEdit> Cells = new();
         public DataRow Row;
+
+        /// <summary>What clicking its header selects.</summary>
+        public RecordTarget Target => new(Row.Id);
     }
 
     private SnowTag _datasetRef = SnowTag.Empty;
     private DataSet _currentDataSet;
 
     private VBoxContainer _mainContainer;
+    private Button _addRowButton;
     private Button _deleteButton;
     private Button _newButton;
     private DataSetSelector _datasetList;
@@ -47,26 +50,35 @@ public partial class DatasetEditor : Window, ICommandView
     // Rows are reconciled by id so edits don't lose focus.
     private List<RowView> _views = new();
 
-    // A blank row the user is typing into. It's written when the cell loses focus,
-    // but a new blank row already shows below it.
-    private RowView _pending;
-    private RowView _blank;
+    // The line under the last row, holding only a button that adds a row.
+    private HBoxContainer _addRowLine;
 
     private SnowTag _renameOnSync = SnowTag.Empty;
     private SnowTag _focusRowOnSync = SnowTag.Empty;
-    private SnowTag _selectedColumn = SnowTag.Empty;
-    private StyleBox _selectedCellStyle;
 
-    // The pointer during a row or column drag, for auto-scrolling at the edges.
+    // What the local player has selected, and the colour of each thing other players have, the newest first.
+    private ImmutableHashSet<Target> _mine = ImmutableHashSet<Target>.Empty;
+    private readonly Dictionary<Target, Color> _others = new();
+
+    // Where Shift+click selects from: the last row, column or cell selected without Shift.
+    private Target _anchor;
+
+    // The theme's styles tinted for each highlight colour, shared by every cell or header.
+    private readonly Dictionary<(string Style, Color Color), StyleBox> _highlightStyles = new();
+
+    // The pointer during a row or column drag, for auto-scrolling at the edges, and the axis it drags along.
     private Vector2? _dragAt;
-    private bool _dragIsRow;
+    private Vector2.Axis _dragAxis;
 
-    private PopupMenu _contextMenu;
-    private readonly List<Action> _menuActions = new();
+    private IReadOnlyList<Command> _commands;
 
+    // The drop indicator's colour.
     private static readonly Color Accent = Color.FromHtml("8cb1ff");
 
-    private const float RowHeaderWidth = 64f;
+    // The local player's own selection shows white, as on the table, so it's never mistaken for a player's colour.
+    private static readonly Color LocalHighlight = Colors.Gray;
+
+    private const float RowHeaderWidth = 48f;
     private const float DefaultColumnWidth = 120f;
     private const float MinColumnWidth = 50f;
     private const float HeaderHeight = 30f;
@@ -79,6 +91,7 @@ public partial class DatasetEditor : Window, ICommandView
     public override void _Ready()
     {
         InitializeSpreadsheet();
+        _commands = EditorCommands();
 
         CloseRequested += CloseDialog;
         MoveToCenter();
@@ -89,10 +102,34 @@ public partial class DatasetEditor : Window, ICommandView
         ProjectService.Instance.Watch(this, Sync);
     }
 
-    /// <summary>Undo walks the shown dataset's edits and its rows'.</summary>
+    /// <summary>
+    /// What the local player has selected in the shown dataset.
+    /// Selected cells refer to their rows and columns, which the menu offers commands for, but keys don't act on.
+    /// </summary>
+    public CommandContext BuildContext()
+    {
+        var selected = MySelection();
+        var cells = selected.OfType<CellTarget>().ToList();
+        return new()
+        {
+            Selected = selected,
+            Referenced =
+            [
+                .. cells.Select(c => (Target)new RecordTarget(c.RowId)),
+                .. cells.Select(c => (Target)Column(c.ColumnId)),
+            ],
+            Local = _commands,
+        };
+    }
+
+    /// <summary>Undo walks the shown dataset's edits, its rows', and what's selected in it.</summary>
     public bool UndoScope(Effect fx) =>
-        fx is UpdateReplicatedEffect<DataSet> ds && ds.Id == _datasetRef
-        || fx is UpdateReplicatedEffect<DataRow> row && row.Payload?.DataSetId == _datasetRef;
+        _datasetRef != SnowTag.Empty
+        && (
+            fx is UpdateReplicatedEffect<DataSet> ds && ds.Id == _datasetRef
+            || fx is UpdateReplicatedEffect<DataRow> row && row.Payload?.DataSetId == _datasetRef
+            || fx is UpdateReplicatedEffect<Selection> s && s.Payload?.Within == _datasetRef
+        );
 
     public override void _Process(double delta)
     {
@@ -100,45 +137,55 @@ public partial class DatasetEditor : Window, ICommandView
             return;
 
         // Holding a drag near an edge scrolls toward it.
+        int i = (int)_dragAxis;
         var rect = _dataScrollContainer.GetGlobalRect();
         int step = (int)(AutoScrollSpeed * delta);
-        if (_dragIsRow)
-        {
-            if (at.Y < rect.Position.Y + AutoScrollMargin)
-                _dataScrollContainer.ScrollVertical -= step;
-            else if (at.Y > rect.End.Y - AutoScrollMargin)
-                _dataScrollContainer.ScrollVertical += step;
-            ShowRowDrop(at);
-        }
+        int direction =
+            at[i] < rect.Position[i] + AutoScrollMargin ? -1
+            : at[i] > rect.End[i] - AutoScrollMargin ? 1
+            : 0;
+        if (_dragAxis == Vector2.Axis.Y)
+            _dataScrollContainer.ScrollVertical += direction * step;
         else
+            _dataScrollContainer.ScrollHorizontal += direction * step;
+        ShowDrop(_dragAxis, at);
+    }
+
+    // Shift or Ctrl+click on a cell selects it without editing it.
+    // Handled before the GUI, since a click focuses the cell first, which would select it alone.
+    public override void _Input(InputEvent e)
+    {
+        if (
+            e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } click
+            && (click.ShiftPressed || click.IsCommandOrControlPressed())
+            && CellOf(GuiGetHoveredControl()) is { } cell
+        )
         {
-            if (at.X < rect.Position.X + AutoScrollMargin)
-                _dataScrollContainer.ScrollHorizontal -= step;
-            else if (at.X > rect.End.X - AutoScrollMargin)
-                _dataScrollContainer.ScrollHorizontal += step;
-            ShowColumnDrop(at);
+            SelectTarget(cell, click);
+            SetInputAsHandled();
         }
     }
 
-    // Cells consume Delete while focused, so this only sees it when nothing is being edited.
+    // Cells consume Escape while focused, so this only sees it when nothing is being edited.
     public override void _UnhandledKeyInput(InputEvent e)
     {
-        if (e is not InputEventKey { Pressed: true } key)
-            return;
-
-        if (key.Keycode == Key.Delete)
+        if (e is InputEventKey { Pressed: true, Keycode: Key.Escape } && !MySelection().IsEmpty)
         {
-            if (_selectedColumn != SnowTag.Empty)
-                DeleteColumn(_selectedColumn);
-            else
-                DeleteCheckedRows();
+            Select([]);
+            SetInputAsHandled();
         }
-        else if (key.Keycode == Key.Escape && _selectedColumn != SnowTag.Empty)
-            SelectColumn(SnowTag.Empty);
-        else
-            return;
+    }
 
-        SetInputAsHandled();
+    // A right-click no control took, on the empty space around the grid, opens the menu
+    // for what's selected, as the keyboard sees it, like the table's.
+    // The scene's background panels pass on the clicks they don't use, so they arrive here.
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (ClickRouting.OpensMenu(e))
+        {
+            OnContext(null, ((InputEventMouseButton)e).Position);
+            SetInputAsHandled();
+        }
     }
 
     private void Sync(IRecordReader R)
@@ -174,10 +221,7 @@ public partial class DatasetEditor : Window, ICommandView
             _headerCells[i].SetHeaderText(ds.Columns[i].Name);
 
         ReconcileRows(R.GetRows(ds.Id));
-
-        if (!_columnIds.Contains(_selectedColumn))
-            _selectedColumn = SnowTag.Empty;
-        ApplyColumnSelection();
+        SyncSelection(R, ds.Id);
 
         if (_renameOnSync != SnowTag.Empty)
         {
@@ -226,15 +270,17 @@ public partial class DatasetEditor : Window, ICommandView
         _dropIndicator.Color = Accent;
         _dropIndicator.Visible = false;
 
+        _addRowButton = GetNode<Button>("%AddRow");
+        _addRowButton.Pressed += AddRow;
+
         _deleteButton = GetNode<Button>("%DeleteRow");
-        _deleteButton.Pressed += DeleteCheckedRows;
+        _deleteButton.Pressed += () => RunOnSelection(DataSetCommands.DeleteRow);
 
         _addColumnButton = GetNode<Button>("%AddColumn");
-        _addColumnButton.Pressed += OnAddColumnPressed;
+        _addColumnButton.Pressed += AddColumn;
 
         _deleteColumnButton = GetNode<Button>("%DeleteColumn");
-        _deleteColumnButton.Pressed += () => DeleteColumn(_selectedColumn);
-        _deleteColumnButton.Disabled = true;
+        _deleteColumnButton.Pressed += () => RunOnSelection(DataSetCommands.DeleteColumn);
 
         _linkButton = GetNode<Button>("%Link");
         _linkButton.Pressed += OnImportPressed;
@@ -246,10 +292,6 @@ public partial class DatasetEditor : Window, ICommandView
         _datasetList.DataSetSelected += OnDatasetSelected;
 
         InitializeNewDatasetDialog();
-
-        _contextMenu = new PopupMenu();
-        AddChild(_contextMenu);
-        _contextMenu.IdPressed += id => _menuActions[(int)id]();
     }
 
     /// <summary>Opens the editor on a specific dataset. Empty opens the first one.</summary>
@@ -319,15 +361,16 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void CloseDialog()
     {
-        if (_blank != null)
-            OnBlankEdited(_blank);
-        CommitPending();
+        // Writes the cell being edited.
+        GuiReleaseFocus();
         Closed?.Invoke(this, EventArgs.Empty);
         Hide();
     }
 
     private float ColumnWidth(SnowTag id) =>
         _columnWidths.GetValueOrDefault(id, DefaultColumnWidth);
+
+    private ColumnTarget Column(SnowTag id) => new(_datasetRef, id);
 
     private void BuildGrid()
     {
@@ -343,39 +386,48 @@ public partial class DatasetEditor : Window, ICommandView
             header.CustomMinimumSize = new Vector2(ColumnWidth(id), HeaderHeight);
             header.WidthDragged += OnColumnWidthDragged;
             header.NameCommitted += OnColumnRenamed;
-            header.Clicked += SelectColumn;
-            header.ContextRequested += (columnId, at) =>
-            {
-                SelectColumn(columnId);
-                ShowContextMenu(null, columnId, at);
-            };
-            header.ColumnDragMoved += (_, at) =>
-            {
-                _dragAt = at;
-                _dragIsRow = false;
-                ShowColumnDrop(at);
-            };
+            header.Clicked += (columnId, click) => SelectTarget(Column(columnId), click);
+            header.ContextRequested += (columnId, at) => OnContext(Column(columnId), at);
+            header.ColumnDragMoved += (_, at) => OnDragMoved(Vector2.Axis.X, at);
             header.ColumnDropped += DropColumn;
             _headerCells.Add(header);
         }
+
+        _headerContainer.AddChild(AddButton("Add Column", AddColumn, HeaderHeight));
 
         // Lets the header scroll as far as the data, whose view is narrowed by its vertical scrollbar.
         var spacer = new Control();
         _headerContainer.AddChild(spacer);
         spacer.CustomMinimumSize = new Vector2(ScrollbarAllowance, 0);
 
-        _blank = CreateRowView();
+        _addRowLine = new HBoxContainer();
+        _dataContainer.AddChild(_addRowLine);
+        _addRowLine.AddChild(AddButton("Add Row", AddRow, RowHeaderWidth));
+    }
+
+    // A "+" after the last row or column, doing what the toolbar's button does.
+    private static Button AddButton(string tooltip, Action pressed, float width)
+    {
+        var button = new Button
+        {
+            Text = "+",
+            TooltipText = tooltip,
+            CustomMinimumSize = new Vector2(width, RowHeight),
+            FocusMode = Control.FocusModeEnum.None,
+        };
+        button.Pressed += pressed;
+        return button;
     }
 
     private void ClearGrid()
     {
-        // Forget the views first: freeing a focused pending cell fires FocusExited, which would write it.
-        var views = AllRowViews();
-        _views = new List<RowView>();
-        _pending = null;
-        _blank = null;
-        foreach (var view in views)
+        foreach (var view in _views)
             FreeRowView(view);
+        _views = new List<RowView>();
+
+        _addRowLine?.GetParent().RemoveChild(_addRowLine);
+        _addRowLine?.QueueFree();
+        _addRowLine = null;
 
         foreach (var c in _headerContainer.GetChildren())
         {
@@ -394,47 +446,31 @@ public partial class DatasetEditor : Window, ICommandView
         _dataContainer.AddChild(view.Box);
         view.Box.CustomMinimumSize = new Vector2(0, RowHeight);
 
-        var rowHeader = new HBoxContainer();
-        view.Box.AddChild(rowHeader);
-        rowHeader.CustomMinimumSize = new Vector2(RowHeaderWidth, RowHeight);
-        rowHeader.MouseDefaultCursorShape = Control.CursorShape.Move;
+        // Like a column's header: click to select, drag to reorder.
+        view.Header = new PanelContainer();
+        view.Box.AddChild(view.Header);
+        view.Header.CustomMinimumSize = new Vector2(RowHeaderWidth, RowHeight);
+        view.Header.MouseDefaultCursorShape = Control.CursorShape.Move;
 
-        var drag = new DragGesture(rowHeader);
-        drag.Moved += at =>
-        {
-            if (view.Row == null)
-                return;
-            _dragAt = at;
-            _dragIsRow = true;
-            ShowRowDrop(at);
-        };
+        var drag = new DragGesture(view.Header);
+        drag.Clicked += click => SelectTarget(view.Target, click);
+        drag.Moved += at => OnDragMoved(Vector2.Axis.Y, at);
         drag.Dropped += at => DropRow(view, at);
-        rowHeader.GuiInput += e =>
+        view.Header.GuiInput += e =>
         {
-            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } b)
+            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right } b)
             {
-                ShowContextMenu(view, SnowTag.Empty, b.GlobalPosition);
-                rowHeader.AcceptEvent();
+                if (ClickRouting.OpensMenu(b))
+                    OnContext(view.Target, b.GlobalPosition);
+                view.Header.AcceptEvent();
             }
         };
 
         view.Number = new Label();
-        rowHeader.AddChild(view.Number);
-        view.Number.CustomMinimumSize = new Vector2(28, 0);
-        view.Number.HorizontalAlignment = HorizontalAlignment.Right;
+        view.Header.AddChild(view.Number);
+        view.Number.HorizontalAlignment = HorizontalAlignment.Center;
         view.Number.VerticalAlignment = VerticalAlignment.Center;
         view.Number.Modulate = new Color(1, 1, 1, 0.5f);
-
-        view.Check = new CheckBox();
-        rowHeader.AddChild(view.Check);
-        view.Check.FocusMode = Control.FocusModeEnum.None;
-        view.Check.Visible = false;
-        view.Check.Toggled += _ =>
-        {
-            // Hand Delete to the editor, which deletes checked rows.
-            SelectColumn(SnowTag.Empty);
-            GuiReleaseFocus();
-        };
 
         for (int i = 0; i < _columnIds.Count; i++)
         {
@@ -444,28 +480,9 @@ public partial class DatasetEditor : Window, ICommandView
             cell.CustomMinimumSize = new Vector2(ColumnWidth(_columnIds[i]), RowHeight);
             cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
             cell.SizeFlagsVertical = Control.SizeFlags.Fill;
-            cell.PlaceholderText = "Enter data...";
-            cell.ContextMenuEnabled = false;
 
-            StyleCell(cell, _columnIds[i]);
-
-            cell.FocusEntered += () => OnCellFocused(cell);
-            cell.FocusExited += () =>
-            {
-                // TextChanged arrives deferred, so the blank row may not know it has text yet.
-                if (view == _blank)
-                    OnBlankEdited(view);
-
-                if (view == _pending)
-                    CommitPending();
-                else
-                    CommitRow(view);
-            };
-            cell.TextChanged += _ =>
-            {
-                if (view.Row == null)
-                    OnBlankEdited(view);
-            };
+            cell.FocusEntered += () => OnCellFocused(view, column);
+            cell.FocusExited += () => CommitRow(view);
             cell.GuiInput += e => OnCellInput(view, column, e);
 
             view.Cells.Add(cell);
@@ -474,7 +491,7 @@ public partial class DatasetEditor : Window, ICommandView
         return view;
     }
 
-    private void FreeRowView(RowView view)
+    private static void FreeRowView(RowView view)
     {
         // Detach first: removing a focused cell fires FocusExited, which must not write the row.
         view.Row = null;
@@ -486,12 +503,10 @@ public partial class DatasetEditor : Window, ICommandView
     {
         view.Row = row;
         view.Number.Text = (index + 1).ToString();
-        view.Check.Visible = true;
 
         for (int i = 0; i < view.Cells.Count; i++)
         {
             var cell = view.Cells[i];
-            cell.PlaceholderText = string.Empty;
             var value = row.Data.GetValueOrDefault(_columnIds[i], string.Empty);
             // Leave the cell being typed in alone; it commits when focus leaves.
             if (!cell.HasFocus() && cell.Text != value)
@@ -517,26 +532,25 @@ public partial class DatasetEditor : Window, ICommandView
             FreeRowView(gone);
 
         _views = next;
-        if (_pending != null)
-            _dataContainer.MoveChild(_pending.Box, _dataContainer.GetChildCount() - 1);
-        _dataContainer.MoveChild(_blank.Box, _dataContainer.GetChildCount() - 1);
+        _dataContainer.MoveChild(_addRowLine, _dataContainer.GetChildCount() - 1);
     }
 
-    private List<RowView> AllRowViews()
+    /// <summary>The cell <paramref name="control"/> shows, or null if it isn't one.</summary>
+    private CellTarget CellOf(Control control)
     {
-        var all = new List<RowView>(_views);
-        if (_pending != null)
-            all.Add(_pending);
-        if (_blank != null)
-            all.Add(_blank);
-        return all;
+        foreach (var view in _views)
+        {
+            int column = view.Cells.IndexOf(control as LineEdit);
+            if (column >= 0)
+                return new CellTarget(view.Row.Id, _columnIds[column]);
+        }
+        return null;
     }
 
     private RowView Neighbor(RowView view, int step)
     {
-        var all = AllRowViews();
-        int i = all.IndexOf(view) + step;
-        return i >= 0 && i < all.Count ? all[i] : null;
+        int i = _views.IndexOf(view) + step;
+        return i >= 0 && i < _views.Count ? _views[i] : null;
     }
 
     private static void FocusCell(RowView view, int column)
@@ -545,22 +559,27 @@ public partial class DatasetEditor : Window, ICommandView
             view.Cells[column].GrabFocus();
     }
 
-    private void OnCellFocused(LineEdit cell)
+    private void OnCellFocused(RowView view, int column)
     {
-        SelectColumn(SnowTag.Empty);
+        // The cell being edited is selected, so it shows the highlight too.
+        SelectTarget(new CellTarget(view.Row.Id, _columnIds[column]));
 
         // Keyboard navigation selects the whole cell, like a spreadsheet; a click places the caret.
         if (!Input.IsMouseButtonPressed(MouseButton.Left))
-            cell.CallDeferred(LineEdit.MethodName.SelectAll);
+            view.Cells[column].CallDeferred(LineEdit.MethodName.SelectAll);
     }
 
     private void OnCellInput(RowView view, int column, InputEvent e)
     {
         var cell = view.Cells[column];
+        var target = new CellTarget(view.Row.Id, _columnIds[column]);
 
-        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } click)
+        // While a cell is being edited, a right-click in it opens the text box's own menu, for its text.
+        // Otherwise the press is kept from the text box, and the release opens the command menu.
+        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right } click && !cell.HasFocus())
         {
-            ShowContextMenu(view, _columnIds[column], click.GlobalPosition);
+            if (ClickRouting.OpensMenu(click))
+                OnContext(target, click.GlobalPosition);
             cell.AcceptEvent();
             return;
         }
@@ -568,30 +587,29 @@ public partial class DatasetEditor : Window, ICommandView
         if (e is not InputEventKey { Pressed: true } key)
             return;
 
-        // Multi-cell clipboard text spreads across cells; anything else pastes as usual.
+        // Cells copied from a spreadsheet spread across the grid; anything else pastes as usual.
         if (e.IsActionPressed("ui_paste"))
         {
             var text = DisplayServer.ClipboardGet().TrimEnd('\r', '\n');
             if (text.Contains('\t') || text.Contains('\n'))
             {
-                PasteGrid(view, column, ParseTsv(text));
+                // Writes the cell first, so the paste starts from what it shows.
+                GuiReleaseFocus();
+                RunOnSelection(DataSetCommands.PasteCells);
                 cell.AcceptEvent();
             }
             return;
         }
 
-        // TextChanged arrives deferred, so catch up before a key moves away from the blank row.
-        if (view.Row == null)
-            OnBlankEdited(view);
-
         switch (key.Keycode)
         {
             case Key.Enter or Key.KpEnter:
-                if (view == _pending)
-                    CommitPending();
+                CommitRow(view);
+                // Enter on the last row adds a row below it.
+                if (!key.ShiftPressed && view == _views[^1])
+                    AddRow();
                 else
-                    CommitRow(view);
-                FocusCell(Neighbor(view, key.ShiftPressed ? -1 : 1), 0);
+                    FocusCell(Neighbor(view, key.ShiftPressed ? -1 : 1), 0);
                 break;
             case Key.Up:
                 FocusCell(Neighbor(view, -1), column);
@@ -600,32 +618,13 @@ public partial class DatasetEditor : Window, ICommandView
                 FocusCell(Neighbor(view, 1), column);
                 break;
             case Key.Escape:
-                cell.Text =
-                    view.Row?.Data.GetValueOrDefault(_columnIds[column], string.Empty)
-                    ?? string.Empty;
+                cell.Text = view.Row.Data.GetValueOrDefault(_columnIds[column], string.Empty);
                 cell.SelectAll();
-                if (view.Row == null)
-                    OnBlankEdited(view);
                 break;
             default:
                 return;
         }
         cell.AcceptEvent();
-    }
-
-    /// <summary>Applies the row's cells to <paramref name="data"/>; empty cells remove their key.</summary>
-    private ImmutableDictionary<SnowTag, string> ApplyCells(
-        RowView view,
-        ImmutableDictionary<SnowTag, string> data
-    )
-    {
-        for (int i = 0; i < view.Cells.Count; i++)
-        {
-            var text = view.Cells[i].Text;
-            data =
-                text.Length == 0 ? data.Remove(_columnIds[i]) : data.SetItem(_columnIds[i], text);
-        }
-        return data;
     }
 
     private static bool DataEqual(
@@ -641,114 +640,34 @@ public partial class DatasetEditor : Window, ICommandView
         return true;
     }
 
+    /// <summary>Writes the row's cells, if they changed. Empty cells have no value.</summary>
     private void CommitRow(RowView view)
     {
-        if (view.Row == null || _currentDataSet == null)
+        if (view.Row == null)
             return;
 
-        var data = ApplyCells(view, view.Row.Data);
-        if (DataEqual(data, view.Row.Data))
+        var row = view.Row;
+        for (int i = 0; i < view.Cells.Count; i++)
+            row = row.WithCell(_columnIds[i], view.Cells[i].Text);
+        if (DataEqual(row.Data, view.Row.Data))
             return;
 
-        view.Row = view.Row with { Data = data };
-        ProjectService.Instance.Upsert(view.Row);
-    }
-
-    private static void SetPlaceholders(RowView view, bool shown)
-    {
-        foreach (var cell in view.Cells)
-            cell.PlaceholderText = shown ? "Enter data..." : string.Empty;
-    }
-
-    /// <summary>
-    /// Typing into the blank row makes it pending and shows a new blank row below it;
-    /// emptying the pending row turns it back into the blank row. Nothing is written until a cell loses focus.
-    /// </summary>
-    private void OnBlankEdited(RowView view)
-    {
-        bool empty = ApplyCells(view, ImmutableDictionary<SnowTag, string>.Empty).IsEmpty;
-        if (view == _blank && !empty)
-        {
-            _pending = _blank;
-            SetPlaceholders(_pending, false);
-            _blank = CreateRowView();
-        }
-        else if (view == _pending && empty && !_blank.Cells.Any(c => c.HasFocus()))
-        {
-            FreeRowView(_blank);
-            _blank = _pending;
-            _pending = null;
-            SetPlaceholders(_blank, true);
-        }
-    }
-
-    /// <summary>Writes the pending row as a real row.</summary>
-    private void CommitPending()
-    {
-        var view = _pending;
-        if (view == null || _currentDataSet == null)
-            return;
-
-        var data = ApplyCells(view, ImmutableDictionary<SnowTag, string>.Empty);
-        if (data.IsEmpty)
-            return;
-
-        var row = new DataRow
-        {
-            Id = Snowport.Clock.CreateTag(),
-            DataSetId = _currentDataSet.Id,
-            Rank = RowRank.Between(_views.LastOrDefault()?.Row.Rank, null),
-            Data = data,
-        };
+        view.Row = row;
         ProjectService.Instance.Upsert(row);
-
-        _pending = null;
-        _views.Add(view);
-        BindRowView(view, row, _views.Count - 1);
     }
 
-    private void ShowDropIndicator(Rect2 rect)
-    {
-        _dropIndicator.Position = rect.Position;
-        _dropIndicator.Size = rect.Size;
-        _dropIndicator.Visible = true;
-    }
+    /// <summary>Adds an empty row after the last, and starts editing it.</summary>
+    private void AddRow() => InsertRow(_views.Count);
 
-    private int RowDropIndex(Vector2 at) =>
-        _views.Count(v => v.Box.GetGlobalRect().GetCenter().Y < at.Y);
-
-    private void ShowRowDrop(Vector2 at)
+    /// <summary>Adds an empty row at <paramref name="index"/>, and starts editing it.</summary>
+    private void InsertRow(int index)
     {
-        if (_views.Count == 0)
+        if (_currentDataSet == null)
             return;
 
-        int index = RowDropIndex(at);
-        float y =
-            index < _views.Count
-                ? _views[index].Box.GetGlobalRect().Position.Y
-                : _views[^1].Box.GetGlobalRect().End.Y;
-
-        var clip = _dataScrollContainer.GetGlobalRect();
-        y = Mathf.Clamp(y, clip.Position.Y, clip.End.Y);
-        ShowDropIndicator(
-            new Rect2(clip.Position.X, y - IndicatorThickness / 2, clip.Size.X, IndicatorThickness)
-        );
-    }
-
-    private void DropRow(RowView view, Vector2 at)
-    {
-        _dropIndicator.Visible = false;
-        _dragAt = null;
-
-        int from = _views.IndexOf(view);
-        if (from < 0)
-            return;
-
-        int to = RowDropIndex(at);
-        if (to == from || to == from + 1)
-            return;
-
-        PlaceRow(view.Row, to > from ? to - 1 : to);
+        var row = new DataRow { Id = Snowport.Clock.CreateTag(), DataSetId = _currentDataSet.Id };
+        PlaceRow(row, index);
+        _focusRowOnSync = row.Id;
     }
 
     /// <summary>Writes <paramref name="row"/> so it sits at <paramref name="index"/> among the other rows.</summary>
@@ -777,37 +696,76 @@ public partial class DatasetEditor : Window, ICommandView
         batch.Submit();
     }
 
-    private int ColumnDropIndex(Vector2 at) =>
-        _headerCells.Count(h => h.GetGlobalRect().GetCenter().X < at.X);
+    // The rows' or the columns' controls, for a drag along that axis.
+    private List<Control> DragItems(Vector2.Axis axis) =>
+        axis == Vector2.Axis.Y
+            ? _views.Select(v => (Control)v.Box).ToList()
+            : _headerCells.Cast<Control>().ToList();
 
-    private void ShowColumnDrop(Vector2 at)
+    // Where a dragged row or column would land: how many of the others are before the pointer.
+    private int DropIndex(Vector2.Axis axis, Vector2 at) =>
+        DragItems(axis).Count(c => c.GetGlobalRect().GetCenter()[(int)axis] < at[(int)axis]);
+
+    private void OnDragMoved(Vector2.Axis axis, Vector2 at)
     {
-        if (_headerCells.Count == 0)
+        _dragAt = at;
+        _dragAxis = axis;
+        ShowDrop(axis, at);
+    }
+
+    /// <summary>
+    /// Shows a line where a dragged row or column would land.
+    /// A row's line runs across the data; a column's runs down the header and the data.
+    /// </summary>
+    private void ShowDrop(Vector2.Axis axis, Vector2 at)
+    {
+        var items = DragItems(axis);
+        if (items.Count == 0)
             return;
 
-        int index = ColumnDropIndex(at);
-        float x =
-            index < _headerCells.Count
-                ? _headerCells[index].GetGlobalRect().Position.X
-                : _headerCells[^1].GetGlobalRect().End.X;
+        int i = (int)axis;
+        int index = DropIndex(axis, at);
+        float line =
+            index < items.Count
+                ? items[index].GetGlobalRect().Position[i]
+                : items[^1].GetGlobalRect().End[i];
 
-        var header = _headerScroll.GetGlobalRect();
         var data = _dataScrollContainer.GetGlobalRect();
-        x = Mathf.Clamp(x, header.Position.X, header.End.X);
-        ShowDropIndicator(
-            new Rect2(
-                x - IndicatorThickness / 2,
-                header.Position.Y,
-                IndicatorThickness,
-                data.End.Y - header.Position.Y
-            )
-        );
+        var span = axis == Vector2.Axis.Y ? data : _headerScroll.GetGlobalRect().Merge(data);
+        var position = span.Position;
+        var size = span.Size;
+        position[i] = Mathf.Clamp(line, span.Position[i], span.End[i]) - IndicatorThickness / 2;
+        size[i] = IndicatorThickness;
+
+        _dropIndicator.Position = position;
+        _dropIndicator.Size = size;
+        _dropIndicator.Visible = true;
+    }
+
+    private void EndDrag()
+    {
+        _dropIndicator.Visible = false;
+        _dragAt = null;
+    }
+
+    private void DropRow(RowView view, Vector2 at)
+    {
+        EndDrag();
+
+        int from = _views.IndexOf(view);
+        if (from < 0)
+            return;
+
+        int to = DropIndex(Vector2.Axis.Y, at);
+        if (to == from || to == from + 1)
+            return;
+
+        PlaceRow(view.Row, to > from ? to - 1 : to);
     }
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        _dropIndicator.Visible = false;
-        _dragAt = null;
+        EndDrag();
 
         if (_currentDataSet == null)
             return;
@@ -817,7 +775,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (from < 0)
             return;
 
-        int to = ColumnDropIndex(at);
+        int to = DropIndex(Vector2.Axis.X, at);
         if (to > from)
             to--;
         if (to == from)
@@ -847,7 +805,8 @@ public partial class DatasetEditor : Window, ICommandView
         ProjectService.Instance.Upsert(_currentDataSet);
     }
 
-    private void OnAddColumnPressed() => InsertColumn(_currentDataSet?.Columns.Length ?? 0);
+    /// <summary>Adds a column after the last, and starts renaming it.</summary>
+    private void AddColumn() => InsertColumn(_currentDataSet?.Columns.Length ?? 0);
 
     private void InsertColumn(int index)
     {
@@ -869,293 +828,246 @@ public partial class DatasetEditor : Window, ICommandView
         _renameOnSync = column.Id;
     }
 
-    private void SelectColumn(SnowTag columnId)
+    /// <summary>What the local player has selected in the shown dataset.</summary>
+    private ImmutableHashSet<Target> MySelection() =>
+        _datasetRef == SnowTag.Empty
+            ? ImmutableHashSet<Target>.Empty
+            : ProjectService.Instance.GetSelection(_datasetRef)?.Targets
+                ?? ImmutableHashSet<Target>.Empty;
+
+    /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
+    private void Select(IEnumerable<Target> targets)
     {
-        if (columnId == _selectedColumn)
-            return;
+        if (_datasetRef != SnowTag.Empty)
+            ProjectService.Instance.SetSelection(targets, _datasetRef);
+    }
 
-        _selectedColumn = columnId;
-        ApplyColumnSelection();
+    /// <summary>
+    /// Selects a row, column or cell, as a click on it does. With Shift, it selects everything from the
+    /// last one selected without Shift; with Ctrl (or Cmd), it's added or removed; otherwise it's selected alone.
+    /// Only one kind is selected at a time, so Delete acts on rows or columns, never both.
+    /// A click takes focus from the cell being edited, so keys like Delete go to the selection.
+    /// Focusing a cell selects it without a click.
+    /// </summary>
+    private void SelectTarget(Target target, InputEventWithModifiers click = null)
+    {
+        var mine = MySelection();
+        var kind = mine.Where(t => t.GetType() == target.GetType());
+        if (click?.ShiftPressed == true && _anchor?.GetType() == target.GetType())
+            Select(Range(_anchor, target));
+        else
+        {
+            _anchor = target;
+            Select(
+                click?.IsCommandOrControlPressed() != true ? [target]
+                : mine.Contains(target) ? kind.Where(t => t != target)
+                : kind.Append(target)
+            );
+        }
 
-        // Hand Delete to the editor instead of the cell being edited.
-        if (columnId != SnowTag.Empty)
+        if (click != null)
             GuiReleaseFocus();
     }
 
-    private void ApplyColumnSelection()
+    /// <summary>Everything from one row, column or cell to another, in the grid's order. Cells make a rectangle.</summary>
+    private IEnumerable<Target> Range(Target from, Target to)
     {
-        foreach (var header in _headerCells)
-            header.SetSelected(header.ColumnId == _selectedColumn);
-
-        foreach (var view in AllRowViews())
-            for (int i = 0; i < view.Cells.Count; i++)
-                StyleCell(view.Cells[i], _columnIds[i]);
-
-        _deleteColumnButton.Disabled = _selectedColumn == SnowTag.Empty;
-    }
-
-    private void StyleCell(LineEdit cell, SnowTag columnId)
-    {
-        if (columnId != _selectedColumn)
+        var rows = _views.Select(v => v.Row.Id).ToList();
+        return (from, to) switch
         {
-            cell.RemoveThemeStyleboxOverride("normal");
-            return;
-        }
-
-        if (_selectedCellStyle == null)
-        {
-            // Tint the theme's own cell style so padding and borders stay the same.
-            _selectedCellStyle = (StyleBox)cell.GetThemeStylebox("normal").Duplicate();
-            if (_selectedCellStyle is StyleBoxFlat flat)
-                flat.BgColor = flat.BgColor.Lerp(Accent, 0.35f);
-            else
-                _selectedCellStyle = new StyleBoxFlat { BgColor = Accent with { A = 0.35f } };
-        }
-        cell.AddThemeStyleboxOverride("normal", _selectedCellStyle);
-    }
-
-    private void DeleteColumn(SnowTag columnId)
-    {
-        if (_currentDataSet == null || columnId == SnowTag.Empty)
-            return;
-
-        _currentDataSet = _currentDataSet with
-        {
-            Columns = _currentDataSet.Columns.RemoveAll(c => c.Id == columnId),
+            (RecordTarget a, RecordTarget b) => Span(rows, a.Id, b.Id)
+                .Select(id => (Target)new RecordTarget(id)),
+            (ColumnTarget a, ColumnTarget b) => Span(_columnIds, a.ColumnId, b.ColumnId)
+                .Select(id => (Target)Column(id)),
+            (CellTarget a, CellTarget b) => Span(rows, a.RowId, b.RowId)
+                .SelectMany(r =>
+                    Span(_columnIds, a.ColumnId, b.ColumnId)
+                        .Select(c => (Target)new CellTarget(r, c))
+                ),
+            _ => [to],
         };
-        if (_selectedColumn == columnId)
-            _selectedColumn = SnowTag.Empty;
-        ProjectService.Instance.Upsert(_currentDataSet);
     }
 
-    private void DeleteCheckedRows() => DeleteRows(_views.Where(v => v.Check.ButtonPressed));
-
-    private void DeleteRows(IEnumerable<RowView> views)
+    // The ids from one to the other, both included, in order. Just the last if either is gone.
+    private static IEnumerable<SnowTag> Span(List<SnowTag> order, SnowTag from, SnowTag to)
     {
-        if (_currentDataSet == null)
-            return;
-
-        var batch = new UpsertBatch();
-        foreach (var view in views)
-            batch.Add(view.Row with { Deleted = true });
-        batch.Submit();
-    }
-
-    private void InsertRow(int index)
-    {
-        if (_currentDataSet == null)
-            return;
-
-        var row = new DataRow { Id = Snowport.Clock.CreateTag(), DataSetId = _currentDataSet.Id };
-        PlaceRow(row, index);
-        _focusRowOnSync = row.Id;
-    }
-
-    private void AddMenuItem(string label, Action action, bool enabled = true)
-    {
-        _contextMenu.AddItem(label, _menuActions.Count);
-        _contextMenu.SetItemDisabled(_contextMenu.ItemCount - 1, !enabled);
-        _menuActions.Add(action);
+        int i = order.IndexOf(from);
+        int j = order.IndexOf(to);
+        return i < 0 || j < 0 ? [to] : order.Skip(Math.Min(i, j)).Take(Math.Abs(i - j) + 1);
     }
 
     /// <summary>
-    /// Shows the menu for a row, a column, or a cell (both). <paramref name="at"/> is in this window's coordinates.
+    /// Right-clicking a row, column or cell selects it, unless it already is, and opens the menu for the selection.
+    /// Empty space has no target, and opens the menu for what's selected.
     /// </summary>
-    private void ShowContextMenu(RowView view, SnowTag columnId, Vector2 at)
+    private void OnContext(Target target, Vector2 at)
     {
-        _contextMenu.Clear();
-        _menuActions.Clear();
-
-        int column = _columnIds.IndexOf(columnId);
-        if (view != null && column >= 0)
-        {
-            var cell = view.Cells[column];
-            AddMenuItem(
-                "Cut",
-                () =>
-                {
-                    DisplayServer.ClipboardSet(cell.Text);
-                    PasteGrid(
-                        view,
-                        column,
-                        [
-                            [string.Empty],
-                        ]
-                    );
-                }
-            );
-            AddMenuItem("Copy", () => DisplayServer.ClipboardSet(cell.Text));
-            AddMenuItem(
-                "Paste",
-                () =>
-                    PasteGrid(
-                        view,
-                        column,
-                        ParseTsv(DisplayServer.ClipboardGet().TrimEnd('\r', '\n'))
-                    )
-            );
-            _contextMenu.AddSeparator();
-        }
-
-        if (view != null)
-        {
-            int index = _views.IndexOf(view);
-            bool real = index >= 0;
-            // Act on every checked row when the clicked row is one of them.
-            List<RowView> targets =
-                real && view.Check.ButtonPressed
-                    ? _views.Where(v => v.Check.ButtonPressed).ToList()
-                    : [view];
-
-            AddMenuItem("Insert Row Above", () => InsertRow(index), real);
-            AddMenuItem("Insert Row Below", () => InsertRow(index + 1), real);
-            AddMenuItem(
-                targets.Count > 1 ? $"Delete {targets.Count} Rows" : "Delete Row",
-                () => DeleteRows(targets),
-                real
-            );
-        }
-
-        if (column >= 0)
-        {
-            if (view != null)
-                _contextMenu.AddSeparator();
-
-            AddMenuItem("Insert Column Left", () => InsertColumn(column));
-            AddMenuItem("Insert Column Right", () => InsertColumn(column + 1));
-            if (view == null)
-            {
-                // Deferred so the closing menu doesn't take focus back from the name box.
-                var header = _headerCells[column];
-                AddMenuItem(
-                    "Rename Column",
-                    () => Callable.From(header.BeginRename).CallDeferred()
-                );
-            }
-            AddMenuItem("Delete Column", () => DeleteColumn(columnId));
-        }
-
-        _contextMenu.ResetSize();
-        _contextMenu.Popup(new Rect2I(Position + (Vector2I)at, Vector2I.Zero));
+        // Writes the cell being edited, so the menu acts on what it shows.
+        GuiReleaseFocus();
+        if (target != null && !MySelection().Contains(target))
+            SelectTarget(target);
+        OpenMenu(BuildContext(), at);
     }
 
     /// <summary>
-    /// Writes a block of values into the grid, starting at a cell and filling rightward and downward.
-    /// Values past the last column are dropped; rows past the end become new rows. One event, one undo.
+    /// Highlights the selected rows, columns and cells: the local player's in <see cref="LocalHighlight"/>,
+    /// and other players' in their colour, the newest selection first.
     /// </summary>
-    private void PasteGrid(RowView start, int column, List<string[]> grid)
+    private void SyncSelection(IRecordReader R, SnowTag datasetId)
     {
-        if (_currentDataSet == null || grid.Count == 0)
-            return;
-
-        var targets = AllRowViews();
-        int first = targets.IndexOf(start);
-        string rank = _views.LastOrDefault()?.Row.Rank;
-        var batch = new UpsertBatch();
-
-        for (int r = 0; r < grid.Count; r++)
+        var local = Snowport.Clock.source;
+        var selections = R.Get<Selection>(s => s.Within == datasetId).ToList();
+        _mine =
+            selections.FirstOrDefault(s => s.Player == local)?.Targets
+            ?? ImmutableHashSet<Target>.Empty;
+        _others.Clear();
+        foreach (
+            var s in selections.Where(s => s.Player != local).OrderByDescending(s => s.LastUpdateId)
+        )
         {
-            var view = first + r < targets.Count ? targets[first + r] : null;
-            var data = ImmutableDictionary<SnowTag, string>.Empty;
-            if (view?.Row != null)
-                data = view.Row.Data;
-            else if (view != null)
-                data = ApplyCells(view, data);
+            var color = PresenceSynchronizer.Instance?.GetSeatColor(s.Player) ?? Colors.Gray;
+            foreach (var target in s.Targets)
+                _others.TryAdd(target, color);
+        }
 
-            for (int c = 0; c < grid[r].Length && column + c < _columnIds.Count; c++)
-            {
-                var id = _columnIds[column + c];
-                data = grid[r][c].Length == 0 ? data.Remove(id) : data.SetItem(id, grid[r][c]);
-            }
-
-            DataRow row;
-            if (view?.Row != null)
-                row = view.Row with { Data = data };
-            else
-            {
-                rank = RowRank.Between(rank, null);
-                row = new DataRow
-                {
-                    Id = Snowport.Clock.CreateTag(),
-                    DataSetId = _currentDataSet.Id,
-                    Rank = rank,
-                    Data = data,
-                };
-            }
-            batch.Add(row);
-
-            // Rows past the existing views get theirs on the next sync.
-            if (view == null)
-                continue;
-
-            if (view.Row == null)
-            {
-                // The pending or blank row becomes a real row.
-                if (view == _pending)
-                    _pending = null;
-                if (view == _blank)
-                    _blank = null;
-                _views.Add(view);
-            }
-
-            // Set every cell, including a focused one, which BindRowView leaves alone.
+        foreach (var header in _headerCells)
+            Highlight(header, "panel", HighlightOf(Column(header.ColumnId)));
+        foreach (var view in _views)
+        {
+            Highlight(view.Header, "panel", HighlightOf(view.Target));
             for (int i = 0; i < view.Cells.Count; i++)
-                view.Cells[i].Text = data.GetValueOrDefault(_columnIds[i], string.Empty);
-            BindRowView(view, row, _views.IndexOf(view));
+                Highlight(
+                    view.Cells[i],
+                    "normal",
+                    HighlightOf(
+                        new CellTarget(view.Row.Id, _columnIds[i]),
+                        view.Target,
+                        Column(_columnIds[i])
+                    )
+                );
         }
 
-        batch.Submit();
-
-        if (_blank == null)
-            _blank = CreateRowView();
+        _deleteButton.Disabled = !_mine.Any(DataSetCommands.DeleteRow.Applies);
+        _deleteColumnButton.Disabled = !_mine.Any(DataSetCommands.DeleteColumn.Applies);
     }
 
     /// <summary>
-    /// Parses tab-separated text as spreadsheets copy it: tabs between cells, newlines between rows,
-    /// and quotes around cells that contain either (with "" for a literal quote).
+    /// <see cref="LocalHighlight"/> if the local player selected any of the targets,
+    /// else the colour of another player who did, or null.
     /// </summary>
-    private static List<string[]> ParseTsv(string text)
+    private Color? HighlightOf(params Target[] targets)
     {
-        text = text.Replace("\r\n", "\n").Replace('\r', '\n');
+        if (targets.Any(_mine.Contains))
+            return LocalHighlight;
+        foreach (var target in targets)
+            if (_others.TryGetValue(target, out var color))
+                return color;
+        return null;
+    }
 
-        var rows = new List<string[]>();
-        var row = new List<string>();
-        var cell = new StringBuilder();
-        bool quoted = false;
+    /// <summary>
+    /// Tints a control's theme style toward <paramref name="color"/>, keeping its padding and borders,
+    /// or clears the tint with null.
+    /// </summary>
+    private void Highlight(Control control, string style, Color? color)
+    {
+        control.RemoveThemeStyleboxOverride(style);
+        if (color is not Color c)
+            return;
 
-        for (int i = 0; i < text.Length; i++)
+        // One tint per style and colour: cells share "normal", and row and column headers share "panel".
+        if (!_highlightStyles.TryGetValue((style, c), out var tinted))
         {
-            char ch = text[i];
-            if (quoted)
+            if (control.GetThemeStylebox(style).Duplicate() is StyleBoxFlat flat)
             {
-                if (ch != '"')
-                    cell.Append(ch);
-                else if (i + 1 < text.Length && text[i + 1] == '"')
-                    cell.Append(text[++i]);
-                else
-                    quoted = false;
-            }
-            else if (ch == '"' && cell.Length == 0)
-                quoted = true;
-            else if (ch == '\t')
-            {
-                row.Add(cell.ToString());
-                cell.Clear();
-            }
-            else if (ch == '\n')
-            {
-                row.Add(cell.ToString());
-                rows.Add(row.ToArray());
-                row.Clear();
-                cell.Clear();
+                flat.BgColor = flat.BgColor.Lerp(c, 0.35f);
+                tinted = flat;
             }
             else
-                cell.Append(ch);
+                tinted = new StyleBoxFlat { BgColor = c with { A = 0.35f } };
+            _highlightStyles[(style, c)] = tinted;
         }
+        control.AddThemeStyleboxOverride(style, tinted);
+    }
 
-        row.Add(cell.ToString());
-        rows.Add(row.ToArray());
-        return rows;
+    /// <summary>Runs <paramref name="command"/> on what the local player has selected, as its shortcut would.</summary>
+    private void RunOnSelection(Command command)
+    {
+        var targets = MySelection().Where(command.Applies).ToList();
+        if (command.Fits(targets.Count))
+            command.Run(targets, 1, this);
+    }
+
+    /// <summary>Opens the command menu. <paramref name="at"/> is in this window's coordinates.</summary>
+    private void OpenMenu(CommandContext context, Vector2 at) =>
+        // The menu shows in the main window, like this one.
+        CommandMenu.Show(Position + (Vector2I)at, context, this);
+
+    /// <summary>
+    /// The commands only the editor offers, since they act on its grid:
+    /// inserts go where the grid shows them and then focus or rename what they add.
+    /// </summary>
+    private IReadOnlyList<Command> EditorCommands() =>
+        [
+            new RecordCommand<DataRow>
+            {
+                Id = new("dataset.insert_row_above"),
+                Caption = "Insert Row Above",
+                Count = TargetCount.One,
+                SideEffects = (rows, _) => InsertRowAt(rows[0], 0),
+            },
+            new RecordCommand<DataRow>
+            {
+                Id = new("dataset.insert_row_below"),
+                Caption = "Insert Row Below",
+                Count = TargetCount.One,
+                SideEffects = (rows, _) => InsertRowAt(rows[0], 1),
+            },
+            new TargetCommand<ColumnTarget>
+            {
+                Id = new("dataset.insert_column_left"),
+                Caption = "Insert Column Left",
+                Count = TargetCount.One,
+                SideEffects = (columns, _) => InsertColumnAt(columns[0], 0),
+            },
+            new TargetCommand<ColumnTarget>
+            {
+                Id = new("dataset.insert_column_right"),
+                Caption = "Insert Column Right",
+                Count = TargetCount.One,
+                SideEffects = (columns, _) => InsertColumnAt(columns[0], 1),
+            },
+            new TargetCommand<ColumnTarget>
+            {
+                Id = new("dataset.rename_column"),
+                Icon = UI.TextureUI_Pencil,
+                Caption = "Rename Column",
+                Count = TargetCount.One,
+                SideEffects = (columns, _) => RenameColumn(columns[0]),
+            },
+        ];
+
+    /// <summary>Inserts a row before <paramref name="row"/>, or after it with an offset of 1.</summary>
+    private void InsertRowAt(DataRow row, int offset)
+    {
+        int index = _views.FindIndex(v => v.Row.Id == row.Id);
+        if (index >= 0)
+            InsertRow(index + offset);
+    }
+
+    /// <summary>Inserts a column left of the target, or right of it with an offset of 1.</summary>
+    private void InsertColumnAt(ColumnTarget column, int offset)
+    {
+        int index = _columnIds.IndexOf(column.ColumnId);
+        if (index >= 0)
+            InsertColumn(index + offset);
+    }
+
+    private void RenameColumn(ColumnTarget column)
+    {
+        // Deferred so the closing menu doesn't take focus back from the name box.
+        if (_headerCells.FirstOrDefault(h => h.ColumnId == column.ColumnId) is { } header)
+            Callable.From(header.BeginRename).CallDeferred();
     }
 
     private void OnImportPressed()
@@ -1174,84 +1086,13 @@ public partial class DatasetEditor : Window, ICommandView
 
         dialog.FileSelected += path =>
         {
-            ImportCsv(path);
+            CsvImport.Replace(ProjectService.Instance, _currentDataSet, path);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;
 
         AddChild(dialog);
         dialog.PopupCentered(new Vector2I(700, 450));
-    }
-
-    private void ImportCsv(string path)
-    {
-        if (_currentDataSet == null)
-            return;
-
-        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
-        if (file == null)
-        {
-            GD.PrintErr($"Could not open CSV file '{path}': {FileAccess.GetOpenError()}");
-            return;
-        }
-
-        var lines = new List<string[]>();
-        while (!file.EofReached())
-        {
-            var cells = file.GetCsvLine();
-            if (cells.Length == 1 && string.IsNullOrEmpty(cells[0]))
-                continue;
-            lines.Add(cells);
-        }
-
-        if (lines.Count == 0)
-        {
-            GD.PrintErr($"CSV file '{path}' contained no data.");
-            return;
-        }
-
-        var header = lines[0];
-
-        var batch = new UpsertBatch();
-
-        var currentColumns = _currentDataSet.Columns.Select(c => c.Name);
-
-        if (!currentColumns.SequenceEqual(header))
-        {
-            // TODO: we should do column matching based on string
-            var nextColumns = header
-                .Select(h => new Column { Id = Snowport.Clock.CreateTag(), Name = h })
-                .ToImmutableArray();
-            _currentDataSet = _currentDataSet with { Columns = nextColumns };
-            batch.Add(_currentDataSet);
-        }
-
-        foreach (var existing in ProjectService.Instance.GetRows(_currentDataSet.Id))
-            batch.Add(existing with { Deleted = true });
-
-        string prevRank = null;
-        for (int i = 1; i < lines.Count; i++)
-        {
-            var data = new Dictionary<SnowTag, string>();
-            for (int c = 0; c < _currentDataSet.Columns.Length && c < lines[i].Length; c++)
-            {
-                if (!string.IsNullOrEmpty(lines[i][c]))
-                    data[_currentDataSet.Columns[c].Id] = lines[i][c];
-            }
-
-            prevRank = RowRank.Between(prevRank, null);
-            batch.Add(
-                new DataRow
-                {
-                    Id = Snowport.Clock.CreateTag(),
-                    DataSetId = _currentDataSet.Id,
-                    Rank = prevRank,
-                    Data = data.ToImmutableDictionary(),
-                }
-            );
-        }
-
-        batch.Submit();
     }
 
     private void OnColumnWidthDragged(SnowTag columnId, float width)
@@ -1264,7 +1105,7 @@ public partial class DatasetEditor : Window, ICommandView
         _columnWidths[columnId] = width;
 
         _headerCells[index].CustomMinimumSize = new Vector2(width, HeaderHeight);
-        foreach (var view in AllRowViews())
+        foreach (var view in _views)
             view.Cells[index].CustomMinimumSize = new Vector2(width, RowHeight);
     }
 }

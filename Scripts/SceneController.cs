@@ -35,6 +35,7 @@ public partial class SceneController : Node3D, ICommandView
 
         CommandList.Register(CommandList.All.Concat(TableCommands));
         ShortcutRelay.Install(GetTree());
+        ClickRouting.Install(GetTree().Root);
         // The table takes the main window's commands.
         CommandViews.Attach(GetTree().Root, this);
     }
@@ -86,20 +87,16 @@ public partial class SceneController : Node3D, ICommandView
     }
 
     /// <summary>
-    /// The table undoes everything but what's edited in its own window:
-    /// prototypes, images, datasets, templates, snapshots, and project settings.
+    /// The table undoes its components, and what's selected on it.
+    /// A snapshot switch is included through the components it writes.
     /// </summary>
     public bool UndoScope(Effect fx) =>
-        fx
-            is not (
-                UpdateReplicatedEffect<Prototype>
-                or UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>
-                or UpdateReplicatedEffect<DataSet>
-                or UpdateReplicatedEffect<DataRow>
-                or UpdateReplicatedEffect<Template>
-                or UpdateReplicatedEffect<GameState>
-                or SetReplicatedValueEffect<ProjectGameSettings>
-            );
+        fx switch
+        {
+            UpdateReplicatedEffect<ComponentState> => true,
+            UpdateReplicatedEffect<Selection> s => s.Payload?.Within == SnowTag.Empty,
+            _ => false,
+        };
 
     #region Table commands
     // These act on the table rather than on records, so only the table offers them.
