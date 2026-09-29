@@ -782,7 +782,7 @@ public partial class GameObjects : Node
             VcToken previewCard = null;
             if (HandsEnabled() && mousePosition.Y > _gameController.HandY)
             {
-                foreach (var go in GetDraggingObjects())
+                foreach (var go in GetLocalDraggingObjects())
                 {
                     if (go is VcToken vct)
                     {
@@ -817,7 +817,7 @@ public partial class GameObjects : Node
                     _currentDragDropTarget.IsHovered = true;
             }
 
-            if (dragTarget != null && dragTarget.DragOver(GetDraggingObjects()))
+            if (dragTarget != null && dragTarget.DragOver(GetLocalDraggingObjects()))
             {
                 Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
             }
@@ -840,7 +840,7 @@ public partial class GameObjects : Node
 
         var mousePos = GetViewport().GetMousePosition();
 
-        // Exclude all dragging objects so the ray passes through them
+        // Exclude every player's dragged objects so the ray passes through them.
         var exclude = new Godot.Collections.Array<Rid>();
         foreach (var dragging in GetDraggingObjects())
             exclude.Add(dragging.GetRid());
@@ -892,11 +892,21 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// The dragged components.
+    /// The components dragged by any player.
     /// </summary>
     private IEnumerable<VisualComponentBase> GetDraggingObjects() =>
         ComponentsAt(VisualComponentBase.ComponentLocation.Cursor);
 
+
+    /// <summary>
+    /// The components dragged by the local player, which is all a local gesture acts on.
+    /// </summary>
+    private IEnumerable<VisualComponentBase> GetLocalDraggingObjects() =>
+        Nodes(
+            ProjectService.Instance.Get<ComponentState>(s =>
+                s.IsHeld && s.Holder == Snowport.Clock.source
+            )
+        );
     private IEnumerable<VisualComponentBase> GetNotDraggingObjects() =>
         ComponentsAt(VisualComponentBase.ComponentLocation.Table);
 
@@ -914,7 +924,7 @@ public partial class GameObjects : Node
         // AND there is at least one printed component to hand off.
         if (HandsEnabled() && mousePosition.Y > _gameController.HandY)
         {
-            var dragged = GetDraggingObjects().ToList();
+            var dragged = GetLocalDraggingObjects().ToList();
             var toHand = dragged.Where(go => go is VcToken).ToList();
 
             if (toHand.Count > 0)
@@ -929,9 +939,9 @@ public partial class GameObjects : Node
 
         if (_currentDragDropTarget != null)
         {
-            if (_currentDragDropTarget.CanObjectsBeDropped(GetDraggingObjects()))
+            if (_currentDragDropTarget.CanObjectsBeDropped(GetLocalDraggingObjects()))
             {
-                var dropEvent = _currentDragDropTarget.DropObjects(GetDraggingObjects());
+                var dropEvent = _currentDragDropTarget.DropObjects(GetLocalDraggingObjects());
                 if (dropEvent != null)
                     EventSynchronizer.Instance?.Submit(dropEvent);
             }
@@ -946,10 +956,10 @@ public partial class GameObjects : Node
             if (
                 hover != null
                 && hover.CanAcceptDrop
-                && hover.CanObjectsBeDropped(GetDraggingObjects())
+                && hover.CanObjectsBeDropped(GetLocalDraggingObjects())
             )
             {
-                var dropEvent = hover.DropObjects(GetDraggingObjects());
+                var dropEvent = hover.DropObjects(GetLocalDraggingObjects());
                 if (dropEvent != null)
                     EventSynchronizer.Instance?.Submit(dropEvent);
             }
@@ -959,7 +969,7 @@ public partial class GameObjects : Node
 
         CursorMode = CursorMode.Normal;
 
-        SubmitDrop(GetDraggingObjects());
+        SubmitDrop(GetLocalDraggingObjects());
     }
 
     private void SubmitDrop(IEnumerable<VisualComponentBase> dragged)
