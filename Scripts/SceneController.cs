@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
@@ -74,14 +73,15 @@ public partial class SceneController : Node3D, ICommandView
 
         return new CommandContext
         {
-            Selected = selected.Select(s => new RecordTarget(s.Id)).ToImmutableHashSet<Target>(),
-            Contents = selected
-                .SelectMany(s => R.Contents(s))
-                .Select(s => new RecordTarget(s.Id))
-                .ToImmutableHashSet<Target>(),
-            Referenced = selected
-                .Select(s => new RecordTarget(s.PrototypeRef))
-                .ToImmutableHashSet<Target>(),
+            Selected = selected.Select(s => new RecordTarget(s.Id)),
+            Contents = selected.SelectMany(s => R.Contents(s)).Select(s => new RecordTarget(s.Id)),
+            Referenced =
+            [
+                .. selected.Select(s => new RecordTarget(s.PrototypeRef)),
+                .. selected
+                    .Where(s => s.DataSetRowId != SnowTag.Empty)
+                    .Select(s => new RecordTarget(s.DataSetRowId)),
+            ],
             Local = TableCommands,
         };
     }

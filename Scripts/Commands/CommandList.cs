@@ -24,6 +24,7 @@ public static class CommandList
         ComponentCommands.Delete,
         UndoCommands.UndoComponentChanges,
         PrototypeCommands.Edit,
+        DataSetCommands.EditRow,
         DataSetCommands.DeleteRow,
         DataSetCommands.DeleteColumn,
         DataSetCommands.ClearCells,
@@ -39,6 +40,8 @@ public static class CommandList
     /// <summary>
     /// Reports any command that isn't in <see cref="All"/>, which nothing could run,
     /// and any id used by more than one command.
+    /// A command in a public static field of any command type is expected in <see cref="All"/>;
+    /// a view's own commands are private or built per instance.
     /// </summary>
     private static IReadOnlyList<Command> Checked(IReadOnlyList<Command> all)
     {
@@ -47,7 +50,7 @@ public static class CommandList
             .Assembly.GetTypes()
             .Where(t => !t.ContainsGenericParameters)
             .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))
-            .Where(f => f.FieldType == typeof(Command));
+            .Where(f => typeof(Command).IsAssignableFrom(f.FieldType));
         foreach (var field in fields)
             if (field.GetValue(null) is Command command && !listed.Contains(command))
                 GD.PushError(
@@ -125,7 +128,7 @@ public static class CommandList
         foreach (var command in MenuOrder(context.Local).Where(c => c.ShowInMenu))
         {
             // A global command applies to no target, so it fits with none and always shows.
-            var targets = TargetsFor(command, context, withReferenced: true);
+            var targets = TargetsFor(command, context, menu: true);
             if (command.Fits(targets.Count))
                 yield return (command, targets);
         }
@@ -148,8 +151,7 @@ public static class CommandList
                 continue;
             matched = true;
 
-            var targets =
-                context == null ? [] : TargetsFor(command, context, withReferenced: false);
+            var targets = context == null ? [] : TargetsFor(command, context, menu: false);
             if (command.Fits(targets.Count))
                 command.Run(targets, number, view);
         }
@@ -158,34 +160,26 @@ public static class CommandList
 
     /// <summary>
     /// Whether the command's keys would run it in <paramref name="context"/>, as <see cref="RunShortcut"/> decides:
-    /// it must fit the targets keys act on, which leave out the referenced ones.
+    /// it must fit the targets keys act on, which leave out containers and referenced ones.
     /// Menus show a command's shortcut only then.
     /// </summary>
     public static bool RunsFromKeys(Command command, CommandContext context) =>
-        command.Fits(TargetsFor(command, context, withReferenced: false).Count);
+        command.Fits(TargetsFor(command, context, menu: false).Count);
 
     /// <summary>
     /// <para>The targets for this command.</para>
-    /// <para>
-    /// First we take the following context:
-    /// <list type="bullet">
-    /// <item>the selected targets always</item>
-    /// <item>the contents if the command is configured to include them</item>
-    /// <item>the referenced targets when asked (yes for the menu, no for the keyboard)</item>
-    /// </list>
-    /// </para>
-    /// <para>Then we keep the ones the command applies to: <see cref="Command.Applies"/>.</para>
+    /// Takes the parts of the context in <see cref="Command.ActsOn"/>
+    /// and filters it by those that return true when passed to <see cref="Command.Applies"/>.
     /// </summary>
-    private static List<Target> TargetsFor(
-        Command command,
-        CommandContext context,
-        bool withReferenced
-    )
+    private static List<Target> TargetsFor(Command command, CommandContext context, bool menu)
     {
-        var targets = context.Selected;
-        if (command.IncludesContents)
+        var acts = command.ActsOn;
+        var targets = acts.HasFlag(Context.Selected) ? context.Selected : [];
+        if (acts.HasFlag(Context.Contents))
             targets = targets.Union(context.Contents);
-        if (withReferenced)
+        if (menu && acts.HasFlag(Context.Containers))
+            targets = targets.Union(context.Containers);
+        if (menu && acts.HasFlag(Context.Referenced))
             targets = targets.Union(context.Referenced);
         return targets.Where(command.Applies).ToList();
     }

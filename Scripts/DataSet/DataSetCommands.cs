@@ -2,10 +2,29 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-/// <summary>Commands for a dataset's rows, columns and cells.</summary>
+/// <summary>
+/// Commands for a dataset's rows, columns, and cells.
+/// </summary>
 public static class DataSetCommands
 {
     private const string DeleteIcon = "res://Textures/UI/delete.svg";
+
+    public static readonly Command EditRow = new RecordCommand<DataRow>
+    {
+        Id = new("dataset.edit_row"),
+        Icon = UI.TextureUI_Pencil,
+        Caption = "Edit Data Row",
+        Count = TargetCount.One,
+        ActsOn = Context.Referenced,
+        SideEffects = (rows, _) =>
+            EventBus.Instance.Publish(
+                new ShowDatasetEditor
+                {
+                    DatasetRef = rows[0].DataSetId,
+                    SelectedRowRef = rows[0].Id,
+                }
+            ),
+    };
 
     public static readonly Command DeleteRow = new RecordCommand<DataRow>
     {
@@ -14,6 +33,7 @@ public static class DataSetCommands
         Caption = "Delete {0}",
         Noun = ("Row", "Rows"),
         Keys = [Shortcuts.Key(Key.Delete)],
+        ActsOn = Context.Selected | Context.Containers,
         Effects = (R, rows, _) => Effect.UpsertAll(rows.Select(r => r with { Deleted = true })),
     };
 
@@ -25,6 +45,7 @@ public static class DataSetCommands
         Caption = "Delete {0}",
         Noun = ("Column", "Columns"),
         Keys = [Shortcuts.Key(Key.Delete)],
+        ActsOn = Context.Selected | Context.Containers,
         AppliesTo = (R, t) => HasColumn(R.Get<DataSet>(t.DataSetId), t.ColumnId),
         Effects = (R, columns, _) =>
             columns

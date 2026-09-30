@@ -241,6 +241,8 @@ public class ShowTemplateEditor : IEvent
 public class ShowDatasetEditor : IEvent
 {
     public SnowTag DatasetRef { get; set; }
+
+    public SnowTag SelectedRowRef { get; set; }
 }
 
 public class ShowImageManagerEvent : IEvent

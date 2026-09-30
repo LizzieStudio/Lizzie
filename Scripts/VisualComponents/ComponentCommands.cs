@@ -27,7 +27,7 @@ public static class ComponentCommands
         Icon = FlipIcon,
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
-        IncludesContents = true,
+        ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !c.IsContained,
         Effects = (R, cs, _) => Effect.UpsertAll(Flipped(cs)),
     };
@@ -38,7 +38,7 @@ public static class ComponentCommands
         Icon = RotateRightIcon,
         Caption = "Rotate {0} Right",
         Keys = [Shortcuts.Key(Key.E)],
-        IncludesContents = true,
+        ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotContained,
         Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rotated(c, -RotationStep))),
     };
@@ -49,7 +49,7 @@ public static class ComponentCommands
         Icon = RotateLeftIcon,
         Caption = "Rotate {0} Left",
         Keys = [Shortcuts.Key(Key.Q)],
-        IncludesContents = true,
+        ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotContained,
         Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rotated(c, RotationStep))),
     };
@@ -60,7 +60,7 @@ public static class ComponentCommands
         Icon = SendToTopIcon,
         Caption = "Move {0} to Top",
         Keys = [Shortcuts.Key(Key.T)],
-        IncludesContents = true,
+        ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
         Effects = (R, cs, _) => Effect.UpsertAll(Reordered(cs, ZTarget.Top)),
     };
@@ -71,7 +71,7 @@ public static class ComponentCommands
         Icon = SendToBottomIcon,
         Caption = "Move {0} to Bottom",
         Keys = [Shortcuts.Key(Key.B)],
-        IncludesContents = true,
+        ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
         Effects = (R, cs, _) => Effect.UpsertAll(Reordered(cs, ZTarget.Bottom)),
     };
@@ -82,7 +82,7 @@ public static class ComponentCommands
         Icon = DeleteIcon,
         Caption = "Delete {0}",
         Keys = [Shortcuts.Key(Key.Delete)],
-        IncludesContents = true,
+        ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotHeld,
         Effects = (R, cs, _) =>
             Effect.UpsertAll(cs.Select(c => c.Settled() with { Deleted = true })),

@@ -54,7 +54,7 @@ public static class UndoCommands
         Id = new("component.undo_changes"),
         Icon = "res://Textures/UI/undo_component.svg",
         Caption = "Undo This",
-        IncludesContents = true,
+        ActsOn = Context.Selected | Context.Contents,
         SideEffects = (cs, _) =>
         {
             var ids = cs.Select(c => c.Id).ToHashSet();

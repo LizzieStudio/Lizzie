@@ -17,7 +17,7 @@ public static class DieCommands
         Caption = "Roll {0}",
         Noun = ("Die", "Dice"),
         Keys = [Shortcuts.Key(Key.R)],
-        AppliesTo = IsDie,
+        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Die,
         Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rolled(R, c))),
     };
 
@@ -34,13 +34,10 @@ public static class DieCommands
             dice.Select(d => Parameters(R, d) is { } p ? VcDie.Faces(p).Length : 0)
                 .DefaultIfEmpty()
                 .Max(),
-        AppliesTo = IsDie,
+        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Die,
         Effects = (R, cs, n) =>
             Effect.UpsertAll(cs.Select(c => Showing(R, c, n)).Where(s => s != null)),
     };
-
-    private static bool IsDie(IRecordReader R, ComponentState c) =>
-        R.Kind(c) == VisualComponentType.Die;
 
     private static DieParameters Parameters(IRecordReader R, ComponentState die) =>
         R.GetIncludingDeleted<Prototype>(die.PrototypeRef)?.Parameters as DieParameters;

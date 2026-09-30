@@ -55,6 +55,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private SnowTag _renameOnSync = SnowTag.Empty;
     private SnowTag _focusRowOnSync = SnowTag.Empty;
+    private SnowTag _revealRowOnSync = SnowTag.Empty;
 
     // What the local player has selected, and the colour of each thing other players have, the newest first.
     private ImmutableHashSet<Target> _mine = ImmutableHashSet<Target>.Empty;
@@ -104,20 +105,19 @@ public partial class DatasetEditor : Window, ICommandView
 
     /// <summary>
     /// What the local player has selected in the shown dataset.
-    /// Selected cells refer to their rows and columns, which the menu offers commands for, but keys don't act on.
     /// </summary>
     public CommandContext BuildContext()
     {
         var selected = MySelection();
-        var cells = selected.OfType<CellTarget>().ToList();
+        var containers = selected
+            .OfType<CellTarget>()
+            .SelectMany(c => new Target[] { new RecordTarget(c.RowId), Column(c.ColumnId) });
+        if (!selected.IsEmpty)
+            containers = containers.Append(new RecordTarget(_datasetRef));
         return new()
         {
             Selected = selected,
-            Referenced =
-            [
-                .. cells.Select(c => (Target)new RecordTarget(c.RowId)),
-                .. cells.Select(c => (Target)Column(c.ColumnId)),
-            ],
+            Containers = containers,
             Local = _commands,
         };
     }
@@ -234,6 +234,18 @@ public partial class DatasetEditor : Window, ICommandView
             FocusCell(_views.FirstOrDefault(v => v.Row.Id == _focusRowOnSync), 0);
             _focusRowOnSync = SnowTag.Empty;
         }
+
+        if (_revealRowOnSync != SnowTag.Empty)
+        {
+            if (_views.FirstOrDefault(v => v.Row.Id == _revealRowOnSync) is { } view)
+            {
+                // defer so the grid has time to complete its layout
+                Callable
+                    .From(() => _dataScrollContainer.EnsureControlVisible(view.Box))
+                    .CallDeferred();
+            }
+            _revealRowOnSync = SnowTag.Empty;
+        }
     }
 
     private void InitializeSpreadsheet()
@@ -298,6 +310,16 @@ public partial class DatasetEditor : Window, ICommandView
     public void SetDatasetById(SnowTag id)
     {
         _datasetRef = id;
+        ProjectService.Instance.QueueSync(this);
+    }
+
+    /// <summary>
+    /// Selects a row of the shown dataset and scrolls it into view.
+    /// </summary>
+    public void RevealRow(SnowTag rowId)
+    {
+        Select([new RecordTarget(rowId)]);
+        _revealRowOnSync = rowId;
         ProjectService.Instance.QueueSync(this);
     }
 

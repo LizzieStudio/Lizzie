@@ -366,6 +366,8 @@ public partial class UI : CanvasLayer
         _datasetEditor.Closed += DatasetEditorOnClosed;
         _modalDialogs.AddChild(_datasetEditor);
         _datasetEditor.SetDatasetById(e.DatasetRef);
+        if (e.SelectedRowRef != SnowTag.Empty)
+            _datasetEditor.RevealRow(e.SelectedRowRef);
     }
 
     private void DatasetEditorOnClosed(object sender, EventArgs e)

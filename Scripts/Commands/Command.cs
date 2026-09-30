@@ -9,40 +9,91 @@ using Godot;
 /// </summary>
 public readonly record struct CommandId(string Id);
 
-/// <summary>How many targets a <see cref="RecordCommand{T}"/> can act on.</summary>
+/// <summary>
+/// How many targets a <see cref="RecordCommand{T}"/> can act on.
+/// When <see cref="One"/> is used, the Command won't appear when multiple targets are selected.
+/// Useful for Commands like "Edit Prototype", where multiple targets would be ambiguous.
+/// </summary>
 public enum TargetCount
 {
-    /// <summary>Can only handle one target, such as Edit Prototype.</summary>
-    One,
+    /// <summary>Should not appear unless only one relevant target is in the context.</summary>
+    One = 1,
 
-    /// <summary>Can handle many targets, such as Delete.</summary>
-    Many,
+    /// <summary>Should appear even when multiple relevant targets are in the context.</summary>
+    Many = 2,
 }
 
-/// <summary>What commands act on. Usually the selection or a hovered element.</summary>
-public sealed class CommandContext
+/// <summary>
+/// The parts of a <see cref="CommandContext"/> a Command can target, set with <see cref="Command.ActsOn"/>.
+/// </summary>
+[Flags]
+public enum Context
 {
     /// <summary>
-    /// What the user targeted. Usually the selection, but can also be the hovered target.
-    /// Matching commands will act on these.
+    /// The records the user targeted. Usually the selection, but can also be the hovered target.
     /// </summary>
-    public ImmutableHashSet<Target> Selected { get; init; } = ImmutableHashSet<Target>.Empty;
+    Selected = 1,
 
     /// <summary>
     /// Records that are contained within the selected targets, like a deck's cards or a DataSet's rows.
-    /// Matching commands will act on these if configured to do so with <see cref="Command.IncludesContents"/>.
     /// </summary>
-    public ImmutableHashSet<Target> Contents { get; init; } = ImmutableHashSet<Target>.Empty;
+    Contents = 2,
 
     /// <summary>
-    /// What the selected targets refer to, like a component's prototype.
-    /// Matching commands will only act on these if triggered from the context menu, not from keyboard shortcuts.
+    /// What the selected records are part of, like a card's deck.
     /// </summary>
-    public ImmutableHashSet<Target> Referenced { get; init; } = ImmutableHashSet<Target>.Empty;
+    Containers = 4,
 
     /// <summary>
-    /// Custom commands for this viewport, like the table's Zoom to Component.
-    /// They appear the same as other commands.
+    /// What the selected targets refer to, like a component's prototype or data row.
+    /// </summary>
+    Referenced = 8,
+}
+
+/// <summary>
+/// What commands act on. Usually the selection or a hovered element.
+/// </summary>
+public sealed class CommandContext
+{
+    /// <summary>
+    /// What the user is targeting. Usually the selection, but can also be the hovered target.
+    /// </summary>
+    public IEnumerable<Target> Selected
+    {
+        get;
+        init => field = value.ToImmutableHashSet();
+    } = ImmutableHashSet<Target>.Empty;
+
+    /// <summary>
+    /// Targets that are contained within the selection, like a selected deck's cards.
+    /// Matching commands act on these when their <see cref="Command.ActsOn"/> includes them.
+    /// </summary>
+    public IEnumerable<Target> Contents
+    {
+        get;
+        init => field = value.ToImmutableHashSet();
+    } = ImmutableHashSet<Target>.Empty;
+
+    /// <summary>
+    /// Targets that contain the the selection, like a selected card's current deck.
+    /// </summary>
+    public IEnumerable<Target> Containers
+    {
+        get;
+        init => field = value.ToImmutableHashSet();
+    } = ImmutableHashSet<Target>.Empty;
+
+    /// <summary>
+    /// What the selected targets refer to, like a component's prototype or data row.
+    /// </summary>
+    public IEnumerable<Target> Referenced
+    {
+        get;
+        init => field = value.ToImmutableHashSet();
+    } = ImmutableHashSet<Target>.Empty;
+
+    /// <summary>
+    /// Custom commands for this viewport to add to the context menu, like the table's Zoom to Component.
     /// </summary>
     public IReadOnlyList<Command> Local { get; init; } = [];
 }
@@ -125,9 +176,19 @@ public abstract class Command
     public bool NumberKeys { get; init; }
 
     /// <summary>
-    /// Set to true to include <see cref="CommandContext.Contents"/> in the targets.
+    /// The parts of the context this Command will act on, in terms of the user's selection.
+    /// By default, a Command only acts on directly selected records.
+    /// <list type="number">
+    /// <item><see cref="Context.Selected"/> acts on the selected records (the most direct)</item>
+    /// <item><see cref="Context.Contents"/> acts on the records inside the selected records, like a selected bag's tokens</item>
+    /// <item><see cref="Context.Containers"/> acts on the records containing the selected records, like a selected card's deck</item>
+    /// <item><see cref="Context.Referenced"/> acts on the records referenced by the selected records, like a selected cube's prototype</item>
+    /// </list>
+    /// You can act on multiple Contexts simultaneously with
+    /// <code>ActsOn = Context.Selected | Context.Contents | Context.Containers | Context.Referenced</code>
+    /// So a Delete Command with <c>Context.Selected | Context.Contents</c> will delete the selected records and their contents.
     /// </summary>
-    public bool IncludesContents { get; init; }
+    public Context ActsOn { get; init; } = Context.Selected;
 
     /// <summary>
     /// The path of an icon shown in the menu's left column, or null for none.
