@@ -18,6 +18,7 @@ public static class LizzieJson
             new CompactVector3JsonConverter(),
             new SnowportIdJsonConverter(),
             new SnowTagJsonConverter(),
+            new CommandIdJsonConverter(),
         },
     };
 }

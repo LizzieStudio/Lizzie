@@ -83,7 +83,7 @@ public static class LocalSelection
                 Within = within,
             };
         EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(null, [Effect.Upsert(record with { Targets = next })])
+            TableEvent.Now([Effect.Upsert(record with { Targets = next })])
         );
     }
 }

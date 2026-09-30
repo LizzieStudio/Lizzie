@@ -167,9 +167,7 @@ public partial class DebugConsole : Node
         try
         {
             for (int i = 0; i < count; i++)
-                sync.Submit(
-                    TableEvent.Now(new MoveAction(), [Effect.Upsert(states[i % states.Length])])
-                );
+                sync.Submit(TableEvent.Now([Effect.Upsert(states[i % states.Length])]));
         }
         finally
         {
@@ -269,15 +267,15 @@ public partial class DebugConsole : Node
     }
 
     /// <summary>
-    /// A label for events. Either the action or the effects.
+    /// A label for events. Either the command that made it or the effects.
     /// </summary>
     private static string Describe(TableEvent e)
     {
+        if (e.Command is { } command)
+            return command.Id;
+
         if (e.Undo is { } u)
             return u.ByRedo ? "Redo" : "Undo";
-
-        if (e.Action != null)
-            return Trim(e.Action.GetType().Name, "Action");
 
         if (e.Effects.Length == 0)
             return e.Close ? "Close" : "(empty)";

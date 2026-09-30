@@ -15,7 +15,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/undo.svg",
         Caption = "Undo Mine",
         Keys = [Shortcuts.Ctrl(Key.Z)],
-        SideEffects = v => Issue(UndoLog.Undo, Mine(v)),
+        SideEffects = v => Issue(Undo, UndoLog.Undo, Mine(v)),
     };
 
     public static readonly Command Redo = new GlobalCommand
@@ -24,7 +24,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/redo.svg",
         Caption = "Redo Mine",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
-        SideEffects = v => Issue(UndoLog.Redo, Mine(v)),
+        SideEffects = v => Issue(Redo, UndoLog.Redo, Mine(v)),
     };
 
     public static readonly Command UndoOthers = new GlobalCommand
@@ -33,7 +33,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/undo_others.svg",
         Caption = "Undo Others",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
-        SideEffects = v => Issue(UndoLog.Undo, Others(v)),
+        SideEffects = v => Issue(UndoOthers, UndoLog.Undo, Others(v)),
     };
 
     public static readonly Command RedoOthers = new GlobalCommand
@@ -42,7 +42,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/redo_others.svg",
         Caption = "Redo Others",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
-        SideEffects = v => Issue(UndoLog.Redo, Others(v)),
+        SideEffects = v => Issue(RedoOthers, UndoLog.Redo, Others(v)),
     };
 
     /// <summary>
@@ -58,7 +58,7 @@ public static class UndoCommands
         SideEffects = (cs, _) =>
         {
             var ids = cs.Select(c => c.Id).ToHashSet();
-            Issue(UndoLog.Undo, (_, fx) => ids.Contains(fx.Id));
+            Issue(UndoComponentChanges, UndoLog.Undo, (_, fx) => ids.Contains(fx.Id));
         },
     };
 
@@ -91,9 +91,10 @@ public static class UndoCommands
     );
 
     /// <summary>
-    /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any.
+    /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any,
+    /// as an event made by <paramref name="command"/>.
     /// </summary>
-    private static void Issue(Pick pick, Func<byte, Effect, bool> scope)
+    private static void Issue(Command command, Pick pick, Func<byte, Effect, bool> scope)
     {
         var sync = EventSynchronizer.Instance;
         if (sync == null || scope == null)
@@ -102,6 +103,6 @@ public static class UndoCommands
         // this creates a performance log in the debug console
         using var _ = DebugTimings.Measure(pick.Method.Name);
         if (pick(sync.EventLog, Me, scope) is { } flag)
-            sync.Submit(TableEvent.Undoing(flag));
+            sync.Submit(TableEvent.Undoing(flag, command.Id));
     }
 }

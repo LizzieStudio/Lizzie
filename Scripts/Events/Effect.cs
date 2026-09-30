@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
-/// The effects of a TableAction.
+/// The effects of a TableEvent.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<ComponentState>), "c")]

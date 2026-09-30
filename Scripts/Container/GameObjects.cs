@@ -304,7 +304,7 @@ public partial class GameObjects : Node
             }
         }
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(null, effects.ToArray()));
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray()));
     }
 
     /// <summary>
@@ -737,7 +737,7 @@ public partial class GameObjects : Node
             );
         }
 
-        return effects.Count == 0 ? null : TableEvent.Now(new MoveAction(), effects.ToArray());
+        return effects.Count == 0 ? null : TableEvent.Now(effects.ToArray());
     }
 
     public void StartDraw(TableEvent drawEvent)
@@ -776,10 +776,7 @@ public partial class GameObjects : Node
         _localDragOverHand = false;
 
         // The drag and its drop undo together.
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(new MoveAction(), dragged),
-            startGroup: true
-        );
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(dragged), startGroup: true);
     }
 
     private VisualComponentGroup _currentDragDropTarget;
@@ -1006,7 +1003,7 @@ public partial class GameObjects : Node
             dropped[i] = Effect.Upsert(s with { X = s.X + snapX, Z = s.Z + snapZ });
         }
 
-        var drop = TableEvent.Now(new MoveAction(), dropped);
+        var drop = TableEvent.Now(dropped);
         EventSynchronizer.Instance?.Submit(drop, endGroup: true);
     }
 
@@ -1091,7 +1088,7 @@ public partial class GameObjects : Node
                 )
             );
 
-        var drop = TableEvent.Now(new MoveAction(), effects.ToArray());
+        var drop = TableEvent.Now(effects.ToArray());
         EventSynchronizer.Instance?.Submit(drop, endGroup: true);
     }
 

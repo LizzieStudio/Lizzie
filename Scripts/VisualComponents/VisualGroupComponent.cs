@@ -66,7 +66,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             )
             .ToArray();
 
-        return TableEvent.Now(new MoveAction(), transformed);
+        return TableEvent.Now(transformed);
     }
 
     public override TableEvent DropObjects(IEnumerable<VisualComponentBase> dragObjects) =>

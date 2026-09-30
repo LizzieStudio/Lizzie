@@ -36,12 +36,7 @@ public sealed class UpsertBatch
             return;
 
         EventSynchronizer.Instance?.Submit(
-            new TableEvent
-            {
-                Id = _eventId,
-                Action = null,
-                Effects = _effects.ToArray(),
-            }
+            new TableEvent { Id = _eventId, Effects = _effects.ToArray() }
         );
     }
 }

@@ -328,7 +328,7 @@ public partial class ProjectService : Node
         foreach (var c in Containers.Where(c => c != Selections))
             effects.AddRange(c.EnumerateSaveEffects());
 
-        return [TableEvent.Now(null, effects.ToArray())];
+        return [TableEvent.Now(effects.ToArray())];
     }
 
     /// <summary>
@@ -361,10 +361,9 @@ public partial class ProjectService : Node
         if (CurrentProject == null || settings == null)
             return;
         EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(
-                null,
-                [new SetReplicatedValueEffect<ProjectGameSettings> { Payload = settings }]
-            )
+            TableEvent.Now([
+                new SetReplicatedValueEffect<ProjectGameSettings> { Payload = settings },
+            ])
         );
     }
 
@@ -511,9 +510,7 @@ public partial class ProjectService : Node
         // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
         effects.AddRange(fold.Values.Select(Effect.Upsert));
 
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now(new GameStateSwitchAction { Target = stateRef }, effects.ToArray())
-        );
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray()));
     }
 
     /// <summary>

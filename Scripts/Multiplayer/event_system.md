@@ -12,13 +12,13 @@ SnowportIds have a guarenteed order when two clients have communicated. So, if R
 
 SnowTags are a second type of ID also found in SnowportId.cs. SnowTags are 32 bits long, with 8 bits for the same source identifier as SnowportIds, and 24 bits for a sequential incrementing counter. SnowTags also give a unique ID, but are used to identify records: components, prototypes, templates, datasets, assets, etc. These ids are used when events identify records for changes. They can also be used as the Id in Godot UI elements, like an OptionButton.
 
-## Events and Actions
+## Events, Commands, and Effects
 
-Events will have two parts: a single Action and an Effect array. The action will specify what prompted this event, and will be used to determine which animations should apply to the event, if any. The Effect array will specify what has actually changed about the table, separated by the record that they touch. Some events may only have an action or effects. A delete event, for example, may only have the effects, since the action is self explanatory. A ping event, on the other hand, may only have the action, since no records need to change.
+Events carry two parts: the Command that triggered it, if any, and an array of Effects, if there are any. The Command helps to convey what prompted the event, while the Effect array specifies what has actually changed. Some events won't have either the command or the effects. Automated events, for example, may only have the effects, since the user didn't trigger the event with a command. An undo event, on the other hand, may only have the command, since the record changes are rederived from the Event Log.
 
 ## The Effect "upserts"
 
-Effects are mostly modeled as "upserts" on records identified by SnowTag. These carry the full internal state of components, prototypes, datasets, etc. If an upsert arrives and the SnowTag doesn't exist yet, that record is created. If it arrives and the SnowTag does exist, it is updated. "Deletion" uses a flag on the record to "soft delete" the record, making it easy to reverse for undo/redo. This also means that upserts are used to delete components.
+Effects are "upserts" on records identified by their SnowTag. An upsert carries the full internal state of a record, like components, prototypes, datasets, etc. If an upsert arrives and the SnowTag doesn't exist yet, that record is created. If it arrives and the SnowTag does exist, it is updated. The term upsert comes from databases and means an update combined with an insert. Deletion uses a flag on the record to "soft delete" the record, making it easy to reverse for undo/redo. This means that upserts are also used to delete components by updating the deleted flag to true.
 
 ## Order of events
 
@@ -52,7 +52,7 @@ This is more resilient to bugs. If two clients pulled a card off of a deck at th
 
 ## Shuffle and Roll
 
-Shuffle and roll actions transmit the final position of all components that they moved. The original client performs the RNG and shuffle, finds an update for the positions of the components, then creates upsert effects to move them to those positions.
+Shuffle and roll actions transmit the final position of all components that they moved. The original client performs the RNG and shuffle, computes the update for the positions of the components, then creates upsert effects to move them to those positions.
 
 ## The cursor position
 

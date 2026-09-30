@@ -191,12 +191,16 @@ public abstract class Command
     public Shortcut NumberLabel(int number) =>
         NumberKeys ? Shortcuts.Label(Shortcuts.Number(number)) : null;
 
-    /// <summary>Submits the effects as one event, or nothing when there are none.</summary>
-    protected static void Submit(IEnumerable<Effect> effects)
+    /// <summary>
+    /// Submits the effects as one event made by this command.
+    /// </summary>
+    protected void Submit(IEnumerable<Effect> effects)
     {
-        var all = effects?.ToArray() ?? [];
-        if (all.Length > 0)
-            EventSynchronizer.Instance?.Submit(TableEvent.Now(null, all));
+        if (effects == null)
+            return;
+        if (!CommandList.All.Contains(this))
+            GD.PushError($"Command {Id.Id} made an event but isn't in CommandList.All.");
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray(), Id));
     }
 }
 
@@ -234,8 +238,9 @@ public sealed class RecordCommand<T> : Command
     );
 
     /// <summary>
-    /// Generates the effects from this command on the given records.
-    /// Returning null or an empty collection will not fire an event.
+    /// Generates the effects from this command on the given records, submitted as one event.
+    /// Returning an empty list still fires an event.
+    /// returning null will not fire an event.
     /// The third parameter provides a number if <see cref="Command.AsksForNumber"/> is true, like with setting a die face.
     /// </summary>
     public EffectsDelegate Effects { get; init; }
@@ -263,10 +268,8 @@ public sealed class RecordCommand<T> : Command
     {
         var records = Records(targets);
         SideEffects?.Invoke(records, number);
-        if (Effects == null)
-            return;
-
-        Submit(Effects(Reader, records, number));
+        if (Effects != null && records.Count > 0)
+            Submit(Effects(Reader, records, number));
     }
 
     private static IRecordReader Reader => ProjectService.Instance;
@@ -295,7 +298,8 @@ public sealed class TargetCommand<T> : Command
 
     /// <summary>
     /// Generates the effects from this command on the given targets, submitted as one event.
-    /// Returning null or an empty collection will not fire an event.
+    /// Returning an empty list still fires an event.
+    /// returning null will not fire an event.
     /// </summary>
     public Func<IRecordReader, IReadOnlyList<T>, int, IEnumerable<Effect>> Effects { get; init; }
 
@@ -310,9 +314,9 @@ public sealed class TargetCommand<T> : Command
 
     public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
     {
-        var typed = targets.OfType<T>().ToList();
+        var typed = targets.OfType<T>().Where(t => AppliesTo(Reader, t)).ToList();
         SideEffects?.Invoke(typed, number);
-        if (Effects != null)
+        if (Effects != null && typed.Count > 0)
             Submit(Effects(Reader, typed, number));
     }
 
