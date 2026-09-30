@@ -206,34 +206,6 @@ public partial class DebugConsole : Node
         ImGui.Separator();
     }
 
-    // Undone units found by scanning back from the newest event, only as deep as rows are shown.
-    private readonly HashSet<SnowportId> _undone = new();
-
-    // the lowest log index the undone scan has visited
-    private int _undoneScannedTo;
-
-    // identifies the log the undone scan was made from, to restart it when the log changes
-    private (int Count, SnowportId Newest) _undoneLog;
-
-    /// <summary>
-    /// Extends the undone scan down to <paramref name="index"/>, restarting it if the log changed.
-    /// Whether an event is undone depends only on the events after it, so rows near the top
-    /// never need the rest of the log.
-    /// </summary>
-    private void ScanUndoneTo(OrderedDictionary<SnowportId, TableEvent> log, int index)
-    {
-        var current = (log.Count, log.Count > 0 ? log.GetAt(log.Count - 1).Key : SnowportId.Empty);
-        if (current != _undoneLog)
-        {
-            _undoneLog = current;
-            _undone.Clear();
-            _undoneScannedTo = log.Count;
-        }
-
-        while (_undoneScannedTo > index)
-            UndoLog.VisitAndTrackUndone(log.GetAt(--_undoneScannedTo).Value, _undone);
-    }
-
     /// <summary>
     /// Infinite-scrolling list of events, newest first.
     /// Only the rows on screen are read from the log.
@@ -247,7 +219,7 @@ public partial class DebugConsole : Node
             int count = eventLog?.Count ?? 0;
 
             ImGui.TextUnformatted($"{count} events");
-            ImGui.TextDisabled("amber = undo/redo   dim = undone   sN = source");
+            ImGui.TextDisabled("amber = undo/redo   sN = source");
             ImGui.Separator();
 
             DrawTimings();
@@ -255,7 +227,6 @@ public partial class DebugConsole : Node
             if (ImGui.BeginChild("##eventlist") && count > 0)
             {
                 var amber = new SysVec4(1f, 0.78f, 0.28f, 1f);
-                var gray = new SysVec4(0.55f, 0.55f, 0.55f, 1f);
 
                 var clipper = new ImGuiListClipperPtr(
                     ImGuiNative.ImGuiListClipper_ImGuiListClipper()
@@ -263,35 +234,30 @@ public partial class DebugConsole : Node
                 clipper.Begin(count);
                 while (clipper.Step())
                 {
-                    // row 0 is the newest event
-                    ScanUndoneTo(eventLog, count - clipper.DisplayEnd);
-
                     for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
                     {
                         int i = count - 1 - row;
                         var e = eventLog.GetAt(i).Value;
-                        int pushed = 0;
-                        if (e.Action is UndoAction)
-                        {
+                        bool colored = e.Undo != null;
+                        if (colored)
                             ImGui.PushStyleColor(ImGuiCol.Text, amber);
-                            pushed = 1;
-                        }
-                        else if (_undone.Contains(e.Unit))
-                        {
-                            ImGui.PushStyleColor(ImGuiCol.Text, gray);
-                            pushed = 1;
-                        }
 
                         string line = $"{i, 5}  s{e.Id.source, -3} {Describe(e)}";
-                        if (e.Action is UndoAction u)
+                        if (e.Undo is { } u)
                         {
-                            int target = eventLog.IndexOf(u.Target);
+                            int target = eventLog.IndexOf(u.Reverses);
                             line += target >= 0 ? $"  → #{target}" : "  → #?";
+                            // other presses it retires with it
+                            if (u.Also != null)
+                                foreach (var also in u.Also)
+                                    line += eventLog.IndexOf(also) is var at and >= 0
+                                        ? $", #{at}"
+                                        : ", #?";
                         }
                         ImGui.TextUnformatted(line);
 
-                        if (pushed > 0)
-                            ImGui.PopStyleColor(pushed);
+                        if (colored)
+                            ImGui.PopStyleColor();
                     }
                 }
                 clipper.End();
@@ -307,14 +273,14 @@ public partial class DebugConsole : Node
     /// </summary>
     private static string Describe(TableEvent e)
     {
-        if (e.Action is UndoAction ua)
-            return ua.Redo ? "Redo" : "Undo";
+        if (e.Undo is { } u)
+            return u.ByRedo ? "Redo" : "Undo";
 
         if (e.Action != null)
             return Trim(e.Action.GetType().Name, "Action");
 
         if (e.Effects.Length == 0)
-            return "(empty)";
+            return e.Close ? "Close" : "(empty)";
 
         return string.Join(
             ", ",

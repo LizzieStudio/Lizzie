@@ -168,7 +168,11 @@ public partial class MultiplayerManager : Node
 
         var playerId = (int)id;
         PresenceSynchronizer.Instance?.ReleaseSeatForPeer(playerId);
-        _players.Remove(playerId);
+        _players.Remove(playerId, out var player);
+
+        // This closes any lingering drag & drop events after a disconnect.
+        if (IsServer && player != null)
+            EventSynchronizer.Instance?.AbandonGroups(player.Source);
 
         EmitSignal("PlayerDisconnected", playerId);
     }

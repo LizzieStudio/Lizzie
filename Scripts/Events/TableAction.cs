@@ -10,7 +10,6 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(DealAction), "dl")]
 [JsonDerivedType(typeof(MoveAction), "m")]
 [JsonDerivedType(typeof(ShuffleAction), "s")]
-[JsonDerivedType(typeof(UndoAction), "u")]
 [JsonDerivedType(typeof(GameStateSwitchAction), "gsw")]
 public abstract class TableAction { }
 
@@ -38,19 +37,4 @@ public class GameStateSwitchAction : TableAction
     /// <summary>The snapshot to switch to.</summary>
     [JsonPropertyName("t")]
     public SnowTag Target { get; set; }
-}
-
-/// <summary>
-/// Reverses a prior event, named by its <see cref="SnowportId"/>.
-/// </summary>
-public class UndoAction : TableAction
-{
-    [JsonPropertyName("t")]
-    public SnowportId Target { get; set; }
-
-    /// <summary>
-    /// True to go forward. Redos should Target an Undo event (undo an undo).
-    /// </summary>
-    [JsonPropertyName("r")]
-    public bool Redo { get; set; }
 }

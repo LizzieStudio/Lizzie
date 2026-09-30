@@ -29,6 +29,9 @@ public partial class EventSynchronizer : Node
         _instance = this;
     }
 
+    /// <summary>
+    /// Clears the log and any open group (without closing it).
+    /// </summary>
     public void Clear()
     {
         EventLog.Clear();
@@ -38,33 +41,66 @@ public partial class EventSynchronizer : Node
     private SnowportId _openGroup = SnowportId.Empty;
 
     /// <summary>True while the local player's events are being collected into one undo.</summary>
-    public bool InGroup => _openGroup != SnowportId.Empty;
+    private bool InGroup => _openGroup != SnowportId.Empty;
 
-    public void Submit(TableEvent e, bool startGroup = false)
+    /// <summary>
+    /// Closes the open group, if any, with an event that does nothing else.
+    /// This is inteded as a fallback.
+    /// The proper way to end a group is with `endGroup: true` on <see cref="Submit"/>.
+    /// </summary>
+    public void EndGroup()
+    {
+        if (!InGroup)
+            return;
+        var group = _openGroup;
+        _openGroup = SnowportId.Empty;
+        Submit(TableEvent.Closing(group));
+    }
+
+    /// <summary>
+    /// Closes and undoes each gesture <paramref name="source"/> left unfinished.
+    /// The host calls this when a player leaves, so it's written once.
+    /// </summary>
+    public void AbandonGroups(byte source)
+    {
+        foreach (var group in UndoLog.OpenGroups(EventLog, source))
+        {
+            Submit(TableEvent.Closing(group));
+            Submit(TableEvent.Undoing(new UndoFlag { Reverses = group }));
+        }
+    }
+
+    /// <summary>
+    /// <para>Records, applies, publishes, and sends an event.</para>
+    /// <paramref name="startGroup"/> starts attaching all submitted events to one group.
+    /// All events in a group are undone and redone together.
+    /// This is generally used for gestures, like dragging, which have multiple events.
+    /// <paramref name="endGroup"/> stops attaching events to the group <strong>after</strong> this event.
+    /// </summary>
+    public void Submit(TableEvent e, bool startGroup = false, bool endGroup = false)
     {
         // Currentlly, all events submitted during a drag will be undone with it.
         // For now, this is correct, since it's just things like flip and rotate.
-        // This could change in the future, though, and might be incorrect now.
+        // This could change in the future, though.
         // TODO: track gestures separately, so events can be in or out of the group.
         if (startGroup)
         {
-            if (InGroup)
-                throw new Exception("you cannot start a group while one is running");
+            // This isn't the worst error, but something went wrong.
+            if (InGroup && OS.IsDebugBuild())
+                throw new Exception("a gesture left its undo group open");
+            EndGroup();
             _openGroup = e.Id;
         }
 
-        if (InGroup && e.Action is not UndoAction)
+        // Undos are never grouped, and an event that names its own group keeps it.
+        if (InGroup && e.Undo == null && e.Group == SnowportId.Empty)
         {
             e.Group = _openGroup;
-
-            if (e.Close)
+            if (endGroup)
             {
+                e.Close = true;
                 _openGroup = SnowportId.Empty;
             }
-        }
-        else
-        {
-            e.Close = false;
         }
 
         if (TryRecord(e))

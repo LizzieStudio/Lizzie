@@ -67,63 +67,42 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
 
     #endregion
 
-    /// <summary>Recomputes every record the undone event touched from the rest of the log.</summary>
-    private void OnUndo(UndoAction undo)
-    {
-        var log = _synchronizer?.EventLog;
-        if (log == null)
-            return;
-
-        var affected = UndoLog.ResolveAffected<TEntity>(log, undo.Target);
-        if (affected.Count == 0)
-            return;
-
-        var winners = UndoLog.LatestReplicated<TEntity>(log, affected);
-        var changed = new Dictionary<SnowTag, (TEntity Old, TEntity New)>();
-
-        foreach (var (id, winner) in winners)
-        {
-            var old = dict.GetValueOrDefault(id);
-            if (winner == null)
-                dict.Remove(id);
-            else
-                dict[id] = winner;
-            changed[id] = (old, winner);
-        }
-
-        Publish(changed);
-    }
-
-    /// <summary>Merges every replicated effect in the event into the store.</summary>
     private void OnEventApplied(TableEvent e)
     {
-        if (dict == null)
+        var log = _synchronizer.EventLog;
+        var ids = UndoLog
+            .Changes(log, e)
+            .SelectMany(c => c.Effects.OfType<UpdateReplicatedEffect<TEntity>>())
+            .Select(fx => fx.Id)
+            .ToHashSet();
+        if (ids.Count == 0)
             return;
 
-        if (e.Action is UndoAction undo)
+        var latest = ids.ToDictionary(id => id, _ => (TEntity)null);
+        var unfound = new HashSet<SnowTag>(ids);
+        foreach (var writer in UndoLog.InEffect(log))
         {
-            OnUndo(undo);
-            return;
+            for (int j = writer.Effects.Length - 1; j >= 0; j--)
+                if (
+                    writer.Effects[j] is UpdateReplicatedEffect<TEntity> { Payload: { } payload } fx
+                    && unfound.Remove(fx.Id)
+                )
+                    latest[fx.Id] = (TEntity)payload.WithIdentity(fx.Id, writer.Id);
+            if (unfound.Count == 0)
+                break;
         }
 
         var changed = new Dictionary<SnowTag, (TEntity Old, TEntity New)>();
-
-        foreach (var fx in e.Effects.OfType<UpdateReplicatedEffect<TEntity>>())
+        foreach (var (id, now) in latest)
         {
-            if (fx.Payload == null)
+            var old = dict.GetValueOrDefault(id);
+            if (Equals(old, now))
                 continue;
-            var entity = (TEntity)fx.Payload.WithIdentity(fx.Id, e.Id);
-
-            if (
-                dict.TryGetValue(fx.Id, out var current)
-                && e.Id.CompareTo(current.LastUpdateId) < 0
-            )
-                continue;
-
-            // an earlier effect in this event may have already replaced it
-            var old = changed.TryGetValue(fx.Id, out var prior) ? prior.Old : current;
-            dict[fx.Id] = entity;
-            changed[fx.Id] = (old, entity);
+            if (now == null)
+                dict.Remove(id);
+            else
+                dict[id] = now;
+            changed[id] = (old, now);
         }
 
         Publish(changed);

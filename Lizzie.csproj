@@ -11,6 +11,11 @@
     <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The test project builds separately and references this one. -->
+    <Compile Remove="Tests/**" />
+    <None Remove="Tests/**" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="Scripts\AssetManagement\README.md" />
     <None Include="Scripts\Multiplayer\README.md" />
     <None Include="Scripts\Templating\SaveBeforeCloseFeature.md" />

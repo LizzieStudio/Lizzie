@@ -39,7 +39,20 @@ public partial class GameObjects : Node
     /// <summary>The current game's components.</summary>
     private Godot.Collections.Array<Node> ComponentNodes => _table.GetChildren();
 
-    public CursorMode CursorMode { get; private set; }
+    private CursorMode _cursorMode;
+
+    public CursorMode CursorMode
+    {
+        get => _cursorMode;
+        private set
+        {
+            // Groups are used to bundle gestures into one "Undo" target.
+            // So if you drag a card and flip it while dragging, all of those events are undone.
+            if (_cursorMode == CursorMode.Drag && value != CursorMode.Drag)
+                EventSynchronizer.Instance?.EndGroup();
+            _cursorMode = value;
+        }
+    }
 
     public override void _Ready()
     {
@@ -897,7 +910,6 @@ public partial class GameObjects : Node
     private IEnumerable<VisualComponentBase> GetDraggingObjects() =>
         ComponentsAt(VisualComponentBase.ComponentLocation.Cursor);
 
-
     /// <summary>
     /// The components dragged by the local player, which is all a local gesture acts on.
     /// </summary>
@@ -907,6 +919,7 @@ public partial class GameObjects : Node
                 s.IsHeld && s.Holder == Snowport.Clock.source
             )
         );
+
     private IEnumerable<VisualComponentBase> GetNotDraggingObjects() =>
         ComponentsAt(VisualComponentBase.ComponentLocation.Table);
 
@@ -965,11 +978,11 @@ public partial class GameObjects : Node
             }
         }
 
+        SubmitDrop(GetLocalDraggingObjects());
+
         Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
 
         CursorMode = CursorMode.Normal;
-
-        SubmitDrop(GetLocalDraggingObjects());
     }
 
     private void SubmitDrop(IEnumerable<VisualComponentBase> dragged)
@@ -993,8 +1006,8 @@ public partial class GameObjects : Node
             dropped[i] = Effect.Upsert(s with { X = s.X + snapX, Z = s.Z + snapZ });
         }
 
-        var drop = TableEvent.Now(new MoveAction(), dropped, true);
-        EventSynchronizer.Instance?.Submit(drop);
+        var drop = TableEvent.Now(new MoveAction(), dropped);
+        EventSynchronizer.Instance?.Submit(drop, endGroup: true);
     }
 
     /// <summary>
@@ -1078,8 +1091,8 @@ public partial class GameObjects : Node
                 )
             );
 
-        var drop = TableEvent.Now(new MoveAction(), effects.ToArray(), true);
-        EventSynchronizer.Instance?.Submit(drop);
+        var drop = TableEvent.Now(new MoveAction(), effects.ToArray());
+        EventSynchronizer.Instance?.Submit(drop, endGroup: true);
     }
 
     #endregion
@@ -1169,7 +1182,7 @@ public partial class GameObjects : Node
         _table = CreateTable();
         _tableChanged = false;
 
-        CursorMode = CursorMode.Normal;
+        _cursorMode = CursorMode.Normal;
         _spawnComponents = null;
         _currentDragDropTarget = null;
         _hoveredComponent = null;

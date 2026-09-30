@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -14,7 +15,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/undo.svg",
         Caption = "Undo Mine",
         Keys = [Shortcuts.Ctrl(Key.Z)],
-        SideEffects = v => IssueUndo(Scope(v, UndoStream.Own), UndoStream.Own),
+        SideEffects = v => Issue(UndoLog.Undo, Mine(v)),
     };
 
     public static readonly Command Redo = new GlobalCommand
@@ -23,7 +24,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/redo.svg",
         Caption = "Redo Mine",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
-        SideEffects = v => IssueRedo(Scope(v, UndoStream.Own), UndoStream.Own),
+        SideEffects = v => Issue(UndoLog.Redo, Mine(v)),
     };
 
     public static readonly Command UndoOthers = new GlobalCommand
@@ -32,7 +33,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/undo_others.svg",
         Caption = "Undo Others",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
-        SideEffects = v => IssueUndo(Scope(v, UndoStream.Others), UndoStream.Others),
+        SideEffects = v => Issue(UndoLog.Undo, Others(v)),
     };
 
     public static readonly Command RedoOthers = new GlobalCommand
@@ -41,7 +42,7 @@ public static class UndoCommands
         Icon = "res://Textures/UI/redo_others.svg",
         Caption = "Redo Others",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
-        SideEffects = v => IssueRedo(Scope(v, UndoStream.Others), UndoStream.Others),
+        SideEffects = v => Issue(UndoLog.Redo, Others(v)),
     };
 
     /// <summary>
@@ -57,51 +58,50 @@ public static class UndoCommands
         SideEffects = (cs, _) =>
         {
             var ids = cs.Select(c => c.Id).ToHashSet();
-            IssueUndo(fx => ids.Contains(fx.Id), UndoStream.Anyone);
+            Issue(UndoLog.Undo, (_, fx) => ids.Contains(fx.Id));
         },
     };
 
-    private static void IssueUndo(Func<Effect, bool> scope, UndoStream stream)
-    {
-        var log = EventSynchronizer.Instance?.EventLog;
-        // Nothing is undone in the middle of a gesture.
-        if (log == null || EventSynchronizer.Instance.InGroup || scope == null)
-            return;
-        using var _ = DebugTimings.Measure("Undo");
-        if (
-            UndoLog.ComputeUndoTarget(log, Snowport.Clock.source, scope, stream)
-            is SnowportId target
-        )
-            EventSynchronizer.Instance.Submit(TableEvent.Now(new UndoAction { Target = target }));
-    }
-
-    /// <summary>A redo is an undo that targets the most recent live undo.</summary>
-    private static void IssueRedo(Func<Effect, bool> scope, UndoStream stream)
-    {
-        var log = EventSynchronizer.Instance?.EventLog;
-        // Nothing is undone in the middle of a gesture.
-        if (log == null || EventSynchronizer.Instance.InGroup || scope == null)
-            return;
-        using var _ = DebugTimings.Measure("Redo");
-        if (
-            UndoLog.ComputeRedoTarget(log, Snowport.Clock.source, scope, stream)
-            is SnowportId target
-        )
-            EventSynchronizer.Instance.Submit(
-                TableEvent.Now(new UndoAction { Target = target, Redo = true })
-            );
-    }
+    private static byte Me => Snowport.Clock.source;
 
     /// <summary>
-    /// The view's undo scope, or null outside any view. Another player's selection is theirs
-    /// to change, so undoing other players' actions passes over it.
+    /// A filter for the player's own changes in the view.
     /// </summary>
-    private static Func<Effect, bool> Scope(ICommandView view, UndoStream stream)
+    private static Func<byte, Effect, bool> Mine(ICommandView view) =>
+        view == null ? null : (author, fx) => author == Me && view.UndoScope(fx);
+
+    /// <summary>
+    /// A filter for other players changes in the view.
+    /// Selection events, however, are passed over. That's too far.
+    /// </summary>
+    private static Func<byte, Effect, bool> Others(ICommandView view) =>
+        view == null
+            ? null
+            : (author, fx) =>
+                author != Me && fx is not UpdateReplicatedEffect<Selection> && view.UndoScope(fx);
+
+    /// <summary>
+    /// <see cref="UndoLog.Undo"/> or <see cref="UndoLog.Redo"/>.
+    /// This is used to make it easier to set which one.
+    /// </summary>
+    private delegate UndoFlag Pick(
+        OrderedDictionary<SnowportId, TableEvent> log,
+        byte me,
+        Func<byte, Effect, bool> scope
+    );
+
+    /// <summary>
+    /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any.
+    /// </summary>
+    private static void Issue(Pick pick, Func<byte, Effect, bool> scope)
     {
-        if (view == null)
-            return null;
-        if (stream != UndoStream.Others)
-            return view.UndoScope;
-        return fx => view.UndoScope(fx) && fx is not UpdateReplicatedEffect<Selection>;
+        var sync = EventSynchronizer.Instance;
+        if (sync == null || scope == null)
+            return;
+
+        // this creates a performance log in the debug console
+        using var _ = DebugTimings.Measure(pick.Method.Name);
+        if (pick(sync.EventLog, Me, scope) is { } flag)
+            sync.Submit(TableEvent.Undoing(flag));
     }
 }

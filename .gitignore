@@ -10,3 +10,6 @@ addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll~*.TMP
 # Build folder except Godot ignore file
 /.builds/*
 !*/.gdignore
+# Test build output
+/Tests/bin/
+/Tests/obj/

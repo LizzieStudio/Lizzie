@@ -49,9 +49,6 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
     // the value last reported by Changed
     private T _notified;
 
-    // the id of the event that wrote _value
-    private SnowportId _writeId = SnowportId.Empty;
-
     // a change merged while the synchronizer is bulk loading, sent by FlushBulkLoad
     private bool _pending;
 
@@ -77,55 +74,32 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
     public void Clear()
     {
         _value = _createDefault();
-        _writeId = SnowportId.Empty;
         _pending = false;
         NotifyChanged();
     }
 
     #endregion
 
-    /// <summary>Recomputes the value from the rest of the log if the undone event wrote it.</summary>
-    private void OnUndo(UndoAction undo)
-    {
-        var log = _synchronizer?.EventLog;
-        if (log == null)
-            return;
-
-        if (!UndoLog.ResolveAffectsValue<T>(log, undo.Target))
-            return;
-
-        if (UndoLog.LatestValue<T>(log, out var value, out var writeId))
-        {
-            _value = value;
-            _writeId = writeId;
-        }
-        else
-        {
-            _value = _createDefault();
-            _writeId = SnowportId.Empty;
-        }
-
-        Publish();
-    }
-
-    /// <summary>Merges the last value effect in the event, if any.</summary>
     private void OnEventApplied(TableEvent e)
     {
-        if (e.Action is UndoAction undo)
-        {
-            OnUndo(undo);
-            return;
-        }
-
-        var fx = e.Effects.OfType<SetReplicatedValueEffect<T>>().LastOrDefault();
-        if (fx == null || fx.Payload is null)
+        var log = _synchronizer.EventLog;
+        var changes = UndoLog.Changes(log, e).SelectMany(c => c.Effects);
+        if (!changes.OfType<SetReplicatedValueEffect<T>>().Any())
             return;
 
-        if (e.Id.CompareTo(_writeId) < 0)
+        var latest = UndoLog
+            .InEffect(log)
+            .Select(writer =>
+                writer
+                    .Effects.OfType<SetReplicatedValueEffect<T>>()
+                    .LastOrDefault(fx => fx.Payload is not null)
+            )
+            .FirstOrDefault(fx => fx != null);
+        var value = latest == null ? _createDefault() : latest.Payload;
+        if (EqualityComparer<T>.Default.Equals(value, _value))
             return;
 
-        _value = fx.Payload;
-        _writeId = e.Id;
+        _value = value;
         Publish();
     }
 

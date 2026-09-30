@@ -2,10 +2,10 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// Makes clicks for right-click context menus behave as expected.
-/// 
+/// <para>Makes clicks for right-click context menus behave as expected.</para>
+///
 /// This is basically just a series of fixes for Godot weirdnesses.
-/// Most people should never have to interact with class.
+/// Most people should never have to interact with this class.
 /// </summary>
 public static class ClickRouting
 {
