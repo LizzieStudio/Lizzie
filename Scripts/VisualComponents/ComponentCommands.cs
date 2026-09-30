@@ -84,8 +84,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotHeld,
-        Effects = (R, cs, _) =>
-            Effect.UpsertAll(cs.Select(c => c.Settled() with { Deleted = true })),
+        Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => c with { Deleted = true })),
     };
 
     private static float RotationStep => ProjectService.Instance.RotationStep;
@@ -103,6 +102,7 @@ public static class ComponentCommands
     /// <summary>
     /// The tokens turned over. Tokens stacked in the same place turn over together like a pile,
     /// reversing their order by swapping their ZOrders.
+    /// <see cref="VcToken"/> animates what Flip writes.
     /// </summary>
     private static IEnumerable<ComponentState> Flipped(IEnumerable<ComponentState> tokens) =>
         tokens
@@ -115,20 +115,18 @@ public static class ComponentCommands
                 );
             });
 
-    /// <summary>The token turned over, animating the flip.</summary>
     private static ComponentState TurnedOver(ComponentState s)
     {
         bool faceUp = Mathf.RadToDeg(s.Rotation.Z) >= 90;
-        return s.Settled() with
+        return s with
         {
             Rotation = new Vector3(s.Rotation.X, s.Rotation.Y, Mathf.DegToRad(faceUp ? 0f : 180f)),
-            Transition = Transition.Flip,
         };
     }
 
     /// <summary>The component turned about Y by <paramref name="degrees"/>.</summary>
     private static ComponentState Rotated(ComponentState s, float degrees) =>
-        s.Settled() with
+        s with
         {
             Rotation = s.Rotation + new Vector3(0, Mathf.DegToRad(degrees), 0),
         };
@@ -141,6 +139,6 @@ public static class ComponentCommands
     {
         var ordered = components.OrderBy(s => s.ZOrder).ToList();
         var stamp = Snowport.Clock.Create();
-        return ordered.Select((s, i) => s.Settled() with { ZOrder = new ZOrder(target, i, stamp) });
+        return ordered.Select((s, i) => s with { ZOrder = new ZOrder(target, i, stamp) });
     }
 }

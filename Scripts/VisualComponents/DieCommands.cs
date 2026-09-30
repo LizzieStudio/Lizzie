@@ -43,21 +43,21 @@ public static class DieCommands
         R.GetIncludingDeleted<Prototype>(die.PrototypeRef)?.Parameters as DieParameters;
 
     /// <summary>
-    /// The die rolled to a random face, animating the roll. The rolling player picks the face.
+    /// The die rolled to a random face. The rolling player picks the face.
+    /// <see cref="VcDie"/> animates what Roll writes, even when it lands on the same face.
     /// </summary>
     private static ComponentState Rolled(IRecordReader R, ComponentState die)
     {
-        var s = die.Settled() with { Transition = Transition.Roll };
         if (Parameters(R, die) is not { SideCount: > 0 } p)
-            return s;
+            return die;
         int side = Random.Shared.Next(p.SideCount) + 1;
-        return VcDie.FaceRotation(p, side) is { } rotation ? s with { Rotation = rotation } : s;
+        return VcDie.FaceRotation(p, side) is { } rotation ? die with { Rotation = rotation } : die;
     }
 
     /// <summary>The die turned to show <paramref name="face"/>, or null if it has no such face.</summary>
     private static ComponentState Showing(IRecordReader R, ComponentState die, int face) =>
         Parameters(R, die) is { } p && VcDie.FaceRotation(p, face) is { } rotation
-            ? die.Settled() with
+            ? die with
             {
                 Rotation = rotation,
             }

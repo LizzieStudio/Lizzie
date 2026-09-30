@@ -37,7 +37,7 @@ public partial class PlayerHandService : Node
         int suborder,
         SnowportId stamp
     ) =>
-        card.Settled() with
+        card with
         {
             Location = VisualComponentBase.ComponentLocation.Hand,
             ContainerRef = HandContainer(seatIndex),

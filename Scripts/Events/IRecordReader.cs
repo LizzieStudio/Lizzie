@@ -87,6 +87,16 @@ public readonly record struct SwapLists<K>(
 
 public static class RecordReaderExtensions
 {
+    /// <summary>
+    /// The command that last wrote <paramref name="record"/>'s current state, or null when there was no command attached.
+    /// If the last command was an undo or a redo, this falls back to the last effective command (before any reversed event).
+    /// </summary>
+    public static CommandId? WrittenBy(this IRecordReader R, IReplicated record) =>
+        EventSynchronizer.Instance is { } sync
+        && sync.EventLog.TryGetValue(record.LastUpdateId, out var writer)
+            ? writer.Command
+            : null;
+
     /// <summary>The rows of a dataset in order.</summary>
     public static List<DataRow> GetRows(this IRecordReader R, SnowTag datasetRef)
     {

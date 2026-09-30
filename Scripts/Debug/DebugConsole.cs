@@ -152,7 +152,6 @@ public partial class DebugConsole : Node
         var sync = EventSynchronizer.Instance;
         var states = ProjectService
             .Instance?.Components.Records.Values.Where(s => !s.Deleted)
-            .Select(s => s with { Transition = Transition.None })
             .ToArray();
         if (sync == null || states == null || states.Length == 0)
         {

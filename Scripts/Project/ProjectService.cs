@@ -462,13 +462,12 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// A component's state as a snapshot stores it: without its write id or animation.
+    /// A component's state as a snapshot stores it: without its write id.
     /// </summary>
     private static ComponentState Snapshot(ComponentState s) =>
         s with
         {
             LastUpdateId = SnowportId.Empty,
-            Transition = Transition.None,
         };
 
     public void DeleteGameState(SnowTag stateRef)

@@ -200,7 +200,7 @@ public abstract partial class VisualComponentBase : Area3D
     private bool _held;
 
     /// <summary>
-    /// Applies the component's record, animating its transition if the write is recent enough.
+    /// Applies the component's record, animated by the command that wrote it if the write is recent enough.
     /// </summary>
     private void SyncState(IRecordReader R)
     {
@@ -220,10 +220,7 @@ public abstract partial class VisualComponentBase : Area3D
         // A held node is placed by its holder's cursor.
         if (!held)
             Position = s.PositionAt(_placed ? Position.Y : YHeight / 2f);
-        if (
-            s.Transition == Transition.None
-            || !PlayTransition(s, Snowport.Clock.MsecSince(s.LastUpdateId))
-        )
+        if (!PlayTransition(s, R.WrittenBy(s), Snowport.Clock.MsecSince(s.LastUpdateId)))
             Rotation = s.Rotation;
         _placed = true;
 
@@ -241,11 +238,15 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// Animates toward <paramref name="state"/> using the <see cref="ComponentState.Transition"/>.
+    /// Animates toward <paramref name="state"/> as <paramref name="writtenBy"/>, the command that wrote it, calls for.
     /// <paramref name="MsecSinceStart"/> is how many milliseconds ago the write was made.
     /// Returns false when there's nothing to animate, so the state is applied immediately.
     /// </summary>
-    public virtual bool PlayTransition(ComponentState state, long MsecSinceStart) => false;
+    public virtual bool PlayTransition(
+        ComponentState state,
+        CommandId? writtenBy,
+        long MsecSinceStart
+    ) => false;
 
     public TextureFactory TextureFactory { get; set; }
 

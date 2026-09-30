@@ -65,7 +65,7 @@ public static class DeckCommands
         var cards = R.TokensOn(deck);
         var orders = cards.Select(c => c.ZOrder).ToArray();
         Random.Shared.Shuffle(orders);
-        return cards.Select((c, i) => c.Settled() with { ZOrder = orders[i] });
+        return cards.Select((c, i) => c with { ZOrder = orders[i] });
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public static class DeckCommands
         var frame = deck.PositionAt(0);
         return cards.Select(
             (c, i) =>
-                c.Settled() with
+                c with
                 {
                     Position = frame + new Vector3(width * (1.5f + i), 0, 0),
                     ZOrder = new ZOrder(ZTarget.Top, i, stamp),

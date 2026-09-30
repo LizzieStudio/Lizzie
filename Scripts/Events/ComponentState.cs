@@ -3,37 +3,16 @@ using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
-/// The animation a component plays when a write is applied.
-/// </summary>
-public enum Transition
-{
-    None,
-    Flip,
-    Roll,
-}
-
-/// <summary>
 /// A component's full replicated state. Every component write carries all of it.
 /// </summary>
 public record ComponentState : Replicated
 {
     /// <summary>
-    /// The state last written for a component, minus the transition.
+    /// The state last written for a component.
     /// </summary>
-    public static ComponentState Of(VisualComponentBase c)
-    {
-        var s =
-            c.State
-            ?? throw new InvalidOperationException(
-                $"Component {c.Reference} has no written state."
-            );
-        return s.Settled();
-    }
-
-    /// <summary>
-    /// This state minus the transition, to build the next write from.
-    /// </summary>
-    public ComponentState Settled() => this with { Transition = Transition.None };
+    public static ComponentState Of(VisualComponentBase c) =>
+        c.State
+        ?? throw new InvalidOperationException($"Component {c.Reference} has no written state.");
 
     /// <summary>
     /// Captures a node that hasn't been written yet, such as a spawn preview.
@@ -136,11 +115,4 @@ public record ComponentState : Replicated
     /// <summary>Whether it's one of a deck's cards, rather than the deck itself.</summary>
     [JsonIgnore]
     public bool IsCard => DataSetRowIndex >= 0 || DataSetRowId != SnowTag.Empty;
-
-    /// <summary>
-    /// How this write animates. It starts when the write was made and is never copied
-    /// forward, so it only ever describes the write that set it.
-    /// </summary>
-    [JsonPropertyName("t")]
-    public Transition Transition { get; init; }
 }
