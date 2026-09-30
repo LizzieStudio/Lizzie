@@ -94,8 +94,8 @@ public static class CommandList
     {
         foreach (var key in command.Keys)
         {
-            // Commands on different kinds of target may share a key, since each runs on its own
-            // targets. The number keys are shared on purpose and aren't in Keys.
+            // Commands on different kinds of target may share a key: they only clash when both
+            // have targets, and then neither runs. The number keys are shared on purpose and aren't in Keys.
             foreach (var other in Registered.Where(o => o.GetType() == command.GetType()))
             {
                 if (other.Keys.Any(k => k.IsMatch(key)))
@@ -135,36 +135,58 @@ public static class CommandList
     }
 
     /// <summary>
-    /// Runs the commands the key is bound to, on the targets in <paramref name="view"/> they can act on.
+    /// Runs the command the key is bound to, on the targets in <paramref name="view"/> it can act on.
+    /// When several commands bound to the same key have targets in the context, none of them run.
     /// Without a view, or while it isn't taking commands, only commands without targets run.
-    /// True when the key belongs to a command, even if there was nothing to act on.
+    /// True when the key belongs to a command, even if it didn't run.
     /// </summary>
     public static bool RunShortcut(InputEvent e, ICommandView view)
     {
-        var context = view?.BuildContext();
-        bool matched = false;
-        foreach (var command in All.Concat(context?.Local ?? []))
+        var bound = ForKeys(view?.BuildContext()).Where(k => k.Command.Matches(e, out _)).ToList();
+        var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
+        if (ready.Count == 1)
         {
-            if (context == null && command is not GlobalCommand)
-                continue;
-            if (!command.Matches(e, out int number))
-                continue;
-            matched = true;
-
-            var targets = context == null ? [] : TargetsFor(command, context, menu: false);
-            if (command.Fits(targets.Count))
-                command.Run(targets, number, view);
+            var (command, targets) = ready[0];
+            command.Matches(e, out int number);
+            command.Run(targets, number, view);
         }
-        return matched;
+        return bound.Count > 0;
     }
 
     /// <summary>
-    /// Whether the command's keys would run it in <paramref name="context"/>, as <see cref="RunShortcut"/> decides:
-    /// it must fit the targets keys act on, which leave out containers and referenced ones.
-    /// Menus show a command's shortcut only then.
+    /// Whether the command's keys would run it in <paramref name="context"/>, using the same logic as <see cref="RunShortcut"/>.
+    /// Menus use this to decide if they should show a command's shortcut.
     /// </summary>
     public static bool RunsFromKeys(Command command, CommandContext context) =>
-        command.Fits(TargetsFor(command, context, menu: false).Count);
+        ForKeys(context)
+            .Where(k => SharesKey(k.Command, command) && k.Command.Fits(k.Targets.Count))
+            .Select(k => k.Command)
+            .SequenceEqual([command]);
+
+    /// <summary>
+    /// Every command that keyboard shortcuts could run in <paramref name="context"/>,
+    /// with the targets those shortcuts act on.
+    /// Without a context, returns only the commands without targets.
+    /// </summary>
+    private static IEnumerable<(Command Command, List<Target> Targets)> ForKeys(
+        CommandContext context
+    ) =>
+        context == null
+            ? All.OfType<GlobalCommand>().Select(c => ((Command)c, new List<Target>()))
+            : All.Concat(context.Local).Select(c => (c, TargetsFor(c, context, menu: false)));
+
+    /// <summary>
+    /// Whether both commands share a keyboard shortcut.
+    /// </summary>
+    private static bool SharesKey(Command a, Command b) =>
+        a == b
+        || (a.NumberKeys && b.NumberKeys)
+        || KeysOf(a).Any(k => KeysOf(b).Any(o => k.IsMatch(o)));
+
+    private static IEnumerable<InputEvent> KeysOf(Command command) =>
+        command.Action != null && InputMap.HasAction(command.Action)
+            ? InputMap.ActionGetEvents(command.Action)
+            : [];
 
     /// <summary>
     /// <para>The targets for this command.</para>

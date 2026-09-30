@@ -109,7 +109,7 @@ public static class Shortcuts
     }
 
     /// <summary>
-    /// Runs the commands bound to the key, in the view that has the viewport's focus.
+    /// Runs the command bound to the key, in the view that has the viewport's focus.
     /// True when the key belongs to a command.
     /// </summary>
     public static bool Dispatch(InputEvent e, Viewport viewport) =>
