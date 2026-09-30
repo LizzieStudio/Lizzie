@@ -113,6 +113,13 @@ public sealed class Watcher : IRecordReader
         return _source.Get(filter);
     }
 
+    public IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
+        where T : class, IReplicated
+    {
+        Depend(typeof(T), o => o is T record && filter(record));
+        return _source.GetIncludingDeleted(filter);
+    }
+
     public IReadOnlyList<T> Get<T>()
         where T : class, IReplicated
     {

@@ -52,12 +52,13 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Only used to track unsaved changes.
+    /// Tracks unsaved changes, and passes the event to the listeners.
     /// </summary>
-    private void OnEventApplied(TableEvent _)
+    private void OnEventApplied(TableEvent e)
     {
         if (EventSynchronizer.Instance?.BulkLoading == true)
             return;
+        ScheduleForListeners(e);
         if (CurrentProject == null)
             return;
         HasUnsavedChanges = true;

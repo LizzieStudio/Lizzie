@@ -244,7 +244,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public virtual bool PlayTransition(
         ComponentState state,
-        CommandId? writtenBy,
+        CommandName? writtenBy,
         long MsecSinceStart
     ) => false;
 

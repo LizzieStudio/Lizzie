@@ -98,9 +98,13 @@ public partial class VcToken : VisualComponentBase
     private float _targetZ;
     private bool _flipInProcess;
 
-    public override bool PlayTransition(ComponentState s, CommandId? writtenBy, long MsecSinceStart)
+    public override bool PlayTransition(
+        ComponentState s,
+        CommandName? writtenBy,
+        long MsecSinceStart
+    )
     {
-        if (writtenBy != ComponentCommands.Flip.Id || MsecSinceStart >= 1000f * 180f / _flipRate)
+        if (writtenBy != ComponentCommands.Flip.Name || MsecSinceStart >= 1000f * 180f / _flipRate)
             return false;
 
         _flipInProcess = true;

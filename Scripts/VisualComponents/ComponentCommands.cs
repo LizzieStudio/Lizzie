@@ -23,7 +23,7 @@ public static class ComponentCommands
 
     public static readonly Command Flip = new RecordCommand<ComponentState>
     {
-        Id = new("component.flip"),
+        Name = new("component.flip"),
         Icon = FlipIcon,
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
@@ -34,7 +34,7 @@ public static class ComponentCommands
 
     public static readonly Command RotateCw = new RecordCommand<ComponentState>
     {
-        Id = new("component.rotate_cw"),
+        Name = new("component.rotate_cw"),
         Icon = RotateRightIcon,
         Caption = "Rotate {0} Right",
         Keys = [Shortcuts.Key(Key.E)],
@@ -45,7 +45,7 @@ public static class ComponentCommands
 
     public static readonly Command RotateCcw = new RecordCommand<ComponentState>
     {
-        Id = new("component.rotate_ccw"),
+        Name = new("component.rotate_ccw"),
         Icon = RotateLeftIcon,
         Caption = "Rotate {0} Left",
         Keys = [Shortcuts.Key(Key.Q)],
@@ -56,7 +56,7 @@ public static class ComponentCommands
 
     public static readonly Command MoveToTop = new RecordCommand<ComponentState>
     {
-        Id = new("component.move_to_top"),
+        Name = new("component.move_to_top"),
         Icon = SendToTopIcon,
         Caption = "Move {0} to Top",
         Keys = [Shortcuts.Key(Key.T)],
@@ -67,7 +67,7 @@ public static class ComponentCommands
 
     public static readonly Command MoveToBottom = new RecordCommand<ComponentState>
     {
-        Id = new("component.move_to_bottom"),
+        Name = new("component.move_to_bottom"),
         Icon = SendToBottomIcon,
         Caption = "Move {0} to Bottom",
         Keys = [Shortcuts.Key(Key.B)],
@@ -78,7 +78,7 @@ public static class ComponentCommands
 
     public static readonly Command Delete = new RecordCommand<ComponentState>
     {
-        Id = new("component.delete"),
+        Name = new("component.delete"),
         Icon = DeleteIcon,
         Caption = "Delete {0}",
         Keys = [Shortcuts.Key(Key.Delete)],

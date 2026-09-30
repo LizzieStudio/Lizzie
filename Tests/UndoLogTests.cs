@@ -13,7 +13,7 @@ public class UndoLogTests
 
     private const byte Local = 1;
 
-    private static SnowportId GetId(int clock, byte source) => new(((ulong)clock << 8) | source);
+    private static SnowportId GetId(int clock, byte source) => new(((ulong)clock << 6) | source);
 
     private static TableEvent GetTableEvent(SnowportId id)
     {

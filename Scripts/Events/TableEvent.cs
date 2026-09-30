@@ -10,7 +10,7 @@ public class TableEvent
     /// The command that made this event, or null if there wasn't one.
     /// </summary>
     [JsonPropertyName("a")]
-    public CommandId? Command { get; set; }
+    public CommandName? Command { get; set; }
 
     [JsonPropertyName("e")]
     public Effect[] Effects { get; set; } = Array.Empty<Effect>();
@@ -44,7 +44,7 @@ public class TableEvent
     public SnowportId Unit => Group == SnowportId.Empty ? Id : Group;
 
     /// <summary>Creates an event with a new SnowportId.</summary>
-    public static TableEvent Now(Effect[] effects, CommandId? command = null) =>
+    public static TableEvent Now(Effect[] effects, CommandName? command = null) =>
         new()
         {
             Id = Snowport.Clock.Create(),
@@ -55,7 +55,7 @@ public class TableEvent
     /// <summary>
     /// Creates an undo or a redo, issued by <paramref name="command"/> if there was one.
     /// </summary>
-    public static TableEvent Undoing(UndoFlag flag, CommandId? command = null) =>
+    public static TableEvent Undoing(UndoFlag flag, CommandName? command = null) =>
         new()
         {
             Id = Snowport.Clock.Create(),

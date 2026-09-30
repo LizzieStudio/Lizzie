@@ -12,7 +12,7 @@ public static class DieCommands
 
     public static readonly Command Roll = new RecordCommand<ComponentState>
     {
-        Id = new("die.roll"),
+        Name = new("die.roll"),
         Icon = DieIcon,
         Caption = "Roll {0}",
         Noun = ("Die", "Dice"),
@@ -23,7 +23,7 @@ public static class DieCommands
 
     public static readonly Command SetFace = new RecordCommand<ComponentState>
     {
-        Id = new("die.set_face"),
+        Name = new("die.set_face"),
         Icon = DieIcon,
         Caption = "Set {0}",
         Noun = ("Die Face", "Die Faces"),

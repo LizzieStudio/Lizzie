@@ -271,7 +271,7 @@ public partial class DebugConsole : Node
     private static string Describe(TableEvent e)
     {
         if (e.Command is { } command)
-            return command.Id;
+            return command.Value;
 
         if (e.Undo is { } u)
             return u.ByRedo ? "Redo" : "Undo";

@@ -103,7 +103,7 @@ public partial class SceneController : Node3D, ICommandView
 
     private static readonly Command DuplicateComponent = new RecordCommand<ComponentState>
     {
-        Id = new("table.duplicate"),
+        Name = new("table.duplicate"),
         // The prototype manifest's clone icon.
         Icon = UI.TextureUI_ContentCopy,
         Caption = "Duplicate Component",
@@ -122,7 +122,7 @@ public partial class SceneController : Node3D, ICommandView
 
     private static readonly Command ZoomToComponent = new RecordCommand<ComponentState>
     {
-        Id = new("table.zoom"),
+        Name = new("table.zoom"),
         Icon = "res://Textures/UI/zoom.svg",
         Caption = "Zoom to Component",
         Keys = [Shortcuts.Key(Key.Z)],

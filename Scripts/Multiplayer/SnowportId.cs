@@ -21,8 +21,13 @@ public class Snowport
 
     public readonly byte source;
 
+    /// <summary>How many sources there are, 0 to 63, since ids give the source 6 bits.</summary>
+    public const int SourceCount = 64;
+
     public Snowport(byte source)
     {
+        if (source >= SourceCount)
+            throw new ArgumentOutOfRangeException(nameof(source), source, "A source takes 6 bits.");
         _localOffsetMsec = Time.GetTicksMsec();
         this.source = source;
     }
@@ -57,7 +62,7 @@ public class Snowport
     {
         // If the game time has advanced, update the hybrid clock to match.
         _useLogicClock = Math.Max(GameTimeMsec << 8, _useLogicClock);
-        var id = (_useLogicClock << 8) | source;
+        var id = (_useLogicClock << 6) | source;
         _useLogicClock++;
         return new SnowportId(id);
     }
@@ -67,7 +72,7 @@ public class Snowport
     /// </summary>
     public SnowTag CreateTag()
     {
-        var tag = (source << 24) | _tagCounter;
+        var tag = (source << 26) | _tagCounter;
         _tagCounter++;
         return new SnowTag(tag);
     }
@@ -79,7 +84,7 @@ public class Snowport
     {
         if (tag.source != source)
             return;
-        int counter = tag.Value & 0xFFFFFF;
+        int counter = tag.Value & 0x3FFFFFF;
         if (counter >= _tagCounter)
             _tagCounter = counter + 1;
     }
@@ -122,8 +127,8 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
     {
         get
         {
-            // get 45 bits from 8 to 52
-            return (ID >> 8) & 0x1FFFFFFFFFFFUL;
+            // get 47 bits from 6 to 52
+            return (ID >> 6) & 0x7FFFFFFFFFFFUL;
         }
     }
 
@@ -131,8 +136,8 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
     {
         get
         {
-            // get 8 bits from 0 to 7
-            return (byte)ID;
+            // get 6 bits from 0 to 5
+            return (byte)(ID & 0x3F);
         }
     }
 
@@ -180,8 +185,8 @@ public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
         this.ID = ID;
     }
 
-    /// <summary>The source that minted this tag. The host is 0, the rest are 1-255.</summary>
-    public byte source => (byte)((ID >> 24) & 0xFF);
+    /// <summary>The source that minted this tag. The host is 0, the rest are 1-63.</summary>
+    public byte source => (byte)((ID >> 26) & 0x3F);
 
     /// <summary>
     /// Projects tags to their raw int values.

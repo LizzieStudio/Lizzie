@@ -86,9 +86,13 @@ public partial class VcDie : VisualComponentBase
     public override float MaxAxisSize => Scale.X;
     public override GeometryInstance3D DragMesh => _mainMesh;
 
-    public override bool PlayTransition(ComponentState s, CommandId? writtenBy, long MsecSinceStart)
+    public override bool PlayTransition(
+        ComponentState s,
+        CommandName? writtenBy,
+        long MsecSinceStart
+    )
     {
-        if (writtenBy != DieCommands.Roll.Id || MsecSinceStart >= _rollDuration * 1000)
+        if (writtenBy != DieCommands.Roll.Name || MsecSinceStart >= _rollDuration * 1000)
             return false;
 
         _rollTargetRotation = s.Rotation;

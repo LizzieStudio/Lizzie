@@ -52,7 +52,7 @@ public static class CsvImport
         foreach (var existing in R.GetRows(dataset.Id))
             batch.Add(existing with { Deleted = true });
 
-        string rank = null;
+        string rank = R.LastRank(dataset.Id);
         foreach (var line in lines.Skip(1))
         {
             var data = ImmutableDictionary<SnowTag, string>.Empty;
@@ -62,7 +62,7 @@ public static class CsvImport
                     data = data.SetItem(dataset.Columns[c].Id, line[c]);
             }
 
-            rank = RowRank.Between(rank, null);
+            rank = RowRank.New(rank, null, Snowport.Clock.source);
             batch.Add(
                 new DataRow
                 {

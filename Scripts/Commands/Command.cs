@@ -5,9 +5,9 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// Identifies a command, like "component.flip".
+/// The stable name of a <see cref="Command"/>, like "component.flip".
 /// </summary>
-public readonly record struct CommandId(string Id);
+public readonly record struct CommandName(string Value);
 
 /// <summary>
 /// How many targets a <see cref="RecordCommand{T}"/> can act on.
@@ -123,7 +123,7 @@ public interface ICommandView
 /// </summary>
 public abstract class Command
 {
-    public CommandId Id { get; init; }
+    public CommandName Name { get; init; }
 
     /// <summary>
     /// The menu label, e.g. "Edit Prototype".
@@ -151,10 +151,10 @@ public abstract class Command
     private StringName _action;
 
     /// <summary>
-    /// The <see cref="InputMap"/> action holding its <see cref="Keys"/>, named by its id,
+    /// The <see cref="InputMap"/> action holding its <see cref="Keys"/>, named by its <see cref="Name"/>,
     /// so the keys can be changed while the game runs. Null when it has no keys.
     /// </summary>
-    public StringName Action => Keys.Count == 0 ? null : _action ??= Id.Id;
+    public StringName Action => Keys.Count == 0 ? null : _action ??= Name.Value;
 
     /// <summary>
     /// Set to false to avoid showing this command in the context menu.
@@ -259,13 +259,13 @@ public abstract class Command
     {
         if (effects == null)
             return;
-        if (!CommandList.All.Contains(this))
-            GD.PushError($"Command {Id.Id} made an event but isn't in CommandList.All.");
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray(), Id));
+        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray(), Name));
     }
 }
 
-/// <summary>A command on records of one type.</summary>
+/// <summary>
+/// A command on records of one type.
+/// </summary>
 public sealed class RecordCommand<T> : Command
     where T : class, IReplicated
 {
@@ -307,14 +307,13 @@ public sealed class RecordCommand<T> : Command
     public EffectsDelegate Effects { get; init; }
 
     /// <summary>
-    /// Run so that this command can perform actions other than change records, such as opening an editor.
-    /// The second parameter provides a number if <see cref="Command.AsksForNumber"/> is true, like with setting a die face.
+    /// An action to apply arbitrary side-effects.
+    /// The second parameter provides a number if <see cref="Command.AsksForNumber"/> is true.
     /// </summary>
     public Action<IReadOnlyList<T>, int> SideEffects { get; init; }
 
     /// <summary>
-    /// When <see cref="Command.AsksForNumber"/> is true, the highest number worth offering for the records,
-    /// such as a die's face count or a deck's card count. Null offers the menu's default.
+    /// When <see cref="Command.AsksForNumber"/> is true, return the highest number worth offering for the records.
     /// </summary>
     public Func<IRecordReader, IReadOnlyList<T>, int> NumberLimit { get; init; }
 
@@ -344,7 +343,7 @@ public sealed class RecordCommand<T> : Command
 }
 
 /// <summary>
-/// A command on targets that are part of a record, like a dataset's columns.
+/// A command on targets that are part of a record.
 /// </summary>
 public sealed class TargetCommand<T> : Command
     where T : Target
@@ -358,8 +357,7 @@ public sealed class TargetCommand<T> : Command
     public TargetCount Count { get; init; } = TargetCount.Many;
 
     /// <summary>
-    /// Generates the effects from this command on the given targets, submitted as one event.
-    /// Returning an empty list still fires an event.
+    /// Generate the effects from this command on the given targets, submitted as one event.
     /// returning null will not fire an event.
     /// </summary>
     public Func<IRecordReader, IReadOnlyList<T>, int, IEnumerable<Effect>> Effects { get; init; }

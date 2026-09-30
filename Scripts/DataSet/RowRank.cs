@@ -8,14 +8,26 @@ using System.Text;
 /// ABCD + ABEFG = ABD
 ///
 /// This ensures that you can always insert a row in-between two other rows if you need to.
+///
+/// <para>
+/// Every rank ends with a character unique to the source that made it,
+/// so two players inserting at roughly the same time still produce different ranks.
+/// </para>
 /// </summary>
 public static class RowRank
 {
-    // these are in Ordinal order
+    // These are in Ordinal order.
+    // We can never end a rank with the lowest character <c>+</c>, since nothing could go before it.
+    // At the high end, more characters make a rank go higher: <c>z < z+</c>
+    // At the low end, fewer characters would be required to make a rank go lower: <c>V < V+</c>
+    // The problem is that we can't guarentee that that rank won't be taken.
+    // We can always add more characters to make a unique rank, but not necessarily the other way around.
+    // Therefore, we have to never end a rank with the lowest character. We only use it for the occasional middle character.
+    // The 64 unique source numbers then translate to <c>-</c> through <c>z</c>.
     private const string Alphabet =
-        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        "+-/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private const int Min_Digit = 0;
-    private const int Max_Digit = 62;
+    private const int Max_Digit = 65;
 
     public static readonly IComparer<string> Comparer = System.StringComparer.Ordinal;
 
@@ -24,11 +36,16 @@ public static class RowRank
     private static char Chr(int i) => Alphabet[i];
 
     /// <summary>
-    /// Returns a rank strictly between <paramref name="prev"/> and <paramref name="next"/>.
+    /// Returns a rank strictly between <paramref name="prev"/> and <paramref name="next"/>, made by <paramref name="source"/>.
     /// If <paramref name="prev"/> is null, get a rank below <paramref name="next"/>.
     /// If <paramref name="next"/> is null, get a rank above <paramref name="prev"/>.
     /// </summary>
-    public static string Between(string prev, string next)
+    public static string New(string prev, string next, byte source) =>
+        // Added characters never change the order.
+        // If ABC < ABD < ABE, then the same is true for any extension of ABD...
+        Between(prev, next) + Chr(source + 1);
+
+    private static string Between(string prev, string next)
     {
         prev ??= string.Empty;
         next ??= string.Empty;

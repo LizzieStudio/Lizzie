@@ -53,9 +53,10 @@ public partial class DatasetEditor : Window, ICommandView
     // The line under the last row, holding only a button that adds a row.
     private HBoxContainer _addRowLine;
 
-    private SnowTag _renameOnSync = SnowTag.Empty;
-    private SnowTag _focusRowOnSync = SnowTag.Empty;
     private SnowTag _revealRowOnSync = SnowTag.Empty;
+
+    // The columns the last grid rebuild added to the shown dataset, for an insert's listener to rename.
+    private List<SnowTag> _addedColumns = [];
 
     // What the local player has selected, and the colour of each thing other players have, the newest first.
     private ImmutableHashSet<Target> _mine = ImmutableHashSet<Target>.Empty;
@@ -100,7 +101,33 @@ public partial class DatasetEditor : Window, ICommandView
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        var ps = ProjectService.Instance;
+        ps.Watch(this, Sync);
+
+        // The local player's inserts focus the row they add, or start renaming the column,
+        // once the grid shows it. A row insert writes only the new row.
+        foreach (var insert in new Command[] { InsertRowAbove, InsertRowBelow, AddRowCommand })
+            ps.Listen(
+                this,
+                insert,
+                e =>
+                    FocusCell(
+                        ViewOf(e.Effects.OfType<UpdateReplicatedEffect<DataRow>>().Single().Id),
+                        0
+                    )
+            );
+
+        foreach (
+            var insert in new Command[] { InsertColumnLeft, InsertColumnRight, AddColumnCommand }
+        )
+            ps.Listen(
+                this,
+                insert,
+                _ =>
+                    _headerCells
+                        .FirstOrDefault(h => _addedColumns.Contains(h.ColumnId))
+                        ?.BeginRename()
+            );
     }
 
     /// <summary>
@@ -211,6 +238,7 @@ public partial class DatasetEditor : Window, ICommandView
         var columnIds = ds.Columns.Select(c => c.Id).ToList();
         if (ds.Id != _shownDataSetId || !columnIds.SequenceEqual(_columnIds))
         {
+            _addedColumns = ds.Id == _shownDataSetId ? columnIds.Except(_columnIds).ToList() : [];
             ClearGrid();
             _shownDataSetId = ds.Id;
             _columnIds = columnIds;
@@ -222,18 +250,6 @@ public partial class DatasetEditor : Window, ICommandView
 
         ReconcileRows(R.GetRows(ds.Id));
         SyncSelection(R, ds.Id);
-
-        if (_renameOnSync != SnowTag.Empty)
-        {
-            _headerCells.FirstOrDefault(h => h.ColumnId == _renameOnSync)?.BeginRename();
-            _renameOnSync = SnowTag.Empty;
-        }
-
-        if (_focusRowOnSync != SnowTag.Empty)
-        {
-            FocusCell(_views.FirstOrDefault(v => v.Row.Id == _focusRowOnSync), 0);
-            _focusRowOnSync = SnowTag.Empty;
-        }
 
         if (_revealRowOnSync != SnowTag.Empty)
         {
@@ -678,44 +694,24 @@ public partial class DatasetEditor : Window, ICommandView
         ProjectService.Instance.Upsert(row);
     }
 
-    /// <summary>Adds an empty row after the last, and starts editing it.</summary>
-    private void AddRow() => InsertRow(_views.Count);
+    /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
+    private void AddRow() => AddRowCommand.Run([new RecordTarget(_datasetRef)], 1, this);
 
-    /// <summary>Adds an empty row at <paramref name="index"/>, and starts editing it.</summary>
-    private void InsertRow(int index)
-    {
-        if (_currentDataSet == null)
-            return;
+    private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
-        var row = new DataRow { Id = Snowport.Clock.CreateTag(), DataSetId = _currentDataSet.Id };
-        PlaceRow(row, index);
-        _focusRowOnSync = row.Id;
-    }
-
-    /// <summary>Writes <paramref name="row"/> so it sits at <paramref name="index"/> among the other rows.</summary>
-    private void PlaceRow(DataRow row, int index)
+    /// <summary>Moves <paramref name="row"/> so it sits at <paramref name="index"/> among the other rows.</summary>
+    private void MoveRow(DataRow row, int index)
     {
         var others = _views.Select(v => v.Row).Where(r => r.Id != row.Id).ToList();
-        var prev = index > 0 ? others[index - 1] : null;
-        var next = index < others.Count ? others[index] : null;
+        if (others.Count == 0)
+            return;
 
-        var batch = new UpsertBatch();
-        if (prev == null || next == null || RowRank.Comparer.Compare(prev.Rank, next.Rank) < 0)
-        {
-            batch.Add(row with { Rank = RowRank.Between(prev?.Rank, next?.Rank) });
-        }
-        else
-        {
-            // Tied ranks leave no room between them, so rank every row in the new order.
-            others.Insert(index, row);
-            string rank = null;
-            foreach (var r in others)
-            {
-                rank = RowRank.Between(rank, null);
-                batch.Add(r with { Rank = rank });
-            }
-        }
-        batch.Submit();
+        var R = ProjectService.Instance;
+        var rank =
+            index > 0
+                ? R.RankBeside(others[index - 1], after: true)
+                : R.RankBeside(others[0], after: false);
+        R.Upsert(row with { Rank = rank });
     }
 
     // The rows' or the columns' controls, for a drag along that axis.
@@ -782,7 +778,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (to == from || to == from + 1)
             return;
 
-        PlaceRow(view.Row, to > from ? to - 1 : to);
+        MoveRow(view.Row, to > from ? to - 1 : to);
     }
 
     private void DropColumn(SnowTag columnId, Vector2 at)
@@ -827,28 +823,8 @@ public partial class DatasetEditor : Window, ICommandView
         ProjectService.Instance.Upsert(_currentDataSet);
     }
 
-    /// <summary>Adds a column after the last, and starts renaming it.</summary>
-    private void AddColumn() => InsertColumn(_currentDataSet?.Columns.Length ?? 0);
-
-    private void InsertColumn(int index)
-    {
-        if (_currentDataSet == null)
-            return;
-
-        var column = new Column
-        {
-            Id = Snowport.Clock.CreateTag(),
-            Name = $"Column {_currentDataSet.Columns.Length + 1}",
-        };
-        _currentDataSet = _currentDataSet with
-        {
-            Columns = _currentDataSet.Columns.Insert(index, column),
-        };
-        ProjectService.Instance.Upsert(_currentDataSet);
-
-        // Name it right away once its header exists.
-        _renameOnSync = column.Id;
-    }
+    /// <summary>Adds a column after the last, which its listener then starts renaming.</summary>
+    private void AddColumn() => AddColumnCommand.Run([new RecordTarget(_datasetRef)], 1, this);
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
     private ImmutableHashSet<Target> MySelection() =>
@@ -1026,42 +1002,17 @@ public partial class DatasetEditor : Window, ICommandView
         CommandMenu.Show(Position + (Vector2I)at, context, this);
 
     /// <summary>
-    /// The commands only the editor offers, since they act on its grid:
-    /// inserts go where the grid shows them and then focus or rename what they add.
+    /// The commands only the editor offers, since they act on its grid.
     /// </summary>
     private IReadOnlyList<Command> EditorCommands() =>
         [
-            new RecordCommand<DataRow>
-            {
-                Id = new("dataset.insert_row_above"),
-                Caption = "Insert Row Above",
-                Count = TargetCount.One,
-                SideEffects = (rows, _) => InsertRowAt(rows[0], 0),
-            },
-            new RecordCommand<DataRow>
-            {
-                Id = new("dataset.insert_row_below"),
-                Caption = "Insert Row Below",
-                Count = TargetCount.One,
-                SideEffects = (rows, _) => InsertRowAt(rows[0], 1),
-            },
+            InsertRowAbove,
+            InsertRowBelow,
+            InsertColumnLeft,
+            InsertColumnRight,
             new TargetCommand<ColumnTarget>
             {
-                Id = new("dataset.insert_column_left"),
-                Caption = "Insert Column Left",
-                Count = TargetCount.One,
-                SideEffects = (columns, _) => InsertColumnAt(columns[0], 0),
-            },
-            new TargetCommand<ColumnTarget>
-            {
-                Id = new("dataset.insert_column_right"),
-                Caption = "Insert Column Right",
-                Count = TargetCount.One,
-                SideEffects = (columns, _) => InsertColumnAt(columns[0], 1),
-            },
-            new TargetCommand<ColumnTarget>
-            {
-                Id = new("dataset.rename_column"),
+                Name = new("dataset.rename_column"),
                 Icon = UI.TextureUI_Pencil,
                 Caption = "Rename Column",
                 Count = TargetCount.One,
@@ -1069,20 +1020,90 @@ public partial class DatasetEditor : Window, ICommandView
             },
         ];
 
-    /// <summary>Inserts a row before <paramref name="row"/>, or after it with an offset of 1.</summary>
-    private void InsertRowAt(DataRow row, int offset)
-    {
-        int index = _views.FindIndex(v => v.Row.Id == row.Id);
-        if (index >= 0)
-            InsertRow(index + offset);
-    }
+    // The inserts only read records, so every editor shares them. The editor's listeners
+    // focus the row they add or start renaming the column.
 
-    /// <summary>Inserts a column left of the target, or right of it with an offset of 1.</summary>
-    private void InsertColumnAt(ColumnTarget column, int offset)
+    private static readonly RecordCommand<DataRow> InsertRowAbove = new()
     {
-        int index = _columnIds.IndexOf(column.ColumnId);
-        if (index >= 0)
-            InsertColumn(index + offset);
+        Name = new("dataset.insert_row_above"),
+        Caption = "Insert Row Above",
+        Count = TargetCount.One,
+        Effects = (R, rows, _) => NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: false)),
+    };
+
+    private static readonly RecordCommand<DataRow> InsertRowBelow = new()
+    {
+        Name = new("dataset.insert_row_below"),
+        Caption = "Insert Row Below",
+        Count = TargetCount.One,
+        Effects = (R, rows, _) => NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: true)),
+    };
+
+    /// <summary>Adds a row after the last, for the add buttons and Enter on the last row.</summary>
+    private static readonly RecordCommand<DataSet> AddRowCommand = new()
+    {
+        Name = new("dataset.add_row"),
+        Caption = "Add Row",
+        Count = TargetCount.One,
+        ShowInMenu = false,
+        Effects = (R, sets, _) =>
+            NewRow(sets[0].Id, RowRank.New(R.LastRank(sets[0].Id), null, Snowport.Clock.source)),
+    };
+
+    private static readonly TargetCommand<ColumnTarget> InsertColumnLeft = new()
+    {
+        Name = new("dataset.insert_column_left"),
+        Caption = "Insert Column Left",
+        Count = TargetCount.One,
+        AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
+        Effects = (R, columns, _) =>
+            NewColumn(R.Get<DataSet>(columns[0].DataSetId), ColumnIndex(R, columns[0])),
+    };
+
+    private static readonly TargetCommand<ColumnTarget> InsertColumnRight = new()
+    {
+        Name = new("dataset.insert_column_right"),
+        Caption = "Insert Column Right",
+        Count = TargetCount.One,
+        AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
+        Effects = (R, columns, _) =>
+            NewColumn(R.Get<DataSet>(columns[0].DataSetId), ColumnIndex(R, columns[0]) + 1),
+    };
+
+    /// <summary>Adds a column after the last, for the add buttons.</summary>
+    private static readonly RecordCommand<DataSet> AddColumnCommand = new()
+    {
+        Name = new("dataset.add_column"),
+        Caption = "Add Column",
+        Count = TargetCount.One,
+        ShowInMenu = false,
+        Effects = (R, sets, _) => NewColumn(sets[0], sets[0].Columns.Length),
+    };
+
+    private static IEnumerable<Effect> NewRow(SnowTag dataSetId, string rank) =>
+        [
+            Effect.Upsert(
+                new DataRow
+                {
+                    Id = Snowport.Clock.CreateTag(),
+                    DataSetId = dataSetId,
+                    Rank = rank,
+                }
+            ),
+        ];
+
+    // The column's place in its dataset, or -1 if it's gone.
+    private static int ColumnIndex(IRecordReader R, ColumnTarget t) =>
+        R.Get<DataSet>(t.DataSetId)?.Columns.Select(c => c.Id).ToList().IndexOf(t.ColumnId) ?? -1;
+
+    private static IEnumerable<Effect> NewColumn(DataSet ds, int index)
+    {
+        var column = new Column
+        {
+            Id = Snowport.Clock.CreateTag(),
+            Name = $"Column {ds.Columns.Length + 1}",
+        };
+        return [Effect.Upsert(ds with { Columns = ds.Columns.Insert(index, column) })];
     }
 
     private void RenameColumn(ColumnTarget column)

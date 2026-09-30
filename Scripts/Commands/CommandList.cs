@@ -39,7 +39,7 @@ public static class CommandList
 
     /// <summary>
     /// Reports any command that isn't in <see cref="All"/>, which nothing could run,
-    /// and any id used by more than one command.
+    /// and any name used by more than one command.
     /// A command in a public static field of any command type is expected in <see cref="All"/>;
     /// a view's own commands are private or built per instance.
     /// </summary>
@@ -57,8 +57,8 @@ public static class CommandList
                     $"{field.DeclaringType.Name}.{field.Name} is not in CommandList.All, so no menu or shortcut can run it."
                 );
 
-        foreach (var id in all.GroupBy(c => c.Id).Where(g => g.Count() > 1))
-            GD.PushError($"Command id \"{id.Key.Id}\" is used by {id.Count()} commands.");
+        foreach (var name in all.GroupBy(c => c.Name).Where(g => g.Count() > 1))
+            GD.PushError($"Command name \"{name.Key.Value}\" is used by {name.Count()} commands.");
 
         return all;
     }
@@ -68,7 +68,7 @@ public static class CommandList
     private static readonly List<Command> Registered = [];
 
     /// <summary>
-    /// Adds each command's keys to the <see cref="InputMap"/> as an action named by its id,
+    /// Adds each command's keys to the <see cref="InputMap"/> as an action named by its name,
     /// and the number keys once. Views call it for the commands they offer themselves.
     /// Reports a key that would run two commands on the same kind of target,
     /// and a command key that another input action in the project also uses.
@@ -100,7 +100,7 @@ public static class CommandList
             {
                 if (other.Keys.Any(k => k.IsMatch(key)))
                     GD.PushError(
-                        $"Commands {other.Id.Id} and {command.Id.Id} both use {key.AsText()} on the same kind of target."
+                        $"Commands {other.Name.Value} and {command.Name.Value} both use {key.AsText()} on the same kind of target."
                     );
             }
 
@@ -111,7 +111,7 @@ public static class CommandList
                     continue;
                 if (InputMap.ActionGetEvents(action).Any(e => e.IsMatch(key)))
                     GD.PushError(
-                        $"Command {command.Id.Id} uses {key.AsText()}, which the input action {action} also uses."
+                        $"Command {command.Name.Value} uses {key.AsText()}, which the input action {action} also uses."
                     );
             }
         }

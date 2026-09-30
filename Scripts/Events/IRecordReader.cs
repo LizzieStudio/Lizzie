@@ -28,6 +28,10 @@ public interface IRecordReader
     IReadOnlyList<T> Get<T>(Func<T, bool> filter)
         where T : class, IReplicated;
 
+    /// <summary>Every record that passes <paramref name="filter"/>, even if it is deleted.</summary>
+    IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
+        where T : class, IReplicated;
+
     /// <summary>Every record, including ones added later.</summary>
     IReadOnlyList<T> Get<T>()
         where T : class, IReplicated;
@@ -91,7 +95,7 @@ public static class RecordReaderExtensions
     /// The command that last wrote <paramref name="record"/>'s current state, or null when there was no command attached.
     /// If the last command was an undo or a redo, this falls back to the last effective command (before any reversed event).
     /// </summary>
-    public static CommandId? WrittenBy(this IRecordReader R, IReplicated record) =>
+    public static CommandName? WrittenBy(this IRecordReader R, IReplicated record) =>
         EventSynchronizer.Instance is { } sync
         && sync.EventLog.TryGetValue(record.LastUpdateId, out var writer)
             ? writer.Command
@@ -113,6 +117,38 @@ public static class RecordReaderExtensions
         );
         return rows;
     }
+
+    /// <summary>
+    /// A rank for a new row right after <paramref name="row"/>, or right before it, made by the local player.
+    /// It goes between <paramref name="row"/> and the closest sibling row on that side,
+    /// counting deleted rows so undoing a delete doesn't cause collisions.
+    /// </summary>
+    public static string RankBeside(this IRecordReader R, DataRow row, bool after)
+    {
+        // Positive when a is further than b in the direction of the new row.
+        int Toward(string a, string b) => RowRank.Comparer.Compare(a, b) * (after ? 1 : -1);
+
+        string nearest = null;
+        foreach (var other in R.GetIncludingDeleted<DataRow>(r => r.DataSetId == row.DataSetId))
+        {
+            if (
+                Toward(other.Rank, row.Rank) > 0
+                && (nearest == null || Toward(other.Rank, nearest) < 0)
+            )
+                nearest = other.Rank;
+        }
+        return after
+            ? RowRank.New(row.Rank, nearest, Snowport.Clock.source)
+            : RowRank.New(nearest, row.Rank, Snowport.Clock.source);
+    }
+
+    /// <summary>
+    /// The highest rank in a dataset, counting deleted rows, or null if it has none.
+    /// </summary>
+    public static string LastRank(this IRecordReader R, SnowTag datasetRef) =>
+        R.GetIncludingDeleted<DataRow>(r => r.DataSetId == datasetRef)
+            .Select(r => r.Rank)
+            .Max(RowRank.Comparer);
 
     /// <summary>
     /// True if <paramref name="id"/> is of type <typeparamref name="T"/>.

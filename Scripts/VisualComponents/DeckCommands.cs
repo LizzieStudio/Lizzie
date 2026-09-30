@@ -16,7 +16,7 @@ public static class DeckCommands
 
     public static readonly Command Shuffle = new RecordCommand<ComponentState>
     {
-        Id = new("deck.shuffle"),
+        Name = new("deck.shuffle"),
         Icon = DeckIcon,
         Caption = "Shuffle {0}",
         Noun = ("Deck", "Decks"),
@@ -26,7 +26,7 @@ public static class DeckCommands
 
     public static readonly Command Draw = new RecordCommand<ComponentState>
     {
-        Id = new("deck.draw"),
+        Name = new("deck.draw"),
         Icon = DeckIcon,
         Caption = "Draw Cards",
         AsksForNumber = true,
@@ -40,7 +40,7 @@ public static class DeckCommands
 
     public static readonly Command Deal = new RecordCommand<ComponentState>
     {
-        Id = new("deck.deal"),
+        Name = new("deck.deal"),
         Icon = DeckIcon,
         Caption = "Deal Cards",
         AsksForNumber = true,

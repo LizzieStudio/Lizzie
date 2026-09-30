@@ -245,10 +245,10 @@ public partial class MultiplayerManager : Node
         foreach (var p in _players.Values)
             used.Add(p.Source);
 
-        for (byte candidate = 1; candidate <= byte.MaxValue; candidate++)
+        for (int candidate = 1; candidate < Snowport.SourceCount; candidate++)
         {
-            if (!used.Contains(candidate))
-                return candidate;
+            if (!used.Contains((byte)candidate))
+                return (byte)candidate;
         }
 
         GD.PrintErr("No free Snowport source ids remain; table is full.");

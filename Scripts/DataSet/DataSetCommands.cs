@@ -11,7 +11,7 @@ public static class DataSetCommands
 
     public static readonly Command EditRow = new RecordCommand<DataRow>
     {
-        Id = new("dataset.edit_row"),
+        Name = new("dataset.edit_row"),
         Icon = UI.TextureUI_Pencil,
         Caption = "Edit Data Row",
         Count = TargetCount.One,
@@ -28,7 +28,7 @@ public static class DataSetCommands
 
     public static readonly Command DeleteRow = new RecordCommand<DataRow>
     {
-        Id = new("dataset.delete_row"),
+        Name = new("dataset.delete_row"),
         Icon = DeleteIcon,
         Caption = "Delete {0}",
         Noun = ("Row", "Rows"),
@@ -40,7 +40,7 @@ public static class DataSetCommands
     /// <summary>Removes the columns from their datasets. The rows keep their values, so undo brings them back.</summary>
     public static readonly Command DeleteColumn = new TargetCommand<ColumnTarget>
     {
-        Id = new("dataset.delete_column"),
+        Name = new("dataset.delete_column"),
         Icon = DeleteIcon,
         Caption = "Delete {0}",
         Noun = ("Column", "Columns"),
@@ -65,7 +65,7 @@ public static class DataSetCommands
 
     public static readonly Command ClearCells = new TargetCommand<CellTarget>
     {
-        Id = new("dataset.clear_cells"),
+        Name = new("dataset.clear_cells"),
         Icon = DeleteIcon,
         Caption = "Clear {0}",
         Noun = ("Cell", "Cells"),
@@ -76,7 +76,7 @@ public static class DataSetCommands
 
     public static readonly Command CutCells = new TargetCommand<CellTarget>
     {
-        Id = new("dataset.cut_cells"),
+        Name = new("dataset.cut_cells"),
         Caption = "Cut {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.X)],
@@ -88,7 +88,7 @@ public static class DataSetCommands
 
     public static readonly Command CopyCells = new TargetCommand<CellTarget>
     {
-        Id = new("dataset.copy_cells"),
+        Name = new("dataset.copy_cells"),
         Icon = UI.TextureUI_ContentCopy,
         Caption = "Copy {0}",
         Noun = ("Cell", "Cells"),
@@ -104,7 +104,7 @@ public static class DataSetCommands
     /// </summary>
     public static readonly Command PasteCells = new TargetCommand<CellTarget>
     {
-        Id = new("dataset.paste_cells"),
+        Name = new("dataset.paste_cells"),
         Caption = "Paste",
         Keys = [Shortcuts.Ctrl(Key.V)],
         AppliesTo = CellExists,
@@ -168,7 +168,8 @@ public static class DataSetCommands
         var (rows, columns, allRows, allColumns) = Block(R, cells);
         int top = allRows.IndexOf(rows[0]);
         int left = allColumns.IndexOf(columns[0]);
-        string rank = allRows[^1].Rank;
+        // New rows go after every rank used so far, even deleted rows', which undo could bring back.
+        string rank = R.LastRank(rows[0].DataSetId);
 
         var written = new List<DataRow>();
         for (int r = 0; r < grid.Count; r++)
@@ -180,7 +181,7 @@ public static class DataSetCommands
                     {
                         Id = Snowport.Clock.CreateTag(),
                         DataSetId = rows[0].DataSetId,
-                        Rank = rank = RowRank.Between(rank, null),
+                        Rank = rank = RowRank.New(rank, null, Snowport.Clock.source),
                     };
             for (int c = 0; c < grid[r].Length && left + c < allColumns.Count; c++)
                 row = row.WithCell(allColumns[left + c], grid[r][c]);

@@ -291,7 +291,7 @@ public sealed class UndoSession
         return Id(_clock, source);
     }
 
-    private static SnowportId Id(ulong clock, byte source) => new((clock << 8) | source);
+    private static SnowportId Id(ulong clock, byte source) => new((clock << 6) | source);
 
     /// <summary>
     /// Records the event in id order, with the given records and values written.

@@ -11,7 +11,7 @@ public static class UndoCommands
 {
     public static readonly Command Undo = new GlobalCommand
     {
-        Id = new("app.undo"),
+        Name = new("app.undo"),
         Icon = "res://Textures/UI/undo.svg",
         Caption = "Undo Mine",
         Keys = [Shortcuts.Ctrl(Key.Z)],
@@ -20,7 +20,7 @@ public static class UndoCommands
 
     public static readonly Command Redo = new GlobalCommand
     {
-        Id = new("app.redo"),
+        Name = new("app.redo"),
         Icon = "res://Textures/UI/redo.svg",
         Caption = "Redo Mine",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
@@ -29,7 +29,7 @@ public static class UndoCommands
 
     public static readonly Command UndoOthers = new GlobalCommand
     {
-        Id = new("app.undo_others"),
+        Name = new("app.undo_others"),
         Icon = "res://Textures/UI/undo_others.svg",
         Caption = "Undo Others",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
@@ -38,7 +38,7 @@ public static class UndoCommands
 
     public static readonly Command RedoOthers = new GlobalCommand
     {
-        Id = new("app.redo_others"),
+        Name = new("app.redo_others"),
         Icon = "res://Textures/UI/redo_others.svg",
         Caption = "Redo Others",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
@@ -51,7 +51,7 @@ public static class UndoCommands
     /// </summary>
     public static readonly Command UndoComponentChanges = new RecordCommand<ComponentState>
     {
-        Id = new("component.undo_changes"),
+        Name = new("component.undo_changes"),
         Icon = "res://Textures/UI/undo_component.svg",
         Caption = "Undo This",
         ActsOn = Context.Selected | Context.Contents,
@@ -103,6 +103,6 @@ public static class UndoCommands
         // this creates a performance log in the debug console
         using var _ = DebugTimings.Measure(pick.Method.Name);
         if (pick(sync.EventLog, Me, scope) is { } flag)
-            sync.Submit(TableEvent.Undoing(flag, command.Id));
+            sync.Submit(TableEvent.Undoing(flag, command.Name));
     }
 }

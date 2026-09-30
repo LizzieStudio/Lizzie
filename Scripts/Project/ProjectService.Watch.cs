@@ -12,6 +12,28 @@ public partial class ProjectService : IRecordReader
     // watchers to rerun at the end of the frame
     private readonly HashSet<Watcher> _dirty = new();
 
+    private readonly List<Listener> _listeners = new();
+
+    // events to tell the listeners about at the end of the frame
+    private List<TableEvent> _pendingListenerEvents = new();
+
+    private bool _flushQueued;
+
+    private sealed record Listener(
+        Node Owner,
+        CommandName? Name,
+        bool Anyone,
+        Action<TableEvent> Handler
+    )
+    {
+        public bool ShouldHearEvent(TableEvent e)
+        {
+            var shouldHearCommand = Name == null || e.Command == Name;
+            var shouldHearSource = Anyone || e.Id.source == Snowport.Clock.source;
+            return shouldHearCommand && shouldHearSource;
+        }
+    }
+
     /// <summary>
     /// Runs <paramref name="sync"/> at the end of the frame, then again whenever a record it
     /// read changes, until <paramref name="owner"/> leaves the tree. Call from _EnterTree.
@@ -61,6 +83,33 @@ public partial class ProjectService : IRecordReader
         _dirty.Remove(watcher);
     }
 
+    /// <summary>
+    /// Calls <paramref name="handler"/> with each event the local player makes with <paramref name="command"/>.
+    /// </summary>
+    public void Listen(Node owner, Command command, Action<TableEvent> handler) =>
+        AddListener(new Listener(owner, command.Name, false, handler));
+
+    private void AddListener(Listener listener)
+    {
+        _listeners.Add(listener);
+        listener.Owner.Connect(
+            Node.SignalName.TreeExiting,
+            Callable.From(() => _listeners.Remove(listener)),
+            (uint)ConnectFlags.OneShot
+        );
+    }
+
+    /// <summary>
+    /// Keeps an event made by a command, undos and redos included, for the listeners.
+    /// </summary>
+    private void ScheduleForListeners(TableEvent e)
+    {
+        if (e.Command == null || _listeners.Count == 0)
+            return;
+        _pendingListenerEvents.Add(e);
+        QueueFlush();
+    }
+
     private void SubscribeWatchers()
     {
         _containersByType = Containers.ToDictionary(c => c.RecordType);
@@ -82,25 +131,46 @@ public partial class ProjectService : IRecordReader
 
     private void MarkDirty(Watcher watcher)
     {
-        if (_dirty.Count == 0)
-            Callable.From(FlushWatchers).CallDeferred();
         _dirty.Add(watcher);
+        QueueFlush();
+    }
+
+    private void QueueFlush()
+    {
+        if (_flushQueued)
+            return;
+        _flushQueued = true;
+        Callable.From(Flush).CallDeferred();
     }
 
     /// <summary>
     /// Runs the dirty watchers, parents before their descendants, so a parent removes or
     /// replaces a child before the child can sync a record that no longer fits it.
     /// Watchers at the same depth run in the order they were registered.
+    /// Then tells the listeners about the events, in the order they arrived.
     /// </summary>
-    private void FlushWatchers()
+    private void Flush()
     {
+        _flushQueued = false;
+
         var batch = _dirty.OrderBy(w => Depth(w.Owner)).ThenBy(w => w.Sequence).ToArray();
         _dirty.Clear();
-
         foreach (var watcher in batch)
         {
             if (_watchers.Contains(watcher) && IsInstanceValid(watcher.Owner))
                 watcher.Run();
+        }
+
+        // A handler that makes an event is heard in the next flush.
+        var events = _pendingListenerEvents;
+        _pendingListenerEvents = new();
+        foreach (var e in events)
+        {
+            foreach (var listener in _listeners.Where(l => l.ShouldHearEvent(e)).ToList())
+            {
+                if (_listeners.Contains(listener) && IsInstanceValid(listener.Owner))
+                    listener.Handler(e);
+            }
         }
     }
 
@@ -147,6 +217,9 @@ public partial class ProjectService : IRecordReader
     public IReadOnlyList<T> Get<T>(Func<T, bool> filter)
         where T : class, IReplicated =>
         RecordsOf<T>().Values.Where(r => !r.Deleted && filter(r)).ToArray();
+
+    public IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
+        where T : class, IReplicated => RecordsOf<T>().Values.Where(filter).ToArray();
 
     public IReadOnlyList<T> Get<T>()
         where T : class, IReplicated => RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
