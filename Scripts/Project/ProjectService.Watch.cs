@@ -19,19 +19,11 @@ public partial class ProjectService : IRecordReader
 
     private bool _flushQueued;
 
-    private sealed record Listener(
-        Node Owner,
-        CommandName? Name,
-        bool Anyone,
-        Action<TableEvent> Handler
-    )
+    private sealed record Listener(Node Owner, CommandName Name, Action<TableEvent> Handler)
     {
-        public bool ShouldHearEvent(TableEvent e)
-        {
-            var shouldHearCommand = Name == null || e.Command == Name;
-            var shouldHearSource = Anyone || e.Id.source == Snowport.Clock.source;
-            return shouldHearCommand && shouldHearSource;
-        }
+        /// <summary>Whether the local player made <paramref name="e"/> with this listener's command.</summary>
+        public bool ShouldHearEvent(TableEvent e) =>
+            e.Command == Name && e.Id.source == Snowport.Clock.source;
     }
 
     /// <summary>
@@ -87,7 +79,7 @@ public partial class ProjectService : IRecordReader
     /// Calls <paramref name="handler"/> with each event the local player makes with <paramref name="command"/>.
     /// </summary>
     public void Listen(Node owner, Command command, Action<TableEvent> handler) =>
-        AddListener(new Listener(owner, command.Name, false, handler));
+        AddListener(new Listener(owner, command.Name, handler));
 
     private void AddListener(Listener listener)
     {
