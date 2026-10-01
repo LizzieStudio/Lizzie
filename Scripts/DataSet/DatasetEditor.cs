@@ -58,6 +58,11 @@ public partial class DatasetEditor : Window, ICommandView
     // The columns the last grid rebuild added to the shown dataset, for an insert's listener to rename.
     private List<SnowTag> _addedColumns = [];
 
+    // Whether a cell is being edited. Updated once focus settles: ShortcutRelay drops focus on a click
+    // outside the focused cell before this window sees it, and the grid should still be editing,
+    // so the click edits the cell it lands on.
+    private bool _editing;
+
     // What the local player has selected, and the colour of each thing other players have, the newest first.
     private ImmutableHashSet<Target> _mine = ImmutableHashSet<Target>.Empty;
     private readonly Dictionary<Target, Color> _others = new();
@@ -170,29 +175,56 @@ public partial class DatasetEditor : Window, ICommandView
         ShowDrop(_dragAxis, at);
     }
 
-    // Shift or Ctrl+click on a cell selects it without editing it.
-    // Handled before the GUI, since a click focuses the cell first, which would select it alone.
+    // Cells only show their values until one is being edited, so clicks on them select instead,
+    // and a right-click opens the command menu. Double-clicking one edits it.
+    // While editing, every cell is a text box, but Shift or Ctrl+click still selects without editing.
+    // Handled before the GUI, since a click would focus the cell, which edits it and selects it alone.
     public override void _Input(InputEvent e)
     {
         if (
-            e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } click
-            && (click.ShiftPressed || click.IsCommandOrControlPressed())
-            && CellOf(GuiGetHoveredControl()) is { } cell
+            e
+                is not InputEventMouseButton
+                {
+                    ButtonIndex: MouseButton.Left or MouseButton.Right
+                } click
+            || CellOf(GuiGetHoveredControl()) is not { } cell
         )
+            return;
+
+        bool modified = click.ShiftPressed || click.IsCommandOrControlPressed();
+        if (_editing && !(modified && click.ButtonIndex == MouseButton.Left))
+            return;
+
+        if (click is { ButtonIndex: MouseButton.Left, Pressed: true })
         {
             SelectTarget(cell, click);
-            SetInputAsHandled();
+            if (click.DoubleClick && !modified)
+                BeginEdit(cell);
         }
+        else if (ClickRouting.OpensMenu(click))
+            OnContext(cell, click.Position);
+        SetInputAsHandled();
     }
 
-    // Cells consume Escape while focused, so this only sees it when nothing is being edited.
+    // Cells consume these keys while focused, so this only sees them when nothing is being edited.
     public override void _UnhandledKeyInput(InputEvent e)
     {
-        if (e is InputEventKey { Pressed: true, Keycode: Key.Escape } && !MySelection().IsEmpty)
+        if (e is not InputEventKey { Pressed: true } key || key.GetModifiersMask() != 0)
+            return;
+
+        switch (key.Keycode)
         {
-            Select([]);
-            SetInputAsHandled();
+            case Key.Escape when !MySelection().IsEmpty:
+                Select([]);
+                break;
+            // Like a spreadsheet, Enter edits the selection's top-left cell.
+            case Key.Enter or Key.KpEnter when TopLeftCell() is { } cell:
+                BeginEdit(cell);
+                break;
+            default:
+                return;
         }
+        SetInputAsHandled();
     }
 
     // A right-click no control took, on the empty space around the grid, opens the menu
@@ -512,7 +544,12 @@ public partial class DatasetEditor : Window, ICommandView
             cell.SizeFlagsVertical = Control.SizeFlags.Fill;
 
             cell.FocusEntered += () => OnCellFocused(view, column);
-            cell.FocusExited += () => CommitRow(view);
+            cell.FocusExited += () =>
+            {
+                CommitRow(view);
+                // Once focus has settled, which may be on another cell.
+                Callable.From(SyncEditing).CallDeferred();
+            };
             cell.GuiInput += e => OnCellInput(view, column, e);
 
             view.Cells.Add(cell);
@@ -563,6 +600,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         _views = next;
         _dataContainer.MoveChild(_addRowLine, _dataContainer.GetChildCount() - 1);
+        ShowEditing();
     }
 
     /// <summary>The cell <paramref name="control"/> shows, or null if it isn't one.</summary>
@@ -575,6 +613,57 @@ public partial class DatasetEditor : Window, ICommandView
                 return new CellTarget(view.Row.Id, _columnIds[column]);
         }
         return null;
+    }
+
+    /// <summary>The text box showing <paramref name="cell"/>, or null if it isn't shown.</summary>
+    private LineEdit CellControl(CellTarget cell)
+    {
+        int column = _columnIds.IndexOf(cell.ColumnId);
+        return column >= 0 ? ViewOf(cell.RowId)?.Cells[column] : null;
+    }
+
+    // Updates whether a cell is being edited, which makes every cell a text box.
+    private void SyncEditing()
+    {
+        _editing = CellOf(GuiGetFocusOwner()) != null;
+        ShowEditing();
+    }
+
+    // Cells show the text cursor only while editing, when a click places the caret.
+    private void ShowEditing()
+    {
+        var shape = _editing ? Control.CursorShape.Ibeam : Control.CursorShape.Arrow;
+        foreach (var view in _views)
+        foreach (var cell in view.Cells)
+            cell.MouseDefaultCursorShape = shape;
+    }
+
+    /// <summary>Starts editing <paramref name="cell"/>, with the caret after its text.</summary>
+    private void BeginEdit(CellTarget cell)
+    {
+        if (CellControl(cell) is not { } edit)
+            return;
+        edit.GrabFocus();
+        // After the select-all that focusing from the keyboard queues.
+        Callable
+            .From(() =>
+            {
+                edit.Deselect();
+                edit.CaretColumn = edit.Text.Length;
+            })
+            .CallDeferred();
+    }
+
+    /// <summary>The top-left of the block of selected cells, or null without any.</summary>
+    private CellTarget TopLeftCell()
+    {
+        var cells = MySelection().OfType<CellTarget>().ToList();
+        var row = _views.FirstOrDefault(v => cells.Any(c => c.RowId == v.Row.Id));
+        var column = _columnIds.FirstOrDefault(
+            id => cells.Any(c => c.ColumnId == id),
+            SnowTag.Empty
+        );
+        return row != null && column != SnowTag.Empty ? new CellTarget(row.Row.Id, column) : null;
     }
 
     private RowView Neighbor(RowView view, int step)
@@ -591,6 +680,8 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void OnCellFocused(RowView view, int column)
     {
+        SyncEditing();
+
         // The cell being edited is selected, so it shows the highlight too.
         SelectTarget(new CellTarget(view.Row.Id, _columnIds[column]));
 
@@ -602,17 +693,6 @@ public partial class DatasetEditor : Window, ICommandView
     private void OnCellInput(RowView view, int column, InputEvent e)
     {
         var cell = view.Cells[column];
-        var target = new CellTarget(view.Row.Id, _columnIds[column]);
-
-        // While a cell is being edited, a right-click in it opens the text box's own menu, for its text.
-        // Otherwise the press is kept from the text box, and the release opens the command menu.
-        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right } click && !cell.HasFocus())
-        {
-            if (ClickRouting.OpensMenu(click))
-                OnContext(target, click.GlobalPosition);
-            cell.AcceptEvent();
-            return;
-        }
 
         if (e is not InputEventKey { Pressed: true } key)
             return;
@@ -647,9 +727,10 @@ public partial class DatasetEditor : Window, ICommandView
             case Key.Down:
                 FocusCell(Neighbor(view, 1), column);
                 break;
+            // Like a spreadsheet, Escape drops the cell's change and stops editing, leaving it selected.
             case Key.Escape:
                 cell.Text = view.Row.Data.GetValueOrDefault(_columnIds[column], string.Empty);
-                cell.SelectAll();
+                GuiReleaseFocus();
                 break;
             default:
                 return;
