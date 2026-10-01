@@ -176,7 +176,7 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     // Cells only show their values until one is being edited, so clicks on them select instead,
-    // and a right-click opens the command menu. Double-clicking one edits it.
+    // a right press included, for the command menu. Double-clicking one edits it.
     // While editing, every cell is a text box, but Shift or Ctrl+click still selects without editing.
     // Handled before the GUI, since a click would focus the cell, which edits it and selects it alone.
     public override void _Input(InputEvent e)
@@ -201,8 +201,8 @@ public partial class DatasetEditor : Window, ICommandView
             if (click.DoubleClick && !modified)
                 BeginEdit(cell);
         }
-        else if (ClickRouting.OpensMenu(click))
-            OnContext(cell, click.Position);
+        else if (click is { ButtonIndex: MouseButton.Right, Pressed: true })
+            SelectForMenu(cell);
         SetInputAsHandled();
     }
 
@@ -225,18 +225,6 @@ public partial class DatasetEditor : Window, ICommandView
                 return;
         }
         SetInputAsHandled();
-    }
-
-    // A right-click no control took, on the empty space around the grid, opens the menu
-    // for what's selected, as the keyboard sees it, like the table's.
-    // The scene's background panels pass on the clicks they don't use, so they arrive here.
-    public override void _UnhandledInput(InputEvent e)
-    {
-        if (ClickRouting.OpensMenu(e))
-        {
-            OnContext(null, ((InputEventMouseButton)e).Position);
-            SetInputAsHandled();
-        }
     }
 
     private void Sync(IRecordReader R)
@@ -449,7 +437,7 @@ public partial class DatasetEditor : Window, ICommandView
             header.WidthDragged += OnColumnWidthDragged;
             header.NameCommitted += OnColumnRenamed;
             header.Clicked += (columnId, click) => SelectTarget(Column(columnId), click);
-            header.ContextRequested += (columnId, at) => OnContext(Column(columnId), at);
+            header.RightPressed += columnId => SelectForMenu(Column(columnId));
             header.ColumnDragMoved += (_, at) => OnDragMoved(Vector2.Axis.X, at);
             header.ColumnDropped += DropColumn;
             _headerCells.Add(header);
@@ -518,15 +506,7 @@ public partial class DatasetEditor : Window, ICommandView
         drag.Clicked += click => SelectTarget(view.Target, click);
         drag.Moved += at => OnDragMoved(Vector2.Axis.Y, at);
         drag.Dropped += at => DropRow(view, at);
-        view.Header.GuiInput += e =>
-        {
-            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right } b)
-            {
-                if (ClickRouting.OpensMenu(b))
-                    OnContext(view.Target, b.GlobalPosition);
-                view.Header.AcceptEvent();
-            }
-        };
+        drag.RightPressed += () => SelectForMenu(view.Target);
 
         view.Number = new Label();
         view.Header.AddChild(view.Number);
@@ -968,16 +948,14 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>
-    /// Right-clicking a row, column or cell selects it, unless it already is, and opens the menu for the selection.
-    /// Empty space has no target, and opens the menu for what's selected.
+    /// Right clicking a row, column, or cell selects it.
+    /// If it was already selected, it does nothing, so as not to clear the selection.
+    /// Right clicking on empty space keeps the selection.
     /// </summary>
-    private void OnContext(Target target, Vector2 at)
+    private void SelectForMenu(Target target)
     {
-        // Writes the cell being edited, so the menu acts on what it shows.
-        GuiReleaseFocus();
-        if (target != null && !MySelection().Contains(target))
+        if (!MySelection().Contains(target))
             SelectTarget(target);
-        CommandMenu.Show(Position + (Vector2I)at, this);
     }
 
     /// <summary>

@@ -530,9 +530,16 @@ public static class CommandViews
     public static void Detach(Node node) => Attached.Remove(node);
 
     /// <summary>The view for the viewport's focused control, or null if it has none.</summary>
-    public static ICommandView Find(Viewport viewport)
+    public static ICommandView Find(Viewport viewport) =>
+        Of(viewport.GuiGetFocusOwner() ?? (Node)viewport);
+
+    /// <summary>
+    /// The view that <paramref name="node"/> is in.
+    /// </summary>
+    public static ICommandView Of(Node node)
     {
-        for (Node n = viewport.GuiGetFocusOwner() ?? (Node)viewport; n != null; n = n.GetParent())
+        var viewport = node.GetViewport();
+        for (Node n = node; n != null; n = n.GetParent())
         {
             if (n is ICommandView view)
                 return view;

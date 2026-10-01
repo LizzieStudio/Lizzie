@@ -21,6 +21,9 @@ public sealed class DragGesture
     public event Action<InputEventMouseButton> Clicked;
     public event Action DoubleClicked;
 
+    /// <summary>A right press, before the right-click's menu opens.</summary>
+    public event Action RightPressed;
+
     public DragGesture(Control control)
     {
         _control = control;
@@ -55,6 +58,10 @@ public sealed class DragGesture
                         Clicked?.Invoke(button);
                     _pressed = _dragging = false;
                 }
+                break;
+            case InputEventMouseButton { ButtonIndex: MouseButton.Right } right:
+                if (right.Pressed)
+                    RightPressed?.Invoke();
                 break;
             case InputEventMouseMotion motion when _pressed:
                 if (!_dragging && motion.GlobalPosition.DistanceTo(_pressAt) < Threshold)

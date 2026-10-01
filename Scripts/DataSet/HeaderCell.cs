@@ -20,7 +20,7 @@ public partial class HeaderCell : PanelContainer
 
     /// <summary>A click on the name, with the modifiers held.</summary>
     public event Action<SnowTag, InputEventMouseButton> Clicked;
-    public event Action<SnowTag, Vector2> ContextRequested;
+    public event Action<SnowTag> RightPressed;
     public event Action<SnowTag, float> WidthDragged;
     public event Action<SnowTag, string> NameCommitted;
     public event Action<SnowTag, Vector2> ColumnDragMoved;
@@ -46,15 +46,7 @@ public partial class HeaderCell : PanelContainer
         drag.Dropped += at => ColumnDropped?.Invoke(ColumnId, at);
         drag.Clicked += click => Clicked?.Invoke(ColumnId, click);
         drag.DoubleClicked += BeginRename;
-        _label.GuiInput += e =>
-        {
-            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right } b)
-            {
-                if (ClickRouting.OpensMenu(b))
-                    ContextRequested?.Invoke(ColumnId, b.GlobalPosition);
-                _label.AcceptEvent();
-            }
-        };
+        drag.RightPressed += () => RightPressed?.Invoke(ColumnId);
 
         _nameEdit = new LineEdit();
         hbox.AddChild(_nameEdit);

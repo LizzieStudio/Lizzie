@@ -4,21 +4,21 @@ using Godot;
 /// <summary>
 /// <para>Makes clicks for right-click context menus behave as expected.</para>
 ///
-/// This is basically just a series of fixes for Godot weirdnesses.
+/// <para>
+/// A right-click anywhere opens the command menu for the view under it.
+/// Views can select on the key-down event to add the target to the selection.
+/// Other than that, an <see cref="ICommandView"/> doesn't have to do anything.
+/// </para>
+///
+/// This is otherwise a series of fixes for Godot weirdnesses.
 /// Most people should never have to interact with this class.
 /// </summary>
 public static class ClickRouting
 {
     private static bool _installed;
 
-    // Where the right button last went down, and whether it came back up without a drag.
+    // Where the right button last went down. Used for a threshold distance.
     private static Vector2 _rightPressAt;
-    private static bool _rightClicked;
-
-    /// <summary>Whether <paramref name="e"/> is the release of a right-click, which opens a context menu.</summary>
-    public static bool OpensMenu(InputEvent e) =>
-        e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false }
-        && _rightClicked;
 
     /// <summary>Applies the rules to every click in <paramref name="root"/>, the main window.</summary>
     public static void Install(Window root)
@@ -46,9 +46,8 @@ public static class ClickRouting
         {
             if (button.Pressed)
                 _rightPressAt = button.Position;
-            else
-                // Moving less than Godot's drag threshold is a click.
-                _rightClicked = button.Position.DistanceTo(_rightPressAt) < root.GuiDragThreshold;
+            else if (button.Position.DistanceTo(_rightPressAt) < root.GuiDragThreshold)
+                OpenMenu(root, button.Position);
         }
         if (!button.Pressed)
             return;
@@ -60,12 +59,58 @@ public static class ClickRouting
             FocusWindowAt(root, button.Position);
     }
 
-    /// <summary>Focuses the embedded window at <paramref name="at"/>, or the main window if there's none.</summary>
-    private static void FocusWindowAt(Window root, Vector2 at)
+    private static void OpenMenu(Window root, Vector2 at)
     {
+        var window = WindowAt(root, at) ?? root;
+
+        if (
+            window is Popup
+            || root.GetEmbeddedSubwindows().Any(w => w.Visible && w.Exclusive && w != window)
+            || ImGuiInterop.ClaimingMouse
+        )
+            return;
+
+        var control = window.GuiGetHoveredControl();
+        while (control != null && control.MouseFilter != Control.MouseFilterEnum.Stop)
+            control = control.GetParentControl();
+        // A text box keeps the Godot native context menu.
+        // This is similar to the strategy of applications like Google Sheets.
+        if (control is LineEdit or TextEdit && control.HasFocus())
+            return;
+
+        var view = CommandViews.Of(control ?? (Node)window);
+        // In the main window, controls like the menu bar draw over the table but aren't part of it.
+        // They reach the table's view (arriving here) but we don't want to open a menu for them.
+        if (window == root && control != null && view == CommandViews.Of(root))
+            return;
+        // When a view returns null that means it's explicitely not taking commands.
+        if (view?.Selected() == null)
+            return;
+
+        // We defer so that the view can handle the click first.
+        // This is often used to select the item clicked so that it's included.
+        Callable
+            .From(() =>
+            {
+                // Writes a text box being edited, so the menu acts on what it shows.
+                window.GuiReleaseFocus();
+                CommandMenu.Show((Vector2I)at, view);
+            })
+            .CallDeferred();
+    }
+
+    /// <summary>The embedded window at <paramref name="point"/>, or null for the main window.</summary>
+    private static Window WindowAt(Window root, Vector2 point) =>
         // Bottom to top.
+        root.GetEmbeddedSubwindows()
+            .Where(w => w.Visible)
+            .LastOrDefault(w => Frame(w).HasPoint(point));
+
+    /// <summary>Focuses the embedded window at <paramref name="point"/>, or the main window if there is none.</summary>
+    private static void FocusWindowAt(Window root, Vector2 point)
+    {
         var windows = root.GetEmbeddedSubwindows().Where(w => w.Visible).ToList();
-        var under = windows.LastOrDefault(w => Frame(w).HasPoint(at));
+        var under = WindowAt(root, point);
         if (under != null)
         {
             if (!under.HasFocus())

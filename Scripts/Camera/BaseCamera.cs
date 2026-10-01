@@ -57,7 +57,7 @@ public abstract partial class BaseCamera : Node3D, ICamera
         !_modalOpen
         && Current
         && _gameObjects.CursorMode != CursorMode.DragSelect
-        && _gameObjects.CursorMode != CursorMode.PopupMenu;
+        && !CommandMenu.IsOpen;
 
     /// <summary>The keys that move the camera while held.</summary>
     private static readonly StringName[] HeldActions =
@@ -127,11 +127,7 @@ public abstract partial class BaseCamera : Node3D, ICamera
             if (@event.IsActionReleased(action))
                 _held.Remove(action);
 
-        if (
-            !Current
-            || _gameObjects.CursorMode == CursorMode.DragSelect
-            || _gameObjects.CursorMode == CursorMode.PopupMenu
-        )
+        if (!Current || _gameObjects.CursorMode == CursorMode.DragSelect || CommandMenu.IsOpen)
             return;
 
         // defer to ImGui debuggers

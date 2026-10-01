@@ -17,7 +17,6 @@ public partial class GameController : Node3D
     public override void _Ready()
     {
         _mainScene = GetNode<SceneController>("3DSceneNoPhysics");
-        _mainScene.ShowComponentPopup2 += MainSceneOnShowComponentPopup2;
         _mainScene.HoveredComponentChange += MainSceneOnHoveredNameChange;
         _mainScene.GameObjects.TextureFactory = _textureFactory;
         _mainScene.GameObjects.SetGameController(this);
@@ -37,11 +36,6 @@ public partial class GameController : Node3D
 
         ProjectService.Instance.EnsureSeatContainers();
         PresenceSynchronizer.Instance?.EnsureLocalSeat();
-    }
-
-    private void MainSceneOnShowComponentPopup2(object sender, ShowComponentPopupEventArgs e)
-    {
-        ShowComponentPopup(e.Position, _mainScene);
     }
 
     private void MainSceneOnHoveredNameChange(object sender, HoveredComponentChangeEventArgs e)
@@ -227,14 +221,6 @@ public partial class GameController : Node3D
     public override void _Process(double delta) { }
 
     public SceneController MainScene => _mainScene;
-
-    public void ShowComponentPopup(Vector2I position, ICommandView view) =>
-        _uiController.ShowComponentPopup(position, view);
-
-    public void ComponentPopupClosed()
-    {
-        _mainScene.PopupClosed();
-    }
 
     public float HandY => _uiController.HandY;
 

@@ -729,22 +729,6 @@ public partial class UI : CanvasLayer
         }
     }
 
-    private void ComponentPopupClosed()
-    {
-        GetParent<GameController>().ComponentPopupClosed();
-    }
-
-    /// <summary>
-    /// Opens the context menu at <paramref name="position"/> with the commands for what was right-clicked.
-    /// </summary>
-    public void ShowComponentPopup(Vector2I position, ICommandView view) =>
-        CommandMenu.Show(
-            position,
-            view,
-            // Ends popup mode, before a command runs so it can change the cursor mode, like Duplicate entering spawn mode.
-            closed: ComponentPopupClosed
-        );
-
     private void OnInsertPressed()
     {
         _componentDefinition.Visible = true;

@@ -163,9 +163,6 @@ public partial class GameObjects : Node
             case CursorMode.DragSelect:
                 HandleDragSelection();
                 break;
-            case CursorMode.PopupMenu:
-                HandlePopupMenu();
-                break;
             default:
                 HandleNormalMode();
                 break;
@@ -221,12 +218,6 @@ public partial class GameObjects : Node
                 GetViewport().SetInputAsHandled();
             }
         }
-        // Right-clicking while the menu is open opens it again where the click is.
-        else if (
-            CursorMode is CursorMode.Normal or CursorMode.PopupMenu
-            && ClickRouting.OpensMenu(@event)
-        )
-            StartPopupMenu();
         else if (
             CursorMode == CursorMode.Normal
             && @event is InputEventMouseButton buttonEvent
@@ -251,6 +242,14 @@ public partial class GameObjects : Node
                         EnterDragMode(go);
                     }
                 }
+            }
+            else if (
+                buttonEvent.ButtonIndex == MouseButton.Right
+                && GetHoveredObject() is { } go
+                && !Selection.Contains(go.Reference)
+            )
+            {
+                SetSelection([go.Reference]);
             }
         }
         else if (@event.IsActionPressed("component_preview"))
@@ -576,34 +575,6 @@ public partial class GameObjects : Node
         {
             Input.SetDefaultCursorShape(Input.CursorShape.PointingHand);
         }
-    }
-    #endregion
-
-    #region Popup Menu
-    public void PopupClosed()
-    {
-        EndPopupMenu();
-    }
-
-    private void StartPopupMenu()
-    {
-        Vector2 mouse = GetViewport().GetMousePosition();
-        Vector2I v = new((int)Math.Floor(mouse.X), (int)Math.Floor(mouse.Y));
-
-        ShowComponentPopup?.Invoke(this, new ShowComponentPopupEventArgs(v));
-        CursorMode = CursorMode.PopupMenu;
-    }
-
-    public event EventHandler<ShowComponentPopupEventArgs> ShowComponentPopup;
-
-    private void HandlePopupMenu() { }
-
-    private void EndPopupMenu()
-    {
-        // Only while still in popup mode, so a command the menu ran keeps its own mode,
-        // like Duplicate entering spawn mode, whenever the menu reports closing.
-        if (CursorMode == CursorMode.PopupMenu)
-            CursorMode = CursorMode.Normal;
     }
     #endregion
 
@@ -1254,16 +1225,6 @@ public partial class GameObjects : Node
     }
 
     #endregion
-}
-
-public class ShowComponentPopupEventArgs : EventArgs
-{
-    public ShowComponentPopupEventArgs(Vector2I position)
-    {
-        Position = position;
-    }
-
-    public Vector2I Position { get; set; }
 }
 
 public class HoveredComponentChangeEventArgs : EventArgs

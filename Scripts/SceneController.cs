@@ -5,12 +5,6 @@ using Godot;
 
 public partial class SceneController : Node3D, ICommandView
 {
-    [Signal]
-    public delegate void ShowComponentPopupEventHandler(
-        Vector2I position,
-        Godot.Collections.Array<VisualComponentBase> components
-    );
-
     [Export]
     TextureFactory _textureFactory;
 
@@ -26,7 +20,6 @@ public partial class SceneController : Node3D, ICommandView
         _cameraManager = GetNode<CameraManager>("Cameras");
         _gameObjects = GetNode<GameObjects>("GameObjects");
         SetMode(Config.Registry.Get<SceneMode>("SceneMode"));
-        _gameObjects.ShowComponentPopup += GameObjectsOnShowComponentPopup;
         _gameObjects.HoveredComponentChange += OnHoveredComponentChange;
         _gameObjects.TextureFactory = _textureFactory;
 
@@ -56,11 +49,11 @@ public partial class SceneController : Node3D, ICommandView
 
     /// <summary>
     /// The selected components, or the hovered component when nothing is selected.
-    /// None while in the middle of creating a selection with a selection box.
+    /// None while drawing a selection box or placing new components.
     /// </summary>
     public IEnumerable<Target> Selected()
     {
-        if (_gameObjects.CursorMode == CursorMode.DragSelect)
+        if (_gameObjects.CursorMode is CursorMode.DragSelect or CursorMode.Spawn)
             return null;
 
         var R = ProjectService.Instance;
@@ -161,24 +154,5 @@ public partial class SceneController : Node3D, ICommandView
         _gameObjects.EnterSpawnMode(components);
     }
 
-    public void PopupClosed()
-    {
-        _gameObjects.PopupClosed();
-    }
-
-    private void OnShowComponentPopup(
-        Vector2I position,
-        Godot.Collections.Array<VisualComponentBase> components
-    )
-    {
-        //EmitSignal(SignalName.ShowComponentPopup, position, components);
-    }
-
-    private void GameObjectsOnShowComponentPopup(object sender, ShowComponentPopupEventArgs e)
-    {
-        ShowComponentPopup2?.Invoke(this, e);
-    }
-
-    public event EventHandler<ShowComponentPopupEventArgs> ShowComponentPopup2;
     #endregion
 }

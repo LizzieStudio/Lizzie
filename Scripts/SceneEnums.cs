@@ -13,5 +13,4 @@ public enum CursorMode
     Drag,
     CanDrop,
     DragSelect,
-    PopupMenu,
 }
