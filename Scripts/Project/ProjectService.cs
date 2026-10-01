@@ -426,17 +426,13 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Saves over an existing snapshot in place.
+    /// The effects that save the table over an existing snapshot, or null if there's no such snapshot.
     /// </summary>
-    public void UpdateGameState(SnowTag stateRef)
+    public IEnumerable<Effect> UpdateGameStateEffects(SnowTag stateRef)
     {
-        if (CurrentProject == null || stateRef == SnowTag.Empty)
-            return;
-        var state = Get<GameState>(stateRef);
-        if (state == null)
-            return;
-
-        Upsert(state with { Upserts = BuildDelta(state.Parent) });
+        if (CurrentProject == null || Get<GameState>(stateRef) is not { } state)
+            return null;
+        return [Effect.Upsert(state with { Upserts = BuildDelta(state.Parent) })];
     }
 
     /// <summary>
@@ -493,8 +489,17 @@ public partial class ProjectService : Node
     /// </summary>
     public void SwitchGameState(SnowTag stateRef)
     {
+        if (SwitchGameStateEffects(stateRef) is { } effects)
+            EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray()));
+    }
+
+    /// <summary>
+    /// The effects that switch every client to a saved game state, or null if there's no such state.
+    /// </summary>
+    public IEnumerable<Effect> SwitchGameStateEffects(SnowTag stateRef)
+    {
         if (CurrentProject == null || Get<GameState>(stateRef) == null)
-            return;
+            return null;
 
         var effects = new List<Effect>
         {
@@ -509,8 +514,7 @@ public partial class ProjectService : Node
 
         // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
         effects.AddRange(fold.Values.Select(Effect.Upsert));
-
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray()));
+        return effects;
     }
 
     /// <summary>

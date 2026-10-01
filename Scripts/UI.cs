@@ -19,12 +19,6 @@ public partial class UI : CanvasLayer
     private ComponentDefinition _componentDefinition;
     private TemplateCreator _templateCreator;
 
-    private PopupMenu _editMenu;
-    private PopupMenu _insertMenu;
-    private PopupMenu _helpMenu;
-    private PopupMenu _fileMenu;
-
-    private PopupMenu _restoreSnapshotMenu;
     private Label _componentName;
 
     private GameController _gameController;
@@ -59,6 +53,7 @@ public partial class UI : CanvasLayer
 
     public override void _EnterTree()
     {
+        _instance = this;
         ProjectService.Instance.Watch(this, Sync);
     }
 
@@ -68,8 +63,6 @@ public partial class UI : CanvasLayer
         HandManager.Visible = s.EnablePlayerHands;
         _opponentHands.Visible = s.EnablePlayerHands;
         _rotationStep.Selected = s.RotationStepIndex;
-
-        RebuildRestoreSnapshotMenu(R);
     }
 
     // Called when the node enters the scene tree for the first time.
@@ -84,39 +77,10 @@ public partial class UI : CanvasLayer
 
         SetSceneMode(Config.Registry.Get<SceneMode>("SceneMode"));
 
-        _fileMenu = GetNode<PopupMenu>("%File");
-        _fileMenu.AddSeparator();
-        _fileMenu.AddItem("Create Snapshot", 3);
-        _fileMenu.AddItem("Update Snapshot", 6);
-
-        _restoreSnapshotMenu = new PopupMenu();
-        _restoreSnapshotMenu.Name = "RestoreSnapshotMenu";
-        _restoreSnapshotMenu.IdPressed += OnRestoreSnapshotSelected;
-        _fileMenu.AddChild(_restoreSnapshotMenu);
-        _fileMenu.AddSubmenuNodeItem("Restore Snapshot", _restoreSnapshotMenu, 4);
-
-        _fileMenu.AddItem("Manage Snapshots...", 5);
-        _fileMenu.AddSeparator();
-        _fileMenu.AddItem("Multiplayer...", 10);
-        _fileMenu.IdPressed += FileMenuOnIdPressed;
-
-        _editMenu = GetNode<PopupMenu>("%Edit");
-        _editMenu.AddItem("Templates", 1);
-        _editMenu.AddItem("Datasets", 2);
-        _editMenu.AddItem("Prototype Manifest", 3);
-        _editMenu.AddItem("Images", 4);
-        _editMenu.AddItem("Project Settings", 5);
-        _editMenu.IdPressed += OnEditMenuSelection;
-
-        _insertMenu = GetNode<PopupMenu>("%Insert");
-        _insertMenu.AddItem("Existing Component", 1);
-        _insertMenu.AddItem("New Component", 2);
-        _insertMenu.AddItem("Zone", 3);
-        _insertMenu.IdPressed += OnInsertMenuSelection;
-
-        _helpMenu = GetNode<PopupMenu>("%Help");
-        _helpMenu.AddItem("Test Function", 1);
-        _helpMenu.IdPressed += OnHelpMenuSelection;
+        var bar = new CommandMenuBar { Name = "MenuBar" };
+        var top = GetNode("MarginContainer/Panel/HBoxContainer");
+        top.AddChild(bar);
+        top.MoveChild(bar, 0);
 
         _rotationStep = GetNode<OptionButton>("%RotationStep");
         _rotationStep.ItemSelected += RotationStepSelected;
@@ -238,26 +202,6 @@ public partial class UI : CanvasLayer
         }
     }
 
-    private void RebuildRestoreSnapshotMenu(IRecordReader R)
-    {
-        _restoreSnapshotMenu.Clear();
-
-        var updateIdx = _fileMenu.GetItemIndex(6);
-        if (updateIdx >= 0)
-            _fileMenu.SetItemDisabled(updateIdx, R.Value<ActiveGameStateRef>().Id == SnowTag.Empty);
-
-        var ordered = OrderedGameStates(R);
-        if (ordered.Count == 0)
-        {
-            _restoreSnapshotMenu.AddItem("(no snapshots)", -1);
-            _restoreSnapshotMenu.SetItemDisabled(0, true);
-            return;
-        }
-
-        foreach (var (state, _) in ordered)
-            _restoreSnapshotMenu.AddItem(GameStateLabel(R, state), state.Id.Value);
-    }
-
     /// <summary>Non-deleted snapshots in hierarchical order with depth.</summary>
     private static List<(GameState State, int Depth)> OrderedGameStates(IRecordReader R)
     {
@@ -294,13 +238,6 @@ public partial class UI : CanvasLayer
         var parent = R.Get<GameState>(state.Parent);
         var parens = parent != null ? $" ({parent.Name})" : "";
         return marker + state.Name + parens;
-    }
-
-    private void OnRestoreSnapshotSelected(long id)
-    {
-        if (id < 0)
-            return;
-        ProjectService.Instance.SwitchGameState(new SnowTag((int)id));
     }
 
     private void ShowComponentDefinition()
@@ -417,50 +354,19 @@ public partial class UI : CanvasLayer
         _gameController = gameController;
     }
 
-    private void FileMenuOnIdPressed(long id)
+    private void OpenSampleProject()
     {
-        switch (id)
-        {
-            case 0:
-                ShowProjectManager();
-                break;
+        if (ProjectService.Instance.LoadProject(ProjectService.SampleProjectName) != null)
+            ShowPlayerPositionDialog();
+    }
 
-            case 1:
-                var p = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
-                if (p != null)
-                {
-                    ShowPlayerPositionDialog();
-                }
-                break;
-
-            case 2:
-                var current = ProjectService.Instance.CurrentProject;
-                if (current != null && string.IsNullOrWhiteSpace(current.Filename))
-                    ShowSaveAsDialog();
-                else
-                    ProjectService.Instance.SaveProject();
-                break;
-
-            case 3:
-                ShowSaveSnapshotDialog();
-                break;
-
-            case 6:
-                ProjectService.Instance.UpdateGameState(
-                    ProjectService.Instance.ActiveGameState.Value.Id
-                );
-                break;
-
-            // case 4 is handled by the _restoreSnapshotMenu submenu
-
-            case 5:
-                ShowSnapshotManager();
-                break;
-
-            case 10:
-                ShowMultiplayerDialog();
-                break;
-        }
+    private void Save()
+    {
+        var current = ProjectService.Instance.CurrentProject;
+        if (current != null && string.IsNullOrWhiteSpace(current.Filename))
+            ShowSaveAsDialog();
+        else
+            ProjectService.Instance.SaveProject();
     }
 
     private void ShowSaveAsDialog(Action onSaved = null)
@@ -839,53 +745,6 @@ public partial class UI : CanvasLayer
             // Ends popup mode, before a command runs so it can change the cursor mode, like Duplicate entering spawn mode.
             closed: ComponentPopupClosed
         );
-
-    private void OnHelpMenuSelection(long id)
-    {
-        var p = GetParent<GameController>();
-        p.TestFunction();
-    }
-
-    private void OnInsertMenuSelection(long id)
-    {
-        if (id == 1)
-        {
-            ShowPrototypeManifest();
-        }
-
-        if (id == 2)
-        {
-            ShowComponentDefinition();
-        }
-    }
-
-    private void OnEditMenuSelection(long id)
-    {
-        if (id == 1)
-        {
-            ShowTemplateEditor();
-        }
-
-        if (id == 2)
-        {
-            ShowDatasetEditor();
-        }
-
-        if (id == 3)
-        {
-            ShowPrototypeManifest();
-        }
-
-        if (id == 4)
-        {
-            ShowImageManager();
-        }
-
-        if (id == 5)
-        {
-            ShowProjectSettings();
-        }
-    }
 
     private void OnInsertPressed()
     {

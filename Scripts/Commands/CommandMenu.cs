@@ -4,10 +4,7 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// The right-click menu of commands. There is one, shared by the table and every window,
-/// like a system's context menu: opening it anywhere takes it from wherever it was.
-/// It lives in the main window, so it shows on top of the other windows.
-/// <see cref="ClickRouting"/> closes it on a click anywhere else.
+/// Utilities to create context menus and the menu bar in the top left.
 /// </summary>
 public static class CommandMenu
 {
@@ -30,9 +27,8 @@ public static class CommandMenu
     private static Action _closed;
 
     /// <summary>
-    /// Opens the menu with the commands for <paramref name="context"/> at <paramref name="position"/>,
-    /// taking it from wherever it was open.
-    /// Each item shows its shortcut, and commands that ask for a number get a submenu.
+    /// Opens the context menu for <paramref name="context"/> at <paramref name="position"/>,
+    /// taking the menu from wherever it was open.
     /// </summary>
     /// <param name="position">Where it opens, in the main window's coordinates.</param>
     /// <param name="context">What the commands act on.</param>
@@ -45,6 +41,24 @@ public static class CommandMenu
         CommandContext context,
         ICommandView view,
         Action closed = null
+    ) => Show(position, context, CommandList.ForContextMenu(context), view, closed);
+
+    /// <summary>
+    /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
+    /// taking the menu from wherever it was open.
+    /// Each item shows its shortcut, and commands that ask for a number get a submenu.
+    /// </summary>
+    /// <param name="position">Where it opens.</param>
+    /// <param name="context">What the commands act on.</param>
+    /// <param name="commands">Its potential contents.</param>
+    /// <param name="view">Where the commands run.</param>
+    /// <param name="closed">Called when this menu closes without a command running.</param>
+    public static void Show(
+        Vector2I position,
+        CommandContext context,
+        IEnumerable<Command> commands,
+        ICommandView view,
+        Action closed = null
     )
     {
         var menu = Menu();
@@ -55,20 +69,30 @@ public static class CommandMenu
         Items.Clear();
         _view = view;
         _closed = closed;
+        Fill(menu, context, commands);
 
-        Type previousKind = null;
-        foreach (var (command, targets) in CommandList.ForMenu(context))
+        Callable.From(() => Open(menu, position)).CallDeferred();
+    }
+
+    /// <summary>Whether the menu is showing.</summary>
+    public static bool IsOpen => GodotObject.IsInstanceValid(_menu) && _menu.Visible;
+
+    private static void Fill(PopupMenu menu, CommandContext context, IEnumerable<Command> commands)
+    {
+        foreach (var (command, targets) in CommandList.ForMenu(context, commands))
         {
-            // Commands on different kinds of target are separated.
-            if (previousKind != null && command.GetType() != previousKind)
+            if (command == Command.Divider)
+            {
                 menu.AddSeparator();
-            previousKind = command.GetType();
+                continue;
+            }
 
-            // Ids skip the separators, so they index the items.
+            // Ids skip the separators, and count across submenus, so they index the items.
             int id = Items.Count;
             Items.Add((command, targets));
             menu.AddItem(command.Label(targets.Count), id);
             int index = menu.GetItemIndex(id);
+            menu.SetItemDisabled(index, !command.IsAvailable());
 
             // A key shows only if pressing it here would run this command.
             bool keys = CommandList.RunsFromKeys(command, context);
@@ -81,13 +105,17 @@ public static class CommandMenu
                 menu.SetItemIconMaxWidth(index, IconSize);
             }
 
+            if (command is Submenu submenu)
+            {
+                var sub = NewMenu($"Submenu_{id}");
+                Fill(sub, context, submenu.Items(ProjectService.Instance));
+                menu.AddChild(sub);
+                menu.SetItemSubmenuNode(index, sub);
+            }
+
             if (command.AsksForNumber)
                 AddNumberSubmenu(menu, command, targets, index, keys);
         }
-
-        // Shown once the frame's input is handled. A popup that loses focus to the main window,
-        // as when a click closes it, hides itself then, and would hide the new menu too.
-        Callable.From(() => Open(menu, position)).CallDeferred();
     }
 
     /// <summary>
@@ -126,17 +154,24 @@ public static class CommandMenu
         if (GodotObject.IsInstanceValid(_menu))
             return _menu;
 
-        _menu = new PopupMenu { Name = "CommandMenu" };
-        _menu.IdPressed += id =>
+        _menu = NewMenu("CommandMenu");
+        _menu.PopupHide += Done;
+        ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_menu);
+        return _menu;
+    }
+
+    // The menu, or one of its submenus of commands, which run the command picked.
+    private static PopupMenu NewMenu(string name)
+    {
+        var menu = new PopupMenu { Name = name };
+        menu.IdPressed += id =>
         {
             var (command, targets) = Items[(int)id];
             // The item of a command that asks for a number only opens its submenu.
             if (!command.AsksForNumber)
                 Run(command, targets, 1);
         };
-        _menu.PopupHide += Done;
-        ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_menu);
-        return _menu;
+        return menu;
     }
 
     // Tells whoever opened what the menu shows that it's done with.

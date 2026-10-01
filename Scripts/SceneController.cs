@@ -164,8 +164,6 @@ public partial class SceneController : Node3D, ICommandView
         }
     }
 
-    public void TestFunction() { }
-
     private void TextureDone(ImageTexture obj)
     {
         var d = obj.GetImage();

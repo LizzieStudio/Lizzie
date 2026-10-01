@@ -33,34 +33,6 @@ anchor_right = 1.0
 offset_bottom = 31.0
 grow_horizontal = 2
 
-[node name="MenuBar" type="MenuBar" parent="UI/MarginContainer/Panel/HBoxContainer" unique_id=672250976]
-layout_mode = 2
-
-[node name="File" type="PopupMenu" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=709451553]
-unique_name_in_owner = true
-oversampling_override = 1.0
-title = "File"
-size = Vector2i(168, 100)
-item_count = 3
-item_0/text = "Project Manager"
-item_0/id = 0
-item_1/text = "Open Project"
-item_1/id = 1
-item_2/text = "Save Project"
-item_2/id = 2
-
-[node name="Edit" type="PopupMenu" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=1056068936]
-unique_name_in_owner = true
-title = "Edit"
-
-[node name="Insert" type="PopupMenu" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=1536859569]
-unique_name_in_owner = true
-title = "Insert"
-
-[node name="Help" type="PopupMenu" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=1339962661]
-unique_name_in_owner = true
-title = "Help"
-
 [node name="Panel" type="Panel" parent="UI/MarginContainer/Panel/HBoxContainer" unique_id=1797442022]
 layout_mode = 2
 size_flags_horizontal = 3

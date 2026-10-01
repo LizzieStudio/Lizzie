@@ -123,6 +123,12 @@ public interface ICommandView
 /// </summary>
 public abstract class Command
 {
+    /// <summary>
+    /// A dividing line between menu items.
+    /// Command menus merge adjacent dividers and trim dividers left at either end.
+    /// </summary>
+    public static readonly Command Divider = new DividerCommand();
+
     public CommandName Name { get; init; }
 
     /// <summary>
@@ -204,6 +210,12 @@ public abstract class Command
 
     /// <summary>Whether it can act on <paramref name="count"/> targets that it applies to.</summary>
     public abstract bool Fits(int count);
+
+    /// <summary>
+    /// Whether the Command can run now.
+    /// When false, it's disabled in menus and keyboard shortcuts won't trigger it.
+    /// </summary>
+    public virtual bool IsAvailable() => true;
 
     /// <summary>
     /// When <see cref="AsksForNumber"/> = true, the highest number worth offering for these targets,
@@ -389,11 +401,60 @@ public sealed class GlobalCommand : Command
 
     public override bool Fits(int count) => count == 0;
 
+    /// <summary>
+    /// Whether the command can run right now.
+    /// </summary>
+    public Func<IRecordReader, bool> Enabled { get; init; }
+
+    /// <summary>
+    /// Generates the effects, submitted as one event.
+    /// Returning an empty list still fires an event
+    /// Returning null does not fire an event.
+    /// </summary>
+    public Func<IRecordReader, IEnumerable<Effect>> Effects { get; init; }
+
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }
 
-    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view) =>
-        SideEffects(view);
+    public override bool IsAvailable() => Enabled?.Invoke(ProjectService.Instance) ?? true;
+
+    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
+    {
+        SideEffects?.Invoke(view);
+        if (Effects != null)
+            Submit(Effects(ProjectService.Instance));
+    }
+}
+
+/// <summary>
+/// A menu item with a submenu of other commands.
+/// It can go in any list of commands a menu shows, including another submenu,
+/// and shows only when one of its commands would show.
+/// </summary>
+public sealed class Submenu : Command
+{
+    /// <summary>
+    /// The commands it offers, built each time a menu shows this submenu.
+    /// They act like any other command in the menu.
+    /// </summary>
+    public Func<IRecordReader, IEnumerable<Command>> Items { get; init; }
+
+    public override bool Applies(Target target) => false;
+
+    public override bool Fits(int count) => count == 0;
+
+    // Picking it opens its menu.
+    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view) { }
+}
+
+// This is just a sentinel so that we can put dividers in command lists.
+internal sealed class DividerCommand : Command
+{
+    public override bool Applies(Target target) => false;
+
+    public override bool Fits(int count) => count == 0;
+
+    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view) { }
 }
 
 /// <summary>

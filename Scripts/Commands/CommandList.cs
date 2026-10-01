@@ -9,8 +9,11 @@ using Godot;
 /// </summary>
 public static class CommandList
 {
-    /// <summary>Every command, in menu order.</summary>
-    public static readonly IReadOnlyList<Command> All = Checked([
+    /// <summary>
+    /// The commands every context menu can offer, in order.
+    /// </summary>
+    public static readonly IReadOnlyList<Command> ContextMenu =
+    [
         ComponentCommands.Flip,
         ComponentCommands.RotateCw,
         ComponentCommands.RotateCcw,
@@ -35,6 +38,74 @@ public static class CommandList
         UndoCommands.Redo,
         UndoCommands.UndoOthers,
         UndoCommands.RedoOthers,
+    ];
+
+    /// <summary>
+    /// The menus along the top of the main window, each a list of commands.
+    /// </summary>
+    public static readonly IReadOnlyList<Submenu> MenuBar =
+    [
+        new()
+        {
+            Caption = "File",
+            Items = _ =>
+                [
+                    UI.OpenProjectManager,
+                    UI.OpenProject,
+                    UI.SaveProject,
+                    Command.Divider,
+                    UI.CreateSnapshot,
+                    UI.UpdateSnapshot,
+                    UI.RestoreSnapshot,
+                    UI.ManageSnapshots,
+                    Command.Divider,
+                    UI.OpenMultiplayer,
+                ],
+        },
+        new()
+        {
+            Caption = "Edit",
+            Items = _ =>
+                [
+                    UndoCommands.Undo,
+                    UndoCommands.Redo,
+                    UndoCommands.UndoOthers,
+                    UndoCommands.RedoOthers,
+                    Command.Divider,
+                    UI.EditTemplates,
+                    UI.EditDatasets,
+                    UI.EditPrototypes,
+                    UI.EditImages,
+                    Command.Divider,
+                    UI.EditProjectSettings,
+                ],
+        },
+        new()
+        {
+            Caption = "Insert",
+            Items = _ => [UI.InsertExistingComponent, UI.InsertNewComponent],
+        },
+    ];
+
+    /// <summary>
+    /// Every command that can be run by shortcut keys.
+    /// </summary>
+    public static readonly IReadOnlyList<Command> All = Checked([
+        .. ContextMenu,
+        UI.OpenProjectManager,
+        UI.OpenProject,
+        UI.SaveProject,
+        UI.CreateSnapshot,
+        UI.UpdateSnapshot,
+        UI.ManageSnapshots,
+        UI.OpenMultiplayer,
+        UI.EditTemplates,
+        UI.EditDatasets,
+        UI.EditPrototypes,
+        UI.EditImages,
+        UI.EditProjectSettings,
+        UI.InsertExistingComponent,
+        UI.InsertNewComponent,
     ]);
 
     /// <summary>
@@ -52,7 +123,10 @@ public static class CommandList
             .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))
             .Where(f => typeof(Command).IsAssignableFrom(f.FieldType));
         foreach (var field in fields)
-            if (field.GetValue(null) is Command command && !listed.Contains(command))
+            if (
+                field.GetValue(null) is Command command and not (DividerCommand or Submenu)
+                && !listed.Contains(command)
+            )
                 GD.PushError(
                     $"{field.DeclaringType.Name}.{field.Name} is not in CommandList.All, so no menu or shortcut can run it."
                 );
@@ -118,20 +192,47 @@ public static class CommandList
     }
 
     /// <summary>
-    /// The commands a menu offers, with what each acts on.
-    /// A command shows when it can act on any of the targets, and acts on just those.
+    /// The commands a context menu offers: <see cref="ContextMenu"/> with the view's own commands.
     /// </summary>
-    public static IEnumerable<(Command Command, IReadOnlyList<Target> Targets)> ForMenu(
-        CommandContext context
+    public static IReadOnlyList<Command> ForContextMenu(CommandContext context) =>
+        MenuOrder(context.Local);
+
+    /// <summary>
+    /// The items a menu of <paramref name="commands"/> shows, with what each acts on.
+    /// Commands have properties which decide when they can act on a certain target.
+    /// The commands inside of a Submenu are checked and that status is inherited by the submenu.
+    /// </summary>
+    public static List<(Command Command, IReadOnlyList<Target> Targets)> ForMenu(
+        CommandContext context,
+        IEnumerable<Command> commands
     )
     {
-        foreach (var command in MenuOrder(context.Local).Where(c => c.ShowInMenu))
+        var items = new List<(Command Command, IReadOnlyList<Target> Targets)>();
+        foreach (var command in commands)
         {
+            if (command == Command.Divider)
+            {
+                if (items.Count > 0 && items[^1].Command != Command.Divider)
+                    items.Add((command, []));
+                continue;
+            }
+            if (!command.ShowInMenu)
+                continue;
+            if (command is Submenu submenu)
+            {
+                if (ForMenu(context, submenu.Items(ProjectService.Instance)).Count > 0)
+                    items.Add((command, []));
+                continue;
+            }
+
             // A global command applies to no target, so it fits with none and always shows.
             var targets = TargetsFor(command, context, menu: true);
             if (command.Fits(targets.Count))
-                yield return (command, targets);
+                items.Add((command, targets));
         }
+        if (items.Count > 0 && items[^1].Command == Command.Divider)
+            items.RemoveAt(items.Count - 1);
+        return items;
     }
 
     /// <summary>
@@ -144,7 +245,7 @@ public static class CommandList
     {
         var bound = ForKeys(view?.BuildContext()).Where(k => k.Command.Matches(e, out _)).ToList();
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
-        if (ready.Count == 1)
+        if (ready.Count == 1 && ready[0].Command.IsAvailable())
         {
             var (command, targets) = ready[0];
             command.Matches(e, out int number);
@@ -207,22 +308,33 @@ public static class CommandList
     }
 
     /// <summary>
-    /// Every command in menu order. A view's own commands go after the shared ones
-    /// on the same kind of target, or before the ones without targets.
+    /// The context menu's commands in order.
     /// </summary>
     private static List<Command> MenuOrder(IReadOnlyList<Command> local)
     {
-        var order = All.ToList();
+        var order = ContextMenu.ToList();
+        int previous = -1;
         foreach (var command in local)
         {
             int last = order.FindLastIndex(c => c.GetType() == command.GetType());
             int firstGlobal = order.FindIndex(c => c is GlobalCommand);
-            order.Insert(
-                last >= 0 ? last + 1
-                    : firstGlobal >= 0 ? firstGlobal
-                    : order.Count,
-                command
-            );
+            previous =
+                command == Command.Divider ? previous + 1
+                : last >= 0 ? last + 1
+                : firstGlobal >= 0 ? firstGlobal
+                : order.Count;
+            order.Insert(previous, command);
+        }
+
+        for (int i = order.Count - 1; i > 0; i--)
+        {
+            var (before, after) = (order[i - 1], order[i]);
+            if (
+                before != Command.Divider
+                && after != Command.Divider
+                && before.GetType() != after.GetType()
+            )
+                order.Insert(i, Command.Divider);
         }
         return order;
     }
