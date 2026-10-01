@@ -27,21 +27,34 @@ public static class CommandMenu
     private static Action _closed;
 
     /// <summary>
-    /// Opens the context menu for <paramref name="context"/> at <paramref name="position"/>,
+    /// Opens the context menu for what's targeted in <paramref name="view"/> at <paramref name="position"/>,
     /// taking the menu from wherever it was open.
     /// </summary>
     /// <param name="position">Where it opens, in the main window's coordinates.</param>
-    /// <param name="context">What the commands act on.</param>
-    /// <param name="view">Where the commands run.</param>
+    /// <param name="view">Where the commands run, and what they act on.</param>
     /// <param name="closed">
     /// Called once when this menu closes or is replaced, before a chosen command runs, or null.
     /// </param>
+    public static void Show(Vector2I position, ICommandView view, Action closed = null)
+    {
+        var context = CommandContext.Of(view) ?? new CommandContext();
+        Show(position, context, CommandList.ForContextMenu(context), view, closed);
+    }
+
+    /// <summary>
+    /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
+    /// acting on what's targeted in <paramref name="view"/>, taking the menu from wherever it was open.
+    /// </summary>
+    /// <param name="position">Where it opens, in the main window's coordinates.</param>
+    /// <param name="view">Where the commands run, and what they act on, or null for neither.</param>
+    /// <param name="commands">What it offers, in order, with dividers and submenus.</param>
+    /// <param name="closed">Called when this menu closes without a command running.</param>
     public static void Show(
         Vector2I position,
-        CommandContext context,
         ICommandView view,
+        IEnumerable<Command> commands,
         Action closed = null
-    ) => Show(position, context, CommandList.ForContextMenu(context), view, closed);
+    ) => Show(position, CommandContext.Of(view) ?? new CommandContext(), commands, view, closed);
 
     /// <summary>
     /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
@@ -53,12 +66,12 @@ public static class CommandMenu
     /// <param name="commands">Its potential contents.</param>
     /// <param name="view">Where the commands run.</param>
     /// <param name="closed">Called when this menu closes without a command running.</param>
-    public static void Show(
+    private static void Show(
         Vector2I position,
         CommandContext context,
         IEnumerable<Command> commands,
         ICommandView view,
-        Action closed = null
+        Action closed
     )
     {
         var menu = Menu();

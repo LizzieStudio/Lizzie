@@ -13,6 +13,9 @@ public interface IRecordReader
     T Get<T>(SnowTag id)
         where T : class, IReplicated;
 
+    /// <summary>The record, or null if it is missing or deleted.</summary>
+    IReplicated Get(SnowTag id);
+
     /// <summary>
     /// The record even if it is deleted.
     /// Returns null if the record never existed or if its creation was reversed through an undo action.
@@ -187,25 +190,4 @@ public static class RecordReaderExtensions
             .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Token)
             .OrderByDescending(s => s.ZOrder)
             .ToList();
-
-    /// <summary>
-    /// The contents of a component like a deck or bag.
-    /// </summary>
-    public static IEnumerable<ComponentState> Contents(this IRecordReader R, ComponentState s)
-    {
-        IEnumerable<ComponentState> inside = R.Kind(s) switch
-        {
-            VisualComponentBase.VisualComponentType.Deck => R.TokensOn(s),
-            VisualComponentBase.VisualComponentType.Bag => R.Get<ComponentState>(c =>
-                c.ContainerRef == s.Id
-            ),
-            _ => [],
-        };
-        foreach (var c in inside)
-        {
-            yield return c;
-            foreach (var d in R.Contents(c))
-                yield return d;
-        }
-    }
 }

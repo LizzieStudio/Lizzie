@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
@@ -115,4 +117,61 @@ public record ComponentState : Replicated
     /// <summary>Whether it's one of a deck's cards, rather than the deck itself.</summary>
     [JsonIgnore]
     public bool IsCard => DataSetRowIndex >= 0 || DataSetRowId != SnowTag.Empty;
+
+    /// <summary>
+    /// A deck's cards, or the components whose <see cref="ContainerRef"/> is this one, like a bag's or a tray's.
+    /// </summary>
+    /// <remarks>
+    /// Any component used as a <see cref="ContainerRef"/> gets its contents here without changes.
+    /// </remarks>
+    public override IEnumerable<Target> Contents(IRecordReader R)
+    {
+        var containedComponents =
+            R.Kind(this) == VisualComponentBase.VisualComponentType.Deck
+                ? R.TokensOn(this)
+                : R.Get<ComponentState>(c => c.ContainerRef == Id);
+
+        return containedComponents.Select(c => new RecordTarget(c.Id));
+    }
+
+    /// <summary>
+    /// The deck it's on or the bag it's in.
+    /// </summary>
+    /// <remarks>
+    /// Any component referenced by <see cref="ContainerRef"/> becomes a container here without changes.
+    /// </remarks>
+    public override IEnumerable<Target> Containers(IRecordReader R)
+    {
+        if (IsContained)
+            return R.Get<ComponentState>(ContainerRef) is { } container
+                ? [new RecordTarget(container.Id)]
+                : [];
+
+        if (
+            Location != VisualComponentBase.ComponentLocation.Table
+            || R.Kind(this) != VisualComponentBase.VisualComponentType.Token
+        )
+            return [];
+
+        // A filter may only read the record, so the kind is checked after.
+        return R.Get<ComponentState>(d =>
+                d.Location == VisualComponentBase.ComponentLocation.Table
+                && d.X == X
+                && d.Z == Z
+                && d.ZOrder < ZOrder
+            )
+            .Where(d => R.Kind(d) == VisualComponentBase.VisualComponentType.Deck)
+            .Select(d => new RecordTarget(d.Id));
+    }
+
+    /// <summary>
+    /// Its prototype and, for a card made from a dataset, its row.
+    /// </summary>
+    /// <remarks>
+    /// This will need to be extended as new references are invented.
+    /// </remarks>
+    public override IEnumerable<Target> Referenced(IRecordReader R) =>
+        DataSetRowId == SnowTag.Empty
+            ? [new RecordTarget(PrototypeRef)]
+            : [new RecordTarget(PrototypeRef), new RecordTarget(DataSetRowId)];
 }

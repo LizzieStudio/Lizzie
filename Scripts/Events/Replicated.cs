@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 public abstract record Replicated : IReplicated
@@ -17,4 +18,10 @@ public abstract record Replicated : IReplicated
         };
 
     public string SheetKey() => $"{Id.Value:X8}{LastUpdateId.Value:X16}";
+
+    public virtual IEnumerable<Target> Contents(IRecordReader R) => [];
+
+    public virtual IEnumerable<Target> Containers(IRecordReader R) => [];
+
+    public virtual IEnumerable<Target> Referenced(IRecordReader R) => [];
 }

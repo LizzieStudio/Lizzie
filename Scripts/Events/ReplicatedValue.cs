@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
-/// Storage for a single <see cref="IReplicated"/> object that syncs during multiplayer transactionally.
+/// Storage for a single value, like the project settings, that syncs during multiplayer transactionally.
+/// The value isn't an <see cref="IReplicated"/>. It has no id of its own, and is read with <see cref="IRecordReader.Value{T}"/>.
 /// </summary>
 public sealed class ReplicatedValue<T> : IReplicatedContainer
 {
@@ -126,6 +127,9 @@ public sealed class ReplicatedValue<T> : IReplicatedContainer
         _pending = false;
         NotifyChanged();
     }
+
+    /// <summary>Always null, since it contains no records.</summary>
+    public IReplicated Find(SnowTag id) => null;
 
     /// <summary>The effect carrying the current value, unless it should not be persisted.</summary>
     public IEnumerable<Effect> EnumerateSaveEffects()

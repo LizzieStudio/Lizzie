@@ -82,9 +82,8 @@ public partial class CommandMenuBar : HBoxContainer
         var rect = title.GetGlobalRect();
         CommandMenu.Show(
             (Vector2I)(rect.Position + new Vector2(0, rect.Size.Y)),
-            _view?.BuildContext() ?? new CommandContext(),
-            menu.Items(ProjectService.Instance),
             _view,
+            menu.Items(ProjectService.Instance),
             closed: () => Closed(title)
         );
         ShowOpen();

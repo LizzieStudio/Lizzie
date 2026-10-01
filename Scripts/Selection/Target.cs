@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 /// <summary>
@@ -7,25 +8,28 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(RecordTarget), "r")]
 [JsonDerivedType(typeof(ColumnTarget), "col")]
 [JsonDerivedType(typeof(CellTarget), "cell")]
-public abstract record Target;
+public abstract record Target
+{
+    /// <inheritdoc cref="IReplicated.Contents"/>
+    public virtual IEnumerable<Target> Contents(IRecordReader R) => [];
+
+    /// <inheritdoc cref="IReplicated.Containers"/>
+    public virtual IEnumerable<Target> Containers(IRecordReader R) => [];
+
+    /// <inheritdoc cref="IReplicated.Referenced"/>
+    public virtual IEnumerable<Target> Referenced(IRecordReader R) => [];
+}
 
 /// <summary>
-/// A record such as a component, prototype, dataset, or row.
+/// Targets a record.
 /// </summary>
-public sealed record RecordTarget([property: JsonPropertyName("i")] SnowTag Id) : Target;
+public sealed record RecordTarget([property: JsonPropertyName("i")] SnowTag Id) : Target
+{
+    public override IEnumerable<Target> Contents(IRecordReader R) => R.Get(Id)?.Contents(R) ?? [];
 
-/// <summary>
-/// A dataset column, which lives inside its dataset.
-/// </summary>
-public sealed record ColumnTarget(
-    [property: JsonPropertyName("d")] SnowTag DataSetId,
-    [property: JsonPropertyName("i")] SnowTag ColumnId
-) : Target;
+    public override IEnumerable<Target> Containers(IRecordReader R) =>
+        R.Get(Id)?.Containers(R) ?? [];
 
-/// <summary>
-/// One cell of a dataset row.
-/// </summary>
-public sealed record CellTarget(
-    [property: JsonPropertyName("r")] SnowTag RowId,
-    [property: JsonPropertyName("i")] SnowTag ColumnId
-) : Target;
+    public override IEnumerable<Target> Referenced(IRecordReader R) =>
+        R.Get(Id)?.Referenced(R) ?? [];
+}

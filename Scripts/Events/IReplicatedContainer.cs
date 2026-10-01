@@ -17,6 +17,9 @@ public interface IReplicatedContainer
     void Clear();
     void FlushBulkLoad();
 
+    /// <summary>The record with <paramref name="id"/> even if it is deleted, or null if this container doesn't hold it.</summary>
+    IReplicated Find(SnowTag id);
+
     /// <summary>The effects that would recreate this container's current state.</summary>
     IEnumerable<Effect> EnumerateSaveEffects();
 }

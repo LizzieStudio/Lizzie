@@ -740,7 +740,6 @@ public partial class UI : CanvasLayer
     public void ShowComponentPopup(Vector2I position, ICommandView view) =>
         CommandMenu.Show(
             position,
-            view.BuildContext() ?? new CommandContext(),
             view,
             // Ends popup mode, before a command runs so it can change the cursor mode, like Duplicate entering spawn mode.
             closed: ComponentPopupClosed

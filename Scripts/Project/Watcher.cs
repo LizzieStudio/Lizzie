@@ -15,6 +15,9 @@ public sealed class Watcher : IRecordReader
     // per record type, predicates that are true for records this watcher read
     private readonly Dictionary<Type, List<Func<object, bool>>> _dependencies = new();
 
+    // SnowTags observed
+    private readonly HashSet<SnowTag> _ids = new();
+
     // per record type, the values its Project returned on the previous run
     private readonly Dictionary<Type, object> _projections = new();
 
@@ -38,6 +41,9 @@ public sealed class Watcher : IRecordReader
     /// <summary>Whether any change touches a record read by the last run.</summary>
     public bool Affected(Type type, IReadOnlyList<RecordChange> changes)
     {
+        if (_ids.Count > 0 && changes.Any(c => IsReadById(c.Old) || IsReadById(c.New)))
+            return true;
+
         if (!_dependencies.TryGetValue(type, out var predicates))
             return false;
 
@@ -57,10 +63,13 @@ public sealed class Watcher : IRecordReader
         return false;
     }
 
+    private bool IsReadById(object record) => record is IReplicated r && _ids.Contains(r.Id);
+
     /// <summary>Replaces the dependencies with the ones read by a fresh run.</summary>
     public void Run()
     {
         _dependencies.Clear();
+        _ids.Clear();
         _projected.Clear();
         try
         {
@@ -88,6 +97,12 @@ public sealed class Watcher : IRecordReader
     {
         Depend<T>(r => r.Id == id);
         return _source.Get<T>(id);
+    }
+
+    public IReplicated Get(SnowTag id)
+    {
+        _ids.Add(id);
+        return _source.Get(id);
     }
 
     public T GetIncludingDeleted<T>(SnowTag id)

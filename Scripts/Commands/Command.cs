@@ -96,6 +96,46 @@ public sealed class CommandContext
     /// Custom commands for this viewport to add to the context menu, like the table's Zoom to Component.
     /// </summary>
     public IReadOnlyList<Command> Local { get; init; } = [];
+
+    /// <summary>
+    /// The full context of what's targeted in <paramref name="view"/>,
+    /// or null if the provided view can't take commands.
+    /// </summary>
+    public static CommandContext Of(ICommandView view)
+    {
+        if (view?.Selected() is not { } selected)
+            return null;
+
+        IRecordReader R = ProjectService.Instance;
+        var chosen = selected.ToImmutableHashSet();
+
+        IEnumerable<Target> Related(
+            IEnumerable<Target> targets,
+            Func<Target, IEnumerable<Target>> relation
+        ) => targets.SelectMany(relation).Where(t => !chosen.Contains(t));
+
+        // Each target is visited once, so if a relation ever does loop back it doesn't hang.
+        HashSet<Target> Followed(Func<Target, IEnumerable<Target>> relation)
+        {
+            var found = new HashSet<Target>();
+            for (
+                var next = Related(chosen, relation).ToList();
+                next.Count > 0;
+                next = Related(next, relation).Where(t => !found.Contains(t)).ToList()
+            )
+                found.UnionWith(next);
+            return found;
+        }
+
+        return new()
+        {
+            Selected = chosen,
+            Contents = Followed(t => t.Contents(R)),
+            Containers = Followed(t => t.Containers(R)),
+            Referenced = Related(chosen, t => t.Referenced(R)),
+            Local = view.Commands,
+        };
+    }
 }
 
 /// <summary>
@@ -104,15 +144,23 @@ public sealed class CommandContext
 public interface ICommandView
 {
     /// <summary>
-    /// The selection context for commands, or null while the view isn't taking commands.
-    /// A view with nothing to act on leaves it empty.
+    /// <para>What the user is targeting right now in this view.</para>
+    ///
+    /// Usually this is the selection, but it could include the hovered records.
+    /// Returns null when this view isn't taking commands.
     /// </summary>
-    CommandContext BuildContext() => new();
+    IEnumerable<Target> Selected() => [];
 
     /// <summary>
-    /// Whether an undo or redo issued here should target <paramref name="effect"/>.
-    /// If the <paramref name="effect"/> is targeting records managed here, return true.
-    /// Returning false will cause the next <see cref="Effect"/> to be checked until a valid target is found or the UndoLog runs out.
+    /// Extra custom commands for this view to add to its context menu.
+    /// </summary>
+    IReadOnlyList<Command> Commands => [];
+
+    /// <summary>
+    /// <para>Whether an undo or redo issued in this view should target <paramref name="effect"/>.</para>
+    ///
+    /// Returning true will make undo or redo in this view reverse or reapply this effect.
+    /// Returning false will make them skip the effect and search further backwards for another candidate.
     /// </summary>
     bool UndoScope(Effect effect);
 }

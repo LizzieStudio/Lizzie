@@ -197,6 +197,11 @@ public partial class ProjectService : IRecordReader
     public T GetIncludingDeleted<T>(SnowTag id)
         where T : class, IReplicated => RecordsOf<T>().GetValueOrDefault(id);
 
+    public IReplicated Get(SnowTag id) =>
+        Containers.Select(c => c.Find(id)).FirstOrDefault(r => r != null) is { Deleted: false } r
+            ? r
+            : null;
+
     public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
         where T : class, IReplicated
     {

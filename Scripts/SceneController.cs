@@ -55,36 +55,22 @@ public partial class SceneController : Node3D, ICommandView
     public GameObjects GameObjects => _gameObjects;
 
     /// <summary>
-    /// The context for the selected components, or the hovered component.
-    /// Their contents, like a deck's cards, come along, and their prototypes are referenced.
+    /// The selected components, or the hovered component when nothing is selected.
+    /// None while in the middle of creating a selection with a selection box.
     /// </summary>
-    public CommandContext BuildContext()
+    public IEnumerable<Target> Selected()
     {
-        // While dragging a selection box, don't build any context.
         if (_gameObjects.CursorMode == CursorMode.DragSelect)
             return null;
 
         var R = ProjectService.Instance;
-        var selected = _gameObjects
+        return _gameObjects
             .GetTargetedObjects()
-            .Select(c => R.Get<ComponentState>(c.Reference))
-            .Where(s => s != null)
-            .ToList();
-
-        return new CommandContext
-        {
-            Selected = selected.Select(s => new RecordTarget(s.Id)),
-            Contents = selected.SelectMany(s => R.Contents(s)).Select(s => new RecordTarget(s.Id)),
-            Referenced =
-            [
-                .. selected.Select(s => new RecordTarget(s.PrototypeRef)),
-                .. selected
-                    .Where(s => s.DataSetRowId != SnowTag.Empty)
-                    .Select(s => new RecordTarget(s.DataSetRowId)),
-            ],
-            Local = TableCommands,
-        };
+            .Where(c => R.Get<ComponentState>(c.Reference) != null)
+            .Select(c => new RecordTarget(c.Reference));
     }
+
+    public IReadOnlyList<Command> Commands => TableCommands;
 
     /// <summary>
     /// The table undoes its components, and what's selected on it.

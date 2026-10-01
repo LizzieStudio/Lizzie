@@ -22,6 +22,24 @@ public interface IReplicated
     /// A cache key that changes whenever the definition is updated.
     /// </summary>
     public string SheetKey();
+
+    /// <summary>
+    /// What's directly inside this record, like a deck's cards or a DataRow's cells.
+    /// These are followed recursively, so only list direct contents.
+    /// </summary>
+    IEnumerable<Target> Contents(IRecordReader R);
+
+    /// <summary>
+    /// What this record is directly inside, like a card's deck or a cells's <see cref="DataRow"/> and <see cref="ColumnTarget"/>.
+    /// These are followed recursively, so only list direct containers.
+    /// </summary>
+    IEnumerable<Target> Containers(IRecordReader R);
+
+    /// <summary>
+    /// What this record refers to, like a component's prototype.
+    /// Not followed further.
+    /// </summary>
+    IEnumerable<Target> Referenced(IRecordReader R);
 }
 
 public static class ReplicatedExtensions

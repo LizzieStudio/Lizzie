@@ -130,24 +130,14 @@ public partial class DatasetEditor : Window, ICommandView
             );
     }
 
+    #region ICommandView
+
     /// <summary>
     /// What the local player has selected in the shown dataset.
     /// </summary>
-    public CommandContext BuildContext()
-    {
-        var selected = MySelection();
-        var containers = selected
-            .OfType<CellTarget>()
-            .SelectMany(c => new Target[] { new RecordTarget(c.RowId), Column(c.ColumnId) });
-        if (!selected.IsEmpty)
-            containers = containers.Append(new RecordTarget(_datasetRef));
-        return new()
-        {
-            Selected = selected,
-            Containers = containers,
-            Local = _commands,
-        };
-    }
+    public IEnumerable<Target> Selected() => MySelection();
+
+    public IReadOnlyList<Command> Commands => _commands;
 
     /// <summary>Undo walks the shown dataset's edits, its rows', and what's selected in it.</summary>
     public bool UndoScope(Effect fx) =>
@@ -157,6 +147,8 @@ public partial class DatasetEditor : Window, ICommandView
             || fx is UpdateReplicatedEffect<DataRow> row && row.Payload?.DataSetId == _datasetRef
             || fx is UpdateReplicatedEffect<Selection> s && s.Payload?.Within == _datasetRef
         );
+
+    #endregion
 
     public override void _Process(double delta)
     {
@@ -904,7 +896,7 @@ public partial class DatasetEditor : Window, ICommandView
         GuiReleaseFocus();
         if (target != null && !MySelection().Contains(target))
             SelectTarget(target);
-        OpenMenu(BuildContext(), at);
+        CommandMenu.Show(Position + (Vector2I)at, this);
     }
 
     /// <summary>
@@ -995,11 +987,6 @@ public partial class DatasetEditor : Window, ICommandView
         if (command.Fits(targets.Count))
             command.Run(targets, 1, this);
     }
-
-    /// <summary>Opens the command menu. <paramref name="at"/> is in this window's coordinates.</summary>
-    private void OpenMenu(CommandContext context, Vector2 at) =>
-        // The menu shows in the main window, like this one.
-        CommandMenu.Show(Position + (Vector2I)at, context, this);
 
     /// <summary>
     /// The commands only the editor offers, since they act on its grid.

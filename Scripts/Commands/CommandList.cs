@@ -10,8 +10,11 @@ using Godot;
 public static class CommandList
 {
     /// <summary>
-    /// The commands every context menu can offer, in order.
+    /// The <see cref="Command"/> every context menu can offer, in order.
     /// </summary>
+    /// <remarks>
+    /// Add a <see cref="Command"/> here to see it in the context menus.
+    /// </remarks>
     public static readonly IReadOnlyList<Command> ContextMenu =
     [
         ComponentCommands.Flip,
@@ -43,6 +46,9 @@ public static class CommandList
     /// <summary>
     /// The menus along the top of the main window, each a list of commands.
     /// </summary>
+    /// <remarks>
+    /// Add a <see cref="Command"/> here to see it in the top-left menus.
+    /// </remarks>
     public static readonly IReadOnlyList<Submenu> MenuBar =
     [
         new()
@@ -90,6 +96,10 @@ public static class CommandList
     /// <summary>
     /// Every command that can be run by shortcut keys.
     /// </summary>
+    /// <remarks>
+    /// Add a <see cref="Command"/> here (but not in <see cref="ContextMenu"/>)
+    /// if you want it to be accessible by keyboard shortcut but not the context menu.
+    /// </remarks>
     public static readonly IReadOnlyList<Command> All = Checked([
         .. ContextMenu,
         UI.OpenProjectManager,
@@ -243,7 +253,9 @@ public static class CommandList
     /// </summary>
     public static bool RunShortcut(InputEvent e, ICommandView view)
     {
-        var bound = ForKeys(view?.BuildContext()).Where(k => k.Command.Matches(e, out _)).ToList();
+        var bound = ForKeys(CommandContext.Of(view))
+            .Where(k => k.Command.Matches(e, out _))
+            .ToList();
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
         if (ready.Count == 1 && ready[0].Command.IsAvailable())
         {

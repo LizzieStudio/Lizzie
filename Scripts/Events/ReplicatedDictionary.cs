@@ -43,6 +43,8 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
         get { return dict; }
     }
 
+    public IReplicated Find(SnowTag id) => dict.GetValueOrDefault(id);
+
     #region events
 
     public event Action<IReadOnlyList<RecordChange>> Changed;
