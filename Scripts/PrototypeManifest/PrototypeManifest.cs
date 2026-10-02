@@ -35,6 +35,9 @@ public partial class PrototypeManifest : Window, ICommandView
     private int _sortColumn = 0;
     private bool _sortAscending = true;
 
+    // Nothing is selected here (yet)
+    public WatchableValue<SnowTag> SelectionScope { get; } = new();
+
     /// <summary>Undo walks the edits to every prototype.</summary>
     public bool UndoScope(Effect fx) => fx is UpdateReplicatedEffect<Prototype>;
 

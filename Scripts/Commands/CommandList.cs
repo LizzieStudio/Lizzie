@@ -238,7 +238,7 @@ public static class CommandList
             }
 
             // A global command applies to no target, so it fits with none and always shows.
-            var targets = TargetsFor(command, context, menu: true);
+            var targets = TargetsFor(command, context, ProjectService.Instance, menu: true);
             if (command.Fits(targets.Count))
                 items.Add((command, targets));
         }
@@ -250,16 +250,15 @@ public static class CommandList
     /// <summary>
     /// Runs the command the key is bound to, on the targets in <paramref name="view"/> it can act on.
     /// When several commands bound to the same key have targets in the context, none of them run.
-    /// Without a view, or while it isn't taking commands, only commands without targets run.
+    /// With nothing selected, they act on what's hovered. Without a view, only commands without targets run.
     /// True when the key belongs to a command, even if it didn't run.
     /// </summary>
     public static bool RunShortcut(InputEvent e, ICommandView view)
     {
-        var bound = ForKeys(CommandContext.Of(view))
-            .Where(k => k.Command.Matches(e, out _))
-            .ToList();
+        var context = CommandContext.Of(view, ProjectService.Instance, keys: true);
+        var bound = ForKeys(context).Where(k => k.Command.Matches(e, out _)).ToList();
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
-        if (ready.Count == 1 && ready[0].Command.IsAvailable())
+        if (ready.Count == 1 && ready[0].Command.IsAvailable(ProjectService.Instance))
         {
             var (command, targets) = ready[0];
             command.Matches(e, out int number);
@@ -281,14 +280,12 @@ public static class CommandList
     /// <summary>
     /// Every command that keyboard shortcuts could run in <paramref name="context"/>,
     /// with the targets those shortcuts act on.
-    /// Without a context, returns only the commands without targets.
     /// </summary>
     private static IEnumerable<(Command Command, List<Target> Targets)> ForKeys(
         CommandContext context
     ) =>
-        context == null
-            ? All.OfType<GlobalCommand>().Select(c => ((Command)c, new List<Target>()))
-            : All.Concat(context.Local).Select(c => (c, TargetsFor(c, context, menu: false)));
+        All.Concat(context.Local)
+            .Select(c => (c, TargetsFor(c, context, ProjectService.Instance, menu: false)));
 
     /// <summary>
     /// Whether both commands share a keyboard shortcut.
@@ -308,7 +305,13 @@ public static class CommandList
     /// Takes the parts of the context in <see cref="Command.ActsOn"/>
     /// and filters it by those that return true when passed to <see cref="Command.Applies"/>.
     /// </summary>
-    public static List<Target> TargetsFor(Command command, CommandContext context, bool menu)
+    /// <param name="R">What <see cref="Command.Applies"/> reads through, like a Watch's reader.</param>
+    public static List<Target> TargetsFor(
+        Command command,
+        CommandContext context,
+        IRecordReader R,
+        bool menu
+    )
     {
         var acts = command.ActsOn;
         var targets = acts.HasFlag(Context.Selected) ? context.Selected : [];
@@ -318,7 +321,9 @@ public static class CommandList
             targets = targets.Union(context.Containers);
         if (menu && acts.HasFlag(Context.Referenced))
             targets = targets.Union(context.Referenced);
-        return targets.Where(command.Applies).ToList();
+        if (acts.HasFlag(Context.View))
+            targets = targets.Union(context.View);
+        return targets.Where(t => command.Applies(R, t)).ToList();
     }
 
     /// <summary>

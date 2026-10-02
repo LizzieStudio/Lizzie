@@ -17,7 +17,7 @@ public partial class GameController : Node3D
     public override void _Ready()
     {
         _mainScene = GetNode<SceneController>("3DSceneNoPhysics");
-        _mainScene.HoveredComponentChange += MainSceneOnHoveredNameChange;
+        _mainScene.GameObjects.HoveredComponentChange += MainSceneOnHoveredNameChange;
         _mainScene.GameObjects.TextureFactory = _textureFactory;
         _mainScene.GameObjects.SetGameController(this);
 

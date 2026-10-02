@@ -19,7 +19,6 @@ public partial class DatasetEditor : Window, ICommandView
         public RecordTarget Target => new(Row.Id);
     }
 
-    private SnowTag _datasetRef = SnowTag.Empty;
     private DataSet _currentDataSet;
 
     private VBoxContainer _mainContainer;
@@ -140,20 +139,18 @@ public partial class DatasetEditor : Window, ICommandView
 
     #region ICommandView
 
-    /// <summary>
-    /// What the local player has selected in the shown dataset.
-    /// </summary>
-    public IEnumerable<Target> Selected() => MySelection();
+    /// <summary>The shown dataset.</summary>
+    public WatchableValue<SnowTag> SelectionScope { get; } = new();
 
     public IReadOnlyList<Command> Commands => _commands;
 
     /// <summary>Undo walks the shown dataset's edits, its rows', and what's selected in it.</summary>
     public bool UndoScope(Effect fx) =>
-        _datasetRef != SnowTag.Empty
+        DatasetRef != SnowTag.Empty
         && (
-            fx is UpdateReplicatedEffect<DataSet> ds && ds.Id == _datasetRef
-            || fx is UpdateReplicatedEffect<DataRow> row && row.Payload?.DataSetId == _datasetRef
-            || fx is UpdateReplicatedEffect<Selection> s && s.Payload?.Within == _datasetRef
+            fx is UpdateReplicatedEffect<DataSet> ds && ds.Id == DatasetRef
+            || fx is UpdateReplicatedEffect<DataRow> row && row.Payload?.DataSetId == DatasetRef
+            || fx is UpdateReplicatedEffect<Selection> s && s.Payload?.Within == DatasetRef
         );
 
     #endregion
@@ -232,24 +229,25 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void Sync(IRecordReader R)
     {
-        var ds = R.Get<DataSet>(_datasetRef);
         // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
         // so the editor stays on it, where redo brings it back.
-        if (_datasetRef == SnowTag.Empty)
-        {
-            ds = R.Get<DataSet>().FirstOrDefault();
-            _datasetRef = ds?.Id ?? SnowTag.Empty;
-        }
+        var ds = SelectionScope.TryGet(R, out var id)
+            ? R.Get<DataSet>(id)
+            : R.Get<DataSet>().FirstOrDefault();
+        if (ds != null)
+            SelectionScope.Set(ds.Id);
 
-        _datasetList.SelectedDataSet = _datasetRef;
+        _datasetList.SelectedDataSet = DatasetRef;
         _currentDataSet = ds;
 
         if (ds == null)
             ClearGrid();
         else
             ShowDataSet(R, ds);
-        CommandButton.Refresh(this);
     }
+
+    // The shown dataset's id, or empty.
+    private SnowTag DatasetRef => SelectionScope.TryGet(out var id) ? id : SnowTag.Empty;
 
     private void ShowDataSet(IRecordReader R, DataSet ds)
     {
@@ -316,13 +314,6 @@ public partial class DatasetEditor : Window, ICommandView
         _dropIndicator.Color = Accent;
         _dropIndicator.Visible = false;
 
-        // This is a stopgap for the time being.
-        // Later we should allow views to provide a baseline "selection".
-        // For now, we hardcode what these buttons act on.
-        // The toolbar's other command buttons act on the selection, which is dynamic.
-        GetNode<CommandButton>("%AddRow").Targets = ShownDataSet;
-        GetNode<CommandButton>("%AddColumn").Targets = ShownDataSet;
-
         _linkButton = GetNode<Button>("%Link");
         _linkButton.Pressed += OnImportPressed;
 
@@ -330,7 +321,7 @@ public partial class DatasetEditor : Window, ICommandView
         _newButton.Pressed += OnNewDatasetPressed;
 
         _datasetList = GetNode<DataSetSelector>("%DatasetList");
-        _datasetList.DataSetSelected += OnDatasetSelected;
+        _datasetList.DataSetSelected += SetDatasetById;
 
         InitializeNewDatasetDialog();
     }
@@ -338,8 +329,10 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>Opens the editor on a specific dataset. Empty opens the first one.</summary>
     public void SetDatasetById(SnowTag id)
     {
-        _datasetRef = id;
-        ProjectService.Instance.QueueSync(this);
+        if (id == SnowTag.Empty)
+            SelectionScope.Unset();
+        else
+            SelectionScope.Set(id);
     }
 
     /// <summary>
@@ -351,8 +344,6 @@ public partial class DatasetEditor : Window, ICommandView
         _revealRowOnSync = rowId;
         ProjectService.Instance.QueueSync(this);
     }
-
-    private void OnDatasetSelected(SnowTag id) => SetDatasetById(id);
 
     private void OnNewDatasetPressed()
     {
@@ -421,7 +412,7 @@ public partial class DatasetEditor : Window, ICommandView
     private float ColumnWidth(SnowTag id) =>
         _columnWidths.GetValueOrDefault(id, DefaultColumnWidth);
 
-    private ColumnTarget Column(SnowTag id) => new(_datasetRef, id);
+    private ColumnTarget Column(SnowTag id) => new(DatasetRef, id);
 
     private void BuildGrid()
     {
@@ -463,7 +454,6 @@ public partial class DatasetEditor : Window, ICommandView
             Text = "+",
             ShowCaption = false,
             Command = command,
-            Targets = ShownDataSet,
             CustomMinimumSize = new Vector2(width, RowHeight),
             FocusMode = Control.FocusModeEnum.None,
         };
@@ -747,10 +737,7 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
-    private void AddRow() => DataSetCommands.AddRow.Run(ShownDataSet(), 1, this);
-
-    // What the add buttons act on.
-    private IReadOnlyList<Target> ShownDataSet() => [new RecordTarget(_datasetRef)];
+    private void AddRow() => DataSetCommands.AddRow.Run([new RecordTarget(DatasetRef)], 1, this);
 
     private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
@@ -880,16 +867,16 @@ public partial class DatasetEditor : Window, ICommandView
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
     private ImmutableHashSet<Target> MySelection() =>
-        _datasetRef == SnowTag.Empty
+        DatasetRef == SnowTag.Empty
             ? ImmutableHashSet<Target>.Empty
-            : ProjectService.Instance.GetSelection(_datasetRef)?.Targets
+            : ProjectService.Instance.GetSelection(DatasetRef)?.Targets
                 ?? ImmutableHashSet<Target>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
     private void Select(IEnumerable<Target> targets)
     {
-        if (_datasetRef != SnowTag.Empty)
-            ProjectService.Instance.SetSelection(targets, _datasetRef);
+        if (DatasetRef != SnowTag.Empty)
+            ProjectService.Instance.SetSelection(targets, DatasetRef);
     }
 
     /// <summary>
@@ -1038,7 +1025,9 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>Runs <paramref name="command"/> on what the local player has selected, as its shortcut would.</summary>
     private void RunOnSelection(Command command)
     {
-        var targets = MySelection().Where(command.Applies).ToList();
+        var targets = MySelection()
+            .Where(t => command.Applies(ProjectService.Instance, t))
+            .ToList();
         if (command.Fits(targets.Count))
             command.Run(targets, 1, this);
     }

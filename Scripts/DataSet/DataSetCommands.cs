@@ -15,6 +15,7 @@ public static class DataSetCommands
         Name = new("dataset.add_row"),
         Caption = "Add Row",
         Count = TargetCount.One,
+        ActsOn = Context.View,
         ShowInMenu = false,
         Effects = (R, sets, _) =>
             NewRow(sets[0].Id, RowRank.New(R.LastRank(sets[0].Id), null, Snowport.Clock.source)),
@@ -26,6 +27,7 @@ public static class DataSetCommands
         Name = new("dataset.add_column"),
         Caption = "Add Column",
         Count = TargetCount.One,
+        ActsOn = Context.View,
         ShowInMenu = false,
         Effects = (R, sets, _) => NewColumn(sets[0], sets[0].Columns.Length),
     };

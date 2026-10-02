@@ -7,7 +7,7 @@ public partial class ProjectService : IRecordReader
 {
     private Dictionary<Type, IReplicatedContainer> _containersByType;
 
-    private readonly List<Watcher> _watchers = new();
+    private readonly HashSet<Watcher> _watchers = new();
 
     // watchers to rerun at the end of the frame
     private readonly HashSet<Watcher> _dirty = new();
@@ -121,10 +121,13 @@ public partial class ProjectService : IRecordReader
         }
     }
 
-    private void MarkDirty(Watcher watcher)
+    public void MarkDirty(Watcher watcher)
     {
-        _dirty.Add(watcher);
-        QueueFlush();
+        if (_watchers.Contains(watcher))
+        {
+            _dirty.Add(watcher);
+            QueueFlush();
+        }
     }
 
     private void QueueFlush()

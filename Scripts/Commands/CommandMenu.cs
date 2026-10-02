@@ -37,7 +37,7 @@ public static class CommandMenu
     /// </param>
     public static void Show(Vector2I position, ICommandView view, Action closed = null)
     {
-        var context = CommandContext.Of(view) ?? new CommandContext();
+        var context = CommandContext.Of(view, ProjectService.Instance);
         Show(position, context, CommandList.ForContextMenu(context), view, closed);
     }
 
@@ -54,7 +54,7 @@ public static class CommandMenu
         ICommandView view,
         IEnumerable<Command> commands,
         Action closed = null
-    ) => Show(position, CommandContext.Of(view) ?? new CommandContext(), commands, view, closed);
+    ) => Show(position, CommandContext.Of(view, ProjectService.Instance), commands, view, closed);
 
     /// <summary>
     /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
@@ -105,7 +105,7 @@ public static class CommandMenu
             Items.Add((command, targets));
             menu.AddItem(command.Label(targets.Count), id);
             int index = menu.GetItemIndex(id);
-            menu.SetItemDisabled(index, !command.IsAvailable());
+            menu.SetItemDisabled(index, !command.IsAvailable(ProjectService.Instance));
 
             // A key shows only if pressing it here would run this command.
             bool keys = CommandList.RunsFromKeys(command, context);

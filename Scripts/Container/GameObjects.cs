@@ -349,17 +349,6 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// What commands act on: the selection, or the hovered component when nothing is selected.
-    /// </summary>
-    public List<VisualComponentBase> GetTargetedObjects()
-    {
-        var selected = GetSelectedObjects().ToList();
-        if (selected.Count == 0 && GetHoveredObject() is { } hovered)
-            selected.Add(hovered);
-        return selected;
-    }
-
-    /// <summary>
     /// Previews a box selection on the nodes. Nothing is written until <see cref="EndDragSelection"/>.
     /// </summary>
     private void PreviewSelection(Rect2 area)
@@ -588,6 +577,7 @@ public partial class GameObjects : Node
             ExitSpawnMode();
 
         CursorMode = CursorMode.Spawn;
+        SetSelection([]);
 
         _spawnComponents = components;
 
@@ -1068,6 +1058,7 @@ public partial class GameObjects : Node
     #region Drag Selection
     private void StartDragSelection()
     {
+        SetSelection([]);
         CursorMode = CursorMode.DragSelect;
         _selectionRectangle.StartDragSelect();
     }

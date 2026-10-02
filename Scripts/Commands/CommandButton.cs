@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -21,8 +20,6 @@ public partial class CommandButton : Button
     // Icons are drawn at text size, as in menus.
     private const int IconSize = 20;
 
-    private static readonly HashSet<CommandButton> InTree = [];
-
     // The command that we used when measuring its width.
     private Command _sizedFor;
 
@@ -37,6 +34,7 @@ public partial class CommandButton : Button
         {
             _command = value;
             _commandName = value?.Name.Value ?? "";
+            Edited();
         }
     }
 
@@ -86,29 +84,11 @@ public partial class CommandButton : Button
         }
     } = true;
 
-    /// <summary>
-    /// An override to set what it always acts on instead of using the context.
-    /// </summary>
-    public Func<IEnumerable<Target>> Targets { get; set; }
-
-    /// <summary>
-    /// Updates every command button in <paramref name="view"/>.
-    /// </summary>
-    public static void Refresh(ICommandView view)
-    {
-        foreach (var button in InTree)
-            if (CommandViews.Of(button) == view)
-                button.Refresh();
-    }
-
-    // The editor keeps nothing in static fields, so it can reload the game's code after a build.
     public override void _EnterTree()
     {
         if (!Engine.IsEditorHint())
-            InTree.Add(this);
+            ProjectService.Instance.Watch(this, Sync);
     }
-
-    public override void _ExitTree() => InTree.Remove(this);
 
     public override void _Ready()
     {
@@ -119,16 +99,15 @@ public partial class CommandButton : Button
             return;
         }
         Pressed += Run;
-        Refresh();
     }
 
-    private void Refresh()
+    private void Sync(IRecordReader R)
     {
         if (Command == null)
             return;
 
-        var (_, targets) = Find();
-        Disabled = !Command.Fits(targets.Count) || !Command.IsAvailable();
+        var targets = GetTargets(CommandViews.Of(this), R);
+        Disabled = !Command.Fits(targets.Count) || !Command.IsAvailable(R);
         if (ShowIcon)
             Icon = IconOf(Command);
         if (_sizedFor != Command)
@@ -163,21 +142,20 @@ public partial class CommandButton : Button
 
     private void Run()
     {
-        var (view, targets) = Find();
-        if (Command != null && Command.Fits(targets.Count) && Command.IsAvailable())
+        IRecordReader R = ProjectService.Instance;
+        var view = CommandViews.Of(this);
+        var targets = GetTargets(view, R);
+        if (Command != null && Command.Fits(targets.Count) && Command.IsAvailable(R))
             Command.Run(targets, 1, view);
     }
 
-    // Its view, and what the command would act on there.
-    private (ICommandView View, List<Target> Targets) Find()
+    /// <summary>
+    /// What commands would act on in the view, as its context menu would.
+    /// </summary>
+    private List<Target> GetTargets(ICommandView view, IRecordReader R)
     {
-        var view = CommandViews.Of(this);
-        var context = CommandContext.Of(view);
-        var targets =
-            Targets != null ? Targets().Where(Command.Applies).ToList()
-            : context != null ? CommandList.TargetsFor(Command, context, menu: true)
-            : [];
-        return (view, targets);
+        var context = CommandContext.Of(view, R);
+        return CommandList.TargetsFor(Command, context, R, menu: true);
     }
 
     // A view's own commands are only known once the button is in it.
@@ -197,11 +175,16 @@ public partial class CommandButton : Button
     #region Editor
 
     // After a change in the Inspector, shows the button as it will look and updates the Inspector.
-    // False while the scene loads, or in the game.
+    // False while the scene loads, or in the game, where it updates automatically.
     private bool Edited()
     {
-        if (!Engine.IsEditorHint() || !IsInsideTree())
+        if (!IsInsideTree())
             return false;
+        if (!Engine.IsEditorHint())
+        {
+            ProjectService.Instance.QueueSync(this);
+            return false;
+        }
         Preview();
         NotifyPropertyListChanged();
         UpdateConfigurationWarnings();

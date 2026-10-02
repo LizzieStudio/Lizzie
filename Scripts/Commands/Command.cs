@@ -48,6 +48,11 @@ public enum Context
     /// What the selected targets refer to, like a component's prototype or data row.
     /// </summary>
     Referenced = 8,
+
+    /// <summary>
+    /// What record the whole view shows, like the dataset editor's currently open dataset.
+    /// </summary>
+    View = 16,
 }
 
 /// <summary>
@@ -56,7 +61,7 @@ public enum Context
 public sealed class CommandContext
 {
     /// <summary>
-    /// What the user is targeting. Usually the selection, but can also be the hovered target.
+    /// What the user is targeting. Usually the selection, but for keys it can be the hovered target.
     /// </summary>
     public IEnumerable<Target> Selected
     {
@@ -93,21 +98,36 @@ public sealed class CommandContext
     } = ImmutableHashSet<Target>.Empty;
 
     /// <summary>
+    /// The record the view shows, from its <see cref="ICommandView.SelectionScope"/>, or empty.
+    /// </summary>
+    public IEnumerable<Target> View
+    {
+        get;
+        init => field = value.ToImmutableHashSet();
+    } = ImmutableHashSet<Target>.Empty;
+
+    /// <summary>
     /// Custom commands for this viewport to add to the context menu, like the table's Zoom to Component.
     /// </summary>
     public IReadOnlyList<Command> Local { get; init; } = [];
 
     /// <summary>
-    /// The full context of what's targeted in <paramref name="view"/>,
-    /// or null if the provided view can't take commands.
+    /// <para>The full context of what's targeted in <paramref name="view"/>, read through <paramref name="R"/>.</para>
+    ///
+    /// The <see cref="CommandContext"/> is derived from the player's selection records.
+    /// If there is no selection and <paramref name="keys"/> is true, the hovered target from <see cref="ICommandView.Hovered"/> is treated like the selection.
+    /// The <see cref="Containers"/>, <see cref="Contents"/>, and <see cref="Referenced"/> are all derived from the selected targets.
     /// </summary>
-    public static CommandContext Of(ICommandView view)
+    public static CommandContext Of(ICommandView view, IRecordReader R, bool keys = false)
     {
-        if (view?.Selected() is not { } selected)
-            return null;
+        if (view == null)
+            return new();
 
-        IRecordReader R = ProjectService.Instance;
-        var chosen = selected.ToImmutableHashSet();
+        bool scoped = view.SelectionScope.TryGet(R, out var scope);
+        var selected = scoped
+            ? R.GetSelection(scope)?.Targets ?? ImmutableHashSet<Target>.Empty
+            : ImmutableHashSet<Target>.Empty;
+        var chosen = selected.IsEmpty && keys ? view.Hovered().ToImmutableHashSet() : selected;
 
         IEnumerable<Target> Related(
             IEnumerable<Target> targets,
@@ -133,6 +153,7 @@ public sealed class CommandContext
             Contents = Followed(t => t.Contents(R)),
             Containers = Followed(t => t.Containers(R)),
             Referenced = Related(chosen, t => t.Referenced(R)),
+            View = scoped && scope != SnowTag.Empty ? [new RecordTarget(scope)] : [],
             Local = view.Commands,
         };
     }
@@ -144,12 +165,19 @@ public sealed class CommandContext
 public interface ICommandView
 {
     /// <summary>
-    /// <para>What the user is targeting right now in this view.</para>
+    /// <para>The record that this view is operating on, like a dataset editor's currently open dataset.</para>
     ///
-    /// Usually this is the selection, but it could include the hovered records.
-    /// Returns null when this view isn't taking commands.
+    /// <see cref="SnowTag.Empty"/> is used for the table.
+    /// Otherwise, use the <see cref="SnowTag"/> of the record.
+    /// Leave it unset in a view without a selection, or while there isn't a record at the moment.
     /// </summary>
-    IEnumerable<Target> Selected() => [];
+    WatchableValue<SnowTag> SelectionScope { get; }
+
+    /// <summary>
+    /// The hovered target that keys act on when nothing is selected.
+    /// Menus and buttons never use it.
+    /// </summary>
+    IEnumerable<Target> Hovered() => [];
 
     /// <summary>
     /// Extra custom commands for this view to add to its context menu.
@@ -254,7 +282,7 @@ public abstract class Command
     /// Returns true if this command can act on <paramref name="target"/>:
     /// a record of the kind it's for, that it has behavior for.
     /// </summary>
-    public abstract bool Applies(Target target);
+    public abstract bool Applies(IRecordReader R, Target target);
 
     /// <summary>Whether it can act on <paramref name="count"/> targets that it applies to.</summary>
     public abstract bool Fits(int count);
@@ -263,7 +291,7 @@ public abstract class Command
     /// Whether the Command can run now.
     /// When false, it's disabled in menus and keyboard shortcuts won't trigger it.
     /// </summary>
-    public virtual bool IsAvailable() => true;
+    public virtual bool IsAvailable(IRecordReader R) => true;
 
     /// <summary>
     /// When <see cref="AsksForNumber"/> = true, the highest number worth offering for these targets,
@@ -377,16 +405,17 @@ public sealed class RecordCommand<T> : Command
     /// </summary>
     public Func<IRecordReader, IReadOnlyList<T>, int> NumberLimit { get; init; }
 
-    public override bool Applies(Target target) => Record(target) is { } r && AppliesTo(Reader, r);
+    public override bool Applies(IRecordReader R, Target target) =>
+        Record(R, target) is { } r && AppliesTo(R, r);
 
     public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
 
     public override int? MaxNumber(IReadOnlyList<Target> targets) =>
-        NumberLimit?.Invoke(Reader, Records(targets));
+        NumberLimit?.Invoke(Reader, Records(Reader, targets));
 
     public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
     {
-        var records = Records(targets);
+        var records = Records(Reader, targets);
         SideEffects?.Invoke(records, number);
         if (Effects != null && records.Count > 0)
             Submit(Effects(Reader, records, number));
@@ -394,12 +423,12 @@ public sealed class RecordCommand<T> : Command
 
     private static IRecordReader Reader => ProjectService.Instance;
 
-    private static T Record(Target target) =>
-        target is RecordTarget r ? Reader?.Get<T>(r.Id) : null;
+    private static T Record(IRecordReader R, Target target) =>
+        target is RecordTarget r ? R?.Get<T>(r.Id) : null;
 
     // A record may be gone since the menu opened.
-    private static List<T> Records(IReadOnlyList<Target> targets) =>
-        targets.Select(Record).Where(r => r != null).ToList();
+    private static List<T> Records(IRecordReader R, IReadOnlyList<Target> targets) =>
+        targets.Select(t => Record(R, t)).Where(r => r != null).ToList();
 }
 
 /// <summary>
@@ -427,7 +456,8 @@ public sealed class TargetCommand<T> : Command
     /// </summary>
     public Action<IReadOnlyList<T>, int> SideEffects { get; init; }
 
-    public override bool Applies(Target target) => target is T t && AppliesTo(Reader, t);
+    public override bool Applies(IRecordReader R, Target target) =>
+        target is T t && AppliesTo(R, t);
 
     public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
 
@@ -445,7 +475,7 @@ public sealed class TargetCommand<T> : Command
 /// <summary>A command that does not act on selected targets, such as undo.</summary>
 public sealed class GlobalCommand : Command
 {
-    public override bool Applies(Target target) => false;
+    public override bool Applies(IRecordReader R, Target target) => false;
 
     public override bool Fits(int count) => count == 0;
 
@@ -464,7 +494,7 @@ public sealed class GlobalCommand : Command
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }
 
-    public override bool IsAvailable() => Enabled?.Invoke(ProjectService.Instance) ?? true;
+    public override bool IsAvailable(IRecordReader R) => Enabled?.Invoke(R) ?? true;
 
     public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
     {
@@ -487,7 +517,7 @@ public sealed class Submenu : Command
     /// </summary>
     public Func<IRecordReader, IEnumerable<Command>> Items { get; init; }
 
-    public override bool Applies(Target target) => false;
+    public override bool Applies(IRecordReader R, Target target) => false;
 
     public override bool Fits(int count) => count == 0;
 
@@ -498,7 +528,7 @@ public sealed class Submenu : Command
 // This is just a sentinel so that we can put dividers in command lists.
 internal sealed class DividerCommand : Command
 {
-    public override bool Applies(Target target) => false;
+    public override bool Applies(IRecordReader R, Target target) => false;
 
     public override bool Fits(int count) => count == 0;
 
@@ -524,6 +554,8 @@ public static class CommandViews
 
     private sealed class ScopeView(Func<Effect, bool> undoScope) : ICommandView
     {
+        public WatchableValue<SnowTag> SelectionScope { get; } = new();
+
         public bool UndoScope(Effect fx) => undoScope(fx);
     }
 

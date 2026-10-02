@@ -83,8 +83,8 @@ public static class ClickRouting
         // They reach the table's view (arriving here) but we don't want to open a menu for them.
         if (window == root && control != null && view == CommandViews.Of(root))
             return;
-        // When a view returns null that means it's explicitely not taking commands.
-        if (view?.Selected() == null)
+        // Don't open a menu mid-drag
+        if (view == null || Input.IsMouseButtonPressed(MouseButton.Left))
             return;
 
         // We defer so that the view can handle the click first.

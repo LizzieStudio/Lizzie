@@ -20,7 +20,6 @@ public partial class SceneController : Node3D, ICommandView
         _cameraManager = GetNode<CameraManager>("Cameras");
         _gameObjects = GetNode<GameObjects>("GameObjects");
         SetMode(Config.Registry.Get<SceneMode>("SceneMode"));
-        _gameObjects.HoveredComponentChange += OnHoveredComponentChange;
         _gameObjects.TextureFactory = _textureFactory;
 
         PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
@@ -38,32 +37,28 @@ public partial class SceneController : Node3D, ICommandView
         CommandViews.Detach(GetTree().Root);
     }
 
-    private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)
-    {
-        HoveredComponentChange?.Invoke(this, e);
-    }
-
-    public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange;
-
     public GameObjects GameObjects => _gameObjects;
 
+    #region ICommandViewport
+
+    // The table's selection is always SnowTag.Empty.
+    // We should maybe change this, but it works for now.
+    public WatchableValue<SnowTag> SelectionScope { get; } = new(SnowTag.Empty);
+
     /// <summary>
-    /// The selected components, or the hovered component when nothing is selected.
+    /// The hovered component, which keys act on when nothing is selected.
     /// None while drawing a selection box or placing new components.
     /// </summary>
-    public IEnumerable<Target> Selected()
-    {
-        if (_gameObjects.CursorMode is CursorMode.DragSelect or CursorMode.Spawn)
-            return null;
-
-        var R = ProjectService.Instance;
-        return _gameObjects
-            .GetTargetedObjects()
-            .Where(c => R.Get<ComponentState>(c.Reference) != null)
-            .Select(c => new RecordTarget(c.Reference));
-    }
+    public IEnumerable<Target> Hovered() =>
+        _gameObjects.CursorMode is CursorMode.DragSelect or CursorMode.Spawn
+        || _gameObjects.GetHoveredObject() is not { } hovered
+        || ProjectService.Instance.Get<ComponentState>(hovered.Reference) == null
+            ? []
+            : [new RecordTarget(hovered.Reference)];
 
     public IReadOnlyList<Command> Commands => TableCommands;
+
+    #endregion
 
     /// <summary>
     /// The table undoes its components, and what's selected on it.
