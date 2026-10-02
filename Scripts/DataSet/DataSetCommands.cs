@@ -9,6 +9,27 @@ public static class DataSetCommands
 {
     private const string DeleteIcon = "res://Textures/UI/delete.svg";
 
+    /// <summary>Adds a row after the last. The dataset editor's add buttons and Enter on its last row run it.</summary>
+    public static readonly Command AddRow = new RecordCommand<DataSet>
+    {
+        Name = new("dataset.add_row"),
+        Caption = "Add Row",
+        Count = TargetCount.One,
+        ShowInMenu = false,
+        Effects = (R, sets, _) =>
+            NewRow(sets[0].Id, RowRank.New(R.LastRank(sets[0].Id), null, Snowport.Clock.source)),
+    };
+
+    /// <summary>Adds a column after the last. The dataset editor's add buttons run it.</summary>
+    public static readonly Command AddColumn = new RecordCommand<DataSet>
+    {
+        Name = new("dataset.add_column"),
+        Caption = "Add Column",
+        Count = TargetCount.One,
+        ShowInMenu = false,
+        Effects = (R, sets, _) => NewColumn(sets[0], sets[0].Columns.Length),
+    };
+
     public static readonly Command EditRow = new RecordCommand<DataRow>
     {
         Name = new("dataset.edit_row"),
@@ -208,4 +229,28 @@ public static class DataSetCommands
                     )
                 )
         );
+
+    /// <summary>Adds an empty row to the dataset at <paramref name="rank"/>.</summary>
+    public static IEnumerable<Effect> NewRow(SnowTag dataSetId, string rank) =>
+        [
+            Effect.Upsert(
+                new DataRow
+                {
+                    Id = Snowport.Clock.CreateTag(),
+                    DataSetId = dataSetId,
+                    Rank = rank,
+                }
+            ),
+        ];
+
+    /// <summary>Adds a column to the dataset at <paramref name="index"/>, named by how many there are.</summary>
+    public static IEnumerable<Effect> NewColumn(DataSet ds, int index)
+    {
+        var column = new Column
+        {
+            Id = Snowport.Clock.CreateTag(),
+            Name = $"Column {ds.Columns.Length + 1}",
+        };
+        return [Effect.Upsert(ds with { Columns = ds.Columns.Insert(index, column) })];
+    }
 }

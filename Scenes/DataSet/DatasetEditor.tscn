@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://jnas4vg7if7d" path="res://Scripts/DataSet/DatasetEditor.cs" id="1_aexr7"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="2_o5pyl"]
 [ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="3_dssel"]
+[ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="4_cmdbtn"]
 
 [node name="DatasetEditor" type="Window" unique_id=1927636890]
 oversampling_override = 1.0
@@ -56,25 +57,35 @@ size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 
-[node name="AddRow" type="Button" parent="Panel/VBoxContainer/Toolbar"]
+[node name="AddRow" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1105667042]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Add Row"
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.add_row"
 
 [node name="DeleteRow" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=922142654]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Delete Row"
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.delete_row"
+ShowIcon = false
 
 [node name="AddColumn" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1268024575]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Add Col"
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.add_column"
 
 [node name="DeleteColumn" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=233397807]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Delete Col"
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.delete_column"
+ShowIcon = false
 
 [node name="Link" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1399230963]
 unique_name_in_owner = true

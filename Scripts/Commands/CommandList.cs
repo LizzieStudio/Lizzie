@@ -116,6 +116,8 @@ public static class CommandList
         UI.EditProjectSettings,
         UI.InsertExistingComponent,
         UI.InsertNewComponent,
+        DataSetCommands.AddRow,
+        DataSetCommands.AddColumn,
     ]);
 
     /// <summary>
@@ -306,7 +308,7 @@ public static class CommandList
     /// Takes the parts of the context in <see cref="Command.ActsOn"/>
     /// and filters it by those that return true when passed to <see cref="Command.Applies"/>.
     /// </summary>
-    private static List<Target> TargetsFor(Command command, CommandContext context, bool menu)
+    public static List<Target> TargetsFor(Command command, CommandContext context, bool menu)
     {
         var acts = command.ActsOn;
         var targets = acts.HasFlag(Context.Selected) ? context.Selected : [];

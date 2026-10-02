@@ -23,13 +23,9 @@ public partial class DatasetEditor : Window, ICommandView
     private DataSet _currentDataSet;
 
     private VBoxContainer _mainContainer;
-    private Button _addRowButton;
-    private Button _deleteButton;
     private Button _newButton;
     private DataSetSelector _datasetList;
     private Button _linkButton;
-    private Button _addColumnButton;
-    private Button _deleteColumnButton;
 
     private ScrollContainer _headerScroll;
     private HBoxContainer _headerContainer;
@@ -111,7 +107,9 @@ public partial class DatasetEditor : Window, ICommandView
 
         // The local player's inserts focus the row they add, or start renaming the column,
         // once the grid shows it. A row insert writes only the new row.
-        foreach (var insert in new Command[] { InsertRowAbove, InsertRowBelow, AddRowCommand })
+        foreach (
+            var insert in new Command[] { InsertRowAbove, InsertRowBelow, DataSetCommands.AddRow }
+        )
             ps.Listen(
                 this,
                 insert,
@@ -123,7 +121,12 @@ public partial class DatasetEditor : Window, ICommandView
             );
 
         foreach (
-            var insert in new Command[] { InsertColumnLeft, InsertColumnRight, AddColumnCommand }
+            var insert in new Command[]
+            {
+                InsertColumnLeft,
+                InsertColumnRight,
+                DataSetCommands.AddColumn,
+            }
         )
             ps.Listen(
                 this,
@@ -242,11 +245,14 @@ public partial class DatasetEditor : Window, ICommandView
         _currentDataSet = ds;
 
         if (ds == null)
-        {
             ClearGrid();
-            return;
-        }
+        else
+            ShowDataSet(R, ds);
+        CommandButton.Refresh(this);
+    }
 
+    private void ShowDataSet(IRecordReader R, DataSet ds)
+    {
         var columnIds = ds.Columns.Select(c => c.Id).ToList();
         if (ds.Id != _shownDataSetId || !columnIds.SequenceEqual(_columnIds))
         {
@@ -310,17 +316,12 @@ public partial class DatasetEditor : Window, ICommandView
         _dropIndicator.Color = Accent;
         _dropIndicator.Visible = false;
 
-        _addRowButton = GetNode<Button>("%AddRow");
-        _addRowButton.Pressed += AddRow;
-
-        _deleteButton = GetNode<Button>("%DeleteRow");
-        _deleteButton.Pressed += () => RunOnSelection(DataSetCommands.DeleteRow);
-
-        _addColumnButton = GetNode<Button>("%AddColumn");
-        _addColumnButton.Pressed += AddColumn;
-
-        _deleteColumnButton = GetNode<Button>("%DeleteColumn");
-        _deleteColumnButton.Pressed += () => RunOnSelection(DataSetCommands.DeleteColumn);
+        // This is a stopgap for the time being.
+        // Later we should allow views to provide a baseline "selection".
+        // For now, we hardcode what these buttons act on.
+        // The toolbar's other command buttons act on the selection, which is dynamic.
+        GetNode<CommandButton>("%AddRow").Targets = ShownDataSet;
+        GetNode<CommandButton>("%AddColumn").Targets = ShownDataSet;
 
         _linkButton = GetNode<Button>("%Link");
         _linkButton.Pressed += OnImportPressed;
@@ -443,7 +444,7 @@ public partial class DatasetEditor : Window, ICommandView
             _headerCells.Add(header);
         }
 
-        _headerContainer.AddChild(AddButton("Add Column", AddColumn, HeaderHeight));
+        _headerContainer.AddChild(AddButton(DataSetCommands.AddColumn, HeaderHeight));
 
         // Lets the header scroll as far as the data, whose view is narrowed by its vertical scrollbar.
         var spacer = new Control();
@@ -452,22 +453,20 @@ public partial class DatasetEditor : Window, ICommandView
 
         _addRowLine = new HBoxContainer();
         _dataContainer.AddChild(_addRowLine);
-        _addRowLine.AddChild(AddButton("Add Row", AddRow, RowHeaderWidth));
+        _addRowLine.AddChild(AddButton(DataSetCommands.AddRow, RowHeaderWidth));
     }
 
     // A "+" after the last row or column, doing what the toolbar's button does.
-    private static Button AddButton(string tooltip, Action pressed, float width)
-    {
-        var button = new Button
+    private CommandButton AddButton(Command command, float width) =>
+        new()
         {
             Text = "+",
-            TooltipText = tooltip,
+            ShowCaption = false,
+            Command = command,
+            Targets = ShownDataSet,
             CustomMinimumSize = new Vector2(width, RowHeight),
             FocusMode = Control.FocusModeEnum.None,
         };
-        button.Pressed += pressed;
-        return button;
-    }
 
     private void ClearGrid()
     {
@@ -748,7 +747,10 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
-    private void AddRow() => AddRowCommand.Run([new RecordTarget(_datasetRef)], 1, this);
+    private void AddRow() => DataSetCommands.AddRow.Run(ShownDataSet(), 1, this);
+
+    // What the add buttons act on.
+    private IReadOnlyList<Target> ShownDataSet() => [new RecordTarget(_datasetRef)];
 
     private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
@@ -876,9 +878,6 @@ public partial class DatasetEditor : Window, ICommandView
         ProjectService.Instance.Upsert(_currentDataSet);
     }
 
-    /// <summary>Adds a column after the last, which its listener then starts renaming.</summary>
-    private void AddColumn() => AddColumnCommand.Run([new RecordTarget(_datasetRef)], 1, this);
-
     /// <summary>What the local player has selected in the shown dataset.</summary>
     private ImmutableHashSet<Target> MySelection() =>
         _datasetRef == SnowTag.Empty
@@ -995,9 +994,6 @@ public partial class DatasetEditor : Window, ICommandView
                     )
                 );
         }
-
-        _deleteButton.Disabled = !_mine.Any(DataSetCommands.DeleteRow.Applies);
-        _deleteColumnButton.Disabled = !_mine.Any(DataSetCommands.DeleteColumn.Applies);
     }
 
     /// <summary>
@@ -1074,7 +1070,8 @@ public partial class DatasetEditor : Window, ICommandView
         Name = new("dataset.insert_row_above"),
         Caption = "Insert Row Above",
         Count = TargetCount.One,
-        Effects = (R, rows, _) => NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: false)),
+        Effects = (R, rows, _) =>
+            DataSetCommands.NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: false)),
     };
 
     private static readonly RecordCommand<DataRow> InsertRowBelow = new()
@@ -1082,18 +1079,8 @@ public partial class DatasetEditor : Window, ICommandView
         Name = new("dataset.insert_row_below"),
         Caption = "Insert Row Below",
         Count = TargetCount.One,
-        Effects = (R, rows, _) => NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: true)),
-    };
-
-    /// <summary>Adds a row after the last, for the add buttons and Enter on the last row.</summary>
-    private static readonly RecordCommand<DataSet> AddRowCommand = new()
-    {
-        Name = new("dataset.add_row"),
-        Caption = "Add Row",
-        Count = TargetCount.One,
-        ShowInMenu = false,
-        Effects = (R, sets, _) =>
-            NewRow(sets[0].Id, RowRank.New(R.LastRank(sets[0].Id), null, Snowport.Clock.source)),
+        Effects = (R, rows, _) =>
+            DataSetCommands.NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: true)),
     };
 
     private static readonly TargetCommand<ColumnTarget> InsertColumnLeft = new()
@@ -1103,7 +1090,10 @@ public partial class DatasetEditor : Window, ICommandView
         Count = TargetCount.One,
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
-            NewColumn(R.Get<DataSet>(columns[0].DataSetId), ColumnIndex(R, columns[0])),
+            DataSetCommands.NewColumn(
+                R.Get<DataSet>(columns[0].DataSetId),
+                ColumnIndex(R, columns[0])
+            ),
     };
 
     private static readonly TargetCommand<ColumnTarget> InsertColumnRight = new()
@@ -1113,44 +1103,15 @@ public partial class DatasetEditor : Window, ICommandView
         Count = TargetCount.One,
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
-            NewColumn(R.Get<DataSet>(columns[0].DataSetId), ColumnIndex(R, columns[0]) + 1),
-    };
-
-    /// <summary>Adds a column after the last, for the add buttons.</summary>
-    private static readonly RecordCommand<DataSet> AddColumnCommand = new()
-    {
-        Name = new("dataset.add_column"),
-        Caption = "Add Column",
-        Count = TargetCount.One,
-        ShowInMenu = false,
-        Effects = (R, sets, _) => NewColumn(sets[0], sets[0].Columns.Length),
-    };
-
-    private static IEnumerable<Effect> NewRow(SnowTag dataSetId, string rank) =>
-        [
-            Effect.Upsert(
-                new DataRow
-                {
-                    Id = Snowport.Clock.CreateTag(),
-                    DataSetId = dataSetId,
-                    Rank = rank,
-                }
+            DataSetCommands.NewColumn(
+                R.Get<DataSet>(columns[0].DataSetId),
+                ColumnIndex(R, columns[0]) + 1
             ),
-        ];
+    };
 
     // The column's place in its dataset, or -1 if it's gone.
     private static int ColumnIndex(IRecordReader R, ColumnTarget t) =>
         R.Get<DataSet>(t.DataSetId)?.Columns.Select(c => c.Id).ToList().IndexOf(t.ColumnId) ?? -1;
-
-    private static IEnumerable<Effect> NewColumn(DataSet ds, int index)
-    {
-        var column = new Column
-        {
-            Id = Snowport.Clock.CreateTag(),
-            Name = $"Column {ds.Columns.Length + 1}",
-        };
-        return [Effect.Upsert(ds with { Columns = ds.Columns.Insert(index, column) })];
-    }
 
     private void RenameColumn(ColumnTarget column)
     {
