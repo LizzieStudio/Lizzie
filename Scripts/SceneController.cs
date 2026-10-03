@@ -34,7 +34,6 @@ public partial class SceneController : Node3D, ICommandView
     public override void _ExitTree()
     {
         PresenceSynchronizer.Instance?.ClearContext();
-        CommandViews.Detach(GetTree().Root);
     }
 
     public GameObjects GameObjects => _gameObjects;

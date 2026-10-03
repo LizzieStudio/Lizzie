@@ -593,7 +593,6 @@ public partial class UI : CanvasLayer
                         or SetReplicatedValueEffect<ActiveGameStateRef>;
             }
         );
-        dialog.TreeExiting += () => CommandViews.Detach(dialog);
 
         RecordService.Instance.Watch(
             dialog,

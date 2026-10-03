@@ -562,12 +562,33 @@ public static class CommandViews
 {
     private static readonly Dictionary<Node, ICommandView> Attached = new();
 
-    /// <summary>Makes <paramref name="view"/> take the commands for everything under <paramref name="node"/>.</summary>
-    public static void Attach(Node node, ICommandView view) => Attached[node] = view;
+    /// <summary>
+    /// Makes <paramref name="view"/> take the <see cref="Command">s
+    /// for everything under <paramref name="node"/> until either leaves the tree.
+    /// </summary>
+    public static void Attach(Node node, ICommandView view)
+    {
+        Attached[node] = view;
+        DetachOnExit(node, node, view);
+        if (view is Node owner && owner != node)
+            DetachOnExit(owner, node, view);
+    }
+
+    private static void DetachOnExit(Node leaving, Node node, ICommandView view) =>
+        leaving.Connect(
+            Node.SignalName.TreeExiting,
+            Callable.From(() =>
+            {
+                // Don't remove it if it was Attached to a new view.
+                if (Attached.GetValueOrDefault(node) == view)
+                    Attached.Remove(node);
+            }),
+            (uint)GodotObject.ConnectFlags.OneShot // our callback is only called once
+        );
 
     /// <summary>
     /// Makes everything under <paramref name="node"/> a view with nothing to act on,
-    /// where undo walks through <paramref name="undoScope"/>.
+    /// where undo walks through <paramref name="undoScope"/>, until it leaves the tree.
     /// </summary>
     public static void Attach(Node node, Func<Effect, bool> undoScope) =>
         Attach(node, new ScopeView(undoScope));
@@ -578,8 +599,6 @@ public static class CommandViews
 
         public bool UndoScope(Effect fx) => undoScope(fx);
     }
-
-    public static void Detach(Node node) => Attached.Remove(node);
 
     /// <summary>The view for the viewport's focused control, or null if it has none.</summary>
     public static ICommandView Find(Viewport viewport) =>
