@@ -58,14 +58,10 @@ public partial class DatasetEditor : Window, ICommandView
     // so the click edits the cell it lands on.
     private bool _editing;
 
-    // What the local player has selected, and the colour of each thing other players have, the newest first.
-    private ImmutableHashSet<Target> _mine = ImmutableHashSet<Target>.Empty;
-    private readonly Dictionary<Target, Color> _others = new();
-
     // Where Shift+click selects from: the last row, column or cell selected without Shift.
     private Target _anchor;
 
-    // The theme's styles tinted for each highlight colour, shared by every cell or header.
+    // The theme's styles tinted for each highlight color, shared by every cell or header.
     private readonly Dictionary<(string Style, Color Color), StyleBox> _highlightStyles = new();
 
     // The pointer during a row or column drag, for auto-scrolling at the edges, and the axis it drags along.
@@ -74,11 +70,10 @@ public partial class DatasetEditor : Window, ICommandView
 
     private IReadOnlyList<Command> _commands;
 
-    // The drop indicator's colour.
+    // The drop indicator's color.
     private static readonly Color Accent = Color.FromHtml("8cb1ff");
 
-    // The local player's own selection shows white, as on the table, so it's never mistaken for a player's colour.
-    private static readonly Color LocalHighlight = Colors.Gray;
+    // The local player's own selection shows white, as on the table, so it's never mistaken for a player's color.
 
     private const float RowHeaderWidth = 48f;
     private const float DefaultColumnWidth = 120f;
@@ -944,36 +939,22 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>
-    /// Highlights the selected rows, columns and cells: the local player's in <see cref="LocalHighlight"/>,
-    /// and other players' in their colour, the newest selection first.
+    /// Highlights the selected rows, columns and cells in the colors <see cref="LocalSelection.SelectionColors"/> gives them.
     /// </summary>
     private void SyncSelection(IRecordReader R, SnowTag datasetId)
     {
-        var local = Snowport.Clock.source;
-        var selections = R.Get<Selection>(s => s.Within == datasetId).ToList();
-        _mine =
-            selections.FirstOrDefault(s => s.Player == local)?.Targets
-            ?? ImmutableHashSet<Target>.Empty;
-        _others.Clear();
-        foreach (
-            var s in selections.Where(s => s.Player != local).OrderByDescending(s => s.LastUpdateId)
-        )
-        {
-            var color = PresenceSynchronizer.Instance?.GetSeatColor(s.Player) ?? Colors.Gray;
-            foreach (var target in s.Targets)
-                _others.TryAdd(target, color);
-        }
-
+        var colors = R.SelectionColors(s => s.Within == datasetId);
         foreach (var header in _headerCells)
-            Highlight(header, "panel", HighlightOf(Column(header.ColumnId)));
+            Highlight(header, "panel", HighlightOf(colors, Column(header.ColumnId)));
         foreach (var view in _views)
         {
-            Highlight(view.Header, "panel", HighlightOf(view.Target));
+            Highlight(view.Header, "panel", HighlightOf(colors, view.Target));
             for (int i = 0; i < view.Cells.Count; i++)
                 Highlight(
                     view.Cells[i],
                     "normal",
                     HighlightOf(
+                        colors,
                         new CellTarget(view.Row.Id, _columnIds[i]),
                         view.Target,
                         Column(_columnIds[i])
@@ -983,15 +964,15 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>
-    /// <see cref="LocalHighlight"/> if the local player selected any of the targets,
-    /// else the colour of another player who did, or null.
+    /// The selection color of the first of <paramref name="targets"/> anyone selected, like a cell before its row and column, or null.
     /// </summary>
-    private Color? HighlightOf(params Target[] targets)
+    private static Color? HighlightOf(
+        IReadOnlyDictionary<Target, Color> colors,
+        params Target[] targets
+    )
     {
-        if (targets.Any(_mine.Contains))
-            return LocalHighlight;
         foreach (var target in targets)
-            if (_others.TryGetValue(target, out var color))
+            if (colors.TryGetValue(target, out var color))
                 return color;
         return null;
     }
@@ -1006,7 +987,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (color is not Color c)
             return;
 
-        // One tint per style and colour: cells share "normal", and row and column headers share "panel".
+        // One tint per style and color: cells share "normal", and row and column headers share "panel".
         if (!_highlightStyles.TryGetValue((style, c), out var tinted))
         {
             if (control.GetThemeStylebox(style).Duplicate() is StyleBoxFlat flat)

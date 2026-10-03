@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Godot;
 
 /// <summary>
 /// What one player has selected in one place, which every player sees.
@@ -24,10 +26,45 @@ public record Selection : Replicated
 }
 
 /// <summary>
-/// Reads and writes the local player's <see cref="Selection"/>.
+/// Reads and writes the local player's <see cref="Selection"/>, and computes selection highlights.
 /// </summary>
 public static class LocalSelection
 {
+    /// <summary>The color the local player's own selection shows in, everywhere.</summary>
+    public static readonly Color LocalColor = Colors.Gray;
+
+    /// <summary>
+    /// <para>The color to show each selected target in, among the selections <paramref name="which"/> picks.</para>
+    ///
+    /// <para>
+    /// The local player's selection shows in <see cref="LocalColor"/>, over anyone else's.
+    /// Otherwise a target shows in the seat color of the player who selected it most recently.
+    /// The <paramref name="which"/> should filter as many selections as possible to avoid observing extraneous records.
+    /// </para>
+    /// </summary>
+    public static IReadOnlyDictionary<Target, Color> SelectionColors(
+        this IRecordReader R,
+        Func<Selection, bool> which
+    )
+    {
+        var local = Snowport.Clock.source;
+        var colors = new Dictionary<Target, Color>();
+        var newestFirst = R.Get(which)
+            .OrderByDescending(s => s.Player == local)
+            .ThenByDescending(s => s.LastUpdateId);
+        foreach (var selection in newestFirst)
+        {
+            var color =
+                selection.Player == local
+                    ? LocalColor
+                    : PresenceSynchronizer.Instance?.GetSeatColor(selection.Player, R)
+                        ?? Colors.Gray;
+            foreach (var target in selection.Targets)
+                colors.TryAdd(target, color);
+        }
+        return colors;
+    }
+
     /// <summary>
     /// The local player's selection <paramref name="within"/> a dataset, or on the table by default.
     /// Null if they have not yet selected anything there.

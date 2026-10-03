@@ -85,7 +85,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
             _seatList.AddItem(label);
             _seatList.SetItemDisabled(_seatList.ItemCount - 1, !available);
 
-            // Colour the icon using the player's configured colour
+            // Color the icon using the player's configured color
             _seatList.SetItemCustomFgColor(_seatList.ItemCount - 1, player.Color);
 
             _seatIndexMap.Add(i);

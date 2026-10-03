@@ -338,11 +338,14 @@ public partial class PresenceSynchronizer : Node
         return sprite;
     }
 
-    /// <summary>The colour of the seat a player sits in.</summary>
-    public Color GetSeatColor(byte source)
+    /// <summary>
+    /// The color of the seat a player sits in.
+    /// Pass a watch's <paramref name="R"/> so it reruns when the color is edited.
+    /// </summary>
+    public Color GetSeatColor(byte source, IRecordReader R = null)
     {
         var seat = GetSeatBySource(source);
-        var settings = RecordService.Instance?.Value<ProjectGameSettings>();
+        var settings = (R ?? RecordService.Instance)?.Value<ProjectGameSettings>();
         if (settings == null || seat < 0 || seat >= settings.Players.Length)
             return FallbackColor;
 
