@@ -19,18 +19,15 @@ public enum ZTarget
 /// </summary>
 public readonly struct ZOrder : IComparable<ZOrder>, IEquatable<ZOrder>
 {
-    [JsonPropertyName("t")]
     public ZTarget Target { get; }
 
     /// <summary>Separates components that share the same <see cref="Stamp"/>. Higher is on top.</summary>
-    [JsonPropertyName("s")]
     public int Suborder { get; }
 
     /// <summary>
     /// The SnowportId of the reorder that last reordered this component, shared by every component
     /// in that reorder. Components that share a Stamp should have unique Suborders.
     /// </summary>
-    [JsonPropertyName("st")]
     public SnowportId Stamp { get; }
 
     [JsonConstructor]

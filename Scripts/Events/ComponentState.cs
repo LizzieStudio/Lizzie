@@ -30,19 +30,16 @@ public record ComponentState : Replicated
             DataSetRowId = c.DataSetRowId,
         };
 
-    [JsonPropertyName("pr")]
     public SnowTag PrototypeRef { get; init; }
 
     /// <summary>
     /// X relative to either the table or player cursor, in tenths of a millimeter.
     /// </summary>
-    [JsonPropertyName("px")]
     public int X { get; init; }
 
     /// <summary>
     /// Z relative to either the table or player cursor, in tenths of a millimeter.
     /// </summary>
-    [JsonPropertyName("pz")]
     public int Z { get; init; }
 
     /// <summary>
@@ -77,33 +74,26 @@ public record ComponentState : Replicated
 
     private static float TenthMmToCm(int v) => v / TenthMmPerUnit;
 
-    [JsonPropertyName("r")]
     public Vector3 Rotation { get; init; }
 
-    [JsonPropertyName("z")]
     public ZOrder ZOrder { get; init; }
 
-    [JsonPropertyName("di")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public int DataSetRowIndex { get; init; } = -1;
 
-    [JsonPropertyName("dr")]
     public SnowTag DataSetRowId { get; init; } = SnowTag.Empty;
 
-    [JsonPropertyName("l")]
     public VisualComponentBase.ComponentLocation Location { get; init; }
 
     /// <summary>
     /// The container that holds this component or <see cref="SnowTag.Empty"/>.
     /// </summary>
-    [JsonPropertyName("c")]
     public SnowTag ContainerRef { get; init; } = SnowTag.Empty;
 
     /// <summary>
     /// While <see cref="VisualComponentBase.ComponentLocation.Cursor"/>, the Snowport source of the
     /// player holding it.
     /// </summary>
-    [JsonPropertyName("h")]
     public byte Holder { get; init; }
 
     /// <summary>Whether a player's cursor is holding it.</summary>

@@ -40,7 +40,7 @@ public class UndoFlagJsonTests
         var json = JsonSerializer.Serialize(reversal, LizzieJson.EventOptions);
         var back = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
 
-        Assert.DoesNotContain("\"a\"", json);
+        Assert.DoesNotContain("\"also\"", json);
         Assert.Null(back.Undo.Also);
     }
 }

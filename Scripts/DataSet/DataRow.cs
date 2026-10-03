@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.Json.Serialization;
 
 /// <summary>
 /// A single dataset row.
@@ -37,10 +36,7 @@ public record DataRow : Replicated
 /// <summary>
 /// One cell of a dataset.
 /// </summary>
-public sealed record CellTarget(
-    [property: JsonPropertyName("r")] SnowTag RowId,
-    [property: JsonPropertyName("i")] SnowTag ColumnId
-) : Target
+public sealed record CellTarget(SnowTag RowId, SnowTag ColumnId) : Target
 {
     public override IEnumerable<Target> Containers(IRecordReader R) =>
         R.Get<DataRow>(RowId) is { } row

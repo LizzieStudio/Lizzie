@@ -66,8 +66,7 @@ public partial class MultiplayerManager : Node
     /// </summary>
     public Error HostServer(int port = 7777, int maxPlayers = 8)
     {
-        _peer = new ENetMultiplayerPeer();
-        var error = _peer.CreateServer(port, maxPlayers);
+        var error = CreatePeer(peer => peer.CreateServer(port, maxPlayers));
 
         if (error != Error.Ok)
         {
@@ -104,8 +103,7 @@ public partial class MultiplayerManager : Node
     /// </summary>
     public Error JoinServer(string address, int port = 7777)
     {
-        _peer = new ENetMultiplayerPeer();
-        var error = _peer.CreateClient(address, port);
+        var error = CreatePeer(peer => peer.CreateClient(address, port));
 
         if (error != Error.Ok)
         {
@@ -119,6 +117,23 @@ public partial class MultiplayerManager : Node
 
         GD.Print($"Connecting to server at {address}:{port}");
 
+        return Error.Ok;
+    }
+
+    /// <summary>
+    /// Makes the peer with <paramref name="create"/>, then sets its compression.
+    /// We always have to use the same compression on either side, so it's set up in one place.
+    /// </summary>
+    private Error CreatePeer(Func<ENetMultiplayerPeer, Error> create)
+    {
+        _peer = new ENetMultiplayerPeer();
+        var error = create(_peer);
+        if (error != Error.Ok)
+            return error;
+
+        // According to Godot, the RangeCoder is best for small packets, and we send a lot of small packets.
+        // Later on, we might consider Zstd for catching up a late joiner, but this is fine for now.
+        _peer.Host.Compress(ENetConnection.CompressionMode.RangeCoder);
         return Error.Ok;
     }
 

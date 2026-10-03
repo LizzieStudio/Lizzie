@@ -1,0 +1,24 @@
+name: Test
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          # global.json runs tests with Microsoft.Testing.Platform, which needs the .NET 10 SDK.
+          dotnet-version: 10.0.x
+      - name: Test
+        run: dotnet test Tests/Lizzie.Tests.csproj
+      # When the save format changed, the new schema is written next to the pinned one.
+      - name: Upload the changed save format
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: save-format-schema
+          path: Tests/*.received.json
+          if-no-files-found: ignore

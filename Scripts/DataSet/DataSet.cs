@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.Json.Serialization;
 
 public record DataSet : Replicated
 {
@@ -22,10 +21,7 @@ public record Column
 /// <summary>
 /// A dataset column.
 /// </summary>
-public sealed record ColumnTarget(
-    [property: JsonPropertyName("d")] SnowTag DataSetId,
-    [property: JsonPropertyName("i")] SnowTag ColumnId
-) : Target
+public sealed record ColumnTarget(SnowTag DataSetId, SnowTag ColumnId) : Target
 {
     public override IEnumerable<Target> Contents(IRecordReader R) =>
         R.Get<DataSet>(DataSetId)?.Columns.Any(c => c.Id == ColumnId) == true

@@ -2,16 +2,16 @@ using System;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
-[JsonDerivedType(typeof(CubeParameters), (int)VisualComponentBase.VisualComponentType.Cube)]
-[JsonDerivedType(typeof(DiscParameters), (int)VisualComponentBase.VisualComponentType.Disc)]
-[JsonDerivedType(typeof(TokenParameters), (int)VisualComponentBase.VisualComponentType.Token)]
-[JsonDerivedType(typeof(DeckParameters), (int)VisualComponentBase.VisualComponentType.Deck)]
-[JsonDerivedType(typeof(DieParameters), (int)VisualComponentBase.VisualComponentType.Die)]
-[JsonDerivedType(typeof(MeepleParameters), (int)VisualComponentBase.VisualComponentType.Meeple)]
-[JsonDerivedType(typeof(TrayParameters), (int)VisualComponentBase.VisualComponentType.Tray)]
-[JsonDerivedType(typeof(BagParameters), (int)VisualComponentBase.VisualComponentType.Bag)]
-[JsonDerivedType(typeof(ZoneParameters), (int)VisualComponentBase.VisualComponentType.Zone)]
+[JsonPolymorphic]
+[JsonDerivedType(typeof(CubeParameters), "CubeParameters")]
+[JsonDerivedType(typeof(DiscParameters), "DiscParameters")]
+[JsonDerivedType(typeof(TokenParameters), "TokenParameters")]
+[JsonDerivedType(typeof(DeckParameters), "DeckParameters")]
+[JsonDerivedType(typeof(DieParameters), "DieParameters")]
+[JsonDerivedType(typeof(MeepleParameters), "MeepleParameters")]
+[JsonDerivedType(typeof(TrayParameters), "TrayParameters")]
+[JsonDerivedType(typeof(BagParameters), "BagParameters")]
+[JsonDerivedType(typeof(ZoneParameters), "ZoneParameters")]
 public abstract record ComponentParameters
 {
     public string ComponentName { get; init; } = "";

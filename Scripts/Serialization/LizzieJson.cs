@@ -9,6 +9,7 @@ public static class LizzieJson
     {
         // set explicitly so GetTypeInfo works before the options are first used to serialize
         TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
         Converters =

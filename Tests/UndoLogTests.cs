@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
 using Xunit;
-using Xunit.Abstractions;
 
 public class UndoLogTests
 {

@@ -4,10 +4,10 @@ using System.Text.Json.Serialization;
 /// <summary>
 /// Something a player can select and run commands on.
 /// </summary>
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
-[JsonDerivedType(typeof(RecordTarget), "r")]
-[JsonDerivedType(typeof(ColumnTarget), "col")]
-[JsonDerivedType(typeof(CellTarget), "cell")]
+[JsonPolymorphic]
+[JsonDerivedType(typeof(RecordTarget), "RecordTarget")]
+[JsonDerivedType(typeof(ColumnTarget), "ColumnTarget")]
+[JsonDerivedType(typeof(CellTarget), "CellTarget")]
 public abstract record Target
 {
     /// <inheritdoc cref="IReplicated.Contents"/>
@@ -23,7 +23,7 @@ public abstract record Target
 /// <summary>
 /// Targets a record.
 /// </summary>
-public sealed record RecordTarget([property: JsonPropertyName("i")] SnowTag Id) : Target
+public sealed record RecordTarget(SnowTag Id) : Target
 {
     public override IEnumerable<Target> Contents(IRecordReader R) => R.Get(Id)?.Contents(R) ?? [];
 

@@ -18,7 +18,7 @@ public class TableEventJsonTests
 
         var back = RoundTrip(e, out var json);
 
-        Assert.Contains("\"a\":\"component.flip\"", json);
+        Assert.Contains("\"command\":\"component.flip\"", json);
         Assert.Equal(new CommandName("component.flip"), back.Command);
     }
 
@@ -29,7 +29,7 @@ public class TableEventJsonTests
 
         var back = RoundTrip(e, out var json);
 
-        Assert.DoesNotContain("\"a\"", json);
+        Assert.DoesNotContain("\"command\"", json);
         Assert.Null(back.Command);
     }
 

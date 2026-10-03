@@ -7,23 +7,22 @@ using Godot;
 /// <summary>
 /// The effects of a TableEvent.
 /// </summary>
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "@")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<ComponentState>), "c")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "p")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "tu")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "du")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<DataRow>), "dw")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "a")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "sv")]
-[JsonDerivedType(typeof(UpdateReplicatedEffect<Selection>), "sl")]
-[JsonDerivedType(typeof(SetReplicatedValueEffect<ProjectGameSettings>), "gs")]
-[JsonDerivedType(typeof(SetReplicatedValueEffect<ActiveGameStateRef>), "ags")]
+[JsonPolymorphic]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<ComponentState>), "ComponentState")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Prototype>), "Prototype")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Template>), "Template")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<DataSet>), "DataSet")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<DataRow>), "DataRow")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "Asset")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "GameState")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<Selection>), "Selection")]
+[JsonDerivedType(typeof(SetReplicatedValueEffect<ProjectGameSettings>), "ProjectGameSettings")]
+[JsonDerivedType(typeof(SetReplicatedValueEffect<ActiveGameStateRef>), "ActiveGameStateRef")]
 public abstract class Effect
 {
     /// <summary>
     /// The record this effect writes.
     /// </summary>
-    [JsonPropertyName("i")]
     public SnowTag Id { get; set; }
 
     /// <summary>
@@ -55,7 +54,6 @@ public abstract class Effect
 public class UpdateReplicatedEffect<T> : Effect
     where T : class, IReplicated
 {
-    [JsonPropertyName("v")]
     public T Payload { get; set; }
 
     internal override Type Writes => typeof(T);
@@ -69,7 +67,6 @@ public class UpdateReplicatedEffect<T> : Effect
 public class SetReplicatedValueEffect<T> : Effect
     where T : class, new()
 {
-    [JsonPropertyName("v")]
     public T Payload { get; set; }
 
     internal override Type Writes => typeof(T);

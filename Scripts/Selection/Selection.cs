@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.Json.Serialization;
 
 /// <summary>
 /// What one player has selected in one place, which every player sees.
@@ -12,18 +11,15 @@ using System.Text.Json.Serialization;
 public record Selection : Replicated
 {
     /// <summary>The source of the player who owns this selection.</summary>
-    [JsonPropertyName("p")]
     public byte Player { get; init; }
 
     /// <summary>
     /// Where it was made: empty for the table, or the dataset whose rows and columns it holds.
     /// A player has one selection in each place, so each view undoes only its own.
     /// </summary>
-    [JsonPropertyName("w")]
     public SnowTag Within { get; init; }
 
     /// <summary>The selected things.</summary>
-    [JsonPropertyName("t")]
     public ImmutableHashSet<Target> Targets { get; init; } = ImmutableHashSet<Target>.Empty;
 }
 
