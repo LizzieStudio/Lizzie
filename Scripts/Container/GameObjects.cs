@@ -112,7 +112,7 @@ public partial class GameObjects : Node
     /// </summary>
     public IEnumerable<VisualComponentBase> GetContainedComponents(SnowTag containerRef) =>
         Nodes(
-            ProjectService
+            RecordService
                 .Instance.Get<ComponentState>(s => s.ContainerRef == containerRef)
                 .OrderBy(s => s.ZOrder)
         );
@@ -274,7 +274,7 @@ public partial class GameObjects : Node
         }
 
         _table.AddChild(component);
-        ProjectService.Instance.SyncNow(component);
+        RecordService.Instance.SyncNow(component);
 
         QueueStackingUpdate();
     }
@@ -310,7 +310,7 @@ public partial class GameObjects : Node
     /// The nodes of the cards stacked exactly on the deck, top first.
     /// </summary>
     public List<VisualComponentBase> GetStack(VcDeck deck) =>
-        deck.State is { } s ? Nodes(ProjectService.Instance.TokensOn(s)).ToList() : [];
+        deck.State is { } s ? Nodes(RecordService.Instance.TokensOn(s)).ToList() : [];
 
     #endregion
 
@@ -333,11 +333,11 @@ public partial class GameObjects : Node
     #region Selection
     /// <summary>The components the local player has selected, read from their selection record.</summary>
     public HashSet<SnowTag> Selection =>
-        ProjectService.Instance.GetSelection<ComponentState>().ToHashSet();
+        RecordService.Instance.GetSelection<ComponentState>().ToHashSet();
 
     /// <summary>Replaces the local player's selected components.</summary>
     public void SetSelection(IEnumerable<SnowTag> components) =>
-        ProjectService.Instance.SetSelection<ComponentState>(components);
+        RecordService.Instance.SetSelection<ComponentState>(components);
 
     /// <summary>The selected components in table order.</summary>
     public IEnumerable<VisualComponentBase> GetSelectedObjects()
@@ -626,7 +626,8 @@ public partial class GameObjects : Node
 
     #region Drag
 
-    private static bool HandsEnabled() => ProjectService.Instance.Settings.Value.EnablePlayerHands;
+    private static bool HandsEnabled() =>
+        RecordService.Instance.Value<ProjectGameSettings>().EnablePlayerHands;
 
     /// <summary>
     /// Recompute per-viewer zone visibility and control for all components each frame so the
@@ -873,7 +874,7 @@ public partial class GameObjects : Node
     /// </summary>
     private IEnumerable<VisualComponentBase> GetLocalDraggingObjects() =>
         Nodes(
-            ProjectService.Instance.Get<ComponentState>(s =>
+            RecordService.Instance.Get<ComponentState>(s =>
                 s.IsHeld && s.Holder == Snowport.Clock.source
             )
         );
@@ -883,7 +884,7 @@ public partial class GameObjects : Node
 
     private IEnumerable<VisualComponentBase> ComponentsAt(
         VisualComponentBase.ComponentLocation location
-    ) => Nodes(ProjectService.Instance.Get<ComponentState>(s => s.Location == location));
+    ) => Nodes(RecordService.Instance.Get<ComponentState>(s => s.Location == location));
 
     private void EndDrag()
     {
@@ -1179,7 +1180,7 @@ public partial class GameObjects : Node
         // A held deck keeps its count, since its cards leave the table with it.
         foreach (var deck in ComponentNodes.OfType<VcDeck>())
             if (deck.State is { IsHeld: false } d)
-                deck.SetCount(ProjectService.Instance.TokensOn(d).Count);
+                deck.SetCount(RecordService.Instance.TokensOn(d).Count);
     }
 
     private bool _localDragOverHand;

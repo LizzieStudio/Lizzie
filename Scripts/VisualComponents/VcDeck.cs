@@ -41,7 +41,7 @@ public partial class VcDeck : VisualComponentBase
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
             return [];
-        var proto = ProjectService.Instance.GetIncludingDeleted<Prototype>(PrototypeRef);
+        var proto = RecordService.Instance.GetIncludingDeleted<Prototype>(PrototypeRef);
         if (proto?.Parameters is not PrintedParameters parameters)
             return [];
 
@@ -83,7 +83,7 @@ public partial class VcDeck : VisualComponentBase
 
             case VcToken.TokenBuildMode.Template:
             {
-                foreach (var row in ProjectService.Instance.GetRows(parameters.Dataset))
+                foreach (var row in RecordService.Instance.GetRows(parameters.Dataset))
                     yield return (-1, row.Id);
                 break;
             }

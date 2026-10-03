@@ -54,7 +54,7 @@ public partial class UI : CanvasLayer
     public override void _EnterTree()
     {
         _instance = this;
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IRecordReader R)
@@ -150,7 +150,7 @@ public partial class UI : CanvasLayer
 
     private void ShowPlayerPositionDialog()
     {
-        var settings = ProjectService.Instance.Settings.Value;
+        var settings = RecordService.Instance.Value<ProjectGameSettings>();
         if (settings == null)
             return;
 
@@ -502,7 +502,7 @@ public partial class UI : CanvasLayer
 
         _modalDialogs.AddChild(dialog);
 
-        ProjectService.Instance.Watch(
+        RecordService.Instance.Watch(
             dialog,
             R =>
             {
@@ -595,7 +595,7 @@ public partial class UI : CanvasLayer
         );
         dialog.TreeExiting += () => CommandViews.Detach(dialog);
 
-        ProjectService.Instance.Watch(
+        RecordService.Instance.Watch(
             dialog,
             R =>
             {
@@ -659,7 +659,7 @@ public partial class UI : CanvasLayer
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
-        var p = ProjectService.Instance.GetIncludingDeleted<Prototype>(editEvent.PrototypeId);
+        var p = RecordService.Instance.GetIncludingDeleted<Prototype>(editEvent.PrototypeId);
         if (p == null)
         {
             return;

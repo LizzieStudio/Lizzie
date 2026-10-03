@@ -20,7 +20,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// </summary>
     public void RebuildCache()
     {
-        var ordered = ProjectService
+        var ordered = RecordService
             .Instance.Get<ComponentState>(s => s.ContainerRef == Reference)
             .OrderByDescending(s => s.ZOrder)
             .Select(s => s.Id)

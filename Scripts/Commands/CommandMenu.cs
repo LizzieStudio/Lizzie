@@ -37,7 +37,7 @@ public static class CommandMenu
     /// </param>
     public static void Show(Vector2I position, ICommandView view, Action closed = null)
     {
-        var context = CommandContext.Of(view, ProjectService.Instance);
+        var context = CommandContext.Of(view, RecordService.Instance);
         Show(position, context, CommandList.ForContextMenu(context), view, closed);
     }
 
@@ -57,7 +57,7 @@ public static class CommandMenu
     ) =>
         Show(
             position,
-            CommandContext.Of(view, ProjectService.Instance),
+            CommandContext.Of(view, RecordService.Instance),
             commands,
             view,
             closed,
@@ -107,7 +107,7 @@ public static class CommandMenu
         bool all
     )
     {
-        IRecordReader R = ProjectService.Instance;
+        IRecordReader R = RecordService.Instance;
         foreach (var (command, targets) in CommandList.ForMenu(context, commands, all))
         {
             if (command == Command.Divider)

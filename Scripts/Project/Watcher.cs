@@ -5,7 +5,7 @@ using Godot;
 
 /// <summary>
 /// Runs a callback and records every record it reads so
-/// <see cref="ProjectService"/> can rerun it when any of them change.
+/// <see cref="RecordService"/> can rerun it when any of them change.
 /// </summary>
 public sealed class Watcher : IRecordReader
 {
@@ -143,7 +143,7 @@ public sealed class Watcher : IRecordReader
     }
 
     public T Value<T>()
-        where T : class
+        where T : class, new()
     {
         Depend(typeof(T), _ => true);
         return _source.Value<T>();

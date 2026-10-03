@@ -7,7 +7,7 @@ public partial class DataSetSelector : OptionButton
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     public override void _Ready()

@@ -428,7 +428,7 @@ public sealed class RecordCommand<T> : Command
             Submit(Effects(Reader, records, number));
     }
 
-    private static IRecordReader Reader => ProjectService.Instance;
+    private static IRecordReader Reader => RecordService.Instance;
 
     private static T Record(IRecordReader R, Target target) =>
         target is RecordTarget r ? R?.Get<T>(r.Id) : null;
@@ -476,7 +476,7 @@ public sealed class TargetCommand<T> : Command
             Submit(Effects(Reader, typed, number));
     }
 
-    private static IRecordReader Reader => ProjectService.Instance;
+    private static IRecordReader Reader => RecordService.Instance;
 }
 
 /// <summary>A command that does not act on selected targets, such as undo.</summary>
@@ -507,7 +507,7 @@ public sealed class GlobalCommand : Command
     {
         SideEffects?.Invoke(view);
         if (Effects != null)
-            Submit(Effects(ProjectService.Instance));
+            Submit(Effects(RecordService.Instance));
     }
 }
 

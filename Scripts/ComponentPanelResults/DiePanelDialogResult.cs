@@ -62,7 +62,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IRecordReader R)
@@ -105,7 +105,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         var target = SidesToTarget(sides);
         _frontTemplatePicker.Target = target;
 
-        var template = ProjectService.Instance.Get<Template>(_frontTemplateRef);
+        var template = RecordService.Instance.Get<Template>(_frontTemplateRef);
         if (template != null && template.Target != target)
         {
             _frontTemplateRef = SnowTag.Empty;
@@ -139,7 +139,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private void OnDatasetChanged(SnowTag datasetRef)
     {
         _datasetRef = datasetRef;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private SnowTag _frontTemplateRef = SnowTag.Empty;
@@ -147,7 +147,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private void OnFrontTemplateChanged(SnowTag templateRef)
     {
         _frontTemplateRef = templateRef;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void EditFrontTemplate()
@@ -264,7 +264,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
                 p = p with { FrontTemplate = _frontTemplateRef, Dataset = _datasetRef };
 
-                DataSet = ProjectService.Instance.Get<DataSet>(_datasetRef);
+                DataSet = RecordService.Instance.Get<DataSet>(_datasetRef);
                 MultipleCreateMode = (DataSet != null);
                 WidthHint = dia / 10;
                 HeightHint = dia / 10;
@@ -308,7 +308,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     private SnowTag GetRow(int rowNum)
     {
-        var rows = ProjectService.Instance.GetRows(_datasetRef);
+        var rows = RecordService.Instance.GetRows(_datasetRef);
         if (rowNum < 0 || rowNum >= rows.Count)
             return SnowTag.Empty;
         return rows[rowNum].Id;
@@ -376,7 +376,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         // Restore dataset
         _datasetPicker.SelectedDataSet = p.Dataset;
         _datasetRef = p.Dataset;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     public override List<string> ValidateParameters(ComponentParameters parameters)

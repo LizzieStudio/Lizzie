@@ -52,7 +52,7 @@ public partial class SceneController : Node3D, ICommandView
     public IEnumerable<Target> Hovered() =>
         _gameObjects.CursorMode is CursorMode.DragSelect or CursorMode.Spawn
         || _gameObjects.GetHoveredObject() is not { } hovered
-        || ProjectService.Instance.Get<ComponentState>(hovered.Reference) == null
+        || RecordService.Instance.Get<ComponentState>(hovered.Reference) == null
             ? []
             : [new RecordTarget(hovered.Reference)];
 

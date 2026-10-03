@@ -101,7 +101,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IRecordReader R)
@@ -197,7 +197,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             if (tab == 1)
                 GenerateQuickCards();
             else if (tab == 4)
-                ProjectService.Instance.QueueSync(this);
+                RecordService.Instance.QueueSync(this);
             UpdatePreview();
         };
 
@@ -487,7 +487,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private void OnDatasetChanged(SnowTag datasetRef)
     {
         _datasetRef = datasetRef;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private SnowTag _frontTemplateRef = SnowTag.Empty;
@@ -496,13 +496,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private void OnFrontTemplateChanged(SnowTag templateRef)
     {
         _frontTemplateRef = templateRef;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void OnBackTemplateChanged(SnowTag templateRef)
     {
         _backTemplateRef = templateRef;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     public override void Activate()
@@ -666,7 +666,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                     BackTemplate = _backTemplateRef,
                     Dataset = _datasetRef,
                 };
-                DataSet = ProjectService.Instance.Get<DataSet>(_datasetRef);
+                DataSet = RecordService.Instance.Get<DataSet>(_datasetRef);
                 if (DataSet != null)
                 {
                     spawnAsDeck = true;
@@ -711,7 +711,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     {
         if (_tabs.CurrentTab == 1 || _datasetRef == SnowTag.Empty)
             return (rowNum, SnowTag.Empty);
-        var rows = ProjectService.Instance.GetRows(_datasetRef);
+        var rows = RecordService.Instance.GetRows(_datasetRef);
         if (rowNum < 0 || rowNum >= rows.Count)
             return (-1, SnowTag.Empty);
         return (-1, rows[rowNum].Id);
@@ -837,7 +837,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _datasetPicker.SelectedDataSet = p.Dataset;
         _datasetRef = p.Dataset;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
 
         UpdateDimensionUI();
         Activate();

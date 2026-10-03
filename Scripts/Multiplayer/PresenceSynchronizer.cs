@@ -100,7 +100,7 @@ public partial class PresenceSynchronizer : Node
     /// <summary>The durable hand container for a seat, read from the project settings.</summary>
     public SnowTag HandRefForSeat(int seat)
     {
-        var players = ProjectService.Instance?.Settings.Value.Players;
+        var players = RecordService.Instance?.Value<ProjectGameSettings>().Players;
         if (players == null || seat < 0 || seat >= players.Value.Length)
             return SnowTag.Empty;
         return players.Value[seat].HandRef;
@@ -342,7 +342,7 @@ public partial class PresenceSynchronizer : Node
     public Color GetSeatColor(byte source)
     {
         var seat = GetSeatBySource(source);
-        var settings = ProjectService.Instance?.Settings.Value;
+        var settings = RecordService.Instance?.Value<ProjectGameSettings>();
         if (settings == null || seat < 0 || seat >= settings.Players.Length)
             return FallbackColor;
 

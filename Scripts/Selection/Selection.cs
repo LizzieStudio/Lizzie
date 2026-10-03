@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 /// Each player writes only their own, so selections never overwrite each other.
 /// Selections are not saved with the project.
 /// </summary>
+[NotSaved]
 public record Selection : Replicated
 {
     /// <summary>The source of the player who owns this selection.</summary>

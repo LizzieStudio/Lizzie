@@ -10,7 +10,7 @@ public partial class ImageSelector : Control
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     // Called when the node enters the scene tree for the first time.

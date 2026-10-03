@@ -14,7 +14,7 @@ public partial class QuickTextureEntry : BoxContainer
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     // Called when the node enters the scene tree for the first time.
@@ -61,7 +61,7 @@ public partial class QuickTextureEntry : BoxContainer
     public void SetIcons(IconLibrary icons)
     {
         _icons = icons;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void Sync(IRecordReader R)

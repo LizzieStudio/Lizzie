@@ -154,7 +154,7 @@ public partial class ComponentDefinition : Window
 
         //update the project prototype
 
-        var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(_mapPrototype.Id);
+        var prototype = RecordService.Instance.GetIncludingDeleted<Prototype>(_mapPrototype.Id);
         if (prototype == null)
             return;
 

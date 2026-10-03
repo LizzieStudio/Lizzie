@@ -101,7 +101,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     public override void _EnterTree()
     {
-        var ps = ProjectService.Instance;
+        var ps = RecordService.Instance;
         ps.Watch(this, Sync);
 
         // The local player's inserts focus the row they add, or start renaming the column,
@@ -342,7 +342,7 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Select([new RecordTarget(rowId)]);
         _revealRowOnSync = rowId;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void OnNewDatasetPressed()
@@ -748,12 +748,11 @@ public partial class DatasetEditor : Window, ICommandView
         if (others.Count == 0)
             return;
 
-        var R = ProjectService.Instance;
         var rank =
             index > 0
-                ? R.RankBeside(others[index - 1], after: true)
-                : R.RankBeside(others[0], after: false);
-        R.Upsert(row with { Rank = rank });
+                ? RecordService.Instance.RankBeside(others[index - 1], after: true)
+                : RecordService.Instance.RankBeside(others[0], after: false);
+        ProjectService.Instance.Upsert(row with { Rank = rank });
     }
 
     // The rows' or the columns' controls, for a drag along that axis.
@@ -869,14 +868,14 @@ public partial class DatasetEditor : Window, ICommandView
     private ImmutableHashSet<Target> MySelection() =>
         DatasetRef == SnowTag.Empty
             ? ImmutableHashSet<Target>.Empty
-            : ProjectService.Instance.GetSelection(DatasetRef)?.Targets
+            : RecordService.Instance.GetSelection(DatasetRef)?.Targets
                 ?? ImmutableHashSet<Target>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
     private void Select(IEnumerable<Target> targets)
     {
         if (DatasetRef != SnowTag.Empty)
-            ProjectService.Instance.SetSelection(targets, DatasetRef);
+            RecordService.Instance.SetSelection(targets, DatasetRef);
     }
 
     /// <summary>
@@ -1025,9 +1024,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>Runs <paramref name="command"/> on what the local player has selected, as its shortcut would.</summary>
     private void RunOnSelection(Command command)
     {
-        var targets = MySelection()
-            .Where(t => command.Applies(ProjectService.Instance, t))
-            .ToList();
+        var targets = MySelection().Where(t => command.Applies(RecordService.Instance, t)).ToList();
         if (command.Fits(targets.Count))
             command.Run(targets, 1, this);
     }
@@ -1125,7 +1122,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         dialog.FileSelected += path =>
         {
-            CsvImport.Replace(ProjectService.Instance, _currentDataSet, path);
+            CsvImport.Replace(RecordService.Instance, _currentDataSet, path);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;

@@ -45,7 +45,7 @@ public partial class MultiplayerDialog : Window
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     public override void _ExitTree()
@@ -119,7 +119,7 @@ public partial class MultiplayerDialog : Window
             _statusLabel.Text = $"Connected to {_addressInput.Text}:{_clientPortInput.Text}";
         }
 
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void Sync(IRecordReader R)

@@ -78,7 +78,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     public event EventHandler Closed;
@@ -166,10 +166,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (_selectedPrototype == null)
             return;
 
-        var existingNames = ProjectService
-            .Instance.Get<Prototype>()
-            .Select(p => p.Name)
-            .ToHashSet();
+        var existingNames = RecordService.Instance.Get<Prototype>().Select(p => p.Name).ToHashSet();
 
         // Strip any existing trailing " (N)" suffix before generating the new name
         var baseName = System.Text.RegularExpressions.Regex.Replace(
@@ -263,7 +260,7 @@ public partial class PrototypeManifest : Window, ICommandView
             _sortAscending = true;
         }
 
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void OnTreeItemSelected()
@@ -277,7 +274,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (prototypeRef == _selectedPrototype?.Id)
             return;
 
-        var prototype = ProjectService.Instance.Get<Prototype>(prototypeRef);
+        var prototype = RecordService.Instance.Get<Prototype>(prototypeRef);
         if (prototype != null)
             SelectedPrototype = prototype;
     }
@@ -302,7 +299,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         if (datasetParam != SnowTag.Empty)
         {
-            var rows = ProjectService.Instance.GetRows(datasetParam);
+            var rows = RecordService.Instance.GetRows(datasetParam);
             if (rows.Count > 0)
             {
                 rowIndex = -1;

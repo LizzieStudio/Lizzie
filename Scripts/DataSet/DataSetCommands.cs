@@ -134,7 +134,7 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Pasted(R, cells, Tsv.Parse(DisplayServer.ClipboardGet())),
     };
 
-    private static IRecordReader Reader => ProjectService.Instance;
+    private static IRecordReader Reader => RecordService.Instance;
 
     private static bool HasColumn(DataSet ds, SnowTag columnId) =>
         ds?.Columns.Any(c => c.Id == columnId) == true;

@@ -1,35 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
 
 /// <summary>
 /// Storage for <see cref="IReplicated"/> objects that syncs during multiplayer transactionally.
 /// </summary>
-public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
+public sealed class ReplicatedDictionary<TEntity> : IReplicatedStore
     where TEntity : class, IReplicated
 {
-    private EventSynchronizer _synchronizer;
-
-    /// <summary>Starts merging events from the synchronizer into this store.</summary>
-    public void Attach(EventSynchronizer synchronizer)
-    {
-        if (synchronizer == null || ReferenceEquals(_synchronizer, synchronizer))
-            return;
-
-        Detach();
-        _synchronizer = synchronizer;
-        _synchronizer.Applied += OnEventApplied;
-    }
-
-    /// <summary>Stops merging events. Safe to call when not attached.</summary>
-    public void Detach()
-    {
-        if (_synchronizer == null)
-            return;
-
-        _synchronizer.Applied -= OnEventApplied;
-        _synchronizer = null;
-    }
+    private static readonly bool Saved = !typeof(TEntity).IsDefined(
+        typeof(NotSavedAttribute),
+        true
+    );
 
     public Type RecordType => typeof(TEntity);
 
@@ -69,11 +52,9 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
 
     #endregion
 
-    private void OnEventApplied(TableEvent e)
+    public void Apply(Log log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
     {
-        var log = _synchronizer.EventLog;
-        var ids = UndoLog
-            .Changes(log, e)
+        var ids = changed
             .SelectMany(c => c.Effects.OfType<UpdateReplicatedEffect<TEntity>>())
             .Select(fx => fx.Id)
             .ToHashSet();
@@ -94,7 +75,7 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
                 break;
         }
 
-        var changed = new Dictionary<SnowTag, (TEntity Old, TEntity New)>();
+        var merged = new Dictionary<SnowTag, (TEntity Old, TEntity New)>();
         foreach (var (id, now) in latest)
         {
             var old = dict.GetValueOrDefault(id);
@@ -104,18 +85,18 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
                 dict.Remove(id);
             else
                 dict[id] = now;
-            changed[id] = (old, now);
+            merged[id] = (old, now);
         }
 
-        Publish(changed);
+        Publish(merged, bulkLoading);
     }
 
-    private void Publish(Dictionary<SnowTag, (TEntity Old, TEntity New)> changed)
+    private void Publish(Dictionary<SnowTag, (TEntity Old, TEntity New)> changed, bool bulkLoading)
     {
         if (changed.Count == 0)
             return;
 
-        if (_synchronizer?.BulkLoading == true)
+        if (bulkLoading)
         {
             // keeps the value from before the bulk load began
             foreach (var (id, change) in changed)
@@ -142,9 +123,13 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedContainer
         NotifyChanged(changed);
     }
 
-    /// <summary>One upsert effect carrying the current value of every record.</summary>
+    /// <summary>
+    /// One upsert effect carrying the current value of every record, unless the type is <see cref="NotSavedAttribute"/>.
+    /// </summary>
     public IEnumerable<Effect> EnumerateSaveEffects() =>
-        dict.Values.Select(r =>
-            (Effect)new UpdateReplicatedEffect<TEntity> { Id = r.Id, Payload = r }
-        );
+        Saved
+            ? dict.Values.Select(r =>
+                (Effect)new UpdateReplicatedEffect<TEntity> { Id = r.Id, Payload = r }
+            )
+            : [];
 }

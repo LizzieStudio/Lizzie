@@ -38,7 +38,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IRecordReader R)

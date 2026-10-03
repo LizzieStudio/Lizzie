@@ -77,7 +77,7 @@ public partial class ProjectSettingsDialog : Window
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IRecordReader R)
@@ -244,7 +244,7 @@ public partial class ProjectSettingsDialog : Window
     /// </summary>
     private ProjectGameSettings ReadUi()
     {
-        var current = ProjectService.Instance.Settings.Value;
+        var current = RecordService.Instance.Value<ProjectGameSettings>();
         return current with
         {
             StartIn2D = _2dToggle.ButtonPressed,

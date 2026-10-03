@@ -117,7 +117,7 @@ public partial class VcTray : VisualComponentGroup
             TextureFactory
         );
         _prototypeSpawnPoint.AddChild(c);
-        ProjectService.Instance.SyncNow(c);
+        RecordService.Instance.SyncNow(c);
         UpdateChildScale(c);
         c.Position += new Vector3(0, c.YHeight, 0);
     }

@@ -20,34 +20,59 @@ using Godot;
 [JsonDerivedType(typeof(SetReplicatedValueEffect<ActiveGameStateRef>), "ags")]
 public abstract class Effect
 {
-    /// <summary>The component or prototype this effect applies to.</summary>
+    /// <summary>
+    /// The record this effect writes.
+    /// </summary>
     [JsonPropertyName("i")]
     public SnowTag Id { get; set; }
 
-    /// <summary>Creates, updates or reversibly deletes a record with its whole value.</summary>
+    /// <summary>
+    /// The type of record or value it writes, which names the store that holds it.
+    /// </summary>
+    internal abstract Type Writes { get; }
+
+    /// <summary>
+    /// A new, empty store for what it writes.
+    /// </summary>
+    internal abstract IReplicatedStore NewStore();
+
+    /// <summary>
+    /// Creates, updates, or reversibly deletes a record with its whole value.
+    /// </summary>
     public static UpdateReplicatedEffect<T> Upsert<T>(T record)
         where T : class, IReplicated => new() { Id = record.Id, Payload = record };
 
-    /// <summary>An upsert for each record.</summary>
+    /// <summary>
+    /// An upsert for each record.
+    /// </summary>
     public static IEnumerable<Effect> UpsertAll<T>(IEnumerable<T> records)
         where T : class, IReplicated => records.Select(r => (Effect)Upsert(r));
 }
 
 /// <summary>
-/// Creates, updates, or reversibly deletes a replicated definition.
+/// Creates, updates, or reversibly deletes a record.
 /// </summary>
 public class UpdateReplicatedEffect<T> : Effect
     where T : class, IReplicated
 {
     [JsonPropertyName("v")]
     public T Payload { get; set; }
+
+    internal override Type Writes => typeof(T);
+
+    internal override IReplicatedStore NewStore() => new ReplicatedDictionary<T>();
 }
 
 /// <summary>
 /// Sets a project-wide singleton value.
 /// </summary>
 public class SetReplicatedValueEffect<T> : Effect
+    where T : class, new()
 {
     [JsonPropertyName("v")]
     public T Payload { get; set; }
+
+    internal override Type Writes => typeof(T);
+
+    internal override IReplicatedStore NewStore() => new ReplicatedValue<T>();
 }

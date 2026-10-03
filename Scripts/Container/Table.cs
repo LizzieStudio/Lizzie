@@ -22,7 +22,7 @@ public partial class Table : Node
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     /// <summary>The node for a component record, or null.</summary>

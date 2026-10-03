@@ -10,6 +10,14 @@ public sealed record TestRecord : Replicated
     public int Face { get; init; }
 }
 
+/// <summary>
+/// A singleton value for the debugger to write for testing.
+/// </summary>
+public sealed record TestValue
+{
+    public string Text { get; init; }
+}
+
 /// <summary>Whose changes a scope takes.</summary>
 public enum ScopeKind
 {
@@ -310,7 +318,10 @@ public sealed class UndoSession
             );
         for (int i = 0; i < values; i++)
             effects.Add(
-                new SetReplicatedValueEffect<string> { Payload = $"{e.Id.Value}.{effects.Count}" }
+                new SetReplicatedValueEffect<TestValue>
+                {
+                    Payload = new() { Text = $"{e.Id.Value}.{effects.Count}" },
+                }
             );
         if (effects.Count > 0)
             e.Effects = effects.ToArray();
@@ -353,7 +364,7 @@ public sealed class UndoSession
                             fx switch
                             {
                                 UpdateReplicatedEffect<TestRecord> r => $"r{r.Id}={r.Payload.Face}",
-                                SetReplicatedValueEffect<string> v => $"v={v.Payload}",
+                                SetReplicatedValueEffect<TestValue> v => $"v={v.Payload.Text}",
                                 _ => fx.GetType().Name,
                             }
                         )

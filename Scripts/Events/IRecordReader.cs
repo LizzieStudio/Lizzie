@@ -41,7 +41,7 @@ public interface IRecordReader
 
     /// <summary>The current value of a <see cref="ReplicatedValue{T}"/>.</summary>
     T Value<T>()
-        where T : class;
+        where T : class, new();
 
     /// <summary>
     /// <para>

@@ -92,7 +92,7 @@ public partial class TemplateCreator : Window
     // Called when the node enters the scene tree for the first time.
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IRecordReader R)
@@ -384,7 +384,7 @@ public partial class TemplateCreator : Window
         if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
-        var switched = ProjectService.Instance.Get<Template>(
+        var switched = RecordService.Instance.Get<Template>(
             _templateNameSelector.GetItemId((int)index)
         );
         if (switched != null)
@@ -1255,7 +1255,7 @@ public partial class TemplateCreator : Window
 
     private void UpdateProject()
     {
-        LoadTemplateNameSelector(ProjectService.Instance);
+        LoadTemplateNameSelector(RecordService.Instance);
 
         if (_templateNameSelector.ItemCount == 0)
         {
@@ -1264,7 +1264,7 @@ public partial class TemplateCreator : Window
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = ProjectService.Instance.Get<Template>(_templateNameSelector.GetItemId(0));
+        CurrentTemplate = RecordService.Instance.Get<Template>(_templateNameSelector.GetItemId(0));
 
         MapDataset();
     }
@@ -1639,21 +1639,21 @@ public partial class TemplateCreator : Window
     #region Datasets
 
     private void ChangePage(object sender, ItemSelectedEventArgs e) =>
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
 
     //Different dataset has been selected by the user
     private void OnDatasetChanged(SnowTag datasetRef)
     {
         EditCurrentTemplate(t => t with { DataSet = datasetRef });
         _pageControl.CurrentItem = 0;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void MapDataset()
     {
         _dataSetSelector.SelectedDataSet = CurrentTemplate.DataSet;
         _pageControl.CurrentItem = 0;
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void SyncDataset(IRecordReader R)

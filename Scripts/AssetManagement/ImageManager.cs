@@ -28,7 +28,7 @@ public partial class ImageManager : Window, ICommandView
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     // Nothing is selected here
@@ -72,7 +72,7 @@ public partial class ImageManager : Window, ICommandView
 
     private void OnRemovePressed()
     {
-        var selected = ProjectService.Instance.Get<Asset>(_selected);
+        var selected = RecordService.Instance.Get<Asset>(_selected);
         if (selected != null)
             ProjectService.Instance.Upsert(selected with { Deleted = true });
     }

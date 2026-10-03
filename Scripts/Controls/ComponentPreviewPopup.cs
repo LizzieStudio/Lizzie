@@ -20,7 +20,7 @@ public partial class ComponentPreviewPopup : Window
 
     public void ShowComponent(VisualComponentBase component, TextureFactory textureFactory)
     {
-        var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(
+        var prototype = RecordService.Instance.GetIncludingDeleted<Prototype>(
             component.PrototypeRef
         );
         if (prototype == null)

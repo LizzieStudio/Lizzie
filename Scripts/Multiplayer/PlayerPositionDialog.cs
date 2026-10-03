@@ -41,7 +41,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     public override void _ExitTree()
@@ -140,12 +140,12 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         QueueFree();
     }
 
-    private void OnSeatsChanged() => ProjectService.Instance.QueueSync(this);
+    private void OnSeatsChanged() => RecordService.Instance.QueueSync(this);
 
     private void OnReprompt(RequestPlayerPositionEvent _)
     {
         // Another player claimed a seat; refresh availability.
-        ProjectService.Instance.QueueSync(this);
+        RecordService.Instance.QueueSync(this);
     }
 
     private void ShowStatus(string message)

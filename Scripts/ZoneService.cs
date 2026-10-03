@@ -26,7 +26,7 @@ public static class ZoneService
     /// </summary>
     public static bool LocalSeatIsAdmin()
     {
-        var settings = ProjectService.Instance?.Settings.Value;
+        var settings = RecordService.Instance?.Value<ProjectGameSettings>();
         if (settings == null)
             return false;
 

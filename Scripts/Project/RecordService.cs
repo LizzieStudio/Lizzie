@@ -3,9 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-public partial class ProjectService : IRecordReader
+/// <summary>
+/// <para>The project's records and singleton values, worked out from the event log.</para>
+///
+/// <para>
+/// Read them through its <see cref="IRecordReader"/>, and <see cref="Watch"/> to rerun code when what it read changes.
+/// Each record type or value gets its store the first time it's read or written, whether the
+/// write comes from this player, another player, or a loaded save.
+/// </para>
+/// </summary>
+public partial class RecordService : Node, IRecordReader
 {
-    private Dictionary<Type, IReplicatedContainer> _containersByType;
+    public static RecordService Instance { get; private set; }
+
+    // Each record type's or value's store, made on first use.
+    private readonly Dictionary<Type, IReplicatedStore> _stores = new();
 
     private readonly HashSet<Watcher> _watchers = new();
 
@@ -25,6 +37,78 @@ public partial class ProjectService : IRecordReader
         public bool ShouldHearEvent(TableEvent e) =>
             e.Command == Name && e.Id.source == Snowport.Clock.source;
     }
+
+    public override void _EnterTree()
+    {
+        Instance = this;
+    }
+
+    // After the EventSynchronizer, which is an earlier autoload.
+    public override void _Ready()
+    {
+        EventSynchronizer.Instance.Applied += OnEventApplied;
+    }
+
+    /// <summary>
+    /// Merges an event into the stores, making the stores for what it writes if they're new,
+    /// and keeps it for the listeners.
+    /// </summary>
+    private void OnEventApplied(TableEvent e)
+    {
+        var sync = EventSynchronizer.Instance;
+        var changed = UndoLog.Changes(sync.EventLog, e).ToList();
+        foreach (var effect in changed.SelectMany(c => c.Effects))
+            if (!_stores.ContainsKey(effect.Writes))
+                AddStore(effect.NewStore());
+
+        foreach (var store in _stores.Values)
+            store.Apply(sync.EventLog, changed, sync.BulkLoading);
+
+        if (!sync.BulkLoading)
+            ScheduleForListeners(e);
+    }
+
+    private IReplicatedStore AddStore(IReplicatedStore store)
+    {
+        var type = store.RecordType;
+        _stores.Add(type, store);
+        store.Changed += changes => OnRecordsChanged(type, changes);
+        return store;
+    }
+
+    /// <summary>The store for <typeparamref name="T"/>, made empty if nothing has read or written one yet.</summary>
+    private S StoreOf<T, S>()
+        where S : IReplicatedStore, new() =>
+        _stores.GetValueOrDefault(typeof(T)) switch
+        {
+            null => (S)AddStore(new S()),
+            S store => store,
+            var other => throw new InvalidOperationException(
+                $"{typeof(T).Name} is held in a {other.GetType().Name}, not a {typeof(S).Name}"
+            ),
+        };
+
+    /// <summary>
+    /// Removes every record and resets every value, e.g. when the project is replaced.
+    /// </summary>
+    public void Clear()
+    {
+        foreach (var store in _stores.Values)
+            store.Clear();
+    }
+
+    /// <summary>
+    /// Sends each store's one notification for everything it merged during a bulk load.
+    /// </summary>
+    public void FlushBulkLoad()
+    {
+        foreach (var store in _stores.Values)
+            store.FlushBulkLoad();
+    }
+
+    /// <summary>The effects that recreate everything saved with the project.</summary>
+    public IEnumerable<Effect> SaveEffects() =>
+        _stores.Values.SelectMany(s => s.EnumerateSaveEffects());
 
     /// <summary>
     /// Runs <paramref name="sync"/> at the end of the frame, then again whenever a record it
@@ -102,16 +186,6 @@ public partial class ProjectService : IRecordReader
         QueueFlush();
     }
 
-    private void SubscribeWatchers()
-    {
-        _containersByType = Containers.ToDictionary(c => c.RecordType);
-        foreach (var container in Containers)
-        {
-            var type = container.RecordType;
-            container.Changed += changes => OnRecordsChanged(type, changes);
-        }
-    }
-
     private void OnRecordsChanged(Type type, IReadOnlyList<RecordChange> changes)
     {
         foreach (var watcher in _watchers)
@@ -182,16 +256,8 @@ public partial class ProjectService : IRecordReader
 
     #region IRecordReader
 
-    private IReplicatedContainer ContainerOf(Type type) =>
-        _containersByType.TryGetValue(type, out var c)
-            ? c
-            : throw new InvalidOperationException($"No replicated container holds {type.Name}");
-
     private IReadOnlyDictionary<SnowTag, T> RecordsOf<T>()
-        where T : class, IReplicated =>
-        ContainerOf(typeof(T)) is ReplicatedDictionary<T> d
-            ? d.Records
-            : throw new InvalidOperationException($"{typeof(T).Name} is not in a dictionary");
+        where T : class, IReplicated => StoreOf<T, ReplicatedDictionary<T>>().Records;
 
     public T Get<T>(SnowTag id)
         where T : class, IReplicated =>
@@ -201,7 +267,8 @@ public partial class ProjectService : IRecordReader
         where T : class, IReplicated => RecordsOf<T>().GetValueOrDefault(id);
 
     public IReplicated Get(SnowTag id) =>
-        Containers.Select(c => c.Find(id)).FirstOrDefault(r => r != null) is { Deleted: false } r
+        _stores.Values.Select(s => s.Find(id)).FirstOrDefault(r => r != null)
+            is { Deleted: false } r
             ? r
             : null;
 
@@ -225,10 +292,7 @@ public partial class ProjectService : IRecordReader
         where T : class, IReplicated => RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
 
     public T Value<T>()
-        where T : class =>
-        ContainerOf(typeof(T)) is ReplicatedValue<T> v
-            ? v.Value
-            : throw new InvalidOperationException($"{typeof(T).Name} is not in a value");
+        where T : class, new() => StoreOf<T, ReplicatedValue<T>>().Value;
 
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
     public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)

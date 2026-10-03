@@ -150,9 +150,7 @@ public partial class DebugConsole : Node
     private void Spam(int count)
     {
         var sync = EventSynchronizer.Instance;
-        var states = ProjectService
-            .Instance?.Components.Records.Values.Where(s => !s.Deleted)
-            .ToArray();
+        var states = RecordService.Instance?.Get<ComponentState>().ToArray();
         if (sync == null || states == null || states.Length == 0)
         {
             Log("Spam needs at least one component on the table.");

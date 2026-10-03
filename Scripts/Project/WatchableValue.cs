@@ -67,7 +67,7 @@ public sealed class WatchableValue<T>
     private void Changed()
     {
         foreach (var watcher in _readers)
-            ProjectService.Instance?.MarkDirty(watcher);
+            RecordService.Instance?.MarkDirty(watcher);
         // Readers will run again, adding them back if they read the value again.
         _readers.Clear();
     }

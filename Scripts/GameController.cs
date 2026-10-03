@@ -74,7 +74,7 @@ public partial class GameController : Node3D
 
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
-        var prototype = ProjectService.Instance.GetIncludingDeleted<Prototype>(e.PrototypeRef);
+        var prototype = RecordService.Instance.GetIncludingDeleted<Prototype>(e.PrototypeRef);
         if (prototype == null)
         {
             GD.PrintErr($"SpawnPrototype: prototype {e.PrototypeRef} not found");
@@ -147,7 +147,7 @@ public partial class GameController : Node3D
         List<(VisualComponentBase, Vector3)> components
     )
     {
-        var rows = ProjectService.Instance.GetRows(args.DataSet.Id);
+        var rows = RecordService.Instance.GetRows(args.DataSet.Id);
         int cols = (int)Math.Ceiling(Math.Sqrt(rows.Count));
 
         int i = 0;
@@ -179,7 +179,7 @@ public partial class GameController : Node3D
         SnowTag rowId
     )
     {
-        if (ProjectService.Instance.GetIncludingDeleted<Prototype>(args.PrototypeRef) == null)
+        if (RecordService.Instance.GetIncludingDeleted<Prototype>(args.PrototypeRef) == null)
         {
             GD.PrintErr($"Prototype {args.PrototypeRef} not found");
             return null;

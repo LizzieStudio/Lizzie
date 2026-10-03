@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -25,3 +26,10 @@ public abstract record Replicated : IReplicated
 
     public virtual IEnumerable<Target> Referenced(IRecordReader R) => [];
 }
+
+/// <summary>
+/// Disables automatic saving in projects.
+/// This record will be used in runtime multiplayer only.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class NotSavedAttribute : Attribute;

@@ -59,7 +59,7 @@ public abstract partial class VisualComponentBase : Area3D
 
         // Normal nodes never change, since the Table replaces the node when they do.
         // Previews have no record and keep their own.
-        var record = ProjectService.Instance.GetIncludingDeleted<ComponentState>(Reference);
+        var record = RecordService.Instance.GetIncludingDeleted<ComponentState>(Reference);
         if (record != null)
         {
             PrototypeRef = record.PrototypeRef;
@@ -68,9 +68,9 @@ public abstract partial class VisualComponentBase : Area3D
         }
 
         // Builds first, so the first placement knows the component's height.
-        ProjectService.Instance.Watch(this, Sync);
-        ProjectService.Instance.Watch(this, SyncState);
-        ProjectService.Instance.Watch(this, SyncSelection);
+        RecordService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, SyncState);
+        RecordService.Instance.Watch(this, SyncSelection);
     }
 
     /// <summary>Shows which players have this component selected.</summary>
@@ -107,7 +107,7 @@ public abstract partial class VisualComponentBase : Area3D
         set
         {
             _draftPrototype = value;
-            ProjectService.Instance.QueueSync(this);
+            RecordService.Instance.QueueSync(this);
         }
     }
 
@@ -274,7 +274,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// The component's record, or null for a node without one, such as a spawn preview.
     /// </summary>
     public ComponentState State =>
-        ProjectService.Instance.GetIncludingDeleted<ComponentState>(Reference);
+        RecordService.Instance.GetIncludingDeleted<ComponentState>(Reference);
 
     /// <summary>
     /// Index for grid and quick deck cards.

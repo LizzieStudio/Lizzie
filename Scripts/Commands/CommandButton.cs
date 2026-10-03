@@ -88,7 +88,7 @@ public partial class CommandButton : Button
     public override void _EnterTree()
     {
         if (!Engine.IsEditorHint())
-            ProjectService.Instance.Watch(this, Sync);
+            RecordService.Instance.Watch(this, Sync);
     }
 
     public override void _Ready()
@@ -143,7 +143,7 @@ public partial class CommandButton : Button
 
     private void Run()
     {
-        IRecordReader R = ProjectService.Instance;
+        IRecordReader R = RecordService.Instance;
         var view = CommandViews.Of(this);
         var targets = GetTargets(view, R);
         if (Command != null && Command.Fits(targets.Count) && Command.IsAvailable(R))
@@ -183,7 +183,7 @@ public partial class CommandButton : Button
             return false;
         if (!Engine.IsEditorHint())
         {
-            ProjectService.Instance.QueueSync(this);
+            RecordService.Instance.QueueSync(this);
             return false;
         }
         Preview();

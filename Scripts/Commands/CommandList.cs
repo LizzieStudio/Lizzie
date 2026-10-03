@@ -205,13 +205,13 @@ public static class CommandList
                 continue;
             if (command is Submenu submenu)
             {
-                if (all || ForMenu(context, submenu.ItemsFor(ProjectService.Instance)).Count > 0)
+                if (all || ForMenu(context, submenu.ItemsFor(RecordService.Instance)).Count > 0)
                     items.Add((command, []));
                 continue;
             }
 
             // A global command applies to no target, so it fits with none and always shows.
-            var targets = TargetsFor(command, context, ProjectService.Instance, menu: true);
+            var targets = TargetsFor(command, context, RecordService.Instance, menu: true);
             if (all || command.Fits(targets.Count))
                 items.Add((command, targets));
         }
@@ -228,10 +228,10 @@ public static class CommandList
     /// </summary>
     public static bool RunShortcut(InputEvent e, ICommandView view)
     {
-        var context = CommandContext.Of(view, ProjectService.Instance, keys: true);
+        var context = CommandContext.Of(view, RecordService.Instance, keys: true);
         var bound = ForKeys(context).Where(k => k.Command.Matches(e, out _)).ToList();
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
-        if (ready.Count == 1 && ready[0].Command.IsAvailable(ProjectService.Instance))
+        if (ready.Count == 1 && ready[0].Command.IsAvailable(RecordService.Instance))
         {
             var (command, targets) = ready[0];
             command.Matches(e, out int number);
@@ -258,7 +258,7 @@ public static class CommandList
         CommandContext context
     ) =>
         All.Concat(context.Local)
-            .Select(c => (c, TargetsFor(c, context, ProjectService.Instance, menu: false)));
+            .Select(c => (c, TargetsFor(c, context, RecordService.Instance, menu: false)));
 
     /// <summary>
     /// Whether both commands share a keyboard shortcut.

@@ -8,7 +8,7 @@ public partial class TemplateSelector : OptionButton
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     public override void _Ready()
@@ -27,7 +27,7 @@ public partial class TemplateSelector : OptionButton
             if (_target != value)
             {
                 _target = value;
-                ProjectService.Instance.QueueSync(this);
+                RecordService.Instance.QueueSync(this);
             }
         }
     }

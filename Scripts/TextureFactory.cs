@@ -96,7 +96,7 @@ public partial class TextureFactory : SubViewport
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
-                    var asset = ProjectService
+                    var asset = RecordService
                         .Instance.Get<Asset>(a => a.Name == imageName)
                         .FirstOrDefault();
                     if (asset != null && !AssetImageCache.Instance.IsDownloaded(asset))
@@ -484,7 +484,7 @@ public partial class TextureFactory : SubViewport
     private bool IsIconUserDefined(string name)
     {
         if (
-            ProjectService
+            RecordService
                 .Instance.Get<Asset>(x =>
                     string.Equals(x.Name, name, StringComparison.CurrentCultureIgnoreCase)
                 )
@@ -503,7 +503,7 @@ public partial class TextureFactory : SubViewport
         {
             if (IsIconUserDefined(useName))
             {
-                var asset = ProjectService
+                var asset = RecordService
                     .Instance.Get<Asset>(a =>
                         string.Equals(a.Name, useName, StringComparison.CurrentCultureIgnoreCase)
                     )
@@ -980,7 +980,7 @@ public partial class TextureFactory : SubViewport
         if (obj.Text != null && obj.Text.StartsWith("u:"))
         {
             string imageName = obj.Text.Substring(2);
-            var asset = ProjectService
+            var asset = RecordService
                 .Instance.Get<Asset>(a => a.Name == imageName)
                 .FirstOrDefault();
             var assetImage = AssetImageCache.Instance.GetImage(asset);

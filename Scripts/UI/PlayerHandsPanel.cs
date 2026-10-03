@@ -32,7 +32,7 @@ public partial class PlayerHandsPanel : Panel
 
     public override void _EnterTree()
     {
-        ProjectService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, Sync);
     }
 
     public override void _ExitTree()
@@ -55,7 +55,7 @@ public partial class PlayerHandsPanel : Panel
         OnModelChanged();
     }
 
-    private void OnModelChanged() => ProjectService.Instance.QueueSync(this);
+    private void OnModelChanged() => RecordService.Instance.QueueSync(this);
 
     // -------------------------------------------------------------------------
     // Show/hide toggle

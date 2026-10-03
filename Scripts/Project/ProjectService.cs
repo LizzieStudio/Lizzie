@@ -38,8 +38,6 @@ public partial class ProjectService : Node
     {
         GD.Print("ProjectService initialized");
 
-        SubscribeWatchers();
-
         Callable.From(SubscribeToEventLog).CallDeferred();
     }
 
@@ -47,22 +45,21 @@ public partial class ProjectService : Node
     {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.Applied += OnEventApplied;
-        AttachReplicated();
         UpdateWindowTitle();
     }
 
     /// <summary>
-    /// Tracks unsaved changes, and passes the event to the listeners.
+    /// Tracks unsaved changes.
     /// </summary>
     private void OnEventApplied(TableEvent e)
     {
-        if (EventSynchronizer.Instance?.BulkLoading == true)
-            return;
-        ScheduleForListeners(e);
-        if (CurrentProject == null)
+        if (EventSynchronizer.Instance?.BulkLoading == true || CurrentProject == null)
             return;
         HasUnsavedChanges = true;
     }
+
+    // What the project's records are read through.
+    private static IRecordReader R => RecordService.Instance;
 
     private bool _hasUnsavedChanges;
 
@@ -78,73 +75,6 @@ public partial class ProjectService : Node
         }
     }
 
-    /// <summary>
-    /// The current project's templates.
-    /// </summary>
-    public ReplicatedDictionary<Template> Templates { get; } = new();
-
-    /// <summary>
-    /// The current project's prototypes.
-    /// </summary>
-    public ReplicatedDictionary<Prototype> Prototypes { get; } = new();
-
-    /// <summary>
-    /// The current project's datasets.
-    /// </summary>
-    public ReplicatedDictionary<DataSet> DataSets { get; } = new();
-
-    /// <summary>
-    /// The current project's dataset rows.
-    /// </summary>
-    public ReplicatedDictionary<DataRow> DataRows { get; } = new();
-
-    /// <summary>
-    /// The current project's images.
-    /// </summary>
-    public ReplicatedDictionary<Asset> Assets { get; } = new();
-
-    /// <summary>
-    /// The current project's saved snapshots.
-    /// </summary>
-    public ReplicatedDictionary<GameState> GameStates { get; } = new();
-
-    /// <summary>
-    /// The current game's components.
-    /// </summary>
-    public ReplicatedDictionary<ComponentState> Components { get; } = new();
-
-    /// <summary>
-    /// What each player has selected. Not saved.
-    /// </summary>
-    public ReplicatedDictionary<Selection> Selections { get; } = new();
-
-    /// <summary>
-    /// The current project's settings, edited via the Project Settings dialog.
-    /// </summary>
-    public ReplicatedValue<ProjectGameSettings> Settings { get; } = new(() => new());
-
-    /// <summary>
-    /// The snapshot currently loaded or <see cref="SnowTag.Empty"/>.
-    /// </summary>
-    public ReplicatedValue<ActiveGameStateRef> ActiveGameState { get; } =
-        new(() => new(), v => v.Id != SnowTag.Empty);
-
-    /// <summary>Every replicated container, in compacted-save order. The single registry that
-    /// drives attach, clear, bulk-load flush, and save.</summary>
-    private IReadOnlyList<IReplicatedContainer> Containers =>
-        [
-            Settings,
-            Templates,
-            DataSets,
-            DataRows,
-            Prototypes,
-            Assets,
-            GameStates,
-            ActiveGameState,
-            Components,
-            Selections,
-        ];
-
     private Project _currentProject;
 
     public Project CurrentProject
@@ -154,28 +84,15 @@ public partial class ProjectService : Node
         {
             var replaced = !ReferenceEquals(_currentProject, value);
             _currentProject = value;
-            AttachReplicated();
 
             if (replaced)
             {
                 TextureCache.Instance.Clear();
-                foreach (var c in Containers)
-                    c.Clear();
+                RecordService.Instance.Clear();
             }
 
             UpdateWindowTitle();
         }
-    }
-
-    /// <summary>
-    /// Starts merging events into the replicated stores. Safe to call repeatedly.
-    /// </summary>
-    private void AttachReplicated()
-    {
-        if (EventSynchronizer.Instance == null)
-            return;
-        foreach (var c in Containers)
-            c.Attach(EventSynchronizer.Instance);
     }
 
     /// <summary>
@@ -253,14 +170,13 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Stops bulk loading and sends each container's one notification for everything it merged.
+    /// Stops bulk loading and sends each store's one notification for everything it merged.
     /// </summary>
     public void EndBulkLoad()
     {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
-        foreach (var c in Containers)
-            c.FlushBulkLoad();
+        RecordService.Instance.FlushBulkLoad();
     }
 
     public bool SaveProject(Project project)
@@ -321,16 +237,8 @@ public partial class ProjectService : Node
     /// <summary>
     /// Rebuilds the event log as one event holding the current state.
     /// </summary>
-    private IEnumerable<TableEvent> BuildCompactedEvents()
-    {
-        var effects = new List<Effect>();
-
-        // A loaded project starts with nothing selected.
-        foreach (var c in Containers.Where(c => c != Selections))
-            effects.AddRange(c.EnumerateSaveEffects());
-
-        return [TableEvent.Now(effects.ToArray())];
-    }
+    private IEnumerable<TableEvent> BuildCompactedEvents() =>
+        [TableEvent.Now(RecordService.Instance.SaveEffects().ToArray())];
 
     /// <summary>
     /// Advances the tag counter past every SnowTag in the log.
@@ -346,7 +254,7 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Creates or updates any replicated definition.
+    /// Creates or updates any record, as an event of its own.
     /// </summary>
     public void Upsert<T>(T entity)
         where T : class, IReplicated
@@ -378,7 +286,7 @@ public partial class ProjectService : Node
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
 
-        var settings = Settings.Value;
+        var settings = R.Value<ProjectGameSettings>();
         var builder = settings.Players.ToBuilder();
         bool changed = false;
         for (int i = 0; i < builder.Count; i++)
@@ -404,7 +312,7 @@ public partial class ProjectService : Node
         if (CurrentProject == null)
             return;
 
-        var parent = link ? ActiveGameState.Value.Id : SnowTag.Empty;
+        var parent = link ? R.Value<ActiveGameStateRef>().Id : SnowTag.Empty;
         var state = new GameState
         {
             Id = Snowport.Clock.CreateTag(),
@@ -430,7 +338,7 @@ public partial class ProjectService : Node
     /// </summary>
     public IEnumerable<Effect> UpdateGameStateEffects(SnowTag stateRef)
     {
-        if (CurrentProject == null || Get<GameState>(stateRef) is not { } state)
+        if (CurrentProject == null || R.Get<GameState>(stateRef) is not { } state)
             return null;
         return [Effect.Upsert(state with { Upserts = BuildDelta(state.Parent) })];
     }
@@ -441,7 +349,7 @@ public partial class ProjectService : Node
     private ImmutableArray<ComponentState> BuildDelta(SnowTag parent)
     {
         var parentFold = FoldChain(parent);
-        var current = Get<ComponentState>().ToDictionary(s => s.Id, Snapshot);
+        var current = R.Get<ComponentState>().ToDictionary(s => s.Id, Snapshot);
 
         var delta = new List<ComponentState>();
 
@@ -471,11 +379,11 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null)
             return;
-        if (!GameStates.Records.TryGetValue(stateRef, out var state))
+        if (R.GetIncludingDeleted<GameState>(stateRef) is not { } state)
             return;
 
         // reject deleting a parent snapshot
-        if (Get<GameState>(g => g.Parent == stateRef).Count > 0)
+        if (R.Get<GameState>(g => g.Parent == stateRef).Count > 0)
         {
             GD.PrintErr($"Cannot delete GameState '{state.Name}': it has child snapshots.");
             return;
@@ -498,7 +406,7 @@ public partial class ProjectService : Node
     /// </summary>
     public IEnumerable<Effect> SwitchGameStateEffects(SnowTag stateRef)
     {
-        if (CurrentProject == null || Get<GameState>(stateRef) == null)
+        if (CurrentProject == null || R.Get<GameState>(stateRef) == null)
             return null;
 
         var effects = new List<Effect>
@@ -508,7 +416,7 @@ public partial class ProjectService : Node
         var fold = FoldChain(stateRef);
 
         // delete every component that isn't in the snapshot
-        foreach (var s in Get<ComponentState>())
+        foreach (var s in R.Get<ComponentState>())
             if (!fold.ContainsKey(s.Id))
                 effects.Add(Effect.Upsert(s with { Deleted = true }));
 
@@ -524,7 +432,7 @@ public partial class ProjectService : Node
     {
         var chain = new List<GameState>();
         var cursor = stateRef;
-        while (cursor != SnowTag.Empty && GameStates.Records.TryGetValue(cursor, out var gs))
+        while (cursor != SnowTag.Empty && R.GetIncludingDeleted<GameState>(cursor) is { } gs)
         {
             chain.Add(gs);
             cursor = gs.Parent;
@@ -548,7 +456,7 @@ public partial class ProjectService : Node
         if (CurrentProject == null)
             return;
 
-        if (!Prototypes.Records.ContainsKey(args.PrototypeRef))
+        if (!R.Is<Prototype>(args.PrototypeRef))
         {
             var name = !string.IsNullOrEmpty(args.Params?.ComponentName)
                 ? args.Params.ComponentName
