@@ -205,11 +205,14 @@ public abstract class Command
     /// </summary>
     public static readonly Command Divider = new DividerCommand();
 
-    public CommandName Name { get; init; }
+    /// <summary>
+    /// The commands unique name, with dot separation and snake case "some.command_name"
+    /// </summary>
+    public CommandName Name { get; set; }
 
     /// <summary>
     /// The menu label, e.g. "Edit Prototype".
-    /// "{0}" is the number of targets: "Delete {0}" shows "Delete 5".
+    /// For a command with targets, "{0}" is their number: "Delete {0}" shows "Delete 5".
     /// With a <see cref="Noun"/>, it's followed by what they are: "Delete 5 Components".
     /// </summary>
     public string Caption { get; init; }
@@ -218,11 +221,15 @@ public abstract class Command
     public (string One, string Many)? Noun { get; init; }
 
     /// <summary>The menu label for <paramref name="count"/> targets.</summary>
-    public string Label(int count) =>
-        string.Format(
-            Caption,
-            Noun is var (one, many) ? $"{count} {(count == 1 ? one : many)}" : count.ToString()
-        );
+    public string Label(int count)
+    {
+        return Fits(0)
+            ? Caption
+            : string.Format(
+                Caption,
+                Noun is var (one, many) ? $"{count} {(count == 1 ? one : many)}" : count.ToString()
+            );
+    }
 
     /// <summary>
     /// The keys that run it, made with <see cref="Shortcuts.Key"/> or <see cref="Shortcuts.Ctrl"/>.
@@ -514,8 +521,18 @@ public sealed class Submenu : Command
     /// <summary>
     /// The commands it offers, built each time a menu shows this submenu.
     /// They act like any other command in the menu.
+    /// Items without their own <see cref="Command.Name"/> inherit the submenu's.
     /// </summary>
     public Func<IRecordReader, IEnumerable<Command>> Items { get; init; }
+
+    public IEnumerable<Command> ItemsFor(IRecordReader R) =>
+        Items(R)
+            .Select(item =>
+            {
+                if (item.Name.Value == null && item != Divider)
+                    item.Name = Name;
+                return item;
+            });
 
     public override bool Applies(IRecordReader R, Target target) => false;
 

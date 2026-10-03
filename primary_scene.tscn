@@ -7,6 +7,10 @@
 [ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="4_n88ql"]
 [ext_resource type="PackedScene" uid="uid://s4e3sjhq6cm1" path="res://Scenes/Controls/player_hands_panel.tscn" id="8_sly7x"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
+[ext_resource type="Script" uid="uid://csl5hqjqm38wh" path="res://Scripts/Commands/CommandMenuBar.cs" id="cmd_bar"]
+[ext_resource type="Script" uid="uid://bux026a2v4f2b" path="res://Scripts/Commands/CommandDivider.cs" id="cmd_divider"]
+[ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandItem.cs" id="cmd_item"]
+[ext_resource type="Script" uid="uid://b5mdnpo6px318" path="res://Scripts/Commands/CommandMenuButton.cs" id="cmd_menu"]
 
 [node name="PrimaryScene" type="Node3D" unique_id=410470090 node_paths=PackedStringArray("_textureFactory")]
 script = ExtResource("1_hibmt")
@@ -32,6 +36,116 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 31.0
 grow_horizontal = 2
+
+[node name="MenuBar" type="HBoxContainer" parent="UI/MarginContainer/Panel/HBoxContainer" unique_id=1298217888]
+layout_mode = 2
+script = ExtResource("cmd_bar")
+
+[node name="File" type="Button" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=3573898]
+layout_mode = 2
+theme_type_variation = &"MenuBar"
+text = "File"
+script = ExtResource("cmd_menu")
+
+[node name="ProjectManager" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1650373246]
+script = ExtResource("cmd_item")
+CommandName = "project.manager"
+
+[node name="ProjectOpen" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=859406123]
+script = ExtResource("cmd_item")
+CommandName = "project.open"
+
+[node name="ProjectSave" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=68874116]
+script = ExtResource("cmd_item")
+CommandName = "project.save"
+
+[node name="Divider1" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1451458939]
+script = ExtResource("cmd_divider")
+
+[node name="SnapshotCreate" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=821654255]
+script = ExtResource("cmd_item")
+CommandName = "snapshot.create"
+
+[node name="SnapshotUpdate" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1017551211]
+script = ExtResource("cmd_item")
+CommandName = "snapshot.update"
+
+[node name="SnapshotRestore" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=2063996971]
+script = ExtResource("cmd_item")
+CommandName = "snapshot.restore"
+
+[node name="SnapshotManage" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1745440306]
+script = ExtResource("cmd_item")
+CommandName = "snapshot.manage"
+
+[node name="Divider2" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1351317784]
+script = ExtResource("cmd_divider")
+
+[node name="AppMultiplayer" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1537379602]
+script = ExtResource("cmd_item")
+CommandName = "app.multiplayer"
+
+[node name="Edit" type="Button" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=1362727651]
+layout_mode = 2
+theme_type_variation = &"MenuBar"
+text = "Edit"
+script = ExtResource("cmd_menu")
+
+[node name="AppUndo" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1262184813]
+script = ExtResource("cmd_item")
+CommandName = "app.undo"
+
+[node name="AppRedo" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1698072289]
+script = ExtResource("cmd_item")
+CommandName = "app.redo"
+
+[node name="AppUndoOthers" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1668310554]
+script = ExtResource("cmd_item")
+CommandName = "app.undo_others"
+
+[node name="AppRedoOthers" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1785570875]
+script = ExtResource("cmd_item")
+CommandName = "app.redo_others"
+
+[node name="Divider1" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1857930977]
+script = ExtResource("cmd_divider")
+
+[node name="EditorTemplates" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=2050032945]
+script = ExtResource("cmd_item")
+CommandName = "editor.templates"
+
+[node name="EditorDatasets" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=568658192]
+script = ExtResource("cmd_item")
+CommandName = "editor.datasets"
+
+[node name="EditorPrototypes" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=828649500]
+script = ExtResource("cmd_item")
+CommandName = "editor.prototypes"
+
+[node name="EditorImages" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=559821132]
+script = ExtResource("cmd_item")
+CommandName = "editor.images"
+
+[node name="Divider2" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1024246169]
+script = ExtResource("cmd_divider")
+
+[node name="EditorProjectSettings" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1107351943]
+script = ExtResource("cmd_item")
+CommandName = "editor.project_settings"
+
+[node name="Insert" type="Button" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=451952767]
+layout_mode = 2
+theme_type_variation = &"MenuBar"
+text = "Insert"
+script = ExtResource("cmd_menu")
+
+[node name="ComponentInsertExisting" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Insert" unique_id=267965828]
+script = ExtResource("cmd_item")
+CommandName = "component.insert_existing"
+
+[node name="ComponentInsertNew" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Insert" unique_id=2113522721]
+script = ExtResource("cmd_item")
+CommandName = "component.insert_new"
 
 [node name="Panel" type="Panel" parent="UI/MarginContainer/Panel/HBoxContainer" unique_id=1797442022]
 layout_mode = 2

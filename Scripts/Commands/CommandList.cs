@@ -44,61 +44,17 @@ public static class CommandList
     ];
 
     /// <summary>
-    /// The menus along the top of the main window, each a list of commands.
+    /// Every command.
     /// </summary>
     /// <remarks>
-    /// Add a <see cref="Command"/> here to see it in the top-left menus.
-    /// </remarks>
-    public static readonly IReadOnlyList<Submenu> MenuBar =
-    [
-        new()
-        {
-            Caption = "File",
-            Items = _ =>
-                [
-                    UI.OpenProjectManager,
-                    UI.OpenProject,
-                    UI.SaveProject,
-                    Command.Divider,
-                    UI.CreateSnapshot,
-                    UI.UpdateSnapshot,
-                    UI.RestoreSnapshot,
-                    UI.ManageSnapshots,
-                    Command.Divider,
-                    UI.OpenMultiplayer,
-                ],
-        },
-        new()
-        {
-            Caption = "Edit",
-            Items = _ =>
-                [
-                    UndoCommands.Undo,
-                    UndoCommands.Redo,
-                    UndoCommands.UndoOthers,
-                    UndoCommands.RedoOthers,
-                    Command.Divider,
-                    UI.EditTemplates,
-                    UI.EditDatasets,
-                    UI.EditPrototypes,
-                    UI.EditImages,
-                    Command.Divider,
-                    UI.EditProjectSettings,
-                ],
-        },
-        new()
-        {
-            Caption = "Insert",
-            Items = _ => [UI.InsertExistingComponent, UI.InsertNewComponent],
-        },
-    ];
-
-    /// <summary>
-    /// Every command that can be run by shortcut keys.
-    /// </summary>
-    /// <remarks>
-    /// Add a <see cref="Command"/> here (but not in <see cref="ContextMenu"/>)
-    /// if you want it to be accessible by keyboard shortcut but not the context menu.
+    /// Add a <see cref="Command"/> here (but not in <see cref="ContextMenu"/>) if you don't want it in context menus but do want it in:
+    /// <list type="bullet">
+    /// <item>keyboard shortcut</item>
+    /// <item>a CommandButton</item>
+    /// <item>the Menu Bar</item>
+    /// <item></item>
+    /// </list>
+    /// You still have to add it to those locations, but this makes it possible without it showing up in context menus.
     /// </remarks>
     public static readonly IReadOnlyList<Command> All = Checked([
         .. ContextMenu,
@@ -107,6 +63,7 @@ public static class CommandList
         UI.SaveProject,
         UI.CreateSnapshot,
         UI.UpdateSnapshot,
+        UI.RestoreSnapshot,
         UI.ManageSnapshots,
         UI.OpenMultiplayer,
         UI.EditTemplates,
@@ -136,7 +93,7 @@ public static class CommandList
             .Where(f => typeof(Command).IsAssignableFrom(f.FieldType));
         foreach (var field in fields)
             if (
-                field.GetValue(null) is Command command and not (DividerCommand or Submenu)
+                field.GetValue(null) is Command command and not DividerCommand
                 && !listed.Contains(command)
             )
                 GD.PushError(
@@ -148,6 +105,17 @@ public static class CommandList
 
         return all;
     }
+
+    /// <summary>The command in <see cref="All"/> named <paramref name="name"/>, or null.</summary>
+    public static Command Named(string name) => All.FirstOrDefault(c => c.Name.Value == name);
+
+    /// <summary>
+    /// The names of the commands in <see cref="All"/> that <paramref name="include"/> picks,
+    /// sorted, with an empty first choice, for a dropdown in the Inspector.
+    /// This is specifically for the Godot Editor.
+    /// </summary>
+    public static string NameHint(System.Func<Command, bool> include) =>
+        string.Join(",", All.Where(include).Select(c => c.Name.Value).Order().Prepend(""));
 
     // the actions this adds to the InputMap, and the commands they belong to
     private static readonly HashSet<StringName> OwnActions = [];
@@ -214,9 +182,14 @@ public static class CommandList
     /// Commands have properties which decide when they can act on a certain target.
     /// The commands inside of a Submenu are checked and that status is inherited by the submenu.
     /// </summary>
+    /// <param name="all">
+    /// Keeps all the commands, even when disabled.
+    /// This is specifically for the Menu Bar, which shouldn't change.
+    /// </param>
     public static List<(Command Command, IReadOnlyList<Target> Targets)> ForMenu(
         CommandContext context,
-        IEnumerable<Command> commands
+        IEnumerable<Command> commands,
+        bool all = false
     )
     {
         var items = new List<(Command Command, IReadOnlyList<Target> Targets)>();
@@ -232,14 +205,14 @@ public static class CommandList
                 continue;
             if (command is Submenu submenu)
             {
-                if (ForMenu(context, submenu.Items(ProjectService.Instance)).Count > 0)
+                if (all || ForMenu(context, submenu.ItemsFor(ProjectService.Instance)).Count > 0)
                     items.Add((command, []));
                 continue;
             }
 
             // A global command applies to no target, so it fits with none and always shows.
             var targets = TargetsFor(command, context, ProjectService.Instance, menu: true);
-            if (command.Fits(targets.Count))
+            if (all || command.Fits(targets.Count))
                 items.Add((command, targets));
         }
         if (items.Count > 0 && items[^1].Command == Command.Divider)

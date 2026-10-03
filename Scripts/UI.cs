@@ -77,11 +77,6 @@ public partial class UI : CanvasLayer
 
         SetSceneMode(Config.Registry.Get<SceneMode>("SceneMode"));
 
-        var bar = new CommandMenuBar { Name = "MenuBar" };
-        var top = GetNode("MarginContainer/Panel/HBoxContainer");
-        top.AddChild(bar);
-        top.MoveChild(bar, 0);
-
         _rotationStep = GetNode<OptionButton>("%RotationStep");
         _rotationStep.ItemSelected += RotationStepSelected;
 

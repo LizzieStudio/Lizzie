@@ -54,7 +54,15 @@ public static class CommandMenu
         ICommandView view,
         IEnumerable<Command> commands,
         Action closed = null
-    ) => Show(position, CommandContext.Of(view, ProjectService.Instance), commands, view, closed);
+    ) =>
+        Show(
+            position,
+            CommandContext.Of(view, ProjectService.Instance),
+            commands,
+            view,
+            closed,
+            true
+        );
 
     /// <summary>
     /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
@@ -66,12 +74,14 @@ public static class CommandMenu
     /// <param name="commands">Its potential contents.</param>
     /// <param name="view">Where the commands run.</param>
     /// <param name="closed">Called when this menu closes without a command running.</param>
+    /// <param name="all">Shows the commands with nothing to act on as disabled.</param>
     private static void Show(
         Vector2I position,
         CommandContext context,
         IEnumerable<Command> commands,
         ICommandView view,
-        Action closed
+        Action closed,
+        bool all = false
     )
     {
         var menu = Menu();
@@ -82,7 +92,7 @@ public static class CommandMenu
         Items.Clear();
         _view = view;
         _closed = closed;
-        Fill(menu, context, commands);
+        Fill(menu, context, commands, all);
 
         Callable.From(() => Open(menu, position)).CallDeferred();
     }
@@ -90,9 +100,15 @@ public static class CommandMenu
     /// <summary>Whether the menu is showing.</summary>
     public static bool IsOpen => GodotObject.IsInstanceValid(_menu) && _menu.Visible;
 
-    private static void Fill(PopupMenu menu, CommandContext context, IEnumerable<Command> commands)
+    private static void Fill(
+        PopupMenu menu,
+        CommandContext context,
+        IEnumerable<Command> commands,
+        bool all
+    )
     {
-        foreach (var (command, targets) in CommandList.ForMenu(context, commands))
+        IRecordReader R = ProjectService.Instance;
+        foreach (var (command, targets) in CommandList.ForMenu(context, commands, all))
         {
             if (command == Command.Divider)
             {
@@ -105,7 +121,12 @@ public static class CommandMenu
             Items.Add((command, targets));
             menu.AddItem(command.Label(targets.Count), id);
             int index = menu.GetItemIndex(id);
-            menu.SetItemDisabled(index, !command.IsAvailable(ProjectService.Instance));
+            var subItems = (command as Submenu)?.ItemsFor(R).ToList();
+            bool disabled =
+                subItems != null
+                    ? CommandList.ForMenu(context, subItems).Count == 0
+                    : !command.Fits(targets.Count) || !command.IsAvailable(R);
+            menu.SetItemDisabled(index, disabled);
 
             // A key shows only if pressing it here would run this command.
             bool keys = CommandList.RunsFromKeys(command, context);
@@ -118,10 +139,13 @@ public static class CommandMenu
                 menu.SetItemIconMaxWidth(index, IconSize);
             }
 
-            if (command is Submenu submenu)
+            if (disabled)
+                continue;
+
+            if (subItems != null)
             {
                 var sub = NewMenu($"Submenu_{id}");
-                Fill(sub, context, submenu.Items(ProjectService.Instance));
+                Fill(sub, context, subItems, all);
                 menu.AddChild(sub);
                 menu.SetItemSubmenuNode(index, sub);
             }

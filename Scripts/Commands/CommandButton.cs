@@ -15,6 +15,7 @@ using Godot;
 /// </remarks>
 [Tool]
 [GlobalClass]
+[Icon("res://Textures/Editor/CommandButton.svg")]
 public partial class CommandButton : Button
 {
     // Icons are drawn at text size, as in menus.
@@ -162,7 +163,7 @@ public partial class CommandButton : Button
     private Command Named(string name) =>
         name == ""
             ? null
-            : CommandList.All.FirstOrDefault(c => c.Name.Value == name)
+            : CommandList.Named(name)
                 ?? (
                     IsInsideTree() && !Engine.IsEditorHint()
                         ? CommandViews.Of(this)?.Commands?.FirstOrDefault(c => c.Name.Value == name)
@@ -210,10 +211,8 @@ public partial class CommandButton : Button
         if (name == PropertyName.CommandName)
         {
             property["hint"] = (int)PropertyHint.Enum;
-            property["hint_string"] = string.Join(
-                ",",
-                CommandList.All.Select(c => c.Name.Value).Order().Prepend("")
-            );
+            // A submenu has nothing to run.
+            property["hint_string"] = CommandList.NameHint(c => c is not Submenu);
         }
         else if (
             name == Button.PropertyName.TooltipText

@@ -2,7 +2,7 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// The commands of the menu bar, in <see cref="CommandList.MenuBar"/>. Most open one of the UI's dialogs.
+/// The commands of the menu bar, whose menus are in the main scene. Most open one of the UI's dialogs.
 /// </summary>
 public partial class UI
 {
@@ -58,14 +58,13 @@ public partial class UI
     /// <summary>Offers each snapshot to switch to.</summary>
     public static readonly Submenu RestoreSnapshot = new()
     {
+        Name = new("snapshot.restore"),
         Caption = "Restore Snapshot",
         Items = R =>
             OrderedGameStates(R)
                 .Select(s => new GlobalCommand
                 {
-                    Name = new("snapshot.restore"),
-                    // A caption is a format string, so braces in a name are escaped.
-                    Caption = GameStateLabel(R, s.State).Replace("{", "{{").Replace("}", "}}"),
+                    Caption = GameStateLabel(R, s.State),
                     Effects = _ => ProjectService.Instance.SwitchGameStateEffects(s.State.Id),
                 }),
     };
@@ -101,7 +100,7 @@ public partial class UI
     public static readonly GlobalCommand EditPrototypes = new()
     {
         Name = new("editor.prototypes"),
-        Caption = "Prototype Manifest",
+        Caption = "Prototypes",
         SideEffects = _ => _instance?.ShowPrototypeManifest(),
     };
 

@@ -24,9 +24,12 @@ public sealed class WatchableValue<T>
 
     public void Set(T value)
     {
-        _value = value;
-        _set = true;
-        Changed();
+        if (!_set || !EqualityComparer<T>.Default.Equals(_value, value))
+        {
+            _value = value;
+            _set = true;
+            Changed();
+        }
     }
 
     public void Unset()
