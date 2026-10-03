@@ -24,7 +24,6 @@ public partial class VcDie : VisualComponentBase
         base._Ready();
 
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         ComponentType = VisualComponentType.Die;
     }

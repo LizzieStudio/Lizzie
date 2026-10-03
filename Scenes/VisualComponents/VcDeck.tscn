@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://bsg4olcgf5pnu"]
 
 [ext_resource type="Script" uid="uid://g0wms1nl61i" path="res://Scripts/VisualComponents/VcDeck.cs" id="1_7r5pi"]
-[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="3_5wibl"]
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="5_lsa78"]
 [ext_resource type="Texture2D" uid="uid://b0udl2xpqnc7l" path="res://Scenes/VisualComponents/deck-dash-outline.png" id="6_3uk5r"]
 
@@ -9,7 +8,6 @@
 size = Vector3(0.25, 0.25, 0.25)
 
 [sub_resource type="BoxMesh" id="BoxMesh_ggpqp"]
-material = ExtResource("3_5wibl")
 
 [node name="Deck" type="Area3D" unique_id=449063618]
 script = ExtResource("1_7r5pi")
@@ -18,7 +16,7 @@ script = ExtResource("1_7r5pi")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6439891, 0.5023112, 0)
 shape = SubResource("BoxShape3D_bjoi2")
 
-[node name="HighlightMesh" type="MeshInstance3D" parent="." unique_id=1404325339]
+[node name="OutlineShape" type="MeshInstance3D" parent="." unique_id=1404325339]
 mesh = SubResource("BoxMesh_ggpqp")
 
 [node name="DragPatch" type="Sprite3D" parent="." unique_id=65843443]

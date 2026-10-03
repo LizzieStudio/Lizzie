@@ -1,8 +1,7 @@
-[gd_scene load_steps=10 format=3 uid="uid://bxgr0y3wqq7i4"]
+[gd_scene load_steps=8 format=3 uid="uid://bxgr0y3wqq7i4"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcDie.cs" id="1_4oqlh"]
 [ext_resource type="Texture2D" uid="uid://bqvur1tqhitam" path="res://Textures/die.png" id="2_kjoil"]
-[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="3_orxdt"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4hptw"]
 albedo_texture = ExtResource("2_kjoil")
@@ -12,9 +11,6 @@ material = SubResource("StandardMaterial3D_4hptw")
 size = Vector3(0.95, 0.95, 0.95)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0thvw"]
-
-[sub_resource type="BoxMesh" id="BoxMesh_loum1"]
-material = ExtResource("3_orxdt")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_a888s"]
 
@@ -30,9 +26,6 @@ _sideRotations = PackedVector3Array(-90, 0, 0, 0, -90, 90, 90, 180, 0, 0, 90, -9
 [node name="ObjectMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_1b8yb")
 surface_material_override/0 = SubResource("StandardMaterial3D_0thvw")
-
-[node name="HighlightMesh" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_loum1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_a888s")

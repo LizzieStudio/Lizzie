@@ -1,8 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://bjtyxixne5228"]
+[gd_scene load_steps=5 format=3 uid="uid://bjtyxixne5228"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcDie.cs" id="1_sn4gg"]
 [ext_resource type="ArrayMesh" uid="uid://c6h70rm2fhjqg" path="res://Scenes/VisualComponents/Dice/d20mesh.tres" id="2_pf0ul"]
-[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_md80e"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_5tq0o"]
 radius = 1.0
@@ -30,6 +29,3 @@ input_ray_pickable = false
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
 shape = SubResource("BoxShape3D_fu0h2")
 
-[node name="HighlightMesh" type="MeshInstance3D" parent="."]
-mesh = ExtResource("2_pf0ul")
-surface_material_override/0 = ExtResource("4_md80e")

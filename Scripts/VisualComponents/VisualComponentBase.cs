@@ -35,20 +35,7 @@ public abstract partial class VisualComponentBase : Area3D
         set => base.Rotation = value;
     }
 
-    private MeshInstance3D _highlightMesh;
-
     public virtual List<OffsetShape2D> ShapeProfiles { get; set; } = new();
-
-    protected MeshInstance3D HighlightMesh
-    {
-        get => _highlightMesh;
-        set
-        {
-            _highlightMesh = value;
-            if (_highlightMesh != null)
-                UpdateHighlight();
-        }
-    }
 
     public const int TooltipTime = 1000;
     private float _curScale = 1;
@@ -77,8 +64,10 @@ public abstract partial class VisualComponentBase : Area3D
     private void SyncSelection(IRecordReader R)
     {
         var target = new RecordTarget(Reference);
-        var colors = R.SelectionColors(s => s.Targets.Contains(target));
-        _selectionColor = colors.TryGetValue(target, out var color) ? color : null;
+        var local = Snowport.Clock.source;
+        _isMine = R.GetSelection()?.Targets.Contains(target) == true;
+        var others = R.SelectionColors(s => s.Player != local && s.Targets.Contains(target));
+        _othersColor = others.TryGetValue(target, out var color) ? color : null;
         UpdateHighlight();
     }
 
@@ -129,7 +118,7 @@ public abstract partial class VisualComponentBase : Area3D
         {
             if (shapeIdx == 0)
             {
-                HoverColor = Colors.White;
+                HoverColor = null;
                 CanDrag = true;
                 IsDrawSelected = false;
             }
@@ -179,6 +168,7 @@ public abstract partial class VisualComponentBase : Area3D
             return;
 
         Setup(proto.Parameters, R);
+        RebuildOutline();
         Built?.Invoke();
 
         // A rebuild can change the component's size, so the table restacks.
@@ -329,8 +319,11 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    // the color of whoever has this component selected, or null
-    private Color? _selectionColor;
+    // whether the local player has this component selected
+    private bool _isMine;
+
+    // the color of the other player who most recently selected this component, or null
+    private Color? _othersColor;
 
     private bool? _previewSelected;
 
@@ -352,10 +345,13 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    private Color _hoverColor = Colors.White;
+    private Color? _hoverColor;
 
-    /// <summary>The outline color while hovered, e.g. yellow over a drop target.</summary>
-    protected Color HoverColor
+    /// <summary>
+    /// The outline color while hovered, e.g. yellow over a drop target.
+    /// Null for <see cref="LocalSelection.LocalColor"/>.
+    /// </summary>
+    protected Color? HoverColor
     {
         get => _hoverColor;
         set
@@ -367,25 +363,123 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// Outlines the component when it's hovered or selected by anyone.
-    /// Hover shows its own color, and selection the color <see cref="LocalSelection.SelectionColors"/> gives it.
+    /// Hover shows <see cref="HoverColor"/>, and selection the color <see cref="LocalSelection.SelectionColors"/> gives it.
     /// </summary>
     protected virtual void UpdateHighlight()
     {
-        if (HighlightMesh == null)
+        var mine = PreviewSelected ?? _isMine;
+        SetOutline(
+            NeverHighlight ? null
+            : IsHovered ? HoverColor ?? LocalSelection.LocalColor
+            : mine ? LocalSelection.LocalColor
+            : _othersColor
+        );
+    }
+
+    // Flat copies of the component's meshes that draw it into the outline mask.
+    private readonly List<MeshInstance3D> _outlineCopies = new();
+    private Color? _outlineColor;
+
+    // The color reserved with SelectionOutline.
+    private Color? _reservedColor;
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete)
+            ReleaseOutlineColor();
+    }
+
+    private void ReleaseOutlineColor()
+    {
+        if (_reservedColor is Color held)
+            SelectionOutline.Release(held);
+        _reservedColor = null;
+    }
+
+    private void SetOutline(Color? color)
+    {
+        if (color == _outlineColor && (color == null || _outlineCopies.Count > 0))
             return;
 
-        var selection = PreviewSelected switch
+        _outlineColor = color;
+        if (color is not Color c)
         {
-            true => LocalSelection.LocalColor,
-            false => null,
-            null => _selectionColor,
-        };
-        HighlightMesh.Visible = (IsHovered || selection != null) && !NeverHighlight;
+            ClearOutlineCopies();
+            return;
+        }
 
-        if (IsHovered)
-            SetHighlightColor(HoverColor);
-        else if (selection is Color color)
-            SetHighlightColor(color);
+        if (_outlineCopies.Count == 0)
+            BuildOutlineCopies();
+
+        ReleaseOutlineColor();
+        var material = SelectionOutline.Reserve(c);
+        _reservedColor = c;
+        foreach (var copy in _outlineCopies)
+            copy.MaterialOverride = material;
+    }
+
+    /// <summary>
+    /// Remakes the outline copies after the component's meshes change.
+    /// </summary>
+    private void RebuildOutline()
+    {
+        ClearOutlineCopies();
+        var color = _outlineColor;
+        _outlineColor = null;
+        SetOutline(color);
+    }
+
+    private void ClearOutlineCopies()
+    {
+        ReleaseOutlineColor();
+        foreach (var copy in _outlineCopies)
+        {
+            if (!IsInstanceValid(copy))
+                continue;
+            copy.GetParent()?.RemoveChild(copy);
+            copy.QueueFree();
+        }
+        _outlineCopies.Clear();
+    }
+
+    /// <summary>
+    /// The meshes whose shape the selection outline traces.
+    /// </summary>
+    protected virtual IEnumerable<MeshInstance3D> OutlineMeshes()
+    {
+        var meshes = new List<MeshInstance3D>();
+        CollectMeshes(this, meshes);
+        return meshes;
+    }
+
+    private void BuildOutlineCopies()
+    {
+        // Each copy of a mesh is a child of that mesh.
+        // That way if we animate the mesh, the outline moves with it.
+        foreach (var mesh in OutlineMeshes())
+        {
+            var copy = new MeshInstance3D
+            {
+                Mesh = mesh.Mesh,
+                Layers = SelectionOutline.MaskLayer,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            mesh.AddChild(copy, false, InternalMode.Back);
+            _outlineCopies.Add(copy);
+        }
+    }
+
+    private void CollectMeshes(Node node, List<MeshInstance3D> meshes)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            if (
+                child is MeshInstance3D { Mesh: not null } mesh
+                && (mesh.Layers & SelectionOutline.MaskLayer) == 0
+            )
+                meshes.Add(mesh);
+            CollectMeshes(child, meshes);
+        }
     }
 
     public Aabb Aabb
@@ -416,7 +510,7 @@ public abstract partial class VisualComponentBase : Area3D
         }
 
         // reset in case we were a drag target
-        HoverColor = Colors.White;
+        HoverColor = null;
     }
 
     private bool _neverHighlight = false;
@@ -450,7 +544,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public void DragOverExit()
     {
-        HoverColor = Colors.White;
+        HoverColor = null;
     }
 
     public virtual bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
@@ -473,10 +567,6 @@ public abstract partial class VisualComponentBase : Area3D
         mat.AlbedoColor = color;
         objMesh.MaterialOverride = mat;
     }
-
-    // An instance uniform, so components share the highlight material but not its color.
-    private void SetHighlightColor(Color color) =>
-        _highlightMesh.SetInstanceShaderParameter("outline_color", color);
 
     protected ImageTexture LoadTexture(string filename)
     {

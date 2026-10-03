@@ -1,8 +1,7 @@
-[gd_scene load_steps=9 format=3 uid="uid://dqdrb4q3jmvp5"]
+[gd_scene load_steps=7 format=3 uid="uid://dqdrb4q3jmvp5"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcToken.cs" id="1_bofsg"]
 [ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="2_a606j"]
-[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_1unop"]
 [ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="4_qcn46"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
@@ -14,21 +13,14 @@ albedo_color = Color(0.505882, 0.505882, 0.505882, 1)
 material = SubResource("StandardMaterial3D_0sugy")
 size = Vector3(0.95, 0.9, 0.95)
 
-[sub_resource type="BoxMesh" id="BoxMesh_ggpqp"]
-material = ExtResource("4_1unop")
-
 [node name="Token" type="Area3D"]
 script = ExtResource("1_bofsg")
-
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_bjoi2")
 
 [node name="SideMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_dg08o")
-
-[node name="HighlightMesh" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_ggpqp")
 
 [node name="FrontViewport" parent="." instance=ExtResource("4_qcn46")]
 

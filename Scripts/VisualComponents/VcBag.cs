@@ -16,7 +16,6 @@ public partial class VcBag : VisualComponentGroup
         ComponentType = VisualComponentType.Bag;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
         DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
         UpdateComponentCount();
@@ -34,7 +33,6 @@ public partial class VcBag : VisualComponentGroup
         var p = (BagParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         if (p.Height <= 0)
             return;

@@ -63,7 +63,6 @@ public partial class VcToken : VisualComponentBase
     {
         base._Ready();
         ComponentType = VisualComponentType.Token;
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
     public override void _Process(double delta)
@@ -253,18 +252,6 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
-    // The outline material every component shares.
-    private static readonly Material HighlightMaterial = GD.Load<Material>(
-        "res://Materials/Highlight.material"
-    );
-
-    /// <summary>
-    /// How much larger the outline is than the token.
-    /// Tokens build their own mesh, so the outline is that mesh scaled up.
-    /// </summary>
-    [Export]
-    private float _highlightScale = 1.04f;
-
     private void BuildToken()
     {
         _mainMesh = GetNode<MeshInstance3D>("SideMesh");
@@ -297,10 +284,6 @@ public partial class VcToken : VisualComponentBase
         CommitFaceSurface(mesh, _backMaterial, ring, -FaceH, mirrorU: true);
         CommitSideSurface(mesh, sideMaterial, ring);
         _mainMesh.Mesh = mesh;
-
-        HighlightMesh.Mesh = mesh;
-        HighlightMesh.MaterialOverride = HighlightMaterial;
-        HighlightMesh.Scale = Vector3.One * _highlightScale;
 
         ShapeProfiles.Clear();
         ShapeProfiles.Add(ShapeProfile(shape, _width, _height));

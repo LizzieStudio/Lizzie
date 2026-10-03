@@ -7,6 +7,7 @@ using Godot;
 public partial class VcDeck : VisualComponentBase
 {
     private Sprite3D _outline;
+    private MeshInstance3D _outlineShape;
     private Label3D _componentCount;
     private Label3D _blankLabel;
 
@@ -15,13 +16,17 @@ public partial class VcDeck : VisualComponentBase
         base._Ready();
         ComponentType = VisualComponentType.Deck;
 
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
+        _outlineShape = GetNode<MeshInstance3D>("OutlineShape");
+        _outlineShape.Layers = 0;
         _outline = GetNode<Sprite3D>("Outline");
         _componentCount = GetNode<Label3D>("ComponentCount");
         _blankLabel = GetNode<Label3D>("%BlankLabel");
     }
 
     public override GeometryInstance3D DragMesh => _outline;
+
+    // The deck draws only a frame sprite, so the outline traces a box added specifically for it.
+    protected override IEnumerable<MeshInstance3D> OutlineMeshes() => [_outlineShape];
 
     public override float MaxAxisSize => Math.Max(_height, _width);
 

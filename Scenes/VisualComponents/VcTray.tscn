@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" uid="uid://c286bvou8j8yd" path="res://Scripts/VisualComponents/VcTray.cs" id="1_vtnvu"]
 [ext_resource type="ArrayMesh" uid="uid://bwswocbm2vgi3" path="res://tray_mesh.tres" id="2_vtnvu"]
-[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="3_fd6t4"]
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="4_o8ta0"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
@@ -10,9 +9,6 @@ resource_local_to_scene = true
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_o8ta0"]
 resource_local_to_scene = true
-
-[sub_resource type="BoxMesh" id="BoxMesh_jaa1f"]
-material = ExtResource("3_fd6t4")
 
 [node name="Tray" type="Area3D" unique_id=769039983]
 script = ExtResource("1_vtnvu")
@@ -27,10 +23,6 @@ shape = SubResource("BoxShape3D_mvaa4")
 
 [node name="DrawCollider" type="CollisionShape3D" parent="." unique_id=2080289539]
 shape = SubResource("BoxShape3D_o8ta0")
-
-[node name="HighlightMesh" type="MeshInstance3D" parent="." unique_id=1832133218]
-transform = Transform3D(2.1, 0, 0, 0, 2.1, 0, 0, 0, 2.1, 0, 0, 0)
-mesh = SubResource("BoxMesh_jaa1f")
 
 [node name="ProtoAnchor" type="Node3D" parent="." unique_id=1832270472]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.397, -0.303)

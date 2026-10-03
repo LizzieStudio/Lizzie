@@ -33,7 +33,7 @@ public record ProjectGameSettings
                     {
                         Name = $"Seat {n}",
                         // 13/34 is roughly the golden angle. It picks distinct colors on the color wheel.
-                        Color = Color.FromOkHsl(13f / 34f * n, 1.0f, 0.7f),
+                        Color = Color.FromOkHsl((1f / 12f) + (13f / 34f * n), 1.0f, 0.65f),
                     }
             )
             .ToImmutableArray();

@@ -16,7 +16,6 @@ public partial class VcTray : VisualComponentGroup
         ComponentType = VisualComponentType.Tray;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _prototypeSpawnPoint = GetNode<Node3D>("ProtoAnchor");
         DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
     }
@@ -44,7 +43,6 @@ public partial class VcTray : VisualComponentGroup
     private void Apply(TrayParameters p, IRecordReader R)
     {
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         if (p.Height <= 0)
             return;

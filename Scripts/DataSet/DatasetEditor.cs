@@ -61,7 +61,10 @@ public partial class DatasetEditor : Window, ICommandView
     // Where Shift+click selects from: the last row, column or cell selected without Shift.
     private Target _anchor;
 
-    // The theme's styles tinted for each highlight color, shared by every cell or header.
+    // The selection outline's width in pixels.
+    private const int SelectionOutlineWidth = 2;
+
+    // The theme's styles outlined in each selection color, shared by every cell or header.
     private readonly Dictionary<(string Style, Color Color), StyleBox> _highlightStyles = new();
 
     // The pointer during a row or column drag, for auto-scrolling at the edges, and the axis it drags along.
@@ -964,22 +967,26 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>
-    /// The selection color of the first of <paramref name="targets"/> anyone selected, like a cell before its row and column, or null.
+    /// The highlight color of all the targets given the colors dictionary.
     /// </summary>
     private static Color? HighlightOf(
         IReadOnlyDictionary<Target, Color> colors,
         params Target[] targets
     )
     {
+        Color? first = null;
         foreach (var target in targets)
             if (colors.TryGetValue(target, out var color))
-                return color;
-        return null;
+            {
+                if (color == LocalSelection.LocalColor)
+                    return color;
+                first ??= color;
+            }
+        return first;
     }
 
     /// <summary>
-    /// Tints a control's theme style toward <paramref name="color"/>, keeping its padding and borders,
-    /// or clears the tint with null.
+    /// Outlines a control in <paramref name="color"/>, or clears the outline with null.
     /// </summary>
     private void Highlight(Control control, string style, Color? color)
     {
@@ -987,19 +994,19 @@ public partial class DatasetEditor : Window, ICommandView
         if (color is not Color c)
             return;
 
-        // One tint per style and color: cells share "normal", and row and column headers share "panel".
-        if (!_highlightStyles.TryGetValue((style, c), out var tinted))
+        // A cache of styles.
+        if (!_highlightStyles.TryGetValue((style, c), out var outlined))
         {
-            if (control.GetThemeStylebox(style).Duplicate() is StyleBoxFlat flat)
-            {
-                flat.BgColor = flat.BgColor.Lerp(c, 0.35f);
-                tinted = flat;
-            }
-            else
-                tinted = new StyleBoxFlat { BgColor = c with { A = 0.35f } };
-            _highlightStyles[(style, c)] = tinted;
+            var theme = control.GetThemeStylebox(style);
+            var flat = theme.Duplicate() as StyleBoxFlat ?? new StyleBoxFlat { DrawCenter = false };
+            foreach (var side in new[] { Side.Left, Side.Top, Side.Right, Side.Bottom })
+                flat.SetContentMargin(side, theme.GetContentMargin(side));
+            flat.BorderColor = c;
+            flat.SetBorderWidthAll(SelectionOutlineWidth);
+            outlined = flat;
+            _highlightStyles[(style, c)] = outlined;
         }
-        control.AddThemeStyleboxOverride(style, tinted);
+        control.AddThemeStyleboxOverride(style, outlined);
     }
 
     /// <summary>Runs <paramref name="command"/> on what the local player has selected, as its shortcut would.</summary>

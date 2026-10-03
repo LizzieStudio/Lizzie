@@ -1,9 +1,7 @@
-[gd_scene load_steps=11 format=3 uid="uid://bhcq41f6f0bfc"]
+[gd_scene load_steps=9 format=3 uid="uid://bhcq41f6f0bfc"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcDie.cs" id="1_81mlg"]
 [ext_resource type="Texture2D" uid="uid://d3pur8xtrn8tw" path="res://Scenes/VisualComponents/Dice/d4numbers.png" id="2_gn6md"]
-[ext_resource type="ArrayMesh" uid="uid://c64ygocks2lyt" path="res://Scenes/VisualComponents/Dice/d4Mesh.tres" id="3_7fdgi"]
-[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_8fpi6"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inqi0"]
 
@@ -69,6 +67,3 @@ input_ray_pickable = false
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
 shape = SubResource("BoxShape3D_w35kv")
 
-[node name="HighlightMesh" type="MeshInstance3D" parent="."]
-mesh = ExtResource("3_7fdgi")
-surface_material_override/0 = ExtResource("4_8fpi6")

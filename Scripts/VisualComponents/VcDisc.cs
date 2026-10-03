@@ -11,7 +11,6 @@ public partial class VcDisc : VisualComponentBase
         ComponentType = VisualComponentType.Disc;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)
@@ -20,7 +19,6 @@ public partial class VcDisc : VisualComponentBase
         var p = (DiscParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         if (p.Height <= 0)
             return;

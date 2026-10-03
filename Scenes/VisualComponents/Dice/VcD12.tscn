@@ -1,9 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://bmanti5q0gk2i"]
+[gd_scene load_steps=4 format=3 uid="uid://bmanti5q0gk2i"]
 
-[ext_resource type="ArrayMesh" uid="uid://b7d6f35880p10" path="res://Scenes/VisualComponents/Dice/d12mesh.tres" id="2_4v3c2"]
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcDie.cs" id="2_vxow7"]
 [ext_resource type="ArrayMesh" uid="uid://dn2kconx3niu6" path="res://Scenes/VisualComponents/Dice/d12cmesh.tres" id="2_y56pc"]
-[ext_resource type="Material" uid="uid://bgmgc3682qest" path="res://Materials/Highlight.material" id="4_s3snl"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_la7hy"]
 radius = 0.95
@@ -22,6 +20,3 @@ skeleton = NodePath("")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("SphereShape3D_la7hy")
 
-[node name="HighlightMesh" type="MeshInstance3D" parent="."]
-mesh = ExtResource("2_4v3c2")
-surface_material_override/0 = ExtResource("4_s3snl")

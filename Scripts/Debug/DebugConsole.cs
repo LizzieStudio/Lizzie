@@ -134,8 +134,16 @@ public partial class DebugConsole : Node
                 _eventsOpen = true;
                 Log("Opened the event log inspector.");
                 break;
+            case "/outlines":
+                SelectionOutline.Enabled = !SelectionOutline.Enabled;
+                Log(
+                    SelectionOutline.Enabled
+                        ? "Outlines on."
+                        : "Outlines off: the mask render and the compute pass are stopped."
+                );
+                break;
             case "/help":
-                Log("Commands: /events, /spam [count], /help");
+                Log("Commands: /events, /outlines, /spam [count], /help");
                 break;
             default:
                 Log($"Unknown command: {cmd}");

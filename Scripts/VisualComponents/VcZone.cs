@@ -31,7 +31,6 @@ public partial class VcZone : VisualComponentBase
         ComponentType = VisualComponentType.Zone;
 
         MainMesh = GetNodeOrNull<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNodeOrNull<MeshInstance3D>("HighlightMesh");
         _handleMesh = GetNodeOrNull<Node3D>("HandleMesh");
         _handleCollision = GetNodeOrNull<Node3D>("CollisionShape3D");
 
@@ -57,7 +56,6 @@ public partial class VcZone : VisualComponentBase
         var p = (ZoneParameters)parameters;
 
         MainMesh = GetNodeOrNull<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNodeOrNull<MeshInstance3D>("HighlightMesh");
 
         _width = p.Width;
         _depth = p.Depth;

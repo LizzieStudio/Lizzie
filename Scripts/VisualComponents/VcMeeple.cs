@@ -12,7 +12,6 @@ public partial class VcMeeple : VisualComponentBase
         ComponentType = VisualComponentType.Meeple;
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)
@@ -26,8 +25,6 @@ public partial class VcMeeple : VisualComponentBase
         {
             child.QueueFree();
         }
-
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
         var h = p.Height / 10;
         var t = p.Thickness / 10;
@@ -77,8 +74,6 @@ public partial class VcMeeple : VisualComponentBase
                 }
             }
         }
-
-        HighlightMesh.Scale = new Vector3(h, t, h);
 
         YHeight = t;
 

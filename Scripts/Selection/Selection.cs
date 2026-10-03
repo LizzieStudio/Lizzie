@@ -31,7 +31,7 @@ public record Selection : Replicated
 public static class LocalSelection
 {
     /// <summary>The color the local player's own selection shows in, everywhere.</summary>
-    public static readonly Color LocalColor = Colors.Gray;
+    public static readonly Color LocalColor = Colors.White;
 
     /// <summary>
     /// <para>The color to show each selected target in, among the selections <paramref name="which"/> picks.</para>
