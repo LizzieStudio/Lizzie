@@ -8,7 +8,7 @@ public sealed class UpsertBatch
     private readonly SnowportId _eventId = Snowport.Clock.Create();
     private readonly List<Effect> _effects = new();
 
-    /// <summary>Adds an upsert of a replicated definition. Mints an id when the entity lacks one.</summary>
+    /// <summary>Adds an upsert of a record. Mints an id when the record lacks one.</summary>
     public UpsertBatch Add<T>(T entity)
         where T : class, IReplicated
     {

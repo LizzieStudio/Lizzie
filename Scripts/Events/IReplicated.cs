@@ -7,7 +7,7 @@ public interface IReplicated
 {
     SnowTag Id { get; }
 
-    /// <summary>The id of the event that last wrote this definition.</summary>
+    /// <summary>The id of the event that last wrote this record.</summary>
     SnowportId LastUpdateId { get; }
 
     /// <summary>Reversible soft-delete flag.</summary>
@@ -19,7 +19,7 @@ public interface IReplicated
     IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId);
 
     /// <summary>
-    /// A cache key that changes whenever the definition is updated.
+    /// A cache key that changes whenever the record is updated.
     /// </summary>
     public string SheetKey();
 
@@ -30,7 +30,7 @@ public interface IReplicated
     IEnumerable<Target> Contents(IRecordReader R);
 
     /// <summary>
-    /// What this record is directly inside, like a card's deck or a cells's <see cref="DataRow"/> and <see cref="ColumnTarget"/>.
+    /// What this record is directly inside, like a card's deck or a cell's <see cref="DataRow"/> and <see cref="ColumnTarget"/>.
     /// These are followed recursively, so only list direct containers.
     /// </summary>
     IEnumerable<Target> Containers(IRecordReader R);
@@ -45,7 +45,7 @@ public interface IReplicated
 public static class ReplicatedExtensions
 {
     /// <summary>
-    /// A cache key that changes whenever any definition is updated.
+    /// A cache key that changes whenever any of the records is updated.
     /// </summary>
     public static string SheetKey(this IEnumerable<IReplicated> items)
     {

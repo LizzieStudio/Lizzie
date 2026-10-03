@@ -52,7 +52,6 @@ public static class CommandList
     /// <item>keyboard shortcut</item>
     /// <item>a CommandButton</item>
     /// <item>the Menu Bar</item>
-    /// <item></item>
     /// </list>
     /// You still have to add it to those locations, but this makes it possible without it showing up in context menus.
     /// </remarks>

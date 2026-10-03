@@ -39,7 +39,7 @@ public partial class SceneController : Node3D, ICommandView
 
     public GameObjects GameObjects => _gameObjects;
 
-    #region ICommandViewport
+    #region ICommandView
 
     // The table's selection is always SnowTag.Empty.
     // We should maybe change this, but it works for now.

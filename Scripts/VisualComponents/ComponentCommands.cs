@@ -10,10 +10,6 @@ using static VisualComponentBase;
 /// </summary>
 public static class ComponentCommands
 {
-    // The component creation dialog's icon for printed components, like tokens and cards.
-    private const string TokenIcon =
-        "res://Textures/UI/crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-
     private const string FlipIcon = "res://Textures/UI/flip.svg";
     private const string RotateRightIcon = "res://Textures/UI/rotate_right.svg";
     private const string RotateLeftIcon = "res://Textures/UI/rotate_left.svg";

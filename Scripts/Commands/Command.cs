@@ -80,7 +80,7 @@ public sealed class CommandContext
     } = ImmutableHashSet<Target>.Empty;
 
     /// <summary>
-    /// Targets that contain the the selection, like a selected card's current deck.
+    /// Targets that contain the selection, like a selected card's current deck.
     /// </summary>
     public IEnumerable<Target> Containers
     {
@@ -107,7 +107,7 @@ public sealed class CommandContext
     } = ImmutableHashSet<Target>.Empty;
 
     /// <summary>
-    /// Custom commands for this viewport to add to the context menu, like the table's Zoom to Component.
+    /// Custom commands for this view to add to the context menu, like the table's Zoom to Component.
     /// </summary>
     public IReadOnlyList<Command> Local { get; init; } = [];
 
@@ -272,10 +272,13 @@ public abstract class Command
     /// <item><see cref="Context.Contents"/> acts on the records inside the selected records, like a selected bag's tokens</item>
     /// <item><see cref="Context.Containers"/> acts on the records containing the selected records, like a selected card's deck</item>
     /// <item><see cref="Context.Referenced"/> acts on the records referenced by the selected records, like a selected cube's prototype</item>
+    /// <item><see cref="Context.View"/> acts on the record the whole view shows, like the dataset editor's open dataset</item>
     /// </list>
     /// You can act on multiple Contexts simultaneously with
     /// <code>ActsOn = Context.Selected | Context.Contents | Context.Containers | Context.Referenced</code>
     /// So a Delete Command with <c>Context.Selected | Context.Contents</c> will delete the selected records and their contents.
+    /// Keyboard shortcuts skip <see cref="Context.Containers"/> and <see cref="Context.Referenced"/>,
+    /// so a key never reaches past what's selected. Menus and CommandButtons use all configured parts.
     /// </summary>
     public Context ActsOn { get; init; } = Context.Selected;
 
