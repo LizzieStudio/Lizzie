@@ -97,11 +97,13 @@ public sealed class NaiveUndo : IUndoApi
     ) => Members(log, unit).Any(m => m.Effects.Any(fx => scope(author, fx)));
 
     /// <summary>
-    /// Whether Undo or Redo may act on the event: the unit its entry comes down to is finished,
-    /// and in scope as done by the entry's author.
+    /// Whether Undo or Redo may act on the event: it isn't an admin event, the unit its entry
+    /// comes down to is finished, and in scope as done by the entry's author.
     /// </summary>
     private static bool IsCandidate(Log log, TableEvent e, byte me, Func<byte, Effect, bool> scope)
     {
+        if (e.IsAdmin)
+            return false;
         var unit = UnitOf(log, Entry(e));
         return IsClosed(log, unit) && InScope(log, unit, AuthorOf(log, Entry(e), me), scope);
     }

@@ -37,6 +37,12 @@ public class TableEvent
     [JsonIgnore]
     public SnowportId Unit => Group == SnowportId.Empty ? Id : Group;
 
+    /// <summary>
+    /// Whether this is an admin event, which belongs to the table rather than a player.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsAdmin => Id.source == Snowport.AdminSource;
+
     /// <summary>Creates an event with a new SnowportId.</summary>
     public static TableEvent Now(Effect[] effects, CommandName? command = null) =>
         new()
@@ -47,12 +53,23 @@ public class TableEvent
         };
 
     /// <summary>
-    /// Creates an undo or a redo, issued by <paramref name="command"/> if there was one.
+    /// Creates an admin event, which don't belong to any player.
     /// </summary>
-    public static TableEvent Undoing(UndoFlag flag, CommandName? command = null) =>
+    public static TableEvent Admin(Effect[] effects) =>
+        new() { Id = Snowport.Clock.CreateAdmin(), Effects = effects ?? Array.Empty<Effect>() };
+
+    /// <summary>
+    /// Creates an undo or a redo, issued by <paramref name="command"/> if there was one.
+    /// <paramref name="admin"/> makes it an admin event, which an undo command won't reverse.
+    /// </summary>
+    public static TableEvent Undoing(
+        UndoFlag flag,
+        CommandName? command = null,
+        bool admin = false
+    ) =>
         new()
         {
-            Id = Snowport.Clock.Create(),
+            Id = admin ? Snowport.Clock.CreateAdmin() : Snowport.Clock.Create(),
             Command = command,
             Undo = flag,
         };

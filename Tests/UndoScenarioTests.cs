@@ -8,7 +8,7 @@ using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>
 /// </summary>
 public class UndoScenarioTests
 {
-    private const byte Host = 0;
+    private const byte Admin = Snowport.AdminSource;
     private const byte Me = 1;
     private const byte Other = 2;
 
@@ -61,7 +61,7 @@ public class UndoScenarioTests
         );
     }
 
-    /// <summary>Records a reversal directly, as the host does for a player who left.</summary>
+    /// <summary>Records a reversal directly, as the host does, as an admin event, for a player who left.</summary>
     private TableEvent AddFlag(SnowportId reverses, byte source)
     {
         var id = NextId(source);
@@ -309,7 +309,7 @@ public class UndoScenarioTests
         // A gesture is flagged while it's still going.
         var g = StartGroup(Other, record: 1);
         var before = Act(Other, record: 2, group: g);
-        var flag = AddFlag(g, Host);
+        var flag = AddFlag(g, Admin);
         var after = Act(Other, record: 3, group: g);
 
         Assert.True(IsUndone(g));
@@ -393,15 +393,29 @@ public class UndoScenarioTests
         Assert.Null(UndoLog.Undo(_log, Me, Mine));
 
         // Closed by someone else, the gesture is still the player's own.
-        CloseGroup(g, Host);
+        CloseGroup(g, Other);
         Assert.Equal(g, Changed(Undo(Mine)));
+    }
+
+    /// <summary>
+    /// A gesture closed by someone else sits in history where it finished,
+    /// so Undo Others reaches it before anything older.
+    /// </summary>
+    [Fact]
+    public void GestureClosedByAnotherIsUndoneFromWhereItFinished()
+    {
+        var g = StartGroup(Other, record: 1);
+        Act(Other, record: 2);
+        CloseGroup(g, Me);
+
+        Assert.Equal(g, Changed(Undo(Others)));
     }
 
     [Fact]
     public void FlagOnAGestureInProgressIsPassedOver()
     {
         var g = StartGroup(Other);
-        AddFlag(g, Host);
+        AddFlag(g, Admin);
 
         Assert.Null(UndoLog.Undo(_log, Me, Others));
     }
@@ -427,9 +441,9 @@ public class UndoScenarioTests
 
         Assert.Equal([open], UndoLog.OpenGroups(_log, Other));
 
-        // What the host writes when the player leaves.
-        CloseGroup(open, Host);
-        AddFlag(open, Host);
+        // What the host, me here, writes when the player leaves: an ordinary close, and an admin undo.
+        CloseGroup(open, Me);
+        AddFlag(open, Admin);
 
         Assert.Empty(UndoLog.OpenGroups(_log, Other));
         Assert.True(IsUndone(open));
@@ -491,5 +505,46 @@ public class UndoScenarioTests
 
         Assert.Equal(first, Changed(Undo(Others)));
         Assert.True(IsUndone(first));
+    }
+
+    /// <summary>
+    /// A loaded save is one admin event holding the whole table, so no undo reaches it,
+    /// whoever presses and in whatever scope.
+    /// </summary>
+    [Fact]
+    public void LoadedSaveIsNeverUndone()
+    {
+        var save = Act(Admin, record: 1);
+
+        Assert.Null(Undo(Mine));
+        Assert.Null(Undo(Others));
+        Assert.Null(Undo((_, _) => true, source: Other));
+
+        // Walking back through my own history stops before it.
+        var mine = Act(Me, record: 2);
+        Assert.Equal(mine, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+        Assert.False(IsUndone(save));
+    }
+
+    /// <summary>Undo This on a record no one has changed since the save loaded has nothing to undo.</summary>
+    [Fact]
+    public void UntouchedRecordHasNothingToUndo()
+    {
+        Act(Admin, record: 1);
+
+        Assert.Null(Undo((_, fx) => fx.Id == 1));
+    }
+
+    /// <summary>The host's bookkeeping, like giving a seat its hand, doesn't take away a player's redo.</summary>
+    [Fact]
+    public void AdminEventDoesNotBlockRedo()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        Act(Admin, record: 2);
+
+        Assert.NotNull(Redo((_, _) => true));
+        Assert.False(IsUndone(a));
     }
 }

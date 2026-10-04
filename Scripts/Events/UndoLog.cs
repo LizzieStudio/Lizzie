@@ -39,6 +39,10 @@ using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>
 /// While groups are open, they're passed over by Undo actions.
 /// </para>
 /// <para>
+/// Admin events (<see cref="TableEvent.IsAdmin"/>), like a loaded save, are never undone or redone.
+/// They still count toward history, but they aren't owned by any player. They belong to the table.
+/// </para>
+/// <para>
 /// When searching for the target for an undo or redo action, you can do so with a scope.
 /// A scope is just a filter on the events, so that a valid target is selected from within the filter.
 /// This is used extensively for many purposes:
@@ -65,7 +69,7 @@ public static class UndoLog
         {
             var e = log.GetAt(i).Value;
             bool inEffect = InEffect(reversed, e);
-            if (e.Undo is { ByRedo: true } || !targets.Include(e, i))
+            if (e.Undo is { ByRedo: true } || !targets.Include(e, i) || e.IsAdmin)
                 continue;
             if (e.Undo != null && e.Id.source == me && !unfolding)
                 continue;
@@ -90,7 +94,7 @@ public static class UndoLog
         {
             var e = log.GetAt(i).Value;
             bool inEffect = InEffect(reversed, e);
-            if (!targets.Include(e, i))
+            if (!targets.Include(e, i) || e.IsAdmin)
                 continue;
 
             if (e.Undo is not { } f || e.Id.source != me)

@@ -7,9 +7,19 @@ using Godot;
 /// </summary>
 public class Snowport
 {
-    // Default to 0, the host.
+    /// <summary>
+    /// The source of admin events, which belong to the table rather than a player.
+    /// The host or a solo player writes them, and no one can undo them.
+    /// </summary>
+    public const byte AdminSource = 0;
+
+    /// <summary>
+    /// The host's source, which a solo player uses too. Joining players get the next ones.
+    /// </summary>
+    public const byte HostSource = 1;
+
     // Different source codes will be used when joining games.
-    public static Snowport Clock = new Snowport(0);
+    public static Snowport Clock = new Snowport(HostSource);
 
     // start at 1 since 0 is used to mean Empty
     private ulong _useLogicClock = 1;
@@ -58,11 +68,24 @@ public class Snowport
     /// Create a new SnowportId.
     /// </summary>
     /// <returns></returns>
-    public SnowportId Create()
+    public SnowportId Create() => Mint(source);
+
+    /// <summary>
+    /// Create a new SnowportId for an admin event.
+    /// Only the host or a solo player can make them.
+    /// </summary>
+    public SnowportId CreateAdmin()
+    {
+        if (source != HostSource)
+            throw new Exception("Only the host can make admin events");
+        return Mint(AdminSource);
+    }
+
+    private SnowportId Mint(byte from)
     {
         // If the game time has advanced, update the hybrid clock to match.
         _useLogicClock = Math.Max(GameTimeMsec << 8, _useLogicClock);
-        var id = (_useLogicClock << 6) | source;
+        var id = (_useLogicClock << 6) | from;
         _useLogicClock++;
         return new SnowportId(id);
     }
@@ -185,7 +208,9 @@ public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
         this.ID = ID;
     }
 
-    /// <summary>The source that minted this tag. The host is 0, the rest are 1-63.</summary>
+    /// <summary>
+    /// The source that minted this tag.
+    /// </summary>
     public byte source => (byte)((ID >> 26) & 0x3F);
 
     /// <summary>

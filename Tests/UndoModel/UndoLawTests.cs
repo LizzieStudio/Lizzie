@@ -23,7 +23,7 @@ public abstract class UndoLawTests : UndoTestBase
 
     /// <summary>A session, then who presses at the end, in what scope, and how many times.</summary>
     private static readonly Gen<(Op[] Ops, byte Me, TestScope Scope, int Reversals)> Endings =
-        Gen.Select(UndoSessions.All, Gen.Byte[0, 3], UndoSessions.Scope, Gen.Int[1, 5]);
+        Gen.Select(UndoSessions.All, Gen.Byte[1, 4], UndoSessions.Scope, Gen.Int[1, 5]);
 
     private static string Print((Op[] Ops, byte Me, TestScope Scope, int Reversals) ending) =>
         $"{UndoSessions.Print(ending.Ops)}\n  then s{ending.Me} in {ending.Scope}, "

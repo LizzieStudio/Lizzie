@@ -99,9 +99,9 @@ public abstract record Op
 /// </summary>
 public sealed class UndoSession
 {
-    public const byte Host = 0;
+    public const byte Host = Snowport.HostSource;
     public const int RecordCount = 4;
-    public static readonly byte[] Sources = [0, 1, 2, 3];
+    public static readonly byte[] Sources = [1, 2, 3, 4];
 
     public readonly Log Log = new();
 
@@ -233,7 +233,7 @@ public sealed class UndoSession
                     Record(
                         new TableEvent
                         {
-                            Id = NextId(Host),
+                            Id = NextId(Snowport.AdminSource),
                             Undo = new UndoFlag { Reverses = open },
                         }
                     );
@@ -246,7 +246,7 @@ public sealed class UndoSession
                 var reverses = (r.Pick % 4) switch
                 {
                     0 => picked.Id,
-                    1 => Id(_clock + 1, 7), // never used: sources are 0 to 3
+                    1 => Id(_clock + 1, 7), // never used: sources are 0 to 4
                     _ => picked.Unit,
                 };
                 Record(
@@ -379,7 +379,7 @@ public sealed class UndoSession
 /// <summary>Generators for random sessions.</summary>
 public static class UndoSessions
 {
-    private static readonly Gen<byte> Source = Gen.Byte[0, 3];
+    private static readonly Gen<byte> Source = Gen.Byte[1, 4];
     private static readonly Gen<int> Record = Gen.Int[1, UndoSession.RecordCount];
     private static readonly Gen<int> MaybeRecord = Gen.Int[0, UndoSession.RecordCount];
 
@@ -416,7 +416,7 @@ public static class UndoSessions
         (s, redo, scope) => (Op)new Op.Reversal(s, redo, scope)
     );
 
-    private static readonly Gen<Op> Leaves = Gen.Byte[1, 3].Select(s => (Op)new Op.Leave(s));
+    private static readonly Gen<Op> Leaves = Gen.Byte[2, 4].Select(s => (Op)new Op.Leave(s));
 
     private static readonly Gen<Op> RawFlags = Gen.Select(
         Source,

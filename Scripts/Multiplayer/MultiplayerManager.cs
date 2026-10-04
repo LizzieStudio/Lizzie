@@ -79,15 +79,14 @@ public partial class MultiplayerManager : Node
         _isNetworked = true;
         _localPlayerId = Multiplayer.GetUniqueId();
 
-        // Use source 0 by default.
-        Snowport.Clock = Snowport.Clock.WithSource(0);
+        Snowport.Clock = Snowport.Clock.WithSource(Snowport.HostSource);
 
         // Add server as first player
         _players[_localPlayerId] = new PlayerInfo
         {
             PlayerId = _localPlayerId,
             IsLocal = true,
-            Source = 0,
+            Source = Snowport.HostSource,
         };
 
         PresenceSynchronizer.Instance?.Clear();
@@ -154,8 +153,7 @@ public partial class MultiplayerManager : Node
         _players.Clear();
         _localPlayerId = 0;
 
-        // Start using the host source again.
-        Snowport.Clock = Snowport.Clock.WithSource(0);
+        Snowport.Clock = Snowport.Clock.WithSource(Snowport.HostSource);
 
         // Drop any event history accumulated during the session.
         EventSynchronizer.Instance?.Clear();
@@ -260,7 +258,7 @@ public partial class MultiplayerManager : Node
         foreach (var p in _players.Values)
             used.Add(p.Source);
 
-        for (int candidate = 1; candidate < Snowport.SourceCount; candidate++)
+        for (int candidate = Snowport.HostSource + 1; candidate < Snowport.SourceCount; candidate++)
         {
             if (!used.Contains((byte)candidate))
                 return (byte)candidate;

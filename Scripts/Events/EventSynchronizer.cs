@@ -66,7 +66,7 @@ public partial class EventSynchronizer : Node
         foreach (var group in UndoLog.OpenGroups(EventLog, source))
         {
             Submit(TableEvent.Closing(group));
-            Submit(TableEvent.Undoing(new UndoFlag { Reverses = group }));
+            Submit(TableEvent.Undoing(new UndoFlag { Reverses = group }, admin: true));
         }
     }
 
@@ -93,7 +93,7 @@ public partial class EventSynchronizer : Node
         }
 
         // Undos are never grouped, and an event that names its own group keeps it.
-        if (InGroup && e.Undo == null && e.Group == SnowportId.Empty)
+        if (InGroup && !e.IsAdmin && e.Undo == null && e.Group == SnowportId.Empty)
         {
             e.Group = _openGroup;
             if (endGroup)

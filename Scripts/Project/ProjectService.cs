@@ -238,7 +238,7 @@ public partial class ProjectService : Node
     /// Rebuilds the event log as one event holding the current state.
     /// </summary>
     private IEnumerable<TableEvent> BuildCompactedEvents() =>
-        [TableEvent.Now(RecordService.Instance.SaveEffects().ToArray())];
+        [TableEvent.Admin(RecordService.Instance.SaveEffects().ToArray())];
 
     /// <summary>
     /// Advances the tag counter past every SnowTag in the log.
@@ -301,7 +301,14 @@ public partial class ProjectService : Node
         if (!changed)
             return;
 
-        UpdateGameSettings(settings with { Players = builder.ToImmutable() });
+        EventSynchronizer.Instance?.Submit(
+            TableEvent.Admin([
+                new SetReplicatedValueEffect<ProjectGameSettings>
+                {
+                    Payload = settings with { Players = builder.ToImmutable() },
+                },
+            ])
+        );
     }
 
     /// <summary>

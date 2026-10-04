@@ -76,7 +76,7 @@ public abstract class UndoModelTests : UndoTestBase
     [Fact]
     public void EmptyLogHasNothingToUndo()
     {
-        Gen.Select(Gen.Byte[0, 3], UndoSessions.Scope)
+        Gen.Select(Gen.Byte[1, 4], UndoSessions.Scope)
             .Sample(query =>
             {
                 var (me, scope) = query;
