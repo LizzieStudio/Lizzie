@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using Godot;
-using TTSS.Scripts.Templating;
 using FileAccess = Godot.FileAccess;
 
 public partial class ProjectManager : Panel

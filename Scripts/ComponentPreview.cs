@@ -383,47 +383,10 @@ public partial class ComponentPreview : Panel
 
     private bool _isSpinning;
 
-    public void SpinStart()
-    {
-        _isSpinning = true;
-        _spinButton.ButtonPressed = true;
-    }
-
     public void SpinStop()
     {
         _isSpinning = false;
         _spinButton.ButtonPressed = false;
-    }
-
-    public void ShowFace()
-    {
-        _frontView.ButtonPressed = true;
-        ShowView(0);
-    }
-
-    private void ShowBack()
-    {
-        _backView.ButtonPressed = true;
-        ShowView(180);
-    }
-
-    private void DisableFrontViewInternal(bool disable)
-    {
-        _spinButton.ButtonPressed = !disable;
-        _spinButton.Disabled = disable;
-        _frontView.Disabled = disable;
-        _backView.ButtonPressed = disable;
-        ShowBack();
-    }
-
-    public void DisableFrontView()
-    {
-        DisableFrontViewInternal(true);
-    }
-
-    public void EnableFrontView()
-    {
-        DisableFrontViewInternal(false);
     }
 
     #endregion

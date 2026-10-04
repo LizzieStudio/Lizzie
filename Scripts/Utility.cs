@@ -13,11 +13,6 @@ public partial class Utility : Node
         Instance = this;
     }
 
-    public float GetAabbSize(Aabb aabb)
-    {
-        return aabb.GetLongestAxisSize();
-    }
-
     /// <summary>
     /// This function parses a string like "1-6, SKIP, +2" into a string array.
     /// (which in this case would be 1, 2, 3, 4, 5, 6, SKIP, +2)

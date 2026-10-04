@@ -191,38 +191,6 @@ public partial class EventBus : Node
     }
 
     #endregion
-
-    #region Utility
-
-    /// <summary>
-    /// Clear all subscriptions for a specific event type
-    /// </summary>
-    public void ClearSubscriptions<TEvent>()
-        where TEvent : IEvent
-    {
-        var eventType = typeof(TEvent);
-        _eventDelegates.Remove(eventType);
-    }
-
-    /// <summary>
-    /// Clear all event subscriptions
-    /// </summary>
-    public void ClearAllSubscriptions()
-    {
-        _eventDelegates.Clear();
-        GD.Print("All EventBus subscriptions cleared");
-    }
-
-    /// <summary>
-    /// Check if an event type has any subscribers
-    /// </summary>
-    public bool HasSubscribers<TEvent>()
-        where TEvent : IEvent
-    {
-        return _eventDelegates.ContainsKey(typeof(TEvent));
-    }
-
-    #endregion
 }
 
 /// <summary>

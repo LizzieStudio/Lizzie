@@ -1201,42 +1201,6 @@ public partial class TextureFactory : SubViewport
             }
         }
 
-        public static string AnchorEnumToString(AnchorPoint anchorEnum)
-        {
-            switch (anchorEnum)
-            {
-                case AnchorPoint.TopLeft:
-                    return "TL";
-
-                case AnchorPoint.TopCenter:
-                    return "TC";
-
-                case AnchorPoint.TopRight:
-                    return "TR";
-
-                case AnchorPoint.MiddleLeft:
-                    return "ML";
-
-                case AnchorPoint.MiddleCenter:
-                    return "MC";
-
-                case AnchorPoint.MiddleRight:
-                    return "MR";
-
-                case AnchorPoint.BottomLeft:
-                    return "BL";
-
-                case AnchorPoint.BottomCenter:
-                    return "BC";
-
-                case AnchorPoint.BottomRight:
-                    return "BR";
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(anchorEnum), anchorEnum, null);
-            }
-        }
-
         public static TrackElement.TrackTypeEnum TrackStringToEnum(string trackType)
         {
             //just look at the first letter of the keyword to give the user a break if they are using their
@@ -1255,7 +1219,6 @@ public partial class TextureFactory : SubViewport
     private class TextureQueueEntry
     {
         public TextureDefinition TextureDefinition { get; set; }
-        public bool InProcess { get; set; }
         public Action<ImageTexture> TextureReadyCallback { get; set; }
     }
 }

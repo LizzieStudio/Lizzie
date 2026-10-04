@@ -37,7 +37,6 @@ public partial class MultiplayerManager : Node
     /// </summary>
     public bool IsMultiplayerActive => _isNetworked;
     public bool IsServer => _isServer;
-    public int LocalPlayerId => _localPlayerId;
     public IReadOnlyDictionary<int, PlayerInfo> Players => _players;
 
     public override void _EnterTree()
@@ -320,14 +319,6 @@ public partial class MultiplayerManager : Node
     public bool HasAuthority()
     {
         return IsServer || !IsMultiplayerActive;
-    }
-
-    /// <summary>
-    /// Check if a specific peer has authority
-    /// </summary>
-    public bool PeerHasAuthority(int peerId)
-    {
-        return peerId == 1 || !IsMultiplayerActive; // Server (peer 1) always has authority
     }
 }
 

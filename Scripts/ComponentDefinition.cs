@@ -256,23 +256,11 @@ public partial class ComponentDefinition : Window
     public event EventHandler<EventArgs> CancelDialog;
     public event EventHandler<EventArgs> CloseDialog;
 
-    public VisualComponentBase.VisualComponentType NameToType(string name)
-    {
-        return Enum.Parse<VisualComponentBase.VisualComponentType>(
-            _components.First(x => x.ComponentName == name).ComponentType
-        );
-    }
-
     private string TypeToName(VisualComponentBase.VisualComponentType componentType)
     {
         if (componentType == VisualComponentBase.VisualComponentType.Deck)
             return "Printed";
         return _components.First(x => x.ComponentType == componentType.ToString()).ComponentName;
-    }
-
-    public void SetCurrentComponentType(VisualComponentBase.VisualComponentType type)
-    {
-        CurName = TypeToName(type);
     }
 
     private Prototype _mapPrototype;

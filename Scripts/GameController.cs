@@ -219,8 +219,6 @@ public partial class GameController : Node3D
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta) { }
 
-    public SceneController MainScene => _mainScene;
-
     public float HandY => _uiController.HandY;
 
     public HandManager HandManager => _uiController.HandManager;

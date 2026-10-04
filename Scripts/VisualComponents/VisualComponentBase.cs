@@ -37,7 +37,6 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual List<OffsetShape2D> ShapeProfiles { get; set; } = new();
 
-    public const int TooltipTime = 1000;
     private float _curScale = 1;
 
     public override void _EnterTree()
@@ -266,8 +265,6 @@ public abstract partial class VisualComponentBase : Area3D
     /// The dataset row that supplies this card's templating data. Defaults to <see cref="SnowTag.Empty"/>.
     /// </summary>
     public virtual SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
-
-    public virtual Polygon2D YProjection { get; private set; }
 
     protected float _yHeight;
 
@@ -556,8 +553,6 @@ public abstract partial class VisualComponentBase : Area3D
     public virtual IEnumerable<Replicated> DropObjects(
         IEnumerable<VisualComponentBase> dragObjects
     ) => [];
-
-    public virtual string GetPreviewComponentScene() => string.Empty;
 
     public virtual void SetColor(Color color)
     {

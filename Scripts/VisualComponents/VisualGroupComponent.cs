@@ -63,26 +63,6 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     protected abstract void OnChildrenChanged();
 
     /// <summary>
-    /// Returns the top <paramref name="quantity"/> child ids, but does not remove them.
-    /// </summary>
-    public virtual SnowTag[] DrawFromTop(int quantity)
-    {
-        quantity = Math.Min(quantity, Children.Count);
-        return quantity <= 0 ? Array.Empty<SnowTag>() : Children.Take(quantity).ToArray();
-    }
-
-    /// <summary>
-    /// Returns the bottom <paramref name="quantity"/> child ids, but does not remove them.
-    /// </summary>
-    public virtual SnowTag[] DrawFromBottom(int quantity)
-    {
-        quantity = Math.Min(quantity, Children.Count);
-        return quantity <= 0
-            ? Array.Empty<SnowTag>()
-            : Children.TakeLast(quantity).Reverse().ToArray();
-    }
-
-    /// <summary>
     /// Picks <paramref name="quantity"/> random child ids, but does not remove them.
     /// </summary>
     public virtual IEnumerable<SnowTag> DrawRandom(int quantity)

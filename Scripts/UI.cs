@@ -796,8 +796,6 @@ public partial class UI : CanvasLayer
         _componentName.Text = component.ComponentName;
     }
 
-    public const int LongClickTime = 1000;
-
     public float HandY => _handManager.HandY;
 
     public HandManager HandManager => _handManager;
