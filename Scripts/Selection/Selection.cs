@@ -82,15 +82,13 @@ public static class LocalSelection
     /// <summary>
     /// Replaces the local player's selected records of type <typeparamref name="T"/> on the table,
     /// keeping everything else they have selected there.
+    /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
     public static void SetSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
         where T : Replicated
     {
-        var old = R.GetSelection()?.Targets ?? ImmutableHashSet<Target>.Empty;
-        R.SetSelection(
-            old.Where(t => t is not RecordTarget r || !R.Is<T>(r.Id))
-                .Concat(ids.Select(id => new RecordTarget(id)))
-        );
+        if (R.NewSelection<T>(ids) is { } selection)
+            RecordService.Instance.Write(selection);
     }
 
     /// <summary>
@@ -103,10 +101,38 @@ public static class LocalSelection
         SnowTag within = default
     )
     {
+        if (R.NewSelection(targets, within) is { } selection)
+            RecordService.Instance.Write(selection);
+    }
+
+    /// <summary>
+    /// The record that will set the selection to <paramref name="ids"/>,
+    /// or null when the selection wouldn't change.
+    /// </summary>
+    public static Selection NewSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
+        where T : Replicated
+    {
+        var old = R.GetSelection()?.Targets ?? ImmutableHashSet<Target>.Empty;
+        return R.NewSelection(
+            old.Where(t => t is not RecordTarget r || !R.Is<T>(r.Id))
+                .Concat(ids.Select(id => new RecordTarget(id)))
+        );
+    }
+
+    /// <summary>
+    /// The record that will set the selection to <paramref name="targets"/>,
+    /// or null when the selection wouldn't change.
+    /// </summary>
+    public static Selection NewSelection(
+        this IRecordReader R,
+        IEnumerable<Target> targets,
+        SnowTag within = default
+    )
+    {
         var current = R.GetSelection(within);
         var next = targets.ToImmutableHashSet();
         if (next.SetEquals(current?.Targets ?? ImmutableHashSet<Target>.Empty))
-            return;
+            return null;
 
         var record =
             current
@@ -116,6 +142,6 @@ public static class LocalSelection
                 Player = Snowport.Clock.source,
                 Within = within,
             };
-        RecordService.Instance.Write(record with { Targets = next });
+        return record with { Targets = next };
     }
 }

@@ -58,6 +58,11 @@ public partial class SceneController : Node3D, ICommandView
 
     public IReadOnlyList<Command> Commands => TableCommands;
 
+    /// <summary>
+    /// The drag Id for attaching events to its undo group.
+    /// </summary>
+    public SnowportId Gesture => _gameObjects.DragGroup;
+
     #endregion
 
     /// <summary>

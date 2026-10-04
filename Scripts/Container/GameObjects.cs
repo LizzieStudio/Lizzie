@@ -53,9 +53,10 @@ public partial class GameObjects : Node
         }
     }
 
-    // The undo group of the local player's drag, or Empty when there's none.
-    // It bundles the drag's pickup, drop targets, and drop into one undo.
-    private SnowportId _dragGroup = SnowportId.Empty;
+    /// <summary>
+    /// The group Id for attaching to the player's drag, or <see cref="SnowTag.Empty"/>.
+    /// </summary>
+    public SnowportId DragGroup { get; private set; }
 
     /// <summary>
     /// Closes the drag's undo group, if it's still open, with an event that does nothing else.
@@ -63,19 +64,22 @@ public partial class GameObjects : Node
     /// </summary>
     private void CloseDragGroup()
     {
-        if (_dragGroup == SnowportId.Empty)
+        if (DragGroup == SnowportId.Empty)
             return;
-        RecordService.Instance.Close(_dragGroup);
-        _dragGroup = SnowportId.Empty;
+        RecordService.Instance.Close(DragGroup);
+        DragGroup = SnowportId.Empty;
     }
 
     /// <summary>
     /// Starts a drag with the records in <paramref name="pickup"/>.
     /// </summary>
-    private void StartDrag(IEnumerable<Replicated> pickup)
+    private void StartDrag(IEnumerable<Replicated> pickup, IEnumerable<SnowTag> selected)
     {
         CloseDragGroup();
-        _dragGroup = RecordService.Instance.Open(pickup);
+        var selection = RecordService.Instance.NewSelection<ComponentState>(selected);
+        DragGroup = RecordService.Instance.Open(
+            selection == null ? pickup : pickup.Append(selection)
+        );
     }
 
     /// <summary>
@@ -83,8 +87,8 @@ public partial class GameObjects : Node
     /// </summary>
     private void EndDrag(IEnumerable<Replicated> drop)
     {
-        RecordService.Instance.Close(_dragGroup, drop);
-        _dragGroup = SnowportId.Empty;
+        RecordService.Instance.Close(DragGroup, drop);
+        DragGroup = SnowportId.Empty;
     }
 
     public override void _Ready()
@@ -367,15 +371,6 @@ public partial class GameObjects : Node
     /// <summary>Replaces the local player's selected components.</summary>
     public void SetSelection(IEnumerable<SnowTag> components) =>
         RecordService.Instance.SetSelection<ComponentState>(components);
-
-    /// <summary>The selected components in table order.</summary>
-    private IEnumerable<VisualComponentBase> GetSelectedObjects()
-    {
-        var selection = Selection;
-        return ComponentNodes
-            .OfType<VisualComponentBase>()
-            .Where(c => selection.Contains(c.Reference));
-    }
 
     /// <summary>
     /// Previews a box selection on the nodes. Nothing is written until <see cref="EndDragSelection"/>.
@@ -674,12 +669,12 @@ public partial class GameObjects : Node
     private void EnterDragMode(VisualComponentBase go)
     {
         // Clicking outside the selection replaces it.
-        if (!Selection.Contains(go.Reference))
-            SetSelection([go.Reference]);
+        var selected = Selection.Contains(go.Reference) ? Selection : [go.Reference];
 
         // Zone control gate.
         if (!go.LocallyMovable)
         {
+            SetSelection(selected);
             GD.Print($"Object {go.ComponentName} is not movable by the local player (zone)");
             return;
         }
@@ -687,12 +682,13 @@ public partial class GameObjects : Node
         var startCursor = _dragPlane.GetCursorProjection();
 
         // A deck carries the cards stacked on it.
-        var dragged = GetSelectedObjects()
-            .Where(o => o.CanDrag)
+        var dragged = selected
+            .Select(GetComponent)
+            .Where(o => o is { CanDrag: true })
             .SelectMany(o => o is VcDeck deck ? GetStack(deck).Append(deck) : [o])
             .Distinct();
 
-        BeginDrag(dragged, startCursor);
+        BeginDrag(dragged, startCursor, selected);
     }
 
     /// <summary>
@@ -737,13 +733,17 @@ public partial class GameObjects : Node
         if (draw.Length == 0)
             return;
 
-        StartDrag(draw);
+        StartDrag(draw, draw.Select(r => r.Id));
 
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
     }
 
-    private void BeginDrag(IEnumerable<VisualComponentBase> components, Vector3 cursor)
+    private void BeginDrag(
+        IEnumerable<VisualComponentBase> components,
+        Vector3 cursor,
+        IEnumerable<SnowTag> selected
+    )
     {
         var dragged = components
             .Where(o => o != null)
@@ -759,12 +759,15 @@ public partial class GameObjects : Node
             )
             .ToArray();
         if (dragged.Length == 0)
+        {
+            SetSelection(selected);
             return;
+        }
 
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
 
-        StartDrag(dragged);
+        StartDrag(dragged, selected);
     }
 
     private VisualComponentGroup _currentDragDropTarget;
@@ -940,7 +943,7 @@ public partial class GameObjects : Node
             if (_currentDragDropTarget.CanObjectsBeDropped(GetLocalDraggingObjects()))
             {
                 RecordService.Instance.Append(
-                    _dragGroup,
+                    DragGroup,
                     _currentDragDropTarget.DropObjects(GetLocalDraggingObjects())
                 );
             }
@@ -959,7 +962,7 @@ public partial class GameObjects : Node
             )
             {
                 RecordService.Instance.Append(
-                    _dragGroup,
+                    DragGroup,
                     hover.DropObjects(GetLocalDraggingObjects())
                 );
             }
@@ -1168,7 +1171,7 @@ public partial class GameObjects : Node
         _tableChanged = false;
 
         _cursorMode = CursorMode.Normal;
-        _dragGroup = SnowportId.Empty;
+        DragGroup = SnowportId.Empty;
         _spawnComponents = null;
         _currentDragDropTarget = null;
         _hoveredComponent = null;

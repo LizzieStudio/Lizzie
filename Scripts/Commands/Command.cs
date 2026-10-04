@@ -82,6 +82,16 @@ public interface ICommandView
     IReadOnlyList<Command> Commands => [];
 
     /// <summary>
+    /// <para>The undo group of a gesture the local player has open in this view, or <see cref="SnowportId.Empty"/>.</para>
+    ///
+    /// <para>
+    /// Commands that run on targets join it, so the gesture undoes as one.
+    /// Commands without targets never join.
+    /// </para>
+    /// </summary>
+    SnowportId Gesture => SnowportId.Empty;
+
+    /// <summary>
     /// <para>Whether an undo or redo issued in this view should target an event that writes <paramref name="record"/>.</para>
     ///
     /// Returning true will make undo or redo in this view reverse or reapply the write.
@@ -248,13 +258,22 @@ public abstract class Command
         NumberKeys ? ShortcutActions.Label(ShortcutActions.Number(number)) : null;
 
     /// <summary>
-    /// Writes the records as one event made by this command.
+    /// <para>Writes the records as one event made by this command.</para>
+    ///
+    /// <para>
+    /// When <paramref name="view"/> has a <see cref="ICommandView.Gesture"/> open, the event joins it.
+    /// Pass a null view for a command without targets, which never joins one.
+    /// </para>
     /// </summary>
-    protected void Submit(IEnumerable<Replicated> records)
+    protected void Submit(IEnumerable<Replicated> records, ICommandView view)
     {
         if (records == null)
             return;
-        RecordService.Instance?.Write(Name, records);
+        var gesture = view?.Gesture ?? SnowportId.Empty;
+        if (gesture == SnowportId.Empty)
+            RecordService.Instance?.Write(Name, records);
+        else
+            RecordService.Instance?.Append(gesture, Name, records);
     }
 }
 
@@ -325,7 +344,7 @@ public sealed class RecordCommand<T> : Command
         var records = Records(Reader, targets);
         SideEffects?.Invoke(records, number);
         if (Effects != null && records.Count > 0)
-            Submit(Effects(Reader, records, number));
+            Submit(Effects(Reader, records, number), view);
     }
 
     private static IRecordReader Reader => RecordService.Instance;
@@ -378,7 +397,7 @@ public sealed class TargetCommand<T> : Command
         var typed = targets.OfType<T>().Where(t => AppliesTo(Reader, t)).ToList();
         SideEffects?.Invoke(typed, number);
         if (Effects != null && typed.Count > 0)
-            Submit(Effects(Reader, typed, number));
+            Submit(Effects(Reader, typed, number), view);
     }
 
     private static IRecordReader Reader => RecordService.Instance;
@@ -412,7 +431,7 @@ public sealed class GlobalCommand : Command
     {
         SideEffects?.Invoke(view);
         if (Effects != null)
-            Submit(Effects(RecordService.Instance));
+            Submit(Effects(RecordService.Instance), null);
     }
 }
 
