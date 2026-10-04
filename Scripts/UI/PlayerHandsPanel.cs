@@ -81,7 +81,7 @@ public partial class PlayerHandsPanel : Panel
             child.QueueFree();
         }
 
-        var settings = R.Value<ProjectGameSettings>();
+        var settings = R.Single<ProjectGameSettings>();
 
         int localSeat = PlayerHandService.LocalSeatIndex();
 

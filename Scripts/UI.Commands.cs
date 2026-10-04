@@ -55,9 +55,11 @@ public partial class UI
         Name = new("snapshot.update"),
         Icon = CommandIcons.UpdateSnapshot,
         Caption = "Update Snapshot",
-        Enabled = R => R.Get<GameState>(R.Value<ActiveGameStateRef>().Id) != null,
+        Enabled = R => R.Get<GameState>(R.Single<ActiveGameStateRef>().GameStateId) != null,
         Effects = R =>
-            ProjectService.Instance.UpdateGameStateEffects(R.Value<ActiveGameStateRef>().Id),
+            ProjectService.Instance.UpdateGameStateEffects(
+                R.Single<ActiveGameStateRef>().GameStateId
+            ),
     };
 
     /// <summary>Offers each snapshot to switch to.</summary>

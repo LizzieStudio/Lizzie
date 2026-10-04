@@ -71,7 +71,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         _seatList.Clear();
         _seatIndexMap.Clear();
 
-        var settings = R.Value<ProjectGameSettings>();
+        var settings = R.Single<ProjectGameSettings>();
 
         for (int i = 0; i < settings.Players.Length; i++)
         {

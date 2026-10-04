@@ -19,7 +19,7 @@ public partial class TableSurface : StaticBody3D
 
     private void Sync(IRecordReader R)
     {
-        var s = R.Value<ProjectGameSettings>();
+        var s = R.Single<ProjectGameSettings>();
 
         _mesh.Size =
             s.TableUnits == 0 // feet

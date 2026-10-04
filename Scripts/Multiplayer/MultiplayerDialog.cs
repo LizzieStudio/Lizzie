@@ -130,7 +130,7 @@ public partial class MultiplayerDialog : Window
         if (mm?.IsMultiplayerActive != true)
             return;
 
-        var settings = R.Value<ProjectGameSettings>();
+        var settings = R.Single<ProjectGameSettings>();
 
         foreach (var player in mm.Players.Values)
         {

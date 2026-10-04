@@ -142,11 +142,11 @@ public sealed class Watcher : IRecordReader
         return _source.Get<T>();
     }
 
-    public T Value<T>()
-        where T : class, new()
+    public T Single<T>()
+        where T : class, IReplicated, new()
     {
-        Depend(typeof(T), _ => true);
-        return _source.Value<T>();
+        Depend<T>(_ => true);
+        return _source.Single<T>();
     }
 
     public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)

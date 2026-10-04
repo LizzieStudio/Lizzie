@@ -33,3 +33,15 @@ public abstract record Replicated : IReplicated
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class NotSavedAttribute : Attribute;
+
+/// <summary>
+/// <para>Exactly one record of this type exists, accessed with <see cref="IRecordReader.Single{T}"/>.</para>
+/// <para>
+/// The method <see cref="ProjectService.EnsureSingletons"/> will create this record during table setup, so it always exists.
+/// </para>
+/// </summary>
+/// <remarks>
+/// Important: The type needs a default constructor without parameters
+/// </remarks>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class SingletonAttribute : Attribute;

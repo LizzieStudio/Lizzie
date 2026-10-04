@@ -4,11 +4,11 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// <para>The project's records and singleton values, worked out from the event log.</para>
+/// <para>The project's records, worked out from the event log.</para>
 ///
 /// <para>
 /// Read them through its <see cref="IRecordReader"/>, and <see cref="Watch"/> to rerun code when what it read changes.
-/// Each record type or value gets its store the first time it's read or written, whether the
+/// Each record type gets its store the first time it's read or written, whether the
 /// write comes from this player, another player, or a loaded save.
 /// </para>
 /// </summary>
@@ -16,7 +16,7 @@ public partial class RecordService : Node, IRecordReader
 {
     public static RecordService Instance { get; private set; }
 
-    // Each record type's or value's store, made on first use.
+    // Each record type's store, made on first use.
     private readonly Dictionary<Type, IReplicatedStore> _stores = new();
 
     private readonly HashSet<Watcher> _watchers = new();
@@ -89,7 +89,7 @@ public partial class RecordService : Node, IRecordReader
         };
 
     /// <summary>
-    /// Removes every record and resets every value, e.g. when the project is replaced.
+    /// Removes every record, e.g. when the project is replaced.
     /// </summary>
     public void Clear()
     {
@@ -291,8 +291,20 @@ public partial class RecordService : Node, IRecordReader
     public IReadOnlyList<T> Get<T>()
         where T : class, IReplicated => RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
 
-    public T Value<T>()
-        where T : class, new() => StoreOf<T, ReplicatedValue<T>>().Value;
+    public T Single<T>()
+        where T : class, IReplicated, new()
+    {
+        var records = Get<T>();
+        if (records.Count == 1)
+            return records[0];
+        if (records.Count == 0 && EventSynchronizer.Instance?.BulkLoading == true)
+            return new T();
+        throw new InvalidOperationException(
+            records.Count == 0
+                ? $"There's no {typeof(T).Name}. Table setup (ProjectService.EnsureSingletons) should have created it."
+                : $"There are {records.Count} {typeof(T).Name} records, but it's a singleton."
+        );
+    }
 
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
     public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)

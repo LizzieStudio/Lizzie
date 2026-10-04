@@ -29,6 +29,9 @@ public class Snowport
     // A counter for SnowTag identities.
     private int _tagCounter = 1;
 
+    // A counter for admin SnowTag identities, like the singletons table setup creates.
+    private int _adminTagCounter = 1;
+
     public readonly byte source;
 
     /// <summary>How many sources there are, 0 to 63, since ids give the source 6 bits.</summary>
@@ -53,6 +56,7 @@ public class Snowport
         {
             _useLogicClock = _useLogicClock,
             _tagCounter = _tagCounter,
+            _adminTagCounter = _adminTagCounter,
         };
     }
 
@@ -101,15 +105,29 @@ public class Snowport
     }
 
     /// <summary>
-    /// Advance the tag counter past <paramref name="tag"/> when it shares our source.
+    /// Create a new <see cref="SnowTag"/> for a record an admin event creates, like a singleton.
+    /// Only the host or a solo player can make them.
+    /// </summary>
+    public SnowTag CreateAdminTag()
+    {
+        if (source != HostSource)
+            throw new Exception("Only the host can make admin records");
+        var tag = (AdminSource << 26) | _adminTagCounter;
+        _adminTagCounter++;
+        return new SnowTag(tag);
+    }
+
+    /// <summary>
+    /// Advance the tag counter past <paramref name="tag"/> when it shares our source,
+    /// or the admin tag counter past an admin tag.
     /// </summary>
     public void ObserveTag(SnowTag tag)
     {
-        if (tag.source != source)
-            return;
         int counter = tag.Value & 0x3FFFFFF;
-        if (counter >= _tagCounter)
+        if (tag.source == source && counter >= _tagCounter)
             _tagCounter = counter + 1;
+        else if (tag.source == AdminSource && counter >= _adminTagCounter)
+            _adminTagCounter = counter + 1;
     }
 
     /// <summary>

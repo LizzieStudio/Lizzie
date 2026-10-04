@@ -310,13 +310,7 @@ public partial class DebugConsole : Node
         {
             UpdateReplicatedEffect<ComponentState> { Payload.Deleted: true } => "Delete",
             UpdateReplicatedEffect<ComponentState> => "Upsert",
-            SetReplicatedValueEffect<ProjectGameSettings> => "Settings",
-            SetReplicatedValueEffect<ActiveGameStateRef> => "ActiveGameState",
-            UpdateReplicatedEffect<Template> => "Template",
-            UpdateReplicatedEffect<DataSet> => "DataSet",
-            UpdateReplicatedEffect<DataRow> => "DataRow",
-            UpdateReplicatedEffect<Prototype> => "Prototype",
-            UpdateReplicatedEffect<GameState> => "GameState",
+            _ when fx.GetType() is { IsGenericType: true } t => t.GenericTypeArguments[0].Name,
             _ => Trim(fx.GetType().Name, "Effect"),
         };
 

@@ -59,7 +59,7 @@ public partial class UI : CanvasLayer
 
     private void Sync(IRecordReader R)
     {
-        var s = R.Value<ProjectGameSettings>();
+        var s = R.Single<ProjectGameSettings>();
         HandManager.Visible = s.EnablePlayerHands;
         _opponentHands.Visible = s.EnablePlayerHands;
         _rotationStep.Selected = s.RotationStepIndex;
@@ -150,7 +150,7 @@ public partial class UI : CanvasLayer
 
     private void ShowPlayerPositionDialog()
     {
-        var settings = RecordService.Instance.Value<ProjectGameSettings>();
+        var settings = RecordService.Instance.Single<ProjectGameSettings>();
         if (settings == null)
             return;
 
@@ -229,7 +229,7 @@ public partial class UI : CanvasLayer
 
     private static string GameStateLabel(IRecordReader R, GameState state)
     {
-        var marker = state.Id == R.Value<ActiveGameStateRef>().Id ? "● " : "";
+        var marker = state.Id == R.Single<ActiveGameStateRef>().GameStateId ? "● " : "";
         var parent = R.Get<GameState>(state.Parent);
         var parens = parent != null ? $" ({parent.Name})" : "";
         return marker + state.Name + parens;
@@ -506,7 +506,7 @@ public partial class UI : CanvasLayer
             dialog,
             R =>
             {
-                var parent = R.Get<GameState>(R.Value<ActiveGameStateRef>().Id);
+                var parent = R.Get<GameState>(R.Single<ActiveGameStateRef>().GameStateId);
                 linkCheck.Visible = parent != null;
                 if (parent == null)
                     return;
@@ -590,7 +590,7 @@ public partial class UI : CanvasLayer
             {
                 return fx
                     is UpdateReplicatedEffect<GameState>
-                        or SetReplicatedValueEffect<ActiveGameStateRef>;
+                        or UpdateReplicatedEffect<ActiveGameStateRef>;
             }
         );
 

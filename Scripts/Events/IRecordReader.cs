@@ -39,9 +39,13 @@ public interface IRecordReader
     IReadOnlyList<T> Get<T>()
         where T : class, IReplicated;
 
-    /// <summary>The current value of a <see cref="ReplicatedValue{T}"/>.</summary>
-    T Value<T>()
-        where T : class, new();
+    /// <summary>
+    /// The one record of a <see cref="SingletonAttribute"/> type, like the project settings.
+    /// While a load is in progress it may not have arrived yet, so this returns the type's defaults.
+    /// Otherwise, it throws if there's none or several.
+    /// </summary>
+    T Single<T>()
+        where T : class, IReplicated, new();
 
     /// <summary>
     /// <para>

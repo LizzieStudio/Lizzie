@@ -43,7 +43,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IRecordReader R)
     {
-        var players = R.Value<ProjectGameSettings>().Players;
+        var players = R.Single<ProjectGameSettings>().Players;
 
         while (_seatRows.Count > players.Length)
         {

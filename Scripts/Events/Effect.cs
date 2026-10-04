@@ -16,8 +16,8 @@ using Godot;
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Lizzie.AssetManagement.Asset>), "Asset")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<GameState>), "GameState")]
 [JsonDerivedType(typeof(UpdateReplicatedEffect<Selection>), "Selection")]
-[JsonDerivedType(typeof(SetReplicatedValueEffect<ProjectGameSettings>), "ProjectGameSettings")]
-[JsonDerivedType(typeof(SetReplicatedValueEffect<ActiveGameStateRef>), "ActiveGameStateRef")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<ProjectGameSettings>), "ProjectGameSettings")]
+[JsonDerivedType(typeof(UpdateReplicatedEffect<ActiveGameStateRef>), "ActiveGameStateRef")]
 public abstract class Effect
 {
     /// <summary>
@@ -26,7 +26,7 @@ public abstract class Effect
     public SnowTag Id { get; set; }
 
     /// <summary>
-    /// The type of record or value it writes, which names the store that holds it.
+    /// The type of record it writes, which names the store that holds it.
     /// </summary>
     internal abstract Type Writes { get; }
 
@@ -59,17 +59,4 @@ public class UpdateReplicatedEffect<T> : Effect
     internal override Type Writes => typeof(T);
 
     internal override IReplicatedStore NewStore() => new ReplicatedDictionary<T>();
-}
-
-/// <summary>
-/// Sets a project-wide singleton value.
-/// </summary>
-public class SetReplicatedValueEffect<T> : Effect
-    where T : class, new()
-{
-    public T Payload { get; set; }
-
-    internal override Type Writes => typeof(T);
-
-    internal override IReplicatedStore NewStore() => new ReplicatedValue<T>();
 }

@@ -5,7 +5,8 @@ using Godot;
 /// <summary>
 /// Persisted settings for a project, edited via the Project Settings dialog.
 /// </summary>
-public record ProjectGameSettings
+[Singleton]
+public sealed record ProjectGameSettings : Replicated
 {
     // Setup tab
     public bool StartIn2D { get; init; } = false;

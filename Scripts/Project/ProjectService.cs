@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
@@ -112,11 +113,54 @@ public partial class ProjectService : Node
     /// <summary>
     /// Starts a fresh, unnamed game.
     /// </summary>
-    public void NewGame()
+    public void NewGame(string filename = null)
     {
-        CurrentProject = new Project();
+        // A guest's table waits for the host's, so the load is in progress until it arrives.
+        if (
+            MultiplayerManager.Instance?.HasAuthority() == false
+            && EventSynchronizer.Instance != null
+        )
+            EventSynchronizer.Instance.BulkLoading = true;
+
+        CurrentProject = new Project { Filename = filename };
         HasUnsavedChanges = false;
+        EnsureSingletons();
     }
+
+    /// <summary>
+    /// Reflects to get every type marked <see cref="SingletonAttribute"/> which table setup needs to create.
+    /// </summary>
+    private static readonly Type[] SingletonTypes = typeof(ProjectService)
+        .Assembly.GetTypes()
+        .Where(t => t.IsDefined(typeof(SingletonAttribute), false))
+        .ToArray();
+
+    /// <summary>
+    /// Creates each <see cref="SingletonAttribute"/> record the table is missing in one admin event.
+    /// The host or a solo player runs it after a new game or a load.
+    /// </summary>
+    public void EnsureSingletons()
+    {
+        if (MultiplayerManager.Instance?.HasAuthority() == false)
+            return;
+
+        var create = typeof(ProjectService).GetMethod(
+            nameof(CreateIfMissing),
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
+        var effects = SingletonTypes
+            .Select(type => (Effect)create.MakeGenericMethod(type).Invoke(null, null))
+            .Where(effect => effect != null)
+            .ToArray();
+        if (effects.Length > 0)
+            EventSynchronizer.Instance?.Submit(TableEvent.Admin(effects));
+    }
+
+    private static Effect CreateIfMissing<T>()
+        where T : class, IReplicated, new() =>
+        R.Get<T>().Count > 0
+            ? null
+            : Effect.Upsert((T)new T().WithIdentity(Snowport.Clock.CreateAdminTag(), default));
 
     public Project LoadProject(string name)
     {
@@ -165,6 +209,7 @@ public partial class ProjectService : Node
     {
         SeedTagsFromLog();
         EndBulkLoad();
+        EnsureSingletons();
 
         HasUnsavedChanges = false;
     }
@@ -269,11 +314,7 @@ public partial class ProjectService : Node
     {
         if (CurrentProject == null || settings == null)
             return;
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now([
-                new SetReplicatedValueEffect<ProjectGameSettings> { Payload = settings },
-            ])
-        );
+        EventSynchronizer.Instance?.Submit(TableEvent.Now([Effect.Upsert(settings)]));
     }
 
     /// <summary>
@@ -286,7 +327,7 @@ public partial class ProjectService : Node
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
 
-        var settings = R.Value<ProjectGameSettings>();
+        var settings = R.Single<ProjectGameSettings>();
         var builder = settings.Players.ToBuilder();
         bool changed = false;
         for (int i = 0; i < builder.Count; i++)
@@ -302,12 +343,7 @@ public partial class ProjectService : Node
             return;
 
         EventSynchronizer.Instance?.Submit(
-            TableEvent.Admin([
-                new SetReplicatedValueEffect<ProjectGameSettings>
-                {
-                    Payload = settings with { Players = builder.ToImmutable() },
-                },
-            ])
+            TableEvent.Admin([Effect.Upsert(settings with { Players = builder.ToImmutable() })])
         );
     }
 
@@ -319,7 +355,7 @@ public partial class ProjectService : Node
         if (CurrentProject == null)
             return;
 
-        var parent = link ? R.Value<ActiveGameStateRef>().Id : SnowTag.Empty;
+        var parent = link ? R.Single<ActiveGameStateRef>().GameStateId : SnowTag.Empty;
         var state = new GameState
         {
             Id = Snowport.Clock.CreateTag(),
@@ -331,12 +367,7 @@ public partial class ProjectService : Node
 
         new UpsertBatch()
             .Add(state)
-            .With(
-                new SetReplicatedValueEffect<ActiveGameStateRef>
-                {
-                    Payload = new() { Id = state.Id },
-                }
-            )
+            .Add(R.Single<ActiveGameStateRef>() with { GameStateId = state.Id })
             .Submit();
     }
 
@@ -418,7 +449,7 @@ public partial class ProjectService : Node
 
         var effects = new List<Effect>
         {
-            new SetReplicatedValueEffect<ActiveGameStateRef> { Payload = new() { Id = stateRef } },
+            Effect.Upsert(R.Single<ActiveGameStateRef>() with { GameStateId = stateRef }),
         };
         var fold = FoldChain(stateRef);
 

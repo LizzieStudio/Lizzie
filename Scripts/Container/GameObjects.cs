@@ -627,7 +627,7 @@ public partial class GameObjects : Node
     #region Drag
 
     private static bool HandsEnabled() =>
-        RecordService.Instance.Value<ProjectGameSettings>().EnablePlayerHands;
+        RecordService.Instance.Single<ProjectGameSettings>().EnablePlayerHands;
 
     /// <summary>
     /// Recompute per-viewer zone visibility and control for all components each frame so the

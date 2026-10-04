@@ -1,12 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
 using System.Text.Json.Serialization;
 using Xunit;
 
@@ -28,7 +23,7 @@ public class JsonDerivedTypeTests
         baseType.GetCustomAttributes<JsonDerivedTypeAttribute>(false).ToArray();
 
     /// <summary>
-    /// Every type that must be in a base's list: the effect that carries each record and value,
+    /// Every type that must be in a base's list: the effect that carries each record,
     /// and each class under a polymorphic base.
     /// </summary>
     private static IEnumerable<(Type Base, Type Type, Type Derived)> Required()
@@ -40,40 +35,9 @@ public class JsonDerivedTypeTests
                 typeof(UpdateReplicatedEffect<>).MakeGenericType(record)
             );
 
-        // TODO: we should be getting rid of this, once values are records.
-        foreach (var effect in TypesNamedInCode().Where(IsValueEffect))
-            yield return (typeof(Effect), effect.GenericTypeArguments[0], effect);
-
         foreach (var baseType in PolymorphicBases)
         foreach (var type in Concrete.Where(t => t.IsSubclassOf(baseType) && !t.IsGenericType))
             yield return (baseType, type, type);
-    }
-
-    private static bool IsValueEffect(Type type) =>
-        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(SetReplicatedValueEffect<>);
-
-    /// <summary>
-    /// Every closed generic type the game's code names, like <c>SetReplicatedValueEffect&lt;ProjectGameSettings&gt;</c>.
-    /// Values have no common base, so this is how they're found.
-    /// </summary>
-    private static List<Type> TypesNamedInCode()
-    {
-        using var pe = new PEReader(File.OpenRead(Game.Location));
-        int rows = pe.GetMetadataReader().GetTableRowCount(TableIndex.TypeSpec);
-        var types = new List<Type>();
-        for (int row = 1; row <= rows; row++)
-        {
-            try
-            {
-                var token = MetadataTokens.GetToken(MetadataTokens.TypeSpecificationHandle(row));
-                types.Add(Game.ManifestModule.ResolveType(token));
-            }
-            catch (ArgumentException)
-            {
-                // named inside generic code, like UpdateReplicatedEffect<T>, so not closed
-            }
-        }
-        return types;
     }
 
     private static string CSharpName(Type type) =>

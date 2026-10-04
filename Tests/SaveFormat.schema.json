@@ -1080,6 +1080,10 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "id": true,
+                  "deleted": {
+                    "type": "boolean"
                   }
                 },
                 "additionalProperties": false
@@ -1099,7 +1103,11 @@
                   "null"
                 ],
                 "properties": {
-                  "id": true
+                  "gameStateId": true,
+                  "id": true,
+                  "deleted": {
+                    "type": "boolean"
+                  }
                 },
                 "additionalProperties": false
               },

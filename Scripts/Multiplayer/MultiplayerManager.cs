@@ -159,6 +159,10 @@ public partial class MultiplayerManager : Node
         EventSynchronizer.Instance?.Clear();
         PresenceSynchronizer.Instance?.Clear();
 
+        // A join that never caught up leaves its load in progress, and the table without its singletons.
+        ProjectService.Instance?.EndBulkLoad();
+        ProjectService.Instance?.EnsureSingletons();
+
         // Back to solo.
         PresenceSynchronizer.Instance?.EnsureLocalSeat();
 

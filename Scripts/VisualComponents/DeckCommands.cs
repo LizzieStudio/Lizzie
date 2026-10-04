@@ -77,7 +77,7 @@ public static class DeckCommands
         var cards = R.TokensOn(deck).Take(count).ToList();
         var stamp = Snowport.Clock.Create();
 
-        if (R.Value<ProjectGameSettings>().EnablePlayerHands)
+        if (R.Single<ProjectGameSettings>().EnablePlayerHands)
         {
             var hands = PlayerHandService.Instance;
             if (hands == null)
@@ -137,7 +137,7 @@ public static class DeckCommands
     /// </summary>
     private static List<int> DealSeats(IRecordReader R)
     {
-        var players = R.Value<ProjectGameSettings>().Players.Length;
+        var players = R.Single<ProjectGameSettings>().Players.Length;
         if (players == 0)
             return null;
 

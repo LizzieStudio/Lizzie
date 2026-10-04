@@ -30,9 +30,8 @@ public partial class GameController : Node3D
 
         ProjectService.Instance.GameObjects = _mainScene.GameObjects;
 
-        ProjectService.Instance.CurrentProject =
-            ProjectService.Instance.LoadProject(ProjectService.SampleProjectName)
-            ?? new Project { Filename = ProjectService.SampleProjectName };
+        if (ProjectService.Instance.LoadProject(ProjectService.SampleProjectName) == null)
+            ProjectService.Instance.NewGame(ProjectService.SampleProjectName);
 
         ProjectService.Instance.EnsureSeatContainers();
         PresenceSynchronizer.Instance?.EnsureLocalSeat();

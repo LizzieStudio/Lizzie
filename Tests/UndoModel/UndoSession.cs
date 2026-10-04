@@ -10,11 +10,13 @@ public sealed record TestRecord : Replicated
     public int Face { get; init; }
 }
 
-/// <summary>
-/// A singleton value for the debugger to write for testing.
-/// </summary>
-public sealed record TestValue
+/// <summary>A singleton record for sessions to write, like the project settings.</summary>
+[Singleton]
+public sealed record TestValue : Replicated
 {
+    /// <summary>Its id, apart from the <see cref="TestRecord"/>s'.</summary>
+    public const int SingletonId = 100;
+
     public string Text { get; init; }
 }
 
@@ -28,7 +30,7 @@ public enum ScopeKind
 
 /// <summary>
 /// An undo scope, as a view or command would give one: whose changes it takes, and which records,
-/// by the bits of <paramref name="Mask"/>. A mask of 0 takes every effect, values included.
+/// by the bits of <paramref name="Mask"/>. A mask of 0 takes every effect, the singleton included.
 /// </summary>
 public sealed record TestScope(ScopeKind Kind, int Mask)
 {
@@ -53,7 +55,7 @@ public abstract record Op
 {
     /// <summary>
     /// An action writing records <paramref name="First"/> and <paramref name="Second"/> (0 for none)
-    /// and <paramref name="Values"/> values. It joins the player's gesture, if one is going.
+    /// and <paramref name="Values"/> writes to the singleton. It joins the player's gesture, if one is going.
     /// </summary>
     public sealed record Act(byte Source, int First, int Second, int Values) : Op;
 
@@ -318,9 +320,14 @@ public sealed class UndoSession
             );
         for (int i = 0; i < values; i++)
             effects.Add(
-                new SetReplicatedValueEffect<TestValue>
+                new UpdateReplicatedEffect<TestValue>
                 {
-                    Payload = new() { Text = $"{e.Id.Value}.{effects.Count}" },
+                    Id = TestValue.SingletonId,
+                    Payload = new()
+                    {
+                        Id = TestValue.SingletonId,
+                        Text = $"{e.Id.Value}.{effects.Count}",
+                    },
                 }
             );
         if (effects.Count > 0)
@@ -364,7 +371,7 @@ public sealed class UndoSession
                             fx switch
                             {
                                 UpdateReplicatedEffect<TestRecord> r => $"r{r.Id}={r.Payload.Face}",
-                                SetReplicatedValueEffect<TestValue> v => $"v={v.Payload.Text}",
+                                UpdateReplicatedEffect<TestValue> v => $"v={v.Payload.Text}",
                                 _ => fx.GetType().Name,
                             }
                         )
