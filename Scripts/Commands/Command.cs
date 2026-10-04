@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// The stable name of a <see cref="Command"/>, like "component.flip".
@@ -223,9 +224,9 @@ public abstract class Command
             return true;
         if (!NumberKeys)
             return false;
-        for (int n = 1; n <= Shortcuts.NumberCount; n++)
+        for (int n = 1; n <= ShortcutActions.NumberCount; n++)
         {
-            if (Shortcuts.Pressed(e, Shortcuts.Number(n)))
+            if (Shortcuts.Pressed(e, ShortcutActions.Number(n)))
             {
                 number = n;
                 return true;
@@ -237,14 +238,14 @@ public abstract class Command
     /// <summary>
     /// The keyboard shortcut to show beside this command in a menu, or null.
     /// </summary>
-    public Shortcut ShortcutLabel() => Shortcuts.Label(Action);
+    public Shortcut ShortcutLabel() => ShortcutActions.Label(Action);
 
     /// <summary>
     /// The number key to show beside <paramref name="number"/> in the menu's number submenu,
     /// or null when the number keys don't run it.
     /// </summary>
     public Shortcut NumberLabel(int number) =>
-        NumberKeys ? Shortcuts.Label(Shortcuts.Number(number)) : null;
+        NumberKeys ? ShortcutActions.Label(ShortcutActions.Number(number)) : null;
 
     /// <summary>
     /// Writes the records as one event made by this command.

@@ -13,7 +13,7 @@ using Lizzie.Replication.Machinery;
 /// write comes from this player, another player, or a loaded save.
 /// </para>
 /// </summary>
-public partial class RecordService : Node, IRecordReader
+public partial class RecordService : Node, IRecordReader, IRecordServiceMachinery
 {
     public static RecordService Instance { get; private set; }
 
@@ -94,19 +94,15 @@ public partial class RecordService : Node, IRecordReader
             ),
         };
 
-    /// <summary>
-    /// Removes every record, e.g. when the project is replaced.
-    /// </summary>
-    public void Clear()
+    /// <inheritdoc/>
+    void IRecordServiceMachinery.Clear()
     {
         foreach (var store in _stores.Values)
             store.Clear();
     }
 
-    /// <summary>
-    /// Sends each store's one notification for everything it merged during a bulk load.
-    /// </summary>
-    public void FlushBulkLoad()
+    /// <inheritdoc/>
+    void IRecordServiceMachinery.FlushBulkLoad()
     {
         foreach (var store in _stores.Values)
             store.FlushBulkLoad();
@@ -232,10 +228,8 @@ public partial class RecordService : Node, IRecordReader
 
     private static void Submit(TableEvent e) => EventSynchronizer.Instance?.Submit(e);
 
-    /// <summary>
-    /// The current value of everything saved with the project.
-    /// </summary>
-    public IEnumerable<Replicated> SavedRecords() =>
+    /// <inheritdoc/>
+    IEnumerable<Replicated> IRecordServiceMachinery.SavedRecords() =>
         _stores.Values.SelectMany(s => s.SavedRecords());
 
     #endregion
@@ -325,7 +319,9 @@ public partial class RecordService : Node, IRecordReader
         }
     }
 
-    public void MarkDirty(Watcher watcher)
+    void IRecordServiceMachinery.MarkDirty(Watcher watcher) => MarkDirty(watcher);
+
+    private void MarkDirty(Watcher watcher)
     {
         if (_watchers.Contains(watcher))
         {

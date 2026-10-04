@@ -90,7 +90,7 @@ public partial class ProjectService : Node
             if (replaced)
             {
                 TextureCache.Instance.Clear();
-                RecordService.Instance.Clear();
+                RecordService.Instance.Machinery().Clear();
             }
 
             UpdateWindowTitle();
@@ -248,7 +248,7 @@ public partial class ProjectService : Node
     {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
-        RecordService.Instance.FlushBulkLoad();
+        RecordService.Instance.Machinery().FlushBulkLoad();
     }
 
     public bool SaveProject(Project project)
@@ -310,7 +310,7 @@ public partial class ProjectService : Node
     /// Rebuilds the event log as one event holding the current state.
     /// </summary>
     private IEnumerable<TableEvent> BuildCompactedEvents() =>
-        [TableEvent.Admin(RecordService.Instance.SavedRecords().ToArray())];
+        [TableEvent.Admin(RecordService.Instance.Machinery().SavedRecords().ToArray())];
 
     /// <summary>
     /// Advances the tag counter past every SnowTag in the log.

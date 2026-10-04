@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Every command, each defined once in a class for what it acts on, like <see cref="DeckCommands"/>.
@@ -129,16 +130,16 @@ public static class CommandList
     /// </summary>
     public static void Register(IEnumerable<Command> commands)
     {
-        for (int n = 1; n <= Shortcuts.NumberCount; n++)
+        for (int n = 1; n <= ShortcutActions.NumberCount; n++)
         {
-            if (OwnActions.Add(Shortcuts.Number(n)))
-                Shortcuts.AddAction(Shortcuts.Number(n), Shortcuts.NumberKeys(n));
+            if (OwnActions.Add(ShortcutActions.Number(n)))
+                ShortcutActions.AddAction(ShortcutActions.Number(n), ShortcutActions.NumberKeys(n));
         }
 
         foreach (var command in commands.Where(c => c.Keys.Count > 0 && !Registered.Contains(c)))
         {
             ReportClashes(command);
-            Shortcuts.AddAction(command.Action, command.Keys);
+            ShortcutActions.AddAction(command.Action, command.Keys);
             OwnActions.Add(command.Action);
             Registered.Add(command);
         }
