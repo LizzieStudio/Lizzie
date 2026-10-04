@@ -3,15 +3,6 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 
 [JsonPolymorphic]
-[JsonDerivedType(typeof(CubeParameters), "CubeParameters")]
-[JsonDerivedType(typeof(DiscParameters), "DiscParameters")]
-[JsonDerivedType(typeof(TokenParameters), "TokenParameters")]
-[JsonDerivedType(typeof(DeckParameters), "DeckParameters")]
-[JsonDerivedType(typeof(DieParameters), "DieParameters")]
-[JsonDerivedType(typeof(MeepleParameters), "MeepleParameters")]
-[JsonDerivedType(typeof(TrayParameters), "TrayParameters")]
-[JsonDerivedType(typeof(BagParameters), "BagParameters")]
-[JsonDerivedType(typeof(ZoneParameters), "ZoneParameters")]
 public abstract record ComponentParameters
 {
     public string ComponentName { get; init; } = "";

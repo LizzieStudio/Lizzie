@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
+[JsonName("DataSet")]
 public record DataSet : Replicated
 {
     public string Name { get; init; }
@@ -21,6 +22,7 @@ public record Column
 /// <summary>
 /// A dataset column.
 /// </summary>
+[JsonName("ColumnTarget")]
 public sealed record ColumnTarget(SnowTag DataSetId, SnowTag ColumnId) : Target
 {
     public override IEnumerable<Target> Contents(IRecordReader R) =>

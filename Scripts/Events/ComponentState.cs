@@ -7,6 +7,7 @@ using Godot;
 /// <summary>
 /// A component's full replicated state. Every component write carries all of it.
 /// </summary>
+[JsonName("ComponentState")]
 public record ComponentState : Replicated
 {
     /// <summary>

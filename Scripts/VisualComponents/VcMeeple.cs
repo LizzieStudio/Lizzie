@@ -180,6 +180,7 @@ public partial class VcMeeple : VisualComponentBase
     }
 }
 
+[JsonName("MeepleParameters")]
 public sealed record MeepleParameters : ComponentParameters
 {
     [JsonIgnore]

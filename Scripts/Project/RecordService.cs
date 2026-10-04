@@ -48,6 +48,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     public override void _Ready()
     {
         EventSynchronizer.Instance.Applied += OnEventApplied;
+        JsonNameAttribute.ThrowIfAnyUnnamed();
     }
 
     /// <summary>

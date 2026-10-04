@@ -47,6 +47,7 @@ public partial class VcDisc : VisualComponentBase
     private Color DiscColor;
 }
 
+[JsonName("DiscParameters")]
 public sealed record DiscParameters : ComponentParameters
 {
     [JsonIgnore]

@@ -5,9 +5,6 @@ using System.Text.Json.Serialization;
 /// Something a player can select and run commands on.
 /// </summary>
 [JsonPolymorphic]
-[JsonDerivedType(typeof(RecordTarget), "RecordTarget")]
-[JsonDerivedType(typeof(ColumnTarget), "ColumnTarget")]
-[JsonDerivedType(typeof(CellTarget), "CellTarget")]
 public abstract record Target
 {
     /// <inheritdoc cref="Replicated.Contents"/>
@@ -23,6 +20,7 @@ public abstract record Target
 /// <summary>
 /// Targets a record.
 /// </summary>
+[JsonName("RecordTarget")]
 public sealed record RecordTarget(SnowTag Id) : Target
 {
     public override IEnumerable<Target> Contents(IRecordReader R) => R.Get(Id)?.Contents(R) ?? [];

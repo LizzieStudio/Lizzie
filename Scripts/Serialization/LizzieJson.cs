@@ -8,7 +8,10 @@ public static class LizzieJson
     public static readonly JsonSerializerOptions EventOptions = new()
     {
         // set explicitly so GetTypeInfo works before the options are first used to serialize
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver
+        {
+            Modifiers = { JsonNameAttribute.AddDerivedTypes },
+        },
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,

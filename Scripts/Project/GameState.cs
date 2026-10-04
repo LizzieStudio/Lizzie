@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 
+[JsonName("GameState")]
 public record GameState : Replicated
 {
     /// <summary>The linked snapshot or <see cref="SnowTag.Empty"/>.</summary>

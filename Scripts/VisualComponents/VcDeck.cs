@@ -130,6 +130,7 @@ public partial class VcDeck : VisualComponentBase
     private const float Thickness = 0.15f;
 }
 
+[JsonName("DeckParameters")]
 public sealed record DeckParameters : PrintedParameters
 {
     [JsonIgnore]

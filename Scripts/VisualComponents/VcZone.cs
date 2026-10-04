@@ -102,6 +102,7 @@ public partial class VcZone : VisualComponentBase
     }
 }
 
+[JsonName("ZoneParameters")]
 public sealed record ZoneParameters : ComponentParameters
 {
     [JsonIgnore]

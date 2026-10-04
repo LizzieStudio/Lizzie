@@ -153,6 +153,7 @@ public partial class VcTray : VisualComponentGroup
     }
 }
 
+[JsonName("TrayParameters")]
 public sealed record TrayParameters : ComponentParameters
 {
     [JsonIgnore]

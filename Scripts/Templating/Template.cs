@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
+[JsonName("Template")]
 public record Template : Replicated
 {
     public enum TemplateTarget

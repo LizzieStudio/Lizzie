@@ -5,6 +5,7 @@ using System.Linq;
 /// <summary>
 /// A single dataset row.
 /// </summary>
+[JsonName("DataRow")]
 public record DataRow : Replicated
 {
     /// <summary>The dataset this row belongs to.</summary>
@@ -36,6 +37,7 @@ public record DataRow : Replicated
 /// <summary>
 /// One cell of a dataset.
 /// </summary>
+[JsonName("CellTarget")]
 public sealed record CellTarget(SnowTag RowId, SnowTag ColumnId) : Target
 {
     public override IEnumerable<Target> Containers(IRecordReader R) =>

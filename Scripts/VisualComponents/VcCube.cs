@@ -58,6 +58,7 @@ public partial class VcCube : VisualComponentBase
     private Color CubeColor;
 }
 
+[JsonName("CubeParameters")]
 public sealed record CubeParameters : ComponentParameters
 {
     [JsonIgnore]

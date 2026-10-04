@@ -3,6 +3,7 @@ namespace Lizzie.AssetManagement
     /// <summary>
     /// Represents a cloud-stored asset in the project
     /// </summary>
+    [JsonName("Asset")]
     public record Asset : Replicated
     {
         public enum AssetType

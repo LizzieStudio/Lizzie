@@ -10,19 +10,9 @@ using System.Text.Json.Serialization;
 /// </para>
 /// </summary>
 /// <remarks>
-/// Every record type must be listed here.
+/// Every record type needs a <see cref="JsonNameAttribute"/>, the name it's saved and sent under.
 /// </remarks>
 [JsonPolymorphic]
-[JsonDerivedType(typeof(ComponentState), "ComponentState")]
-[JsonDerivedType(typeof(Prototype), "Prototype")]
-[JsonDerivedType(typeof(Template), "Template")]
-[JsonDerivedType(typeof(DataSet), "DataSet")]
-[JsonDerivedType(typeof(DataRow), "DataRow")]
-[JsonDerivedType(typeof(Lizzie.AssetManagement.Asset), "Asset")]
-[JsonDerivedType(typeof(GameState), "GameState")]
-[JsonDerivedType(typeof(Selection), "Selection")]
-[JsonDerivedType(typeof(ProjectGameSettings), "ProjectGameSettings")]
-[JsonDerivedType(typeof(ActiveGameStateRef), "ActiveGameStateRef")]
 public abstract record Replicated
 {
     /// <summary>

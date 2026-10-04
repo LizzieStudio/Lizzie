@@ -94,6 +94,7 @@ public partial class VcBag : VisualComponentGroup
     }
 }
 
+[JsonName("BagParameters")]
 public sealed record BagParameters : ComponentParameters
 {
     [JsonIgnore]

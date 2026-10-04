@@ -1270,6 +1270,7 @@ public abstract record PrintedParameters : ComponentParameters
     public SnowTag Dataset { get; init; }
 }
 
+[JsonName("TokenParameters")]
 public sealed record TokenParameters : PrintedParameters
 {
     [JsonIgnore]

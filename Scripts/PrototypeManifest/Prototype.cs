@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 
+[JsonName("Prototype")]
 public record Prototype : Replicated
 {
     public string Name { get; init; }

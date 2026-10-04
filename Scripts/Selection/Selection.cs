@@ -10,6 +10,7 @@ using Godot;
 /// Selections are not saved with the project.
 /// </summary>
 [NotSaved]
+[JsonName("Selection")]
 public record Selection : Replicated
 {
     /// <summary>The source of the player who owns this selection.</summary>

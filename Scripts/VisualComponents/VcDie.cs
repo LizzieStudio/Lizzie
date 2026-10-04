@@ -510,6 +510,7 @@ public partial class VcDie : VisualComponentBase
     }
 }
 
+[JsonName("DieParameters")]
 public sealed record DieParameters : ComponentParameters
 {
     [JsonIgnore]
