@@ -33,7 +33,6 @@ public partial class GameController : Node3D
         if (ProjectService.Instance.LoadProject(ProjectService.SampleProjectName) == null)
             ProjectService.Instance.NewGame(ProjectService.SampleProjectName);
 
-        ProjectService.Instance.EnsureSeatContainers();
         PresenceSynchronizer.Instance?.EnsureLocalSeat();
     }
 

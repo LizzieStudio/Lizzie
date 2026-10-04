@@ -107,6 +107,29 @@ public partial class PresenceSynchronizer : Node
     }
 
     /// <summary>
+    /// The cursor container for <paramref name="seat"/>, read from the project settings.
+    /// </summary>
+    public SnowTag CursorRefForSeat(int seat)
+    {
+        var players = RecordService.Instance.Single<ProjectGameSettings>().Players;
+        if (seat < 0 || seat >= players.Length)
+            return SnowTag.Empty;
+        return players[seat].CursorRef;
+    }
+
+    /// <summary>
+    /// The cursor position of the player whose cursor container is <paramref name="cursorRef"/>.
+    /// </summary>
+    public bool TryGetCursor(SnowTag cursorRef, out Vector3 pos)
+    {
+        foreach (var (source, seat) in _seats)
+            if (seat >= 0 && CursorRefForSeat(seat) == cursorRef)
+                return TryGetCursor(source, out pos);
+        pos = default;
+        return false;
+    }
+
+    /// <summary>
     /// Requests a seat for the local player.
     /// In solo, the seat is taken immediately.
     /// In multiplayer, the server handles the result.

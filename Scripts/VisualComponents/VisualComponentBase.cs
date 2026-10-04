@@ -187,8 +187,8 @@ public abstract partial class VisualComponentBase : Area3D
         if (s == null)
             return;
 
-        var held = s.IsHeld;
-        LogicalVisible = s.Location is ComponentLocation.Table or ComponentLocation.Cursor;
+        var held = R.IsBeingDragged(s);
+        LogicalVisible = s.IsOnTable || held;
         // The cursor may have left it while it was held, which doesn't unhover it.
         if (_held && !held)
         {
@@ -597,24 +597,17 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    public enum ComponentLocation
-    {
-        Table,
-        Container,
-        Hand,
-        Cursor,
-    }
-
     /// <summary>
     /// Local-only. While dragged, the height this component rests at within its dragged group.
     /// </summary>
     public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
-    public bool IsDragging => State?.IsHeld == true;
+    public bool IsDragging => State is { } s && RecordService.Instance.IsBeingDragged(s);
 
     /// <summary>True while this component is being held by the local player's cursor.</summary>
-    private bool IsHeldByLocal => State is { IsHeld: true } s && s.Holder == Snowport.Clock.source;
+    private bool IsHeldByLocal =>
+        State is { IsOnTable: false } s && s.ContainerRef == PlayerHandService.LocalCursor();
 
     private bool _logicalVisible = true;
 

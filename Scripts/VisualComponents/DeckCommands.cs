@@ -82,7 +82,10 @@ public static class DeckCommands
             var hands = PlayerHandService.Instance;
             if (hands == null)
                 return [];
+            // Observers and unseated players have no hand to draw into.
             int seat = PlayerHandService.LocalSeatIndex();
+            if (seat < 0)
+                return [];
             return cards.Select((c, i) => hands.MovedToHand(c, seat, i, stamp));
         }
 

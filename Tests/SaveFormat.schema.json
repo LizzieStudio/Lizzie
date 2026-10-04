@@ -101,13 +101,7 @@
                 "type": "integer"
               },
               "dataSetRowId": true,
-              "location": {
-                "type": "integer"
-              },
               "containerRef": true,
-              "holder": {
-                "type": "integer"
-              },
               "id": true,
               "deleted": {
                 "type": "boolean"
@@ -233,13 +227,7 @@
                       "type": "integer"
                     },
                     "dataSetRowId": true,
-                    "location": {
-                      "type": "integer"
-                    },
                     "containerRef": true,
-                    "holder": {
-                      "type": "integer"
-                    },
                     "id": true,
                     "deleted": {
                       "type": "boolean"
@@ -309,7 +297,8 @@
                     "isAdmin": {
                       "type": "boolean"
                     },
-                    "handRef": true
+                    "handRef": true,
+                    "cursorRef": true
                   },
                   "additionalProperties": false
                 }

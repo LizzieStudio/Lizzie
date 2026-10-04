@@ -84,26 +84,22 @@ public record ComponentState : Replicated
 
     public SnowTag DataSetRowId { get; init; } = SnowTag.Empty;
 
-    public VisualComponentBase.ComponentLocation Location { get; init; }
-
     /// <summary>
-    /// The container that holds this component or <see cref="SnowTag.Empty"/>.
+    /// What holds this component:
+    /// <list type="bullet">
+    /// <item><see cref="SnowTag.Empty"/> when it's on the table</item>
+    /// <item>a component Id, for bags</item>
+    /// <item>a seat's hand Id, for a player hand</item>
+    /// <item>a seat's cursor Id, when being dragged by a player</item>
+    /// </list>
     /// </summary>
     public SnowTag ContainerRef { get; init; } = SnowTag.Empty;
 
     /// <summary>
-    /// While <see cref="VisualComponentBase.ComponentLocation.Cursor"/>, the Snowport source of the
-    /// player holding it.
+    /// True if it's sitting on the table, outside a component, and not being dragged.
     /// </summary>
-    public byte Holder { get; init; }
-
-    /// <summary>Whether a player's cursor is holding it.</summary>
     [JsonIgnore]
-    public bool IsHeld => Location == VisualComponentBase.ComponentLocation.Cursor;
-
-    /// <summary>Whether it's inside a container, such as a bag or a player's hand.</summary>
-    [JsonIgnore]
-    public bool IsContained => ContainerRef != SnowTag.Empty;
+    public bool IsOnTable => ContainerRef == SnowTag.Empty;
 
     /// <summary>Whether it's one of a deck's cards, rather than the deck itself.</summary>
     [JsonIgnore]
@@ -133,24 +129,17 @@ public record ComponentState : Replicated
     /// </remarks>
     public override IEnumerable<Target> Containers(IRecordReader R)
     {
-        if (IsContained)
+        // A hand or a cursor isn't a component, so it isn't found.
+        if (!IsOnTable)
             return R.Get<ComponentState>(ContainerRef) is { } container
                 ? [new RecordTarget(container.Id)]
                 : [];
 
-        if (
-            Location != VisualComponentBase.ComponentLocation.Table
-            || R.Kind(this) != VisualComponentBase.VisualComponentType.Token
-        )
+        if (R.Kind(this) != VisualComponentBase.VisualComponentType.Token)
             return [];
 
         // A filter may only read the record, so the kind is checked after.
-        return R.Get<ComponentState>(d =>
-                d.Location == VisualComponentBase.ComponentLocation.Table
-                && d.X == X
-                && d.Z == Z
-                && d.ZOrder < ZOrder
-            )
+        return R.Get<ComponentState>(d => d.IsOnTable && d.X == X && d.Z == Z && d.ZOrder < ZOrder)
             .Where(d => R.Kind(d) == VisualComponentBase.VisualComponentType.Deck)
             .Select(d => new RecordTarget(d.Id));
     }

@@ -17,7 +17,7 @@ public static class ComponentCommands
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !c.IsContained,
+        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !R.IsContained(c),
         Effects = (R, cs, _) => Flipped(cs),
     };
 
@@ -79,14 +79,14 @@ public static class ComponentCommands
     private static float RotationStep => ProjectService.Instance.RotationStep;
 
     // Deleting or restacking what someone is dragging would fight the drag.
-    private static bool NotHeld(IRecordReader _, ComponentState c) => !c.IsHeld;
+    private static bool NotHeld(IRecordReader R, ComponentState c) => !R.IsBeingDragged(c);
 
     // What's inside a bag or a hand isn't on the table to turn or restack.
-    private static bool NotContained(IRecordReader _, ComponentState c) => !c.IsContained;
+    private static bool NotContained(IRecordReader R, ComponentState c) => !R.IsContained(c);
 
     // Zones stay underneath everything.
     private static bool Restackable(IRecordReader R, ComponentState c) =>
-        !c.IsHeld && !c.IsContained && R.Kind(c) != VisualComponentType.Zone;
+        c.IsOnTable && R.Kind(c) != VisualComponentType.Zone;
 
     /// <summary>
     /// The tokens turned over. Tokens stacked in the same place turn over together like a pile,
@@ -95,7 +95,7 @@ public static class ComponentCommands
     /// </summary>
     private static IEnumerable<ComponentState> Flipped(IEnumerable<ComponentState> tokens) =>
         tokens
-            .GroupBy(c => (c.Location, c.Holder, c.X, c.Z))
+            .GroupBy(c => (c.ContainerRef, c.X, c.Z))
             .SelectMany(pile =>
             {
                 var ordered = pile.OrderBy(c => c.ZOrder).ToList();

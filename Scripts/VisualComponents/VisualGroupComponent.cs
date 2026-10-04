@@ -52,7 +52,6 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             Replicated (c, i) =>
                 ComponentState.Of(c) with
                 {
-                    Location = ComponentLocation.Container,
                     ContainerRef = Reference,
                     Position = c.Position,
                     ZOrder = new ZOrder(target, i, stamp),

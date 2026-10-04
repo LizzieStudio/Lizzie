@@ -119,6 +119,7 @@ public partial class ProjectService : Node
         CurrentProject = new Project { Filename = filename };
         HasUnsavedChanges = false;
         EnsureSingletons();
+        EnsureSeatContainers();
     }
 
     /// <summary>
@@ -237,6 +238,7 @@ public partial class ProjectService : Node
         SeedTagsFromLog();
         EndBulkLoad();
         EnsureSingletons();
+        EnsureSeatContainers();
 
         HasUnsavedChanges = false;
     }
@@ -326,9 +328,10 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Assigns a hand container SnowTag to any seat that lacks one.
+    /// Assigns hand and cursor container SnowTags to any seat that lacks them.
+    /// The host or a solo player runs it after a new game or a load.
     /// </summary>
-    public void EnsureSeatContainers()
+    private void EnsureSeatContainers()
     {
         if (CurrentProject == null)
             return;
@@ -343,6 +346,11 @@ public partial class ProjectService : Node
             if (builder[i].HandRef == SnowTag.Empty)
             {
                 builder[i] = builder[i] with { HandRef = Snowport.Clock.CreateTag() };
+                changed = true;
+            }
+            if (builder[i].CursorRef == SnowTag.Empty)
+            {
+                builder[i] = builder[i] with { CursorRef = Snowport.Clock.CreateTag() };
                 changed = true;
             }
         }

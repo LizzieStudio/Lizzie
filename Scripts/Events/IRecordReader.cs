@@ -189,12 +189,31 @@ public static class RecordReaderExtensions
     /// <summary>The VcTokens stacked exactly on a deck, top first.</summary>
     public static List<ComponentState> TokensOn(this IRecordReader R, ComponentState deck) =>
         R.Get<ComponentState>(s =>
-                s.Location == VisualComponentBase.ComponentLocation.Table
-                && s.X == deck.X
-                && s.Z == deck.Z
-                && s.ZOrder > deck.ZOrder
+                s.IsOnTable && s.X == deck.X && s.Z == deck.Z && s.ZOrder > deck.ZOrder
             )
             .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Token)
             .OrderByDescending(s => s.ZOrder)
             .ToList();
+
+    /// <summary>
+    /// The cursor container of each seat.
+    /// </summary>
+    public static HashSet<SnowTag> Cursors(this IRecordReader R) =>
+        R.Single<ProjectGameSettings>()
+            .Players.Select(p => p.CursorRef)
+            .Where(c => c != SnowTag.Empty)
+            .ToHashSet();
+
+    /// <summary>
+    /// Whether a player is dragging <paramref name="c"/>.
+    /// </summary>
+    public static bool IsBeingDragged(this IRecordReader R, ComponentState c) =>
+        !c.IsOnTable
+        && R.Single<ProjectGameSettings>().Players.Any(p => p.CursorRef == c.ContainerRef);
+
+    /// <summary>
+    /// True if it's inside a container, such as a bag or a player's hand, rather than on the table.
+    /// </summary>
+    public static bool IsContained(this IRecordReader R, ComponentState c) =>
+        !c.IsOnTable && !R.IsBeingDragged(c);
 }

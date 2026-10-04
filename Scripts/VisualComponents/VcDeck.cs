@@ -58,7 +58,6 @@ public partial class VcDeck : VisualComponentBase
                 PrototypeRef = PrototypeRef,
                 DataSetRowIndex = row.Index,
                 DataSetRowId = row.Id,
-                Location = ComponentLocation.Table,
                 X = self.X,
                 Z = self.Z,
                 Rotation = new Vector3(0, self.Rotation.Y, Mathf.Pi),

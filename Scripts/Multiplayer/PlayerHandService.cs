@@ -28,6 +28,18 @@ public partial class PlayerHandService : Node
         PresenceSynchronizer.Instance?.HandRefForSeat(seatIndex) ?? SnowTag.Empty;
 
     /// <summary>
+    /// The container that holds what the local player is dragging,
+    /// or <see cref="SnowTag.Empty"/> when they're an observer or unseated.
+    /// </summary>
+    public static SnowTag LocalCursor()
+    {
+        var psm = PresenceSynchronizer.Instance;
+        if (psm == null)
+            return SnowTag.Empty;
+        return psm.CursorRefForSeat(psm.GetSeatBySource(Snowport.Clock.source));
+    }
+
+    /// <summary>
     /// The card moved into a seat's hand at the top of its order.
     /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
@@ -39,7 +51,6 @@ public partial class PlayerHandService : Node
     ) =>
         card with
         {
-            Location = VisualComponentBase.ComponentLocation.Hand,
             ContainerRef = HandContainer(seatIndex),
             ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
         };
@@ -65,16 +76,9 @@ public partial class PlayerHandService : Node
     }
 
     /// <summary>
-    /// Returns the seat index the local player is sitting in (-2 if unclaimed).
-    /// Works in both local-only and multiplayer modes.
+    /// The seat the local player is sitting in, -1 for an observer, or -2 when unseated.
+    /// A solo player is always in a seat.
     /// </summary>
-    public static int LocalSeatIndex()
-    {
-        var psm = PresenceSynchronizer.Instance;
-        if (psm == null)
-            return 0; // safe default for solo mode
-
-        int seat = psm.GetSeatBySource(Snowport.Clock.source);
-        return seat == -2 ? 0 : seat; // fall back to seat 0
-    }
+    public static int LocalSeatIndex() =>
+        PresenceSynchronizer.Instance?.GetSeatBySource(Snowport.Clock.source) ?? -2;
 }

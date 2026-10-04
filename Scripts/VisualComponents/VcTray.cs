@@ -136,7 +136,9 @@ public partial class VcTray : VisualComponentGroup
 
     public override Replicated[] DragDraw(int quantity)
     {
-        if (_prototype == null)
+        // Observers and unseated players can't drag.
+        var cursor = PlayerHandService.LocalCursor();
+        if (_prototype == null || cursor == SnowTag.Empty)
             return [];
 
         return
@@ -145,8 +147,7 @@ public partial class VcTray : VisualComponentGroup
             {
                 Id = Snowport.Clock.CreateTag(),
                 PrototypeRef = _prototype.Id,
-                Location = ComponentLocation.Cursor,
-                Holder = Snowport.Clock.source,
+                ContainerRef = cursor,
                 ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
             },
         ];

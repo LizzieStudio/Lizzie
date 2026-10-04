@@ -419,7 +419,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void UpdateDragFloors()
     {
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Holder))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.ContainerRef))
         {
             var dragged = group.ToArray();
             var floors = StackFloors(dragged, out _);
@@ -510,10 +510,7 @@ public partial class GameObjects : Node
             if (!bounds.Intersects(table.Bounds, includeBorders: true))
                 continue;
             var c = table.Component;
-            if (
-                !IsInstanceValid(c)
-                || c.State?.Location != VisualComponentBase.ComponentLocation.Table
-            )
+            if (!IsInstanceValid(c) || c.State is not { IsOnTable: true })
                 continue;
 
             foreach (var f in footprints)
@@ -700,6 +697,11 @@ public partial class GameObjects : Node
     )
     {
         var records = new List<Replicated>();
+        // Observers and unseated players can't drag.
+        var cursor = PlayerHandService.LocalCursor();
+        if (cursor == SnowTag.Empty)
+            return [];
+
         var stamp = Snowport.Clock.Create();
         foreach (var r in componentRefs)
         {
@@ -711,9 +713,7 @@ public partial class GameObjects : Node
             records.Add(
                 s with
                 {
-                    Location = VisualComponentBase.ComponentLocation.Cursor,
-                    ContainerRef = SnowTag.Empty,
-                    Holder = Snowport.Clock.source,
+                    ContainerRef = cursor,
                     // Held under the cursor.
                     Position = Vector3.Zero,
                     Rotation = rotation?.Invoke(c) ?? s.Rotation,
@@ -745,14 +745,14 @@ public partial class GameObjects : Node
         IEnumerable<SnowTag> selected
     )
     {
+        // Observers and unseated players can't drag.
+        var holder = PlayerHandService.LocalCursor();
         var dragged = components
-            .Where(o => o != null)
+            .Where(o => o != null && holder != SnowTag.Empty)
             .Select(o =>
                 ComponentState.Of(o) with
                 {
-                    Location = VisualComponentBase.ComponentLocation.Cursor,
-                    ContainerRef = SnowTag.Empty,
-                    Holder = Snowport.Clock.source,
+                    ContainerRef = holder,
                     // Held positions are relative to the cursor.
                     Position = o.Position - cursor,
                 }
@@ -895,25 +895,27 @@ public partial class GameObjects : Node
     /// <summary>
     /// The components dragged by any player.
     /// </summary>
-    private IEnumerable<VisualComponentBase> GetDraggingObjects() =>
-        ComponentsAt(VisualComponentBase.ComponentLocation.Cursor);
+    private IEnumerable<VisualComponentBase> GetDraggingObjects()
+    {
+        var cursors = RecordService.Instance.Cursors();
+        return Nodes(
+            RecordService.Instance.Get<ComponentState>(s => cursors.Contains(s.ContainerRef))
+        );
+    }
 
     /// <summary>
     /// The components dragged by the local player, which is all a local gesture acts on.
     /// </summary>
-    private IEnumerable<VisualComponentBase> GetLocalDraggingObjects() =>
-        Nodes(
-            RecordService.Instance.Get<ComponentState>(s =>
-                s.IsHeld && s.Holder == Snowport.Clock.source
-            )
-        );
+    private IEnumerable<VisualComponentBase> GetLocalDraggingObjects()
+    {
+        var cursor = PlayerHandService.LocalCursor();
+        return cursor == SnowTag.Empty
+            ? []
+            : Nodes(RecordService.Instance.Get<ComponentState>(s => s.ContainerRef == cursor));
+    }
 
     private IEnumerable<VisualComponentBase> GetNotDraggingObjects() =>
-        ComponentsAt(VisualComponentBase.ComponentLocation.Table);
-
-    private IEnumerable<VisualComponentBase> ComponentsAt(
-        VisualComponentBase.ComponentLocation location
-    ) => Nodes(RecordService.Instance.Get<ComponentState>(s => s.Location == location));
+        Nodes(RecordService.Instance.Get<ComponentState>(s => s.IsOnTable));
 
     private void EndDrag()
     {
@@ -988,7 +990,6 @@ public partial class GameObjects : Node
         {
             var s = ComponentState.Of(ordered[i]) with
             {
-                Location = VisualComponentBase.ComponentLocation.Table,
                 ContainerRef = SnowTag.Empty,
                 Position = ordered[i].Position,
                 ZOrder = new ZOrder(ZTarget.Top, i, stamp),
@@ -1064,7 +1065,6 @@ public partial class GameObjects : Node
             records.Add(
                 ComponentState.Of(toBoard[i]) with
                 {
-                    Location = VisualComponentBase.ComponentLocation.Table,
                     ContainerRef = SnowTag.Empty,
                     Position = toBoard[i].Position,
                     ZOrder = new ZOrder(ZTarget.Top, i, stamp),
@@ -1156,6 +1156,7 @@ public partial class GameObjects : Node
         ResetTable();
         EventSynchronizer.Instance?.Clear();
         PresenceSynchronizer.Instance?.Clear();
+        PresenceSynchronizer.Instance?.EnsureLocalSeat();
     }
 
     /// <summary>
@@ -1196,7 +1197,7 @@ public partial class GameObjects : Node
     {
         // A held deck keeps its count, since its cards leave the table with it.
         foreach (var deck in ComponentNodes.OfType<VcDeck>())
-            if (deck.State is { IsHeld: false } d)
+            if (deck.State is { } d && !RecordService.Instance.IsBeingDragged(d))
                 deck.SetCount(RecordService.Instance.TokensOn(d).Count);
     }
 
@@ -1208,9 +1209,9 @@ public partial class GameObjects : Node
         if (cursors == null)
             return;
 
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Holder))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.ContainerRef))
         {
-            if (group.Key == Snowport.Clock.source && _localDragOverHand)
+            if (group.Key == PlayerHandService.LocalCursor() && _localDragOverHand)
                 continue;
 
             if (!cursors.TryGetCursor(group.Key, out var cursor))
