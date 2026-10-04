@@ -95,7 +95,7 @@ public partial class ProjectSettingsDialog : Window
         _baseline = next; // safe: immutable, no clone
     }
 
-    public const int MAX_PLAYERS = 16;
+    private const int MAX_PLAYERS = 16;
 
     public Color[] _playerColors =
     {
@@ -302,7 +302,7 @@ public partial class ProjectSettingsDialog : Window
     /// For each field, keep the UI value if the user edited it.
     /// Otherwise take the incoming value.
     /// </summary>
-    public static ProjectGameSettings MergeSettings(
+    private static ProjectGameSettings MergeSettings(
         ProjectGameSettings baseline,
         ProjectGameSettings ui,
         ProjectGameSettings next

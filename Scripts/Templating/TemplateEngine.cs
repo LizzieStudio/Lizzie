@@ -113,7 +113,7 @@ public static class TemplateEngine
         return te;
     }
 
-    public static List<ITemplateElement> BuildTemplateElements(Template template)
+    private static List<ITemplateElement> BuildTemplateElements(Template template)
     {
         var l = new List<ITemplateElement>();
         foreach (var t in template.Elements)

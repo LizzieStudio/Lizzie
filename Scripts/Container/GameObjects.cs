@@ -295,7 +295,7 @@ public partial class GameObjects : Node
     #region Components
 
 
-    public void AddComponentToScene(VisualComponentBase component)
+    private void AddComponentToScene(VisualComponentBase component)
     {
         if (component.Reference == SnowTag.Empty)
         {
@@ -309,7 +309,7 @@ public partial class GameObjects : Node
         QueueStackingUpdate();
     }
 
-    public void CreateComponents(IEnumerable<VisualComponentBase> components)
+    private void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
         var records = new List<Replicated>();
         var stamp = Snowport.Clock.Create();
@@ -337,7 +337,7 @@ public partial class GameObjects : Node
     /// <summary>
     /// The nodes of the cards stacked exactly on the deck, top first.
     /// </summary>
-    public List<VisualComponentBase> GetStack(VcDeck deck) =>
+    private List<VisualComponentBase> GetStack(VcDeck deck) =>
         deck.State is { } s ? Nodes(RecordService.Instance.TokensOn(s)).ToList() : [];
 
     #endregion
@@ -349,7 +349,7 @@ public partial class GameObjects : Node
             as VisualComponentBase;
     }
 
-    public VisualComponentBase GetHoveredDropTarget()
+    private VisualComponentBase GetHoveredDropTarget()
     {
         return ComponentNodes.FirstOrDefault(x =>
                 x is VisualComponentBase { IsHovered: true, CanAcceptDrop: true, IsDragging: false }
@@ -368,7 +368,7 @@ public partial class GameObjects : Node
         RecordService.Instance.SetSelection<ComponentState>(components);
 
     /// <summary>The selected components in table order.</summary>
-    public IEnumerable<VisualComponentBase> GetSelectedObjects()
+    private IEnumerable<VisualComponentBase> GetSelectedObjects()
     {
         var selection = Selection;
         return ComponentNodes

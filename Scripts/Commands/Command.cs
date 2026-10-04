@@ -551,7 +551,7 @@ public sealed class Submenu : Command
 }
 
 // This is just a sentinel so that we can put dividers in command lists.
-internal sealed class DividerCommand : Command
+file sealed class DividerCommand : Command
 {
     public override bool Applies(IRecordReader R, Target target) => false;
 

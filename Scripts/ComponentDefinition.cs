@@ -172,7 +172,7 @@ public partial class ComponentDefinition : Window
         CancelDialog?.Invoke(this, EventArgs.Empty);
     }
 
-    public string CurName
+    private string CurName
     {
         get => _curItem;
         set
@@ -263,7 +263,7 @@ public partial class ComponentDefinition : Window
         );
     }
 
-    public string TypeToName(VisualComponentBase.VisualComponentType componentType)
+    private string TypeToName(VisualComponentBase.VisualComponentType componentType)
     {
         if (componentType == VisualComponentBase.VisualComponentType.Deck)
             return "Printed";

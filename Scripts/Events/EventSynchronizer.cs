@@ -189,7 +189,7 @@ public partial class EventSynchronizer : Node
     /// <summary>
     /// Stream the entire event log to a joining peer, oldest-to-newest.
     /// </summary>
-    public void SendStateTo(int peerId)
+    private void SendStateTo(int peerId)
     {
         if (MultiplayerManager.Instance?.IsServer != true)
             return;

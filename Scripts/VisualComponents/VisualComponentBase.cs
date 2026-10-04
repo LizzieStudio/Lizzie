@@ -619,7 +619,7 @@ public abstract partial class VisualComponentBase : Area3D
     public bool IsDragging => State?.IsHeld == true;
 
     /// <summary>True while this component is being held by the local player's cursor.</summary>
-    public bool IsHeldByLocal => State is { IsHeld: true } s && s.Holder == Snowport.Clock.source;
+    private bool IsHeldByLocal => State is { IsHeld: true } s && s.Holder == Snowport.Clock.source;
 
     private bool _logicalVisible = true;
 
@@ -660,7 +660,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public bool LocallyMovable { get; set; } = true;
 
-    public void ApplyEffectiveVisibility()
+    private void ApplyEffectiveVisibility()
     {
         Visible = _logicalVisible && !_zoneHidden;
     }

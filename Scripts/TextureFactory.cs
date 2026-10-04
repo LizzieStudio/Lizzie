@@ -1252,7 +1252,7 @@ public partial class TextureFactory : SubViewport
         }
     }
 
-    public class TextureQueueEntry
+    private class TextureQueueEntry
     {
         public TextureDefinition TextureDefinition { get; set; }
         public bool InProcess { get; set; }

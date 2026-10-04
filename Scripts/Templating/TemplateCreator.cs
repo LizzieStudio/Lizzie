@@ -250,7 +250,7 @@ public partial class TemplateCreator : Window
     /// Switches the edited template and rebuilds the whole editor UI from it.
     /// Edits made from within the editor must go through <see cref="EditCurrentTemplate"/> instead.
     /// </summary>
-    public Template CurrentTemplate
+    private Template CurrentTemplate
     {
         get => _currentTemplate;
         set
@@ -1591,7 +1591,7 @@ public partial class TemplateCreator : Window
     //It may take a few frames for the Size of the preview window to be set properly
     private bool _fitRequired;
 
-    public void InitializeFit(float w, float h)
+    private void InitializeFit(float w, float h)
     {
         if (w <= 0 || h <= 0)
             return;

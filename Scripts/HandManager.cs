@@ -265,14 +265,14 @@ public partial class HandManager : Panel
     /// Refreshes the local player's hand display from PlayerHandService.
     /// Shows the Face (front) of each card.
     /// </summary>
-    public void RefreshDisplay()
+    private void RefreshDisplay()
     {
         _cards = PlayerHandService.Instance.GetHand(PlayerHandService.LocalSeatIndex()).ToList();
 
         MapHandToContainer();
     }
 
-    public void RemoveFromHand(VcToken card)
+    private void RemoveFromHand(VcToken card)
     {
         var go = ProjectService.Instance.GameObjects;
         go.StartDraw(go.BuildDraw([card.Reference]));

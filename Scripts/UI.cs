@@ -693,7 +693,7 @@ public partial class UI : CanvasLayer
     /// </summary>
     private bool _modalDialogShown;
 
-    public bool ModalDialogShown
+    private bool ModalDialogShown
     {
         get => _modalDialogShown;
         set

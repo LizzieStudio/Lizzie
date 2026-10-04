@@ -93,7 +93,7 @@ public class TemplateElement : ITemplateElement
 
     #region Parameter Processing
 
-    public TemplateParameter GetParameterByName(string name) =>
+    private TemplateParameter GetParameterByName(string name) =>
         _parameters.FirstOrDefault(x => x.Name == name);
 
     public string EvaluateTextParameter(
@@ -210,7 +210,7 @@ public class TemplateElement : ITemplateElement
         return (c == 'T' || c == 'Y' || c == '1');
     }
 
-    public TextureFactory.TextureObject.AnchorPoint EvaluateAnchorParameter(
+    private TextureFactory.TextureObject.AnchorPoint EvaluateAnchorParameter(
         IList<TemplateParameter> parameters,
         string key,
         TextureContext context

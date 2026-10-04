@@ -401,7 +401,7 @@ public partial class ComponentPreview : Panel
         ShowView(0);
     }
 
-    public void ShowBack()
+    private void ShowBack()
     {
         _backView.ButtonPressed = true;
         ShowView(180);

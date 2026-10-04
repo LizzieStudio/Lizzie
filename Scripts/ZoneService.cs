@@ -38,7 +38,7 @@ public static class ZoneService
     /// Resolve the effective tier for a component given the zones on the table and the local
     /// player's seat. Overlapping/nested zones combine most-restrictively.
     /// </summary>
-    public static ZoneTier ResolveTier(
+    private static ZoneTier ResolveTier(
         VisualComponentBase component,
         IReadOnlyList<VcZone> zones,
         int localSeat,

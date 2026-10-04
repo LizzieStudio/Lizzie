@@ -153,7 +153,7 @@ public partial class VcMeeple : VisualComponentBase
     /// <param name="x">X position</param>
     /// <param name="z">Y position (Z in 3D space)</param>
     /// <returns>MeshInstance3D of the created cube</returns>
-    public MeshInstance3D CreateCubeMesh(float s, float t, Color c, float x, float y)
+    private MeshInstance3D CreateCubeMesh(float s, float t, Color c, float x, float y)
     {
         // Create a new MeshInstance3D
         var meshInstance = new MeshInstance3D();

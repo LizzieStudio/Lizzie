@@ -120,12 +120,12 @@ public class IconLibrary : Dictionary<string, IconEntry>
         Add(key, new IconEntry { FileName = value, IsCore = isCore });
     }
 
-    public List<string> GetCoreIconList()
+    private List<string> GetCoreIconList()
     {
         return this.Where(x => x.Value.IsCore).Select(x => x.Key).OrderBy(key => key).ToList();
     }
 
-    public List<string> GetExtendedIconList()
+    private List<string> GetExtendedIconList()
     {
         return this.Where(x => !x.Value.IsCore).Select(x => x.Key).OrderBy(key => key).ToList();
     }

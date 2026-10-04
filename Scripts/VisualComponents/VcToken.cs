@@ -29,7 +29,7 @@ public partial class VcToken : VisualComponentBase
     private Texture2D _faceTexture = new ImageTexture();
     private Texture2D _backTexture;
 
-    public Texture2D FaceTexture
+    private Texture2D FaceTexture
     {
         get => _faceTexture;
         set
@@ -633,7 +633,7 @@ public partial class VcToken : VisualComponentBase
             );
     }
 
-    public const float BASE_DPI = 10f;
+    private const float BASE_DPI = 10f;
 
     private static void StartTemplateSheetBuild(
         TextureFactory factory,
@@ -872,7 +872,7 @@ public partial class VcToken : VisualComponentBase
         return true;
     }
 
-    public static void ComputeCellSize(float height, float width, out int cellW, out int cellH)
+    private static void ComputeCellSize(float height, float width, out int cellW, out int cellH)
     {
         cellW = 256;
         cellH = 256;
@@ -884,7 +884,7 @@ public partial class VcToken : VisualComponentBase
             cellH = (int)(height * 256 / width);
     }
 
-    public static string QuickDeckSheetKey(
+    private static string QuickDeckSheetKey(
         ImmutableArray<QuickCardData> cards,
         int shape,
         int cellW,
@@ -909,7 +909,12 @@ public partial class VcToken : VisualComponentBase
         return sb.ToString();
     }
 
-    public static string QuickDeckSingleBackKey(QuickCardData card, int shape, int cellW, int cellH)
+    private static string QuickDeckSingleBackKey(
+        QuickCardData card,
+        int shape,
+        int cellW,
+        int cellH
+    )
     {
         var sb = new System.Text.StringBuilder();
         sb.Append("qd-bsingle:");
@@ -985,7 +990,7 @@ public partial class VcToken : VisualComponentBase
         return BuildQuickTextureDefinition(bgColor, qtf, _height, _width, _shape);
     }
 
-    public static TextureFactory.TextureDefinition BuildQuickTextureDefinition(
+    private static TextureFactory.TextureDefinition BuildQuickTextureDefinition(
         Color bgColor,
         QuickTextureField qtf,
         float height,

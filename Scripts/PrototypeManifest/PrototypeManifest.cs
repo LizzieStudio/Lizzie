@@ -22,10 +22,10 @@ public partial class PrototypeManifest : Window, ICommandView
     private Button _hideUnused;
 
     private Prototype _selectedPrototype;
-    public Prototype SelectedPrototype
+    private Prototype SelectedPrototype
     {
         get => _selectedPrototype;
-        private set
+        set
         {
             _selectedPrototype = value;
             OnPrototypeSelected();

@@ -107,17 +107,10 @@ public static class Shortcuts
         foreach (var key in keys)
             InputMap.ActionAddEvent(action, key);
     }
-
-    /// <summary>
-    /// Runs the command bound to the key, in the view that has the viewport's focus.
-    /// True when the key belongs to a command.
-    /// </summary>
-    public static bool Dispatch(InputEvent e, Viewport viewport) =>
-        e is InputEventKey && CommandList.RunShortcut(e, CommandViews.Find(viewport));
 }
 
 /// <summary>
-/// Passes shortcuts to <see cref="Shortcuts.Dispatch"/>.
+/// Runs the command bound to a key, in the view that has the window's focus.
 /// Windows don't pass input to the table, so this needs to be added to every dialogue.
 /// It has an <see cref="Install"/> to do so.
 /// </summary>
@@ -157,9 +150,16 @@ public partial class ShortcutRelay : Node
 
     public override void _ShortcutInput(InputEvent e)
     {
-        if (Shortcuts.Dispatch(e, GetViewport()))
+        if (Dispatch(e, GetViewport()))
             GetViewport().SetInputAsHandled();
     }
+
+    /// <summary>
+    /// Runs the command bound to the key, in the view that has the viewport's focus.
+    /// True when the key belongs to a command.
+    /// </summary>
+    private static bool Dispatch(InputEvent e, Viewport viewport) =>
+        e is InputEventKey && CommandList.RunShortcut(e, CommandViews.Find(viewport));
 
     private static readonly MouseButton[] _defocusEvents =
     [

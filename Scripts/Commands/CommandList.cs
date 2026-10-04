@@ -15,7 +15,7 @@ public static class CommandList
     /// <remarks>
     /// Add a <see cref="Command"/> here to see it in the context menus.
     /// </remarks>
-    public static readonly IReadOnlyList<Command> ContextMenu =
+    private static readonly IReadOnlyList<Command> ContextMenu =
     [
         ComponentCommands.Flip,
         ComponentCommands.RotateCw,
@@ -92,7 +92,8 @@ public static class CommandList
             .Where(f => typeof(Command).IsAssignableFrom(f.FieldType));
         foreach (var field in fields)
             if (
-                field.GetValue(null) is Command command and not DividerCommand
+                field.GetValue(null) is Command command
+                && command != Command.Divider
                 && !listed.Contains(command)
             )
                 GD.PushError(

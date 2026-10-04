@@ -231,7 +231,7 @@ public partial class ProjectService : Node
         SettleAfterIngest();
     }
 
-    public void SettleAfterIngest()
+    private void SettleAfterIngest()
     {
         SeedTagsFromLog();
         EndBulkLoad();
