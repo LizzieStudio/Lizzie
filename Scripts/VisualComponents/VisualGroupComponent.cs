@@ -35,42 +35,30 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     }
 
     /// <summary>
-    /// Builds the event that moves the given components into this container,
-    /// or null if there are none.
+    /// The records that move the given components into this container.
     /// </summary>
-    public virtual TableEvent AddChildComponents(
-        IEnumerable<VisualComponentBase> components,
-        bool addToTop = false
+    public override IEnumerable<Replicated> DropObjects(
+        IEnumerable<VisualComponentBase> dragObjects
     )
     {
-        var compArr = components as VisualComponentBase[] ?? components.ToArray(); //avoid multiple iterations
+        var compArr = dragObjects as VisualComponentBase[] ?? dragObjects.ToArray(); //avoid multiple iterations
         if (compArr.Length == 0)
-            return null;
+            return [];
 
-        var target = addToTop ? ZTarget.Top : ZTarget.Bottom;
+        var target = ZTarget.Top;
         var stamp = Snowport.Clock.Create();
 
-        var transformed = compArr
-            .Select(
-                (c, i) =>
-                    (Effect)
-                        Effect.Upsert(
-                            ComponentState.Of(c) with
-                            {
-                                Location = ComponentLocation.Container,
-                                ContainerRef = Reference,
-                                Position = c.Position,
-                                ZOrder = new ZOrder(target, i, stamp),
-                            }
-                        )
-            )
-            .ToArray();
-
-        return TableEvent.Now(transformed);
+        return compArr.Select(
+            Replicated (c, i) =>
+                ComponentState.Of(c) with
+                {
+                    Location = ComponentLocation.Container,
+                    ContainerRef = Reference,
+                    Position = c.Position,
+                    ZOrder = new ZOrder(target, i, stamp),
+                }
+        );
     }
-
-    public override TableEvent DropObjects(IEnumerable<VisualComponentBase> dragObjects) =>
-        AddChildComponents(dragObjects);
 
     protected abstract void OnChildrenChanged();
 
@@ -116,7 +104,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <summary>
     /// Shuffles the container using a seed and the Fisher-Yates algorithm.
     /// </summary>
-    public virtual Effect[] Shuffle(ulong seed)
+    public virtual Replicated[] Shuffle(ulong seed)
     {
         var ids = Children.ToList();
         ids.Sort(); // deterministic starting order
@@ -134,11 +122,11 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     }
 
     /// <summary>
-    /// Builds the transform effects that reorder the child list
+    /// The records that reorder the child list
     /// </summary>
-    protected Effect[] BuildReorder(IReadOnlyList<SnowTag> orderedIds)
+    protected Replicated[] BuildReorder(IReadOnlyList<SnowTag> orderedIds)
     {
-        var effects = new List<Effect>(orderedIds.Count);
+        var records = new List<Replicated>(orderedIds.Count);
         var stamp = Snowport.Clock.Create();
         for (int i = 0; i < orderedIds.Count; i++)
         {
@@ -146,23 +134,21 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             if (comp == null)
                 continue;
 
-            effects.Add(
-                Effect.Upsert(
-                    ComponentState.Of(comp) with
-                    {
-                        ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, stamp),
-                    }
-                )
+            records.Add(
+                ComponentState.Of(comp) with
+                {
+                    ZOrder = new ZOrder(ZTarget.Top, orderedIds.Count - 1 - i, stamp),
+                }
             );
         }
 
-        return effects.ToArray();
+        return records.ToArray();
     }
 
     /// <summary>
     /// Called when the user drags on a container to draw components, or uses a key command to
-    /// draw multiples. Builds the event the draw should fire, or null if it fires none.
+    /// draw multiples. The records the draw writes, or none if it draws nothing.
     /// </summary>
     /// <param name="quantity"></param>
-    public virtual TableEvent DragDraw(int quantity) => null;
+    public virtual Replicated[] DragDraw(int quantity) => [];
 }

@@ -102,6 +102,8 @@ public partial class MultiplayerManager : Node
     /// </summary>
     public Error JoinServer(string address, int port = 7777)
     {
+        ProjectService.Instance?.ReplaceWithNewGame();
+
         var error = CreatePeer(peer => peer.CreateClient(address, port));
 
         if (error != Error.Ok)
@@ -113,6 +115,8 @@ public partial class MultiplayerManager : Node
         Multiplayer.MultiplayerPeer = _peer;
         _isServer = false;
         _isNetworked = true;
+
+        EventSynchronizer.Instance?.BeginJoin();
 
         GD.Print($"Connecting to server at {address}:{port}");
 
@@ -153,15 +157,18 @@ public partial class MultiplayerManager : Node
         _players.Clear();
         _localPlayerId = 0;
 
-        Snowport.Clock = Snowport.Clock.WithSource(Snowport.HostSource);
-
-        // Drop any event history accumulated during the session.
-        EventSynchronizer.Instance?.Clear();
-        PresenceSynchronizer.Instance?.Clear();
-
-        // A join that never caught up leaves its load in progress, and the table without its singletons.
-        ProjectService.Instance?.EndBulkLoad();
-        ProjectService.Instance?.EnsureSingletons();
+        if (EventSynchronizer.Instance?.Joining == true)
+        {
+            EventSynchronizer.Instance.CancelJoin();
+            Snowport.Clock = new Snowport(Snowport.HostSource);
+            ProjectService.Instance?.ReplaceWithNewGame();
+        }
+        else
+        {
+            Snowport.Clock = Snowport.Clock.WithSource(Snowport.HostSource);
+            EventSynchronizer.Instance?.Clear();
+            PresenceSynchronizer.Instance?.Clear();
+        }
 
         // Back to solo.
         PresenceSynchronizer.Instance?.EnsureLocalSeat();

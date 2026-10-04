@@ -162,7 +162,7 @@ public partial class ComponentDefinition : Window
         var newParams = editResult?.GetParams();
         prototype = prototype with { Parameters = newParams, Name = newParams?.ComponentName };
 
-        ProjectService.Instance.Upsert(prototype);
+        RecordService.Instance.Write(prototype);
 
         CloseDialog?.Invoke(this, EventArgs.Empty);
     }

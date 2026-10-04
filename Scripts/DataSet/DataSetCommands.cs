@@ -57,7 +57,7 @@ public static class DataSetCommands
         Noun = ("Row", "Rows"),
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
-        Effects = (R, rows, _) => Effect.UpsertAll(rows.Select(r => r with { Deleted = true })),
+        Effects = (R, rows, _) => rows.Select(r => r with { Deleted = true }),
     };
 
     /// <summary>Removes the columns from their datasets. The rows keep their values, so undo brings them back.</summary>
@@ -77,12 +77,7 @@ public static class DataSetCommands
                 {
                     var ds = R.Get<DataSet>(g.Key);
                     var ids = g.Select(t => t.ColumnId).ToHashSet();
-                    return Effect.Upsert(
-                        ds with
-                        {
-                            Columns = ds.Columns.RemoveAll(c => ids.Contains(c.Id)),
-                        }
-                    );
+                    return ds with { Columns = ds.Columns.RemoveAll(c => ids.Contains(c.Id)) };
                 }),
     };
 
@@ -181,7 +176,7 @@ public static class DataSetCommands
         );
     }
 
-    private static IEnumerable<Effect> Pasted(
+    private static IEnumerable<Replicated> Pasted(
         IRecordReader R,
         IReadOnlyList<CellTarget> cells,
         List<string[]> grid
@@ -212,49 +207,47 @@ public static class DataSetCommands
                 row = row.WithCell(allColumns[left + c], grid[r][c]);
             written.Add(row);
         }
-        return Effect.UpsertAll(written);
+        return written;
     }
 
-    private static IEnumerable<Effect> Cleared(IRecordReader R, IReadOnlyList<CellTarget> cells) =>
-        Written(R, cells.Select(c => (c, string.Empty)));
+    private static IEnumerable<Replicated> Cleared(
+        IRecordReader R,
+        IReadOnlyList<CellTarget> cells
+    ) => Written(R, cells.Select(c => (c, string.Empty)));
 
-    /// <summary>The rows with each cell set to its value, one effect per row.</summary>
-    private static IEnumerable<Effect> Written(
+    /// <summary>The rows with each cell set to its value, one record per row.</summary>
+    private static IEnumerable<Replicated> Written(
         IRecordReader R,
         IEnumerable<(CellTarget Cell, string Value)> values
     ) =>
-        Effect.UpsertAll(
-            values
-                .GroupBy(v => v.Cell.RowId)
-                .Select(g =>
-                    g.Aggregate(
-                        R.Get<DataRow>(g.Key),
-                        (row, v) => row.WithCell(v.Cell.ColumnId, v.Value)
-                    )
+        values
+            .GroupBy(v => v.Cell.RowId)
+            .Select(g =>
+                g.Aggregate(
+                    R.Get<DataRow>(g.Key),
+                    (row, v) => row.WithCell(v.Cell.ColumnId, v.Value)
                 )
-        );
+            );
 
     /// <summary>Adds an empty row to the dataset at <paramref name="rank"/>.</summary>
-    public static IEnumerable<Effect> NewRow(SnowTag dataSetId, string rank) =>
+    public static IEnumerable<Replicated> NewRow(SnowTag dataSetId, string rank) =>
         [
-            Effect.Upsert(
-                new DataRow
-                {
-                    Id = Snowport.Clock.CreateTag(),
-                    DataSetId = dataSetId,
-                    Rank = rank,
-                }
-            ),
+            new DataRow
+            {
+                Id = Snowport.Clock.CreateTag(),
+                DataSetId = dataSetId,
+                Rank = rank,
+            },
         ];
 
     /// <summary>Adds a column to the dataset at <paramref name="index"/>, named by how many there are.</summary>
-    public static IEnumerable<Effect> NewColumn(DataSet ds, int index)
+    public static IEnumerable<Replicated> NewColumn(DataSet ds, int index)
     {
         var column = new Column
         {
             Id = Snowport.Clock.CreateTag(),
             Name = $"Column {ds.Columns.Length + 1}",
         };
-        return [Effect.Upsert(ds with { Columns = ds.Columns.Insert(index, column) })];
+        return [ds with { Columns = ds.Columns.Insert(index, column) }];
     }
 }

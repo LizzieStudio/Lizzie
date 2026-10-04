@@ -115,16 +115,18 @@ public partial class ProjectService : Node
     /// </summary>
     public void NewGame(string filename = null)
     {
-        // A guest's table waits for the host's, so the load is in progress until it arrives.
-        if (
-            MultiplayerManager.Instance?.HasAuthority() == false
-            && EventSynchronizer.Instance != null
-        )
-            EventSynchronizer.Instance.BulkLoading = true;
-
         CurrentProject = new Project { Filename = filename };
         HasUnsavedChanges = false;
         EnsureSingletons();
+    }
+
+    /// <summary>
+    /// Replaces the table with a fresh, unnamed game, like before joining a game.
+    /// </summary>
+    public void ReplaceWithNewGame()
+    {
+        GameObjects?.ResetForLoad();
+        NewGame();
     }
 
     /// <summary>
@@ -148,19 +150,25 @@ public partial class ProjectService : Node
             nameof(CreateIfMissing),
             BindingFlags.NonPublic | BindingFlags.Static
         );
-        var effects = SingletonTypes
-            .Select(type => (Effect)create.MakeGenericMethod(type).Invoke(null, null))
-            .Where(effect => effect != null)
-            .ToArray();
-        if (effects.Length > 0)
-            EventSynchronizer.Instance?.Submit(TableEvent.Admin(effects));
+        RecordService.Instance.WriteAdmin(
+            SingletonTypes
+                .Select(type => (Replicated)create.MakeGenericMethod(type).Invoke(null, null))
+                .Where(record => record != null)
+        );
     }
 
-    private static Effect CreateIfMissing<T>()
-        where T : class, IReplicated, new() =>
-        R.Get<T>().Count > 0
-            ? null
-            : Effect.Upsert((T)new T().WithIdentity(Snowport.Clock.CreateAdminTag(), default));
+    /// <summary>
+    /// A new <typeparamref name="T"/> with its defaults, or null if the table has one.
+    /// </summary>
+    private static T CreateIfMissing<T>()
+        where T : Replicated
+    {
+        if (R.Get<T>().Count > 0)
+            return null;
+
+        Replicated record = Activator.CreateInstance<T>();
+        return (T)(record with { Id = Snowport.Clock.CreateTag() });
+    }
 
     public Project LoadProject(string name)
     {
@@ -203,6 +211,24 @@ public partial class ProjectService : Node
 
         SettleAfterIngest();
         return project;
+    }
+
+    /// <summary>
+    /// Replaces the table with the host's, from the events collected while joining,
+    /// all in one frame, so nothing sees the table half loaded.
+    /// </summary>
+    public void LoadJoinedTable(IEnumerable<TableEvent> events)
+    {
+        GameObjects?.ResetTable();
+        EventSynchronizer.Instance?.Clear();
+        CurrentProject = new Project();
+
+        if (EventSynchronizer.Instance != null)
+            EventSynchronizer.Instance.BulkLoading = true;
+        foreach (var e in events)
+            EventSynchronizer.Instance?.Ingest(e);
+
+        SettleAfterIngest();
     }
 
     public void SettleAfterIngest()
@@ -283,7 +309,7 @@ public partial class ProjectService : Node
     /// Rebuilds the event log as one event holding the current state.
     /// </summary>
     private IEnumerable<TableEvent> BuildCompactedEvents() =>
-        [TableEvent.Admin(RecordService.Instance.SaveEffects().ToArray())];
+        [TableEvent.Admin(RecordService.Instance.SavedRecords().ToArray())];
 
     /// <summary>
     /// Advances the tag counter past every SnowTag in the log.
@@ -296,25 +322,6 @@ public partial class ProjectService : Node
 
         foreach (var e in log.Values)
             SnowTagWalker.Visit(e, Snowport.Clock.ObserveTag);
-    }
-
-    /// <summary>
-    /// Creates or updates any record, as an event of its own.
-    /// </summary>
-    public void Upsert<T>(T entity)
-        where T : class, IReplicated
-    {
-        if (CurrentProject == null || entity == null)
-            return;
-
-        new UpsertBatch().Add(entity).Submit();
-    }
-
-    public void UpdateGameSettings(ProjectGameSettings settings)
-    {
-        if (CurrentProject == null || settings == null)
-            return;
-        EventSynchronizer.Instance?.Submit(TableEvent.Now([Effect.Upsert(settings)]));
     }
 
     /// <summary>
@@ -342,9 +349,7 @@ public partial class ProjectService : Node
         if (!changed)
             return;
 
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Admin([Effect.Upsert(settings with { Players = builder.ToImmutable() })])
-        );
+        RecordService.Instance.WriteAdmin(settings with { Players = builder.ToImmutable() });
     }
 
     /// <summary>
@@ -365,20 +370,23 @@ public partial class ProjectService : Node
             Upserts = BuildDelta(parent),
         };
 
-        new UpsertBatch()
-            .Add(state)
-            .Add(R.Single<ActiveGameStateRef>() with { GameStateId = state.Id })
-            .Submit();
+        RecordService.Instance.Write(
+            state,
+            R.Single<ActiveGameStateRef>() with
+            {
+                GameStateId = state.Id,
+            }
+        );
     }
 
     /// <summary>
-    /// The effects that save the table over an existing snapshot, or null if there's no such snapshot.
+    /// The records that save the table over an existing snapshot, or null if there's no such snapshot.
     /// </summary>
-    public IEnumerable<Effect> UpdateGameStateEffects(SnowTag stateRef)
+    public IEnumerable<Replicated> UpdateGameStateEffects(SnowTag stateRef)
     {
         if (CurrentProject == null || R.Get<GameState>(stateRef) is not { } state)
             return null;
-        return [Effect.Upsert(state with { Upserts = BuildDelta(state.Parent) })];
+        return [state with { Upserts = BuildDelta(state.Parent) }];
     }
 
     /// <summary>
@@ -427,7 +435,7 @@ public partial class ProjectService : Node
             return;
         }
 
-        Upsert(state with { Deleted = true });
+        RecordService.Instance.Write(state with { Deleted = true });
     }
 
     /// <summary>
@@ -435,32 +443,35 @@ public partial class ProjectService : Node
     /// </summary>
     public void SwitchGameState(SnowTag stateRef)
     {
-        if (SwitchGameStateEffects(stateRef) is { } effects)
-            EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray()));
+        if (SwitchGameStateEffects(stateRef) is { } records)
+            RecordService.Instance.Write(records);
     }
 
     /// <summary>
-    /// The effects that switch every client to a saved game state, or null if there's no such state.
+    /// The records that switch every client to a saved game state, or null if there's no such state.
     /// </summary>
-    public IEnumerable<Effect> SwitchGameStateEffects(SnowTag stateRef)
+    public IEnumerable<Replicated> SwitchGameStateEffects(SnowTag stateRef)
     {
         if (CurrentProject == null || R.Get<GameState>(stateRef) == null)
             return null;
 
-        var effects = new List<Effect>
+        var records = new List<Replicated>
         {
-            Effect.Upsert(R.Single<ActiveGameStateRef>() with { GameStateId = stateRef }),
+            R.Single<ActiveGameStateRef>() with
+            {
+                GameStateId = stateRef,
+            },
         };
         var fold = FoldChain(stateRef);
 
         // delete every component that isn't in the snapshot
         foreach (var s in R.Get<ComponentState>())
             if (!fold.ContainsKey(s.Id))
-                effects.Add(Effect.Upsert(s with { Deleted = true }));
+                records.Add(s with { Deleted = true });
 
         // Keep the captured transform and ZOrder intact so stacking is reproduced exactly.
-        effects.AddRange(fold.Values.Select(Effect.Upsert));
-        return effects;
+        records.AddRange(fold.Values);
+        return records;
     }
 
     /// <summary>
@@ -500,7 +511,7 @@ public partial class ProjectService : Node
                 ? args.Params.ComponentName
                 : $"Unnamed {args.ComponentType}";
 
-            Upsert(
+            RecordService.Instance.Write(
                 new Prototype
                 {
                     Id = args.PrototypeRef,

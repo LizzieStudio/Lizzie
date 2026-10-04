@@ -85,7 +85,7 @@ public class SaveFormatTests
     }
 
     /// <summary>
-    /// The names removed and added between two schemas, like <c>effects[].ComponentState.payload.holder</c>,
+    /// The names removed and added between two schemas, like <c>records[].ComponentState.holder</c>,
     /// leaving out those inside a type or property that was itself removed or added.
     /// </summary>
     private static string Changes(string before, string after)

@@ -110,11 +110,7 @@ public partial class DatasetEditor : Window, ICommandView
             ps.Listen(
                 this,
                 insert,
-                e =>
-                    FocusCell(
-                        ViewOf(e.Effects.OfType<UpdateReplicatedEffect<DataRow>>().Single().Id),
-                        0
-                    )
+                e => FocusCell(ViewOf(e.Records.OfType<DataRow>().Single().Id), 0)
             );
 
         foreach (
@@ -143,12 +139,12 @@ public partial class DatasetEditor : Window, ICommandView
     public IReadOnlyList<Command> Commands => _commands;
 
     /// <summary>Undo walks the shown dataset's edits, its rows', and what's selected in it.</summary>
-    public bool UndoScope(Effect fx) =>
+    public bool UndoScope(Replicated record) =>
         DatasetRef != SnowTag.Empty
         && (
-            fx is UpdateReplicatedEffect<DataSet> ds && ds.Id == DatasetRef
-            || fx is UpdateReplicatedEffect<DataRow> row && row.Payload?.DataSetId == DatasetRef
-            || fx is UpdateReplicatedEffect<Selection> s && s.Payload?.Within == DatasetRef
+            record is DataSet ds && ds.Id == DatasetRef
+            || record is DataRow row && row.DataSetId == DatasetRef
+            || record is Selection s && s.Within == DatasetRef
         );
 
     #endregion
@@ -392,7 +388,7 @@ public partial class DatasetEditor : Window, ICommandView
             return;
 
         var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = name };
-        ProjectService.Instance.Upsert(ds);
+        RecordService.Instance.Write(ds);
 
         SetDatasetById(ds.Id);
     }
@@ -731,7 +727,7 @@ public partial class DatasetEditor : Window, ICommandView
             return;
 
         view.Row = row;
-        ProjectService.Instance.Upsert(row);
+        RecordService.Instance.Write(row);
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
@@ -750,7 +746,7 @@ public partial class DatasetEditor : Window, ICommandView
             index > 0
                 ? RecordService.Instance.RankBeside(others[index - 1], after: true)
                 : RecordService.Instance.RankBeside(others[0], after: false);
-        ProjectService.Instance.Upsert(row with { Rank = rank });
+        RecordService.Instance.Write(row with { Rank = rank });
     }
 
     // The rows' or the columns' controls, for a drag along that axis.
@@ -842,7 +838,7 @@ public partial class DatasetEditor : Window, ICommandView
         {
             Columns = columns.RemoveAt(from).Insert(to, columns[from]),
         };
-        ProjectService.Instance.Upsert(_currentDataSet);
+        RecordService.Instance.Write(_currentDataSet);
     }
 
     private void OnColumnRenamed(SnowTag columnId, string name)
@@ -859,7 +855,7 @@ public partial class DatasetEditor : Window, ICommandView
         {
             Columns = columns.SetItem(index, columns[index] with { Name = name }),
         };
-        ProjectService.Instance.Upsert(_currentDataSet);
+        RecordService.Instance.Write(_currentDataSet);
     }
 
     /// <summary>What the local player has selected in the shown dataset.</summary>

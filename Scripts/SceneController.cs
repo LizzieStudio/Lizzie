@@ -64,11 +64,11 @@ public partial class SceneController : Node3D, ICommandView
     /// The table undoes its components, and what's selected on it.
     /// A snapshot switch is included through the components it writes.
     /// </summary>
-    public bool UndoScope(Effect fx) =>
-        fx switch
+    public bool UndoScope(Replicated record) =>
+        record switch
         {
-            UpdateReplicatedEffect<ComponentState> => true,
-            UpdateReplicatedEffect<Selection> s => s.Payload?.Within == SnowTag.Empty,
+            ComponentState => true,
+            Selection s => s.Within == SnowTag.Empty,
             _ => false,
         };
 

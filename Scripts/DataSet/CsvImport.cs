@@ -34,7 +34,7 @@ public static class CsvImport
             return;
         }
 
-        var batch = new UpsertBatch();
+        var records = new List<Replicated>();
 
         var header = lines[0];
         if (!dataset.Columns.Select(c => c.Name).SequenceEqual(header))
@@ -46,11 +46,11 @@ public static class CsvImport
                     .Select(h => new Column { Id = Snowport.Clock.CreateTag(), Name = h })
                     .ToImmutableArray(),
             };
-            batch.Add(dataset);
+            records.Add(dataset);
         }
 
         foreach (var existing in R.GetRows(dataset.Id))
-            batch.Add(existing with { Deleted = true });
+            records.Add(existing with { Deleted = true });
 
         string rank = R.LastRank(dataset.Id);
         foreach (var line in lines.Skip(1))
@@ -63,7 +63,7 @@ public static class CsvImport
             }
 
             rank = RowRank.New(rank, null, Snowport.Clock.source);
-            batch.Add(
+            records.Add(
                 new DataRow
                 {
                     Id = Snowport.Clock.CreateTag(),
@@ -74,6 +74,6 @@ public static class CsvImport
             );
         }
 
-        batch.Submit();
+        RecordService.Instance.Write(records);
     }
 }

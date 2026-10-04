@@ -11,7 +11,7 @@ using Xunit;
 /// </summary>
 public class JsonDerivedTypeTests
 {
-    private static readonly Assembly Game = typeof(Effect).Assembly;
+    private static readonly Assembly Game = typeof(Replicated).Assembly;
 
     private static IEnumerable<Type> Concrete =>
         Game.GetTypes().Where(t => t.IsClass && !t.IsAbstract && !t.ContainsGenericParameters);
@@ -23,27 +23,14 @@ public class JsonDerivedTypeTests
         baseType.GetCustomAttributes<JsonDerivedTypeAttribute>(false).ToArray();
 
     /// <summary>
-    /// Every type that must be in a base's list: the effect that carries each record,
-    /// and each class under a polymorphic base.
+    /// Every type that must be in a base's list: each class under a polymorphic base,
+    /// like every record under <see cref="Replicated"/>.
     /// </summary>
-    private static IEnumerable<(Type Base, Type Type, Type Derived)> Required()
-    {
-        foreach (var record in Concrete.Where(t => typeof(IReplicated).IsAssignableFrom(t)))
-            yield return (
-                typeof(Effect),
-                record,
-                typeof(UpdateReplicatedEffect<>).MakeGenericType(record)
-            );
-
-        foreach (var baseType in PolymorphicBases)
-        foreach (var type in Concrete.Where(t => t.IsSubclassOf(baseType) && !t.IsGenericType))
-            yield return (baseType, type, type);
-    }
-
-    private static string CSharpName(Type type) =>
-        type.IsGenericType
-            ? $"{type.Name[..type.Name.IndexOf('`')]}<{string.Join(", ", type.GenericTypeArguments.Select(CSharpName))}>"
-            : type.Name;
+    private static IEnumerable<(Type Base, Type Type)> Required() =>
+        from baseType in PolymorphicBases
+        from type in Concrete
+        where type.IsSubclassOf(baseType) && !type.IsGenericType
+        select (baseType, type);
 
     /// <summary>Fails with every problem, a blank line apart, each a headline followed by the fix.</summary>
     private static void FailWith(IReadOnlyCollection<string> problems)
@@ -57,11 +44,11 @@ public class JsonDerivedTypeTests
     {
         FailWith(
             Required()
-                .Where(r => !Listed(r.Base).Any(a => a.DerivedType == r.Derived))
+                .Where(r => !Listed(r.Base).Any(a => a.DerivedType == r.Type))
                 .Select(r =>
                     $"{r.Type.Name} is missing from {r.Base.Name}'s [JsonDerivedType] list, so it can't be saved or sent.\n"
                     + $"Add this above {r.Base.Name}:\n"
-                    + $"    [JsonDerivedType(typeof({CSharpName(r.Derived)}), \"{r.Type.Name}\")]"
+                    + $"    [JsonDerivedType(typeof({r.Type.Name}), \"{r.Type.Name}\")]"
                 )
                 .ToList()
         );
@@ -83,7 +70,7 @@ public class JsonDerivedTypeTests
                     .GroupBy(a => a.TypeDiscriminator)
                     .Where(g => g.Count() > 1)
                     .Select(g =>
-                        $"\"{g.Key}\" is used by {string.Join(" and ", g.Select(a => CSharpName(a.DerivedType)))} in {baseType.Name}'s [JsonDerivedType] list.\n"
+                        $"\"{g.Key}\" is used by {string.Join(" and ", g.Select(a => a.DerivedType.Name))} in {baseType.Name}'s [JsonDerivedType] list.\n"
                         + "Each needs its own name. Keep the name on the type that saves already use it for, and give the other its class name."
                     )
             );
@@ -92,7 +79,7 @@ public class JsonDerivedTypeTests
                     .GroupBy(a => a.DerivedType)
                     .Where(g => g.Count() > 1)
                     .Select(g =>
-                        $"{CSharpName(g.Key)} is listed {g.Count()} times in {baseType.Name}'s [JsonDerivedType] list.\n"
+                        $"{g.Key.Name} is listed {g.Count()} times in {baseType.Name}'s [JsonDerivedType] list.\n"
                         + "Keep only the line with the name saves already use."
                     )
             );

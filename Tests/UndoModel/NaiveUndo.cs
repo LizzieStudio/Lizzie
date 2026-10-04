@@ -88,19 +88,24 @@ public sealed class NaiveUndo : IUndoApi
         return members.MaxBy(e => e.Id).Close;
     }
 
-    /// <summary>Whether any effect of the unit's events is in scope, as done by the author.</summary>
+    /// <summary>Whether any record the unit's events write is in scope, as done by the author.</summary>
     private static bool InScope(
         Log log,
         SnowportId unit,
         byte author,
-        Func<byte, Effect, bool> scope
-    ) => Members(log, unit).Any(m => m.Effects.Any(fx => scope(author, fx)));
+        Func<byte, Replicated, bool> scope
+    ) => Members(log, unit).Any(m => m.Records.Any(r => scope(author, r)));
 
     /// <summary>
     /// Whether Undo or Redo may act on the event: it isn't an admin event, the unit its entry
     /// comes down to is finished, and in scope as done by the entry's author.
     /// </summary>
-    private static bool IsCandidate(Log log, TableEvent e, byte me, Func<byte, Effect, bool> scope)
+    private static bool IsCandidate(
+        Log log,
+        TableEvent e,
+        byte me,
+        Func<byte, Replicated, bool> scope
+    )
     {
         if (e.IsAdmin)
             return false;
@@ -124,7 +129,7 @@ public sealed class NaiveUndo : IUndoApi
     /// older undo reversals included, and the newest entry still in effect is reversed.
     /// A Redo reversal is never history: it cancels out with the Undo reversal it reversed.
     /// </summary>
-    public UndoFlag Undo(Log log, byte me, Func<byte, Effect, bool> scope)
+    public UndoFlag Undo(Log log, byte me, Func<byte, Replicated, bool> scope)
     {
         bool pastLatestReversals = false;
         foreach (var e in NewestFirst(log))
@@ -171,7 +176,7 @@ public sealed class NaiveUndo : IUndoApi
     /// Redo reverses the player's newest Undo reversal still in effect, among their latest reversals.
     /// Anything else that has happened since leaves nothing to redo.
     /// </summary>
-    public UndoFlag Redo(Log log, byte me, Func<byte, Effect, bool> scope)
+    public UndoFlag Redo(Log log, byte me, Func<byte, Replicated, bool> scope)
     {
         foreach (var e in NewestFirst(log))
         {

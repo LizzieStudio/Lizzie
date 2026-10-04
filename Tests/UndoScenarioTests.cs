@@ -12,9 +12,9 @@ public class UndoScenarioTests
     private const byte Me = 1;
     private const byte Other = 2;
 
-    private static bool Mine(byte author, Effect _) => author == Me;
+    private static bool Mine(byte author, Replicated _) => author == Me;
 
-    private static bool Others(byte author, Effect _) => author != Me;
+    private static bool Others(byte author, Replicated _) => author != Me;
 
     private readonly Log _log = new();
     private ulong _clock;
@@ -40,7 +40,7 @@ public class UndoScenarioTests
                 Id = id,
                 Group = group,
                 Close = close,
-                Effects = [new UpdateReplicatedEffect<Prototype> { Id = record }],
+                Records = [new Prototype { Id = record }],
             }
         );
         return id;
@@ -82,10 +82,10 @@ public class UndoScenarioTests
         return id;
     }
 
-    private UndoFlag Undo(Func<byte, Effect, bool> scope, byte source = Me) =>
+    private UndoFlag Undo(Func<byte, Replicated, bool> scope, byte source = Me) =>
         Reversal(UndoLog.Undo(_log, source, scope), source);
 
-    private UndoFlag Redo(Func<byte, Effect, bool> scope, byte source = Me) =>
+    private UndoFlag Redo(Func<byte, Replicated, bool> scope, byte source = Me) =>
         Reversal(UndoLog.Redo(_log, source, scope), source);
 
     private UndoFlag Reversal(UndoFlag flag, byte source)
@@ -533,7 +533,7 @@ public class UndoScenarioTests
     {
         Act(Admin, record: 1);
 
-        Assert.Null(Undo((_, fx) => fx.Id == 1));
+        Assert.Null(Undo((_, r) => r.Id == 1));
     }
 
     /// <summary>The host's bookkeeping, like giving a seat its hand, doesn't take away a player's redo.</summary>

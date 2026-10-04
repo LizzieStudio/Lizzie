@@ -59,7 +59,7 @@ public static class UndoLog
     /// <summary>
     /// Selects the target that Undo should submit, or null if there's nothing in scope to undo.
     /// </summary>
-    public static UndoFlag Undo(Log log, byte me, Func<byte, Effect, bool> scope)
+    public static UndoFlag Undo(Log log, byte me, Func<byte, Replicated, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
         var targets = new Targets(log, me, scope);
@@ -85,7 +85,7 @@ public static class UndoLog
     /// <summary>
     /// Selects the target that Redo should submit, or null if there's nothing in scope to redo.
     /// </summary>
-    public static UndoFlag Redo(Log log, byte me, Func<byte, Effect, bool> scope)
+    public static UndoFlag Redo(Log log, byte me, Func<byte, Replicated, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
         var targets = new Targets(log, me, scope);
@@ -192,7 +192,7 @@ public static class UndoLog
     /// <summary>
     /// What Undo and Redo may target, judged once per entry over a walk from newest to oldest.
     /// </summary>
-    private sealed class Targets(Log log, byte me, Func<byte, Effect, bool> scope)
+    private sealed class Targets(Log log, byte me, Func<byte, Replicated, bool> scope)
     {
         // the index of each unit's newest event, for units the walk has met
         private readonly Dictionary<SnowportId, int> _newest = new();
@@ -279,8 +279,8 @@ public static class UndoLog
                 return inScope;
 
             foreach (var member in AllMembers(unit, i))
-            foreach (var fx in member.Effects)
-                if (scope(author, fx))
+            foreach (var record in member.Records)
+                if (scope(author, record))
                     return _inScope[(unit, author)] = true;
 
             return _inScope[(unit, author)] = false;

@@ -29,9 +29,6 @@ public class Snowport
     // A counter for SnowTag identities.
     private int _tagCounter = 1;
 
-    // A counter for admin SnowTag identities, like the singletons table setup creates.
-    private int _adminTagCounter = 1;
-
     public readonly byte source;
 
     /// <summary>How many sources there are, 0 to 63, since ids give the source 6 bits.</summary>
@@ -46,7 +43,7 @@ public class Snowport
     }
 
     /// <summary>
-    /// Returns a clock under a new source that keeps the hybrid-clock and tag counter.
+    /// Returns a clock under a new source that keeps the game time, hybrid clock, and tag counter.
     /// Use this instead of <c>new Snowport(source)</c> when the local player switches source
     /// while keeping the current table (hosting or disconnecting).
     /// </summary>
@@ -54,9 +51,10 @@ public class Snowport
     {
         return new Snowport(newSource)
         {
+            _localOffsetMsec = _localOffsetMsec,
+            _globalOffsetMsec = _globalOffsetMsec,
             _useLogicClock = _useLogicClock,
             _tagCounter = _tagCounter,
-            _adminTagCounter = _adminTagCounter,
         };
     }
 
@@ -105,29 +103,13 @@ public class Snowport
     }
 
     /// <summary>
-    /// Create a new <see cref="SnowTag"/> for a record an admin event creates, like a singleton.
-    /// Only the host or a solo player can make them.
-    /// </summary>
-    public SnowTag CreateAdminTag()
-    {
-        if (source != HostSource)
-            throw new Exception("Only the host can make admin records");
-        var tag = (AdminSource << 26) | _adminTagCounter;
-        _adminTagCounter++;
-        return new SnowTag(tag);
-    }
-
-    /// <summary>
-    /// Advance the tag counter past <paramref name="tag"/> when it shares our source,
-    /// or the admin tag counter past an admin tag.
+    /// Advance the tag counter past <paramref name="tag"/> when it shares our source.
     /// </summary>
     public void ObserveTag(SnowTag tag)
     {
         int counter = tag.Value & 0x3FFFFFF;
         if (tag.source == source && counter >= _tagCounter)
             _tagCounter = counter + 1;
-        else if (tag.source == AdminSource && counter >= _adminTagCounter)
-            _adminTagCounter = counter + 1;
     }
 
     /// <summary>
@@ -211,8 +193,8 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
 }
 
 /// <summary>
-/// A compact, timestamp-free unique ID for an <see cref="IReplicated"/>.
-/// </remarks>
+/// A compact, timestamp-free unique ID for a <see cref="Replicated"/> record.
+/// </summary>
 public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
 {
     private readonly int ID;
@@ -230,17 +212,6 @@ public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
     /// The source that minted this tag.
     /// </summary>
     public byte source => (byte)((ID >> 26) & 0x3F);
-
-    /// <summary>
-    /// Projects tags to their raw int values.
-    /// </summary>
-    public static int[] ToValues(IReadOnlyList<SnowTag> tags)
-    {
-        var values = new int[tags.Count];
-        for (int i = 0; i < tags.Count; i++)
-            values[i] = tags[i].ID;
-        return values;
-    }
 
     public bool Equals(SnowTag other) => ID == other.ID;
 

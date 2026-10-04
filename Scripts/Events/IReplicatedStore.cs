@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
 
 /// <summary>
-/// Holds the current records of one type, or one value, worked out from the event log.
+/// Holds the current records of one type, worked out from the event log.
 /// <see cref="RecordService"/> makes one for each type the first time it's read or written.
 /// </summary>
 public interface IReplicatedStore
@@ -16,7 +16,7 @@ public interface IReplicatedStore
 
     /// <summary>
     /// Merges an event that was just recorded in <paramref name="log"/>.
-    /// <paramref name="changed"/> are the events whose effects it puts in or out of effect:
+    /// <paramref name="changed"/> are the events whose records it puts in or out of effect:
     /// the event itself, or what an undo or redo reverses.
     /// While <paramref name="bulkLoading"/>, the changes wait for <see cref="FlushBulkLoad"/>.
     /// </summary>
@@ -29,8 +29,8 @@ public interface IReplicatedStore
     void FlushBulkLoad();
 
     /// <summary>The record with <paramref name="id"/> even if it is deleted, or null if this store doesn't hold it.</summary>
-    IReplicated Find(SnowTag id);
+    Replicated Find(SnowTag id);
 
-    /// <summary>The effects that would recreate what's saved of this store's current state.</summary>
-    IEnumerable<Effect> EnumerateSaveEffects();
+    /// <summary>The current value of every record that's saved with the project.</summary>
+    IEnumerable<Replicated> SavedRecords();
 }

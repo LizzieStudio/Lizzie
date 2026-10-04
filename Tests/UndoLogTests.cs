@@ -16,11 +16,7 @@ public class UndoLogTests
 
     private static TableEvent GetTableEvent(SnowportId id)
     {
-        return new TableEvent
-        {
-            Id = id,
-            Effects = [new UpdateReplicatedEffect<Prototype> { Id = 1 }],
-        };
+        return new TableEvent { Id = id, Records = [new Prototype { Id = 1 }] };
     }
 
     private static TableEvent GetUndoRedoEvent(SnowportId id, SnowportId target, bool redo = false)
@@ -43,14 +39,7 @@ public class UndoLogTests
             for (int l = 0; l < count; l++)
             {
                 var id = GetId(i + 1, sources[i]);
-                log.Add(
-                    id,
-                    new TableEvent
-                    {
-                        Id = id,
-                        Effects = [new UpdateReplicatedEffect<Selection> { Id = i + 1 }],
-                    }
-                );
+                log.Add(id, new TableEvent { Id = id, Records = [new Selection { Id = i + 1 }] });
             }
         }
         return log;

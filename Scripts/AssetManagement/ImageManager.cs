@@ -35,7 +35,7 @@ public partial class ImageManager : Window, ICommandView
     public WatchableValue<SnowTag> SelectionScope { get; } = new();
 
     /// <summary>Undo walks the edits to every image.</summary>
-    public bool UndoScope(Effect fx) => fx is UpdateReplicatedEffect<Asset>;
+    public bool UndoScope(Replicated record) => record is Asset;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -74,7 +74,7 @@ public partial class ImageManager : Window, ICommandView
     {
         var selected = RecordService.Instance.Get<Asset>(_selected);
         if (selected != null)
-            ProjectService.Instance.Upsert(selected with { Deleted = true });
+            RecordService.Instance.Write(selected with { Deleted = true });
     }
 
     private void OnTileClicked(SnowTag target)
@@ -112,12 +112,13 @@ public partial class ImageManager : Window, ICommandView
         //create the new asset
         var asset = new Asset
         {
+            Id = Snowport.Clock.CreateTag(),
             Name = _nameInput.Text,
             Type = Asset.AssetType.Image,
             CloudPath = _urlInput.Text,
         };
 
-        ProjectService.Instance.Upsert(asset);
+        RecordService.Instance.Write(asset);
 
         _nameInput.Text = string.Empty;
         _urlInput.Text = string.Empty;

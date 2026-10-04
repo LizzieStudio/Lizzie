@@ -10,13 +10,13 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(CellTarget), "CellTarget")]
 public abstract record Target
 {
-    /// <inheritdoc cref="IReplicated.Contents"/>
+    /// <inheritdoc cref="Replicated.Contents"/>
     public virtual IEnumerable<Target> Contents(IRecordReader R) => [];
 
-    /// <inheritdoc cref="IReplicated.Containers"/>
+    /// <inheritdoc cref="Replicated.Containers"/>
     public virtual IEnumerable<Target> Containers(IRecordReader R) => [];
 
-    /// <inheritdoc cref="IReplicated.Referenced"/>
+    /// <inheritdoc cref="Replicated.Referenced"/>
     public virtual IEnumerable<Target> Referenced(IRecordReader R) => [];
 }
 

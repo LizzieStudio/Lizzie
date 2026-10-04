@@ -4,10 +4,10 @@ using System.Linq;
 using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
 
 /// <summary>
-/// Storage for <see cref="IReplicated"/> objects that syncs during multiplayer transactionally.
+/// Storage for <see cref="Replicated"/> objects that syncs during multiplayer transactionally.
 /// </summary>
 public sealed class ReplicatedDictionary<TEntity> : IReplicatedStore
-    where TEntity : class, IReplicated
+    where TEntity : Replicated
 {
     private static readonly bool Saved = !typeof(TEntity).IsDefined(
         typeof(NotSavedAttribute),
@@ -26,7 +26,7 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedStore
         get { return dict; }
     }
 
-    public IReplicated Find(SnowTag id) => dict.GetValueOrDefault(id);
+    public Replicated Find(SnowTag id) => dict.GetValueOrDefault(id);
 
     #region events
 
@@ -55,8 +55,8 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedStore
     public void Apply(Log log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
     {
         var ids = changed
-            .SelectMany(c => c.Effects.OfType<UpdateReplicatedEffect<TEntity>>())
-            .Select(fx => fx.Id)
+            .SelectMany(c => c.Records.OfType<TEntity>())
+            .Select(r => r.Id)
             .ToHashSet();
         if (ids.Count == 0)
             return;
@@ -65,12 +65,9 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedStore
         var unfound = new HashSet<SnowTag>(ids);
         foreach (var writer in UndoLog.InEffect(log))
         {
-            for (int j = writer.Effects.Length - 1; j >= 0; j--)
-                if (
-                    writer.Effects[j] is UpdateReplicatedEffect<TEntity> { Payload: { } payload } fx
-                    && unfound.Remove(fx.Id)
-                )
-                    latest[fx.Id] = (TEntity)payload.WithIdentity(fx.Id, writer.Id);
+            for (int j = writer.Records.Length - 1; j >= 0; j--)
+                if (writer.Records[j] is TEntity record && unfound.Remove(record.Id))
+                    latest[record.Id] = record with { LastUpdateId = writer.Id };
             if (unfound.Count == 0)
                 break;
         }
@@ -124,12 +121,7 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedStore
     }
 
     /// <summary>
-    /// One upsert effect carrying the current value of every record, unless the type is <see cref="NotSavedAttribute"/>.
+    /// The current value of every record, unless the type is <see cref="NotSavedAttribute"/>.
     /// </summary>
-    public IEnumerable<Effect> EnumerateSaveEffects() =>
-        Saved
-            ? dict.Values.Select(r =>
-                (Effect)new UpdateReplicatedEffect<TEntity> { Id = r.Id, Payload = r }
-            )
-            : [];
+    public IEnumerable<Replicated> SavedRecords() => Saved ? dict.Values : [];
 }

@@ -30,22 +30,18 @@ public enum ScopeKind
 
 /// <summary>
 /// An undo scope, as a view or command would give one: whose changes it takes, and which records,
-/// by the bits of <paramref name="Mask"/>. A mask of 0 takes every effect, the singleton included.
+/// by the bits of <paramref name="Mask"/>. A mask of 0 takes every record, the singleton included.
 /// </summary>
 public sealed record TestScope(ScopeKind Kind, int Mask)
 {
-    public Func<byte, Effect, bool> For(byte me) =>
-        (author, fx) =>
+    public Func<byte, Replicated, bool> For(byte me) =>
+        (author, record) =>
             Kind switch
             {
                 ScopeKind.Mine => author == me,
                 ScopeKind.Others => author != me,
                 _ => true,
-            }
-            && (
-                Mask == 0
-                || fx is UpdateReplicatedEffect<TestRecord> && (Mask & (1 << (fx.Id - 1))) != 0
-            );
+            } && (Mask == 0 || record is TestRecord && (Mask & (1 << (record.Id - 1))) != 0);
 
     public override string ToString() => Mask == 0 ? $"{Kind}" : $"{Kind} records {Mask}";
 }
@@ -309,29 +305,17 @@ public sealed class UndoSession
     /// </summary>
     private void Record(TableEvent e, int first = 0, int second = 0, int values = 0)
     {
-        var effects = new List<Effect>();
+        var records = new List<Replicated>();
         foreach (var record in new[] { first, second }.Where(r => r != 0))
-            effects.Add(
-                new UpdateReplicatedEffect<TestRecord>
-                {
-                    Id = record,
-                    Payload = new TestRecord { Face = (int)e.Id.Value * 10 + effects.Count },
-                }
+            records.Add(
+                new TestRecord { Id = record, Face = (int)e.Id.Value * 10 + records.Count }
             );
         for (int i = 0; i < values; i++)
-            effects.Add(
-                new UpdateReplicatedEffect<TestValue>
-                {
-                    Id = TestValue.SingletonId,
-                    Payload = new()
-                    {
-                        Id = TestValue.SingletonId,
-                        Text = $"{e.Id.Value}.{effects.Count}",
-                    },
-                }
+            records.Add(
+                new TestValue { Id = TestValue.SingletonId, Text = $"{e.Id.Value}.{records.Count}" }
             );
-        if (effects.Count > 0)
-            e.Effects = effects.ToArray();
+        if (records.Count > 0)
+            e.Records = records.ToArray();
 
         int at = Log.Count;
         while (at > 0 && Log.GetAt(at - 1).Key.CompareTo(e.Id) > 0)
@@ -367,12 +351,12 @@ public sealed class UndoSession
                     ? Describe(f)
                     : string.Join(
                         " ",
-                        e.Effects.Select(fx =>
-                            fx switch
+                        e.Records.Select(record =>
+                            record switch
                             {
-                                UpdateReplicatedEffect<TestRecord> r => $"r{r.Id}={r.Payload.Face}",
-                                UpdateReplicatedEffect<TestValue> v => $"v={v.Payload.Text}",
-                                _ => fx.GetType().Name,
+                                TestRecord r => $"r{r.Id}={r.Face}",
+                                TestValue v => $"v={v.Text}",
+                                _ => record.GetType().Name,
                             }
                         )
                     );

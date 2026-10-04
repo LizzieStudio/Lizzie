@@ -10,7 +10,10 @@ public class TableEvent
     /// </summary>
     public CommandName? Command { get; set; }
 
-    public Effect[] Effects { get; set; } = Array.Empty<Effect>();
+    /// <summary>
+    /// The records this event writes, each with its whole value.
+    /// </summary>
+    public Replicated[] Records { get; set; } = Array.Empty<Replicated>();
 
     /// <summary>
     /// Set on an undo or a redo, which changes nothing itself but reverses an earlier entry in history.
@@ -44,19 +47,19 @@ public class TableEvent
     public bool IsAdmin => Id.source == Snowport.AdminSource;
 
     /// <summary>Creates an event with a new SnowportId.</summary>
-    public static TableEvent Now(Effect[] effects, CommandName? command = null) =>
+    public static TableEvent Now(Replicated[] records, CommandName? command = null) =>
         new()
         {
             Id = Snowport.Clock.Create(),
             Command = command,
-            Effects = effects ?? Array.Empty<Effect>(),
+            Records = records ?? Array.Empty<Replicated>(),
         };
 
     /// <summary>
     /// Creates an admin event, which don't belong to any player.
     /// </summary>
-    public static TableEvent Admin(Effect[] effects) =>
-        new() { Id = Snowport.Clock.CreateAdmin(), Effects = effects ?? Array.Empty<Effect>() };
+    public static TableEvent Admin(Replicated[] records) =>
+        new() { Id = Snowport.Clock.CreateAdmin(), Records = records ?? Array.Empty<Replicated>() };
 
     /// <summary>
     /// Creates an undo or a redo, issued by <paramref name="command"/> if there was one.

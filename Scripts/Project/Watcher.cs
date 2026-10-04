@@ -63,7 +63,7 @@ public sealed class Watcher : IRecordReader
         return false;
     }
 
-    private bool IsReadById(object record) => record is IReplicated r && _ids.Contains(r.Id);
+    private bool IsReadById(object record) => record is Replicated r && _ids.Contains(r.Id);
 
     /// <summary>Replaces the dependencies with the ones read by a fresh run.</summary>
     public void Run()
@@ -89,31 +89,31 @@ public sealed class Watcher : IRecordReader
     }
 
     private void Depend<T>(Func<T, bool> matches)
-        where T : class, IReplicated =>
+        where T : Replicated =>
         Depend(typeof(T), o => o is T record && !record.Deleted && matches(record));
 
     public T Get<T>(SnowTag id)
-        where T : class, IReplicated
+        where T : Replicated
     {
         Depend<T>(r => r.Id == id);
         return _source.Get<T>(id);
     }
 
-    public IReplicated Get(SnowTag id)
+    public Replicated Get(SnowTag id)
     {
         _ids.Add(id);
         return _source.Get(id);
     }
 
     public T GetIncludingDeleted<T>(SnowTag id)
-        where T : class, IReplicated
+        where T : Replicated
     {
         Depend(typeof(T), o => o is T record && record.Id == id);
         return _source.GetIncludingDeleted<T>(id);
     }
 
     public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
-        where T : class, IReplicated
+        where T : Replicated
     {
         var list = ids.ToArray();
         var set = list.ToHashSet();
@@ -122,35 +122,35 @@ public sealed class Watcher : IRecordReader
     }
 
     public IReadOnlyList<T> Get<T>(Func<T, bool> filter)
-        where T : class, IReplicated
+        where T : Replicated
     {
         Depend(filter);
         return _source.Get(filter);
     }
 
     public IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
-        where T : class, IReplicated
+        where T : Replicated
     {
         Depend(typeof(T), o => o is T record && filter(record));
         return _source.GetIncludingDeleted(filter);
     }
 
     public IReadOnlyList<T> Get<T>()
-        where T : class, IReplicated
+        where T : Replicated
     {
         Depend<T>(_ => true);
         return _source.Get<T>();
     }
 
     public T Single<T>()
-        where T : class, IReplicated, new()
+        where T : Replicated
     {
         Depend<T>(_ => true);
         return _source.Single<T>();
     }
 
     public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
-        where T : class, IReplicated
+        where T : Replicated
         where K : struct
     {
         if (!_projected.Add(typeof(T)))
@@ -184,7 +184,7 @@ public sealed class Watcher : IRecordReader
     }
 
     public SwapLists GetChanged<T>()
-        where T : class, IReplicated
+        where T : Replicated
     {
         var (deleted, created) = GetChanged<T, bool>((R, value) => true);
         return new SwapLists(

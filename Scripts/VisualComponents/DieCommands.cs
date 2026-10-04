@@ -14,7 +14,7 @@ public static class DieCommands
         Noun = ("Die", "Dice"),
         Keys = [Shortcuts.Key(Key.R)],
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Die,
-        Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rolled(R, c))),
+        Effects = (R, cs, _) => cs.Select(c => Rolled(R, c)),
     };
 
     public static readonly Command SetFace = new RecordCommand<ComponentState>
@@ -31,8 +31,7 @@ public static class DieCommands
                 .DefaultIfEmpty()
                 .Max(),
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Die,
-        Effects = (R, cs, n) =>
-            Effect.UpsertAll(cs.Select(c => Showing(R, c, n)).Where(s => s != null)),
+        Effects = (R, cs, n) => cs.Select(c => Showing(R, c, n)).Where(s => s != null),
     };
 
     private static DieParameters Parameters(IRecordReader R, ComponentState die) =>

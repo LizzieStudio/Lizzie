@@ -6,7 +6,7 @@
   "properties": {
     "id": true,
     "command": true,
-    "effects": {
+    "records": {
       "type": [
         "array",
         "null"
@@ -25,58 +25,51 @@
               "$type": {
                 "const": "ComponentState"
               },
-              "payload": {
-                "type": [
-                  "object",
-                  "null"
-                ],
+              "prototypeRef": true,
+              "x": {
+                "type": "integer"
+              },
+              "z": {
+                "type": "integer"
+              },
+              "rotation": true,
+              "zOrder": {
+                "type": "object",
                 "properties": {
-                  "prototypeRef": true,
-                  "x": {
+                  "target": {
                     "type": "integer"
                   },
-                  "z": {
+                  "suborder": {
                     "type": "integer"
                   },
-                  "rotation": true,
-                  "zOrder": {
-                    "type": "object",
-                    "properties": {
-                      "target": {
-                        "type": "integer"
-                      },
-                      "suborder": {
-                        "type": "integer"
-                      },
-                      "stamp": true
-                    },
-                    "required": [
-                      "target",
-                      "suborder",
-                      "stamp"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "dataSetRowIndex": {
-                    "type": "integer"
-                  },
-                  "dataSetRowId": true,
-                  "location": {
-                    "type": "integer"
-                  },
-                  "containerRef": true,
-                  "holder": {
-                    "type": "integer"
-                  },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
+                  "stamp": true
                 },
+                "required": [
+                  "target",
+                  "suborder",
+                  "stamp"
+                ],
                 "additionalProperties": false
               },
-              "id": true
+              "dataSetRowIndex": {
+                "type": "integer"
+              },
+              "dataSetRowId": true,
+              "location": {
+                "type": "integer"
+              },
+              "containerRef": true,
+              "holder": {
+                "type": "integer"
+              },
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -84,569 +77,562 @@
               "$type": {
                 "const": "Prototype"
               },
-              "payload": {
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parameters": {
                 "type": [
                   "object",
                   "null"
                 ],
-                "properties": {
-                  "name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "parameters": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
-                    "required": [
-                      "$type"
-                    ],
-                    "anyOf": [
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "CubeParameters"
-                          },
-                          "height": {
-                            "type": "number"
-                          },
-                          "width": {
-                            "type": "number"
-                          },
-                          "length": {
-                            "type": "number"
-                          },
-                          "color": true,
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
+                "required": [
+                  "$type"
+                ],
+                "anyOf": [
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "CubeParameters"
                       },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "DiscParameters"
-                          },
-                          "height": {
-                            "type": "number"
-                          },
-                          "diameter": {
-                            "type": "number"
-                          },
-                          "color": true,
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
+                      "height": {
+                        "type": "number"
                       },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "TokenParameters"
-                          },
-                          "height": {
-                            "type": "number"
-                          },
-                          "width": {
-                            "type": "number"
-                          },
-                          "thickness": {
-                            "type": "number"
-                          },
-                          "shape": {
-                            "type": "integer"
-                          },
-                          "mode": {
-                            "type": "integer"
-                          },
-                          "differentBack": {
-                            "type": "boolean"
-                          },
-                          "frontImage": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "backImage": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "frontBgColor": true,
-                          "backBgColor": true,
-                          "quickFront": {
-                            "type": [
-                              "object",
-                              "null"
-                            ],
-                            "properties": {
-                              "faceType": {
-                                "type": "integer"
-                              },
-                              "foregroundColor": true,
-                              "caption": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              },
-                              "quantity": {
-                                "type": "integer"
-                              }
-                            },
-                            "additionalProperties": false
-                          },
-                          "quickBack": {
-                            "type": [
-                              "object",
-                              "null"
-                            ],
-                            "properties": {
-                              "faceType": {
-                                "type": "integer"
-                              },
-                              "foregroundColor": true,
-                              "caption": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              },
-                              "quantity": {
-                                "type": "integer"
-                              }
-                            },
-                            "additionalProperties": false
-                          },
-                          "frontFontSize": {
-                            "type": "integer"
-                          },
-                          "backFontSize": {
-                            "type": "integer"
-                          },
-                          "type": {
-                            "type": "integer"
-                          },
-                          "quickCardData": {
-                            "type": "array",
-                            "items": {
-                              "type": [
-                                "object",
-                                "null"
-                              ],
-                              "properties": {
-                                "backgroundColor": true,
-                                "caption": {
-                                  "type": [
-                                    "string",
-                                    "null"
-                                  ]
-                                },
-                                "cardBackColor": true,
-                                "cardBackValue": {
-                                  "type": [
-                                    "string",
-                                    "null"
-                                  ]
-                                }
-                              },
-                              "additionalProperties": false
-                            }
-                          },
-                          "frontGridImageKey": true,
-                          "backGridImageKey": true,
-                          "gridRows": {
-                            "type": "integer"
-                          },
-                          "gridCols": {
-                            "type": "integer"
-                          },
-                          "gridCount": {
-                            "type": "integer"
-                          },
-                          "gridSingleBack": {
-                            "type": "boolean"
-                          },
-                          "frontTemplate": true,
-                          "backTemplate": true,
-                          "dataset": true,
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
+                      "width": {
+                        "type": "number"
                       },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "DeckParameters"
-                          },
-                          "height": {
-                            "type": "number"
-                          },
-                          "width": {
-                            "type": "number"
-                          },
-                          "thickness": {
-                            "type": "number"
-                          },
-                          "shape": {
-                            "type": "integer"
-                          },
-                          "mode": {
-                            "type": "integer"
-                          },
-                          "differentBack": {
-                            "type": "boolean"
-                          },
-                          "frontImage": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "backImage": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "frontBgColor": true,
-                          "backBgColor": true,
-                          "quickFront": {
-                            "type": [
-                              "object",
-                              "null"
-                            ],
-                            "properties": {
-                              "faceType": {
-                                "type": "integer"
-                              },
-                              "foregroundColor": true,
-                              "caption": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              },
-                              "quantity": {
-                                "type": "integer"
-                              }
-                            },
-                            "additionalProperties": false
-                          },
-                          "quickBack": {
-                            "type": [
-                              "object",
-                              "null"
-                            ],
-                            "properties": {
-                              "faceType": {
-                                "type": "integer"
-                              },
-                              "foregroundColor": true,
-                              "caption": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              },
-                              "quantity": {
-                                "type": "integer"
-                              }
-                            },
-                            "additionalProperties": false
-                          },
-                          "frontFontSize": {
-                            "type": "integer"
-                          },
-                          "backFontSize": {
-                            "type": "integer"
-                          },
-                          "type": {
-                            "type": "integer"
-                          },
-                          "quickCardData": {
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/properties/effects/items/anyOf/1/properties/payload/properties/parameters/anyOf/2/properties/quickCardData/items"
-                            }
-                          },
-                          "frontGridImageKey": true,
-                          "backGridImageKey": true,
-                          "gridRows": {
-                            "type": "integer"
-                          },
-                          "gridCols": {
-                            "type": "integer"
-                          },
-                          "gridCount": {
-                            "type": "integer"
-                          },
-                          "gridSingleBack": {
-                            "type": "boolean"
-                          },
-                          "frontTemplate": true,
-                          "backTemplate": true,
-                          "dataset": true,
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
+                      "length": {
+                        "type": "number"
                       },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "DieParameters"
-                          },
-                          "size": {
-                            "type": "number"
-                          },
-                          "color": true,
-                          "sides": {
-                            "type": "array",
-                            "items": {
-                              "type": [
-                                "object",
-                                "null"
-                              ],
-                              "properties": {
-                                "faceType": {
-                                  "type": "integer"
-                                },
-                                "foregroundColor": true,
-                                "caption": {
-                                  "type": [
-                                    "string",
-                                    "null"
-                                  ]
-                                },
-                                "quantity": {
-                                  "type": "integer"
-                                }
-                              },
-                              "additionalProperties": false
-                            }
-                          },
-                          "sideCount": {
-                            "type": "integer"
-                          },
-                          "mode": {
-                            "type": "integer"
-                          },
-                          "frontTemplate": true,
-                          "dataset": true,
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
+                      "color": true,
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "MeepleParameters"
-                          },
-                          "height": {
-                            "type": "number"
-                          },
-                          "thickness": {
-                            "type": "number"
-                          },
-                          "color": true,
-                          "grid": {
-                            "type": "array",
-                            "items": {
-                              "type": "array",
-                              "items": {
-                                "type": "boolean"
-                              }
-                            }
-                          },
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "TrayParameters"
-                          },
-                          "height": {
-                            "type": "number"
-                          },
-                          "width": {
-                            "type": "number"
-                          },
-                          "length": {
-                            "type": "number"
-                          },
-                          "color": true,
-                          "prototype": true,
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "BagParameters"
-                          },
-                          "height": {
-                            "type": "number"
-                          },
-                          "diameter": {
-                            "type": "number"
-                          },
-                          "color": true,
-                          "showCount": {
-                            "type": "boolean"
-                          },
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      {
-                        "properties": {
-                          "$type": {
-                            "const": "ZoneParameters"
-                          },
-                          "width": {
-                            "type": "number"
-                          },
-                          "depth": {
-                            "type": "number"
-                          },
-                          "defaultIncluded": {
-                            "type": "boolean"
-                          },
-                          "hiddenWhenExcluded": {
-                            "type": "boolean"
-                          },
-                          "includedSeats": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "excludedSeats": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "componentName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "baseName": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       }
-                    ]
+                    },
+                    "additionalProperties": false
                   },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "DiscParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "diameter": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "TokenParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "thickness": {
+                        "type": "number"
+                      },
+                      "shape": {
+                        "type": "integer"
+                      },
+                      "mode": {
+                        "type": "integer"
+                      },
+                      "differentBack": {
+                        "type": "boolean"
+                      },
+                      "frontImage": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "backImage": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "frontBgColor": true,
+                      "backBgColor": true,
+                      "quickFront": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "faceType": {
+                            "type": "integer"
+                          },
+                          "foregroundColor": true,
+                          "caption": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "quantity": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "quickBack": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "faceType": {
+                            "type": "integer"
+                          },
+                          "foregroundColor": true,
+                          "caption": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "quantity": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "frontFontSize": {
+                        "type": "integer"
+                      },
+                      "backFontSize": {
+                        "type": "integer"
+                      },
+                      "type": {
+                        "type": "integer"
+                      },
+                      "quickCardData": {
+                        "type": "array",
+                        "items": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "backgroundColor": true,
+                            "caption": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "cardBackColor": true,
+                            "cardBackValue": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "frontGridImageKey": true,
+                      "backGridImageKey": true,
+                      "gridRows": {
+                        "type": "integer"
+                      },
+                      "gridCols": {
+                        "type": "integer"
+                      },
+                      "gridCount": {
+                        "type": "integer"
+                      },
+                      "gridSingleBack": {
+                        "type": "boolean"
+                      },
+                      "frontTemplate": true,
+                      "backTemplate": true,
+                      "dataset": true,
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "DeckParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "thickness": {
+                        "type": "number"
+                      },
+                      "shape": {
+                        "type": "integer"
+                      },
+                      "mode": {
+                        "type": "integer"
+                      },
+                      "differentBack": {
+                        "type": "boolean"
+                      },
+                      "frontImage": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "backImage": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "frontBgColor": true,
+                      "backBgColor": true,
+                      "quickFront": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "faceType": {
+                            "type": "integer"
+                          },
+                          "foregroundColor": true,
+                          "caption": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "quantity": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "quickBack": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "faceType": {
+                            "type": "integer"
+                          },
+                          "foregroundColor": true,
+                          "caption": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "quantity": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "frontFontSize": {
+                        "type": "integer"
+                      },
+                      "backFontSize": {
+                        "type": "integer"
+                      },
+                      "type": {
+                        "type": "integer"
+                      },
+                      "quickCardData": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/properties/records/items/anyOf/1/properties/parameters/anyOf/2/properties/quickCardData/items"
+                        }
+                      },
+                      "frontGridImageKey": true,
+                      "backGridImageKey": true,
+                      "gridRows": {
+                        "type": "integer"
+                      },
+                      "gridCols": {
+                        "type": "integer"
+                      },
+                      "gridCount": {
+                        "type": "integer"
+                      },
+                      "gridSingleBack": {
+                        "type": "boolean"
+                      },
+                      "frontTemplate": true,
+                      "backTemplate": true,
+                      "dataset": true,
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "DieParameters"
+                      },
+                      "size": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "sides": {
+                        "type": "array",
+                        "items": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "faceType": {
+                              "type": "integer"
+                            },
+                            "foregroundColor": true,
+                            "caption": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "quantity": {
+                              "type": "integer"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "sideCount": {
+                        "type": "integer"
+                      },
+                      "mode": {
+                        "type": "integer"
+                      },
+                      "frontTemplate": true,
+                      "dataset": true,
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "MeepleParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "thickness": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "grid": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "TrayParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "length": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "prototype": true,
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "BagParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "diameter": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "showCount": {
+                        "type": "boolean"
+                      },
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "ZoneParameters"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "depth": {
+                        "type": "number"
+                      },
+                      "defaultIncluded": {
+                        "type": "boolean"
+                      },
+                      "hiddenWhenExcluded": {
+                        "type": "boolean"
+                      },
+                      "includedSeats": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        }
+                      },
+                      "excludedSeats": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        }
+                      },
+                      "componentName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "baseName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
                   }
-                },
-                "additionalProperties": false
+                ]
               },
-              "id": true
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -654,55 +640,48 @@
               "$type": {
                 "const": "Template"
               },
-              "payload": {
+              "name": {
                 "type": [
-                  "object",
+                  "string",
                   "null"
-                ],
-                "properties": {
-                  "name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "sizeTemplate": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "width": {
-                    "type": "number"
-                  },
-                  "height": {
-                    "type": "number"
-                  },
-                  "elements": {
-                    "type": "array",
-                    "items": {
-                      "type": [
-                        "object",
-                        "null"
-                      ],
-                      "additionalProperties": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      }
-                    }
-                  },
-                  "dataSet": true,
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+                ]
               },
-              "id": true
+              "sizeTemplate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              },
+              "elements": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "dataSet": true,
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -710,46 +689,39 @@
               "$type": {
                 "const": "DataSet"
               },
-              "payload": {
+              "name": {
                 "type": [
-                  "object",
+                  "string",
                   "null"
-                ],
-                "properties": {
-                  "name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "columns": {
-                    "type": "array",
-                    "items": {
+                ]
+              },
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": true,
+                    "name": {
                       "type": [
-                        "object",
+                        "string",
                         "null"
-                      ],
-                      "properties": {
-                        "id": true,
-                        "name": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        }
-                      },
-                      "additionalProperties": false
+                      ]
                     }
                   },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+                  "additionalProperties": false
+                }
               },
-              "id": true
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -757,40 +729,33 @@
               "$type": {
                 "const": "DataRow"
               },
-              "payload": {
+              "dataSetId": true,
+              "rank": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "data": {
                 "type": [
                   "object",
                   "null"
                 ],
-                "properties": {
-                  "dataSetId": true,
-                  "rank": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "data": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
-                    "additionalProperties": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
               },
-              "id": true
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -798,36 +763,29 @@
               "$type": {
                 "const": "Asset"
               },
-              "payload": {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "properties": {
-                  "type": {
-                    "type": "integer"
-                  },
-                  "name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "cloudPath": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+              "type": {
+                "type": "integer"
               },
-              "id": true
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cloudPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -835,72 +793,68 @@
               "$type": {
                 "const": "GameState"
               },
-              "payload": {
+              "parent": true,
+              "name": {
                 "type": [
-                  "object",
+                  "string",
                   "null"
-                ],
-                "properties": {
-                  "parent": true,
-                  "name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "description": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "upserts": {
-                    "type": "array",
-                    "items": {
-                      "type": [
-                        "object",
-                        "null"
-                      ],
-                      "properties": {
-                        "prototypeRef": true,
-                        "x": {
-                          "type": "integer"
-                        },
-                        "z": {
-                          "type": "integer"
-                        },
-                        "rotation": true,
-                        "zOrder": {
-                          "$ref": "#/properties/effects/items/anyOf/0/properties/payload/properties/zOrder"
-                        },
-                        "dataSetRowIndex": {
-                          "type": "integer"
-                        },
-                        "dataSetRowId": true,
-                        "location": {
-                          "type": "integer"
-                        },
-                        "containerRef": true,
-                        "holder": {
-                          "type": "integer"
-                        },
-                        "id": true,
-                        "deleted": {
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
+                ]
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "upserts": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "prototypeRef": true,
+                    "x": {
+                      "type": "integer"
+                    },
+                    "z": {
+                      "type": "integer"
+                    },
+                    "rotation": true,
+                    "zOrder": {
+                      "$ref": "#/properties/records/items/anyOf/0/properties/zOrder"
+                    },
+                    "dataSetRowIndex": {
+                      "type": "integer"
+                    },
+                    "dataSetRowId": true,
+                    "location": {
+                      "type": "integer"
+                    },
+                    "containerRef": true,
+                    "holder": {
+                      "type": "integer"
+                    },
+                    "id": true,
+                    "deleted": {
+                      "type": "boolean"
                     }
                   },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                }
               },
-              "id": true
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -908,82 +862,75 @@
               "$type": {
                 "const": "Selection"
               },
-              "payload": {
+              "player": {
+                "type": "integer"
+              },
+              "within": true,
+              "targets": {
                 "type": [
-                  "object",
+                  "array",
                   "null"
                 ],
-                "properties": {
-                  "player": {
-                    "type": "integer"
-                  },
-                  "within": true,
-                  "targets": {
-                    "type": [
-                      "array",
-                      "null"
-                    ],
-                    "items": {
-                      "type": [
-                        "object",
-                        "null"
-                      ],
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "required": [
+                    "$type"
+                  ],
+                  "anyOf": [
+                    {
+                      "properties": {
+                        "$type": {
+                          "const": "RecordTarget"
+                        },
+                        "id": true
+                      },
                       "required": [
-                        "$type"
+                        "id"
                       ],
-                      "anyOf": [
-                        {
-                          "properties": {
-                            "$type": {
-                              "const": "RecordTarget"
-                            },
-                            "id": true
-                          },
-                          "required": [
-                            "id"
-                          ],
-                          "additionalProperties": false
+                      "additionalProperties": false
+                    },
+                    {
+                      "properties": {
+                        "$type": {
+                          "const": "ColumnTarget"
                         },
-                        {
-                          "properties": {
-                            "$type": {
-                              "const": "ColumnTarget"
-                            },
-                            "dataSetId": true,
-                            "columnId": true
-                          },
-                          "required": [
-                            "dataSetId",
-                            "columnId"
-                          ],
-                          "additionalProperties": false
+                        "dataSetId": true,
+                        "columnId": true
+                      },
+                      "required": [
+                        "dataSetId",
+                        "columnId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "properties": {
+                        "$type": {
+                          "const": "CellTarget"
                         },
-                        {
-                          "properties": {
-                            "$type": {
-                              "const": "CellTarget"
-                            },
-                            "rowId": true,
-                            "columnId": true
-                          },
-                          "required": [
-                            "rowId",
-                            "columnId"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
+                        "rowId": true,
+                        "columnId": true
+                      },
+                      "required": [
+                        "rowId",
+                        "columnId"
+                      ],
+                      "additionalProperties": false
                     }
-                  },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+                  ]
+                }
               },
-              "id": true
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -991,105 +938,98 @@
               "$type": {
                 "const": "ProjectGameSettings"
               },
-              "payload": {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "properties": {
-                  "startIn2D": {
-                    "type": "boolean"
-                  },
-                  "enablePlayerHands": {
-                    "type": "boolean"
-                  },
-                  "tableWidth": {
-                    "type": "number"
-                  },
-                  "tableHeight": {
-                    "type": "number"
-                  },
-                  "tableUnits": {
-                    "type": "integer"
-                  },
-                  "tableColor": true,
-                  "rotationStepIndex": {
-                    "type": "integer"
-                  },
-                  "allowObservers": {
-                    "type": "boolean"
-                  },
-                  "maxPlayers": {
-                    "type": "integer"
-                  },
-                  "players": {
-                    "type": "array",
-                    "items": {
-                      "type": [
-                        "object",
-                        "null"
-                      ],
-                      "properties": {
-                        "name": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "color": true,
-                        "isAdmin": {
-                          "type": "boolean"
-                        },
-                        "handRef": true
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "gameTitle": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "designers": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "graphicDesign": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "artists": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "contactInfo": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "visionStatement": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+              "startIn2D": {
+                "type": "boolean"
               },
-              "id": true
+              "enablePlayerHands": {
+                "type": "boolean"
+              },
+              "tableWidth": {
+                "type": "number"
+              },
+              "tableHeight": {
+                "type": "number"
+              },
+              "tableUnits": {
+                "type": "integer"
+              },
+              "tableColor": true,
+              "rotationStepIndex": {
+                "type": "integer"
+              },
+              "allowObservers": {
+                "type": "boolean"
+              },
+              "maxPlayers": {
+                "type": "integer"
+              },
+              "players": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "color": true,
+                    "isAdmin": {
+                      "type": "boolean"
+                    },
+                    "handRef": true
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "gameTitle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "designers": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "graphicDesign": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "artists": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contactInfo": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "visionStatement": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           },
           {
@@ -1097,22 +1037,15 @@
               "$type": {
                 "const": "ActiveGameStateRef"
               },
-              "payload": {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "properties": {
-                  "gameStateId": true,
-                  "id": true,
-                  "deleted": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "id": true
+              "gameStateId": true,
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
+            "required": [
+              "id"
+            ],
             "additionalProperties": false
           }
         ]

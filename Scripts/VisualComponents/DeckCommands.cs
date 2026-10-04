@@ -17,7 +17,7 @@ public static class DeckCommands
         Caption = "Shuffle {0}",
         Noun = ("Deck", "Decks"),
         AppliesTo = HasCards,
-        Effects = (R, cs, _) => Effect.UpsertAll(cs.SelectMany(c => Shuffled(R, c))),
+        Effects = (R, cs, _) => cs.SelectMany(c => Shuffled(R, c)),
     };
 
     public static readonly Command Draw = new RecordCommand<ComponentState>
@@ -31,7 +31,7 @@ public static class DeckCommands
         // As many cards as the fullest deck has.
         NumberLimit = (R, decks) => decks.Select(d => R.TokensOn(d).Count).DefaultIfEmpty().Max(),
         AppliesTo = HasCards,
-        Effects = (R, cs, n) => Effect.UpsertAll(cs.SelectMany(c => Drawn(R, c, n))),
+        Effects = (R, cs, n) => cs.SelectMany(c => Drawn(R, c, n)),
     };
 
     public static readonly Command Deal = new RecordCommand<ComponentState>
@@ -45,7 +45,7 @@ public static class DeckCommands
         NumberLimit = (R, decks) =>
             decks.Select(d => PerSeat(R.TokensOn(d).Count, DealSeats(R))).DefaultIfEmpty().Max(),
         AppliesTo = HasCards,
-        Effects = (R, cs, n) => Effect.UpsertAll(cs.SelectMany(c => Dealt(R, c, n))),
+        Effects = (R, cs, n) => cs.SelectMany(c => Dealt(R, c, n)),
     };
 
     private static bool IsDeck(IRecordReader R, ComponentState c) =>

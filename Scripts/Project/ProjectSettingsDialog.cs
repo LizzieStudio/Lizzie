@@ -235,7 +235,7 @@ public partial class ProjectSettingsDialog : Window
             return;
         }
 
-        ProjectService.Instance.UpdateGameSettings(ReadUi());
+        RecordService.Instance.Write(ReadUi());
         OnClosePressed();
     }
 

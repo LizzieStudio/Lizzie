@@ -185,12 +185,12 @@ public interface ICommandView
     IReadOnlyList<Command> Commands => [];
 
     /// <summary>
-    /// <para>Whether an undo or redo issued in this view should target <paramref name="effect"/>.</para>
+    /// <para>Whether an undo or redo issued in this view should target an event that writes <paramref name="record"/>.</para>
     ///
-    /// Returning true will make undo or redo in this view reverse or reapply this effect.
-    /// Returning false will make them skip the effect and search further backwards for another candidate.
+    /// Returning true will make undo or redo in this view reverse or reapply the write.
+    /// Returning false will make them skip it and search further backwards for another candidate.
     /// </summary>
-    bool UndoScope(Effect effect);
+    bool UndoScope(Replicated record);
 }
 
 /// <summary>
@@ -351,13 +351,13 @@ public abstract class Command
         NumberKeys ? Shortcuts.Label(Shortcuts.Number(number)) : null;
 
     /// <summary>
-    /// Submits the effects as one event made by this command.
+    /// Writes the records as one event made by this command.
     /// </summary>
-    protected void Submit(IEnumerable<Effect> effects)
+    protected void Submit(IEnumerable<Replicated> records)
     {
-        if (effects == null)
+        if (records == null)
             return;
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray(), Name));
+        RecordService.Instance?.Write(Name, records);
     }
 }
 
@@ -365,7 +365,7 @@ public abstract class Command
 /// A command on records of one type.
 /// </summary>
 public sealed class RecordCommand<T> : Command
-    where T : class, IReplicated
+    where T : Replicated
 {
     /// <summary>
     /// Determines whether this command can operate on a given <paramref name="record"/>.
@@ -384,20 +384,20 @@ public sealed class RecordCommand<T> : Command
     public TargetCount Count { get; init; } = TargetCount.Many;
 
     /// <summary>
-    /// Produces the <see cref="Effect"/>s from this command.
+    /// Produces the records this command writes, each with its whole new value.
     /// </summary>
     /// <param name="reader">The record reader to pull data.</param>
     /// <param name="records">The records that were targeted with this command.</param>
     /// <param name="number">When <see cref="Command.AsksForNumber"/> is true, the number provided by the user.</param>
-    /// <returns>The effects, submitted as one event.</returns>
-    public delegate IEnumerable<Effect> EffectsDelegate(
+    /// <returns>The records, written as one event.</returns>
+    public delegate IEnumerable<Replicated> EffectsDelegate(
         IRecordReader reader,
         IReadOnlyList<T> records,
         int number
     );
 
     /// <summary>
-    /// Generates the effects from this command on the given records, submitted as one event.
+    /// Generates the records this command writes for the given records, written as one event.
     /// Returning an empty list still fires an event.
     /// returning null will not fire an event.
     /// The third parameter provides a number if <see cref="Command.AsksForNumber"/> is true, like with setting a die face.
@@ -456,10 +456,15 @@ public sealed class TargetCommand<T> : Command
     public TargetCount Count { get; init; } = TargetCount.Many;
 
     /// <summary>
-    /// Generate the effects from this command on the given targets, submitted as one event.
+    /// Generates the records this command writes for the given targets, written as one event.
     /// returning null will not fire an event.
     /// </summary>
-    public Func<IRecordReader, IReadOnlyList<T>, int, IEnumerable<Effect>> Effects { get; init; }
+    public Func<
+        IRecordReader,
+        IReadOnlyList<T>,
+        int,
+        IEnumerable<Replicated>
+    > Effects { get; init; }
 
     /// <summary>
     /// Run so that this command can perform actions other than change records, such as starting a rename.
@@ -495,11 +500,11 @@ public sealed class GlobalCommand : Command
     public Func<IRecordReader, bool> Enabled { get; init; }
 
     /// <summary>
-    /// Generates the effects, submitted as one event.
+    /// Generates the records to write, as one event.
     /// Returning an empty list still fires an event
     /// Returning null does not fire an event.
     /// </summary>
-    public Func<IRecordReader, IEnumerable<Effect>> Effects { get; init; }
+    public Func<IRecordReader, IEnumerable<Replicated>> Effects { get; init; }
 
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }
@@ -590,14 +595,14 @@ public static class CommandViews
     /// Makes everything under <paramref name="node"/> a view with nothing to act on,
     /// where undo walks through <paramref name="undoScope"/>, until it leaves the tree.
     /// </summary>
-    public static void Attach(Node node, Func<Effect, bool> undoScope) =>
+    public static void Attach(Node node, Func<Replicated, bool> undoScope) =>
         Attach(node, new ScopeView(undoScope));
 
-    private sealed class ScopeView(Func<Effect, bool> undoScope) : ICommandView
+    private sealed class ScopeView(Func<Replicated, bool> undoScope) : ICommandView
     {
         public WatchableValue<SnowTag> SelectionScope { get; } = new();
 
-        public bool UndoScope(Effect fx) => undoScope(fx);
+        public bool UndoScope(Replicated record) => undoScope(record);
     }
 
     /// <summary>The view for the viewport's focused control, or null if it has none.</summary>

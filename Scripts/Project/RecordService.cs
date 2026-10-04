@@ -57,9 +57,9 @@ public partial class RecordService : Node, IRecordReader
     {
         var sync = EventSynchronizer.Instance;
         var changed = UndoLog.Changes(sync.EventLog, e).ToList();
-        foreach (var effect in changed.SelectMany(c => c.Effects))
-            if (!_stores.ContainsKey(effect.Writes))
-                AddStore(effect.NewStore());
+        foreach (var record in changed.SelectMany(c => c.Records))
+            if (!_stores.ContainsKey(record.GetType()))
+                AddStore(NewStore(record.GetType()));
 
         foreach (var store in _stores.Values)
             store.Apply(sync.EventLog, changed, sync.BulkLoading);
@@ -67,6 +67,11 @@ public partial class RecordService : Node, IRecordReader
         if (!sync.BulkLoading)
             ScheduleForListeners(e);
     }
+
+    /// <summary>A new, empty store for records of <paramref name="type"/>.</summary>
+    private static IReplicatedStore NewStore(Type type) =>
+        (IReplicatedStore)
+            Activator.CreateInstance(typeof(ReplicatedDictionary<>).MakeGenericType(type));
 
     private IReplicatedStore AddStore(IReplicatedStore store)
     {
@@ -106,9 +111,133 @@ public partial class RecordService : Node, IRecordReader
             store.FlushBulkLoad();
     }
 
-    /// <summary>The effects that recreate everything saved with the project.</summary>
-    public IEnumerable<Effect> SaveEffects() =>
-        _stores.Values.SelectMany(s => s.EnumerateSaveEffects());
+    #region Writing
+
+    /// <summary>
+    /// <para>Writes records to all connected clients, including locally.</para>
+    /// <para>
+    /// Records are identified by their <see cref="Replicated.Id"/>.
+    /// If you Write a record with a new Id, it is created on all clients.
+    /// If you Write a record using an existing Id, that record is replaced with the new one.
+    /// </para>
+    /// <para>
+    /// The <paramref name="records"/> passed here are bundled in one event which is undone or redone together.
+    /// To bundle multiple discrete events into one undo group, use Open, Append, and Close.
+    /// </para>
+    /// <para>
+    /// Commands return their records from <see cref="Command.Effects"/> instead.
+    /// </para>
+    /// </summary>
+    public void Write(params IEnumerable<Replicated> records)
+    {
+        var all = records.ToArray();
+        if (all.Length > 0)
+            Submit(TableEvent.Now(all));
+    }
+
+    /// <summary>
+    /// Writes records as one event made by <paramref name="command"/>, even if there are none,
+    /// so the command's listeners hear it.
+    /// </summary>
+    public void Write(CommandName command, params IEnumerable<Replicated> records) =>
+        Submit(TableEvent.Now(records.ToArray(), command));
+
+    /// <summary>
+    /// Writes records as one admin event, which belongs to the table rather than a player,
+    /// so no one can undo it. Only the host or a solo player can write one. Does nothing without records.
+    /// </summary>
+    public void WriteAdmin(params IEnumerable<Replicated> records)
+    {
+        var all = records.ToArray();
+        if (all.Length > 0)
+            Submit(TableEvent.Admin(all));
+    }
+
+    /// <summary>
+    /// <para>
+    /// Starts a gesture, like a drag, by writing its first event.
+    /// Returns the gesture's undo group to be used in Append and Close.
+    /// </para>
+    /// <para>
+    /// Write the gesture's other events with <see cref="Append(SnowportId, IEnumerable{Replicated})"/>,
+    /// and its last with <see cref="Close(SnowportId, IEnumerable{Replicated})"/>.
+    /// A not-yet-closed group is skiped by undo and redo events.
+    /// A closed group is undone or redone all at once.
+    /// </para>
+    /// </summary>
+    public SnowportId Open(params IEnumerable<Replicated> records) => Open(null, records);
+
+    /// <inheritdoc cref="Open(IEnumerable{Replicated})"/>
+    public SnowportId Open(CommandName command, params IEnumerable<Replicated> records) =>
+        Open((CommandName?)command, records);
+
+    private SnowportId Open(CommandName? command, IEnumerable<Replicated> records)
+    {
+        var e = TableEvent.Now(records.ToArray(), command);
+        e.Group = e.Id;
+        Submit(e);
+        return e.Id;
+    }
+
+    /// <summary>
+    /// Writes records as one event in the open <paramref name="group"/>. Does nothing without records.
+    /// </summary>
+    public void Append(SnowportId group, params IEnumerable<Replicated> records) =>
+        Append(group, null, records);
+
+    /// <inheritdoc cref="Append(SnowportId, IEnumerable{Replicated})"/>
+    public void Append(
+        SnowportId group,
+        CommandName command,
+        params IEnumerable<Replicated> records
+    ) => Append(group, (CommandName?)command, records);
+
+    private void Append(SnowportId group, CommandName? command, IEnumerable<Replicated> records)
+    {
+        var e = TableEvent.Now(records.ToArray(), command);
+        if (e.Records.Length == 0)
+            return;
+        e.Group = group;
+        Submit(e);
+    }
+
+    /// <summary>
+    /// Writes the last event of <paramref name="group"/>, which closes it.
+    /// Without records it only closes the group, for a gesture that ended without its usual last event.
+    /// </summary>
+    public void Close(SnowportId group, params IEnumerable<Replicated> records) =>
+        Close(group, null, records);
+
+    /// <inheritdoc cref="Close(SnowportId, IEnumerable{Replicated})"/>
+    public void Close(
+        SnowportId group,
+        CommandName command,
+        params IEnumerable<Replicated> records
+    ) => Close(group, (CommandName?)command, records);
+
+    private void Close(SnowportId group, CommandName? command, IEnumerable<Replicated> records)
+    {
+        var e = TableEvent.Now(records.ToArray(), command);
+        if (group == SnowportId.Empty)
+        {
+            if (e.Records.Length > 0)
+                Submit(e);
+            return;
+        }
+        e.Group = group;
+        e.Close = true;
+        Submit(e);
+    }
+
+    private static void Submit(TableEvent e) => EventSynchronizer.Instance?.Submit(e);
+
+    /// <summary>
+    /// The current value of everything saved with the project.
+    /// </summary>
+    public IEnumerable<Replicated> SavedRecords() =>
+        _stores.Values.SelectMany(s => s.SavedRecords());
+
+    #endregion
 
     /// <summary>
     /// Runs <paramref name="sync"/> at the end of the frame, then again whenever a record it
@@ -257,23 +386,22 @@ public partial class RecordService : Node, IRecordReader
     #region IRecordReader
 
     private IReadOnlyDictionary<SnowTag, T> RecordsOf<T>()
-        where T : class, IReplicated => StoreOf<T, ReplicatedDictionary<T>>().Records;
+        where T : Replicated => StoreOf<T, ReplicatedDictionary<T>>().Records;
 
     public T Get<T>(SnowTag id)
-        where T : class, IReplicated =>
-        RecordsOf<T>().TryGetValue(id, out var r) && !r.Deleted ? r : null;
+        where T : Replicated => RecordsOf<T>().TryGetValue(id, out var r) && !r.Deleted ? r : null;
 
     public T GetIncludingDeleted<T>(SnowTag id)
-        where T : class, IReplicated => RecordsOf<T>().GetValueOrDefault(id);
+        where T : Replicated => RecordsOf<T>().GetValueOrDefault(id);
 
-    public IReplicated Get(SnowTag id) =>
+    public Replicated Get(SnowTag id) =>
         _stores.Values.Select(s => s.Find(id)).FirstOrDefault(r => r != null)
             is { Deleted: false } r
             ? r
             : null;
 
     public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
-        where T : class, IReplicated
+        where T : Replicated
     {
         var records = RecordsOf<T>();
         return ids.Select(id => records.GetValueOrDefault(id))
@@ -282,23 +410,20 @@ public partial class RecordService : Node, IRecordReader
     }
 
     public IReadOnlyList<T> Get<T>(Func<T, bool> filter)
-        where T : class, IReplicated =>
-        RecordsOf<T>().Values.Where(r => !r.Deleted && filter(r)).ToArray();
+        where T : Replicated => RecordsOf<T>().Values.Where(r => !r.Deleted && filter(r)).ToArray();
 
     public IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
-        where T : class, IReplicated => RecordsOf<T>().Values.Where(filter).ToArray();
+        where T : Replicated => RecordsOf<T>().Values.Where(filter).ToArray();
 
     public IReadOnlyList<T> Get<T>()
-        where T : class, IReplicated => RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
+        where T : Replicated => RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
 
     public T Single<T>()
-        where T : class, IReplicated, new()
+        where T : Replicated
     {
         var records = Get<T>();
         if (records.Count == 1)
             return records[0];
-        if (records.Count == 0 && EventSynchronizer.Instance?.BulkLoading == true)
-            return new T();
         throw new InvalidOperationException(
             records.Count == 0
                 ? $"There's no {typeof(T).Name}. Table setup (ProjectService.EnsureSingletons) should have created it."
@@ -308,7 +433,7 @@ public partial class RecordService : Node, IRecordReader
 
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
     public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
-        where T : class, IReplicated
+        where T : Replicated
         where K : struct
     {
         throw new InvalidOperationException(
@@ -318,7 +443,7 @@ public partial class RecordService : Node, IRecordReader
 
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
     public SwapLists GetChanged<T>()
-        where T : class, IReplicated
+        where T : Replicated
     {
         throw new InvalidOperationException(
             "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."

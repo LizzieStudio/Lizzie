@@ -411,7 +411,7 @@ public partial class TemplateCreator : Window
                     .ToImmutableArray(),
             }
         );
-        ProjectService.Instance.Upsert(_currentTemplate);
+        RecordService.Instance.Write(_currentTemplate);
 
         _hasUnsavedChanges = false;
     }
@@ -1208,7 +1208,7 @@ public partial class TemplateCreator : Window
             Height = h,
         };
 
-        ProjectService.Instance.Upsert(t);
+        RecordService.Instance.Write(t);
         CurrentTemplate = t;
 
         _newTemplateName.Clear();

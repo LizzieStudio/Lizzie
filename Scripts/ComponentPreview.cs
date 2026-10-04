@@ -265,7 +265,7 @@ public partial class ComponentPreview : Panel
         _component.DataSetRowIndex = rowIndex;
         _component.DataSetRowId = rowId;
         _component.TextureFactory = textureFactory;
-        _component.DraftPrototype = new Prototype { Parameters = parameters };
+        _component.DraftPrototype = new Prototype { Id = SnowTag.Empty, Parameters = parameters };
     }
 
     public void Build(Prototype prototype, TextureFactory textureFactory)

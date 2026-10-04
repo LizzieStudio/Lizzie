@@ -39,7 +39,7 @@ public partial class PrototypeManifest : Window, ICommandView
     public WatchableValue<SnowTag> SelectionScope { get; } = new();
 
     /// <summary>Undo walks the edits to every prototype.</summary>
-    public bool UndoScope(Effect fx) => fx is UpdateReplicatedEffect<Prototype>;
+    public bool UndoScope(Replicated record) => record is Prototype;
 
     public override void _Ready()
     {
@@ -152,7 +152,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         dialog.Confirmed += () =>
         {
-            ProjectService.Instance.Upsert(_selectedPrototype with { Deleted = true });
+            RecordService.Instance.Write(_selectedPrototype with { Deleted = true });
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;
@@ -190,7 +190,7 @@ public partial class PrototypeManifest : Window, ICommandView
             Parameters = _selectedPrototype.Parameters with { ComponentName = newName },
         };
 
-        ProjectService.Instance.Upsert(duplicate);
+        RecordService.Instance.Write(duplicate);
     }
 
     private void Sync(IRecordReader R)

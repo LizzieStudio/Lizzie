@@ -15,12 +15,12 @@ public partial class EventSynchronizer : Node
 
     /// <summary>
     /// While true, events are recorded but not applied to the scene per-event.
-    /// Set during a project load or joining a game.
+    /// Set during a project load, including the host's table after joining a game.
     /// </summary>
     public bool BulkLoading { get; set; }
 
     /// <summary>
-    /// Represents a player action and its subsequent effects.
+    /// Raised for each event recorded, from this player, another player, or a load.
     /// </summary>
     public event Action<TableEvent> Applied;
 
@@ -30,31 +30,11 @@ public partial class EventSynchronizer : Node
     }
 
     /// <summary>
-    /// Clears the log and any open group (without closing it).
+    /// Clears the log.
     /// </summary>
     public void Clear()
     {
         EventLog.Clear();
-        _openGroup = SnowportId.Empty;
-    }
-
-    private SnowportId _openGroup = SnowportId.Empty;
-
-    /// <summary>True while the local player's events are being collected into one undo.</summary>
-    private bool InGroup => _openGroup != SnowportId.Empty;
-
-    /// <summary>
-    /// Closes the open group, if any, with an event that does nothing else.
-    /// This is inteded as a fallback.
-    /// The proper way to end a group is with `endGroup: true` on <see cref="Submit"/>.
-    /// </summary>
-    public void EndGroup()
-    {
-        if (!InGroup)
-            return;
-        var group = _openGroup;
-        _openGroup = SnowportId.Empty;
-        Submit(TableEvent.Closing(group));
     }
 
     /// <summary>
@@ -71,36 +51,25 @@ public partial class EventSynchronizer : Node
     }
 
     /// <summary>
-    /// <para>Records, applies, publishes, and sends an event.</para>
-    /// <paramref name="startGroup"/> starts attaching all submitted events to one group.
-    /// All events in a group are undone and redone together.
-    /// This is generally used for gestures, like dragging, which have multiple events.
-    /// <paramref name="endGroup"/> stops attaching events to the group <strong>after</strong> this event.
+    /// Publishes the event to all clients, including this one.
     /// </summary>
-    public void Submit(TableEvent e, bool startGroup = false, bool endGroup = false)
+    /// <remarks>
+    /// Write records with <see cref="RecordService.Write(IEnumerable{Replicated})"/> and its gesture calls instead.
+    /// This is for events that aren't plain writes, like undos.
+    /// </remarks>
+    public void Submit(TableEvent e)
     {
-        // Currentlly, all events submitted during a drag will be undone with it.
-        // For now, this is correct, since it's just things like flip and rotate.
-        // This could change in the future, though.
-        // TODO: track gestures separately, so events can be in or out of the group.
-        if (startGroup)
-        {
-            // This isn't the worst error, but something went wrong.
-            if (InGroup && OS.IsDebugBuild())
-                throw new Exception("a gesture left its undo group open");
-            EndGroup();
-            _openGroup = e.Id;
-        }
+        foreach (var record in e.Records)
+            if (record.Id == SnowTag.Empty)
+                throw new ArgumentException(
+                    $"A {record.GetType().Name} was written without an Id. Give it Snowport.Clock.CreateTag() when it's made."
+                );
 
-        // Undos are never grouped, and an event that names its own group keeps it.
-        if (InGroup && !e.IsAdmin && e.Undo == null && e.Group == SnowportId.Empty)
+        // The table is about to be replaced by the host's, so a change now would be lost.
+        if (Joining)
         {
-            e.Group = _openGroup;
-            if (endGroup)
-            {
-                e.Close = true;
-                _openGroup = SnowportId.Empty;
-            }
+            GD.PushWarning($"Ignored a change made while joining a game: {e.Command}");
+            return;
         }
 
         if (TryRecord(e))
@@ -174,7 +143,10 @@ public partial class EventSynchronizer : Node
     private void ReceiveEvent(string json)
     {
         var e = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
-        Ingest(e);
+        if (Joining)
+            _joinBuffer.Add(e);
+        else
+            Ingest(e);
     }
 
     /// <summary>
@@ -195,6 +167,24 @@ public partial class EventSynchronizer : Node
     }
 
     #region Catchup
+
+    // the host's events, collected while joining, or null when not joining
+    private List<TableEvent> _joinBuffer;
+
+    /// <summary>
+    /// True while connecting to a game.
+    /// </summary>
+    public bool Joining => _joinBuffer != null;
+
+    /// <summary>
+    /// Starts collecting the host's events instead of applying them.
+    /// </summary>
+    public void BeginJoin() => _joinBuffer = new();
+
+    /// <summary>
+    /// Drops the collected events, for when a join fails or is abandoned.
+    /// </summary>
+    public void CancelJoin() => _joinBuffer = null;
 
     /// <summary>
     /// Stream the entire event log to a joining peer, oldest-to-newest.
@@ -229,7 +219,6 @@ public partial class EventSynchronizer : Node
         if (MultiplayerManager.Instance.IsServer)
             return;
 
-        BulkLoading = true;
         RpcId(1, nameof(ServerSendCatchup));
     }
 
@@ -261,8 +250,10 @@ public partial class EventSynchronizer : Node
     )]
     private void ClientCatchupComplete()
     {
-        GD.Print("[EventSynchronizer] Catchup complete - settling table.");
-        ProjectService.Instance?.SettleAfterIngest();
+        GD.Print("[EventSynchronizer] Catchup complete - replacing the table.");
+        var events = _joinBuffer ?? [];
+        _joinBuffer = null;
+        ProjectService.Instance?.LoadJoinedTable(events);
         EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
     }
 

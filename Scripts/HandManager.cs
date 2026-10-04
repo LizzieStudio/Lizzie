@@ -275,7 +275,7 @@ public partial class HandManager : Panel
     public void RemoveFromHand(VcToken card)
     {
         var go = ProjectService.Instance.GameObjects;
-        go.StartDraw(go.BuildDrawEvent([card.Reference]));
+        go.StartDraw(go.BuildDraw([card.Reference]));
     }
 
     private static ImageTexture GetCardTexture(VcToken card)

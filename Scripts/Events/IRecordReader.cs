@@ -11,41 +11,43 @@ public interface IRecordReader
 {
     /// <summary>The record, or null if it is missing or deleted.</summary>
     T Get<T>(SnowTag id)
-        where T : class, IReplicated;
+        where T : Replicated;
 
     /// <summary>The record, or null if it is missing or deleted.</summary>
-    IReplicated Get(SnowTag id);
+    Replicated Get(SnowTag id);
 
     /// <summary>
     /// The record even if it is deleted.
     /// Returns null if the record never existed or if its creation was reversed through an undo action.
     /// </summary>
     T GetIncludingDeleted<T>(SnowTag id)
-        where T : class, IReplicated;
+        where T : Replicated;
 
     /// <summary>The records that exist, in the order of <paramref name="ids"/>.</summary>
     IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
-        where T : class, IReplicated;
+        where T : Replicated;
 
     /// <summary>Every record that passes <paramref name="filter"/>, which must only read the record.</summary>
     IReadOnlyList<T> Get<T>(Func<T, bool> filter)
-        where T : class, IReplicated;
+        where T : Replicated;
 
     /// <summary>Every record that passes <paramref name="filter"/>, even if it is deleted.</summary>
     IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
-        where T : class, IReplicated;
+        where T : Replicated;
 
     /// <summary>Every record, including ones added later.</summary>
     IReadOnlyList<T> Get<T>()
-        where T : class, IReplicated;
+        where T : Replicated;
 
     /// <summary>
-    /// The one record of a <see cref="SingletonAttribute"/> type, like the project settings.
-    /// While a load is in progress it may not have arrived yet, so this returns the type's defaults.
-    /// Otherwise, it throws if there's none or several.
+    /// <para>The one record of a <see cref="SingletonAttribute"/> type, like the project settings.</para>
+    /// <para>
+    /// Table setup creates it, so it should always exist.
+    /// Throws if there's none or several.
+    /// </para>
     /// </summary>
     T Single<T>()
-        where T : class, IReplicated, new();
+        where T : Replicated;
 
     /// <summary>
     /// <para>
@@ -63,7 +65,7 @@ public interface IRecordReader
     /// <strong>Only one call of GetChanged per record type per Sync.</strong>
     /// </summary>
     SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
-        where T : class, IReplicated
+        where T : Replicated
         where K : struct;
 
     /// <summary>
@@ -76,7 +78,7 @@ public interface IRecordReader
     /// <strong>Only one call of GetChanged per record type per Sync.</strong>
     /// </summary>
     SwapLists GetChanged<T>()
-        where T : class, IReplicated;
+        where T : Replicated;
 }
 
 /// <summary>
@@ -102,7 +104,7 @@ public static class RecordReaderExtensions
     /// The command that last wrote <paramref name="record"/>'s current state, or null when there was no command attached.
     /// If the last command was an undo or a redo, this falls back to the last effective command (before any reversed event).
     /// </summary>
-    public static CommandName? WrittenBy(this IRecordReader R, IReplicated record) =>
+    public static CommandName? WrittenBy(this IRecordReader R, Replicated record) =>
         EventSynchronizer.Instance is { } sync
         && sync.EventLog.TryGetValue(record.LastUpdateId, out var writer)
             ? writer.Command
@@ -164,7 +166,7 @@ public static class RecordReaderExtensions
     /// <param name="id">The record to check.</param>
     /// <returns>Whether or not <paramref name="id"/> is of type <typeparamref name="T"/></returns>
     public static bool Is<T>(this IRecordReader R, SnowTag id)
-        where T : class, IReplicated => R.GetIncludingDeleted<T>(id) != null;
+        where T : Replicated => R.GetIncludingDeleted<T>(id) != null;
 
     /// <summary>
     /// What a component shows as. A deck's cards share the deck's prototype but show as tokens,

@@ -2,33 +2,85 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-public abstract record Replicated : IReplicated
+/// <summary>
+/// <para>A record, easily replicated in multiplayer through a write-only synchronized log.</para>
+/// <para>
+/// Write records with <see cref="RecordService.Write(IEnumerable{Replicated})"/>,
+/// or return them from a command's <see cref="Command.Effects"/>.
+/// </para>
+/// </summary>
+/// <remarks>
+/// Every record type must be listed here.
+/// </remarks>
+[JsonPolymorphic]
+[JsonDerivedType(typeof(ComponentState), "ComponentState")]
+[JsonDerivedType(typeof(Prototype), "Prototype")]
+[JsonDerivedType(typeof(Template), "Template")]
+[JsonDerivedType(typeof(DataSet), "DataSet")]
+[JsonDerivedType(typeof(DataRow), "DataRow")]
+[JsonDerivedType(typeof(Lizzie.AssetManagement.Asset), "Asset")]
+[JsonDerivedType(typeof(GameState), "GameState")]
+[JsonDerivedType(typeof(Selection), "Selection")]
+[JsonDerivedType(typeof(ProjectGameSettings), "ProjectGameSettings")]
+[JsonDerivedType(typeof(ActiveGameStateRef), "ActiveGameStateRef")]
+public abstract record Replicated
 {
-    public SnowTag Id { get; init; }
+    /// <summary>
+    /// The record's identity, usually created with <see cref="Snowport.CreateTag"/>.
+    /// </summary>
+    public required SnowTag Id { get; init; }
 
+    /// <summary>
+    /// Reversible soft-delete flag.
+    /// </summary>
     public bool Deleted { get; init; }
 
+    /// <summary>
+    /// The id of the event that last wrote this record.
+    /// </summary>
     [JsonIgnore]
     public SnowportId LastUpdateId { get; init; }
 
-    public IReplicated WithIdentity(SnowTag id, SnowportId lastUpdateId) =>
-        this with
-        {
-            Id = id,
-            LastUpdateId = lastUpdateId,
-        };
-
+    /// <summary>
+    /// A cache key that changes whenever the record is updated.
+    /// </summary>
     public string SheetKey() => $"{Id.Value:X8}{LastUpdateId.Value:X16}";
 
+    /// <summary>
+    /// What's directly inside this record, like a deck's cards or a DataRow's cells.
+    /// These are followed recursively, so only list direct contents.
+    /// </summary>
     public virtual IEnumerable<Target> Contents(IRecordReader R) => [];
 
+    /// <summary>
+    /// What this record is directly inside, like a card's deck or a cell's <see cref="DataRow"/> and <see cref="ColumnTarget"/>.
+    /// These are followed recursively, so only list direct containers.
+    /// </summary>
     public virtual IEnumerable<Target> Containers(IRecordReader R) => [];
 
+    /// <summary>
+    /// What this record refers to, like a component's prototype.
+    /// Not followed further.
+    /// </summary>
     public virtual IEnumerable<Target> Referenced(IRecordReader R) => [];
 }
 
+public static class ReplicatedExtensions
+{
+    /// <summary>
+    /// A cache key that changes whenever any of the records is updated.
+    /// </summary>
+    public static string SheetKey(this IEnumerable<Replicated> items)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var item in items)
+            sb.Append(item.SheetKey());
+        return sb.ToString();
+    }
+}
+
 /// <summary>
-/// Disables automatic saving in projects.
+/// Keeps this record out of saved projects.
 /// This record will be used in runtime multiplayer only.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]

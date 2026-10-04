@@ -76,18 +76,16 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public event Action Built;
 
-    private Prototype _draftPrototype;
-
     /// <summary>
     /// An unsaved prototype shown instead of <see cref="PrototypeRef"/>.
     /// Used for the editor preview, since there is no protoype record yet.
     /// </summary>
     public Prototype DraftPrototype
     {
-        get => _draftPrototype;
+        get;
         set
         {
-            _draftPrototype = value;
+            field = value;
             RecordService.Instance.QueueSync(this);
         }
     }
@@ -553,10 +551,11 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// Builds the event for dropping the given components onto this one, or null if the
-    /// drop produces no change.
+    /// The records that drop the given components onto this one, or none if the drop produces no change.
     /// </summary>
-    public virtual TableEvent DropObjects(IEnumerable<VisualComponentBase> dragObjects) => null;
+    public virtual IEnumerable<Replicated> DropObjects(
+        IEnumerable<VisualComponentBase> dragObjects
+    ) => [];
 
     public virtual string GetPreviewComponentScene() => string.Empty;
 

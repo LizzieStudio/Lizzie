@@ -75,7 +75,7 @@ public static class LocalSelection
 
     /// <summary>The ids of the records of type <typeparamref name="T"/> the local player has selected on the table.</summary>
     public static IEnumerable<SnowTag> GetSelection<T>(this IRecordReader R)
-        where T : class, IReplicated =>
+        where T : Replicated =>
         R.GetSelection()?.Targets.OfType<RecordTarget>().Select(t => t.Id).Where(id => R.Is<T>(id))
         ?? [];
 
@@ -84,7 +84,7 @@ public static class LocalSelection
     /// keeping everything else they have selected there.
     /// </summary>
     public static void SetSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
-        where T : class, IReplicated
+        where T : Replicated
     {
         var old = R.GetSelection()?.Targets ?? ImmutableHashSet<Target>.Empty;
         R.SetSelection(
@@ -116,8 +116,6 @@ public static class LocalSelection
                 Player = Snowport.Clock.source,
                 Within = within,
             };
-        EventSynchronizer.Instance?.Submit(
-            TableEvent.Now([Effect.Upsert(record with { Targets = next })])
-        );
+        RecordService.Instance.Write(record with { Targets = next });
     }
 }

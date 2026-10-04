@@ -584,15 +584,7 @@ public partial class UI : CanvasLayer
         _modalDialogs.AddChild(dialog);
 
         // Undo walks the snapshots and which one is active.
-        CommandViews.Attach(
-            dialog,
-            fx =>
-            {
-                return fx
-                    is UpdateReplicatedEffect<GameState>
-                        or UpdateReplicatedEffect<ActiveGameStateRef>;
-            }
-        );
+        CommandViews.Attach(dialog, record => record is GameState or ActiveGameStateRef);
 
         RecordService.Instance.Watch(
             dialog,

@@ -157,9 +157,8 @@ public partial class DebugConsole : Node
     /// </summary>
     private void Spam(int count)
     {
-        var sync = EventSynchronizer.Instance;
         var states = RecordService.Instance?.Get<ComponentState>().ToArray();
-        if (sync == null || states == null || states.Length == 0)
+        if (EventSynchronizer.Instance == null || states == null || states.Length == 0)
         {
             Log("Spam needs at least one component on the table.");
             return;
@@ -168,11 +167,11 @@ public partial class DebugConsole : Node
         var watch = System.Diagnostics.Stopwatch.StartNew();
 
         // bulk loading sends one change notification at the end instead of one per event
-        sync.BulkLoading = true;
+        EventSynchronizer.Instance.BulkLoading = true;
         try
         {
             for (int i = 0; i < count; i++)
-                sync.Submit(TableEvent.Now([Effect.Upsert(states[i % states.Length])]));
+                EventSynchronizer.Instance.Submit(TableEvent.Now([states[i % states.Length]]));
         }
         finally
         {
@@ -180,7 +179,7 @@ public partial class DebugConsole : Node
         }
 
         Log(
-            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({sync.EventLog.Count} total)."
+            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({EventSynchronizer.Instance.EventLog.Count} total)."
         );
     }
 
@@ -272,7 +271,7 @@ public partial class DebugConsole : Node
     }
 
     /// <summary>
-    /// A label for events. Either the command that made it or the effects.
+    /// A label for events. Either the command that made it or the records it writes.
     /// </summary>
     private static string Describe(TableEvent e)
     {
@@ -282,12 +281,12 @@ public partial class DebugConsole : Node
         if (e.Undo is { } u)
             return u.ByRedo ? "Redo" : "Undo";
 
-        if (e.Effects.Length == 0)
+        if (e.Records.Length == 0)
             return e.Close ? "Close" : "(empty)";
 
         return string.Join(
             ", ",
-            e.Effects.GroupBy(EffectLabel)
+            e.Records.GroupBy(RecordLabel)
                 .Select(g => g.Count() > 1 ? $"{g.Key}×{g.Count()}" : g.Key)
         );
     }
@@ -305,17 +304,11 @@ public partial class DebugConsole : Node
             io.AddMouseButtonEvent((int)imguiButton, false);
     }
 
-    private static string EffectLabel(Effect fx) =>
-        fx switch
+    private static string RecordLabel(Replicated record) =>
+        record switch
         {
-            UpdateReplicatedEffect<ComponentState> { Payload.Deleted: true } => "Delete",
-            UpdateReplicatedEffect<ComponentState> => "Upsert",
-            _ when fx.GetType() is { IsGenericType: true } t => t.GenericTypeArguments[0].Name,
-            _ => Trim(fx.GetType().Name, "Effect"),
+            ComponentState { Deleted: true } => "Delete",
+            ComponentState => "Upsert",
+            _ => record.GetType().Name,
         };
-
-    private static string Trim(string name, string suffix) =>
-        name.EndsWith(suffix, StringComparison.Ordinal) && name.Length > suffix.Length
-            ? name[..^suffix.Length]
-            : name;
 }

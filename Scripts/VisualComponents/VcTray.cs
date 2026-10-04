@@ -134,23 +134,22 @@ public partial class VcTray : VisualComponentGroup
 
     protected override void OnChildrenChanged() { }
 
-    public override TableEvent DragDraw(int quantity)
+    public override Replicated[] DragDraw(int quantity)
     {
         if (_prototype == null)
-            return null;
+            return [];
 
-        return TableEvent.Now([
-            Effect.Upsert(
-                new ComponentState
-                {
-                    Id = Snowport.Clock.CreateTag(),
-                    PrototypeRef = _prototype.Id,
-                    Location = ComponentLocation.Cursor,
-                    Holder = Snowport.Clock.source,
-                    ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
-                }
-            ),
-        ]);
+        return
+        [
+            new ComponentState
+            {
+                Id = Snowport.Clock.CreateTag(),
+                PrototypeRef = _prototype.Id,
+                Location = ComponentLocation.Cursor,
+                Holder = Snowport.Clock.source,
+                ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
+            },
+        ];
     }
 }
 

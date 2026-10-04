@@ -46,19 +46,49 @@ public partial class GameObjects : Node
         get => _cursorMode;
         private set
         {
-            // Groups are used to bundle gestures into one "Undo" target.
-            // So if you drag a card and flip it while dragging, all of those events are undone.
             if (_cursorMode == CursorMode.Drag && value != CursorMode.Drag)
-                EventSynchronizer.Instance?.EndGroup();
+                CloseDragGroup();
             _cursorMode = value;
         }
+    }
+
+    // The undo group of the local player's drag, or Empty when there's none.
+    // It bundles the drag's pickup, drop targets, and drop into one undo.
+    private SnowportId _dragGroup = SnowportId.Empty;
+
+    /// <summary>
+    /// Closes the drag's undo group, if it's still open, with an event that does nothing else.
+    /// This is just a fallback.
+    /// </summary>
+    private void CloseDragGroup()
+    {
+        if (_dragGroup == SnowportId.Empty)
+            return;
+        RecordService.Instance.Close(_dragGroup);
+        _dragGroup = SnowportId.Empty;
+    }
+
+    /// <summary>
+    /// Starts a drag with the records in <paramref name="pickup"/>.
+    /// </summary>
+    private void StartDrag(IEnumerable<Replicated> pickup)
+    {
+        CloseDragGroup();
+        _dragGroup = RecordService.Instance.Open(pickup);
+    }
+
+    /// <summary>
+    /// Ends a drag with the records in <paramref name="drop"/>.
+    /// </summary>
+    private void EndDrag(IEnumerable<Replicated> drop)
+    {
+        RecordService.Instance.Close(_dragGroup, drop);
+        _dragGroup = SnowportId.Empty;
     }
 
     public override void _Ready()
     {
         _table = CreateTable();
-
-        EventBus.Instance.Subscribe<LocalPlayerJoinedGameEvent>(OnLocalPlayerJoinedGame);
 
         EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
         EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
@@ -281,7 +311,7 @@ public partial class GameObjects : Node
 
     public void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
-        var effects = new List<Effect>();
+        var records = new List<Replicated>();
         var stamp = Snowport.Clock.Create();
         int suborder = 0;
 
@@ -292,18 +322,16 @@ public partial class GameObjects : Node
                 Id = Snowport.Clock.CreateTag(),
                 ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
             };
-            effects.Add(Effect.Upsert(self));
+            records.Add(self);
 
             // The stack goes above the component, bottom first.
             foreach (var s in component.GetSpawnStack(self))
             {
-                effects.Add(
-                    Effect.Upsert(s with { ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp) })
-                );
+                records.Add(s with { ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp) });
             }
         }
 
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(effects.ToArray()));
+        RecordService.Instance.Write(records);
     }
 
     /// <summary>
@@ -667,14 +695,14 @@ public partial class GameObjects : Node
     }
 
     /// <summary>
-    /// Builds the event that draws the given components into the local player's hold.
+    /// The records that draw the given components into the local player's hold.
     /// </summary>
-    public TableEvent BuildDrawEvent(
+    public Replicated[] BuildDraw(
         IEnumerable<SnowTag> componentRefs,
         Func<VisualComponentBase, Vector3> rotation = null
     )
     {
-        var effects = new List<Effect>();
+        var records = new List<Replicated>();
         var stamp = Snowport.Clock.Create();
         foreach (var r in componentRefs)
         {
@@ -683,32 +711,32 @@ public partial class GameObjects : Node
                 continue;
 
             var s = ComponentState.Of(c);
-            effects.Add(
-                Effect.Upsert(
-                    s with
-                    {
-                        Location = VisualComponentBase.ComponentLocation.Cursor,
-                        ContainerRef = SnowTag.Empty,
-                        Holder = Snowport.Clock.source,
-                        // Held under the cursor.
-                        Position = Vector3.Zero,
-                        Rotation = rotation?.Invoke(c) ?? s.Rotation,
-                        ZOrder = new ZOrder(ZTarget.Top, effects.Count, stamp),
-                    }
-                )
+            records.Add(
+                s with
+                {
+                    Location = VisualComponentBase.ComponentLocation.Cursor,
+                    ContainerRef = SnowTag.Empty,
+                    Holder = Snowport.Clock.source,
+                    // Held under the cursor.
+                    Position = Vector3.Zero,
+                    Rotation = rotation?.Invoke(c) ?? s.Rotation,
+                    ZOrder = new ZOrder(ZTarget.Top, records.Count, stamp),
+                }
             );
         }
 
-        return effects.Count == 0 ? null : TableEvent.Now(effects.ToArray());
+        return records.ToArray();
     }
 
-    public void StartDraw(TableEvent drawEvent)
+    /// <summary>
+    /// Starts a drag with the records of a draw, from <see cref="BuildDraw"/>.
+    /// </summary>
+    public void StartDraw(Replicated[] draw)
     {
-        if (drawEvent == null)
+        if (draw.Length == 0)
             return;
 
-        // The draw and its drop undo together.
-        EventSynchronizer.Instance?.Submit(drawEvent, startGroup: true);
+        StartDrag(draw);
 
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
@@ -719,16 +747,14 @@ public partial class GameObjects : Node
         var dragged = components
             .Where(o => o != null)
             .Select(o =>
-                Effect.Upsert(
-                    ComponentState.Of(o) with
-                    {
-                        Location = VisualComponentBase.ComponentLocation.Cursor,
-                        ContainerRef = SnowTag.Empty,
-                        Holder = Snowport.Clock.source,
-                        // Held positions are relative to the cursor.
-                        Position = o.Position - cursor,
-                    }
-                )
+                ComponentState.Of(o) with
+                {
+                    Location = VisualComponentBase.ComponentLocation.Cursor,
+                    ContainerRef = SnowTag.Empty,
+                    Holder = Snowport.Clock.source,
+                    // Held positions are relative to the cursor.
+                    Position = o.Position - cursor,
+                }
             )
             .ToArray();
         if (dragged.Length == 0)
@@ -737,8 +763,7 @@ public partial class GameObjects : Node
         CursorMode = CursorMode.Drag;
         _localDragOverHand = false;
 
-        // The drag and its drop undo together.
-        EventSynchronizer.Instance?.Submit(TableEvent.Now(dragged), startGroup: true);
+        StartDrag(dragged);
     }
 
     private VisualComponentGroup _currentDragDropTarget;
@@ -913,9 +938,10 @@ public partial class GameObjects : Node
         {
             if (_currentDragDropTarget.CanObjectsBeDropped(GetLocalDraggingObjects()))
             {
-                var dropEvent = _currentDragDropTarget.DropObjects(GetLocalDraggingObjects());
-                if (dropEvent != null)
-                    EventSynchronizer.Instance?.Submit(dropEvent);
+                RecordService.Instance.Append(
+                    _dragGroup,
+                    _currentDragDropTarget.DropObjects(GetLocalDraggingObjects())
+                );
             }
 
             _currentDragDropTarget.DragOverExit();
@@ -931,9 +957,10 @@ public partial class GameObjects : Node
                 && hover.CanObjectsBeDropped(GetLocalDraggingObjects())
             )
             {
-                var dropEvent = hover.DropObjects(GetLocalDraggingObjects());
-                if (dropEvent != null)
-                    EventSynchronizer.Instance?.Submit(dropEvent);
+                RecordService.Instance.Append(
+                    _dragGroup,
+                    hover.DropObjects(GetLocalDraggingObjects())
+                );
             }
         }
 
@@ -952,7 +979,7 @@ public partial class GameObjects : Node
         var (snapX, snapZ) = SnapDelta(ordered);
 
         var stamp = Snowport.Clock.Create();
-        var dropped = new Effect[ordered.Count];
+        var dropped = new Replicated[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
         {
             var s = ComponentState.Of(ordered[i]) with
@@ -962,11 +989,10 @@ public partial class GameObjects : Node
                 Position = ordered[i].Position,
                 ZOrder = new ZOrder(ZTarget.Top, i, stamp),
             };
-            dropped[i] = Effect.Upsert(s with { X = s.X + snapX, Z = s.Z + snapZ });
+            dropped[i] = s with { X = s.X + snapX, Z = s.Z + snapZ };
         }
 
-        var drop = TableEvent.Now(dropped);
-        EventSynchronizer.Instance?.Submit(drop, endGroup: true);
+        EndDrag(dropped);
     }
 
     /// <summary>
@@ -1012,7 +1038,7 @@ public partial class GameObjects : Node
     private const int SnapRange = 250;
 
     /// <summary>
-    /// Submits the event to send components to the hand.
+    /// Drops components into the hand, ending the drag.
     /// </summary>
     private void SubmitHandDrop(
         List<VisualComponentBase> toHand,
@@ -1022,36 +1048,26 @@ public partial class GameObjects : Node
     {
         _localDragOverHand = false;
 
-        var effects = new List<Effect>(toHand.Count + toBoard.Count);
+        var records = new List<Replicated>(toHand.Count + toBoard.Count);
         var stamp = Snowport.Clock.Create();
 
         for (int i = 0; i < toHand.Count; i++)
-            effects.Add(
-                Effect.Upsert(
-                    PlayerHandService.Instance.MovedToHand(
-                        ComponentState.Of(toHand[i]),
-                        seat,
-                        i,
-                        stamp
-                    )
-                )
+            records.Add(
+                PlayerHandService.Instance.MovedToHand(ComponentState.Of(toHand[i]), seat, i, stamp)
             );
 
         for (int i = 0; i < toBoard.Count; i++)
-            effects.Add(
-                Effect.Upsert(
-                    ComponentState.Of(toBoard[i]) with
-                    {
-                        Location = VisualComponentBase.ComponentLocation.Table,
-                        ContainerRef = SnowTag.Empty,
-                        Position = toBoard[i].Position,
-                        ZOrder = new ZOrder(ZTarget.Top, i, stamp),
-                    }
-                )
+            records.Add(
+                ComponentState.Of(toBoard[i]) with
+                {
+                    Location = VisualComponentBase.ComponentLocation.Table,
+                    ContainerRef = SnowTag.Empty,
+                    Position = toBoard[i].Position,
+                    ZOrder = new ZOrder(ZTarget.Top, i, stamp),
+                }
             );
 
-        var drop = TableEvent.Now(effects.ToArray());
-        EventSynchronizer.Instance?.Submit(drop, endGroup: true);
+        EndDrag(records);
     }
 
     #endregion
@@ -1128,12 +1144,20 @@ public partial class GameObjects : Node
 
     #region Multiplayer
 
-    private void OnLocalPlayerJoinedGame() => ReplaceWithNewGame();
-
     /// <summary>
     /// Resets the game for loading a project.
     /// </summary>
     public void ResetForLoad()
+    {
+        ResetTable();
+        EventSynchronizer.Instance?.Clear();
+        PresenceSynchronizer.Instance?.Clear();
+    }
+
+    /// <summary>
+    /// Replaces the table node with an empty one and forgets the local player's gestures.
+    /// </summary>
+    public void ResetTable()
     {
         // Removed now so its watch stops before the new table's starts.
         var old = _table;
@@ -1143,22 +1167,11 @@ public partial class GameObjects : Node
         _tableChanged = false;
 
         _cursorMode = CursorMode.Normal;
+        _dragGroup = SnowportId.Empty;
         _spawnComponents = null;
         _currentDragDropTarget = null;
         _hoveredComponent = null;
         _stackingUpdateRequired = 0;
-
-        EventSynchronizer.Instance?.Clear();
-        PresenceSynchronizer.Instance?.Clear();
-    }
-
-    /// <summary>
-    /// Resets the game for joining an existing game.
-    /// </summary>
-    public void ReplaceWithNewGame()
-    {
-        ResetForLoad();
-        ProjectService.Instance?.NewGame();
     }
 
     /// <summary>

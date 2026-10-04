@@ -58,7 +58,7 @@ public static class UndoCommands
         SideEffects = (cs, _) =>
         {
             var ids = cs.Select(c => c.Id).ToHashSet();
-            Issue(UndoComponentChanges, UndoLog.Undo, (_, fx) => ids.Contains(fx.Id));
+            Issue(UndoComponentChanges, UndoLog.Undo, (_, record) => ids.Contains(record.Id));
         },
     };
 
@@ -67,18 +67,17 @@ public static class UndoCommands
     /// <summary>
     /// A filter for the player's own changes in the view.
     /// </summary>
-    private static Func<byte, Effect, bool> Mine(ICommandView view) =>
-        view == null ? null : (author, fx) => author == Me && view.UndoScope(fx);
+    private static Func<byte, Replicated, bool> Mine(ICommandView view) =>
+        view == null ? null : (author, record) => author == Me && view.UndoScope(record);
 
     /// <summary>
     /// A filter for other players changes in the view.
     /// Selection events, however, are passed over. That's too far.
     /// </summary>
-    private static Func<byte, Effect, bool> Others(ICommandView view) =>
+    private static Func<byte, Replicated, bool> Others(ICommandView view) =>
         view == null
             ? null
-            : (author, fx) =>
-                author != Me && fx is not UpdateReplicatedEffect<Selection> && view.UndoScope(fx);
+            : (author, record) => author != Me && record is not Selection && view.UndoScope(record);
 
     /// <summary>
     /// <see cref="UndoLog.Undo"/> or <see cref="UndoLog.Redo"/>.
@@ -87,22 +86,21 @@ public static class UndoCommands
     private delegate UndoFlag Pick(
         OrderedDictionary<SnowportId, TableEvent> log,
         byte me,
-        Func<byte, Effect, bool> scope
+        Func<byte, Replicated, bool> scope
     );
 
     /// <summary>
     /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any,
     /// as an event made by <paramref name="command"/>.
     /// </summary>
-    private static void Issue(Command command, Pick pick, Func<byte, Effect, bool> scope)
+    private static void Issue(Command command, Pick pick, Func<byte, Replicated, bool> scope)
     {
-        var sync = EventSynchronizer.Instance;
-        if (sync == null || scope == null)
+        if (EventSynchronizer.Instance == null || scope == null)
             return;
 
         // this creates a performance log in the debug console
         using var _ = DebugTimings.Measure(pick.Method.Name);
-        if (pick(sync.EventLog, Me, scope) is { } flag)
-            sync.Submit(TableEvent.Undoing(flag, command.Name));
+        if (pick(EventSynchronizer.Instance.EventLog, Me, scope) is { } flag)
+            EventSynchronizer.Instance.Submit(TableEvent.Undoing(flag, command.Name));
     }
 }

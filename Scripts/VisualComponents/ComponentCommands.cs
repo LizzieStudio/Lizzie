@@ -18,7 +18,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !c.IsContained,
-        Effects = (R, cs, _) => Effect.UpsertAll(Flipped(cs)),
+        Effects = (R, cs, _) => Flipped(cs),
     };
 
     public static readonly Command RotateCw = new RecordCommand<ComponentState>
@@ -29,7 +29,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.E)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotContained,
-        Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rotated(c, -RotationStep))),
+        Effects = (R, cs, _) => cs.Select(c => Rotated(c, -RotationStep)),
     };
 
     public static readonly Command RotateCcw = new RecordCommand<ComponentState>
@@ -40,7 +40,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.Q)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotContained,
-        Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => Rotated(c, RotationStep))),
+        Effects = (R, cs, _) => cs.Select(c => Rotated(c, RotationStep)),
     };
 
     public static readonly Command MoveToTop = new RecordCommand<ComponentState>
@@ -51,7 +51,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.T)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
-        Effects = (R, cs, _) => Effect.UpsertAll(Reordered(cs, ZTarget.Top)),
+        Effects = (R, cs, _) => Reordered(cs, ZTarget.Top),
     };
 
     public static readonly Command MoveToBottom = new RecordCommand<ComponentState>
@@ -62,7 +62,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.B)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
-        Effects = (R, cs, _) => Effect.UpsertAll(Reordered(cs, ZTarget.Bottom)),
+        Effects = (R, cs, _) => Reordered(cs, ZTarget.Bottom),
     };
 
     public static readonly Command Delete = new RecordCommand<ComponentState>
@@ -73,7 +73,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotHeld,
-        Effects = (R, cs, _) => Effect.UpsertAll(cs.Select(c => c with { Deleted = true })),
+        Effects = (R, cs, _) => cs.Select(c => c with { Deleted = true }),
     };
 
     private static float RotationStep => ProjectService.Instance.RotationStep;
