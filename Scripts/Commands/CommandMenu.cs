@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Utilities to create context menus and the menu bar in the top left.
@@ -38,7 +39,7 @@ public static class CommandMenu
     public static void Show(Vector2I position, ICommandView view, Action closed = null)
     {
         var context = CommandContext.Of(view, RecordService.Instance);
-        Show(position, context, CommandList.ForContextMenu(context), view, closed);
+        Show(position, context, CommandResolver.ForContextMenu(context), view, closed);
     }
 
     /// <summary>
@@ -108,7 +109,7 @@ public static class CommandMenu
     )
     {
         IRecordReader R = RecordService.Instance;
-        foreach (var (command, targets) in CommandList.ForMenu(context, commands, all))
+        foreach (var (command, targets) in CommandResolver.ForMenu(context, commands, all))
         {
             if (command == Command.Divider)
             {
@@ -124,12 +125,12 @@ public static class CommandMenu
             var subItems = (command as Submenu)?.ItemsFor(R).ToList();
             bool disabled =
                 subItems != null
-                    ? CommandList.ForMenu(context, subItems).Count == 0
+                    ? CommandResolver.ForMenu(context, subItems).Count == 0
                     : !command.Fits(targets.Count) || !command.IsAvailable(R);
             menu.SetItemDisabled(index, disabled);
 
             // A key shows only if pressing it here would run this command.
-            bool keys = CommandList.RunsFromKeys(command, context);
+            bool keys = CommandResolver.RunsFromKeys(command, context);
             if (keys && command.ShortcutLabel() is { } shortcut)
                 menu.SetItemShortcut(index, shortcut);
 

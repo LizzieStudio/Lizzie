@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Lizzie.Replication.Machinery;
 using Xunit;
 
 public class TableEventJsonTests

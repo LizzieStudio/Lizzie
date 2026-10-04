@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// UI dialog for hosting or joining multiplayer sessions

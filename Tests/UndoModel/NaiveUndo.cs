@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// The undo rules written as plainly as possible, as the model the real implementations are checked against.
@@ -15,13 +15,13 @@ public sealed class NaiveUndo : IUndoApi
 
     private static bool Newer(TableEvent a, TableEvent b) => a.Id.CompareTo(b.Id) > 0;
 
-    private static IEnumerable<TableEvent> NewestFirst(Log log) => log.Values.Reverse();
+    private static IEnumerable<TableEvent> NewestFirst(EventLog log) => log.Values.Reverse();
 
     /// <summary>
     /// The events of a unit. A unit is named by its first event: a group's first event names itself
     /// as the group, and an ungrouped event is a unit of one. Any other id names nothing.
     /// </summary>
-    private static List<TableEvent> Members(Log log, SnowportId unit)
+    private static List<TableEvent> Members(EventLog log, SnowportId unit)
     {
         var first = log.Values.FirstOrDefault(e => e.Id == unit);
         if (first == null || first.Unit != unit)
@@ -35,7 +35,7 @@ public sealed class NaiveUndo : IUndoApi
     private static SnowportId Entry(TableEvent e) => e.Undo == null ? e.Unit : e.Id;
 
     /// <summary>The reversal with this id, if the entry is one. A reversal only reverses something older than itself.</summary>
-    private static TableEvent ReversalAt(Log log, SnowportId entry) =>
+    private static TableEvent ReversalAt(EventLog log, SnowportId entry) =>
         log.Values.FirstOrDefault(e =>
             e.Id == entry && e.Undo != null && e.Undo.Reverses.CompareTo(e.Id) < 0
         );
@@ -47,7 +47,7 @@ public sealed class NaiveUndo : IUndoApi
     /// <summary>
     /// An event's history entry is in effect unless a newer reversal, itself in effect, reverses it.
     /// </summary>
-    private static bool InEffect(Log log, TableEvent e) =>
+    private static bool InEffect(EventLog log, TableEvent e) =>
         !log.Values.Any(reversal =>
             reversal.Undo != null
             && Reversed(reversal.Undo).Contains(Entry(e))
@@ -59,17 +59,17 @@ public sealed class NaiveUndo : IUndoApi
     /// History is the only source of truth: an event is undone when its entry isn't in effect.
     /// The same as the interface's, asked directly.
     /// </summary>
-    public bool IsUndone(Log log, TableEvent e) => !InEffect(log, e);
+    public bool IsUndone(EventLog log, TableEvent e) => !InEffect(log, e);
 
     /// <summary>The unit an entry comes down to: an action's own, or for a reversal, that of what it reverses.</summary>
-    public static SnowportId UnitOf(Log log, SnowportId entry) =>
+    public static SnowportId UnitOf(EventLog log, SnowportId entry) =>
         ReversalAt(log, entry) is { } reversal ? UnitOf(log, reversal.Undo.Reverses) : entry;
 
     /// <summary>
     /// Who an entry counts as done by, for the player <paramref name="me"/>: an action by whoever started it,
     /// another player's reversal by them, and the player's own reversal by whoever did what it reverses.
     /// </summary>
-    private static byte AuthorOf(Log log, SnowportId entry, byte me) =>
+    private static byte AuthorOf(EventLog log, SnowportId entry, byte me) =>
         ReversalAt(log, entry) is not { } reversal ? entry.source
         : reversal.Id.source == me ? AuthorOf(log, reversal.Undo.Reverses, me)
         : reversal.Id.source;
@@ -78,7 +78,7 @@ public sealed class NaiveUndo : IUndoApi
     /// A unit is finished when it's a single ungrouped event, or when its newest event closes it.
     /// Until then it's a gesture in progress.
     /// </summary>
-    public static bool IsClosed(Log log, SnowportId unit)
+    public static bool IsClosed(EventLog log, SnowportId unit)
     {
         var members = Members(log, unit);
         if (members.Count == 0)
@@ -90,7 +90,7 @@ public sealed class NaiveUndo : IUndoApi
 
     /// <summary>Whether any record the unit's events write is in scope, as done by the author.</summary>
     private static bool InScope(
-        Log log,
+        EventLog log,
         SnowportId unit,
         byte author,
         Func<byte, Replicated, bool> scope
@@ -101,7 +101,7 @@ public sealed class NaiveUndo : IUndoApi
     /// comes down to is finished, and in scope as done by the entry's author.
     /// </summary>
     private static bool IsCandidate(
-        Log log,
+        EventLog log,
         TableEvent e,
         byte me,
         Func<byte, Replicated, bool> scope
@@ -116,7 +116,7 @@ public sealed class NaiveUndo : IUndoApi
     /// <summary>
     /// The events a reversal may change: those of the unit its entry comes down to, older than the reversal.
     /// </summary>
-    private static IEnumerable<TableEvent> CoveredBy(Log log, TableEvent reversal) =>
+    private static IEnumerable<TableEvent> CoveredBy(EventLog log, TableEvent reversal) =>
         Members(log, UnitOf(log, reversal.Id)).Where(m => Newer(reversal, m));
 
     #endregion
@@ -129,7 +129,7 @@ public sealed class NaiveUndo : IUndoApi
     /// older undo reversals included, and the newest entry still in effect is reversed.
     /// A Redo reversal is never history: it cancels out with the Undo reversal it reversed.
     /// </summary>
-    public UndoFlag Undo(Log log, byte me, Func<byte, Replicated, bool> scope)
+    public UndoFlag Undo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
     {
         bool pastLatestReversals = false;
         foreach (var e in NewestFirst(log))
@@ -150,7 +150,7 @@ public sealed class NaiveUndo : IUndoApi
     /// reversals still in effect on the entry it reversed are retired too, so that comes back whoever else
     /// reversed it as well.
     /// </summary>
-    private static UndoFlag Reverse(Log log, TableEvent e, bool byRedo = false)
+    private static UndoFlag Reverse(EventLog log, TableEvent e, bool byRedo = false)
     {
         var entry = Entry(e);
         var also = ReversalAt(log, entry) is { } target
@@ -176,7 +176,7 @@ public sealed class NaiveUndo : IUndoApi
     /// Redo reverses the player's newest Undo reversal still in effect, among their latest reversals.
     /// Anything else that has happened since leaves nothing to redo.
     /// </summary>
-    public UndoFlag Redo(Log log, byte me, Func<byte, Replicated, bool> scope)
+    public UndoFlag Redo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
     {
         foreach (var e in NewestFirst(log))
         {
@@ -195,7 +195,7 @@ public sealed class NaiveUndo : IUndoApi
     #region Groups and changes
 
     /// <summary>The groups a player started whose newest event doesn't close them.</summary>
-    public List<SnowportId> OpenGroups(Log log, byte source) =>
+    public List<SnowportId> OpenGroups(EventLog log, byte source) =>
         log
             .Values.Where(e => e.Group != SnowportId.Empty && e.Group.source == source)
             .GroupBy(e => e.Group)
@@ -204,10 +204,10 @@ public sealed class NaiveUndo : IUndoApi
             .ToList();
 
     /// <summary>What a reversal may change is what it covers; any other event changes only itself.</summary>
-    public IEnumerable<TableEvent> Changes(Log log, TableEvent e) =>
+    public IEnumerable<TableEvent> Changes(EventLog log, TableEvent e) =>
         e.Undo == null ? [e] : CoveredBy(log, e);
 
-    public IEnumerable<TableEvent> InEffect(Log log) =>
+    public IEnumerable<TableEvent> InEffect(EventLog log) =>
         NewestFirst(log).Where(e => InEffect(log, e));
 
     #endregion

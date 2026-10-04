@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
+using Lizzie.Replication.Machinery;
 using Xunit;
-using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
 
 /// <summary>
 /// Undo and redo walked through by hand, one reversal at a time.
@@ -16,7 +16,7 @@ public class UndoScenarioTests
 
     private static bool Others(byte author, Replicated _) => author != Me;
 
-    private readonly Log _log = new();
+    private readonly EventLog _log = new();
     private ulong _clock;
 
     private SnowportId NextId(byte source) => new((++_clock << 6) | source);

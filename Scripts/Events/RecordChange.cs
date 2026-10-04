@@ -1,3 +1,5 @@
+namespace Lizzie.Replication.Machinery;
+
 /// <summary>
 /// One record's value before and after a change.
 /// When old is null, it was added.

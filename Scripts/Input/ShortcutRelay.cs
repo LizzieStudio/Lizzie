@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Keyboard shortcut helpers.
@@ -159,7 +160,7 @@ public partial class ShortcutRelay : Node
     /// True when the key belongs to a command.
     /// </summary>
     private static bool Dispatch(InputEvent e, Viewport viewport) =>
-        e is InputEventKey && CommandList.RunShortcut(e, CommandViews.Find(viewport));
+        e is InputEventKey && CommandResolver.RunShortcut(e, CommandViews.Find(viewport));
 
     private static readonly MouseButton[] _defocusEvents =
     [

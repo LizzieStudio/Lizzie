@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// <para>A button that runs a <see cref="Command"/> the way the context menu would.</para>
@@ -156,7 +157,7 @@ public partial class CommandButton : Button
     private List<Target> GetTargets(ICommandView view, IRecordReader R)
     {
         var context = CommandContext.Of(view, R);
-        return CommandList.TargetsFor(Command, context, R, menu: true);
+        return CommandResolver.TargetsFor(Command, context, R, menu: true);
     }
 
     // A view's own commands are only known once the button is in it.

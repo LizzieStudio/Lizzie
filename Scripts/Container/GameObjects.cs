@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 public partial class GameObjects : Node
 {

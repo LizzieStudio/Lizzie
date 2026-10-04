@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// <para>The project's records, worked out from the event log.</para>
@@ -56,13 +57,13 @@ public partial class RecordService : Node, IRecordReader
     private void OnEventApplied(TableEvent e)
     {
         var sync = EventSynchronizer.Instance;
-        var changed = UndoLog.Changes(sync.EventLog, e).ToList();
+        var changed = UndoLog.Changes(sync.Log, e).ToList();
         foreach (var record in changed.SelectMany(c => c.Records))
             if (!_stores.ContainsKey(record.GetType()))
                 AddStore(NewStore(record.GetType()));
 
         foreach (var store in _stores.Values)
-            store.Apply(sync.EventLog, changed, sync.BulkLoading);
+            store.Apply(sync.Log, changed, sync.BulkLoading);
 
         if (!sync.BulkLoading)
             ScheduleForListeners(e);

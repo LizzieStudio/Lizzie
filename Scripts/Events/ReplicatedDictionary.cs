@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
+
+namespace Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Storage for <see cref="Replicated"/> objects that syncs during multiplayer transactionally.
@@ -52,7 +53,7 @@ public sealed class ReplicatedDictionary<TEntity> : IReplicatedStore
 
     #endregion
 
-    public void Apply(Log log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
+    public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
     {
         var ids = changed
             .SelectMany(c => c.Records.OfType<TEntity>())

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
+using Lizzie.Replication.Machinery;
 
 public partial class ProjectService : Node
 {
@@ -316,7 +317,7 @@ public partial class ProjectService : Node
     /// </summary>
     private static void SeedTagsFromLog()
     {
-        var log = EventSynchronizer.Instance?.EventLog;
+        var log = EventSynchronizer.Instance?.Log;
         if (log == null)
             return;
 

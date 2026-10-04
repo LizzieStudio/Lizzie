@@ -1,6 +1,8 @@
 using System;
 using System.Text.Json.Serialization;
 
+namespace Lizzie.Replication.Machinery;
+
 public class TableEvent
 {
     public SnowportId Id { get; set; }

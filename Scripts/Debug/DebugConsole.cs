@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using ImGuiNET;
+using Lizzie.Replication.Machinery;
 using SysVec2 = System.Numerics.Vector2;
 using SysVec4 = System.Numerics.Vector4;
 
@@ -179,7 +180,7 @@ public partial class DebugConsole : Node
         }
 
         Log(
-            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({EventSynchronizer.Instance.EventLog.Count} total)."
+            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({EventSynchronizer.Instance.Log.Count} total)."
         );
     }
 
@@ -217,7 +218,7 @@ public partial class DebugConsole : Node
         ImGui.SetNextWindowSize(new SysVec2(360, 480), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("Event Log", ref _eventsOpen))
         {
-            var eventLog = EventSynchronizer.Instance?.EventLog;
+            var eventLog = EventSynchronizer.Instance?.Log;
             int count = eventLog?.Count ?? 0;
 
             ImGui.TextUnformatted($"{count} events");

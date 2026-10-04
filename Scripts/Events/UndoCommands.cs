@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Undo and redo. Those without targets walk the changes in their view's
@@ -83,11 +84,7 @@ public static class UndoCommands
     /// <see cref="UndoLog.Undo"/> or <see cref="UndoLog.Redo"/>.
     /// This is used to make it easier to set which one.
     /// </summary>
-    private delegate UndoFlag Pick(
-        OrderedDictionary<SnowportId, TableEvent> log,
-        byte me,
-        Func<byte, Replicated, bool> scope
-    );
+    private delegate UndoFlag Pick(EventLog log, byte me, Func<byte, Replicated, bool> scope);
 
     /// <summary>
     /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any,
@@ -100,7 +97,7 @@ public static class UndoCommands
 
         // this creates a performance log in the debug console
         using var _ = DebugTimings.Measure(pick.Method.Name);
-        if (pick(EventSynchronizer.Instance.EventLog, Me, scope) is { } flag)
+        if (pick(EventSynchronizer.Instance.Log, Me, scope) is { } flag)
             EventSynchronizer.Instance.Submit(TableEvent.Undoing(flag, command.Name));
     }
 }

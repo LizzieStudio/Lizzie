@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
-using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
+using Lizzie.Replication.Machinery;
 
 /// <summary>A record for sessions to write. Faces are unique, so every write can be told apart.</summary>
 public sealed record TestRecord : Replicated
@@ -101,7 +101,7 @@ public sealed class UndoSession
     public const int RecordCount = 4;
     public static readonly byte[] Sources = [1, 2, 3, 4];
 
-    public readonly Log Log = new();
+    public readonly EventLog Log = new();
 
     // decides undos, redos and which gestures a leaving player left open
     private readonly IUndoApi _driver;
@@ -202,7 +202,7 @@ public sealed class UndoSession
                     .Keys.Skip(Math.Max(0, Log.Count - c.Back))
                     .Where(key => key.source != c.Source)
                     .ToList();
-                var seen = new Log();
+                var seen = new EventLog();
                 foreach (var (key, known) in Log)
                     if (!unseen.Contains(key))
                         seen.Add(key, known);
@@ -272,7 +272,7 @@ public sealed class UndoSession
         return _recorded.ToArray();
     }
 
-    private UndoFlag Decide(Log log, byte source, bool redo, TestScope scope) =>
+    private UndoFlag Decide(EventLog log, byte source, bool redo, TestScope scope) =>
         redo
             ? _driver.Redo(log, source, scope.For(source))
             : _driver.Undo(log, source, scope.For(source));

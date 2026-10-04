@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Godot;
 
+namespace Lizzie.Replication.Machinery;
+
 /// <summary>
 /// The event-sourced synchronizer. Streams events to all peers.
 /// </summary>
@@ -11,7 +13,7 @@ public partial class EventSynchronizer : Node
     private static EventSynchronizer _instance;
     public static EventSynchronizer Instance => _instance;
 
-    public readonly OrderedDictionary<SnowportId, TableEvent> EventLog = new();
+    public readonly EventLog Log = new();
 
     /// <summary>
     /// While true, events are recorded but not applied to the scene per-event.
@@ -34,7 +36,7 @@ public partial class EventSynchronizer : Node
     /// </summary>
     public void Clear()
     {
-        EventLog.Clear();
+        Log.Clear();
     }
 
     /// <summary>
@@ -43,7 +45,7 @@ public partial class EventSynchronizer : Node
     /// </summary>
     public void AbandonGroups(byte source)
     {
-        foreach (var group in UndoLog.OpenGroups(EventLog, source))
+        foreach (var group in UndoLog.OpenGroups(Log, source))
         {
             Submit(TableEvent.Closing(group));
             Submit(TableEvent.Undoing(new UndoFlag { Reverses = group }, admin: true));
@@ -88,15 +90,15 @@ public partial class EventSynchronizer : Node
 
     private bool TryRecord(TableEvent e)
     {
-        if (EventLog.ContainsKey(e.Id))
+        if (Log.ContainsKey(e.Id))
             return false;
 
         // insert to maintain SnowportId order
         // most events arrive in order, so search from the end
-        int i = EventLog.Count - 1;
-        while (i >= 0 && EventLog.GetAt(i).Key.CompareTo(e.Id) > 0)
+        int i = Log.Count - 1;
+        while (i >= 0 && Log.GetAt(i).Key.CompareTo(e.Id) > 0)
             i--;
-        EventLog.Insert(i + 1, e.Id, e);
+        Log.Insert(i + 1, e.Id, e);
         return true;
     }
 
@@ -194,7 +196,7 @@ public partial class EventSynchronizer : Node
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        foreach (var e in EventLog.Values)
+        foreach (var e in Log.Values)
             RpcId(
                 peerId,
                 nameof(ReceiveState),

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie.Replication.Machinery;
+
 /// <summary>
 /// Runs a callback and records every record it reads so
 /// <see cref="RecordService"/> can rerun it when any of them change.

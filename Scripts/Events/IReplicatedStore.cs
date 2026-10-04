@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
+
+namespace Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Holds the current records of one type, worked out from the event log.
@@ -20,7 +21,7 @@ public interface IReplicatedStore
     /// the event itself, or what an undo or redo reverses.
     /// While <paramref name="bulkLoading"/>, the changes wait for <see cref="FlushBulkLoad"/>.
     /// </summary>
-    void Apply(Log log, IReadOnlyList<TableEvent> changed, bool bulkLoading);
+    void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading);
 
     /// <summary>Removes everything, e.g. when the project is replaced, reporting each removal.</summary>
     void Clear();

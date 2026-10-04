@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// <para>A local value that a Watch can read like a record.</para>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// The most recent durations of instrumented operations, shown in the debug console.
@@ -30,7 +31,7 @@ public static class DebugTimings
                 new Entry(
                     label,
                     Stopwatch.GetElapsedTime(start).TotalMilliseconds,
-                    EventSynchronizer.Instance?.EventLog.Count ?? 0
+                    EventSynchronizer.Instance?.Log.Count ?? 0
                 )
             );
         }

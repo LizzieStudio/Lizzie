@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Manages multiplayer connections, hosting, and player state

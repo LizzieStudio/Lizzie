@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using CsCheck;
+using Lizzie.Replication.Machinery;
 using Xunit;
 
 /// <summary>

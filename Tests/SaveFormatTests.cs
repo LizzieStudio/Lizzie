@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
+using Lizzie.Replication.Machinery;
 using Xunit;
 
 /// <summary>

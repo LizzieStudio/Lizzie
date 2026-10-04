@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Log = System.Collections.Generic.OrderedDictionary<SnowportId, TableEvent>;
+
+namespace Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Undo and redo, worked out from the event log on every call.
@@ -59,7 +60,7 @@ public static class UndoLog
     /// <summary>
     /// Selects the target that Undo should submit, or null if there's nothing in scope to undo.
     /// </summary>
-    public static UndoFlag Undo(Log log, byte me, Func<byte, Replicated, bool> scope)
+    public static UndoFlag Undo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
         var targets = new Targets(log, me, scope);
@@ -85,7 +86,7 @@ public static class UndoLog
     /// <summary>
     /// Selects the target that Redo should submit, or null if there's nothing in scope to redo.
     /// </summary>
-    public static UndoFlag Redo(Log log, byte me, Func<byte, Replicated, bool> scope)
+    public static UndoFlag Redo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
         var targets = new Targets(log, me, scope);
@@ -109,7 +110,7 @@ public static class UndoLog
     /// <summary>
     /// The flag that reverses <paramref name="e"/>'s history entry.
     /// </summary>
-    private static UndoFlag Reverse(Log log, TableEvent e, bool byRedo)
+    private static UndoFlag Reverse(EventLog log, TableEvent e, bool byRedo)
     {
         var entry = Entry(e);
         List<SnowportId> also = null;
@@ -175,14 +176,14 @@ public static class UndoLog
     /// The reversal with id <paramref name="entry"/>, if that's what the id is,
     /// and only if it reverses something older than itself, to avoid infinite loops.
     /// </summary>
-    private static bool IsReversal(Log log, SnowportId entry, out UndoFlag reversal) =>
+    private static bool IsReversal(EventLog log, SnowportId entry, out UndoFlag reversal) =>
         (reversal = log.TryGetValue(entry, out var e) ? e.Undo : null) != null
         && reversal.Reverses.CompareTo(entry) < 0;
 
     /// <summary>
     /// The event or group an entry's chain of reversals comes down to.
     /// </summary>
-    private static SnowportId UnitOf(Log log, SnowportId entry)
+    private static SnowportId UnitOf(EventLog log, SnowportId entry)
     {
         while (IsReversal(log, entry, out var reversal))
             entry = reversal.Reverses;
@@ -192,7 +193,7 @@ public static class UndoLog
     /// <summary>
     /// What Undo and Redo may target, judged once per entry over a walk from newest to oldest.
     /// </summary>
-    private sealed class Targets(Log log, byte me, Func<byte, Replicated, bool> scope)
+    private sealed class Targets(EventLog log, byte me, Func<byte, Replicated, bool> scope)
     {
         // the index of each unit's newest event, for units the walk has met
         private readonly Dictionary<SnowportId, int> _newest = new();
@@ -290,7 +291,7 @@ public static class UndoLog
     /// <summary>
     /// The groups started by <paramref name="source"/> that no event has closed yet, newest first.
     /// </summary>
-    public static List<SnowportId> OpenGroups(Log log, byte source)
+    public static List<SnowportId> OpenGroups(EventLog log, byte source)
     {
         var open = new List<SnowportId>();
         var met = new HashSet<SnowportId>();
@@ -315,7 +316,7 @@ public static class UndoLog
     /// The events of <paramref name="unit"/> at or before index <paramref name="end"/>.
     /// None if <paramref name="unit"/> isn't a unit in the log.
     /// </summary>
-    private static IEnumerable<TableEvent> Members(Log log, SnowportId unit, int end)
+    private static IEnumerable<TableEvent> Members(EventLog log, SnowportId unit, int end)
     {
         int start = log.IndexOf(unit);
         if (start < 0 || start > end)
@@ -344,14 +345,14 @@ public static class UndoLog
     /// For a reversal, the events older than it of the unit its reversals come down to; for any other
     /// event, itself.
     /// </summary>
-    public static IEnumerable<TableEvent> Changes(Log log, TableEvent e) =>
+    public static IEnumerable<TableEvent> Changes(EventLog log, TableEvent e) =>
         e.Undo == null ? [e] : Members(log, UnitOf(log, e.Id), log.IndexOf(e.Id) - 1);
 
     /// <summary>
     /// The events whose history entry is in effect, newest first. For an action, that's not being
     /// undone, so the newest write to a record among these is what the record holds.
     /// </summary>
-    public static IEnumerable<TableEvent> InEffect(Log log)
+    public static IEnumerable<TableEvent> InEffect(EventLog log)
     {
         var reversed = new HashSet<SnowportId>();
         for (int i = log.Count - 1; i >= 0; i--)

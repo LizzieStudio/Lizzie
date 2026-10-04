@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Reads project records.
@@ -106,7 +107,7 @@ public static class RecordReaderExtensions
     /// </summary>
     public static CommandName? WrittenBy(this IRecordReader R, Replicated record) =>
         EventSynchronizer.Instance is { } sync
-        && sync.EventLog.TryGetValue(record.LastUpdateId, out var writer)
+        && sync.Log.TryGetValue(record.LastUpdateId, out var writer)
             ? writer.Command
             : null;
 

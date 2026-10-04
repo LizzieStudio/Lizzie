@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
+using Lizzie.Replication.Machinery;
 using Xunit;
 
 public class UndoLogTests
@@ -28,12 +29,9 @@ public class UndoLogTests
         };
     }
 
-    private static OrderedDictionary<SnowportId, TableEvent> GetEventLog(
-        byte[] sources,
-        int count = 1
-    )
+    private static EventLog GetEventLog(byte[] sources, int count = 1)
     {
-        var log = new OrderedDictionary<SnowportId, TableEvent>();
+        var log = new EventLog();
         for (int i = 0; i < sources.Length; i++)
         {
             for (int l = 0; l < count; l++)
@@ -54,7 +52,7 @@ public class UndoLogTests
             {
                 var events = new List<SnowportId>();
                 int idIndex = 0;
-                var log = new OrderedDictionary<SnowportId, TableEvent>();
+                var log = new EventLog();
                 foreach (var item in p)
                 {
                     var (source, what, pick) = item;
@@ -98,7 +96,7 @@ public class UndoLogTests
     [Fact]
     public void FirstTest()
     {
-        OrderedDictionary<SnowportId, TableEvent> log = new();
+        EventLog log = new();
         UndoLog.Undo(log, 0, (_, _) => true);
         Assert.Equal("Hello, world!", "Hello, " + "world!");
     }
