@@ -22,7 +22,7 @@ public static class TemplateEngine
             BackgroundColor = Colors.White,
             Height = (int)_textureContext.ParentSize.Y,
             Width = (int)_textureContext.ParentSize.X,
-            Shape = TextureFactory.TokenShape.Square,
+            Shape = TokenShape.Rectangle,
         };
 
         foreach (var element in templateElements)

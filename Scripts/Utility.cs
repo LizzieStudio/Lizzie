@@ -8,21 +8,9 @@ public partial class Utility : Node
 {
     public static Utility Instance { get; private set; }
 
-    private TokenTextureSubViewport _textureCreator;
-
     public override void _EnterTree()
     {
         Instance = this;
-    }
-
-    public override void _Ready()
-    {
-        _textureCreator = GetNode<TokenTextureSubViewport>("TextureCreator");
-    }
-
-    public Texture2D CreateQuickTexture(TokenTextureParameters parameters)
-    {
-        return _textureCreator.CreateQuickTexture(parameters);
     }
 
     public float GetAabbSize(Aabb aabb)

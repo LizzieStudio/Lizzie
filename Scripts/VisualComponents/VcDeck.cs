@@ -119,9 +119,7 @@ public partial class VcDeck : VisualComponentBase
         YHeight = Thickness + 0.03f;
         Scale = new Vector3(_width, Thickness, _height);
 
-        ShapeProfiles.Add(
-            VcToken.ShapeProfile((TokenTextureSubViewport.TokenShape)p.Shape, _width, _height)
-        );
+        ShapeProfiles.Add(VcToken.ShapeProfile((TokenShape)p.Shape, _width, _height));
 
         TextureReady = true;
     }

@@ -247,7 +247,7 @@ public partial class VcDie : VisualComponentBase
             BackgroundColor = color,
             Height = 170,
             Width = 256,
-            Shape = TextureFactory.TokenShape.Square,
+            Shape = TokenShape.Rectangle,
         };
 
         var to = new TextureFactory.TextureObject
@@ -290,7 +290,7 @@ public partial class VcDie : VisualComponentBase
             BackgroundColor = color,
             Height = 256,
             Width = 256,
-            Shape = TextureFactory.TokenShape.Square,
+            Shape = TokenShape.Rectangle,
         };
 
         var t0 = new TextureFactory.TextureObject
@@ -335,7 +335,7 @@ public partial class VcDie : VisualComponentBase
             BackgroundColor = color,
             Height = 256,
             Width = 256,
-            Shape = TextureFactory.TokenShape.Square,
+            Shape = TokenShape.Rectangle,
         };
 
         var to = new TextureFactory.TextureObject
@@ -382,7 +382,7 @@ public partial class VcDie : VisualComponentBase
             BackgroundColor = color,
             Height = 256,
             Width = 256,
-            Shape = TextureFactory.TokenShape.Square,
+            Shape = TokenShape.Rectangle,
         };
 
         var to = new TextureFactory.TextureObject
@@ -431,7 +431,7 @@ public partial class VcDie : VisualComponentBase
             BackgroundColor = color,
             Height = 256,
             Width = 256,
-            Shape = TextureFactory.TokenShape.Square,
+            Shape = TokenShape.Rectangle,
         };
 
         var to = new TextureFactory.TextureObject

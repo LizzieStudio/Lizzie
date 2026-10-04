@@ -1,8 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://5ccswp8lv6rf"]
+[gd_scene load_steps=5 format=3 uid="uid://5ccswp8lv6rf"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcToken.cs" id="1_mjoqy"]
 [ext_resource type="Texture2D" uid="uid://vv54s2nf8a7x" path="res://Textures/Shapes/circletest2.png" id="2_wn0j6"]
-[ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="4_x3ne0"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_feocx"]
 top_radius = 0.49
@@ -20,7 +19,3 @@ mesh = SubResource("CylinderMesh_feocx")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_bjoi2")
-
-[node name="FrontViewport" parent="." instance=ExtResource("4_x3ne0")]
-
-[node name="BackViewport" parent="." instance=ExtResource("4_x3ne0")]

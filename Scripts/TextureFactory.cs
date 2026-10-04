@@ -9,21 +9,12 @@ using Lizzie.AssetManagement;
 
 public partial class TextureFactory : SubViewport
 {
-    private Texture2D _circleShape;
-    private Texture2D _rectShape;
-    private Texture2D _hexPointShape;
-    private Texture2D _hexFlatShape;
     private IconLibrary _iconLibrary = new();
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         _viewport = this;
-
-        _circleShape = ResourceLoader.Load("res://Textures/Shapes/circle.png") as Texture2D;
-        _rectShape = ResourceLoader.Load("res://Textures/Shapes/square.png") as Texture2D;
-        _hexPointShape = ResourceLoader.Load("res://Textures/Shapes/hex.png") as Texture2D;
-        _hexFlatShape = ResourceLoader.Load("res://Textures/Shapes/hexflat.png") as Texture2D;
     }
 
     private int _frameCount;
@@ -133,33 +124,16 @@ public partial class TextureFactory : SubViewport
 
         var tr = new TextureRect();
 
-        Texture2D texture;
-
-        switch (definition.Shape)
-        {
-            case TokenShape.Square:
-                texture = _rectShape;
-                break;
-            case TokenShape.Circle:
-                texture = _circleShape;
-                break;
-            case TokenShape.HexPoint:
-                texture = _hexPointShape;
-                break;
-            case TokenShape.HexFlat:
-                texture = _hexFlatShape;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-        var image = texture.GetImage();
         tr.Size = new Vector2(
             _activeQueueEntry.TextureDefinition.Width,
             _activeQueueEntry.TextureDefinition.Height
         );
-        tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
-        tr.Texture = ImageTexture.CreateFromImage(image);
+
+        if (definition.Shape.Mask() is { } mask)
+        {
+            tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
+            tr.Texture = ImageTexture.CreateFromImage(mask.GetImage());
+        }
 
         var bgRect = new ColorRect();
         bgRect.Color = definition.BackgroundColor;
@@ -1120,19 +1094,11 @@ public partial class TextureFactory : SubViewport
         RectangleFrame,
     }
 
-    public enum TokenShape
-    {
-        Square = 0,
-        Circle = 1,
-        HexPoint = 2,
-        HexFlat = 3,
-    }
-
     public class TextureDefinition
     {
         public int Width { get; set; } = 256;
         public int Height { get; set; } = 256;
-        public TokenShape Shape { get; set; } = TokenShape.Square;
+        public TokenShape Shape { get; set; } = TokenShape.Rectangle;
         public Color BackgroundColor { get; set; } = Colors.White;
         public List<TextureObject> Objects { get; set; } = new List<TextureObject>();
     }

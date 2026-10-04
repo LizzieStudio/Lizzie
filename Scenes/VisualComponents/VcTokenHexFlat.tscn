@@ -1,8 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://h000km435sy6"]
+[gd_scene load_steps=5 format=3 uid="uid://h000km435sy6"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcToken.cs" id="1_c64ht"]
 [ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="2_m0fox"]
-[ext_resource type="PackedScene" uid="uid://b576dfm4886tw" path="res://Scenes/ComponentPanels/TokenTextureSubViewport.tscn" id="4_rkiku"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
 size = Vector3(1, 0.03, 1)
@@ -22,7 +21,3 @@ shape = SubResource("BoxShape3D_bjoi2")
 [node name="SideMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0, 0)
 mesh = SubResource("CylinderMesh_lwpqf")
-
-[node name="FrontViewport" parent="." instance=ExtResource("4_rkiku")]
-
-[node name="BackViewport" parent="." instance=ExtResource("4_rkiku")]

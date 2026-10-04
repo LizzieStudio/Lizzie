@@ -56,9 +56,6 @@ public partial class VcToken : VisualComponentBase
 
     public Image BackSprite => BackTexture.GetImage();
 
-    private TokenTextureSubViewport _frontView;
-    private TokenTextureSubViewport _backView;
-
     public override void _Ready()
     {
         base._Ready();
@@ -276,7 +273,7 @@ public partial class VcToken : VisualComponentBase
             AlbedoColor = new Color(0.506f, 0.506f, 0.506f),
         };
 
-        var shape = (TokenTextureSubViewport.TokenShape)_shape;
+        var shape = (TokenShape)_shape;
         var ring = GetFaceRing(shape);
 
         var mesh = new ArrayMesh();
@@ -293,21 +290,12 @@ public partial class VcToken : VisualComponentBase
     /// The table footprint of a <paramref name="width"/> by <paramref name="height"/> token, used
     /// for stacking.
     /// </summary>
-    public static OffsetShape2D ShapeProfile(
-        TokenTextureSubViewport.TokenShape shape,
-        float width,
-        float height
-    ) =>
+    public static OffsetShape2D ShapeProfile(TokenShape shape, float width, float height) =>
         shape switch
         {
-            TokenTextureSubViewport.TokenShape.Square => new(
-                new RectangleShape2D { Size = new Vector2(width, height) }
-            ),
-            TokenTextureSubViewport.TokenShape.Circle => new(
-                new CircleShape2D { Radius = width / 2f }
-            ),
-            TokenTextureSubViewport.TokenShape.HexPoint
-            or TokenTextureSubViewport.TokenShape.HexFlat => new(
+            TokenShape.Rectangle => new(new RectangleShape2D { Size = new Vector2(width, height) }),
+            TokenShape.Circle => new(new CircleShape2D { Radius = width / 2f }),
+            TokenShape.HexPoint or TokenShape.HexFlat => new(
                 new ConvexPolygonShape2D
                 {
                     Points = GetFaceRing(shape)
@@ -321,17 +309,17 @@ public partial class VcToken : VisualComponentBase
             _ => throw new ArgumentOutOfRangeException(nameof(shape)),
         };
 
-    private static Vector3[] GetFaceRing(TokenTextureSubViewport.TokenShape shape) =>
+    private static Vector3[] GetFaceRing(TokenShape shape) =>
         shape switch
         {
-            TokenTextureSubViewport.TokenShape.Square => new[]
+            TokenShape.Rectangle => new[]
             {
                 new Vector3(-FaceR, 0, -FaceR),
                 new Vector3(+FaceR, 0, -FaceR),
                 new Vector3(+FaceR, 0, +FaceR),
                 new Vector3(-FaceR, 0, +FaceR),
             },
-            TokenTextureSubViewport.TokenShape.Circle => Enumerable
+            TokenShape.Circle => Enumerable
                 .Range(0, CircleSegments)
                 .Select(i =>
                 {
@@ -339,8 +327,8 @@ public partial class VcToken : VisualComponentBase
                     return new Vector3(FaceR * Mathf.Cos(a), 0, FaceR * Mathf.Sin(a));
                 })
                 .ToArray(),
-            TokenTextureSubViewport.TokenShape.HexPoint => HexRing(Mathf.Pi / 2f),
-            TokenTextureSubViewport.TokenShape.HexFlat => HexRing(0f),
+            TokenShape.HexPoint => HexRing(Mathf.Pi / 2f),
+            TokenShape.HexFlat => HexRing(0f),
             _ => new[]
             {
                 new Vector3(-FaceR, 0, -FaceR),
@@ -447,14 +435,9 @@ public partial class VcToken : VisualComponentBase
 
     private void BuildCustom()
     {
-        _frontView = GetNode<TokenTextureSubViewport>("FrontViewport");
         CreateCustomFrontTexture();
-
         if (_differentBack)
-        {
-            _backView = GetNode<TokenTextureSubViewport>("BackViewport");
             CreateCustomBackTexture();
-        }
     }
 
     private void BuildGrid()
@@ -948,12 +931,8 @@ public partial class VcToken : VisualComponentBase
         if (!File.Exists(_frontImage))
             return;
 
-        _frontView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
-        _frontView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
-        _frontView.SetTexture(LoadTexture(_frontImage));
+        FaceTexture = LoadClipped(_frontImage);
         _frontTextureGenerated = true;
-
-        FaceTexture = _frontView.GetTexture();
 
         if (!_differentBack)
         {
@@ -967,11 +946,17 @@ public partial class VcToken : VisualComponentBase
         if (!File.Exists(_backImage))
             return;
 
-        _backView.SetViewPortMode(TokenTextureSubViewport.ShapeViewportMode.Texture);
-        _backView.SetShape((TokenTextureSubViewport.TokenShape)_shape);
-        _backView.SetTexture(LoadTexture(_backImage));
-        BackTexture = _backView.GetTexture();
+        BackTexture = LoadClipped(_backImage);
         _backTextureGenerated = true;
+    }
+
+    // An uploaded image, transparent outside the token's shape, so the hand shows its shape too.
+    private ImageTexture LoadClipped(string path)
+    {
+        var image = Image.LoadFromFile(path);
+        return image == null
+            ? new ImageTexture()
+            : ImageTexture.CreateFromImage(((TokenShape)_shape).Clip(image));
     }
 
     private void CreateQuickFrontTexture(TextureFactory textureFactory)
@@ -1043,19 +1028,19 @@ public partial class VcToken : VisualComponentBase
         switch (shape)
         {
             case 0:
-                td.Shape = TextureFactory.TokenShape.Square;
+                td.Shape = TokenShape.Rectangle;
                 break;
 
             case 1:
-                td.Shape = TextureFactory.TokenShape.Circle;
+                td.Shape = TokenShape.Circle;
                 break;
 
             case 2:
-                td.Shape = TextureFactory.TokenShape.HexPoint;
+                td.Shape = TokenShape.HexPoint;
                 break;
 
             case 3:
-                td.Shape = TextureFactory.TokenShape.HexFlat;
+                td.Shape = TokenShape.HexFlat;
                 break;
         }
 
