@@ -63,6 +63,7 @@ layout_mode = 2
 theme_override_constants/icon_max_width = 20
 script = ExtResource("4_cmdbtn")
 CommandName = "dataset.add_row"
+ShowIcon = false
 
 [node name="DeleteRow" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=922142654]
 unique_name_in_owner = true
@@ -78,6 +79,7 @@ layout_mode = 2
 theme_override_constants/icon_max_width = 20
 script = ExtResource("4_cmdbtn")
 CommandName = "dataset.add_column"
+ShowIcon = false
 
 [node name="DeleteColumn" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=233397807]
 unique_name_in_owner = true

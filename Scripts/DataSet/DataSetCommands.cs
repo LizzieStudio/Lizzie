@@ -7,12 +7,11 @@ using Godot;
 /// </summary>
 public static class DataSetCommands
 {
-    private const string DeleteIcon = "res://Textures/UI/delete.svg";
-
     /// <summary>Adds a row after the last. The dataset editor's add buttons and Enter on its last row run it.</summary>
     public static readonly Command AddRow = new RecordCommand<DataSet>
     {
         Name = new("dataset.add_row"),
+        Icon = CommandIcons.Add,
         Caption = "Add Row",
         Count = TargetCount.One,
         ActsOn = Context.View,
@@ -25,6 +24,7 @@ public static class DataSetCommands
     public static readonly Command AddColumn = new RecordCommand<DataSet>
     {
         Name = new("dataset.add_column"),
+        Icon = CommandIcons.Add,
         Caption = "Add Column",
         Count = TargetCount.One,
         ActsOn = Context.View,
@@ -35,7 +35,7 @@ public static class DataSetCommands
     public static readonly Command EditRow = new RecordCommand<DataRow>
     {
         Name = new("dataset.edit_row"),
-        Icon = UI.TextureUI_Pencil,
+        Icon = CommandIcons.Edit,
         Caption = "Edit Data Row",
         Count = TargetCount.One,
         ActsOn = Context.Referenced,
@@ -52,7 +52,7 @@ public static class DataSetCommands
     public static readonly Command DeleteRow = new RecordCommand<DataRow>
     {
         Name = new("dataset.delete_row"),
-        Icon = DeleteIcon,
+        Icon = CommandIcons.Delete,
         Caption = "Delete {0}",
         Noun = ("Row", "Rows"),
         Keys = [Shortcuts.Key(Key.Delete)],
@@ -64,7 +64,7 @@ public static class DataSetCommands
     public static readonly Command DeleteColumn = new TargetCommand<ColumnTarget>
     {
         Name = new("dataset.delete_column"),
-        Icon = DeleteIcon,
+        Icon = CommandIcons.Delete,
         Caption = "Delete {0}",
         Noun = ("Column", "Columns"),
         Keys = [Shortcuts.Key(Key.Delete)],
@@ -89,7 +89,7 @@ public static class DataSetCommands
     public static readonly Command ClearCells = new TargetCommand<CellTarget>
     {
         Name = new("dataset.clear_cells"),
-        Icon = DeleteIcon,
+        Icon = CommandIcons.Clear,
         Caption = "Clear {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Key(Key.Delete)],
@@ -100,6 +100,7 @@ public static class DataSetCommands
     public static readonly Command CutCells = new TargetCommand<CellTarget>
     {
         Name = new("dataset.cut_cells"),
+        Icon = CommandIcons.Cut,
         Caption = "Cut {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.X)],
@@ -112,7 +113,7 @@ public static class DataSetCommands
     public static readonly Command CopyCells = new TargetCommand<CellTarget>
     {
         Name = new("dataset.copy_cells"),
-        Icon = UI.TextureUI_ContentCopy,
+        Icon = CommandIcons.Copy,
         Caption = "Copy {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.C)],
@@ -128,6 +129,7 @@ public static class DataSetCommands
     public static readonly Command PasteCells = new TargetCommand<CellTarget>
     {
         Name = new("dataset.paste_cells"),
+        Icon = CommandIcons.Paste,
         Caption = "Paste",
         Keys = [Shortcuts.Ctrl(Key.V)],
         AppliesTo = CellExists,

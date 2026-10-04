@@ -6,14 +6,10 @@ using static VisualComponentBase;
 /// <summary>Commands for dice.</summary>
 public static class DieCommands
 {
-    // The component creation dialog's die icon.
-    private const string DieIcon =
-        "res://Textures/UI/ifl_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-
     public static readonly Command Roll = new RecordCommand<ComponentState>
     {
         Name = new("die.roll"),
-        Icon = DieIcon,
+        Icon = CommandIcons.Die,
         Caption = "Roll {0}",
         Noun = ("Die", "Dice"),
         Keys = [Shortcuts.Key(Key.R)],
@@ -24,7 +20,7 @@ public static class DieCommands
     public static readonly Command SetFace = new RecordCommand<ComponentState>
     {
         Name = new("die.set_face"),
-        Icon = DieIcon,
+        Icon = CommandIcons.SetFace,
         Caption = "Set {0}",
         Noun = ("Die Face", "Die Faces"),
         AsksForNumber = true,

@@ -10,17 +10,10 @@ using static VisualComponentBase;
 /// </summary>
 public static class ComponentCommands
 {
-    private const string FlipIcon = "res://Textures/UI/flip.svg";
-    private const string RotateRightIcon = "res://Textures/UI/rotate_right.svg";
-    private const string RotateLeftIcon = "res://Textures/UI/rotate_left.svg";
-    private const string SendToTopIcon = "res://Textures/UI/send_to_top.svg";
-    private const string SendToBottomIcon = "res://Textures/UI/send_to_bottom.svg";
-    private const string DeleteIcon = "res://Textures/UI/delete.svg";
-
     public static readonly Command Flip = new RecordCommand<ComponentState>
     {
         Name = new("component.flip"),
-        Icon = FlipIcon,
+        Icon = CommandIcons.Flip,
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
@@ -31,7 +24,7 @@ public static class ComponentCommands
     public static readonly Command RotateCw = new RecordCommand<ComponentState>
     {
         Name = new("component.rotate_cw"),
-        Icon = RotateRightIcon,
+        Icon = CommandIcons.RotateRight,
         Caption = "Rotate {0} Right",
         Keys = [Shortcuts.Key(Key.E)],
         ActsOn = Context.Selected | Context.Contents,
@@ -42,7 +35,7 @@ public static class ComponentCommands
     public static readonly Command RotateCcw = new RecordCommand<ComponentState>
     {
         Name = new("component.rotate_ccw"),
-        Icon = RotateLeftIcon,
+        Icon = CommandIcons.RotateLeft,
         Caption = "Rotate {0} Left",
         Keys = [Shortcuts.Key(Key.Q)],
         ActsOn = Context.Selected | Context.Contents,
@@ -53,7 +46,7 @@ public static class ComponentCommands
     public static readonly Command MoveToTop = new RecordCommand<ComponentState>
     {
         Name = new("component.move_to_top"),
-        Icon = SendToTopIcon,
+        Icon = CommandIcons.SendToTop,
         Caption = "Move {0} to Top",
         Keys = [Shortcuts.Key(Key.T)],
         ActsOn = Context.Selected | Context.Contents,
@@ -64,7 +57,7 @@ public static class ComponentCommands
     public static readonly Command MoveToBottom = new RecordCommand<ComponentState>
     {
         Name = new("component.move_to_bottom"),
-        Icon = SendToBottomIcon,
+        Icon = CommandIcons.SendToBottom,
         Caption = "Move {0} to Bottom",
         Keys = [Shortcuts.Key(Key.B)],
         ActsOn = Context.Selected | Context.Contents,
@@ -75,7 +68,7 @@ public static class ComponentCommands
     public static readonly Command Delete = new RecordCommand<ComponentState>
     {
         Name = new("component.delete"),
-        Icon = DeleteIcon,
+        Icon = CommandIcons.Delete,
         Caption = "Delete {0}",
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,

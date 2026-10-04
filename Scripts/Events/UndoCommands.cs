@@ -12,7 +12,7 @@ public static class UndoCommands
     public static readonly Command Undo = new GlobalCommand
     {
         Name = new("app.undo"),
-        Icon = "res://Textures/UI/undo.svg",
+        Icon = CommandIcons.Undo,
         Caption = "Undo Mine",
         Keys = [Shortcuts.Ctrl(Key.Z)],
         SideEffects = v => Issue(Undo, UndoLog.Undo, Mine(v)),
@@ -21,7 +21,7 @@ public static class UndoCommands
     public static readonly Command Redo = new GlobalCommand
     {
         Name = new("app.redo"),
-        Icon = "res://Textures/UI/redo.svg",
+        Icon = CommandIcons.Redo,
         Caption = "Redo Mine",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
         SideEffects = v => Issue(Redo, UndoLog.Redo, Mine(v)),
@@ -30,7 +30,7 @@ public static class UndoCommands
     public static readonly Command UndoOthers = new GlobalCommand
     {
         Name = new("app.undo_others"),
-        Icon = "res://Textures/UI/undo_others.svg",
+        Icon = CommandIcons.UndoOthers,
         Caption = "Undo Others",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
         SideEffects = v => Issue(UndoOthers, UndoLog.Undo, Others(v)),
@@ -39,7 +39,7 @@ public static class UndoCommands
     public static readonly Command RedoOthers = new GlobalCommand
     {
         Name = new("app.redo_others"),
-        Icon = "res://Textures/UI/redo_others.svg",
+        Icon = CommandIcons.RedoOthers,
         Caption = "Redo Others",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
         SideEffects = v => Issue(RedoOthers, UndoLog.Redo, Others(v)),
@@ -52,7 +52,7 @@ public static class UndoCommands
     public static readonly Command UndoComponentChanges = new RecordCommand<ComponentState>
     {
         Name = new("component.undo_changes"),
-        Icon = "res://Textures/UI/undo_component.svg",
+        Icon = CommandIcons.UndoComponent,
         Caption = "Undo This",
         ActsOn = Context.Selected | Context.Contents,
         SideEffects = (cs, _) =>

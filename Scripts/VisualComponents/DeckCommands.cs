@@ -10,14 +10,10 @@ using static VisualComponentBase;
 /// </summary>
 public static class DeckCommands
 {
-    // The component creation dialog's icon for printed components, which include decks.
-    private const string DeckIcon =
-        "res://Textures/UI/crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-
     public static readonly Command Shuffle = new RecordCommand<ComponentState>
     {
         Name = new("deck.shuffle"),
-        Icon = DeckIcon,
+        Icon = CommandIcons.Shuffle,
         Caption = "Shuffle {0}",
         Noun = ("Deck", "Decks"),
         AppliesTo = HasCards,
@@ -27,7 +23,7 @@ public static class DeckCommands
     public static readonly Command Draw = new RecordCommand<ComponentState>
     {
         Name = new("deck.draw"),
-        Icon = DeckIcon,
+        Icon = CommandIcons.Draw,
         Caption = "Draw Cards",
         AsksForNumber = true,
         InfiniteOption = "All",
@@ -41,7 +37,7 @@ public static class DeckCommands
     public static readonly Command Deal = new RecordCommand<ComponentState>
     {
         Name = new("deck.deal"),
-        Icon = DeckIcon,
+        Icon = CommandIcons.Deal,
         Caption = "Deal Cards",
         AsksForNumber = true,
         InfiniteOption = "All",

@@ -445,12 +445,12 @@ public partial class DatasetEditor : Window, ICommandView
         _addRowLine.AddChild(AddButton(DataSetCommands.AddRow, RowHeaderWidth));
     }
 
-    // A "+" after the last row or column, doing what the toolbar's button does.
+    // A "+" icon after the last row or column, doing what the toolbar's button does.
     private CommandButton AddButton(Command command, float width) =>
         new()
         {
-            Text = "+",
             ShowCaption = false,
+            IconAlignment = HorizontalAlignment.Center,
             Command = command,
             CustomMinimumSize = new Vector2(width, RowHeight),
             FocusMode = Control.FocusModeEnum.None,
@@ -1029,7 +1029,7 @@ public partial class DatasetEditor : Window, ICommandView
             new TargetCommand<ColumnTarget>
             {
                 Name = new("dataset.rename_column"),
-                Icon = UI.TextureUI_Pencil,
+                Icon = CommandIcons.Edit,
                 Caption = "Rename Column",
                 Count = TargetCount.One,
                 SideEffects = (columns, _) => RenameColumn(columns[0]),
@@ -1042,6 +1042,7 @@ public partial class DatasetEditor : Window, ICommandView
     private static readonly RecordCommand<DataRow> InsertRowAbove = new()
     {
         Name = new("dataset.insert_row_above"),
+        Icon = CommandIcons.InsertRowAbove,
         Caption = "Insert Row Above",
         Count = TargetCount.One,
         Effects = (R, rows, _) =>
@@ -1051,6 +1052,7 @@ public partial class DatasetEditor : Window, ICommandView
     private static readonly RecordCommand<DataRow> InsertRowBelow = new()
     {
         Name = new("dataset.insert_row_below"),
+        Icon = CommandIcons.InsertRowBelow,
         Caption = "Insert Row Below",
         Count = TargetCount.One,
         Effects = (R, rows, _) =>
@@ -1060,6 +1062,7 @@ public partial class DatasetEditor : Window, ICommandView
     private static readonly TargetCommand<ColumnTarget> InsertColumnLeft = new()
     {
         Name = new("dataset.insert_column_left"),
+        Icon = CommandIcons.InsertColumnLeft,
         Caption = "Insert Column Left",
         Count = TargetCount.One,
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
@@ -1073,6 +1076,7 @@ public partial class DatasetEditor : Window, ICommandView
     private static readonly TargetCommand<ColumnTarget> InsertColumnRight = new()
     {
         Name = new("dataset.insert_column_right"),
+        Icon = CommandIcons.InsertColumnRight,
         Caption = "Insert Column Right",
         Count = TargetCount.One,
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,

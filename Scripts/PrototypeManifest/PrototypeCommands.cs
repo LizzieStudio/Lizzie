@@ -5,7 +5,7 @@ public static class PrototypeCommands
     {
         Name = new("prototype.edit"),
         // The prototype manifest's edit icon.
-        Icon = UI.TextureUI_Pencil,
+        Icon = CommandIcons.Edit,
         Caption = "Edit Prototype",
         Count = TargetCount.One,
         ActsOn = Context.Selected | Context.Referenced,
