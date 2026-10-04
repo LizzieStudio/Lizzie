@@ -26,10 +26,7 @@ public static class ZoneService
     /// </summary>
     public static bool LocalSeatIsAdmin()
     {
-        var settings = RecordService.Instance?.Single<ProjectGameSettings>();
-        if (settings == null)
-            return false;
-
+        var settings = RecordService.Instance.Single<ProjectGameSettings>();
         int seat = PlayerHandService.LocalSeatIndex();
         if (seat < 0 || seat >= settings.Players.Length)
             return false;

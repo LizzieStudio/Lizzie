@@ -83,9 +83,6 @@ public partial class ProjectSettingsDialog : Window
     private void Sync(IRecordReader R)
     {
         var next = R.Single<ProjectGameSettings>();
-        if (next == null)
-            return;
-
         if (_baseline == null)
         {
             Load(next);

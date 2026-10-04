@@ -142,7 +142,7 @@ public partial class MultiplayerDialog : Window
 
             int idx = _playerList.AddItem(label);
 
-            if (settings != null && seat >= 0 && seat < settings.Players.Length)
+            if (seat >= 0 && seat < settings.Players.Length)
             {
                 var p = settings.Players[seat];
                 _playerList.SetItemCustomFgColor(idx, p.Color);
@@ -154,7 +154,7 @@ public partial class MultiplayerDialog : Window
     {
         if (seat == -1)
             return "Observer";
-        if (seat < 0 || settings == null || seat >= settings.Players.Length)
+        if (seat < 0 || seat >= settings.Players.Length)
             return "Choosing a seat";
         var name = settings.Players[seat].Name;
         return string.IsNullOrWhiteSpace(name) ? $"Seat {seat + 1}" : name;

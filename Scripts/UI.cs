@@ -151,8 +151,6 @@ public partial class UI : CanvasLayer
     private void ShowPlayerPositionDialog()
     {
         var settings = RecordService.Instance.Single<ProjectGameSettings>();
-        if (settings == null)
-            return;
 
         // Don't open if there are no player slots and observers are not allowed.
         if (settings.Players.Length == 0 && !settings.AllowObservers)
