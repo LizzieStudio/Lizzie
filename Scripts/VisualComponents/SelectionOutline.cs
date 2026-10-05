@@ -13,6 +13,8 @@ using Godot;
 /// and outlines hide behind other objects.
 /// </para>
 /// </summary>
+[GlobalClass]
+[Icon("res://Textures/Editor/SelectionOutline.svg")]
 public partial class SelectionOutline : Node
 {
     /// <summary>
@@ -31,7 +33,8 @@ public partial class SelectionOutline : Node
     /// The outline's width in pixels, including the dark rim on each side,
     /// up to <see cref="SelectionOutlineEffect.MaxWidth"/>.
     /// </summary>
-    [Export]
+    // The range's maximum is SelectionOutlineEffect.MaxWidth.
+    [Export(PropertyHint.Range, "3,8,0.2,suffix:px")]
     public float Width = 5f;
 
     private static readonly Shader MaskShader = GD.Load<Shader>(

@@ -21,7 +21,6 @@ public partial class SceneController : Node3D, ICommandView
         _gameObjects = GetNode<GameObjects>("GameObjects");
         SetMode(Config.Registry.Get<SceneMode>("SceneMode"));
         _gameObjects.TextureFactory = _textureFactory;
-        AddChild(new SelectionOutline());
 
         PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
 

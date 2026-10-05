@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://bgpmoevuajrwu" path="res://Scripts/Camera/TopViewCamera.cs" id="5_he01h"]
 [ext_resource type="Script" uid="uid://cj0jjb2j7nse1" path="res://Scripts/Container/GameObjects.cs" id="6_7g6ti"]
 [ext_resource type="Script" uid="uid://d01l1jo1swppc" path="res://Scripts/Interactivity/DragPlane.cs" id="7_inwp1"]
+[ext_resource type="Script" uid="uid://brlvv6ecrxrum" path="res://Scripts/VisualComponents/SelectionOutline.cs" id="9_5tlkv"]
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_d3epo"]
 
@@ -83,3 +84,8 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("5_56t6u")
+
+[node name="SelectionOutline" type="Node" parent="." unique_id=597922359]
+script = ExtResource("9_5tlkv")
+Width = 3.8
+metadata/_custom_type_script = "uid://brlvv6ecrxrum"
