@@ -69,6 +69,7 @@ public readonly struct ZOrder : IComparable<ZOrder>, IEquatable<ZOrder>
     /// <summary>
     /// A number that sorts the same way <see cref="CompareTo"/> does, for sorting many at once.
     /// </summary>
+    [JsonIgnore]
     public UInt128 SortKey
     {
         get
