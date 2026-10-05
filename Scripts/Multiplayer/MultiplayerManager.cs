@@ -89,8 +89,6 @@ public partial class MultiplayerManager : Node
             Source = Snowport.HostSource,
         };
 
-        PresenceSynchronizer.Instance?.Clear();
-
         GD.Print($"Server started on port {port}. Server ID: {_localPlayerId}");
         EmitSignal("ServerStarted");
 
@@ -165,13 +163,12 @@ public partial class MultiplayerManager : Node
         }
         else
         {
+            var previousSource = Snowport.Clock.source;
             Snowport.Clock = Snowport.Clock.WithSource(Snowport.HostSource);
             EventSynchronizer.Instance?.Clear();
-            PresenceSynchronizer.Instance?.Clear();
+            // Back to solo, alone at the table.
+            PresenceSynchronizer.Instance?.KeepOnlyLocalSeat(previousSource);
         }
-
-        // Back to solo.
-        PresenceSynchronizer.Instance?.EnsureLocalSeat();
 
         GD.Print("Disconnected from multiplayer");
     }
@@ -252,9 +249,6 @@ public partial class MultiplayerManager : Node
         foreach (var kv in _players)
             if (kv.Key != playerId)
                 RpcId(playerId, nameof(ReceivePlayerPresence), kv.Key, (int)kv.Value.Source);
-
-        // Give the newcomer the current seat occupancy.
-        PresenceSynchronizer.Instance?.SendSeatSnapshotTo(playerId);
 
         // Announce the newcomer to everyone.
         Rpc(nameof(ReceivePlayerPresence), playerId, (int)source);

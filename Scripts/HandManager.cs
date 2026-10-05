@@ -57,6 +57,11 @@ public partial class HandManager : Panel
         AddChild(_dragPreview);
     }
 
+    public override void _EnterTree()
+    {
+        RecordService.Instance.Watch(this, Sync);
+    }
+
     public override void _ExitTree()
     {
         if (_gameObjects != null && IsInstanceValid(_gameObjects))
@@ -261,13 +266,11 @@ public partial class HandManager : Panel
 
     #region Hand Management
 
-    /// <summary>
-    /// Refreshes the local player's hand display from PlayerHandService.
-    /// Shows the Face (front) of each card.
-    /// </summary>
-    private void RefreshDisplay()
+    private void RefreshDisplay() => RecordService.Instance.QueueSync(this);
+
+    private void Sync(IRecordReader R)
     {
-        _cards = PlayerHandService.Instance.GetHand(PlayerHandService.LocalSeatIndex()).ToList();
+        _cards = PlayerHandService.Instance.GetHand(R.LocalSeat()).ToList();
 
         MapHandToContainer();
     }

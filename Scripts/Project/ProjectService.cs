@@ -120,6 +120,7 @@ public partial class ProjectService : Node
         HasUnsavedChanges = false;
         EnsureSingletons();
         EnsureSeatContainers();
+        PresenceSynchronizer.Instance?.SeatSoloPlayer();
     }
 
     /// <summary>
@@ -239,6 +240,7 @@ public partial class ProjectService : Node
         EndBulkLoad();
         EnsureSingletons();
         EnsureSeatContainers();
+        PresenceSynchronizer.Instance?.SeatSoloPlayer();
 
         HasUnsavedChanges = false;
     }

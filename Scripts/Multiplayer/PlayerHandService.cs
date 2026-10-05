@@ -22,24 +22,6 @@ public partial class PlayerHandService : Node
     }
 
     /// <summary>
-    /// Gets the container id for a seat's hand.
-    /// </summary>
-    public SnowTag HandContainer(int seatIndex) =>
-        PresenceSynchronizer.Instance?.HandRefForSeat(seatIndex) ?? SnowTag.Empty;
-
-    /// <summary>
-    /// The container that holds what the local player is dragging,
-    /// or <see cref="SnowTag.Empty"/> when they're an observer or unseated.
-    /// </summary>
-    public static SnowTag LocalCursor()
-    {
-        var psm = PresenceSynchronizer.Instance;
-        if (psm == null)
-            return SnowTag.Empty;
-        return psm.CursorRefForSeat(psm.GetSeatBySource(Snowport.Clock.source));
-    }
-
-    /// <summary>
     /// The card moved into a seat's hand at the top of its order.
     /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
@@ -51,7 +33,7 @@ public partial class PlayerHandService : Node
     ) =>
         card with
         {
-            ContainerRef = HandContainer(seatIndex),
+            ContainerRef = RecordService.Instance.HandOf(seatIndex),
             ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
         };
 
@@ -68,17 +50,10 @@ public partial class PlayerHandService : Node
         if (gameObjects == null)
             return System.Array.Empty<VcToken>();
 
-        var container = HandContainer(seatIndex);
+        var container = RecordService.Instance.HandOf(seatIndex);
         if (container == SnowTag.Empty)
             return System.Array.Empty<VcToken>();
 
         return gameObjects.GetContainedComponents(container).OfType<VcToken>().ToList();
     }
-
-    /// <summary>
-    /// The seat the local player is sitting in, -1 for an observer, or -2 when unseated.
-    /// A solo player is always in a seat.
-    /// </summary>
-    public static int LocalSeatIndex() =>
-        PresenceSynchronizer.Instance?.GetSeatBySource(Snowport.Clock.source) ?? -2;
 }

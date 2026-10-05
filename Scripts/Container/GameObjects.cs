@@ -658,7 +658,7 @@ public partial class GameObjects : Node
     {
         ZoneService.Recompute(
             ComponentNodes.OfType<VisualComponentBase>(),
-            PlayerHandService.LocalSeatIndex(),
+            RecordService.Instance.LocalSeat(),
             ZoneService.LocalSeatIsAdmin()
         );
     }
@@ -697,8 +697,8 @@ public partial class GameObjects : Node
     )
     {
         var records = new List<Replicated>();
-        // Observers and unseated players can't drag.
-        var cursor = PlayerHandService.LocalCursor();
+        // Players without a seat can't drag.
+        var cursor = RecordService.Instance.LocalCursor();
         if (cursor == SnowTag.Empty)
             return [];
 
@@ -745,8 +745,8 @@ public partial class GameObjects : Node
         IEnumerable<SnowTag> selected
     )
     {
-        // Observers and unseated players can't drag.
-        var holder = PlayerHandService.LocalCursor();
+        // Players without a seat can't drag.
+        var holder = RecordService.Instance.LocalCursor();
         var dragged = components
             .Where(o => o != null && holder != SnowTag.Empty)
             .Select(o =>
@@ -908,7 +908,7 @@ public partial class GameObjects : Node
     /// </summary>
     private IEnumerable<VisualComponentBase> GetLocalDraggingObjects()
     {
-        var cursor = PlayerHandService.LocalCursor();
+        var cursor = RecordService.Instance.LocalCursor();
         return cursor == SnowTag.Empty
             ? []
             : Nodes(RecordService.Instance.Get<ComponentState>(s => s.ContainerRef == cursor));
@@ -933,7 +933,7 @@ public partial class GameObjects : Node
             if (toHand.Count > 0)
             {
                 var toBoard = dragged.Where(go => go is not VcToken).ToList();
-                SubmitHandDrop(toHand, toBoard, PlayerHandService.LocalSeatIndex());
+                SubmitHandDrop(toHand, toBoard, RecordService.Instance.LocalSeat());
                 Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
                 CursorMode = CursorMode.Normal;
                 return;
@@ -1155,8 +1155,6 @@ public partial class GameObjects : Node
     {
         ResetTable();
         EventSynchronizer.Instance?.Clear();
-        PresenceSynchronizer.Instance?.Clear();
-        PresenceSynchronizer.Instance?.EnsureLocalSeat();
     }
 
     /// <summary>
@@ -1211,7 +1209,7 @@ public partial class GameObjects : Node
 
         foreach (var group in GetDraggingObjects().GroupBy(c => c.State.ContainerRef))
         {
-            if (group.Key == PlayerHandService.LocalCursor() && _localDragOverHand)
+            if (group.Key == RecordService.Instance.LocalCursor() && _localDragOverHand)
                 continue;
 
             if (!cursors.TryGetCursor(group.Key, out var cursor))

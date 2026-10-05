@@ -32,8 +32,6 @@ public partial class GameController : Node3D
 
         if (ProjectService.Instance.LoadProject(ProjectService.SampleProjectName) == null)
             ProjectService.Instance.NewGame(ProjectService.SampleProjectName);
-
-        PresenceSynchronizer.Instance?.EnsureLocalSeat();
     }
 
     private void MainSceneOnHoveredNameChange(object sender, HoveredComponentChangeEventArgs e)

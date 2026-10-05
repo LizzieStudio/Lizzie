@@ -38,9 +38,6 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.ConnectionFailed += OnConnectionFailed;
         }
 
-        if (PresenceSynchronizer.Instance != null)
-            PresenceSynchronizer.Instance.SeatsChanged += OnSeatsChanged;
-
         UpdateUI();
     }
 
@@ -60,9 +57,6 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.PlayersChanged -= OnPlayersChanged;
             MultiplayerManager.Instance.ConnectionFailed -= OnConnectionFailed;
         }
-
-        if (PresenceSynchronizer.Instance != null)
-            PresenceSynchronizer.Instance.SeatsChanged -= OnSeatsChanged;
     }
 
     private void BuildUI()
@@ -131,34 +125,22 @@ public partial class MultiplayerDialog : Window
         if (mm?.IsMultiplayerActive != true)
             return;
 
-        var settings = R.Single<ProjectGameSettings>();
-
         foreach (var player in mm.Players.Values)
         {
-            int seat = PresenceSynchronizer.Instance?.GetSeatBySource(player.Source) ?? -2;
+            int seat = R.SeatOf(player.Source);
+            var seatSettings = R.SeatSettings(seat);
 
-            var label = SeatLabel(seat, settings);
+            var label =
+                seatSettings == null ? "Watching"
+                : string.IsNullOrWhiteSpace(seatSettings.Name) ? $"Seat {seat + 1}"
+                : seatSettings.Name;
             if (player.IsLocal)
                 label += " (you)";
 
             int idx = _playerList.AddItem(label);
-
-            if (seat >= 0 && seat < settings.Players.Length)
-            {
-                var p = settings.Players[seat];
-                _playerList.SetItemCustomFgColor(idx, p.Color);
-            }
+            if (seatSettings != null)
+                _playerList.SetItemCustomFgColor(idx, seatSettings.Color);
         }
-    }
-
-    private static string SeatLabel(int seat, ProjectGameSettings settings)
-    {
-        if (seat == -1)
-            return "Observer";
-        if (seat < 0 || seat >= settings.Players.Length)
-            return "Choosing a seat";
-        var name = settings.Players[seat].Name;
-        return string.IsNullOrWhiteSpace(name) ? $"Seat {seat + 1}" : name;
     }
 
     private void OnHostPressed()
@@ -244,8 +226,6 @@ public partial class MultiplayerDialog : Window
     {
         CallDeferred(nameof(UpdateUI));
     }
-
-    private void OnSeatsChanged() => UpdateUI();
 
     private void OnConnectionFailed()
     {

@@ -12,7 +12,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     private ItemList _seatList;
     private Label _statusLabel;
 
-    // Maps list index -> seatIndex (-1 = observer)
+    // Maps list index -> seat, or NoSeat to observe
     private readonly List<int> _seatIndexMap = new();
 
     public override void _Ready()
@@ -34,8 +34,6 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         Confirmed += OnConfirmed;
         Canceled += OnCanceled;
 
-        if (PresenceSynchronizer.Instance != null)
-            PresenceSynchronizer.Instance.SeatsChanged += OnSeatsChanged;
         EventBus.Instance?.Subscribe<RequestPlayerPositionEvent>(OnReprompt);
     }
 
@@ -46,8 +44,6 @@ public partial class PlayerPositionDialog : ConfirmationDialog
 
     public override void _ExitTree()
     {
-        if (PresenceSynchronizer.Instance != null)
-            PresenceSynchronizer.Instance.SeatsChanged -= OnSeatsChanged;
         EventBus.Instance?.Unsubscribe<RequestPlayerPositionEvent>(OnReprompt);
     }
 
@@ -76,7 +72,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         for (int i = 0; i < settings.Players.Length; i++)
         {
             var player = settings.Players[i];
-            bool available = PresenceSynchronizer.Instance?.IsAvailable(i) ?? true;
+            bool available = !R.IsSeatTaken(i);
 
             var label = $"Player {i + 1}: {player.Name}";
             if (!available)
@@ -94,7 +90,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         if (settings.AllowObservers)
         {
             _seatList.AddItem("Observer  (watch only)");
-            _seatIndexMap.Add(-1);
+            _seatIndexMap.Add(SeatingReader.NoSeat);
         }
 
         // Keep the player's choice selected while it's still available
@@ -123,7 +119,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         {
             ShowStatus("Please select a position first.");
             // Re-open so the player can choose
-            CallDeferred(nameof(PopupCentered));
+            Callable.From(() => PopupCentered()).CallDeferred();
             return;
         }
 
@@ -139,8 +135,6 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     {
         QueueFree();
     }
-
-    private void OnSeatsChanged() => RecordService.Instance.QueueSync(this);
 
     private void OnReprompt(RequestPlayerPositionEvent _)
     {

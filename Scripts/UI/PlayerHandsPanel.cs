@@ -24,9 +24,6 @@ public partial class PlayerHandsPanel : Panel
 
         _playerHandsContainer = GetNode<VBoxContainer>("%PlayerHands");
 
-        if (PresenceSynchronizer.Instance != null)
-            PresenceSynchronizer.Instance.SeatsChanged += OnModelChanged;
-
         Callable.From(ConnectTable).CallDeferred();
     }
 
@@ -37,8 +34,6 @@ public partial class PlayerHandsPanel : Panel
 
     public override void _ExitTree()
     {
-        if (PresenceSynchronizer.Instance != null)
-            PresenceSynchronizer.Instance.SeatsChanged -= OnModelChanged;
         if (_gameObjects != null && IsInstanceValid(_gameObjects))
             _gameObjects.TableChanged -= OnModelChanged;
     }
@@ -83,7 +78,7 @@ public partial class PlayerHandsPanel : Panel
 
         var settings = R.Single<ProjectGameSettings>();
 
-        int localSeat = PlayerHandService.LocalSeatIndex();
+        int localSeat = R.LocalSeat();
 
         for (int seatIndex = 0; seatIndex < settings.Players.Length; seatIndex++)
         {

@@ -82,8 +82,8 @@ public static class DeckCommands
             var hands = PlayerHandService.Instance;
             if (hands == null)
                 return [];
-            // Observers and unseated players have no hand to draw into.
-            int seat = PlayerHandService.LocalSeatIndex();
+            // A player without a seat has no hand to draw into.
+            int seat = R.LocalSeat();
             if (seat < 0)
                 return [];
             return cards.Select((c, i) => hands.MovedToHand(c, seat, i, stamp));
@@ -144,13 +144,7 @@ public static class DeckCommands
         if (players == 0)
             return null;
 
-        var hands = PlayerHandService.Instance;
-        if (hands == null)
-            return [];
-        return Enumerable
-            .Range(0, players)
-            .Where(seat => hands.HandContainer(seat) != SnowTag.Empty)
-            .ToList();
+        return Enumerable.Range(0, players).Where(seat => R.HandOf(seat) != SnowTag.Empty).ToList();
     }
 
     /// <summary>How many of <paramref name="cards"/> each seat can be dealt, rounding up.</summary>

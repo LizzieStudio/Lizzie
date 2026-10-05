@@ -607,7 +607,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>True while this component is being held by the local player's cursor.</summary>
     private bool IsHeldByLocal =>
-        State is { IsOnTable: false } s && s.ContainerRef == PlayerHandService.LocalCursor();
+        State is { IsOnTable: false } s && s.ContainerRef == RecordService.Instance.LocalCursor();
 
     private bool _logicalVisible = true;
 

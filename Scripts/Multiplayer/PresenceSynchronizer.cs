@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Godot;
 
 /// <summary>
 /// Tracks session state in multiplayer:
-/// * which client occupies which seat
+/// * seat requests, which it writes to <see cref="Seating"/>
 /// * each client's cursor position
 /// </summary>
 public partial class PresenceSynchronizer : Node
@@ -19,12 +20,7 @@ public partial class PresenceSynchronizer : Node
 
     private const float CursorLift = 0.2f;
 
-    /// <summary>Seat value meaning the source is unseated or has no claim.</summary>
-    private const int Unseated = -2;
-
     private static Vector3 Miss => DragPlane.Miss;
-
-    private static readonly Color FallbackColor = new(0.8f, 0.8f, 0.8f);
 
     private DragPlane _dragPlane;
     private Node3D _cursorParent;
@@ -37,13 +33,6 @@ public partial class PresenceSynchronizer : Node
     private readonly Dictionary<byte, Sprite3D> _cursors = new();
 
     private readonly Dictionary<byte, Vector3> _positions = new();
-
-    /// <summary>Live seat occupancy: Snowport source to seat number map.</summary>
-    private readonly Dictionary<byte, int> _seats = new();
-
-    /// <summary>Raised after the seat registry changes.</summary>
-    [Signal]
-    public delegate void SeatsChangedEventHandler();
 
     public bool TryGetCursor(byte source, out Vector3 pos) =>
         _positions.TryGetValue(source, out pos);
@@ -73,92 +62,62 @@ public partial class PresenceSynchronizer : Node
         ClearCursors();
     }
 
-    #region Seat Registry
+    #region Seats
 
-    /// <summary>Drops all live seat occupancy.</summary>
-    public void Clear()
-    {
-        _seats.Clear();
-        EmitSignal(SignalName.SeatsChanged);
-    }
-
-    /// <summary>The seat occupied by the given source, -1 for observer, or -2 if unseated.</summary>
-    public int GetSeatBySource(byte source) =>
-        _seats.TryGetValue(source, out var seat) ? seat : Unseated;
-
-    /// <summary>True if the seat is an observer slot or is not currently occupied.</summary>
-    public bool IsAvailable(int seat)
-    {
-        if (seat < 0)
-            return true;
-        foreach (var s in _seats.Values)
-            if (s == seat)
-                return false;
-        return true;
-    }
-
-    /// <summary>The durable hand container for a seat, read from the project settings.</summary>
-    public SnowTag HandRefForSeat(int seat)
-    {
-        var players = RecordService.Instance.Single<ProjectGameSettings>().Players;
-        if (seat < 0 || seat >= players.Length)
-            return SnowTag.Empty;
-        return players[seat].HandRef;
-    }
+    private static RecordService R => RecordService.Instance;
 
     /// <summary>
-    /// The cursor container for <paramref name="seat"/>, read from the project settings.
-    /// </summary>
-    public SnowTag CursorRefForSeat(int seat)
-    {
-        var players = RecordService.Instance.Single<ProjectGameSettings>().Players;
-        if (seat < 0 || seat >= players.Length)
-            return SnowTag.Empty;
-        return players[seat].CursorRef;
-    }
-
-    /// <summary>
-    /// The cursor position of the player whose cursor container is <paramref name="cursorRef"/>.
+    /// The cursor position of the seated player whose cursor container is <paramref name="cursorRef"/>.
     /// </summary>
     public bool TryGetCursor(SnowTag cursorRef, out Vector3 pos)
     {
-        foreach (var (source, seat) in _seats)
-            if (seat >= 0 && CursorRefForSeat(seat) == cursorRef)
-                return TryGetCursor(source, out pos);
+        if (R.HolderOf(cursorRef) is byte source)
+            return TryGetCursor(source, out pos);
         pos = default;
         return false;
     }
 
     /// <summary>
-    /// Requests a seat for the local player.
-    /// In solo, the seat is taken immediately.
-    /// In multiplayer, the server handles the result.
+    /// Asks for a seat for the local player, or <see cref="SeatingReader.NoSeat"/> to observe.
+    /// The host or a solo player takes it at once; a client asks the host.
     /// </summary>
     public void RequestSeat(int seat)
     {
         var mm = MultiplayerManager.Instance;
-        if (mm?.IsMultiplayerActive != true)
-        {
-            SetSeat(Snowport.Clock.source, seat);
-            return;
-        }
-
-        if (mm.IsServer)
-            TryAssignSeat(Snowport.Clock.source, seat, 1);
-        else
+        if (mm?.IsMultiplayerActive == true && !mm.IsServer)
             RpcId(1, nameof(ServerRequestSeat), seat);
+        else
+            TryAssignSeat(Snowport.Clock.source, seat, 1);
     }
 
     /// <summary>
-    /// Seats the local participant in solo play.
+    /// In solo play, seats the local player alone, keeping their seat if they have one, or seat 0.
     /// </summary>
-    public void EnsureLocalSeat(int seat = 0)
+    public void SeatSoloPlayer()
     {
         if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
             return;
-        if (GetSeatBySource(Snowport.Clock.source) != Unseated)
+
+        var source = Snowport.Clock.source;
+        var seats = R.Single<Seating>().Seats;
+        var seated = seats.TryGetValue(source, out var current);
+        if (seated && seats.Count == 1)
             return;
-        SetSeat(Snowport.Clock.source, seat);
+        WriteSeats(ImmutableDictionary<byte, int>.Empty.Add(source, seated ? current : 0));
+    }
+
+    /// <summary>
+    /// After leaving multiplayer, drops everyone else's seat.
+    /// The local player keeps theirs, under their solo source.
+    /// </summary>
+    public void KeepOnlyLocalSeat(byte previousSource)
+    {
+        var seats = R.Single<Seating>().Seats;
+        WriteSeats(
+            seats.TryGetValue(previousSource, out var seat)
+                ? ImmutableDictionary<byte, int>.Empty.Add(Snowport.Clock.source, seat)
+                : ImmutableDictionary<byte, int>.Empty
+        );
     }
 
     /// <summary>On the server, free the seat held by a disconnected peer's source.</summary>
@@ -169,19 +128,10 @@ public partial class PresenceSynchronizer : Node
             return;
         if (!mm.Players.TryGetValue(peerId, out var pi))
             return;
-        if (!_seats.ContainsKey(pi.Source))
-            return;
 
-        Rpc(nameof(ClearSeat), (int)pi.Source);
-    }
-
-    /// <summary>On the server, stream the current seat map to a newly-joined peer.</summary>
-    public void SendSeatSnapshotTo(int peerId)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-        foreach (var kv in _seats)
-            RpcId(peerId, nameof(SetSeat), (int)kv.Key, kv.Value);
+        var seats = R.Single<Seating>().Seats;
+        if (seats.ContainsKey(pi.Source))
+            WriteSeats(seats.Remove(pi.Source));
     }
 
     [Rpc(
@@ -201,11 +151,12 @@ public partial class PresenceSynchronizer : Node
         TryAssignSeat(pi.Source, seat, peer);
     }
 
-    /// <summary>Server-side seat arbitration.</summary>
+    /// <summary>
+    /// The host's decision: a seat goes to whoever asks first, and anyone later asks again.
+    /// </summary>
     private void TryAssignSeat(byte source, int seat, int requesterPeerId)
     {
-        // A concrete seat must be free, unless the requester already holds it.
-        if (seat >= 0 && !IsAvailable(seat) && GetSeatBySource(source) != seat)
+        if (R.IsSeatTaken(seat) && R.SeatOf(source) != seat)
         {
             if (requesterPeerId == 1)
                 OnSeatDenied();
@@ -214,30 +165,19 @@ public partial class PresenceSynchronizer : Node
             return;
         }
 
-        Rpc(nameof(SetSeat), (int)source, seat);
+        Seat(source, seat);
     }
 
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = true,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void SetSeat(int source, int seat)
+    private static void Seat(byte source, int seat)
     {
-        _seats[(byte)source] = seat;
-        EmitSignal(SignalName.SeatsChanged);
+        var seats = R.Single<Seating>().Seats;
+        WriteSeats(
+            seat == SeatingReader.NoSeat ? seats.Remove(source) : seats.SetItem(source, seat)
+        );
     }
 
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = true,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClearSeat(int source)
-    {
-        if (_seats.Remove((byte)source))
-            EmitSignal(SignalName.SeatsChanged);
-    }
+    private static void WriteSeats(ImmutableDictionary<byte, int> seats) =>
+        R.WriteAdmin(R.Single<Seating>() with { Seats = seats });
 
     [Rpc(
         MultiplayerApi.RpcMode.Authority,
@@ -335,7 +275,7 @@ public partial class PresenceSynchronizer : Node
             _cursors[source] = sprite;
         }
 
-        sprite.Modulate = GetSeatColor(source);
+        sprite.Modulate = R.SeatColor(source);
         sprite.Position = pos + Vector3.Up * CursorLift;
 
         _positions[source] = pos;
@@ -359,20 +299,6 @@ public partial class PresenceSynchronizer : Node
         sprite.Offset = new Vector2(texSize.X / 2f, -texSize.Y / 2f);
 
         return sprite;
-    }
-
-    /// <summary>
-    /// The color of the seat a player sits in.
-    /// Pass a watch's <paramref name="R"/> so it reruns when the color is edited.
-    /// </summary>
-    public Color GetSeatColor(byte source, IRecordReader R = null)
-    {
-        var seat = GetSeatBySource(source);
-        var settings = (R ?? RecordService.Instance).Single<ProjectGameSettings>();
-        if (seat < 0 || seat >= settings.Players.Length)
-            return FallbackColor;
-
-        return settings.Players[seat].Color;
     }
 
     private static bool IsSourceConnected(MultiplayerManager mm, byte source)

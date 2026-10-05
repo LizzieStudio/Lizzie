@@ -55,11 +55,7 @@ public static class LocalSelection
             .ThenByDescending(s => s.LastUpdateId);
         foreach (var selection in newestFirst)
         {
-            var color =
-                selection.Player == local
-                    ? LocalColor
-                    : PresenceSynchronizer.Instance?.GetSeatColor(selection.Player, R)
-                        ?? Colors.Gray;
+            var color = selection.Player == local ? LocalColor : R.SeatColor(selection.Player);
             foreach (var target in selection.Targets)
                 colors.TryAdd(target, color);
         }

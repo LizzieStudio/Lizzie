@@ -915,6 +915,30 @@
           {
             "properties": {
               "$type": {
+                "const": "Seating"
+              },
+              "seats": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              },
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
                 "const": "Selection"
               },
               "player": {

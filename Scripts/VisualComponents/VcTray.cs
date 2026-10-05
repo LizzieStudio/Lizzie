@@ -136,8 +136,8 @@ public partial class VcTray : VisualComponentGroup
 
     public override Replicated[] DragDraw(int quantity)
     {
-        // Observers and unseated players can't drag.
-        var cursor = PlayerHandService.LocalCursor();
+        // Players without a seat can't drag.
+        var cursor = RecordService.Instance.LocalCursor();
         if (_prototype == null || cursor == SnowTag.Empty)
             return [];
 
