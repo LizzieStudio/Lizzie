@@ -540,8 +540,7 @@ public partial class GameObjects : Node
         public readonly int Index;
         public readonly VisualComponentBase Component;
         public readonly (int X, int Z) Key;
-        public readonly Vector2 Center;
-        public readonly float Angle;
+        public readonly (Shape2D Shape, Transform2D Transform)[] Shapes;
         public readonly Rect2 Bounds;
         public readonly ZOrder ZOrder;
         public readonly float YHeight;
@@ -561,16 +560,17 @@ public partial class GameObjects : Node
             ZOrder = StackOrder(c);
             YHeight = c.YHeight;
 
-            Center = new Vector2(position.X, position.Z);
-            Angle = angle;
+            var center = new Vector2(position.X, position.Z);
+            var profiles = c.ShapeProfiles;
+            Shapes = new (Shape2D, Transform2D)[profiles.Count];
             Bounds = default;
-            bool first = true;
-            foreach (var profile in c.ShapeProfiles)
+            for (int i = 0; i < profiles.Count; i++)
             {
-                var t = new Transform2D(angle, Center + profile.Offset.Rotated(angle));
+                var profile = profiles[i];
+                var t = new Transform2D(angle, center + profile.Offset.Rotated(angle));
+                Shapes[i] = (profile.Shape, t);
                 var rect = t * profile.Shape.GetRect();
-                Bounds = first ? rect : Bounds.Merge(rect);
-                first = false;
+                Bounds = i == 0 ? rect : Bounds.Merge(rect);
             }
         }
     }
@@ -1141,21 +1141,10 @@ public partial class GameObjects : Node
 
     private static bool CheckOverlap(Footprint a, Footprint b)
     {
-        foreach (var shapeA in a.Component.ShapeProfiles)
-        {
-            // Rotate the offset by the component's rotation, then add to its center
-            Transform2D tA = new(a.Angle, a.Center + shapeA.Offset.Rotated(a.Angle));
-
-            foreach (var shapeB in b.Component.ShapeProfiles)
-            {
-                Transform2D tB = new(b.Angle, b.Center + shapeB.Offset.Rotated(b.Angle));
-
-                if (shapeA.Shape.Collide(tA, shapeB.Shape, tB))
-                {
-                    return true;
-                }
-            }
-        }
+        foreach (var (shapeA, tA) in a.Shapes)
+        foreach (var (shapeB, tB) in b.Shapes)
+            if (shapeA.Collide(tA, shapeB, tB))
+                return true;
 
         return false;
     }
