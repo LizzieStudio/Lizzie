@@ -552,7 +552,7 @@ public partial class GameObjects : Node
         {
             var s = ComponentState.Of(c);
             var position = origin + s.PositionAt(0);
-            float angle = s.Rotation.Y;
+            float angle = -s.Rotation.Y;
 
             Index = index;
             Component = c;
