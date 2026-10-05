@@ -196,14 +196,51 @@ public abstract partial class VisualComponentBase : Area3D
         }
         _held = held;
 
+        // A new state ends any slide toward the old one.
+        if (IsInstanceValid(_slide))
+            _slide.Kill();
+
         // A held node is placed by its holder's cursor.
         if (!held)
-            Position = s.PositionAt(_placed ? Position.Y : YHeight / 2f);
+        {
+            var target = s.PositionAt(_placed ? Position.Y : YHeight / 2f);
+            if (
+                !_placed
+                || R.WrittenBy(s) != DragCommands.Drop
+                || !Slide(target, Snowport.Clock.MsecSince(s.LastUpdateId))
+            )
+                Position = target;
+        }
         if (!PlayTransition(s, R.WrittenBy(s), Snowport.Clock.MsecSince(s.LastUpdateId)))
             Rotation = s.Rotation;
         _placed = true;
 
         GetParentOrNull<Table>()?.NotifyChanged();
+    }
+
+    private Tween _slide;
+
+    /// <summary>
+    /// Slides across the table to <paramref name="target"/> at <see cref="GameObjects.DropSpeed"/>,
+    /// minus the <paramref name="msecSinceStart"/> that's already gone by.
+    /// </summary>
+    /// <returns>true when it still has movement to go</returns>
+    private bool Slide(Vector3 target, long msecSinceStart)
+    {
+        var from = new Vector2(Position.X, Position.Z);
+        var to = new Vector2(target.X, target.Z);
+        var speed = GetParentOrNull<Table>()?.GetParentOrNull<GameObjects>()?.DropSpeed ?? 0;
+        if (speed <= 0)
+            return false;
+        float remaining = from.DistanceTo(to) / speed - msecSinceStart / 1000f;
+        if (remaining <= 0)
+            return false;
+
+        _slide = CreateTween().SetParallel();
+        _slide.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        _slide.TweenProperty(this, "position:x", target.X, remaining);
+        _slide.TweenProperty(this, "position:z", target.Z, remaining);
+        return true;
     }
 
     /// <summary>

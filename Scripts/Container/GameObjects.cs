@@ -15,6 +15,12 @@ public partial class GameObjects : Node
     [Export]
     private int _stackingUpdateFrames = 3; //Test hack to avoid issue with stacking not seeing colliders
 
+    /// <summary>
+    /// How fast a dropped component slides into place, in cm per second.
+    /// </summary>
+    [Export(PropertyHint.Range, "1,30,1,suffix:cm/s")]
+    public float DropSpeed { get; set; } = 10f;
+
     [Signal]
     public delegate void CameraActivationEventHandler(bool cameraActivated);
 
@@ -66,7 +72,7 @@ public partial class GameObjects : Node
     {
         if (DragGroup == SnowportId.Empty)
             return;
-        RecordService.Instance.Close(DragGroup);
+        RecordService.Instance.Close(DragGroup, DragCommands.Drop);
         DragGroup = SnowportId.Empty;
     }
 
@@ -78,6 +84,7 @@ public partial class GameObjects : Node
         CloseDragGroup();
         var selection = RecordService.Instance.NewSelection<ComponentState>(selected);
         DragGroup = RecordService.Instance.Open(
+            DragCommands.Pickup,
             selection == null ? pickup : pickup.Append(selection)
         );
     }
@@ -87,7 +94,7 @@ public partial class GameObjects : Node
     /// </summary>
     private void EndDrag(IEnumerable<Replicated> drop)
     {
-        RecordService.Instance.Close(DragGroup, drop);
+        RecordService.Instance.Close(DragGroup, DragCommands.Drop, drop);
         DragGroup = SnowportId.Empty;
     }
 
@@ -459,7 +466,7 @@ public partial class GameObjects : Node
                 if (!fa.Bounds.Intersects(fb.Bounds, includeBorders: true))
                     continue;
                 // Components with the same center always overlap.
-                if (fa.Key != fb.Key && !CheckOverlap(fa.Component, fb.Component))
+                if (fa.Key != fb.Key && !CheckOverlap(fa, fb))
                     continue;
 
                 if (fa.ZOrder < fb.ZOrder)
@@ -490,12 +497,13 @@ public partial class GameObjects : Node
 
     /// <summary>
     /// The highest top among the table components under a dragged group, which it floats above.
+    /// The group is placed around its dragging <paramref name="cursor"/>.
     /// </summary>
-    private float DragLift(List<VisualComponentBase> dragged)
+    private float DragLift(List<VisualComponentBase> dragged, Vector3 cursor)
     {
         var footprints = dragged
             .Where(c => c.ShapeProfiles.Count > 0)
-            .Select(c => new Footprint(0, c))
+            .Select(c => new Footprint(0, c, cursor))
             .ToList();
         if (footprints.Count == 0)
             return 0;
@@ -516,7 +524,7 @@ public partial class GameObjects : Node
             foreach (var f in footprints)
                 if (
                     f.Bounds.Intersects(table.Bounds, includeBorders: true)
-                    && CheckOverlap(f.Component, c)
+                    && CheckOverlap(f, table)
                 )
                     return top;
         }
@@ -532,26 +540,34 @@ public partial class GameObjects : Node
         public readonly int Index;
         public readonly VisualComponentBase Component;
         public readonly (int X, int Z) Key;
+        public readonly Vector2 Center;
+        public readonly float Angle;
         public readonly Rect2 Bounds;
         public readonly ZOrder ZOrder;
         public readonly float YHeight;
 
-        public Footprint(int index, VisualComponentBase c)
+        /// <summary>
+        /// Where the component's record puts it, offset by <paramref name="origin"/>, if provided.
+        /// </summary>
+        public Footprint(int index, VisualComponentBase c, Vector3 origin = default)
         {
+            var s = ComponentState.Of(c);
+            var position = origin + s.PositionAt(0);
+            float angle = s.Rotation.Y;
+
             Index = index;
             Component = c;
-            var position = c.Position;
             Key = ComponentState.TableKey(position);
             ZOrder = StackOrder(c);
             YHeight = c.YHeight;
 
-            float angle = c.Rotation.Y;
-            var center = new Vector2(position.X, position.Z);
+            Center = new Vector2(position.X, position.Z);
+            Angle = angle;
             Bounds = default;
             bool first = true;
             foreach (var profile in c.ShapeProfiles)
             {
-                var t = new Transform2D(angle, center + profile.Offset.Rotated(angle));
+                var t = new Transform2D(angle, Center + profile.Offset.Rotated(angle));
                 var rect = t * profile.Shape.GetRect();
                 Bounds = first ? rect : Bounds.Merge(rect);
                 first = false;
@@ -946,6 +962,7 @@ public partial class GameObjects : Node
             {
                 RecordService.Instance.Append(
                     DragGroup,
+                    DragCommands.Drop,
                     _currentDragDropTarget.DropObjects(GetLocalDraggingObjects())
                 );
             }
@@ -965,6 +982,7 @@ public partial class GameObjects : Node
             {
                 RecordService.Instance.Append(
                     DragGroup,
+                    DragCommands.Drop,
                     hover.DropObjects(GetLocalDraggingObjects())
                 );
             }
@@ -1121,22 +1139,18 @@ public partial class GameObjects : Node
         return (point.X >= minX && point.X <= maxX && point.Y >= minY && point.Y <= maxY);
     }
 
-    private static bool CheckOverlap(VisualComponentBase comp1, VisualComponentBase comp2)
+    private static bool CheckOverlap(Footprint a, Footprint b)
     {
-        foreach (var offsetShape1 in comp1.ShapeProfiles)
+        foreach (var shapeA in a.Component.ShapeProfiles)
         {
-            // Rotate the offset by the component's rotation, then add to component position
-            var rotatedOffset1 = offsetShape1.Offset.Rotated(comp1.Rotation.Y);
-            var pos1 = new Vector2(comp1.Position.X, comp1.Position.Z) + rotatedOffset1;
-            Transform2D t1 = new(comp1.Rotation.Y, pos1);
+            // Rotate the offset by the component's rotation, then add to its center
+            Transform2D tA = new(a.Angle, a.Center + shapeA.Offset.Rotated(a.Angle));
 
-            foreach (var offsetShape2 in comp2.ShapeProfiles)
+            foreach (var shapeB in b.Component.ShapeProfiles)
             {
-                var rotatedOffset2 = offsetShape2.Offset.Rotated(comp2.Rotation.Y);
-                var pos2 = new Vector2(comp2.Position.X, comp2.Position.Z) + rotatedOffset2;
-                Transform2D t2 = new(comp2.Rotation.Y, pos2);
+                Transform2D tB = new(b.Angle, b.Center + shapeB.Offset.Rotated(b.Angle));
 
-                if (offsetShape1.Shape.Collide(t1, offsetShape2.Shape, t2))
+                if (shapeA.Shape.Collide(tA, shapeB.Shape, tB))
                 {
                     return true;
                 }
@@ -1223,7 +1237,7 @@ public partial class GameObjects : Node
                 c.Position = new Vector3(cursor.X + offset.X, c.Position.Y, cursor.Z + offset.Z);
             }
 
-            float lift = DragLift(dragged);
+            float lift = DragLift(dragged, cursor);
             foreach (var c in dragged)
             {
                 c.Position = c.Position with { Y = lift + c.DragFloor + c.YHeight };
