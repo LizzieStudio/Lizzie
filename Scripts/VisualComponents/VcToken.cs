@@ -22,8 +22,8 @@ public partial class VcToken : VisualComponentBase
     private StandardMaterial3D _frontMaterial;
     private StandardMaterial3D _backMaterial;
 
-    private const float FaceH = 0.475f;
-    private const float FaceR = 0.475f;
+    private const float FaceH = 0.5f;
+    private const float FaceR = 0.5f;
     private const int CircleSegments = 32;
 
     private Texture2D _faceTexture = new ImageTexture();

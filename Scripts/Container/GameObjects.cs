@@ -399,10 +399,11 @@ public partial class GameObjects : Node
     #region Stacking
 
     /// <summary>
-    /// The table's footprints from the last stacking pass with the height of each one's top,
-    /// highest first. Drags use it to find what they're passing over.
+    /// The table's columns from the last stacking pass,
+    /// sorted from highest ceiling to lowest.
+    /// Used during dragging to compute component height.
     /// </summary>
-    private List<(Footprint Footprint, float Top)> _tableTops = new();
+    private StackColumns _tableTops = StackColumns.Empty;
 
     /// <summary>
     /// Rests each table component on the highest top among the components below it.
@@ -410,12 +411,7 @@ public partial class GameObjects : Node
     private void UpdateStackingHeights()
     {
         var table = GetNotDraggingObjects().ToArray();
-        var floors = StackFloors(table, out var footprints);
-
-        _tableTops = footprints
-            .Select(f => (f, floors[f.Index] + f.YHeight))
-            .OrderByDescending(t => t.Item2)
-            .ToList();
+        var floors = Stacking.Floors(table, out _tableTops);
 
         for (int i = 0; i < table.Length; i++)
             table[i].MoveToTargetY(floors[i] + (table[i].YHeight / 2f));
@@ -429,70 +425,10 @@ public partial class GameObjects : Node
         foreach (var group in GetDraggingObjects().GroupBy(c => c.State.ContainerRef))
         {
             var dragged = group.ToArray();
-            var floors = StackFloors(dragged, out _);
+            var floors = Stacking.Floors(dragged, out _);
             for (int i = 0; i < dragged.Length; i++)
                 dragged[i].DragFloor = floors[i];
         }
-    }
-
-    /// <summary>
-    /// The height each component rests at when the components are stacked on the table, which is
-    /// the highest top among the components below it that it overlaps.
-    /// </summary>
-    /// <param name="footprints">The footprints of the components that have a shape, by X.</param>
-    private static float[] StackFloors(
-        IReadOnlyList<VisualComponentBase> components,
-        out List<Footprint> footprints
-    )
-    {
-        var below = new List<int>[components.Count];
-
-        // Only components with a shape stack.
-        footprints = new List<Footprint>(components.Count);
-        for (int i = 0; i < components.Count; i++)
-            if (components[i].ShapeProfiles.Count > 0)
-                footprints.Add(new Footprint(i, components[i]));
-
-        // Sort by X to at least skip any components that don't overlap horizontally.
-        footprints.Sort((a, b) => a.Bounds.Position.X.CompareTo(b.Bounds.Position.X));
-        for (int a = 0; a < footprints.Count; a++)
-        {
-            var fa = footprints[a];
-            for (int b = a + 1; b < footprints.Count; b++)
-            {
-                var fb = footprints[b];
-                if (fb.Bounds.Position.X > fa.Bounds.End.X)
-                    break;
-                if (!fa.Bounds.Intersects(fb.Bounds, includeBorders: true))
-                    continue;
-                // Components with the same center always overlap.
-                if (fa.Key != fb.Key && !CheckOverlap(fa, fb))
-                    continue;
-
-                if (fa.ZOrder < fb.ZOrder)
-                    (below[fb.Index] ??= new()).Add(fa.Index);
-                else if (fb.ZOrder < fa.ZOrder)
-                    (below[fa.Index] ??= new()).Add(fb.Index);
-            }
-        }
-
-        // Settle from the bottom up so everything below is placed first.
-        var floors = new float[components.Count];
-        var top = new float[components.Count];
-        foreach (
-            int i in Enumerable.Range(0, components.Count).OrderBy(i => StackOrder(components[i]))
-        )
-        {
-            float floor = 0;
-            if (below[i] != null)
-                foreach (int j in below[i])
-                    floor = Mathf.Max(floor, top[j]);
-
-            floors[i] = floor;
-            top[i] = floor + components[i].YHeight;
-        }
-
-        return floors;
     }
 
     /// <summary>
@@ -512,74 +448,31 @@ public partial class GameObjects : Node
         foreach (var f in footprints)
             bounds = bounds.Merge(f.Bounds);
 
-        // Highest first, so the first overlap found is the answer.
-        foreach (var (table, top) in _tableTops)
+        float lift = 0;
+        for (int column = 0; column < _tableTops.Count; column++)
         {
-            if (!bounds.Intersects(table.Bounds, includeBorders: true))
+            if (_tableTops.Top(column) <= lift)
+                break;
+            var shape = _tableTops.Shape(column);
+            if (!bounds.Intersects(shape.Bounds, includeBorders: true))
                 continue;
-            var c = table.Component;
-            if (!IsInstanceValid(c) || c.State is not { IsOnTable: true })
+            if (!footprints.Exists(f => Stacking.Overlaps(f, shape)))
                 continue;
 
-            foreach (var f in footprints)
-                if (
-                    f.Bounds.Intersects(table.Bounds, includeBorders: true)
-                    && CheckOverlap(f, table)
-                )
-                    return top;
-        }
-
-        return 0;
-    }
-
-    /// <summary>
-    /// A component's footprint on the table, read once for the stacking pass.
-    /// </summary>
-    private readonly struct Footprint
-    {
-        public readonly int Index;
-        public readonly VisualComponentBase Component;
-        public readonly (int X, int Z) Key;
-        public readonly (Shape2D Shape, Transform2D Transform)[] Shapes;
-        public readonly Rect2 Bounds;
-        public readonly ZOrder ZOrder;
-        public readonly float YHeight;
-
-        /// <summary>
-        /// Where the component's record puts it, offset by <paramref name="origin"/>, if provided.
-        /// </summary>
-        public Footprint(int index, VisualComponentBase c, Vector3 origin = default)
-        {
-            var s = ComponentState.Of(c);
-            var position = origin + s.PositionAt(0);
-            float angle = -s.Rotation.Y;
-
-            Index = index;
-            Component = c;
-            Key = ComponentState.TableKey(position);
-            ZOrder = StackOrder(c);
-            YHeight = c.YHeight;
-
-            var center = new Vector2(position.X, position.Z);
-            var profiles = c.ShapeProfiles;
-            Shapes = new (Shape2D, Transform2D)[profiles.Count];
-            Bounds = default;
-            for (int i = 0; i < profiles.Count; i++)
+            foreach (var (c, top) in _tableTops.Members(column))
             {
-                var profile = profiles[i];
-                var t = new Transform2D(angle, center + profile.Offset.Rotated(angle));
-                Shapes[i] = (profile.Shape, t);
-                var rect = t * profile.Shape.GetRect();
-                Bounds = i == 0 ? rect : Bounds.Merge(rect);
+                if (top <= lift)
+                    break;
+                if (IsInstanceValid(c) && c.State is { IsOnTable: true })
+                {
+                    lift = top;
+                    break;
+                }
             }
         }
-    }
 
-    /// <summary>
-    /// The order a component stacks in. Zones always sit below everything else.
-    /// </summary>
-    private static ZOrder StackOrder(VisualComponentBase c) =>
-        c is VcZone ? ZOrder.Floor : c.State?.ZOrder ?? ZOrder.Floor;
+        return lift;
+    }
 
     private void QueueStackingUpdate()
     {
@@ -1137,16 +1030,6 @@ public partial class GameObjects : Node
         float maxY = Mathf.Max(rect.Position.Y, rect.Position.Y + rect.Size.Y);
 
         return (point.X >= minX && point.X <= maxX && point.Y >= minY && point.Y <= maxY);
-    }
-
-    private static bool CheckOverlap(Footprint a, Footprint b)
-    {
-        foreach (var (shapeA, tA) in a.Shapes)
-        foreach (var (shapeB, tB) in b.Shapes)
-            if (shapeA.Collide(tA, shapeB, tB))
-                return true;
-
-        return false;
     }
 
     #region Multiplayer

@@ -66,6 +66,25 @@ public readonly struct ZOrder : IComparable<ZOrder>, IEquatable<ZOrder>
         return Suborder.CompareTo(other.Suborder);
     }
 
+    /// <summary>
+    /// A number that sorts the same way <see cref="CompareTo"/> does, for sorting many at once.
+    /// </summary>
+    public UInt128 SortKey
+    {
+        get
+        {
+            // The ~ operator counts down from the max, which is what we want for Bottom.
+            ulong stamp = Target == ZTarget.Top ? Stamp.Value : ~Stamp.Value;
+            // For Top, put a 1 with enough room for half the stamp.
+            ulong target = Target == ZTarget.Top ? 1UL << 32 : 0UL;
+            // UInt128 takes two ulongs, so we split the stamp onto each.
+            return new UInt128(
+                target | (stamp >> 32),
+                (stamp << 32) | (uint)Suborder // we're counting on Suborder to be non-negative
+            );
+        }
+    }
+
     public bool Equals(ZOrder other) =>
         Target == other.Target && Suborder == other.Suborder && Stamp == other.Stamp;
 
