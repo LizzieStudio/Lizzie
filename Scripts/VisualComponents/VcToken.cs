@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Godot;
@@ -19,12 +19,48 @@ using Vector2 = Godot.Vector2;
 public partial class VcToken : VisualComponentBase
 {
     private MeshInstance3D _mainMesh;
-    private StandardMaterial3D _frontMaterial;
-    private StandardMaterial3D _backMaterial;
 
     private const float FaceH = 0.5f;
     private const float FaceR = 0.5f;
     private const int CircleSegments = 32;
+
+    // The mesh's surfaces.
+    private const int FrontSurface = 0;
+    private const int BackSurface = 1;
+    private const int SideSurface = 2;
+
+    // Tokens share their meshes and materials, so the renderer can draw alike tokens in one call.
+    private static readonly Dictionary<TokenShape, ArrayMesh> Meshes = new();
+
+    private static readonly StandardMaterial3D SideMaterial = new()
+    {
+        AlbedoColor = new Color(0.506f, 0.506f, 0.506f),
+    };
+
+    private static readonly Shader FaceShader = GD.Load<Shader>(
+        "res://Shaders/token_face.gdshader"
+    );
+
+    // A face with no texture yet, which shows white.
+    private static readonly ShaderMaterial BlankFace = new() { Shader = FaceShader };
+
+    private static readonly ConditionalWeakTable<Texture2D, ShaderMaterial> FaceMaterials = new();
+
+    /// <summary>
+    /// The material shared by every face showing <paramref name="texture"/>.
+    /// </summary>
+    private static ShaderMaterial FaceMaterial(Texture2D texture)
+    {
+        if (texture == null)
+            return BlankFace;
+        if (!FaceMaterials.TryGetValue(texture, out var material))
+        {
+            material = new ShaderMaterial { Shader = FaceShader };
+            material.SetShaderParameter("albedo_texture", texture);
+            FaceMaterials.Add(texture, material);
+        }
+        return material;
+    }
 
     private Texture2D _faceTexture = new ImageTexture();
     private Texture2D _backTexture;
@@ -36,8 +72,8 @@ public partial class VcToken : VisualComponentBase
         {
             _faceTexture = value;
 
-            if (_frontMaterial != null && value != null)
-                _frontMaterial.AlbedoTexture = value;
+            if (_mainMesh != null && value != null)
+                _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, FaceMaterial(value));
         }
     }
 
@@ -49,8 +85,8 @@ public partial class VcToken : VisualComponentBase
         set
         {
             _backTexture = value;
-            if (_backMaterial != null && value != null)
-                _backMaterial.AlbedoTexture = value;
+            if (_mainMesh != null && value != null)
+                _mainMesh.SetSurfaceOverrideMaterial(BackSurface, FaceMaterial(value));
         }
     }
 
@@ -84,6 +120,10 @@ public partial class VcToken : VisualComponentBase
             TextureReady = _frontTextureGenerated && _backTextureGenerated;
         }
 
+        // Idle optimization.
+        if (!_flipInProcess && !_mapFrontTextureRequired && !_mapBackTextureRequired)
+            SetProcess(false);
+
         base._Process(delta);
     }
 
@@ -104,6 +144,7 @@ public partial class VcToken : VisualComponentBase
             return false;
 
         _flipInProcess = true;
+        SetProcess(true);
         _targetZ = Mathf.RadToDeg(s.Rotation.Z);
         return true;
     }
@@ -259,28 +300,22 @@ public partial class VcToken : VisualComponentBase
         YHeight = _thickness;
         Scale = new Vector3(_width, _thickness, _height);
 
-        // Scissor keeps faces in the opaque pass, so covered faces in a stack are skipped.
-        _frontMaterial = new StandardMaterial3D
-        {
-            Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor,
-        };
-        _backMaterial = new StandardMaterial3D
-        {
-            Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor,
-        };
-        var sideMaterial = new StandardMaterial3D
-        {
-            AlbedoColor = new Color(0.506f, 0.506f, 0.506f),
-        };
-
         var shape = (TokenShape)_shape;
-        var ring = GetFaceRing(shape);
-
-        var mesh = new ArrayMesh();
-        CommitFaceSurface(mesh, _frontMaterial, ring, +FaceH, mirrorU: false);
-        CommitFaceSurface(mesh, _backMaterial, ring, -FaceH, mirrorU: true);
-        CommitSideSurface(mesh, sideMaterial, ring);
+        if (!Meshes.TryGetValue(shape, out var mesh))
+        {
+            var ring = GetFaceRing(shape);
+            mesh = new ArrayMesh();
+            CommitFaceSurface(mesh, ring, +FaceH, mirrorU: false);
+            CommitFaceSurface(mesh, ring, -FaceH, mirrorU: true);
+            CommitSideSurface(mesh, ring);
+            Meshes[shape] = mesh;
+        }
         _mainMesh.Mesh = mesh;
+        _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, BlankFace);
+        _mainMesh.SetSurfaceOverrideMaterial(BackSurface, BlankFace);
+        _mainMesh.SetSurfaceOverrideMaterial(SideSurface, SideMaterial);
+        SetFrame("front_rect", 1, 1, 0);
+        SetFrame("back_rect", 1, 1, 0);
 
         ShapeProfiles.Clear();
         ShapeProfiles.Add(ShapeProfile(shape, _width, _height));
@@ -348,17 +383,10 @@ public partial class VcToken : VisualComponentBase
             })
             .ToArray();
 
-    private static void CommitFaceSurface(
-        ArrayMesh mesh,
-        StandardMaterial3D mat,
-        Vector3[] ring,
-        float y,
-        bool mirrorU
-    )
+    private static void CommitFaceSurface(ArrayMesh mesh, Vector3[] ring, float y, bool mirrorU)
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
-        st.SetMaterial(mat);
         var normal = mirrorU ? Vector3.Down : Vector3.Up;
         for (int i = 0; i < ring.Length; i++)
         {
@@ -396,11 +424,10 @@ public partial class VcToken : VisualComponentBase
         st.AddVertex(new Vector3(xz.X, y, xz.Z));
     }
 
-    private static void CommitSideSurface(ArrayMesh mesh, StandardMaterial3D mat, Vector3[] ring)
+    private static void CommitSideSurface(ArrayMesh mesh, Vector3[] ring)
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
-        st.SetMaterial(mat);
         for (int i = 0; i < ring.Length; i++)
         {
             var a = ring[i];
@@ -1094,17 +1121,18 @@ public partial class VcToken : VisualComponentBase
 
     private void MapFrontTexture()
     {
-        if (_frontMaterial == null)
+        if (_mainMesh == null)
         {
             _mapFrontTextureRequired = true;
+            SetProcess(true);
             return;
         }
 
         _mapFrontTextureRequired = false;
         _frontTextureGenerated = true;
-        _frontMaterial.AlbedoTexture = FaceTexture;
+        _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, FaceMaterial(FaceTexture));
 
-        ApplyUvOffset(_frontMaterial, _faceHframes, _faceVframes, _faceFrame);
+        SetFrame("front_rect", _faceHframes, _faceVframes, _faceFrame);
 
         if (!_differentBack)
             BackTexture = FaceTexture;
@@ -1114,30 +1142,33 @@ public partial class VcToken : VisualComponentBase
 
     private void MapBackTexture()
     {
-        if (_backMaterial == null)
+        if (_mainMesh == null)
         {
             _mapBackTextureRequired = true;
+            SetProcess(true);
             return;
         }
 
         _mapBackTextureRequired = false;
         _backTextureGenerated = true;
-        _backMaterial.AlbedoTexture = BackTexture;
+        _mainMesh.SetSurfaceOverrideMaterial(BackSurface, FaceMaterial(BackTexture));
 
         if (!_gridSingleBack)
         {
-            ApplyUvOffset(_backMaterial, _backHframes, _backVframes, _backFrame);
+            SetFrame("back_rect", _backHframes, _backVframes, _backFrame);
         }
     }
 
-    private static void ApplyUvOffset(StandardMaterial3D mat, int hframes, int vframes, int frame)
+    private void SetFrame(string face, int hframes, int vframes, int frame)
     {
         int cols = Math.Max(hframes, 1);
         int rows = Math.Max(vframes, 1);
         int col = frame % cols;
         int row = frame / cols;
-        mat.Uv1Scale = new Vector3(1f / cols, 1f / rows, 1f);
-        mat.Uv1Offset = new Vector3((float)col / cols, (float)row / rows, 0f);
+        _mainMesh.SetInstanceShaderParameter(
+            face,
+            new Vector4((float)col / cols, (float)row / rows, 1f / cols, 1f / rows)
+        );
     }
 
     private void CreateQuickBackTexture(TextureFactory textureFactory)

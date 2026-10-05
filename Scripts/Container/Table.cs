@@ -12,6 +12,14 @@ public partial class Table : Node
 
     private readonly Dictionary<SnowTag, VisualComponentBase> _components = new();
 
+    // Cached here to prevent reading it from Godot, which got expensive.
+    private readonly List<VisualComponentBase> _nodes = new();
+
+    /// <summary>
+    /// Every component node on the table, in child order.
+    /// </summary>
+    public IReadOnlyList<VisualComponentBase> Nodes => _nodes;
+
     /// <summary>
     /// Called when a component is added, removed, or synced.
     /// </summary>
@@ -23,6 +31,20 @@ public partial class Table : Node
     public override void _EnterTree()
     {
         RecordService.Instance.Watch(this, Sync);
+    }
+
+    public Table()
+    {
+        ChildEnteredTree += child =>
+        {
+            if (child is VisualComponentBase c)
+                _nodes.Add(c);
+        };
+        ChildExitingTree += child =>
+        {
+            if (child is VisualComponentBase c)
+                _nodes.Remove(c);
+        };
     }
 
     /// <summary>The node for a component record, or null.</summary>

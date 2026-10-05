@@ -44,7 +44,7 @@ public partial class GameObjects : Node
     private Table _table;
 
     /// <summary>The current game's components.</summary>
-    private Godot.Collections.Array<Node> ComponentNodes => _table.GetChildren();
+    private IReadOnlyList<VisualComponentBase> ComponentNodes => _table.Nodes;
 
     private CursorMode _cursorMode;
 
