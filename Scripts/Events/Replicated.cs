@@ -22,6 +22,7 @@ public abstract record Replicated
 
     /// <summary>
     /// Reversible soft-delete flag.
+    /// Will be permanently deleted in save files unless a kept record references it.
     /// </summary>
     public bool Deleted { get; init; }
 

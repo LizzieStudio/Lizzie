@@ -195,6 +195,10 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
 /// <summary>
 /// A compact, timestamp-free unique ID for a <see cref="Replicated"/> record.
 /// </summary>
+/// <remarks>
+/// Records should refer to records with a SnowTag, never its value in an int or string.
+/// The save file uses a form of garbage collection to keep records alive.
+/// </remarks>
 public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
 {
     private readonly int ID;

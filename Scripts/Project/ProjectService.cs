@@ -269,6 +269,7 @@ public partial class ProjectService : Node
         var finalVirtual = $"user://{project.Filename}.proj";
         var tempVirtual = $"user://{project.Filename}.{OS.GetProcessId()}.proj.tmp";
 
+        var tempReal = ProjectSettings.GlobalizePath(tempVirtual);
         using (var saveFile = FileAccess.Open(tempVirtual, FileAccess.ModeFlags.Write))
         {
             if (saveFile == null)
@@ -279,11 +280,20 @@ public partial class ProjectService : Node
                 return false;
             }
 
-            foreach (var e in BuildCompactedEvents())
-                saveFile.StoreLine(JsonSerializer.Serialize(e, LizzieJson.EventOptions));
+            try
+            {
+                saveFile.StoreLine(SaveCompaction.Serialize(BuildCompactedEvent()));
+            }
+            catch (Exception ex)
+            {
+                // the old save is left as it was
+                GD.PrintErr($"Could not save '{finalVirtual}': {ex.Message}");
+                saveFile.Close();
+                System.IO.File.Delete(tempReal);
+                return false;
+            }
         }
 
-        var tempReal = ProjectSettings.GlobalizePath(tempVirtual);
         try
         {
             System.IO.File.Move(tempReal, ProjectSettings.GlobalizePath(finalVirtual), true);
@@ -313,8 +323,15 @@ public partial class ProjectService : Node
     /// <summary>
     /// Rebuilds the event log as one event holding the current state.
     /// </summary>
-    private IEnumerable<TableEvent> BuildCompactedEvents() =>
-        [TableEvent.Admin(RecordService.Instance.Machinery().SavedRecords().ToArray())];
+    private static TableEvent BuildCompactedEvent() =>
+        TableEvent.Admin(
+            SaveCompaction
+                .Collect(RecordService.Instance.Machinery().SavedRecords())
+                // sorted for determinism
+                .OrderBy(r => r.Id)
+                .ThenBy(r => r.GetType().Name, StringComparer.Ordinal)
+                .ToArray()
+        );
 
     /// <summary>
     /// Advances the tag counter past every SnowTag in the log.
@@ -326,7 +343,7 @@ public partial class ProjectService : Node
             return;
 
         foreach (var e in log.Values)
-            SnowTagWalker.Visit(e, Snowport.Clock.ObserveTag);
+            JsonWalker.Visit<SnowTag>(e, Snowport.Clock.ObserveTag);
     }
 
     /// <summary>
