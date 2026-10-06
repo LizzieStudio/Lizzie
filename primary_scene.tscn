@@ -206,6 +206,14 @@ layout_mode = 2
 theme_override_constants/separation = 6
 alignment = 1
 
+[node name="ResizeHandle" type="Control" parent="UI/Hand" unique_id=1735204617]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 8.0
+grow_horizontal = 2
+mouse_default_cursor_shape = 9
+
 [node name="HandLockButton" type="Button" parent="UI/Hand" unique_id=1128516974]
 layout_mode = 1
 offset_right = 24.0

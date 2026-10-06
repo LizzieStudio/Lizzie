@@ -3,39 +3,48 @@ using System.Collections.Immutable;
 using Godot;
 
 /// <summary>
-/// Tracks session state in multiplayer:
-/// * seat requests, which it writes to <see cref="Seating"/>
-/// * each client's cursor position
+/// Tracks session state in multiplayer.
+/// <list type="bullet">
+/// <item>seat requests, which it writes to <see cref="Seating"/></item>
+/// <item>each client's cursor position, which <see cref="CursorOverlay"/> draws</item>
+/// </list>
 /// </summary>
 public partial class PresenceSynchronizer : Node
 {
     private static PresenceSynchronizer _instance;
     public static PresenceSynchronizer Instance => _instance;
 
-    private const string CursorTexturePath = "res://Textures/cursor.png";
-
     private const double SendInterval = 1.0 / 30.0;
 
     private const float MoveEpsilon = 0.1f;
 
-    private const float CursorLift = 0.2f;
-
     private static Vector3 Miss => DragPlane.Miss;
 
     private DragPlane _dragPlane;
-    private Node3D _cursorParent;
 
     private double _sendAccumulator;
     private Vector3 _lastSentPosition = Miss;
 
-    private Texture2D _cursorTexture;
+    // The local player's cursor, kept apart so it stays theirs when their source changes.
+    private Vector3? _localPosition;
 
-    private readonly Dictionary<byte, Sprite3D> _cursors = new();
-
+    // The other players' cursors, by source.
     private readonly Dictionary<byte, Vector3> _positions = new();
 
-    public bool TryGetCursor(byte source, out Vector3 pos) =>
-        _positions.TryGetValue(source, out pos);
+    public bool TryGetCursor(byte source, out Vector3 pos)
+    {
+        if (source == Snowport.Clock.source)
+        {
+            pos = _localPosition.GetValueOrDefault();
+            return _localPosition.HasValue;
+        }
+        return _positions.TryGetValue(source, out pos);
+    }
+
+    /// <summary>
+    /// The cursor positions of other players on the table.
+    /// </summary>
+    public IReadOnlyDictionary<byte, Vector3> RemoteCursors => _positions;
 
     public override void _EnterTree()
     {
@@ -48,16 +57,14 @@ public partial class PresenceSynchronizer : Node
             _instance = null;
     }
 
-    public void SetContext(DragPlane dragPlane, Node3D cursorParent)
+    public void SetContext(DragPlane dragPlane)
     {
         _dragPlane = dragPlane;
-        _cursorParent = cursorParent;
     }
 
     public void ClearContext()
     {
         _dragPlane = null;
-        _cursorParent = null;
         _lastSentPosition = Miss;
         ClearCursors();
     }
@@ -201,16 +208,15 @@ public partial class PresenceSynchronizer : Node
         if (_dragPlane == null)
             return;
 
-        var mm = MultiplayerManager.Instance;
-
         var pos = _dragPlane.GetCursorProjection();
         if (pos != Miss)
-            _positions[Snowport.Clock.source] = pos;
+            _localPosition = pos;
 
-        if (mm?.IsMultiplayerActive != true)
+        if (MultiplayerManager.Instance != null)
+            RemoveStaleCursors(MultiplayerManager.Instance);
+
+        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
             return;
-
-        RemoveStaleCursors(mm);
 
         _sendAccumulator += delta;
         if (_sendAccumulator < SendInterval)
@@ -223,7 +229,7 @@ public partial class PresenceSynchronizer : Node
             return;
         _lastSentPosition = pos;
 
-        if (mm.IsServer)
+        if (MultiplayerManager.Instance.IsServer)
             Rpc(nameof(ClientReceiveCursor), (int)Snowport.Clock.source, pos);
         else
             RpcId(1, nameof(ServerReceiveCursor), (int)Snowport.Clock.source, pos);
@@ -263,42 +269,12 @@ public partial class PresenceSynchronizer : Node
 
     private void UpdateCursor(byte source, Vector3 pos)
     {
-        if (_cursorParent == null)
+        if (_dragPlane == null)
             return;
         if (source == Snowport.Clock.source)
             return;
 
-        if (!_cursors.TryGetValue(source, out var sprite))
-        {
-            sprite = CreateCursorSprite();
-            _cursorParent.AddChild(sprite);
-            _cursors[source] = sprite;
-        }
-
-        sprite.Modulate = R.SeatColor(source);
-        sprite.Position = pos + Vector3.Up * CursorLift;
-
         _positions[source] = pos;
-    }
-
-    private Sprite3D CreateCursorSprite()
-    {
-        _cursorTexture ??= GD.Load<Texture2D>(CursorTexturePath);
-
-        var sprite = new Sprite3D
-        {
-            Texture = _cursorTexture,
-            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            FixedSize = true,
-            NoDepthTest = true,
-            AlphaCut = SpriteBase3D.AlphaCutMode.OpaquePrepass,
-            PixelSize = 0.0003f,
-        };
-
-        var texSize = _cursorTexture.GetSize();
-        sprite.Offset = new Vector2(texSize.X / 2f, -texSize.Y / 2f);
-
-        return sprite;
     }
 
     private static bool IsSourceConnected(MultiplayerManager mm, byte source)
@@ -314,11 +290,11 @@ public partial class PresenceSynchronizer : Node
 
     private void RemoveStaleCursors(MultiplayerManager mm)
     {
-        if (_cursors.Count == 0)
+        if (_positions.Count == 0)
             return;
 
         List<byte> stale = null;
-        foreach (var source in _cursors.Keys)
+        foreach (var source in _positions.Keys)
         {
             if (!IsSourceConnected(mm, source))
                 (stale ??= new List<byte>()).Add(source);
@@ -328,19 +304,12 @@ public partial class PresenceSynchronizer : Node
             return;
 
         foreach (var source in stale)
-        {
-            if (_cursors.TryGetValue(source, out var sprite))
-                sprite.QueueFree();
-            _cursors.Remove(source);
             _positions.Remove(source);
-        }
     }
 
     private void ClearCursors()
     {
-        foreach (var sprite in _cursors.Values)
-            sprite.QueueFree();
-        _cursors.Clear();
+        _localPosition = null;
         _positions.Clear();
     }
 

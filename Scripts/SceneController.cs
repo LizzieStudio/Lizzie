@@ -22,7 +22,7 @@ public partial class SceneController : Node3D, ICommandView
         SetMode(Config.Registry.Get<SceneMode>("SceneMode"));
         _gameObjects.TextureFactory = _textureFactory;
 
-        PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"), this);
+        PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"));
 
         CommandList.Register(CommandList.All.Concat(TableCommands));
         ShortcutRelay.Install(GetTree());

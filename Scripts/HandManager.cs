@@ -8,7 +8,7 @@ public partial class HandManager : Panel
     private float _openPosition;
     private float _closedPosition;
 
-    private const float ResizeHandleHeight = 8f;
+    private Control _resizeHandle;
     private bool _isResizing;
     private float _resizeDragStartY;
     private float _resizePanelStartY;
@@ -35,6 +35,9 @@ public partial class HandManager : Panel
 
         _openCloseButton = GetNode<Button>("HandLockButton");
         _openCloseButton.Pressed += TogglePanel;
+
+        _resizeHandle = GetNode<Control>("ResizeHandle");
+        _resizeHandle.GuiInput += OnResizeHandleGuiInput;
 
         GetTree().Root.SizeChanged += OnWindowResized;
 
@@ -79,64 +82,38 @@ public partial class HandManager : Panel
         RefreshDisplay();
     }
 
-    public override void _Input(InputEvent @event)
+    private void OnResizeHandleGuiInput(InputEvent @event)
     {
-        // Don't start a hand-resize drag through an ImGui window.
-        // Resizing takes precedence.
-        if (ImGuiInterop.ClaimingMouse && !_isResizing)
-            return;
-
         if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left } mb)
         {
-            if (mb.Pressed && IsOverResizeHandle(mb.Position))
+            _isResizing = mb.Pressed;
+            if (mb.Pressed)
             {
-                _isResizing = true;
                 _resizeDragStartY = mb.GlobalPosition.Y;
                 _resizePanelStartY = Position.Y;
                 _resizePanelStartHeight = Size.Y;
-                GetViewport().SetInputAsHandled();
-                DisplayServer.CursorSetShape(DisplayServer.CursorShape.Vsize);
-            }
-            else if (!mb.Pressed && _isResizing)
-            {
-                _isResizing = false;
-                UpdatePositions();
-                GetViewport().SetInputAsHandled();
-            }
-        }
-        else if (@event is InputEventMouseMotion motion)
-        {
-            if (_isResizing)
-            {
-                float dy = motion.GlobalPosition.Y - _resizeDragStartY;
-                float newY = _resizePanelStartY + dy;
-                float newHeight = _resizePanelStartHeight - dy;
-                float viewportHeight = GetViewport().GetVisibleRect().Size.Y;
-
-                newHeight = Math.Max(newHeight, 50f);
-                newY = Math.Min(newY, viewportHeight - 50f);
-
-                Position = new Vector2(Position.X, newY);
-                Size = new Vector2(Size.X, newHeight);
-                _openPosition = newY;
-                _closedPosition = _openPosition + newHeight - 50;
-                _panelMoveDir = 0;
-                GetViewport().SetInputAsHandled();
             }
             else
-            {
-                if (IsOverResizeHandle(motion.Position))
-                    DisplayServer.CursorSetShape(DisplayServer.CursorShape.Vsize);
-                else
-                    DisplayServer.CursorSetShape(DisplayServer.CursorShape.Arrow);
-            }
+                UpdatePositions();
+            _resizeHandle.AcceptEvent();
         }
-    }
+        else if (@event is InputEventMouseMotion motion && _isResizing)
+        {
+            float dy = motion.GlobalPosition.Y - _resizeDragStartY;
+            float newY = _resizePanelStartY + dy;
+            float newHeight = _resizePanelStartHeight - dy;
+            float viewportHeight = GetViewport().GetVisibleRect().Size.Y;
 
-    private bool IsOverResizeHandle(Vector2 globalMousePos)
-    {
-        var localPos = globalMousePos - GlobalPosition;
-        return localPos.Y >= 0 && localPos.Y <= ResizeHandleHeight;
+            newHeight = Math.Max(newHeight, 50f);
+            newY = Math.Min(newY, viewportHeight - 50f);
+
+            Position = new Vector2(Position.X, newY);
+            Size = new Vector2(Size.X, newHeight);
+            _openPosition = newY;
+            _closedPosition = _openPosition + newHeight - 50;
+            _panelMoveDir = 0;
+            _resizeHandle.AcceptEvent();
+        }
     }
 
     private const string OpenIcon = "res://Textures/UI/arrowup16.png";
