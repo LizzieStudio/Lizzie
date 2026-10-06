@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="24px" height="24px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-25,-78)">
+        <g id="Seating" transform="matrix(1,0,0,1,-0.055118,0)">
+            <rect x="25.055" y="78" width="16" height="16" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="25.055" y="78" width="16" height="16"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(1.025538,0,0,0.77062,-0.821436,19.568057)">
+                    <path d="M28.157,86.224L37.908,86.224L37.908,76.473" style="fill:none;stroke:white;stroke-width:2.3px;"/>
+                </g>
+                <g transform="matrix(1.27533,0.083842,-0.111577,0.958321,0.520223,6.909684)">
+                    <path d="M30.15,79.907L30.15,87.719" style="fill:none;stroke:white;stroke-width:1.89px;"/>
+                </g>
+                <g transform="matrix(1.27533,-0.083842,0.111577,0.958321,-11.311391,11.965303)">
+                    <path d="M30.15,79.907L30.15,87.719" style="fill:none;stroke:white;stroke-width:1.8px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

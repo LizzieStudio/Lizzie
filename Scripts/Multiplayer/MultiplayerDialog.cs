@@ -132,7 +132,7 @@ public partial class MultiplayerDialog : Window
 
             var label =
                 seatSettings == null ? "Watching"
-                : string.IsNullOrWhiteSpace(seatSettings.Name) ? $"Seat {seat + 1}"
+                : string.IsNullOrWhiteSpace(seatSettings.Name) ? $"Seat {seat}"
                 : seatSettings.Name;
             if (player.IsLocal)
                 label += " (you)";
@@ -156,11 +156,6 @@ public partial class MultiplayerDialog : Window
         if (error != Error.Ok)
         {
             _statusLabel.Text = $"Failed to host server: {error}";
-        }
-        else
-        {
-            // Prompt the host to choose a seat right away.
-            EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
         }
     }
 

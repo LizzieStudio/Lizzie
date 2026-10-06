@@ -85,6 +85,10 @@ script = ExtResource("cmd_divider")
 script = ExtResource("cmd_item")
 CommandName = "app.multiplayer"
 
+[node name="AppChangeSeat" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1320688926]
+script = ExtResource("cmd_item")
+CommandName = "app.change_seat"
+
 [node name="Edit" type="Button" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=1362727651]
 layout_mode = 2
 theme_type_variation = &"MenuBar"

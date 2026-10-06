@@ -62,7 +62,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     private void Sync(IRecordReader R)
     {
         var selected = _seatList.GetSelectedItems();
-        int? selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : null;
+        int? selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : R.LocalSeat();
 
         _seatList.Clear();
         _seatIndexMap.Clear();
@@ -72,10 +72,13 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         for (int i = 0; i < settings.Players.Length; i++)
         {
             var player = settings.Players[i];
-            bool available = !R.IsSeatTaken(i);
+            bool current = R.LocalSeat() == i;
+            bool available = current || !R.IsSeatTaken(i);
 
-            var label = $"Player {i + 1}: {player.Name}";
-            if (!available)
+            var label = player.Name;
+            if (current)
+                label += "  [current]";
+            else if (!available)
                 label += "  [taken]";
 
             _seatList.AddItem(label);

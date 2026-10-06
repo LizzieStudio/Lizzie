@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cxp0w8sl4nhm4"]
 
 [ext_resource type="Script" uid="uid://dxk7v87pd3r0w" path="res://Scripts/Multiplayer/MultiplayerDialog.cs" id="1_b7pin"]
+[ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="2_cmdbtn"]
 
 [node name="MultiplayerConnect" type="Window" unique_id=680875562]
 oversampling_override = 1.0
@@ -33,27 +34,31 @@ layout_mode = 2
 
 [node name="TabContainer" type="TabContainer" parent="MarginContainer/VBoxContainer" unique_id=832383081]
 layout_mode = 2
-current_tab = 1
+current_tab = 0
 
 [node name="Host Game" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=1282489991]
-visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Host Game" unique_id=518695656]
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Host Game" unique_id=638600773]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Host Game/GridContainer" unique_id=518695656]
 layout_mode = 2
 text = "Port:"
 
-[node name="PortInput" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Host Game" unique_id=2068007426]
+[node name="PortInput" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Host Game/GridContainer" unique_id=2068007426]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 placeholder_text = "7777"
 
-[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Host Game" unique_id=1775371864]
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Host Game/GridContainer" unique_id=1775371864]
 layout_mode = 2
 text = "Max Players:"
 
-[node name="MaxPlayerInput" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Host Game" unique_id=898100101]
+[node name="MaxPlayerInput" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Host Game/GridContainer" unique_id=898100101]
 unique_name_in_owner = true
 layout_mode = 2
 min_value = 1.0
@@ -66,23 +71,29 @@ layout_mode = 2
 text = "Create Game"
 
 [node name="Join Game" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=1340679652]
+visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Join Game" unique_id=1652334743]
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Join Game" unique_id=110533306]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Join Game/GridContainer" unique_id=1652334743]
 layout_mode = 2
 text = "Server Address:"
 
-[node name="AddressInput" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Join Game" unique_id=599404347]
+[node name="AddressInput" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Join Game/GridContainer" unique_id=599404347]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 placeholder_text = "127.0.0.1 or hostname"
 
-[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Join Game" unique_id=1974879215]
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Join Game/GridContainer" unique_id=1974879215]
 layout_mode = 2
 text = "Port:"
 
-[node name="ClientPortInput" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Join Game" unique_id=1653380833]
+[node name="ClientPortInput" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Join Game/GridContainer" unique_id=1653380833]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "7777"
@@ -101,8 +112,17 @@ text = "Connected Players:"
 
 [node name="PlayerList" type="ItemList" parent="MarginContainer/VBoxContainer" unique_id=1166523736]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
+size_flags_vertical = 3
+auto_height = true
+
+[node name="ChangeSeatButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=392710133]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("2_cmdbtn")
+CommandName = "app.change_seat"
+ShowIcon = false
 
 [node name="DisconnectButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=42987255]
 unique_name_in_owner = true

@@ -66,6 +66,7 @@ public static class CommandList
         UI.RestoreSnapshot,
         UI.ManageSnapshots,
         UI.OpenMultiplayer,
+        UI.ChangeSeat,
         UI.EditTemplates,
         UI.EditDatasets,
         UI.EditPrototypes,

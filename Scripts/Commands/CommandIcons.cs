@@ -51,6 +51,7 @@ public static class CommandIcons
     public const string ManageSnapshots = Folder + "photo_library.svg";
 
     public const string Multiplayer = Folder + "group.svg";
+    public const string ChangeSeat = Folder + "seating.svg";
     public const string Templates = Folder + "design_services.svg";
     public const string Datasets = Folder + "table.svg";
     public const string Prototypes = Folder + "category.svg";

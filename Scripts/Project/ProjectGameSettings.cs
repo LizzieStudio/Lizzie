@@ -33,7 +33,7 @@ public sealed record ProjectGameSettings : Replicated
                 (n) =>
                     new ProjectPlayerSettings
                     {
-                        Name = $"Seat {n}",
+                        Name = $"Seat {n + 1}",
                         // 13/34 is roughly the golden angle. It picks distinct colors on the color wheel.
                         Color = Color.FromOkHsl((1f / 12f) + (13f / 34f * n), 1.0f, 0.65f),
                     }

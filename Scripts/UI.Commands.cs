@@ -93,6 +93,20 @@ public partial class UI
         SideEffects = _ => _instance?.ShowMultiplayerDialog(),
     };
 
+    /// <summary>
+    /// Asks the local player for a seat, or to observe.
+    /// </summary>
+    public static readonly GlobalCommand ChangeSeat = new()
+    {
+        Name = new("app.change_seat"),
+        Icon = CommandIcons.ChangeSeat,
+        Caption = "Change Seat...",
+        Enabled = R =>
+            R.Single<ProjectGameSettings>() is var settings
+            && (settings.Players.Length > 0 || settings.AllowObservers),
+        SideEffects = _ => _instance?.ShowPlayerPositionDialog(),
+    };
+
     public static readonly GlobalCommand EditTemplates = new()
     {
         Name = new("editor.templates"),
