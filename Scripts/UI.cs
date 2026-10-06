@@ -676,45 +676,6 @@ public partial class UI : CanvasLayer
         _editingPrototypeId = SnowTag.Empty;
     }
 
-    public override void _Process(double delta)
-    {
-        if (_modalDialogs == null)
-        {
-            ModalDialogShown = false;
-        }
-        else
-        {
-            ModalDialogShown = _modalDialogs.GetChildCount() > 0;
-        }
-    }
-
-    /// <summary>
-    /// Check to see if there are any modal dialogs open, and see if the flag needs to be flipped.
-    /// If so, send the appropriate event signal.
-    /// NOTE: All modal dialogs should be added as children to the ModalDialogs node for this to work properly. This is a bit hacky but it works for now and saves us from having to add event hooks for every single dialog we create.
-    /// </summary>
-    private bool _modalDialogShown;
-
-    private bool ModalDialogShown
-    {
-        get => _modalDialogShown;
-        set
-        {
-            if (value == _modalDialogShown)
-                return;
-            _modalDialogShown = value;
-
-            if (value)
-            {
-                EventBus.Instance.Publish<ModalDialogOpenedEvent>();
-            }
-            else
-            {
-                EventBus.Instance.Publish<ModalDialogClosedEvent>();
-            }
-        }
-    }
-
     private void OnInsertPressed()
     {
         _componentDefinition.Visible = true;

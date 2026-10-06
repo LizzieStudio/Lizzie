@@ -35,29 +35,10 @@ public abstract partial class BaseCamera : Node3D, ICamera
         ActualCamera = GetCameraNode();
         _initialTransform = Transform;
         _initialCameraTransform = ActualCamera.Transform;
-        EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
-        EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
-    }
-
-    private void OnModalClosed()
-    {
-        _modalOpen = false;
-    }
-
-    private bool _modalOpen;
-
-    private void OnModalOpened()
-    {
-        _modalOpen = true;
-        _held.Clear();
-        EndRotate();
     }
 
     private bool AcceptsInput =>
-        !_modalOpen
-        && Current
-        && _gameObjects.CursorMode != CursorMode.DragSelect
-        && !CommandMenu.IsOpen;
+        Current && _gameObjects.CursorMode != CursorMode.DragSelect && !CommandMenu.IsOpen;
 
     /// <summary>The keys that move the camera while held.</summary>
     private static readonly StringName[] HeldActions =
@@ -103,7 +84,6 @@ public abstract partial class BaseCamera : Node3D, ICamera
             Reset();
     }
 
-    // Only the main viewport's shortcuts reach here, so inputs targeting a dialogue never move the camera.
     public override void _UnhandledKeyInput(InputEvent e)
     {
         foreach (var action in HeldActions)
@@ -113,7 +93,8 @@ public abstract partial class BaseCamera : Node3D, ICamera
 
     public override void _Notification(int what)
     {
-        if (what == NotificationApplicationFocusOut)
+        // A window or another app took focus.
+        if (what == NotificationApplicationFocusOut || what == NotificationWMWindowFocusOut)
         {
             _held.Clear();
             EndRotate();
@@ -124,7 +105,6 @@ public abstract partial class BaseCamera : Node3D, ICamera
     {
         base._Input(e);
 
-        // Releasing a key is always visible, regardless of propogation.
         foreach (var action in HeldActions)
             if (e.IsActionReleased(action))
                 _held.Remove(action);

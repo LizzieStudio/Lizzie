@@ -224,16 +224,6 @@ public class EditPrototypeEvent : IEvent
 }
 
 /// <summary>
-/// When a dialog is opened, this event is published to disable inputs
-/// </summary>
-public class ModalDialogOpenedEvent : IEvent { }
-
-/// <summary>
-/// When a dialog is closed, this event is published to re-enable inputs
-/// </summary>
-public class ModalDialogClosedEvent : IEvent { }
-
-/// <summary>
 /// Picks up a new component of a prototype, for the local player to place.
 /// </summary>
 public class SpawnPrototypeEvent : IEvent

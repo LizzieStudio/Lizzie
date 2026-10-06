@@ -91,9 +91,6 @@ public partial class GameObjects : Node
     public override void _Ready()
     {
         _table = CreateTable();
-
-        EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
-        EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
     }
 
     private Table CreateTable()
@@ -122,18 +119,6 @@ public partial class GameObjects : Node
     public void SetGameController(GameController gameController)
     {
         _gameController = gameController;
-    }
-
-    private void OnModalClosed()
-    {
-        _modalOpen = false;
-    }
-
-    private bool _modalOpen;
-
-    private void OnModalOpened()
-    {
-        _modalOpen = true;
     }
 
     public VisualComponentBase GetComponent(SnowTag reference) => _table.GetComponent(reference);
