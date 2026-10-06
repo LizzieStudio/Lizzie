@@ -39,7 +39,7 @@ public readonly struct ZOrder : IComparable<ZOrder>, IEquatable<ZOrder>
     }
 
     /// <summary>A value that always sorts below every normal component. Used by zones.</summary>
-    public static ZOrder Floor => new(ZTarget.Bottom, int.MinValue, new SnowportId(ulong.MaxValue));
+    public static ZOrder Floor => new(ZTarget.Bottom, int.MinValue, new SnowportId(long.MaxValue));
 
     /// <summary>Positive when this component is higher in the stack than <paramref name="other"/>.</summary>
     public int CompareTo(ZOrder other)
@@ -75,7 +75,7 @@ public readonly struct ZOrder : IComparable<ZOrder>, IEquatable<ZOrder>
         get
         {
             // The ~ operator counts down from the max, which is what we want for Bottom.
-            ulong stamp = Target == ZTarget.Top ? Stamp.Value : ~Stamp.Value;
+            ulong stamp = Target == ZTarget.Top ? Stamp : ~(ulong)Stamp;
             // For Top, put a 1 with enough room for half the stamp.
             ulong target = Target == ZTarget.Top ? 1UL << 32 : 0UL;
             // UInt128 takes two ulongs, so we split the stamp onto each.

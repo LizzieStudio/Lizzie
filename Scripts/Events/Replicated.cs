@@ -35,7 +35,7 @@ public abstract record Replicated
     /// <summary>
     /// A cache key that changes whenever the record is updated.
     /// </summary>
-    public string SheetKey() => $"{Id.Value:X8}{LastUpdateId.Value:X16}";
+    public string SheetKey() => $"{Id:X8}{LastUpdateId:X16}";
 
     /// <summary>
     /// What's directly inside this record, like a deck's cards or a DataRow's cells.

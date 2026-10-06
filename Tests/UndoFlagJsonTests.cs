@@ -5,7 +5,7 @@ using Xunit;
 /// <summary>Reversals as they're saved and sent, with the game's JSON options.</summary>
 public class UndoFlagJsonTests
 {
-    private static SnowportId Id(ulong clock, byte source) => new((clock << 6) | source);
+    private static SnowportId Id(long clock, byte source) => new(clock, source);
 
     [Fact]
     public void RetiredReversalsSurviveTheRoundTrip()

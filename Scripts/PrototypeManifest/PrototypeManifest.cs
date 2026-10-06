@@ -238,7 +238,7 @@ public partial class PrototypeManifest : Window, ICommandView
             item.SetText(2, counts.GetValueOrDefault(prototype.Id).ToString());
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
-            item.SetMetadata(0, prototype.Id.Value);
+            item.SetMetadata(0, prototype.Id);
 
             if (prototype == _selectedPrototype)
                 item.Select(0);
@@ -269,7 +269,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (selectedItem == null)
             return;
 
-        var prototypeRef = new SnowTag(selectedItem.GetMetadata(0).AsInt32());
+        var prototypeRef = (SnowTag)selectedItem.GetMetadata(0);
 
         if (prototypeRef == _selectedPrototype?.Id)
             return;

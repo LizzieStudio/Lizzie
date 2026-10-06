@@ -17,9 +17,9 @@ public class UndoScenarioTests
     private static bool Others(byte author, Replicated _) => author != Me;
 
     private readonly EventLog _log = new();
-    private ulong _clock;
+    private long _clock;
 
-    private SnowportId NextId(byte source) => new((++_clock << 6) | source);
+    private SnowportId NextId(byte source) => new(++_clock, source);
 
     /// <summary>
     /// Records an action that writes <paramref name="record"/>, in <paramref name="group"/> if given,
@@ -357,7 +357,7 @@ public class UndoScenarioTests
     public void FlagOnAnUnknownTargetDoesNothing()
     {
         var a = Act(Me);
-        var missing = new SnowportId((999UL << 6) | Me);
+        var missing = new SnowportId(999, Me);
         var id = NextId(Me);
         _log.Add(
             id,

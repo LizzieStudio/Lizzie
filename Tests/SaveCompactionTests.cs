@@ -9,10 +9,10 @@ using Xunit;
 public class SaveCompactionTests
 {
     private static SnowTag Tag(int counter, byte source = Snowport.HostSource) =>
-        new((source << 26) | counter);
+        new(source, counter);
 
-    private static SnowportId Id(ulong clock, byte source = Snowport.HostSource) =>
-        new((clock << 6) | source);
+    private static SnowportId Id(long clock, byte source = Snowport.HostSource) =>
+        new(clock, source);
 
     private static ComponentState Component(int id, bool deleted = false) =>
         new() { Id = Tag(id), Deleted = deleted };

@@ -545,7 +545,7 @@ public partial class UI : CanvasLayer
             var sel = list.GetSelectedItems();
             if (sel.Length == 0)
                 return SnowTag.Empty;
-            return new SnowTag((int)list.GetItemMetadata(sel[0]));
+            return (SnowTag)list.GetItemMetadata(sel[0]);
         }
 
         var hbox = new HBoxContainer();
@@ -593,7 +593,7 @@ public partial class UI : CanvasLayer
                 foreach (var (state, _) in OrderedGameStates(R))
                 {
                     var idx = list.AddItem(GameStateLabel(R, state));
-                    list.SetItemMetadata(idx, state.Id.Value);
+                    list.SetItemMetadata(idx, state.Id);
                     if (state.Id == selected)
                         list.Select(idx);
                 }

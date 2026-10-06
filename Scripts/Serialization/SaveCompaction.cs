@@ -52,17 +52,14 @@ public static class SaveCompaction
         return JsonSerializer.Serialize(save, LizzieJson.SaveOptions(tags, ids));
     }
 
-    // a tag's counter has 26 bits
-    private const int MaxTagCounter = (1 << 26) - 1;
-
     private static SnowTag Tag(int n) =>
-        n <= MaxTagCounter
-            ? new SnowTag((Snowport.AdminSource << 26) | n)
+        n <= SnowTag.MaxCounter
+            ? new SnowTag(Snowport.AdminSource, n)
             : throw new InvalidOperationException(
-                $"A save can't hold more than {MaxTagCounter} SnowTags."
+                $"A save can't hold more than {SnowTag.MaxCounter} SnowTags."
             );
 
-    private static SnowportId Id(int n) => new(((ulong)n << 6) | Snowport.AdminSource);
+    private static SnowportId Id(int n) => new(n, Snowport.AdminSource);
 
     private static Dictionary<T, T> Renumber<T>(TableEvent save, T empty, Func<int, T> number)
         where T : IComparable<T>

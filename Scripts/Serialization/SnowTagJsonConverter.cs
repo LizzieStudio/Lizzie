@@ -12,7 +12,7 @@ public sealed class SnowTagJsonConverter(IReadOnlyDictionary<SnowTag, SnowTag> r
 {
     public override void Write(Utf8JsonWriter writer, SnowTag tag, JsonSerializerOptions options)
     {
-        writer.WriteNumberValue(Renumbered(tag).Value);
+        writer.WriteNumberValue((int)Renumbered(tag));
     }
 
     public override SnowTag Read(
@@ -35,7 +35,7 @@ public sealed class SnowTagJsonConverter(IReadOnlyDictionary<SnowTag, SnowTag> r
         JsonSerializerOptions options
     )
     {
-        writer.WritePropertyName(Renumbered(tag).Value.ToString());
+        writer.WritePropertyName(Renumbered(tag).ToString());
     }
 
     public override SnowTag ReadAsPropertyName(

@@ -110,7 +110,7 @@ public sealed class UndoSession
     private readonly Dictionary<byte, SnowportId> _open = new();
 
     // Events take even clock values, so late events can take the odd ones between.
-    private ulong _clock;
+    private long _clock;
 
     // the events the operation being applied has recorded
     private readonly List<TableEvent> _recorded = new();
@@ -256,8 +256,8 @@ public sealed class UndoSession
                 );
                 break;
 
-            case Op.Late l when (ulong)(2 * l.Back - 1) < _clock:
-                var id = Id(_clock - (ulong)(2 * l.Back - 1), l.Source);
+            case Op.Late l when 2 * l.Back - 1 < _clock:
+                var id = Id(_clock - (2 * l.Back - 1), l.Source);
                 if (Log.ContainsKey(id))
                     break;
                 // It joins the player's gesture only if it's newer than the gesture's first event.
@@ -297,7 +297,7 @@ public sealed class UndoSession
         return Id(_clock, source);
     }
 
-    private static SnowportId Id(ulong clock, byte source) => new((clock << 6) | source);
+    private static SnowportId Id(long clock, byte source) => new(clock, source);
 
     /// <summary>
     /// Records the event in id order, with the given records and values written.
@@ -308,11 +308,11 @@ public sealed class UndoSession
         var records = new List<Replicated>();
         foreach (var record in new[] { first, second }.Where(r => r != 0))
             records.Add(
-                new TestRecord { Id = record, Face = (int)e.Id.Value * 10 + records.Count }
+                new TestRecord { Id = record, Face = (int)(long)e.Id * 10 + records.Count }
             );
         for (int i = 0; i < values; i++)
             records.Add(
-                new TestValue { Id = TestValue.SingletonId, Text = $"{e.Id.Value}.{records.Count}" }
+                new TestValue { Id = TestValue.SingletonId, Text = $"{e.Id}.{records.Count}" }
             );
         if (records.Count > 0)
             e.Records = records.ToArray();

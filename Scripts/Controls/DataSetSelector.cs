@@ -18,11 +18,11 @@ public partial class DataSetSelector : OptionButton
     private void Sync(IRecordReader R)
     {
         Clear();
-        AddItem("(none)", SnowTag.Empty.Value);
+        AddItem("(none)", SnowTag.Empty);
 
         foreach (var d in R.Get<DataSet>())
         {
-            AddItem(d.Name, d.Id.Value);
+            AddItem(d.Name, d.Id);
         }
 
         UpdateSelection();

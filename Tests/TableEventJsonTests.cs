@@ -4,7 +4,7 @@ using Xunit;
 
 public class TableEventJsonTests
 {
-    private static SnowportId Id(ulong clock, byte source) => new((clock << 6) | source);
+    private static SnowportId Id(long clock, byte source) => new(clock, source);
 
     private static TableEvent RoundTrip(TableEvent e, out string json)
     {

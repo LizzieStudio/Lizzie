@@ -13,7 +13,7 @@ public sealed class SnowportIdJsonConverter(
 {
     public override void Write(Utf8JsonWriter writer, SnowportId id, JsonSerializerOptions options)
     {
-        writer.WriteNumberValue(Renumbered(id).Value);
+        writer.WriteNumberValue((long)Renumbered(id));
     }
 
     public override SnowportId Read(
@@ -22,7 +22,7 @@ public sealed class SnowportIdJsonConverter(
         JsonSerializerOptions options
     )
     {
-        if (!reader.TryGetUInt64(out var value))
+        if (!reader.TryGetInt64(out var value))
         {
             GD.PrintErr("SnowportId from json could not be parsed");
             return SnowportId.Empty;
@@ -36,7 +36,7 @@ public sealed class SnowportIdJsonConverter(
         JsonSerializerOptions options
     )
     {
-        writer.WritePropertyName(Renumbered(id).Value.ToString());
+        writer.WritePropertyName(Renumbered(id).ToString());
     }
 
     public override SnowportId ReadAsPropertyName(

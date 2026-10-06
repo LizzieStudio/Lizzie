@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Godot;
 
 /// <summary>
@@ -22,9 +21,9 @@ public class Snowport
     public static Snowport Clock = new Snowport(HostSource);
 
     // start at 1 since 0 is used to mean Empty
-    private ulong _useLogicClock = 1;
-    private ulong _localOffsetMsec = 0;
-    private ulong _globalOffsetMsec = 0;
+    private long _useLogicClock = 1;
+    private long _localOffsetMsec = 0;
+    private long _globalOffsetMsec = 0;
 
     // A counter for SnowTag identities.
     private int _tagCounter = 1;
@@ -38,7 +37,7 @@ public class Snowport
     {
         if (source >= SourceCount)
             throw new ArgumentOutOfRangeException(nameof(source), source, "A source takes 6 bits.");
-        _localOffsetMsec = Time.GetTicksMsec();
+        _localOffsetMsec = (long)Time.GetTicksMsec();
         this.source = source;
     }
 
@@ -59,12 +58,12 @@ public class Snowport
     }
 
     /// <summary>The table's shared time, in milliseconds.</summary>
-    private ulong GameTimeMsec => Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
+    private long GameTimeMsec => (long)Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
 
     /// <summary>
     /// The milliseconds since <paramref name="id"/> was created. Negative when it's in the future.
     /// </summary>
-    public long MsecSince(SnowportId id) => (long)GameTimeMsec - (long)(id.logicClock >> 8);
+    public long MsecSince(SnowportId id) => GameTimeMsec - (id.logicClock >> 8);
 
     /// <summary>
     /// Create a new SnowportId.
@@ -87,31 +86,21 @@ public class Snowport
     {
         // If the game time has advanced, update the hybrid clock to match.
         _useLogicClock = Math.Max(GameTimeMsec << 8, _useLogicClock);
-        var id = (_useLogicClock << 6) | from;
-        _useLogicClock++;
-        return new SnowportId(id);
+        return new SnowportId(_useLogicClock++, from);
     }
 
     /// <summary>
     /// Create a new <see cref="SnowTag"/>.
     /// </summary>
-    public SnowTag CreateTag()
-    {
-        if (_tagCounter > 0x3FFFFFF)
-            throw new InvalidOperationException("This source has run out of SnowTags.");
-        var tag = (source << 26) | _tagCounter;
-        _tagCounter++;
-        return new SnowTag(tag);
-    }
+    public SnowTag CreateTag() => new(source, _tagCounter++);
 
     /// <summary>
     /// Advance the tag counter past <paramref name="tag"/> when it shares our source.
     /// </summary>
     public void ObserveTag(SnowTag tag)
     {
-        int counter = tag.Value & 0x3FFFFFF;
-        if (tag.source == source && counter >= _tagCounter)
-            _tagCounter = counter + 1;
+        if (tag.source == source && tag.counter >= _tagCounter)
+            _tagCounter = tag.counter + 1;
     }
 
     /// <summary>
@@ -132,59 +121,67 @@ public class Snowport
     }
 }
 
-public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<SnowportId>
+/// <summary>
+/// The id of a synchronized table event.
+/// <para>
+/// Stores a timestamp with a guarenteed order and which source made it.
+/// </para>
+/// </summary>
+/// <remarks>Laid out as <c>[ logicClock:47 | source:6 ]</c>.</remarks>
+public readonly record struct SnowportId : IComparable<SnowportId>, IFormattable
 {
-    private readonly ulong ID;
-
-    public ulong Value
-    {
-        get { return ID; }
-    }
+    private readonly long ID;
 
     public static readonly SnowportId Empty = new(0);
 
-    public SnowportId(ulong ID)
+    public SnowportId(long id)
     {
-        this.ID = ID;
+        ID = id;
     }
 
-    public ulong logicClock
-    {
-        get
-        {
-            // get 47 bits from 6 to 52
-            return (ID >> 6) & 0x7FFFFFFFFFFFUL;
-        }
-    }
+    public SnowportId(long logicClock, byte source)
+        : this((logicClock << 6) | CheckSource(source)) { }
 
-    public byte source
-    {
-        get
-        {
-            // get 6 bits from 0 to 5
-            return (byte)(ID & 0x3F);
-        }
-    }
+    /// <summary>
+    /// The hybrid clock: the game time in milliseconds then an 8 bit increment for events in the same millisecond.
+    /// </summary>
+    public long logicClock => (ID >> 6) & 0x7FFFFFFFFFFFL;
 
-    public bool Equals(SnowportId other) => ID == other.ID;
-
-    public override bool Equals(object other) => other is SnowportId Id && Equals(Id);
-
-    public override int GetHashCode() => ID.GetHashCode();
+    /// <summary>
+    /// The source that made this SnowportId.
+    /// </summary>
+    public byte source => (byte)(ID & 0x3F);
 
     public int CompareTo(SnowportId other) => ID.CompareTo(other.ID);
 
-    public static bool operator ==(SnowportId left, SnowportId right) => left.Equals(right);
+    // Declared because comparisons were having to choose between long and ulong conversion.
+    public static bool operator <(SnowportId left, SnowportId right) => left.ID < right.ID;
 
-    public static bool operator !=(SnowportId left, SnowportId right) => !left.Equals(right);
+    public static bool operator >(SnowportId left, SnowportId right) => left.ID > right.ID;
+
+    public static bool operator <=(SnowportId left, SnowportId right) => left.ID <= right.ID;
+
+    public static bool operator >=(SnowportId left, SnowportId right) => left.ID >= right.ID;
+
+    public static implicit operator long(SnowportId id) => id.ID;
+
+    // An id only uses 53 bits, so it's never negative.
+    public static implicit operator ulong(SnowportId id) => (ulong)id.ID;
+
+    public static implicit operator Variant(SnowportId id) => id.ID;
+
+    public static explicit operator SnowportId(Variant v) => new(v.AsInt64());
 
     public override string ToString() => ID.ToString();
 
-    public static SnowportId Parse(string s) => new SnowportId(ulong.Parse(s));
+    public string ToString(string format, IFormatProvider provider) =>
+        ID.ToString(format, provider);
+
+    public static SnowportId Parse(string s) => new(long.Parse(s));
 
     public static bool TryParse(string s, out SnowportId id)
     {
-        if (ulong.TryParse(s, out var value))
+        if (long.TryParse(s, out var value))
         {
             id = new SnowportId(value);
             return true;
@@ -192,52 +189,81 @@ public readonly struct SnowportId : IEquatable<SnowportId>, IComparable<Snowport
         id = Empty;
         return false;
     }
+
+    internal static byte CheckSource(byte source) =>
+        source < Snowport.SourceCount
+            ? source
+            : throw new ArgumentOutOfRangeException(
+                nameof(source),
+                source,
+                "A source takes 6 bits."
+            );
 }
 
 /// <summary>
 /// A compact, timestamp-free unique ID for a <see cref="Replicated"/> record.
 /// </summary>
 /// <remarks>
+/// <para>Laid out as <c>[ source:6 | counter:26 ]</c>.</para>
+/// <para>
 /// Records should refer to records with a SnowTag, never its value in an int or string.
 /// The save file uses a form of garbage collection to keep records alive.
+/// </para>
 /// </remarks>
-public readonly struct SnowTag : IEquatable<SnowTag>, IComparable<SnowTag>
+public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
 {
     private readonly int ID;
 
-    public int Value => ID;
-
     public static readonly SnowTag Empty = new(0);
 
-    public SnowTag(int ID)
+    /// <summary>
+    /// The maximum counter on any one source.
+    /// </summary>
+    public const int MaxCounter = (1 << 26) - 1;
+
+    public SnowTag(int id)
     {
-        this.ID = ID;
+        ID = id;
     }
+
+    public SnowTag(byte source, int counter)
+        : this((SnowportId.CheckSource(source) << 26) | CheckCounter(counter)) { }
+
+    private static int CheckCounter(int counter) =>
+        counter is >= 0 and <= MaxCounter
+            ? counter
+            : throw new ArgumentOutOfRangeException(
+                nameof(counter),
+                counter,
+                "This source has run out of SnowTags."
+            );
 
     /// <summary>
     /// The source that minted this tag.
     /// </summary>
     public byte source => (byte)((ID >> 26) & 0x3F);
 
-    public bool Equals(SnowTag other) => ID == other.ID;
-
-    public override bool Equals(object other) => other is SnowTag tag && Equals(tag);
-
-    public override int GetHashCode() => ID.GetHashCode();
+    /// <summary>
+    /// The ID without the source number.
+    /// </summary>
+    public int counter => ID & MaxCounter;
 
     public int CompareTo(SnowTag other) => ID.CompareTo(other.ID);
 
-    public static bool operator ==(SnowTag left, SnowTag right) => left.Equals(right);
-
-    public static bool operator !=(SnowTag left, SnowTag right) => !left.Equals(right);
-
-    public static implicit operator SnowTag(int x) => new SnowTag(x);
+    public static implicit operator SnowTag(int x) => new(x);
 
     public static implicit operator int(SnowTag x) => x.ID;
 
+    public static implicit operator Variant(SnowTag tag) => tag.ID;
+
+    public static explicit operator SnowTag(Variant v) => new(v.AsInt32());
+
     public override string ToString() => ID.ToString();
 
-    public static SnowTag Parse(string s) => new SnowTag(int.Parse(s));
+    public string ToString(string format, IFormatProvider provider) =>
+        ID.ToString(format, provider);
+
+    public static SnowTag Parse(string s) => new(int.Parse(s));
 
     public static bool TryParse(string s, out SnowTag tag)
     {

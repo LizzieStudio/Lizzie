@@ -272,7 +272,7 @@ public partial class TemplateCreator : Window
         if (id == SnowTag.Empty)
             return;
 
-        var idx = _templateNameSelector.GetItemIndex(id.Value);
+        var idx = _templateNameSelector.GetItemIndex(id);
         if (idx >= 0)
         {
             _templateNameSelector.Selected = idx;
@@ -334,7 +334,7 @@ public partial class TemplateCreator : Window
             var ni = _elementTree.CreateItem(_rootItem);
 
             te.Id = Snowport.Clock.CreateTag();
-            ni.SetMetadata(0, te.Id.Value);
+            ni.SetMetadata(0, te.Id);
             ni.SetText(0, te.ElementName);
 
             _templateElements.Add(te);
@@ -584,7 +584,7 @@ public partial class TemplateCreator : Window
         var id = ti.GetMetadata(0).AsInt32();
 
         //matching param
-        var p = _templateElements.FirstOrDefault(x => x.Id.Value == id);
+        var p = _templateElements.FirstOrDefault(x => x.Id == id);
         return p;
     }
 
@@ -596,7 +596,7 @@ public partial class TemplateCreator : Window
             return;
         var ti = _elementTree.GetSelected();
 
-        if (ti.GetMetadata(0).AsInt32() != _selectedElement.Id.Value)
+        if (ti.GetMetadata(0).AsInt32() != _selectedElement.Id)
             return;
 
         _acceptDialog.DialogText =
@@ -670,7 +670,7 @@ public partial class TemplateCreator : Window
         var elementName = CreateUniqueElementName(_selectedElement.ElementName);
 
         var ni = _elementTree.CreateItem(_rootItem); //update so that it places item as sibling to selected
-        ni.SetMetadata(0, id.Value);
+        ni.SetMetadata(0, id);
         ni.SetText(0, elementName);
 
         t.Id = id;
@@ -772,7 +772,7 @@ public partial class TemplateCreator : Window
         var elementName = CreateUniqueElementName(prefix);
 
         var ni = _elementTree.CreateItem(_rootItem);
-        ni.SetMetadata(0, id.Value);
+        ni.SetMetadata(0, id);
         ni.SetText(0, elementName);
 
         t.Id = id;
@@ -1226,7 +1226,7 @@ public partial class TemplateCreator : Window
 
         foreach (var t in R.Get<Template>().OrderBy(v => v.Name))
         {
-            _templateNameSelector.AddItem(t.Name, t.Id.Value);
+            _templateNameSelector.AddItem(t.Name, t.Id);
         }
     }
 
@@ -1351,7 +1351,7 @@ public partial class TemplateCreator : Window
 
         var dropSection = _elementTree.GetDropSectionAtPosition(position);
 
-        var draggedElement = _templateElements.FirstOrDefault(x => x.Id.Value == draggedId);
+        var draggedElement = _templateElements.FirstOrDefault(x => x.Id == draggedId);
         if (draggedElement == null)
             return;
 
@@ -1386,7 +1386,7 @@ public partial class TemplateCreator : Window
         var oldParent = draggedItem.GetParent();
 
         var newItem = _elementTree.CreateItem(newParent, GetChildIndex(newParent, insertBefore)); //newParent.GetChildIndex(insertBefore));
-        newItem.SetMetadata(0, draggedElement.Id.Value);
+        newItem.SetMetadata(0, draggedElement.Id);
         newItem.SetText(0, draggedElement.ElementName);
 
         var children = new List<TreeItem>();
