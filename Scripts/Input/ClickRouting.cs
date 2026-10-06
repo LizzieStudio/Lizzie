@@ -20,6 +20,10 @@ public static class ClickRouting
     // Where the right button last went down. Used for a threshold distance.
     private static Vector2 _rightPressAt;
 
+    // Whether the held right button has moved past the threshold, making it a drag, not a click.
+    // This is a "threshold switch". Once it's past that point, moving back to the start doesn't reverse it.
+    private static bool _rightDragged;
+
     /// <summary>Applies the rules to every click in <paramref name="root"/>, the main window.</summary>
     public static void Install(Window root)
     {
@@ -32,6 +36,13 @@ public static class ClickRouting
 
     private static void OnWindowInput(Window root, InputEvent e)
     {
+        if (
+            e is InputEventMouseMotion motion
+            && motion.ButtonMask.HasFlag(MouseButtonMask.Right)
+            && motion.Position.DistanceTo(_rightPressAt) >= root.GuiDragThreshold
+        )
+            _rightDragged = true;
+
         // The wheel is a button too, but scrolling shouldn't move focus or close the menu.
         if (
             e
@@ -45,8 +56,11 @@ public static class ClickRouting
         if (button.ButtonIndex == MouseButton.Right)
         {
             if (button.Pressed)
+            {
                 _rightPressAt = button.Position;
-            else if (button.Position.DistanceTo(_rightPressAt) < root.GuiDragThreshold)
+                _rightDragged = false;
+            }
+            else if (!_rightDragged)
                 OpenMenu(root, button.Position);
         }
         if (!button.Pressed)

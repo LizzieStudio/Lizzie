@@ -64,26 +64,19 @@ public partial class ComponentPreview : Panel
         _isSpinning = _spinButton.ButtonPressed;
     }
 
-    public override void _Input(InputEvent @event)
+    public override void _GuiInput(InputEvent e)
     {
-        if (!Visible)
-            return;
-
-        // defer to ImGui debuggers
-        if (ImGuiInterop.ClaimingMouse)
-            return;
-
-        if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
+        if (e is InputEventMouseButton { Pressed: true } mouseEvent)
         {
             if (mouseEvent.ButtonIndex == MouseButton.WheelUp)
             {
                 ZoomIn();
-                GetViewport().SetInputAsHandled();
+                AcceptEvent();
             }
             else if (mouseEvent.ButtonIndex == MouseButton.WheelDown)
             {
                 ZoomOut();
-                GetViewport().SetInputAsHandled();
+                AcceptEvent();
             }
         }
     }
@@ -266,11 +259,6 @@ public partial class ComponentPreview : Panel
         _component.DataSetRowId = rowId;
         _component.TextureFactory = textureFactory;
         _component.DraftPrototype = new Prototype { Id = SnowTag.Empty, Parameters = parameters };
-    }
-
-    public void Build(Prototype prototype, TextureFactory textureFactory)
-    {
-        Build(prototype, -1, SnowTag.Empty, textureFactory);
     }
 
     public void Build(

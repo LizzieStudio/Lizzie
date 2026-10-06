@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.ComponentModel;
 using Godot;
 
 public abstract partial class BaseCamera : Node3D, ICamera
@@ -51,6 +50,7 @@ public abstract partial class BaseCamera : Node3D, ICamera
     {
         _modalOpen = true;
         _held.Clear();
+        EndRotate();
     }
 
     private bool AcceptsInput =>
@@ -114,38 +114,78 @@ public abstract partial class BaseCamera : Node3D, ICamera
     public override void _Notification(int what)
     {
         if (what == NotificationApplicationFocusOut)
+        {
             _held.Clear();
+            EndRotate();
+        }
     }
 
-    // Controls that use the mouse are better handled in the _Input method because of engine quirks (like Mouse wheel not having a pressed event).
-    public override void _Input(InputEvent @event)
+    public override void _Input(InputEvent e)
     {
-        base._Input(@event);
+        base._Input(e);
 
         // Releasing a key is always visible, regardless of propogation.
         foreach (var action in HeldActions)
-            if (@event.IsActionReleased(action))
+            if (e.IsActionReleased(action))
                 _held.Remove(action);
 
-        if (!Current || _gameObjects.CursorMode == CursorMode.DragSelect || CommandMenu.IsOpen)
+        // _rotateFrom != null
+        if (_rotateFrom is not { } from)
             return;
 
-        // defer to ImGui debuggers
-        if (ImGuiInterop.ClaimingMouse)
+        if (e is InputEventMouseButton && e.IsActionReleased("rotate"))
+        {
+            if (_rotating)
+                GetViewport().SetInputAsHandled();
+            EndRotate();
+        }
+        else if (e is InputEventMouseMotion motion)
+        {
+            if (_rotating)
+            {
+                UpdateRotation(motion.Relative);
+                GetViewport().SetInputAsHandled();
+            }
+            // A right click opens the command menu, so wait until a drag threshold is passed.
+            else if (motion.Position.DistanceTo(from) >= GetViewport().GuiDragThreshold)
+            {
+                _rotating = true;
+                Input.MouseMode = Input.MouseModeEnum.Captured;
+                GetViewport().SetInputAsHandled();
+            }
+        }
+    }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (!AcceptsInput || e is not InputEventMouseButton button)
             return;
 
-        if (Input.IsActionPressed("rotate") && @event is InputEventMouseMotion mouseMotion)
-        {
-            UpdateRotation(mouseMotion.Relative);
-        }
+        if (e.IsActionPressed("rotate"))
+            _rotateFrom = button.Position;
+        if (e.IsActionPressed("zoom_in"))
+            UpdateZoom(-ZoomSpeed);
+        if (e.IsActionPressed("zoom_out"))
+            UpdateZoom(ZoomSpeed);
+    }
 
-        if (@event is InputEventMouseButton)
+    // Where the rotate click started.
+    private Vector2? _rotateFrom;
+
+    private bool _rotating;
+
+    /// <summary>
+    /// Stops rotating and puts the cursor back where the drag began.
+    /// </summary>
+    private void EndRotate()
+    {
+        if (_rotating)
         {
-            if (@event.IsActionPressed("zoom_in"))
-                UpdateZoom(-ZoomSpeed);
-            if (@event.IsActionPressed("zoom_out"))
-                UpdateZoom(ZoomSpeed);
+            Input.MouseMode = Input.MouseModeEnum.Visible;
+            GetViewport().WarpMouse(_rotateFrom!.Value);
         }
+        _rotating = false;
+        _rotateFrom = null;
     }
 
     protected abstract Camera3D GetCameraNode();
