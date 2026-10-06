@@ -8,5 +8,4 @@ script = ExtResource("2_csu0h")
 ComponentName = "Bag"
 Icon = ExtResource("1_mf8nb")
 DefinitionDialogName = "res://Scenes/ComponentPanels/bag_panel.tscn"
-PrototypeName = "res://Scenes/VisualComponents/VcBag.tscn"
 ComponentType = "Bag"

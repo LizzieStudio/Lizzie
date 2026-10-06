@@ -26,8 +26,6 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Zone;
-
         _nameInput = GetNode<LineEdit>("%ItemName");
         _widthInput = GetNode<LineEdit>("%Width");
         _depthInput = GetNode<LineEdit>("%Depth");

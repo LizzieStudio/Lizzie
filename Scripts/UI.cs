@@ -88,7 +88,7 @@ public partial class UI : CanvasLayer
 
         _handManager = GetNode<HandManager>("%Hand");
         _opponentHands = GetNode<PlayerHandsPanel>("%PlayerHandsPanel");
-        _opponentHands.ShowHideToggled += OnOpponentHandsShowHideToggled;
+        _opponentHands.IsShowingChanged += OnOpponentHandsShowHideToggled;
 
         // Defer position capture until layout is resolved.
         CallDeferred(nameof(InitOpponentHandsPositions));
@@ -120,15 +120,17 @@ public partial class UI : CanvasLayer
         _opponentHandsHiddenOffsetRight = _opponentHandsOpenOffsetRight + slideAmount;
     }
 
-    private void OnOpponentHandsShowHideToggled(object sender, bool isHidden)
+    private void OnOpponentHandsShowHideToggled(object sender, bool isShowing)
     {
         if (_opponentHands == null)
             return;
 
-        float targetLeft = isHidden ? _opponentHandsHiddenOffsetLeft : _opponentHandsOpenOffsetLeft;
-        float targetRight = isHidden
-            ? _opponentHandsHiddenOffsetRight
-            : _opponentHandsOpenOffsetRight;
+        float targetLeft = isShowing
+            ? _opponentHandsOpenOffsetLeft
+            : _opponentHandsHiddenOffsetLeft;
+        float targetRight = isShowing
+            ? _opponentHandsOpenOffsetRight
+            : _opponentHandsHiddenOffsetRight;
 
         _opponentHandsTween?.Kill();
         _opponentHandsTween = _opponentHands.CreateTween();
@@ -237,8 +239,8 @@ public partial class UI : CanvasLayer
     {
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
         _componentDefinition = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _componentDefinition.CreateObject += OnCreateObject;
-        _componentDefinition.CancelDialog += OnCancelCreate;
+        _componentDefinition.CloseDialog += CloseComponentDefinition;
+        _componentDefinition.CancelDialog += CloseComponentDefinition;
         _modalDialogs.AddChild(_componentDefinition);
 
         _componentDefinition.SetTextureFactory(_textureFactory);
@@ -718,16 +720,7 @@ public partial class UI : CanvasLayer
         _componentDefinition.Visible = true;
     }
 
-    public event EventHandler<CreateObjectEventArgs> CreateObject;
-
-    private void OnCreateObject(object sender, CreateObjectEventArgs args)
-    {
-        _componentDefinition.Visible = false;
-        _componentDefinition.QueueFree();
-        CreateObject?.Invoke(this, args);
-    }
-
-    private void OnCancelCreate(object sender, EventArgs e)
+    private void CloseComponentDefinition(object sender, EventArgs e)
     {
         _componentDefinition.Visible = false;
         _componentDefinition.QueueFree();

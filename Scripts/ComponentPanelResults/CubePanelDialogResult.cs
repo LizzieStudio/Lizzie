@@ -13,7 +13,6 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Cube;
         _nameInput = GetNode<LineEdit>("%ItemName");
         _heightInput = GetNode<LineEdit>("%Height");
         _heightInput.TextChanged += t => UpdatePreview();

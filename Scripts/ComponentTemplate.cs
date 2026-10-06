@@ -13,11 +13,5 @@ public partial class ComponentTemplate : Resource
     public string DefinitionDialogName;
 
     [Export]
-    public string PrototypeName;
-
-    [Export]
     public string ComponentType;
-
-    [Export]
-    public string[] PrototypeNames;
 }

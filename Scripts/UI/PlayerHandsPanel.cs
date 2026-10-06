@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -9,13 +10,7 @@ public partial class PlayerHandsPanel : Panel
 
     private VBoxContainer _playerHandsContainer;
 
-    private GameObjects _gameObjects;
-
-    /// <summary>
-    /// Fired when the show/hide button is pressed.
-    /// The bool argument is <c>true</c> when the panel is now hidden, <c>false</c> when shown.
-    /// </summary>
-    public event EventHandler<bool> ShowHideToggled;
+    public event EventHandler<bool> IsShowingChanged;
 
     public override void _Ready()
     {
@@ -23,8 +18,6 @@ public partial class PlayerHandsPanel : Panel
         _showHideButton.Pressed += OnShowHideButtonPressed;
 
         _playerHandsContainer = GetNode<VBoxContainer>("%PlayerHands");
-
-        Callable.From(ConnectTable).CallDeferred();
     }
 
     public override void _EnterTree()
@@ -32,113 +25,59 @@ public partial class PlayerHandsPanel : Panel
         RecordService.Instance.Watch(this, Sync);
     }
 
-    public override void _ExitTree()
-    {
-        if (_gameObjects != null && IsInstanceValid(_gameObjects))
-            _gameObjects.TableChanged -= OnModelChanged;
-    }
-
-    // -------------------------------------------------------------------------
-    // Event handlers
-    // -------------------------------------------------------------------------
-
-    private void ConnectTable()
-    {
-        _gameObjects = ProjectService.Instance?.GameObjects;
-        if (_gameObjects != null)
-            _gameObjects.TableChanged += OnModelChanged;
-        OnModelChanged();
-    }
-
-    private void OnModelChanged() => RecordService.Instance.QueueSync(this);
-
-    // -------------------------------------------------------------------------
-    // Show/hide toggle
-    // -------------------------------------------------------------------------
-
     private void OnShowHideButtonPressed()
     {
         _isHidden = !_isHidden;
         _showHideButton.Text = _isHidden ? "<" : ">";
-        ShowHideToggled?.Invoke(this, _isHidden);
+        IsShowingChanged?.Invoke(this, !_isHidden);
     }
 
-    // -------------------------------------------------------------------------
-    // Dynamic opponent-hand rows
-    // -------------------------------------------------------------------------
+    private readonly Dictionary<int, (VBoxContainer Row, Label Label)> _rows = new();
 
     private void Sync(IRecordReader R)
     {
-        // Remove existing rows
-        foreach (var child in _playerHandsContainer.GetChildren())
-        {
-            _playerHandsContainer.RemoveChild(child);
-            child.QueueFree();
-        }
-
-        var settings = R.Single<ProjectGameSettings>();
-
+        var players = R.Single<ProjectGameSettings>().Players;
         int localSeat = R.LocalSeat();
 
-        for (int seatIndex = 0; seatIndex < settings.Players.Length; seatIndex++)
+        // the local player is shown in HandManager, not here
+        var seats = Enumerable.Range(0, players.Length).Where(s => s != localSeat).ToList();
+
+        foreach (var seat in _rows.Keys.Except(seats).ToList())
         {
-            if (seatIndex == localSeat)
-                continue; // local player is shown in HandManager, not here
+            _rows.Remove(seat, out var gone);
+            _playerHandsContainer.RemoveChild(gone.Row);
+            gone.Row.QueueFree();
+        }
 
-            var playerSettings = settings.Players[seatIndex];
-            var hand = PlayerHandService.Instance?.GetHand(seatIndex) ?? Array.Empty<VcToken>();
+        for (int i = 0; i < seats.Count; i++)
+        {
+            int seat = seats[i];
+            if (!_rows.TryGetValue(seat, out var row))
+                _rows[seat] = row = AddRow(seat);
+            _playerHandsContainer.MoveChild(row.Row, i);
 
-            // Row container for this opponent
-            var row = new VBoxContainer();
-            row.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-
-            // Player name label  e.g. "Player 2 (3 cards)"
-            var label = new Label();
-            label.Text = $"{playerSettings.Name}  ({hand.Count})";
-            label.AddThemeColorOverride("font_color", playerSettings.Color);
-            row.AddChild(label);
-
-            // HBoxContainer holding card backs
-            var hbox = new HBoxContainer();
-            hbox.CustomMinimumSize = new Vector2(0, 50);
-            hbox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-
-            foreach (var card in hand)
-            {
-                var tex = new TextureRect();
-                tex.ExpandMode = TextureRect.ExpandModeEnum.FitWidthProportional;
-                tex.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
-                tex.Texture = GetCardBackTexture(card);
-                tex.CustomMinimumSize = new Vector2(35, 50);
-                hbox.AddChild(tex);
-            }
-
-            row.AddChild(hbox);
-            _playerHandsContainer.AddChild(row);
+            var player = players[seat];
+            row.Label.Text = $"{player.Name}  ({PlayerHandService.GetHand(R, seat).Count})";
+            row.Label.AddThemeColorOverride("font_color", player.Color);
         }
     }
 
-    private static ImageTexture GetCardBackTexture(VcToken card)
+    private (VBoxContainer Row, Label Label) AddRow(int seat)
     {
-        if (card.BackTexture == null)
-            return null;
+        var row = new VBoxContainer();
+        _playerHandsContainer.AddChild(row);
+        row.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 
-        var fullImage = card.BackSprite;
-        if (fullImage == null)
-            return null;
+        var label = new Label();
+        row.AddChild(label);
 
-        if (fullImage.IsCompressed())
-            fullImage.Decompress();
+        var hand = new HandRow { Back = true };
+        row.AddChild(hand);
+        hand.Seat = seat;
+        hand.CustomMinimumSize = new Vector2(0, 50);
+        hand.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 
-        int hframes = Math.Max(1, card.BackHframes);
-        int vframes = Math.Max(1, card.BackVframes);
-        int frameW = fullImage.GetWidth() / hframes;
-        int frameH = fullImage.GetHeight() / vframes;
-        int col = card.BackFrame % hframes;
-        int row = card.BackFrame / hframes;
-        var region = new Rect2I(col * frameW, row * frameH, frameW, frameH);
-        var frameImage = fullImage.GetRegion(region);
-        return ImageTexture.CreateFromImage(frameImage);
+        return (row, label);
     }
 
     public override void _Process(double delta) { }

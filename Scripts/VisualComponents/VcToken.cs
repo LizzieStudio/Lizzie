@@ -65,19 +65,18 @@ public partial class VcToken : VisualComponentBase
     private Texture2D _faceTexture = new ImageTexture();
     private Texture2D _backTexture;
 
-    private Texture2D FaceTexture
+    public Texture2D FaceTexture
     {
         get => _faceTexture;
-        set
+        private set
         {
             _faceTexture = value;
 
             if (_mainMesh != null && value != null)
                 _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, FaceMaterial(value));
+            TexturesChanged?.Invoke();
         }
     }
-
-    public Image FaceSprite => FaceTexture.GetImage();
 
     public Texture2D BackTexture
     {
@@ -87,10 +86,14 @@ public partial class VcToken : VisualComponentBase
             _backTexture = value;
             if (_mainMesh != null && value != null)
                 _mainMesh.SetSurfaceOverrideMaterial(BackSurface, FaceMaterial(value));
+            TexturesChanged?.Invoke();
         }
     }
 
-    public Image BackSprite => BackTexture.GetImage();
+    /// <summary>
+    /// Called when the face or back texture is changes.
+    /// </summary>
+    public event Action TexturesChanged;
 
     public override void _Ready()
     {
@@ -536,7 +539,6 @@ public partial class VcToken : VisualComponentBase
         BackTexture = back;
         _frontTextureGenerated = true;
         _backTextureGenerated = true;
-        TextureChanged = true;
         MapFrontTexture();
         MapBackTexture();
     }
@@ -1112,8 +1114,6 @@ public partial class VcToken : VisualComponentBase
 
         TextureReady = _frontTextureGenerated && _backTextureGenerated;
 
-        TextureChanged = true;
-
         MapFrontTexture();
     }
 
@@ -1205,7 +1205,6 @@ public partial class VcToken : VisualComponentBase
         BackTexture = t;
 
         TextureReady = _frontTextureGenerated && _backTextureGenerated;
-        TextureChanged = true;
 
         MapBackTexture();
     }

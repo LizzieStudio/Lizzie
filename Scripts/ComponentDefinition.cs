@@ -102,33 +102,20 @@ public partial class ComponentDefinition : Window
             if (string.IsNullOrEmpty(result.BaseName))
                 result = result with { BaseName = CurName };
 
-            CreateObjectEventArgs e = new()
+            var prototype = new Prototype
             {
-                ComponentType = r.ComponentType,
-                Params = result,
-                PrototypeRef = Snowport.Clock.CreateTag(),
-                DataSet = r.DataSet,
-                MultipleCreateMode = r.MultipleCreateMode,
-                WidthHint = r.WidthHint,
-                HeightHint = r.HeightHint,
+                Id = Snowport.Clock.CreateTag(),
+                Parameters = result,
+                Name = !string.IsNullOrEmpty(result.ComponentName)
+                    ? result.ComponentName
+                    : $"Unnamed {result.ComponentType}",
             };
+            RecordService.Instance.Write(prototype);
 
-            var cd = _components.First(x => x.ComponentName == CurName);
-
-            if (
-                cd.PrototypeNames != null
-                && cd.PrototypeNames.Length > 0
-                && r.PrototypeIndex < cd.PrototypeNames.Length
-            )
-            {
-                e.PrototypeName = cd.PrototypeNames[r.PrototypeIndex];
-            }
-            else
-            {
-                e.PrototypeName = cd.PrototypeName;
-            }
-
-            CreateObject?.Invoke(this, e);
+            EventBus.Instance.Publish(
+                new SpawnPrototypeEvent { PrototypeRef = prototype.Id, AllRows = true }
+            );
+            CloseDialog?.Invoke(this, EventArgs.Empty);
         }
         else
         {
@@ -252,7 +239,6 @@ public partial class ComponentDefinition : Window
         return null;
     }
 
-    public event EventHandler<CreateObjectEventArgs> CreateObject;
     public event EventHandler<EventArgs> CancelDialog;
     public event EventHandler<EventArgs> CloseDialog;
 
@@ -296,20 +282,4 @@ public partial class ComponentDefinition : Window
         _createButton.Visible = false;
         buttonPanel.Visible = false;
     }
-}
-
-public class CreateObjectEventArgs : EventArgs
-{
-    public ComponentParameters Params { get; set; }
-    public VisualComponentBase.VisualComponentType ComponentType { get; set; }
-
-    public string PrototypeName { get; set; }
-
-    public SnowTag PrototypeRef { get; set; }
-
-    public DataSet DataSet { get; set; }
-
-    public bool MultipleCreateMode { get; set; }
-    public float WidthHint { get; set; }
-    public float HeightHint { get; set; }
 }

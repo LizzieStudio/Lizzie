@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
 using Godot;
 
 public partial class GameController : Node3D
@@ -23,7 +21,6 @@ public partial class GameController : Node3D
 
         _uiController = GetNode<UI>("UI");
         _uiController.SceneModeChange += OnSceneModeChange;
-        _uiController.CreateObject += OnCreateObject;
         _uiController.SetGameController(this);
 
         EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawnPrototype);
@@ -39,35 +36,6 @@ public partial class GameController : Node3D
         _uiController.UpdateHoveredName(e.Component);
     }
 
-    private void OnCreateObject(object sender, CreateObjectEventArgs args)
-    {
-        //Add to Prototype Manifest if it's not already there
-        ProjectService.Instance.AddPrototypeToManifest(args);
-
-        var components = new List<(VisualComponentBase, Vector3)>();
-
-        if (args.MultipleCreateMode)
-        {
-            var mode = args.Params is PrintedParameters pp ? pp.Mode : VcToken.TokenBuildMode.Quick;
-            if (mode == VcToken.TokenBuildMode.Grid)
-            {
-                SpawnGridMultiples(args, components);
-            }
-            else
-            {
-                SpawnDataSetMultiples(args, components);
-            }
-        }
-        else
-        {
-            var sc = SingleComponentSpawn(args, -1, SnowTag.Empty);
-            if (sc != null)
-                components.Add((sc, Vector3.Zero));
-        }
-
-        _mainScene.EnterSpawnMode(components);
-    }
-
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
         var prototype = RecordService.Instance.GetIncludingDeleted<Prototype>(e.PrototypeRef);
@@ -77,88 +45,49 @@ public partial class GameController : Node3D
             return;
         }
 
-        var scenePath = Utility.ComponentTypeToScenePath(prototype.Type, prototype.Parameters);
-        if (string.IsNullOrEmpty(scenePath))
+        var components = new List<(VisualComponentBase, Vector3)>();
+
+        if (
+            e.AllRows
+            && prototype.Parameters is DieParameters { Mode: VcToken.TokenBuildMode.Template } die
+            && RecordService.Instance.Get<DataSet>(die.Dataset) != null
+        )
         {
-            GD.PrintErr($"SpawnPrototype: could not resolve scene path for {prototype.Type}");
-            return;
+            SpawnRows(prototype, die.Dataset, die.Size / 10f, components);
+        }
+        else
+        {
+            var component = SingleComponentSpawn(prototype, e.DataSetRowIndex, e.DataSetRowId);
+            if (component != null)
+                components.Add((component, Vector3.Zero));
         }
 
-        var args = new CreateObjectEventArgs
-        {
-            ComponentType = prototype.Type,
-            Params = prototype.Parameters,
-            PrototypeRef = prototype.Id,
-            PrototypeName = scenePath,
-        };
-
-        var component = SingleComponentSpawn(args, e.DataSetRowIndex, e.DataSetRowId);
-        if (component != null)
-            _mainScene.EnterSpawnMode([(component, Vector3.Zero)]);
+        if (components.Count > 0)
+            _mainScene.EnterSpawnMode(components);
     }
 
-    private void SpawnGridMultiples(
-        CreateObjectEventArgs args,
+    private void SpawnRows(
+        Prototype prototype,
+        SnowTag dataset,
+        float size,
         List<(VisualComponentBase, Vector3)> components
     )
     {
-        var printed = args.Params as PrintedParameters;
-        var gridRows = printed?.GridRows ?? 0;
-        var gridCols = printed?.GridCols ?? 0;
-        var cardCount = printed?.GridCount ?? 0;
-
-        float w = args.WidthHint * 1.5f;
-        float h = args.HeightHint * 1.5f;
-
-        //we map the tokens into as much of a square as possible, regardless of the grid dims.
-        int cols = (int)Math.Ceiling(Math.Sqrt(cardCount));
-        int ci = 0;
-        int cj = 0;
-
-        int cardNum = 0;
-
-        for (int i = 0; i < gridRows; i++)
-        for (int j = 0; j < gridCols; j++)
-        {
-            var mc = SingleComponentSpawn(args, cardNum, SnowTag.Empty);
-
-            if (mc != null)
-                components.Add((mc, new Vector3(w * ci, 0, h * cj)));
-
-            cardNum++;
-            if (cardNum >= cardCount)
-                return;
-
-            ci++;
-            if (ci == cols)
-            {
-                ci = 0;
-                cj++;
-            }
-        }
-    }
-
-    private void SpawnDataSetMultiples(
-        CreateObjectEventArgs args,
-        List<(VisualComponentBase, Vector3)> components
-    )
-    {
-        var rows = RecordService.Instance.GetRows(args.DataSet.Id);
+        var rows = RecordService.Instance.GetRows(dataset);
         int cols = (int)Math.Ceiling(Math.Sqrt(rows.Count));
 
         int i = 0;
         int j = 0;
 
-        float w = args.WidthHint * 1.5f;
-        float h = args.HeightHint * 1.5f;
+        float spacing = size * 1.5f;
 
         foreach (var r in rows)
         {
-            var mc = SingleComponentSpawn(args, -1, r.Id);
+            var mc = SingleComponentSpawn(prototype, -1, r.Id);
 
             if (mc != null)
             {
-                components.Add((mc, new Vector3(w * i, 0, h * j)));
+                components.Add((mc, new Vector3(spacing * i, 0, spacing * j)));
                 i++;
                 if (i == cols)
                 {
@@ -170,18 +99,24 @@ public partial class GameController : Node3D
     }
 
     private VisualComponentBase SingleComponentSpawn(
-        CreateObjectEventArgs args,
+        Prototype prototype,
         int rowIndex,
         SnowTag rowId
     )
     {
-        if (RecordService.Instance.GetIncludingDeleted<Prototype>(args.PrototypeRef) == null)
+        var scenePath = Utility.ComponentTypeToScenePath(
+            prototype.Type,
+            prototype.Parameters,
+            rowIndex,
+            rowId
+        );
+        if (string.IsNullOrEmpty(scenePath))
         {
-            GD.PrintErr($"Prototype {args.PrototypeRef} not found");
+            GD.PrintErr($"SpawnPrototype: could not resolve scene path for {prototype.Type}");
             return null;
         }
 
-        VisualComponentBase component = ProjectService.Instance.SpawnComponent(args.PrototypeName);
+        VisualComponentBase component = ProjectService.Instance.SpawnComponent(scenePath);
 
         if (component == null)
         {
@@ -189,7 +124,7 @@ public partial class GameController : Node3D
             return null;
         }
 
-        component.PrototypeRef = args.PrototypeRef;
+        component.PrototypeRef = prototype.Id;
         component.DataSetRowIndex = rowIndex;
         component.DataSetRowId = rowId;
 

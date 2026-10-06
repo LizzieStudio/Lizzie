@@ -79,14 +79,11 @@ public static class DeckCommands
 
         if (R.Single<ProjectGameSettings>().EnablePlayerHands)
         {
-            var hands = PlayerHandService.Instance;
-            if (hands == null)
-                return [];
             // A player without a seat has no hand to draw into.
             int seat = R.LocalSeat();
             if (seat < 0)
                 return [];
-            return cards.Select((c, i) => hands.MovedToHand(c, seat, i, stamp));
+            return cards.Select((c, i) => PlayerHandService.MovedToHand(c, seat, i, stamp));
         }
 
         // Splayed cards land to the right of the deck and on top, in draw order.
@@ -120,7 +117,6 @@ public static class DeckCommands
         if (seats.Count == 0)
             return [];
 
-        var hands = PlayerHandService.Instance;
         var cards = R.TokensOn(deck);
         int total = (int)Math.Min((long)countPerPlayer * seats.Count, cards.Count);
         var suborder = new int[seats.Max() + 1];
@@ -129,7 +125,7 @@ public static class DeckCommands
         for (int i = 0; i < total; i++)
         {
             int seat = seats[i % seats.Count];
-            dealt.Add(hands.MovedToHand(cards[i], seat, suborder[seat]++, stamp));
+            dealt.Add(PlayerHandService.MovedToHand(cards[i], seat, suborder[seat]++, stamp));
         }
         return dealt;
     }

@@ -8,6 +8,4 @@ script = ExtResource("2_prntd")
 ComponentName = "Printed"
 Icon = ExtResource("1_prntd")
 DefinitionDialogName = "res://Scenes/ComponentPanels/printed_panel.tscn"
-PrototypeName = "res://Scenes/VisualComponents/VcToken.tscn"
 ComponentType = "Token"
-PrototypeNames = PackedStringArray("res://Scenes/VisualComponents/VcToken.tscn", "res://Scenes/VisualComponents/VcTokenCircle.tscn", "res://Scenes/VisualComponents/VcTokenHexPoint.tscn", "res://Scenes/VisualComponents/VcTokenHexFlat.tscn", "res://Scenes/VisualComponents/VcDeck.tscn")

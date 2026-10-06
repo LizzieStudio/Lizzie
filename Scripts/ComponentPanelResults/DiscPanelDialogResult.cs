@@ -13,7 +13,6 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Disc;
         _nameInput = GetNode<LineEdit>("%ItemName");
         _heightInput = GetNode<LineEdit>("%Height");
         _heightInput.TextChanged += t => UpdatePreview();

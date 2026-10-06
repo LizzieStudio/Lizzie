@@ -27,7 +27,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Die;
         _nameInput = GetNode<LineEdit>("%ComponentName");
         _diameterInput = GetNode<LineEdit>("%Diameter");
         _diameterInput.TextChanged += text => UpdatePreview();
@@ -56,7 +55,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             i++;
         }
 
-        PrototypeIndex = 1;
         UpdateQuickSidesVisibility();
     }
 
@@ -212,7 +210,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     {
         UpdateQuickSidesVisibility();
         UpdateTemplateTarget();
-        PrototypeIndex = (int)index;
         Activate();
     }
 
@@ -232,9 +229,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     public override ComponentParameters GetParams()
     {
-        MultipleCreateMode = false;
-        DataSet = null;
-
         var dia = ParamToFloat(_diameterInput.Text);
 
         var p = new DieParameters
@@ -263,12 +257,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 p = p with { Mode = VcToken.TokenBuildMode.Template };
 
                 p = p with { FrontTemplate = _frontTemplateRef, Dataset = _datasetRef };
-
-                DataSet = RecordService.Instance.Get<DataSet>(_datasetRef);
-                MultipleCreateMode = (DataSet != null);
-                WidthHint = dia / 10;
-                HeightHint = dia / 10;
-
                 break;
         }
 

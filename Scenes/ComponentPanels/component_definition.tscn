@@ -19,7 +19,6 @@ script = ExtResource("11_m15dm")
 ComponentName = "Zone"
 Icon = ExtResource("10_fr6ym")
 DefinitionDialogName = "res://Scenes/ComponentPanels/zone_panel.tscn"
-PrototypeName = "res://Scenes/VisualComponents/VcZone.tscn"
 ComponentType = "Zone"
 
 [sub_resource type="Theme" id="Theme_a3w6s"]

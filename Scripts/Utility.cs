@@ -227,15 +227,15 @@ public partial class Utility : Node
     public static string DieScene(ComponentParameters parameters)
     {
         var sides = parameters is DieParameters die
-            ? die.Sides
-            : ImmutableArray<QuickTextureField>.Empty;
+            ? (die.SideCount > 0 ? die.SideCount : die.Sides.Length)
+            : 0;
 
-        if (sides.Length == 0)
+        if (sides == 0)
             return $"res://Scenes/VisualComponents/Dice/VcD6s.tscn";
 
         string shape = string.Empty;
 
-        switch (sides.Length)
+        switch (sides)
         {
             case 4:
                 shape = "vc_d_4.tscn";

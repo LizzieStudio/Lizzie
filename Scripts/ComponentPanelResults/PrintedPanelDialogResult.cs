@@ -119,8 +119,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Token;
-
         _nameInput = GetNode<LineEdit>("%ItemName");
 
         _heightInput = GetNode<LineEdit>("%Height");
@@ -524,8 +522,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             _ => "VcToken.tscn",
         };
 
-        PrototypeIndex = shape;
-
         var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/{sceneName}");
         var vc = scene.Instantiate<VcToken>();
         return vc;
@@ -576,9 +572,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override ComponentParameters GetParams()
     {
-        MultipleCreateMode = false;
-        DataSet = null;
-
         int shape = GetEffectiveShape();
 
         float height = ParamToFloat(_heightInput.Text);
@@ -626,8 +619,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                     Mode = VcToken.TokenBuildMode.QuickDeck,
                 };
                 spawnAsDeck = true;
-                WidthHint = width / 10f;
-                HeightHint = height / 10f;
                 break;
 
             case 2:
@@ -651,11 +642,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                     GridSingleBack = _gridSingleBack.ButtonPressed,
                 };
                 if (_gridCount > 1)
-                {
                     spawnAsDeck = true;
-                    WidthHint = width / 10f;
-                    HeightHint = height / 10f;
-                }
                 break;
 
             case 4:
@@ -666,27 +653,16 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                     BackTemplate = _backTemplateRef,
                     Dataset = _datasetRef,
                 };
-                DataSet = RecordService.Instance.Get<DataSet>(_datasetRef);
-                if (DataSet != null)
-                {
+                if (RecordService.Instance.Get<DataSet>(_datasetRef) != null)
                     spawnAsDeck = true;
-                    WidthHint = width / 10f;
-                    HeightHint = height / 10f;
-                }
                 break;
         }
 
         d = d with { BackBgColor = _quickBackgroundColor2.Color, BackFontSize = 24 };
 
         if (spawnAsDeck)
-        {
-            PrototypeIndex = 4;
-            ComponentType = VisualComponentBase.VisualComponentType.Deck;
             return d;
-        }
 
-        PrototypeIndex = shape;
-        ComponentType = VisualComponentBase.VisualComponentType.Token;
         return d.CloneAs<TokenParameters>();
     }
 

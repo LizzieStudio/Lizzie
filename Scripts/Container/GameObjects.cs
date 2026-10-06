@@ -21,16 +21,6 @@ public partial class GameObjects : Node
     [Export(PropertyHint.Range, "1,30,1,suffix:cm/s")]
     public float DropSpeed { get; set; } = 10f;
 
-    [Signal]
-    public delegate void CameraActivationEventHandler(bool cameraActivated);
-
-    /// <summary>
-    /// Raised the frame after components change, once they have synced and the table's
-    /// caches are rebuilt. Signals to views to update their state.
-    /// </summary>
-    [Signal]
-    public delegate void TableChangedEventHandler();
-
     private int _stackingUpdateRequired;
 
     // set when a component changes, and handled once at the start of the next frame
@@ -188,7 +178,6 @@ public partial class GameObjects : Node
             _tableChanged = false;
             RebuildContainerCaches();
             QueueStackingUpdate();
-            EmitSignal(SignalName.TableChanged);
         }
 
         ProcessActiveDrags();
@@ -969,7 +958,7 @@ public partial class GameObjects : Node
 
         for (int i = 0; i < toHand.Count; i++)
             records.Add(
-                PlayerHandService.Instance.MovedToHand(ComponentState.Of(toHand[i]), seat, i, stamp)
+                PlayerHandService.MovedToHand(ComponentState.Of(toHand[i]), seat, i, stamp)
             );
 
         for (int i = 0; i < toBoard.Count; i++)

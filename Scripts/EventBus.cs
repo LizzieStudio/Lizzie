@@ -233,22 +233,26 @@ public class ModalDialogOpenedEvent : IEvent { }
 /// </summary>
 public class ModalDialogClosedEvent : IEvent { }
 
+/// <summary>
+/// Picks up a new component of a prototype, for the local player to place.
+/// </summary>
 public class SpawnPrototypeEvent : IEvent
 {
     public SnowTag PrototypeRef { get; set; }
     public int DataSetRowIndex { get; set; } = -1;
     public SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
+
+    /// <summary>
+    /// Spawns one component per row of the prototype's dataset, where it has one per row,
+    /// rather than a single component.
+    /// </summary>
+    public bool AllRows { get; set; }
 }
 
 public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IEvent
 {
     public VisualComponentBase Component { get; set; } = component;
 }
-
-/// <summary>
-/// Published on a client when it has connected to an existing game.
-/// </summary>
-public class LocalPlayerJoinedGameEvent : IEvent { }
 
 /// <summary>
 /// Published when the local player should be prompted to pick a player position.

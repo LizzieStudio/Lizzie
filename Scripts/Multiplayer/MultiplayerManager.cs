@@ -209,8 +209,6 @@ public partial class MultiplayerManager : Node
         RpcId(1, nameof(RegisterPlayer), _localPlayerId);
 
         EmitSignal(SignalName.PlayersChanged);
-
-        EventBus.Instance?.Publish<LocalPlayerJoinedGameEvent>();
     }
 
     private void OnConnectionFailed()

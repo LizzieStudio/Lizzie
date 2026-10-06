@@ -1,31 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
-using Godot;
 
 /// <summary>
-/// A player hand is a container which tracks which cards are displayed on player's screens.
+/// Reads and fills the player hands.
 /// </summary>
-public partial class PlayerHandService : Node
+public static class PlayerHandService
 {
-    private static PlayerHandService _instance;
-    public static PlayerHandService Instance => _instance;
-
-    public override void _EnterTree()
-    {
-        _instance = this;
-    }
-
-    public override void _ExitTree()
-    {
-        if (_instance == this)
-            _instance = null;
-    }
-
     /// <summary>
     /// The card moved into a seat's hand at the top of its order.
     /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
-    public ComponentState MovedToHand(
+    public static ComponentState MovedToHand(
         ComponentState card,
         int seatIndex,
         int suborder,
@@ -39,21 +24,16 @@ public partial class PlayerHandService : Node
 
     /// <summary>
     /// Returns the cards in a given seat's hand, ordered by their ZOrder.
-    /// Returns an empty list for observer seats or when the scene is not ready.
+    /// Returns an empty list for observer seats.
     /// </summary>
-    public IReadOnlyList<VcToken> GetHand(int seatIndex)
+    public static IReadOnlyList<ComponentState> GetHand(IRecordReader R, int seatIndex)
     {
-        if (seatIndex < 0)
-            return System.Array.Empty<VcToken>();
-
-        var gameObjects = ProjectService.Instance?.GameObjects;
-        if (gameObjects == null)
-            return System.Array.Empty<VcToken>();
-
-        var container = RecordService.Instance.HandOf(seatIndex);
+        var container = R.HandOf(seatIndex);
         if (container == SnowTag.Empty)
-            return System.Array.Empty<VcToken>();
+            return [];
 
-        return gameObjects.GetContainedComponents(container).OfType<VcToken>().ToList();
+        return R.Get<ComponentState>(s => s.ContainerRef == container)
+            .OrderBy(s => s.ZOrder)
+            .ToList();
     }
 }

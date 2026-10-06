@@ -528,28 +528,6 @@ public partial class ProjectService : Node
         return fold;
     }
 
-    public void AddPrototypeToManifest(CreateObjectEventArgs args)
-    {
-        if (CurrentProject == null)
-            return;
-
-        if (!R.Is<Prototype>(args.PrototypeRef))
-        {
-            var name = !string.IsNullOrEmpty(args.Params?.ComponentName)
-                ? args.Params.ComponentName
-                : $"Unnamed {args.ComponentType}";
-
-            RecordService.Instance.Write(
-                new Prototype
-                {
-                    Id = args.PrototypeRef,
-                    Parameters = args.Params,
-                    Name = name,
-                }
-            );
-        }
-    }
-
     private readonly Dictionary<SnowTag, Task> _inFlightFetches = new();
 
     public async Task<Image> FetchImageAsync(Asset asset)
