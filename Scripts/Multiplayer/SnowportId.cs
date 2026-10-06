@@ -97,6 +97,8 @@ public class Snowport
     /// </summary>
     public SnowTag CreateTag()
     {
+        if (_tagCounter > 0x3FFFFFF)
+            throw new InvalidOperationException("This source has run out of SnowTags.");
         var tag = (source << 26) | _tagCounter;
         _tagCounter++;
         return new SnowTag(tag);
