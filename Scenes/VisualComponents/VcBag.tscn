@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://42w15c1u0733"]
 
 [ext_resource type="Script" uid="uid://b8plyiyorugjs" path="res://Scripts/VisualComponents/VcBag.cs" id="1_7onit"]
-[ext_resource type="ArrayMesh" uid="uid://b8gu6yva74y2g" path="res://cup_mesh.tres" id="2_7onit"]
+[ext_resource type="ArrayMesh" uid="uid://b8gu6yva74y2g" path="res://Scenes/VisualComponents/cup_mesh.tres" id="2_7onit"]
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="4_bojv1"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_7dijs"]

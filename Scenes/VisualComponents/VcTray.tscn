@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b4ger6dcqlo54"]
 
 [ext_resource type="Script" uid="uid://c286bvou8j8yd" path="res://Scripts/VisualComponents/VcTray.cs" id="1_vtnvu"]
-[ext_resource type="ArrayMesh" uid="uid://bwswocbm2vgi3" path="res://tray_mesh.tres" id="2_vtnvu"]
+[ext_resource type="ArrayMesh" uid="uid://bwswocbm2vgi3" path="res://Scenes/VisualComponents/tray_mesh.tres" id="2_vtnvu"]
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="4_o8ta0"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
