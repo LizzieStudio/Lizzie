@@ -1,9 +1,0 @@
-[gd_scene load_steps=3 format=3 uid="uid://03q3jrh1f5sd"]
-
-[ext_resource type="PackedScene" uid="uid://c5065g1fihxva" path="res://Scenes/VisualComponents/Dice/d6a.glb" id="1_v32jt"]
-[ext_resource type="ArrayMesh" uid="uid://bew2kcc2b0hul" path="res://Scenes/VisualComponents/Dice/d6a.tres" id="2_u1tdw"]
-
-[node name="d6a" instance=ExtResource("1_v32jt")]
-
-[node name="Cube" parent="." index="0"]
-mesh = ExtResource("2_u1tdw")
