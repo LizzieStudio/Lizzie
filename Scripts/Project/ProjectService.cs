@@ -255,6 +255,21 @@ public partial class ProjectService : Node
         RecordService.Instance.Machinery().FlushBulkLoad();
     }
 
+    /// <summary>
+    /// Cleans up after a player who is gone.
+    /// <list type="bullet">
+    /// <item>closes and reverses their open gestures</item>
+    /// <item>deletes their selection</item>
+    /// </list>
+    /// </summary>
+    public void AbandonPlayer(byte source)
+    {
+        EventSynchronizer.Instance?.AbandonGroups(source);
+        RecordService.Instance.WriteAdmin(
+            R.Get<Selection>(s => s.Player == source).Select(s => s with { Deleted = true })
+        );
+    }
+
     public bool SaveProject(Project project)
     {
         // an unnamed project will not autosave

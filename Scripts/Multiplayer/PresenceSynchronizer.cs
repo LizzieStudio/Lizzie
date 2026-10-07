@@ -113,20 +113,6 @@ public partial class PresenceSynchronizer : Node
         WriteSeats(ImmutableDictionary<byte, int>.Empty.Add(source, seated ? current : 0));
     }
 
-    /// <summary>
-    /// After leaving multiplayer, drops everyone else's seat.
-    /// The local player keeps theirs, under their solo source.
-    /// </summary>
-    public void KeepOnlyLocalSeat(byte previousSource)
-    {
-        var seats = R.Single<Seating>().Seats;
-        WriteSeats(
-            seats.TryGetValue(previousSource, out var seat)
-                ? ImmutableDictionary<byte, int>.Empty.Add(Snowport.Clock.source, seat)
-                : ImmutableDictionary<byte, int>.Empty
-        );
-    }
-
     /// <summary>On the server, free the seat held by a disconnected peer's source.</summary>
     public void ReleaseSeatForPeer(int peerId)
     {

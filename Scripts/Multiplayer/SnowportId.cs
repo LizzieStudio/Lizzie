@@ -44,7 +44,7 @@ public class Snowport
     /// <summary>
     /// Returns a clock under a new source that keeps the game time, hybrid clock, and tag counter.
     /// Use this instead of <c>new Snowport(source)</c> when the local player switches source
-    /// while keeping the current table (hosting or disconnecting).
+    /// while keeping the current table (hosting).
     /// </summary>
     public Snowport WithSource(byte newSource)
     {

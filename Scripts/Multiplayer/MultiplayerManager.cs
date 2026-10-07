@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
@@ -143,6 +144,14 @@ public partial class MultiplayerManager : Node
     /// </summary>
     public void Disconnect()
     {
+        var wasHost = _isServer;
+        var wasGuest = _isNetworked && !_isServer;
+        // We effectively need to "disconnect" all peers, even though we're the ones disconnecting.
+        var guests = _players
+            .Values.Where(p => !p.IsLocal && p.Source != Snowport.AdminSource)
+            .Select(p => p.Source)
+            .ToList();
+
         if (_peer != null)
         {
             _peer.Close();
@@ -155,19 +164,19 @@ public partial class MultiplayerManager : Node
         _players.Clear();
         _localPlayerId = 0;
 
-        if (EventSynchronizer.Instance?.Joining == true)
+        if (wasGuest)
         {
-            EventSynchronizer.Instance.CancelJoin();
+            // Leaving someone else's game clears the table.
+            EventSynchronizer.Instance?.CancelJoin();
             Snowport.Clock = new Snowport(Snowport.HostSource);
             ProjectService.Instance?.ReplaceWithNewGame();
         }
-        else
+        else if (wasHost)
         {
-            var previousSource = Snowport.Clock.source;
-            Snowport.Clock = Snowport.Clock.WithSource(Snowport.HostSource);
-            EventSynchronizer.Instance?.Clear();
-            // Back to solo, alone at the table.
-            PresenceSynchronizer.Instance?.KeepOnlyLocalSeat(previousSource);
+            // Leaving your own game keeps the table.
+            foreach (var source in guests)
+                ProjectService.Instance?.AbandonPlayer(source);
+            PresenceSynchronizer.Instance?.SeatSoloPlayer();
         }
 
         GD.Print("Disconnected from multiplayer");
@@ -191,9 +200,8 @@ public partial class MultiplayerManager : Node
         PresenceSynchronizer.Instance?.ReleaseSeatForPeer(playerId);
         _players.Remove(playerId, out var player);
 
-        // This closes any lingering drag & drop events after a disconnect.
         if (IsServer && player != null)
-            EventSynchronizer.Instance?.AbandonGroups(player.Source);
+            ProjectService.Instance?.AbandonPlayer(player.Source);
 
         EmitSignal("PlayerDisconnected", playerId);
     }
