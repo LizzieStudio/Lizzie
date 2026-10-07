@@ -36,7 +36,7 @@ The event-sourced synchronizer that fires events locally and on all peers.
   `EventLog` and broadcasts the serialized event to all clients.
 - Each `ReplicatedStore` subscribes to `Applied` and merges the relevant effects
   into the current `Project` with last-writer-wins by `SnowportId`.
-- On join, `RequestCatchup()` asks the host to `SendStateTo` the joiner: a single snapshot
+- On join, `RequestCatchup()` asks the host to `SendStateTo` the joiner: a single
   event of every store's current state, followed by any backlog events after the cutoff index.
 - `Project.Filename` is intentionally **not** synced — a joiner starts unnamed and must Save As
   before its machine will write the project to disk.

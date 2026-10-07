@@ -23,22 +23,6 @@
           {
             "properties": {
               "$type": {
-                "const": "ActiveGameStateRef"
-              },
-              "gameStateId": true,
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "id"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "properties": {
-              "$type": {
                 "const": "Asset"
               },
               "type": {
@@ -173,69 +157,6 @@
                       ]
                     }
                   },
-                  "additionalProperties": false
-                }
-              },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "id"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "properties": {
-              "$type": {
-                "const": "GameState"
-              },
-              "parent": true,
-              "name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "description": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "upserts": {
-                "type": "array",
-                "items": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "properties": {
-                    "prototypeRef": true,
-                    "x": {
-                      "type": "integer"
-                    },
-                    "z": {
-                      "type": "integer"
-                    },
-                    "rotation": true,
-                    "zOrder": {
-                      "$ref": "#/properties/records/items/anyOf/2/properties/zOrder"
-                    },
-                    "dataSetRowIndex": {
-                      "type": "integer"
-                    },
-                    "dataSetRowId": true,
-                    "containerRef": true,
-                    "id": true,
-                    "deleted": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "id"
-                  ],
                   "additionalProperties": false
                 }
               },
@@ -790,7 +711,7 @@
                       "quickCardData": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/quickCardData/items"
+                          "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/quickCardData/items"
                         }
                       },
                       "frontGridImageKey": true,

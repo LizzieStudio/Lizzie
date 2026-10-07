@@ -5,7 +5,7 @@ using Godot;
 /// <summary>
 /// <para>An item in the menu of a <see cref="CommandMenuButton"/>.</para>
 ///
-/// A <see cref="Submenu"/>, like Restore Snapshot, shows as a submenu.
+/// A <see cref="Submenu"/> shows as a submenu.
 /// In the editor it names itself after its command, like "ProjectSave", unless you rename it.
 /// </summary>
 /// <remarks>

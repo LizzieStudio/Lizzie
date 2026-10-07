@@ -109,22 +109,6 @@ public class SaveCompactionTests
         ]);
 
     [Fact]
-    public void SnapshotKeepsWhatItsComponentsReferToButNotTheirTombstones() =>
-        AssertKept(
-            [
-                new GameState
-                {
-                    Id = Tag(1),
-                    Upserts = [Component(2) with { PrototypeRef = Tag(3) }],
-                },
-                Component(2, deleted: true),
-                new Prototype { Id = Tag(3), Deleted = true },
-            ],
-            1,
-            3
-        );
-
-    [Fact]
     public void TagsBecomeAdminTagsFromOneInOrder()
     {
         var json = SaveCompaction.Serialize(
@@ -214,8 +198,7 @@ public class SaveCompactionTests
                     PrototypeRef = Tag(3, source: 2),
                     ZOrder = new ZOrder(ZTarget.Bottom, 1, Id(77)),
                 },
-                new Prototype { Id = Tag(3, source: 2), Name = "Card" },
-                new GameState { Id = Tag(12), Upserts = [Component(8)] }
+                new Prototype { Id = Tag(3, source: 2), Name = "Card" }
             )
         );
 

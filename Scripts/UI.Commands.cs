@@ -1,4 +1,3 @@
-using System.Linq;
 using Godot;
 
 /// <summary>
@@ -39,50 +38,6 @@ public partial class UI
         Caption = "Save Project",
         Keys = [Shortcuts.Ctrl(Key.S)],
         SideEffects = _ => _instance?.Save(),
-    };
-
-    public static readonly GlobalCommand CreateSnapshot = new()
-    {
-        Name = new("snapshot.create"),
-        Icon = CommandIcons.CreateSnapshot,
-        Caption = "Create Snapshot",
-        SideEffects = _ => _instance?.ShowSaveSnapshotDialog(),
-    };
-
-    /// <summary>Saves the table over the active snapshot.</summary>
-    public static readonly GlobalCommand UpdateSnapshot = new()
-    {
-        Name = new("snapshot.update"),
-        Icon = CommandIcons.UpdateSnapshot,
-        Caption = "Update Snapshot",
-        Enabled = R => R.Get<GameState>(R.Single<ActiveGameStateRef>().GameStateId) != null,
-        Effects = R =>
-            ProjectService.Instance.UpdateGameStateEffects(
-                R.Single<ActiveGameStateRef>().GameStateId
-            ),
-    };
-
-    /// <summary>Offers each snapshot to switch to.</summary>
-    public static readonly Submenu RestoreSnapshot = new()
-    {
-        Name = new("snapshot.restore"),
-        Icon = CommandIcons.RestoreSnapshot,
-        Caption = "Restore Snapshot",
-        Items = R =>
-            OrderedGameStates(R)
-                .Select(s => new GlobalCommand
-                {
-                    Caption = GameStateLabel(R, s.State),
-                    Effects = _ => ProjectService.Instance.SwitchGameStateEffects(s.State.Id),
-                }),
-    };
-
-    public static readonly GlobalCommand ManageSnapshots = new()
-    {
-        Name = new("snapshot.manage"),
-        Icon = CommandIcons.ManageSnapshots,
-        Caption = "Manage Snapshots...",
-        SideEffects = _ => _instance?.ShowSnapshotManager(),
     };
 
     public static readonly GlobalCommand OpenMultiplayer = new()

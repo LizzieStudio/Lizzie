@@ -45,11 +45,6 @@ public static class CommandIcons
     public const string Open = Folder + "folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
     public const string Save = Folder + "save.svg";
 
-    public const string CreateSnapshot = Folder + "add_a_photo.svg";
-    public const string UpdateSnapshot = Folder + "photo_camera.svg";
-    public const string RestoreSnapshot = Folder + "restore_page.svg";
-    public const string ManageSnapshots = Folder + "photo_library.svg";
-
     public const string Multiplayer = Folder + "group.svg";
     public const string ChangeSeat = Folder + "seating.svg";
     public const string Templates = Folder + "design_services.svg";

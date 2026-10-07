@@ -510,20 +510,6 @@ public static class CommandViews
             (uint)GodotObject.ConnectFlags.OneShot // our callback is only called once
         );
 
-    /// <summary>
-    /// Makes everything under <paramref name="node"/> a view with nothing to act on,
-    /// where undo walks through <paramref name="undoScope"/>, until it leaves the tree.
-    /// </summary>
-    public static void Attach(Node node, Func<Replicated, bool> undoScope) =>
-        Attach(node, new ScopeView(undoScope));
-
-    private sealed class ScopeView(Func<Replicated, bool> undoScope) : ICommandView
-    {
-        public WatchableValue<SnowTag> SelectionScope { get; } = new();
-
-        public bool UndoScope(Replicated record) => undoScope(record);
-    }
-
     /// <summary>The view for the viewport's focused control, or null if it has none.</summary>
     public static ICommandView Find(Viewport viewport) =>
         Of(viewport.GuiGetFocusOwner() ?? (Node)viewport);

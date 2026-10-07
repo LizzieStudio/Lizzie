@@ -62,25 +62,6 @@ CommandName = "project.save"
 [node name="Divider1" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1451458939]
 script = ExtResource("cmd_divider")
 
-[node name="SnapshotCreate" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=821654255]
-script = ExtResource("cmd_item")
-CommandName = "snapshot.create"
-
-[node name="SnapshotUpdate" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1017551211]
-script = ExtResource("cmd_item")
-CommandName = "snapshot.update"
-
-[node name="SnapshotRestore" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=2063996971]
-script = ExtResource("cmd_item")
-CommandName = "snapshot.restore"
-
-[node name="SnapshotManage" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1745440306]
-script = ExtResource("cmd_item")
-CommandName = "snapshot.manage"
-
-[node name="Divider2" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1351317784]
-script = ExtResource("cmd_divider")
-
 [node name="AppMultiplayer" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1537379602]
 script = ExtResource("cmd_item")
 CommandName = "app.multiplayer"

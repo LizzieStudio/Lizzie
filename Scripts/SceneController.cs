@@ -66,7 +66,6 @@ public partial class SceneController : Node3D, ICommandView
 
     /// <summary>
     /// The table undoes its components, and what's selected on it.
-    /// A snapshot switch is included through the components it writes.
     /// </summary>
     public bool UndoScope(Replicated record) =>
         record switch
