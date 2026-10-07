@@ -12,8 +12,10 @@ public readonly record struct CommandName(string Value);
 
 /// <summary>
 /// How many targets a <see cref="RecordCommand{T}"/> can act on.
-/// When <see cref="One"/> is used, the Command won't appear when multiple targets are selected.
-/// Useful for Commands like "Edit Prototype", where multiple targets would be ambiguous.
+/// <list type="bullet">
+/// <item><see cref="One"/>: the Command <b>won't</b> appear when multiple applicable targets are selected.</item>
+/// <item><see cref="Many"/>: the Command <b>will always</b> appear when applicable targets are selected.</item>
+/// </list>
 /// </summary>
 public enum TargetCount
 {
@@ -297,6 +299,7 @@ public sealed class RecordCommand<T> : Command
     /// </summary>
     public AppliesToDelegate AppliesTo { get; init; } = (_, _) => true;
 
+    /// <inheritdoc cref="TargetCount" />
     public TargetCount Count { get; init; } = TargetCount.Many;
 
     /// <summary>
