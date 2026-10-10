@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class HandManager : Panel
@@ -16,12 +17,17 @@ public partial class HandManager : Panel
 
     private HandRow _hand;
 
+    [Export]
     private Texture2D _openIcon;
+
+    [Export]
     private Texture2D _closeIcon;
 
-    // Drag-preview sprite shown while a 3D card is dragged over the hand panel
+    // The scene's drag preview, which is duplicated when creating previews of held cards.
     private TextureRect _dragPreview;
-    private VcToken _dragPreviewCard;
+
+    // A preview for each card held over a hand, with the card and side it shows.
+    private readonly List<(TextureRect Rect, VcToken Card, bool Back)> _previews = new();
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -37,24 +43,9 @@ public partial class HandManager : Panel
 
         GetTree().Root.SizeChanged += OnWindowResized;
 
-        var handContainer = GetNode<HBoxContainer>("%HandContainer");
-        _hand = new HandRow();
-        handContainer.AddChild(_hand);
-        _hand.AddThemeConstantOverride("separation", handContainer.GetThemeConstant("separation"));
-
-        _openIcon = ResourceLoader.Load<Texture2D>(OpenIcon);
-        _closeIcon = ResourceLoader.Load<Texture2D>(CloseIcon);
-
-        _dragPreview = new TextureRect
-        {
-            ExpandMode = TextureRect.ExpandModeEnum.FitWidthProportional,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspect,
-            Size = new Vector2(80, 120),
-            Visible = false,
-            MouseFilter = MouseFilterEnum.Ignore,
-            ZIndex = 10,
-        };
-        AddChild(_dragPreview);
+        _hand = GetNode<HandRow>("%HandRow");
+        _dragPreview = GetNode<TextureRect>("%DragPreview");
+        _previews.Add((_dragPreview, null, false));
     }
 
     public override void _EnterTree()
@@ -95,9 +86,6 @@ public partial class HandManager : Panel
         }
     }
 
-    private const string OpenIcon = "res://Textures/UI/arrowup16.png";
-    private const string CloseIcon = "res://Textures/UI/arrowdown16.png";
-
     private void TogglePanel()
     {
         _currentlyClosed = !_currentlyClosed;
@@ -119,39 +107,55 @@ public partial class HandManager : Panel
         _closedPosition = _openPosition + Size.Y - 50;
     }
 
-    public float HandY => _currentlyClosed ? _closedPosition : _openPosition;
+    private float HandY => _currentlyClosed ? _closedPosition : _openPosition;
 
     #region Drag-over preview (called from GameObjects during 3D drag)
 
     /// <summary>
-    /// Called by GameObjects while a VcToken is being dragged and the mouse Y is over the hand panel.
-    /// Shows a 2D preview image under the mouse cursor inside the panel.
-    /// Pass null to hide the preview.
+    /// Shows <paramref name="cards"/> as they would be in <paramref name="row"/>, held around <paramref name="point"/>.
     /// </summary>
-    public void ShowDragPreview(VcToken card, Vector2 globalMousePos)
+    /// <param name="row">The hand under the mouse, which gives the cards their scale.</param>
+    /// <param name="point">The mouse point.</param>
+    public void ShowDragPreview(IReadOnlyList<ComponentState> cards, HandRow row, Vector2 point)
     {
-        if (card == null)
+        var pointer = GetGlobalTransformWithCanvas().AffineInverse() * point;
+        for (int i = 0; i < cards.Count; i++)
         {
-            HideDragPreview();
-            return;
-        }
+            if (i == _previews.Count)
+            {
+                var copy = (TextureRect)_dragPreview.Duplicate();
+                AddChild(copy);
+                _previews.Add((copy, null, false));
+            }
+            var s = cards[i];
+            var card = ProjectService.Instance.GameObjects.GetComponent(s.Id) as VcToken;
+            var (rect, shown, shownBack) = _previews[i];
 
-        if (card != _dragPreviewCard)
-        {
-            _dragPreviewCard = card;
-            _dragPreview.Texture = HandCard.CardTexture(card, back: false);
-        }
+            // A card can be flipped while it's held.
+            bool back = HandCard.IsFaceDown(s);
+            if (card != shown || back != shownBack)
+            {
+                rect.Texture = card == null ? null : HandCard.CardTexture(card, back);
+                _previews[i] = (rect, card, back);
+            }
 
-        // Position the preview relative to this panel's local space
-        var localPos = globalMousePos - GlobalPosition;
-        _dragPreview.Position = localPos - _dragPreview.Size / 2f;
-        _dragPreview.Visible = true;
+            float rotation = HandCard.ScreenRotation(s.Rotation.Y);
+            var (size, _) = row.CardSize(HandRow.TableSize(card), rotation);
+            var offset = s.PositionAt(0);
+            rect.Size = size;
+            rect.PivotOffset = size / 2;
+            rect.Rotation = rotation;
+            rect.Position = pointer + new Vector2(offset.X, offset.Z) * row.PixelsPerCm - size / 2;
+            rect.Visible = true;
+        }
+        for (int i = cards.Count; i < _previews.Count; i++)
+            _previews[i].Rect.Visible = false;
     }
 
     public void HideDragPreview()
     {
-        _dragPreview.Visible = false;
-        _dragPreviewCard = null;
+        foreach (var preview in _previews)
+            preview.Rect.Visible = false;
     }
 
     #endregion

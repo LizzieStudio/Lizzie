@@ -59,12 +59,24 @@ public static class SeatingReader
     public static SnowTag LocalCursor(this IRecordReader R) =>
         R.SeatSettings(R.LocalSeat())?.CursorRef ?? SnowTag.Empty;
 
-    /// <summary>The player whose seat's cursor is <paramref name="cursorRef"/>, if one is seated there.</summary>
+    /// <summary>
+    /// The container holding what the local player drags over their hand,
+    /// or <see cref="SnowTag.Empty"/> when they have no seat.
+    /// </summary>
+    public static SnowTag LocalHandHold(this IRecordReader R) =>
+        R.SeatSettings(R.LocalSeat())?.HandHoldRef ?? SnowTag.Empty;
+
+    /// <summary>
+    /// The player whose seat drags with <paramref name="cursorRef"/>, if there is one.
+    /// </summary>
     public static byte? HolderOf(this IRecordReader R, SnowTag cursorRef)
     {
         var players = R.Single<ProjectGameSettings>().Players;
         foreach (var (source, seat) in R.Single<Seating>().Seats)
-            if (seat < players.Length && players[seat].CursorRef == cursorRef)
+            if (
+                seat < players.Length
+                && (players[seat].CursorRef == cursorRef || players[seat].HandHoldRef == cursorRef)
+            )
                 return source;
         return null;
     }

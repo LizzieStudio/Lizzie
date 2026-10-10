@@ -18,14 +18,20 @@ public partial class VcBag : VisualComponentGroup
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
         DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
-        UpdateComponentCount();
         CanAcceptDrop = true;
     }
 
-    private void UpdateComponentCount()
+    public override void _EnterTree()
     {
-        _componentCount.Text = Children.Count().ToString();
+        base._EnterTree();
+        RecordService.Instance.Watch(this, SyncCount);
     }
+
+    private void SyncCount(IRecordReader R) =>
+        _componentCount.Text = Contents(R).Count().ToString();
+
+    private IEnumerable<ComponentState> Contents(IRecordReader R) =>
+        R.Get<ComponentState>(s => s.ContainerRef == Reference);
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
@@ -71,26 +77,15 @@ public partial class VcBag : VisualComponentGroup
     private float Diameter;
     private Color BagColor;
 
-    private Vector3 _lastScale;
-
-    private void UpdateChildScale(Node3D c)
+    /// <summary>
+    /// One of the bag's components, at random.
+    /// </summary>
+    public override ComponentState[] DragDraw()
     {
-        if (Math.Abs(c.Scale.Length() - _lastScale.Length()) >= 0.05f)
-        {
-            var s = c.Scale;
-            _lastScale = new Vector3(s.X / Diameter, s.Y / Height, s.Z / Diameter);
-            c.Scale = _lastScale;
-        }
-    }
-
-    protected override void OnChildrenChanged()
-    {
-        UpdateComponentCount();
-    }
-
-    public override Replicated[] DragDraw(int quantity)
-    {
-        return ProjectService.Instance.GameObjects.BuildDraw(DrawRandom(quantity));
+        var contents = Contents(RecordService.Instance).ToList();
+        return contents.Count == 0
+            ? []
+            : [contents[Random.Shared.Next(contents.Count)] with { Position = Vector3.Zero }];
     }
 }
 

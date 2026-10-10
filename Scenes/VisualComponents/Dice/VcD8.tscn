@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://b0amv4fbuehiq"]
+[gd_scene load_steps=8 format=3 uid="uid://b0amv4fbuehiq"]
 
 [ext_resource type="Script" path="res://Scripts/VisualComponents/VcDie.cs" id="1_wk1vj"]
 [ext_resource type="Texture2D" uid="uid://hyvb6i0qsssx" path="res://Scenes/VisualComponents/Dice/d8texture.png" id="2_vrb2k"]
@@ -41,9 +41,6 @@ albedo_texture = ExtResource("2_vrb2k")
 [sub_resource type="SphereShape3D" id="SphereShape3D_t6c7b"]
 radius = 0.9
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_8wjkq"]
-size = Vector3(1, 100, 1)
-
 [node name="VcD8" type="Area3D"]
 transform = Transform3D(-0.707107, 0.707107, -6.18172e-08, 0.5, 0.5, 0.707107, 0.5, 0.5, -0.707107, 0, 0, 0)
 script = ExtResource("1_wk1vj")
@@ -59,9 +56,3 @@ surface_material_override/0 = SubResource("StandardMaterial3D_pst8c")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(0.853553, -0.146447, 0.5, 0.5, 0.5, -0.707107, -0.146447, 0.853553, 0.5, 0, 0, 0)
 shape = SubResource("SphereShape3D_t6c7b")
-
-[node name="Area3D" type="Area3D" parent="."]
-input_ray_pickable = false
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
-shape = SubResource("BoxShape3D_8wjkq")

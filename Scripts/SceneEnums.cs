@@ -11,6 +11,5 @@ public enum CursorMode
     Normal,
     Spawn,
     Drag,
-    CanDrop,
     DragSelect,
 }

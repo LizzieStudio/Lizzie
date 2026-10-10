@@ -40,16 +40,13 @@ public partial class EventSynchronizer : Node
     }
 
     /// <summary>
-    /// Closes and undoes each gesture <paramref name="source"/> left unfinished.
+    /// Cancels each gesture <paramref name="source"/> left unfinished.
     /// The host calls this when a player leaves, so it's written once.
     /// </summary>
     public void AbandonGroups(byte source)
     {
         foreach (var group in UndoLog.OpenGroups(Log, source))
-        {
-            Submit(TableEvent.Closing(group));
-            Submit(TableEvent.Undoing(new UndoFlag { Reverses = group }, admin: true));
-        }
+            Submit(TableEvent.Canceling(group));
     }
 
     /// <summary>

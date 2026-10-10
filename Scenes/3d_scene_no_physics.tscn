@@ -13,10 +13,6 @@
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_d3epo"]
 
-[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
-
-[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_at6bq"]
-
 [node name="3DSceneNoPhysics" type="Node3D" unique_id=425149799]
 script = ExtResource("1_4ynb0")
 
@@ -63,30 +59,37 @@ projection = 1
 current = true
 size = 110.0
 
-[node name="GameObjects" type="Node" parent="." unique_id=1908248094 node_paths=PackedStringArray("_dragPlane", "_selectionRectangle")]
+[node name="GameObjects" type="Node3D" parent="." unique_id=1908248094 node_paths=PackedStringArray("_dragPlane", "_selectionRectangle", "_tableMouseControl")]
 script = ExtResource("6_7g6ti")
 _dragPlane = NodePath("../DragPlane")
-_selectionRectangle = NodePath("../DragSelectRectangle")
+_selectionRectangle = NodePath("../TableOverlay/DragSelectRectangle")
+_tableMouseControl = NodePath("../TableOverlay/TableMouseControl")
 
-[node name="DragPlane" type="StaticBody3D" parent="." unique_id=1141716743]
+[node name="DragPlane" type="Node3D" parent="." unique_id=1141716743]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-collision_layer = 4
-collision_mask = 4
-input_ray_pickable = false
-physics_material_override = SubResource("PhysicsMaterial_b00ve")
 script = ExtResource("7_inwp1")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="DragPlane" unique_id=1418680334]
-shape = SubResource("WorldBoundaryShape3D_at6bq")
+[node name="TableOverlay" type="CanvasLayer" parent="." unique_id=1631013120]
+layer = 0
 
-[node name="DragSelectRectangle" type="Control" parent="." unique_id=817530666]
+[node name="TableMouseControl" type="Control" parent="TableOverlay" unique_id=1190505151]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="DragSelectRectangle" type="Control" parent="TableOverlay" unique_id=817530666]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
+mouse_filter = 2
 script = ExtResource("5_56t6u")
 
-[node name="CursorOverlay" type="Control" parent="." unique_id=564827702]
+[node name="CursorOverlay" type="Control" parent="TableOverlay" unique_id=564827702]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
-public partial class GameController : Node3D
+public partial class GameController : Node
 {
     private SceneController _mainScene;
 
@@ -150,8 +150,6 @@ public partial class GameController : Node3D
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta) { }
-
-    public float HandY => _uiController.HandY;
 
     public HandManager HandManager => _uiController.HandManager;
 }

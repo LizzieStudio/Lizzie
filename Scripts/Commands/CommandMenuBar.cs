@@ -62,7 +62,7 @@ public partial class CommandMenuBar : HBoxContainer
             case InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } press
                 when !Titles.Any(t => t.IsOpen || t.ClosedThisFrame)
                     && TitleAt(press.Position) != null:
-                View = FocusedView();
+                View = CommandViews.Find(CommandViews.FocusedWindow(GetTree().Root));
                 break;
 
             // Moving onto another title while a menu is open opens that title's menu.
@@ -77,14 +77,4 @@ public partial class CommandMenuBar : HBoxContainer
 
     private CommandMenuButton TitleAt(Vector2 at) =>
         Titles.FirstOrDefault(t => t.Visible && t.GetGlobalRect().HasPoint(at));
-
-    // The view of the focused window, the table's when it's the main window.
-    // Popups, like the menu itself, aren't where commands run.
-    private ICommandView FocusedView()
-    {
-        var root = GetTree().Root;
-        var focused = root.GetEmbeddedSubwindows()
-            .FirstOrDefault(w => w.Visible && w.HasFocus() && w is not Popup);
-        return CommandViews.Find(focused ?? root);
-    }
 }

@@ -196,11 +196,15 @@ public static class RecordReaderExtensions
             .ToList();
 
     /// <summary>
-    /// The cursor container of each seat.
+    /// The containers each seat drags with.
+    /// <list type="bullet">
+    /// <item>Its container for dragging on the table.</item>
+    /// <item>Its container for dragging over the hand.</item>
+    /// </list>
     /// </summary>
     public static HashSet<SnowTag> Cursors(this IRecordReader R) =>
         R.Single<ProjectGameSettings>()
-            .Players.Select(p => p.CursorRef)
+            .Players.SelectMany(p => new[] { p.CursorRef, p.HandHoldRef })
             .Where(c => c != SnowTag.Empty)
             .ToHashSet();
 
@@ -209,11 +213,26 @@ public static class RecordReaderExtensions
     /// </summary>
     public static bool IsBeingDragged(this IRecordReader R, ComponentState c) =>
         !c.IsOnTable
-        && R.Single<ProjectGameSettings>().Players.Any(p => p.CursorRef == c.ContainerRef);
+        && R.Single<ProjectGameSettings>()
+            .Players.Any(p => p.CursorRef == c.ContainerRef || p.HandHoldRef == c.ContainerRef);
+
+    /// <summary>
+    /// Whether a player is dragging <paramref name="c"/> over their hand, where no one else sees it.
+    /// </summary>
+    public static bool IsHeldOverHand(this IRecordReader R, ComponentState c) =>
+        !c.IsOnTable
+        && R.Single<ProjectGameSettings>().Players.Any(p => p.HandHoldRef == c.ContainerRef);
 
     /// <summary>
     /// True if it's inside a container, such as a bag or a player's hand, rather than on the table.
     /// </summary>
     public static bool IsContained(this IRecordReader R, ComponentState c) =>
         !c.IsOnTable && !R.IsBeingDragged(c);
+
+    /// <summary>
+    /// Whether <paramref name="c"/> is in a player's hand.
+    /// </summary>
+    public static bool IsInHand(this IRecordReader R, ComponentState c) =>
+        !c.IsOnTable
+        && R.Single<ProjectGameSettings>().Players.Any(p => p.HandRef == c.ContainerRef);
 }

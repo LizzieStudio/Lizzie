@@ -31,15 +31,12 @@ public record Selection : Replicated
 /// </summary>
 public static class LocalSelection
 {
-    /// <summary>The color the local player's own selection shows in, everywhere.</summary>
-    public static readonly Color LocalColor = Colors.White;
-
     /// <summary>
-    /// <para>The color to show each selected target in, among the selections <paramref name="which"/> picks.</para>
+    /// The color to show each selected target in, among the selections <paramref name="which"/> picks.
     ///
     /// <para>
-    /// The local player's selection shows in <see cref="LocalColor"/>, over anyone else's.
-    /// Otherwise a target shows in the seat color of the player who selected it most recently.
+    /// A target shows in the seat color of the player who selected it most recently,
+    /// with the local player taking priority.
     /// The <paramref name="which"/> should filter as many selections as possible to avoid observing extraneous records.
     /// </para>
     /// </summary>
@@ -55,7 +52,7 @@ public static class LocalSelection
             .ThenByDescending(s => s.LastUpdateId);
         foreach (var selection in newestFirst)
         {
-            var color = selection.Player == local ? LocalColor : R.SeatColor(selection.Player);
+            var color = R.SeatColor(selection.Player);
             foreach (var target in selection.Targets)
                 colors.TryAdd(target, color);
         }
@@ -82,10 +79,20 @@ public static class LocalSelection
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
     public static void SetSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
+        where T : Replicated => RecordService.Instance.Write(R.NewSelection<T>(ids));
+
+    /// <summary>
+    /// The record that <see cref="SetSelection{T}(IRecordReader, IEnumerable{SnowTag})"/> writes,
+    /// or none when the selection wouldn't change.
+    /// </summary>
+    public static Selection[] NewSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
         where T : Replicated
     {
-        if (R.NewSelection<T>(ids) is { } selection)
-            RecordService.Instance.Write(selection);
+        var old = R.GetSelection()?.Targets ?? ImmutableHashSet<Target>.Empty;
+        return R.NewSelection(
+            old.Where(t => t is not RecordTarget r || !R.Is<T>(r.Id))
+                .Concat(ids.Select(id => new RecordTarget(id)))
+        );
     }
 
     /// <summary>
@@ -98,29 +105,14 @@ public static class LocalSelection
         SnowTag within = default
     )
     {
-        if (R.NewSelection(targets, within) is { } selection)
-            RecordService.Instance.Write(selection);
-    }
-
-    /// <summary>
-    /// The record that will set the selection to <paramref name="ids"/>,
-    /// or null when the selection wouldn't change.
-    /// </summary>
-    public static Selection NewSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
-        where T : Replicated
-    {
-        var old = R.GetSelection()?.Targets ?? ImmutableHashSet<Target>.Empty;
-        return R.NewSelection(
-            old.Where(t => t is not RecordTarget r || !R.Is<T>(r.Id))
-                .Concat(ids.Select(id => new RecordTarget(id)))
-        );
+        RecordService.Instance.Write(R.NewSelection(targets, within));
     }
 
     /// <summary>
     /// The record that will set the selection to <paramref name="targets"/>,
-    /// or null when the selection wouldn't change.
+    /// or none when the selection wouldn't change.
     /// </summary>
-    public static Selection NewSelection(
+    private static Selection[] NewSelection(
         this IRecordReader R,
         IEnumerable<Target> targets,
         SnowTag within = default
@@ -129,7 +121,7 @@ public static class LocalSelection
         var current = R.GetSelection(within);
         var next = targets.ToImmutableHashSet();
         if (next.SetEquals(current?.Targets ?? ImmutableHashSet<Target>.Empty))
-            return null;
+            return [];
 
         var record =
             current
@@ -139,6 +131,6 @@ public static class LocalSelection
                 Player = Snowport.Clock.source,
                 Within = within,
             };
-        return record with { Targets = next };
+        return [record with { Targets = next }];
     }
 }

@@ -23,8 +23,9 @@ public partial class HeaderCell : PanelContainer
     public event Action<SnowTag> RightPressed;
     public event Action<SnowTag, float> WidthDragged;
     public event Action<SnowTag, string> NameCommitted;
-    public event Action<SnowTag, Vector2> ColumnDragMoved;
-    public event Action<SnowTag, Vector2> ColumnDropped;
+
+    // Set by a double-click, so the release that follows it isn't a click.
+    private bool _doubleClicked;
 
     public override void _Ready()
     {
@@ -40,13 +41,18 @@ public partial class HeaderCell : PanelContainer
         _label.AddThemeColorOverride("font_color", Color.FromHtml("8cb1ff"));
         _label.MouseDefaultCursorShape = CursorShape.Move;
         _label.TooltipText = "Click to select, drag to reorder, double-click to rename";
-
-        var drag = new DragGesture(_label);
-        drag.Moved += at => ColumnDragMoved?.Invoke(ColumnId, at);
-        drag.Dropped += at => ColumnDropped?.Invoke(ColumnId, at);
-        drag.Clicked += click => Clicked?.Invoke(ColumnId, click);
-        drag.DoubleClicked += BeginRename;
-        drag.RightPressed += () => RightPressed?.Invoke(ColumnId);
+        _label.MouseFilter = MouseFilterEnum.Stop;
+        _label.GuiInput += OnLabelInput;
+        // Dragging the name moves the column, through Godot's drag and drop.
+        _label.SetDragForwarding(
+            Callable.From<Vector2, ReorderDrag>(_ => new ReorderDrag
+            {
+                Axis = Vector2.Axis.X,
+                Id = ColumnId,
+            }),
+            default,
+            default
+        );
 
         _nameEdit = new LineEdit();
         hbox.AddChild(_nameEdit);
@@ -101,6 +107,34 @@ public partial class HeaderCell : PanelContainer
 
         SetHeaderText(name);
         NameCommitted?.Invoke(ColumnId, name);
+    }
+
+    private void OnLabelInput(InputEvent e)
+    {
+        switch (e)
+        {
+            case InputEventMouseButton
+            {
+                ButtonIndex: MouseButton.Left,
+                Pressed: true,
+                DoubleClick: true
+            }:
+                _doubleClicked = true;
+                BeginRename();
+                break;
+            // A drag takes the release from the label, so one that gets here is a click.
+            case InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } release:
+                if (!_doubleClicked)
+                    Clicked?.Invoke(ColumnId, release);
+                _doubleClicked = false;
+                break;
+            case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }:
+                RightPressed?.Invoke(ColumnId);
+                break;
+            default:
+                return;
+        }
+        _label.AcceptEvent();
     }
 
     private void OnNameEditInput(InputEvent e)

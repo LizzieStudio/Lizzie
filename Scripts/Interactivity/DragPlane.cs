@@ -1,27 +1,21 @@
-using System.Collections.Generic;
 using Godot;
 
-public partial class DragPlane : StaticBody3D
+/// <summary>
+/// The flat plane the cursor moves on, at this node's height.
+/// </summary>
+public partial class DragPlane : Node3D
 {
-    /// <summary>The value returned by <see cref="GetCursorProjection"/> on a ray miss.</summary>
-    public static readonly Vector3 Miss = new(-99, -99, -99);
+    public Vector3? GetCursorProjection() => Project(GetViewport().GetMousePosition());
 
-    public Vector3 GetCursorProjection()
+    /// <summary>
+    /// The 3D point on the plane under <paramref name="point"/>, or null when the point is at or above the horizon.
+    /// </summary>
+    public Vector3? Project(Vector2 point)
     {
-        var mousePosition = GetViewport().GetMousePosition();
-
-        InputRayPickable = true;
-        var from = GetViewport().GetCamera3D().ProjectRayOrigin(mousePosition);
-        var to = from + GetViewport().GetCamera3D().ProjectRayNormal(mousePosition) * 500;
-        var ray = new PhysicsRayQueryParameters3D
-        {
-            From = from,
-            To = to,
-            CollisionMask = 4,
-        };
-        var res = GetWorld3D().DirectSpaceState.IntersectRay(ray);
-        InputRayPickable = false;
-
-        return (Vector3)res.GetValueOrDefault("position", Miss);
+        var camera = GetViewport().GetCamera3D();
+        return new Plane(Vector3.Up, GlobalPosition.Y).IntersectsRay(
+            camera.ProjectRayOrigin(point),
+            camera.ProjectRayNormal(point)
+        );
     }
 }

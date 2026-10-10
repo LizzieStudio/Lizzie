@@ -223,8 +223,20 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
             return;
         }
         e.Group = group;
-        e.Close = true;
+        e.End = GroupEnd.Closed;
         Submit(e);
+    }
+
+    /// <summary>
+    /// Ends an open <paramref name="group"/> as if it never happened,
+    /// but does nothing to an already closed or canceled group.
+    /// Its events stop counting, so what they wrote goes back, and undo and redo pass over it.
+    /// </summary>
+    public void CancelIfOpen(SnowportId group)
+    {
+        var sync = EventSynchronizer.Instance;
+        if (sync != null && UndoLog.IsOpen(sync.Log, group))
+            Submit(TableEvent.Canceling(group));
     }
 
     private static void Submit(TableEvent e) => EventSynchronizer.Instance?.Submit(e);

@@ -39,7 +39,7 @@ public class UndoScenarioTests
             {
                 Id = id,
                 Group = group,
-                Close = close,
+                End = close ? GroupEnd.Closed : GroupEnd.None,
                 Records = [new Prototype { Id = record }],
             }
         );
@@ -56,9 +56,23 @@ public class UndoScenarioTests
             {
                 Id = id,
                 Group = group,
-                Close = true,
+                End = GroupEnd.Closed,
             }
         );
+    }
+
+    /// <summary>Records an event that cancels <paramref name="group"/>.</summary>
+    private TableEvent CancelGroup(SnowportId group, byte source)
+    {
+        var id = NextId(source);
+        var e = new TableEvent
+        {
+            Id = id,
+            Group = group,
+            End = GroupEnd.Canceled,
+        };
+        _log.Add(id, e);
+        return e;
     }
 
     /// <summary>Records a reversal directly, as the host does, as an admin event, for a player who left.</summary>
@@ -431,7 +445,7 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void AbandonedGestureIsClosedAndUndone()
+    public void AbandonedGestureIsCanceled()
     {
         var open = StartGroup(Other, record: 1);
         Act(Other, record: 2, group: open);
@@ -441,13 +455,88 @@ public class UndoScenarioTests
 
         Assert.Equal([open], UndoLog.OpenGroups(_log, Other));
 
-        // What the host, me here, writes when the player leaves: an ordinary close, and an admin undo.
-        CloseGroup(open, Me);
-        AddFlag(open, Admin);
+        // What the host, me here, writes when the player leaves.
+        CancelGroup(open, Me);
 
         Assert.Empty(UndoLog.OpenGroups(_log, Other));
         Assert.True(IsUndone(open));
         Assert.False(IsUndone(finished));
+    }
+
+    [Fact]
+    public void CanceledGestureNeverHappened()
+    {
+        var g = StartGroup(Me, record: 1);
+        var move = Act(Me, record: 2, group: g);
+        Assert.True(UndoLog.IsOpen(_log, g));
+
+        var cancel = CancelGroup(g, Me);
+
+        Assert.False(UndoLog.IsOpen(_log, g));
+        Assert.True(IsUndone(g));
+        Assert.True(IsUndone(move));
+        Assert.True(IsUndone(cancel.Id));
+        // What the gesture wrote goes back, so its records are recomputed.
+        Assert.Equal([g, move, cancel.Id], Changes(cancel));
+    }
+
+    [Fact]
+    public void UndoPassesOverACanceledGesture()
+    {
+        var a = Act(Me);
+        var g = StartGroup(Me, record: 2);
+        CancelGroup(g, Me);
+
+        Assert.Equal(a, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+    }
+
+    /// <summary>A canceled gesture isn't a new action, so the undo before it is still there to redo.</summary>
+    [Fact]
+    public void CanceledGestureLeavesRedo()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        var g = StartGroup(Me, record: 2);
+        CancelGroup(g, Me);
+
+        Assert.Equal(a, Changed(Redo(Mine)));
+        Assert.Null(Redo(Mine));
+    }
+
+    /// <summary>A canceled gesture isn't a new action either, so undo doesn't start unfolding past it.</summary>
+    [Fact]
+    public void CanceledGestureDoesNotUnfold()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        var g = StartGroup(Me, record: 2);
+        CancelGroup(g, Me);
+
+        Assert.Null(Undo(Mine));
+        Assert.True(IsUndone(a));
+    }
+
+    [Fact]
+    public void CancelAfterCloseDoesNothing()
+    {
+        var g = StartGroup(Me, record: 1);
+        Act(Me, record: 2, group: g, close: true);
+        CancelGroup(g, Me);
+
+        Assert.False(IsUndone(g));
+        Assert.Equal(g, Changed(Undo(Mine)));
+    }
+
+    [Fact]
+    public void CancelKeepsOthersLaterWrites()
+    {
+        var g = StartGroup(Me, record: 1);
+        var theirs = Act(Other, record: 1);
+        CancelGroup(g, Me);
+
+        Assert.True(IsUndone(g));
+        Assert.False(IsUndone(theirs));
     }
 
     /// <summary>

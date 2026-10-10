@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://s4e3sjhq6cm1"]
 
 [ext_resource type="Script" uid="uid://ublvk3w28xaf" path="res://Scripts/UI/PlayerHandsPanel.cs" id="1_kyexm"]
+[ext_resource type="PackedScene" uid="uid://bob3g28fu22ko" path="res://Scenes/Controls/opponent_hand.tscn" id="2_opp"]
 
 [node name="PlayerHandsPanel" type="Panel" unique_id=416397088]
 custom_minimum_size = Vector2(100, 200)
@@ -16,11 +17,15 @@ grow_horizontal = 0
 grow_vertical = 2
 size_flags_vertical = 3
 script = ExtResource("1_kyexm")
+_opponentHandScene = ExtResource("2_opp")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1577772514]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6

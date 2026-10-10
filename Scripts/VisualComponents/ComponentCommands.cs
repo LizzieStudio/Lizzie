@@ -17,8 +17,8 @@ public static class ComponentCommands
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !R.IsContained(c),
-        Effects = (R, cs, _) => Flipped(cs),
+        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && Turnable(R, c),
+        Effects = (R, cs, _) => Flipped(R, cs),
     };
 
     public static readonly Command RotateCw = new RecordCommand<ComponentState>
@@ -28,8 +28,8 @@ public static class ComponentCommands
         Caption = "Rotate {0} Right",
         Keys = [Shortcuts.Key(Key.E)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = NotContained,
-        Effects = (R, cs, _) => cs.Select(c => Rotated(c, -RotationStep)),
+        AppliesTo = Turnable,
+        Effects = (R, cs, _) => cs.Select(c => Rotated(c, -RotationStep(R))),
     };
 
     public static readonly Command RotateCcw = new RecordCommand<ComponentState>
@@ -39,8 +39,8 @@ public static class ComponentCommands
         Caption = "Rotate {0} Left",
         Keys = [Shortcuts.Key(Key.Q)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = NotContained,
-        Effects = (R, cs, _) => cs.Select(c => Rotated(c, RotationStep)),
+        AppliesTo = Turnable,
+        Effects = (R, cs, _) => cs.Select(c => Rotated(c, RotationStep(R))),
     };
 
     public static readonly Command MoveToTop = new RecordCommand<ComponentState>
@@ -76,13 +76,15 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => c with { Deleted = true }),
     };
 
-    private static float RotationStep => ProjectService.Instance.RotationStep;
+    private static float RotationStep(IRecordReader R) =>
+        R.Single<ProjectGameSettings>().RotationStep();
 
     // Deleting or restacking what someone is dragging would fight the drag.
     private static bool NotHeld(IRecordReader R, ComponentState c) => !R.IsBeingDragged(c);
 
-    // What's inside a bag or a hand isn't on the table to turn or restack.
-    private static bool NotContained(IRecordReader R, ComponentState c) => !R.IsContained(c);
+    // What's inside a bag isn't on the table to turn. A hand shows its cards turned as they'll lie on the table.
+    private static bool Turnable(IRecordReader R, ComponentState c) =>
+        !R.IsContained(c) || R.IsInHand(c);
 
     // Zones stay underneath everything.
     private static bool Restackable(IRecordReader R, ComponentState c) =>
@@ -90,12 +92,19 @@ public static class ComponentCommands
 
     /// <summary>
     /// The tokens turned over. Tokens stacked in the same place turn over together like a pile,
-    /// reversing their order by swapping their ZOrders.
+    /// reversing their order by swapping their ZOrders. Cards in a hand aren't stacked, so each turns over in place.
     /// <see cref="VcToken"/> animates what Flip writes.
     /// </summary>
-    private static IEnumerable<ComponentState> Flipped(IEnumerable<ComponentState> tokens) =>
+    private static IEnumerable<ComponentState> Flipped(
+        IRecordReader R,
+        IEnumerable<ComponentState> tokens
+    ) =>
         tokens
-            .GroupBy(c => (c.ContainerRef, c.X, c.Z))
+            .GroupBy(c =>
+                R.IsInHand(c)
+                    ? (c.ContainerRef, 0, 0, c.Id)
+                    : (c.ContainerRef, c.X, c.Z, SnowTag.Empty)
+            )
             .SelectMany(pile =>
             {
                 var ordered = pile.OrderBy(c => c.ZOrder).ToList();

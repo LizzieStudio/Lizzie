@@ -163,6 +163,7 @@ public partial class MultiplayerManager : Node
         _isNetworked = false;
         _players.Clear();
         _localPlayerId = 0;
+        PresenceSynchronizer.Instance?.ClearCursors();
 
         if (wasGuest)
         {
@@ -197,9 +198,10 @@ public partial class MultiplayerManager : Node
         GD.Print($"Peer disconnected: {id}");
 
         var playerId = (int)id;
-        PresenceSynchronizer.Instance?.ReleaseSeatForPeer(playerId);
         _players.Remove(playerId, out var player);
 
+        if (player != null)
+            PresenceSynchronizer.Instance?.RemoveCursor(player.Source);
         if (IsServer && player != null)
             ProjectService.Instance?.AbandonPlayer(player.Source);
 
@@ -288,6 +290,7 @@ public partial class MultiplayerManager : Node
     {
         var assigned = (byte)source;
         Snowport.Clock = new Snowport(assigned);
+        PresenceSynchronizer.Instance?.ClearCursors();
 
         if (_players.TryGetValue(_localPlayerId, out var self))
             self.Source = assigned;

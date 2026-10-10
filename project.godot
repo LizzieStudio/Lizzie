@@ -58,6 +58,10 @@ folder_colors={
 "res://Scripts/": "red"
 }
 
+[gui]
+
+common/drag_threshold=5
+
 [input]
 
 rotate={
@@ -121,3 +125,7 @@ component_preview={
 [layer_names]
 
 3d_render/layer_20="outline_pass"
+
+[physics]
+
+common/enable_object_picking=false

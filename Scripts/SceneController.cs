@@ -104,6 +104,7 @@ public partial class SceneController : Node3D, ICommandView
         Caption = "Zoom to Component",
         Keys = [Shortcuts.Key(Key.Z)],
         Count = TargetCount.One,
+        AppliesTo = (R, c) => !R.IsContained(c),
         SideEffects = (cs, _) =>
         {
             if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)

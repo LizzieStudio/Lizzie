@@ -61,15 +61,12 @@ public partial class DatasetEditor : Window, ICommandView
     // Where Shift+click selects from: the last row, column or cell selected without Shift.
     private Target _anchor;
 
-    // The selection outline's width in pixels.
-    private const int SelectionOutlineWidth = 2;
+    // The row or column being dragged with Godot's drag and drop, or null.
+    private ReorderDrag _reorder;
 
-    // The theme's styles outlined in each selection color, shared by every cell or header.
-    private readonly Dictionary<(string Style, Color Color), StyleBox> _highlightStyles = new();
-
-    // The pointer during a row or column drag, for auto-scrolling at the edges, and the axis it drags along.
-    private Vector2? _dragAt;
-    private Vector2.Axis _dragAxis;
+    // Over the grid, so a dragged row or column can be dropped anywhere on it.
+    // It lets the mouse through except during one of those drags, since the cells would refuse the drop.
+    private Control _dropZone;
 
     private IReadOnlyList<Command> _commands;
 
@@ -149,24 +146,42 @@ public partial class DatasetEditor : Window, ICommandView
 
     #endregion
 
+    public override void _Notification(int what)
+    {
+        // Godot tells every node when any drag begins and ends.
+        if (what == NotificationDragBegin)
+        {
+            _reorder = GetViewport().GuiGetDragData().As<GodotObject>() as ReorderDrag;
+            if (_reorder != null)
+                _dropZone.MouseFilter = Control.MouseFilterEnum.Stop;
+        }
+        else if (what == NotificationDragEnd && _reorder != null)
+        {
+            _reorder = null;
+            _dropZone.MouseFilter = Control.MouseFilterEnum.Ignore;
+            _dropIndicator.Visible = false;
+        }
+    }
+
     public override void _Process(double delta)
     {
-        if (_dragAt is not Vector2 at)
+        if (_reorder == null)
             return;
 
         // Holding a drag near an edge scrolls toward it.
-        int i = (int)_dragAxis;
+        var at = _dropZone.GetGlobalMousePosition();
+        int i = (int)_reorder.Axis;
         var rect = _dataScrollContainer.GetGlobalRect();
         int step = (int)(AutoScrollSpeed * delta);
         int direction =
             at[i] < rect.Position[i] + AutoScrollMargin ? -1
             : at[i] > rect.End[i] - AutoScrollMargin ? 1
             : 0;
-        if (_dragAxis == Vector2.Axis.Y)
+        if (_reorder.Axis == Vector2.Axis.Y)
             _dataScrollContainer.ScrollVertical += direction * step;
         else
             _dataScrollContainer.ScrollHorizontal += direction * step;
-        ShowDrop(_dragAxis, at);
+        ShowDrop(_reorder.Axis, at);
     }
 
     // Cells only show their values until one is being edited, so clicks on them select instead,
@@ -308,6 +323,21 @@ public partial class DatasetEditor : Window, ICommandView
         _dropIndicator.Color = Accent;
         _dropIndicator.Visible = false;
 
+        _dropZone = GetNode<Control>("%ReorderDropZone");
+        _dropZone.SetDragForwarding(
+            default,
+            Callable.From<Vector2, Variant, bool>(
+                (_, data) => data.As<GodotObject>() is ReorderDrag
+            ),
+            Callable.From<Vector2, Variant>(
+                (at, data) =>
+                    DropReorder(
+                        (ReorderDrag)data.As<GodotObject>(),
+                        _dropZone.GetGlobalTransform() * at
+                    )
+            )
+        );
+
         _linkButton = GetNode<Button>("%Link");
         _linkButton.Pressed += OnImportPressed;
 
@@ -424,8 +454,6 @@ public partial class DatasetEditor : Window, ICommandView
             header.NameCommitted += OnColumnRenamed;
             header.Clicked += (columnId, click) => SelectTarget(Column(columnId), click);
             header.RightPressed += columnId => SelectForMenu(Column(columnId));
-            header.ColumnDragMoved += (_, at) => OnDragMoved(Vector2.Axis.X, at);
-            header.ColumnDropped += DropColumn;
             _headerCells.Add(header);
         }
 
@@ -484,12 +512,18 @@ public partial class DatasetEditor : Window, ICommandView
         view.Box.AddChild(view.Header);
         view.Header.CustomMinimumSize = new Vector2(RowHeaderWidth, RowHeight);
         view.Header.MouseDefaultCursorShape = Control.CursorShape.Move;
-
-        var drag = new DragGesture(view.Header);
-        drag.Clicked += click => SelectTarget(view.Target, click);
-        drag.Moved += at => OnDragMoved(Vector2.Axis.Y, at);
-        drag.Dropped += at => DropRow(view, at);
-        drag.RightPressed += () => SelectForMenu(view.Target);
+        view.Header.MouseFilter = Control.MouseFilterEnum.Stop;
+        view.Header.GuiInput += e => OnRowHeaderInput(view, e);
+        // Dragging it moves the row, through Godot's drag and drop.
+        view.Header.SetDragForwarding(
+            Callable.From<Vector2, ReorderDrag>(_ => new ReorderDrag
+            {
+                Axis = Vector2.Axis.Y,
+                Id = view.Row.Id,
+            }),
+            default,
+            default
+        );
 
         view.Number = new Label();
         view.Header.AddChild(view.Number);
@@ -759,11 +793,22 @@ public partial class DatasetEditor : Window, ICommandView
     private int DropIndex(Vector2.Axis axis, Vector2 at) =>
         DragItems(axis).Count(c => c.GetGlobalRect().GetCenter()[(int)axis] < at[(int)axis]);
 
-    private void OnDragMoved(Vector2.Axis axis, Vector2 at)
+    // Selects the row on a click, or for the menu on a right press.
+    private void OnRowHeaderInput(RowView view, InputEvent e)
     {
-        _dragAt = at;
-        _dragAxis = axis;
-        ShowDrop(axis, at);
+        switch (e)
+        {
+            // A drag takes the release from the header, so one that gets here is a click.
+            case InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } release:
+                SelectTarget(view.Target, release);
+                break;
+            case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }:
+                SelectForMenu(view.Target);
+                break;
+            default:
+                return;
+        }
+        view.Header.AcceptEvent();
     }
 
     /// <summary>
@@ -795,16 +840,18 @@ public partial class DatasetEditor : Window, ICommandView
         _dropIndicator.Visible = true;
     }
 
-    private void EndDrag()
+    /// <summary>Moves the dragged row or column to where it was dropped, at <paramref name="at"/> in the window.</summary>
+    private void DropReorder(ReorderDrag drag, Vector2 at)
     {
-        _dropIndicator.Visible = false;
-        _dragAt = null;
+        if (drag.Axis == Vector2.Axis.Y)
+            DropRow(drag.Id, at);
+        else
+            DropColumn(drag.Id, at);
     }
 
-    private void DropRow(RowView view, Vector2 at)
+    private void DropRow(SnowTag rowId, Vector2 at)
     {
-        EndDrag();
-
+        var view = ViewOf(rowId);
         int from = _views.IndexOf(view);
         if (from < 0)
             return;
@@ -818,8 +865,6 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        EndDrag();
-
         if (_currentDataSet == null)
             return;
 
@@ -944,65 +989,20 @@ public partial class DatasetEditor : Window, ICommandView
     {
         var colors = R.SelectionColors(s => s.Within == datasetId);
         foreach (var header in _headerCells)
-            Highlight(header, "panel", HighlightOf(colors, Column(header.ColumnId)));
+            SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnId));
         foreach (var view in _views)
         {
-            Highlight(view.Header, "panel", HighlightOf(colors, view.Target));
+            SelectionHighlight.Outline(view.Header, "panel", colors, view.Target);
             for (int i = 0; i < view.Cells.Count; i++)
-                Highlight(
+                SelectionHighlight.Outline(
                     view.Cells[i],
                     "normal",
-                    HighlightOf(
-                        colors,
-                        new CellTarget(view.Row.Id, _columnIds[i]),
-                        view.Target,
-                        Column(_columnIds[i])
-                    )
+                    colors,
+                    new CellTarget(view.Row.Id, _columnIds[i]),
+                    view.Target,
+                    Column(_columnIds[i])
                 );
         }
-    }
-
-    /// <summary>
-    /// The highlight color of all the targets given the colors dictionary.
-    /// </summary>
-    private static Color? HighlightOf(
-        IReadOnlyDictionary<Target, Color> colors,
-        params Target[] targets
-    )
-    {
-        Color? first = null;
-        foreach (var target in targets)
-            if (colors.TryGetValue(target, out var color))
-            {
-                if (color == LocalSelection.LocalColor)
-                    return color;
-                first ??= color;
-            }
-        return first;
-    }
-
-    /// <summary>
-    /// Outlines a control in <paramref name="color"/>, or clears the outline with null.
-    /// </summary>
-    private void Highlight(Control control, string style, Color? color)
-    {
-        control.RemoveThemeStyleboxOverride(style);
-        if (color is not Color c)
-            return;
-
-        // A cache of styles.
-        if (!_highlightStyles.TryGetValue((style, c), out var outlined))
-        {
-            var theme = control.GetThemeStylebox(style);
-            var flat = theme.Duplicate() as StyleBoxFlat ?? new StyleBoxFlat { DrawCenter = false };
-            foreach (var side in new[] { Side.Left, Side.Top, Side.Right, Side.Bottom })
-                flat.SetContentMargin(side, theme.GetContentMargin(side));
-            flat.BorderColor = c;
-            flat.SetBorderWidthAll(SelectionOutlineWidth);
-            outlined = flat;
-            _highlightStyles[(style, c)] = outlined;
-        }
-        control.AddThemeStyleboxOverride(style, outlined);
     }
 
     /// <summary>Runs <paramref name="command"/> on what the local player has selected, as its shortcut would.</summary>

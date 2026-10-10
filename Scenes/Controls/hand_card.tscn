@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://bhyk8cr0w1cbl"]
+
+[ext_resource type="Script" uid="uid://bieppen1i26w0" path="res://Scripts/UI/HandCard.cs" id="1_card"]
+
+[node name="HandCard" type="PanelContainer" unique_id=821400318]
+mouse_filter = 2
+script = ExtResource("1_card")
+
+[node name="Face" type="TextureRect" parent="." unique_id=1266918473]
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1

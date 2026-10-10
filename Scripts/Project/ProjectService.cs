@@ -257,15 +257,19 @@ public partial class ProjectService : Node
     /// <summary>
     /// Cleans up after a player who is gone.
     /// <list type="bullet">
-    /// <item>closes and reverses their open gestures</item>
+    /// <item>cancels their open gestures</item>
     /// <item>deletes their selection</item>
+    /// <item>frees their seat</item>
     /// </list>
     /// </summary>
     public void AbandonPlayer(byte source)
     {
         EventSynchronizer.Instance?.AbandonGroups(source);
+        var seating = R.Single<Seating>();
         RecordService.Instance.WriteAdmin(
-            R.Get<Selection>(s => s.Player == source).Select(s => s with { Deleted = true })
+            R.Get<Selection>(s => s.Player == source)
+                .Select(s => s with { Deleted = true })
+                .Append<Replicated>(seating with { Seats = seating.Seats.Remove(source) })
         );
     }
 
@@ -361,7 +365,7 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Assigns hand and cursor container SnowTags to any seat that lacks them.
+    /// Assigns hand, cursor, and over-the-hand container SnowTags to any seat that lacks them.
     /// The host or a solo player runs it after a new game or a load.
     /// </summary>
     private void EnsureSeatContainers()
@@ -384,6 +388,11 @@ public partial class ProjectService : Node
             if (builder[i].CursorRef == SnowTag.Empty)
             {
                 builder[i] = builder[i] with { CursorRef = Snowport.Clock.CreateTag() };
+                changed = true;
+            }
+            if (builder[i].HandHoldRef == SnowTag.Empty)
+            {
+                builder[i] = builder[i] with { HandHoldRef = Snowport.Clock.CreateTag() };
                 changed = true;
             }
         }
@@ -497,6 +506,4 @@ public partial class ProjectService : Node
         }
         return null;
     }
-
-    public float RotationStep { get; set; } = 15;
 }

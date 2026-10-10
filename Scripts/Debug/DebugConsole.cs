@@ -283,7 +283,7 @@ public partial class DebugConsole : Node
             return u.ByRedo ? "Redo" : "Undo";
 
         if (e.Records.Length == 0)
-            return e.Close ? "Close" : "(empty)";
+            return e.End != GroupEnd.None ? e.End.ToString() : "(empty)";
 
         return string.Join(
             ", ",

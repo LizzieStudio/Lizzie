@@ -184,17 +184,8 @@ public partial class UI : CanvasLayer
 
     private void RotationStepSelected(long index)
     {
-        var text = _rotationStep.GetItemText((int)index);
-
-        // Strip off the last character (the degree symbol '°')
-        if (!string.IsNullOrEmpty(text))
-        {
-            text = text.Substring(0, text.Length - 1);
-            if (float.TryParse(text, out var step))
-            {
-                ProjectService.Instance.RotationStep = step;
-            }
-        }
+        var settings = RecordService.Instance.Single<ProjectGameSettings>();
+        RecordService.Instance.Write(settings with { RotationStepIndex = (int)index });
     }
 
     private void ShowComponentDefinition()
@@ -563,8 +554,6 @@ public partial class UI : CanvasLayer
 
         _componentName.Text = component.ComponentName;
     }
-
-    public float HandY => _handManager.HandY;
 
     public HandManager HandManager => _handManager;
 }

@@ -45,10 +45,31 @@ public sealed class NaiveUndo : IUndoApi
         (f.Also ?? []).Prepend(f.Reverses);
 
     /// <summary>
-    /// An event's history entry is in effect unless a newer reversal, itself in effect, reverses it.
+    /// A group is canceled when its newest event cancels it and no event before that closed it.
+    /// </summary>
+    public static bool IsCanceled(EventLog log, SnowportId group)
+    {
+        var members = Members(log, group);
+        if (members.Count == 0 || members[0].Group != group)
+            return false;
+        var newest = members.MaxBy(e => e.Id);
+        return newest.End == GroupEnd.Canceled
+            && !members.Any(m => m != newest && m.End != GroupEnd.None);
+    }
+
+    /// <summary>
+    /// The events of a canceled group, its cancel included, never happened, so they aren't history.
+    /// Nor did a reversal that comes down to one.
+    /// </summary>
+    private static bool NeverHappened(EventLog log, TableEvent e) =>
+        IsCanceled(log, e.Undo == null ? e.Unit : UnitOf(log, e.Id));
+
+    /// <summary>
+    /// An event's history entry is in effect unless it never happened, or a newer reversal, itself in effect, reverses it.
     /// </summary>
     private static bool InEffect(EventLog log, TableEvent e) =>
-        !log.Values.Any(reversal =>
+        !NeverHappened(log, e)
+        && !log.Values.Any(reversal =>
             reversal.Undo != null
             && Reversed(reversal.Undo).Contains(Entry(e))
             && Newer(reversal, e)
@@ -85,7 +106,7 @@ public sealed class NaiveUndo : IUndoApi
             return false;
         if (members[0].Group == SnowportId.Empty)
             return true;
-        return members.MaxBy(e => e.Id).Close;
+        return members.MaxBy(e => e.Id).End != GroupEnd.None;
     }
 
     /// <summary>Whether any record the unit's events write is in scope, as done by the author.</summary>
@@ -134,6 +155,8 @@ public sealed class NaiveUndo : IUndoApi
         bool pastLatestReversals = false;
         foreach (var e in NewestFirst(log))
         {
+            if (NeverHappened(log, e))
+                continue;
             if (e.Undo is { ByRedo: true } || !IsCandidate(log, e, me, scope))
                 continue;
             if (e.Undo != null && e.Id.source == me && !pastLatestReversals)
@@ -180,7 +203,7 @@ public sealed class NaiveUndo : IUndoApi
     {
         foreach (var e in NewestFirst(log))
         {
-            if (!IsCandidate(log, e, me, scope))
+            if (NeverHappened(log, e) || !IsCandidate(log, e, me, scope))
                 continue;
             if (e.Undo == null || e.Id.source != me)
                 return null;
@@ -199,13 +222,24 @@ public sealed class NaiveUndo : IUndoApi
         log
             .Values.Where(e => e.Group != SnowportId.Empty && e.Group.source == source)
             .GroupBy(e => e.Group)
-            .Where(group => !group.MaxBy(e => e.Id).Close)
+            .Where(group => group.MaxBy(e => e.Id).End == GroupEnd.None)
             .Select(group => group.Key)
             .ToList();
 
-    /// <summary>What a reversal may change is what it covers; any other event changes only itself.</summary>
-    public IEnumerable<TableEvent> Changes(EventLog log, TableEvent e) =>
-        e.Undo == null ? [e] : CoveredBy(log, e);
+    /// <summary>
+    /// What a reversal may change is what it covers. An event that ends a group, or is in a group with a cancel,
+    /// may change the group up to it, since how the group ends decides whether it's canceled.
+    /// Any other event changes only itself.
+    /// </summary>
+    public IEnumerable<TableEvent> Changes(EventLog log, TableEvent e)
+    {
+        if (e.Undo != null)
+            return CoveredBy(log, e);
+        if (e.Group == SnowportId.Empty)
+            return [e];
+        var upToIt = Members(log, e.Group).Where(m => !Newer(m, e)).ToList();
+        return e.End != GroupEnd.None || upToIt.Any(m => m.End == GroupEnd.Canceled) ? upToIt : [e];
+    }
 
     public IEnumerable<TableEvent> InEffect(EventLog log) =>
         NewestFirst(log).Where(e => InEffect(log, e));

@@ -219,7 +219,8 @@
                       "type": "boolean"
                     },
                     "handRef": true,
-                    "cursorRef": true
+                    "cursorRef": true,
+                    "handHoldRef": true
                   },
                   "additionalProperties": false
                 }
@@ -1005,8 +1006,8 @@
       "additionalProperties": false
     },
     "group": true,
-    "close": {
-      "type": "boolean"
+    "end": {
+      "type": "integer"
     }
   },
   "additionalProperties": false

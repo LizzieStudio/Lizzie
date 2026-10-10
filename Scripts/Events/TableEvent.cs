@@ -30,13 +30,20 @@ public class TableEvent
     public SnowportId Group { get; set; }
 
     /// <summary>
-    /// True on the event that finishes its <see cref="Group"/>.
+    /// How this event ends its <see cref="Group"/>, if it does.
     /// <list type="bullet">
-    /// <item>Before a close event the group is "open" and undo/redo ignore it.</item>
-    /// <item>After a close event the group is "closed" and undo/redo remove or reapply the whole group together.</item>
+    /// <item>Before an event that ends it, the group is "open" and undo/redo ignore it.</item>
+    /// <item>After a <see cref="GroupEnd.Closed"/> event the group is "closed" and undo/redo remove or reapply the whole group together.</item>
+    /// <item>
+    /// A <see cref="GroupEnd.Canceled"/> group is effectively undone, and undo and redo pass over it.
+    /// Only an open group can be canceled: a cancel after the group's close does nothing.
+    /// </item>
     /// </list>
     /// </summary>
-    public bool Close { get; set; }
+    /// <remarks>
+    /// We cancel because using Undo would put a history event for Redo to reverse, which is the wrong UX.
+    /// </remarks>
+    public GroupEnd End { get; set; }
 
     /// <summary>What an undo of this event targets: its group, or itself.</summary>
     [JsonIgnore]
@@ -89,8 +96,40 @@ public class TableEvent
         {
             Id = Snowport.Clock.Create(),
             Group = group,
-            Close = true,
+            End = GroupEnd.Closed,
         };
+
+    /// <summary>
+    /// Creates an event that cancels the open <paramref name="group"/>, so it never happened.
+    /// </summary>
+    public static TableEvent Canceling(SnowportId group) =>
+        new()
+        {
+            Id = Snowport.Clock.Create(),
+            Group = group,
+            End = GroupEnd.Canceled,
+        };
+}
+
+/// <summary>
+/// How an event ends its undo group, in <see cref="TableEvent.End"/>.
+/// </summary>
+public enum GroupEnd
+{
+    /// <summary>
+    /// The default value, which does nothing.
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// It completes its group, which are Undone or Redone together.
+    /// </summary>
+    Closed,
+
+    /// <summary>
+    /// It cancels its open group, making it as if it never happened.
+    /// </summary>
+    Canceled,
 }
 
 /// <summary>

@@ -6,13 +6,15 @@
 [ext_resource type="Script" uid="uid://3274wuq0qfvx" path="res://Scripts/HandManager.cs" id="3_h6pmi"]
 [ext_resource type="Texture2D" uid="uid://cvm5vjhh2nn2g" path="res://Textures/UI/arrowdown16.png" id="4_n88ql"]
 [ext_resource type="PackedScene" uid="uid://s4e3sjhq6cm1" path="res://Scenes/Controls/player_hands_panel.tscn" id="8_sly7x"]
+[ext_resource type="PackedScene" uid="uid://g1hurherohq0" path="res://Scenes/Controls/hand_row.tscn" id="9_hand"]
+[ext_resource type="Texture2D" uid="uid://cx5dv08dde75e" path="res://Textures/UI/arrowup16.png" id="10_up"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
 [ext_resource type="Script" uid="uid://csl5hqjqm38wh" path="res://Scripts/Commands/CommandMenuBar.cs" id="cmd_bar"]
 [ext_resource type="Script" uid="uid://bux026a2v4f2b" path="res://Scripts/Commands/CommandDivider.cs" id="cmd_divider"]
 [ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandItem.cs" id="cmd_item"]
 [ext_resource type="Script" uid="uid://b5mdnpo6px318" path="res://Scripts/Commands/CommandMenuButton.cs" id="cmd_menu"]
 
-[node name="PrimaryScene" type="Node3D" unique_id=410470090 node_paths=PackedStringArray("_textureFactory")]
+[node name="PrimaryScene" type="Node" unique_id=410470090 node_paths=PackedStringArray("_textureFactory")]
 script = ExtResource("1_hibmt")
 _textureFactory = NodePath("UI/TextureFactory")
 
@@ -172,6 +174,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 0
 script = ExtResource("3_h6pmi")
+_openIcon = ExtResource("10_up")
+_closeIcon = ExtResource("4_n88ql")
 
 [node name="MarginContainer" type="MarginContainer" parent="UI/Hand" unique_id=184998263]
 layout_mode = 1
@@ -191,6 +195,11 @@ layout_mode = 2
 theme_override_constants/separation = 6
 alignment = 1
 
+[node name="HandRow" parent="UI/Hand/MarginContainer/HandContainer" unique_id=256712204 instance=ExtResource("9_hand")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="ResizeHandle" type="Control" parent="UI/Hand" unique_id=1735204617]
 layout_mode = 1
 anchors_preset = 10
@@ -204,6 +213,14 @@ layout_mode = 1
 offset_right = 24.0
 offset_bottom = 28.0
 icon = ExtResource("4_n88ql")
+
+[node name="DragPreview" type="TextureRect" parent="UI/Hand" unique_id=1579015371]
+unique_name_in_owner = true
+visible = false
+z_index = 10
+layout_mode = 0
+mouse_filter = 2
+expand_mode = 1
 
 [node name="Mode" type="HBoxContainer" parent="UI" unique_id=1351550218]
 anchors_preset = 3

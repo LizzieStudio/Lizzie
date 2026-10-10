@@ -291,6 +291,10 @@ public partial class ProjectSettingsDialog : Window
                             seat < current.Length
                                 ? current[seat].CursorRef
                                 : Snowport.Clock.CreateTag(),
+                        HandHoldRef =
+                            seat < current.Length
+                                ? current[seat].HandHoldRef
+                                : Snowport.Clock.CreateTag(),
                     }
                 );
             }

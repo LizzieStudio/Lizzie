@@ -24,9 +24,10 @@ public partial class CursorOverlay : Control
 
         var size =
             Texture.GetSize() * (GetViewportRect().Size.Y * CursorHeight / Texture.GetHeight());
-        foreach (var (source, pos) in cursors.RemoteCursors)
+        foreach (var (source, pos) in cursors.Cursors)
         {
-            if (camera.IsPositionBehind(pos))
+            // The local player has the mouse pointer.
+            if (source == Snowport.Clock.source || camera.IsPositionBehind(pos))
                 continue;
             var tip = camera.UnprojectPosition(pos);
             DrawTextureRect(Texture, new Rect2(tip, size), false, R.SeatColor(source));

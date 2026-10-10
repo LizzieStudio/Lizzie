@@ -63,7 +63,10 @@ public abstract partial class VisualComponentBase : Area3D
     {
         var target = new RecordTarget(Reference);
         var local = Snowport.Clock.source;
-        _isMine = R.GetSelection()?.Targets.Contains(target) == true;
+        var selection = R.GetSelection()?.Targets;
+        _isMine = selection?.Contains(target) == true;
+        _localColor = R.SeatColor(local);
+        _nothingSelected = selection?.IsEmpty != false;
         var others = R.SelectionColors(s => s.Player != local && s.Targets.Contains(target));
         _othersColor = others.TryGetValue(target, out var color) ? color : null;
         UpdateHighlight();
@@ -96,37 +99,7 @@ public abstract partial class VisualComponentBase : Area3D
     {
         _curScale = 1;
 
-        //MouseEntered += _on_mouse_entered;
-        MouseExited += _on_mouse_exited;
-
         base._Ready();
-    }
-
-    public override void _InputEvent(
-        Camera3D camera,
-        InputEvent @event,
-        Vector3 eventPosition,
-        Vector3 normal,
-        int shapeIdx
-    )
-    {
-        if (@event is InputEventMouseMotion mouse && !IsHeldByLocal)
-        {
-            if (shapeIdx == 0)
-            {
-                HoverColor = null;
-                CanDrag = true;
-                IsDrawSelected = false;
-            }
-            else
-            {
-                HoverColor = Colors.CornflowerBlue;
-                IsDrawSelected = true;
-                CanDrag = false;
-            }
-            _on_mouse_entered();
-        }
-        base._InputEvent(camera, @event, eventPosition, normal, shapeIdx);
     }
 
     private Tween _yTween;
@@ -174,9 +147,6 @@ public abstract partial class VisualComponentBase : Area3D
     // whether SyncState has placed the node yet
     private bool _placed;
 
-    // whether the last record SyncState applied was held
-    private bool _held;
-
     /// <summary>
     /// Applies the component's record, animated by the command that wrote it if the write is recent enough.
     /// </summary>
@@ -187,30 +157,25 @@ public abstract partial class VisualComponentBase : Area3D
             return;
 
         var held = R.IsBeingDragged(s);
-        LogicalVisible = s.IsOnTable || held;
-        // The cursor may have left it while it was held, which doesn't unhover it.
-        if (_held && !held)
-        {
-            IsHovered = false;
-        }
-        _held = held;
+        LogicalVisible = s.IsOnTable || held && !R.IsHeldOverHand(s);
 
         // A new state ends any slide toward the old one.
         if (IsInstanceValid(_slide))
             _slide.Kill();
 
+        // Only a recent write animates. Anything older jumps into place, to catch up.
+        long age = Snowport.Clock.MsecSince(s.LastUpdateId);
+        var cutoff = ProjectService.Instance.GameObjects.AnimationCutoff;
+        var writtenBy = _placed && age <= cutoff ? R.WrittenBy(s) : null;
+
         // A held node is placed by its holder's cursor.
         if (!held)
         {
             var target = s.PositionAt(_placed ? Position.Y : YHeight / 2f);
-            if (
-                !_placed
-                || R.WrittenBy(s) != DragCommands.Drop
-                || !Slide(target, Snowport.Clock.MsecSince(s.LastUpdateId))
-            )
+            if (writtenBy != DragCommands.Drop || !Slide(target, age))
                 Position = target;
         }
-        if (!PlayTransition(s, R.WrittenBy(s), Snowport.Clock.MsecSince(s.LastUpdateId)))
+        if (!PlayTransition(s, writtenBy, age))
             Rotation = s.Rotation;
         _placed = true;
 
@@ -255,6 +220,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Animates toward <paramref name="state"/> as <paramref name="writtenBy"/>, the command that wrote it, calls for.
     /// <paramref name="MsecSinceStart"/> is how many milliseconds ago the write was made.
+    /// <paramref name="writtenBy"/> is null for a write too old to animate (see <see cref="GameObjects.AnimationCutoff"/>).
     /// Returns false when there's nothing to animate, so the state is applied immediately.
     /// </summary>
     public virtual bool PlayTransition(
@@ -322,7 +288,9 @@ public abstract partial class VisualComponentBase : Area3D
 
     private bool _isDrawSelected;
 
-    //Component is selected for drawing tokens, cards, etc. Relevant for containers.
+    /// <summary>
+    /// Whether the mouse is over a container's draw area, so a drag draws from it.
+    /// </summary>
     public bool IsDrawSelected
     {
         get => _isDrawSelected;
@@ -335,7 +303,9 @@ public abstract partial class VisualComponentBase : Area3D
 
     private bool _isHovered;
 
-    /// <summary>Whether the mouse is over the component, or it's the target of a drag.</summary>
+    /// <summary>
+    /// Whether the mouse is over the component.
+    /// </summary>
     public bool IsHovered
     {
         get => _isHovered;
@@ -352,6 +322,12 @@ public abstract partial class VisualComponentBase : Area3D
 
     // whether the local player has this component selected
     private bool _isMine;
+
+    // the local player's seat color, which their selection shows in
+    private Color _localColor;
+
+    // whether the local player has nothing selected on the table, so keys act on the hovered component
+    private bool _nothingSelected = true;
 
     // the color of the other player who most recently selected this component, or null
     private Color? _othersColor;
@@ -376,33 +352,49 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    private Color? _hoverColor;
+    private bool _isDropTarget;
 
     /// <summary>
-    /// The outline color while hovered, e.g. yellow over a drop target.
-    /// Null for <see cref="LocalSelection.LocalColor"/>.
+    /// Whether what the local player holds would drop into this component.
     /// </summary>
-    protected Color? HoverColor
+    public bool IsDropTarget
     {
-        get => _hoverColor;
+        get => _isDropTarget;
         set
         {
-            _hoverColor = value;
+            if (_isDropTarget == value)
+                return;
+
+            _isDropTarget = value;
+
             UpdateHighlight();
         }
     }
 
+    // The outline of a drop target.
+    private static readonly Color DropTargetColor = Colors.Yellow;
+
+    // The outline over a container's draw area.
+    private static readonly Color DrawAreaColor = Colors.CornflowerBlue;
+
+    // The outline of a plain hover.
+    private static readonly Color PlainHoverColor = Colors.White;
+
     /// <summary>
-    /// Outlines the component when it's hovered or selected by anyone.
-    /// Hover shows <see cref="HoverColor"/>, and selection the color <see cref="LocalSelection.SelectionColors"/> gives it.
+    /// Outlines the component when it's a drop target, hovered, or selected by anyone.
     /// </summary>
     protected virtual void UpdateHighlight()
     {
         var mine = PreviewSelected ?? _isMine;
+        Color? hover =
+            IsDrawSelected ? DrawAreaColor
+            : _nothingSelected ? PlainHoverColor
+            : null;
         SetOutline(
             NeverHighlight ? null
-            : IsHovered ? HoverColor ?? LocalSelection.LocalColor
-            : mine ? LocalSelection.LocalColor
+            : IsDropTarget ? DropTargetColor
+            : IsHovered && hover != null ? hover
+            : mine ? _localColor
             : _othersColor
         );
     }
@@ -528,22 +520,6 @@ public abstract partial class VisualComponentBase : Area3D
 
     public abstract float MaxAxisSize { get; }
 
-    private void _on_mouse_entered()
-    {
-        IsHovered = true;
-    }
-
-    private void _on_mouse_exited()
-    {
-        if (!IsHeldByLocal)
-        {
-            IsHovered = false;
-        }
-
-        // reset in case we were a drag target
-        HoverColor = null;
-    }
-
     private bool _neverHighlight = false;
 
     public bool NeverHighlight
@@ -558,37 +534,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public abstract GeometryInstance3D DragMesh { get; }
 
-    public bool CanDrag { get; set; } = true;
-
     public virtual bool CanAcceptDrop { get; set; } = false;
-
-    public virtual bool DragOver(IEnumerable<VisualComponentBase> dragObjects)
-    {
-        if (CanObjectsBeDropped(dragObjects))
-        {
-            HoverColor = Colors.Yellow;
-            return true;
-        }
-
-        return false;
-    }
-
-    public void DragOverExit()
-    {
-        HoverColor = null;
-    }
-
-    public virtual bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
-    {
-        return true;
-    }
-
-    /// <summary>
-    /// The records that drop the given components onto this one, or none if the drop produces no change.
-    /// </summary>
-    public virtual IEnumerable<Replicated> DropObjects(
-        IEnumerable<VisualComponentBase> dragObjects
-    ) => [];
 
     public virtual void SetColor(Color color)
     {
@@ -640,10 +586,6 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
     public bool IsDragging => State is { } s && RecordService.Instance.IsBeingDragged(s);
-
-    /// <summary>True while this component is being held by the local player's cursor.</summary>
-    private bool IsHeldByLocal =>
-        State is { IsOnTable: false } s && s.ContainerRef == RecordService.Instance.LocalCursor();
 
     private bool _logicalVisible = true;
 

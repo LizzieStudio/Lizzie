@@ -40,6 +40,10 @@ namespace Lizzie.Replication.Machinery;
 /// While groups are open, they're passed over by Undo actions.
 /// </para>
 /// <para>
+/// A gesture can end by canceling its group instead. A canceled group is treated as if it never happened.
+/// The events in the group are reversed and Undo and Redo pass over it as if it weren't in the log.
+/// </para>
+/// <para>
 /// Admin events (<see cref="TableEvent.IsAdmin"/>), like a loaded save, are never undone or redone.
 /// They still count toward history, but they aren't owned by any player. They belong to the table.
 /// </para>
@@ -63,13 +67,16 @@ public static class UndoLog
     public static UndoFlag Undo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
-        var targets = new Targets(log, me, scope);
+        var ends = new Ends(log);
+        var targets = new Targets(log, me, scope, ends);
         bool unfolding = false;
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
             bool inEffect = InEffect(reversed, e);
+            if (ends.Canceled(e, i))
+                continue;
             if (e.Undo is { ByRedo: true } || !targets.Include(e, i) || e.IsAdmin)
                 continue;
             if (e.Undo != null && e.Id.source == me && !unfolding)
@@ -89,12 +96,15 @@ public static class UndoLog
     public static UndoFlag Redo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
-        var targets = new Targets(log, me, scope);
+        var ends = new Ends(log);
+        var targets = new Targets(log, me, scope, ends);
 
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
             bool inEffect = InEffect(reversed, e);
+            if (ends.Canceled(e, i))
+                continue;
             if (!targets.Include(e, i) || e.IsAdmin)
                 continue;
 
@@ -193,13 +203,15 @@ public static class UndoLog
     /// <summary>
     /// What Undo and Redo may target, judged once per entry over a walk from newest to oldest.
     /// </summary>
-    private sealed class Targets(EventLog log, byte me, Func<byte, Replicated, bool> scope)
+    private sealed class Targets(
+        EventLog log,
+        byte me,
+        Func<byte, Replicated, bool> scope,
+        Ends ends
+    )
     {
         // the index of each unit's newest event, for units the walk has met
         private readonly Dictionary<SnowportId, int> _newest = new();
-
-        // whether each unit is closed
-        private readonly Dictionary<SnowportId, bool> _closed = new();
 
         // whether each unit, as done by an author, changes something in scope
         private readonly Dictionary<(SnowportId, byte), bool> _inScope = new();
@@ -210,16 +222,15 @@ public static class UndoLog
         /// <summary>
         /// Whether the event at index <paramref name="i"/> is something to undo or redo:
         /// the unit its entry comes down to is closed, and changes something in scope as done by
-        /// the entry's author. Call on every event in turn.
+        /// the entry's author. Call on every event in turn, after <see cref="Ends.Canceled"/>.
         /// </summary>
         public bool Include(TableEvent e, int i)
         {
-            // The walk meets a unit first at its newest event, which says whether it's closed.
-            if (e.Undo == null && _newest.TryAdd(e.Unit, i))
-                _closed.TryAdd(e.Unit, e.Close || e.Group == SnowportId.Empty);
+            if (e.Undo == null)
+                _newest.TryAdd(e.Unit, i);
 
             var (unit, author) = Resolve(Entry(e));
-            return IsClosed(unit, i) && InScope(unit, author, i);
+            return ends.Of(unit, i) != GroupEnd.None && InScope(unit, author, i);
         }
 
         /// <summary>
@@ -257,21 +268,6 @@ public static class UndoLog
             Members(log, unit, _newest.GetValueOrDefault(unit, i));
 
         /// <summary>
-        /// Whether the unit is a single ungrouped event, or its newest event closes it.
-        /// </summary>
-        private bool IsClosed(SnowportId unit, int i)
-        {
-            if (_closed.TryGetValue(unit, out bool closed))
-                return closed;
-
-            TableEvent newest = null;
-            foreach (var member in AllMembers(unit, i))
-                newest = member;
-            return _closed[unit] =
-                newest != null && (newest.Close || newest.Group == SnowportId.Empty);
-        }
-
-        /// <summary>
         /// Whether any of the unit's events changes something in scope, as done by the author.
         /// </summary>
         private bool InScope(SnowportId unit, byte author, int i)
@@ -289,6 +285,83 @@ public static class UndoLog
     }
 
     /// <summary>
+    /// How each unit ended, worked out once per unit over a walk from newest to oldest.
+    /// <list type="bullet">
+    /// <item>An ungrouped event is <see cref="GroupEnd.Closed"/>.</item>
+    /// <item>A group ends as its newest event says, which is <see cref="GroupEnd.None"/> while it's open.</item>
+    /// <item>A cancel after an earlier event ended the group does nothing, so the group counts as closed.</item>
+    /// </list>
+    /// </summary>
+    private sealed class Ends(EventLog log)
+    {
+        private readonly Dictionary<SnowportId, GroupEnd> _ends = new();
+
+        /// <summary>
+        /// Whether the event at index <paramref name="i"/> was canceled,
+        /// which can happen if it's in a canceled group or it reverses a canceled group.
+        /// Call on every event in turn.
+        /// </summary>
+        public bool Canceled(TableEvent e, int i)
+        {
+            if (e.Undo != null)
+                return Of(UnitOf(log, e.Id), i) == GroupEnd.Canceled;
+
+            // The walk meets a unit first at its newest event, which says how it ended.
+            // Only a cancel needs the older events.
+            if (!_ends.TryGetValue(e.Unit, out var end))
+                _ends[e.Unit] = end = Decide(
+                    e,
+                    e.End == GroupEnd.Canceled && EndedBefore(e.Unit, i)
+                );
+            return end == GroupEnd.Canceled;
+        }
+
+        /// <summary>
+        /// How <paramref name="unit"/> ended.
+        /// </summary>
+        public GroupEnd Of(SnowportId unit, int i)
+        {
+            if (_ends.TryGetValue(unit, out var end))
+                return end;
+
+            TableEvent newest = null;
+            bool endedBefore = false;
+            foreach (var member in Members(log, unit, i))
+            {
+                endedBefore |= newest is { End: not GroupEnd.None };
+                newest = member;
+            }
+            return _ends[unit] = newest == null ? GroupEnd.None : Decide(newest, endedBefore);
+        }
+
+        // Whether an event of the unit before index i ended it.
+        private bool EndedBefore(SnowportId unit, int i)
+        {
+            foreach (var member in Members(log, unit, i - 1))
+                if (member.End != GroupEnd.None)
+                    return true;
+            return false;
+        }
+
+        // How a unit ended, given its newest event and whether an older one already ended it.
+        private static GroupEnd Decide(TableEvent newest, bool endedBefore) =>
+            newest.Group == SnowportId.Empty ? GroupEnd.Closed
+            : newest.End == GroupEnd.Canceled && endedBefore ? GroupEnd.Closed
+            : newest.End;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="group"/> is in the log and no event has closed or canceled it yet.
+    /// </summary>
+    public static bool IsOpen(EventLog log, SnowportId group)
+    {
+        TableEvent newest = null;
+        foreach (var member in Members(log, group, log.Count - 1))
+            newest = member;
+        return newest is { End: GroupEnd.None } && newest.Group == group;
+    }
+
+    /// <summary>
     /// The groups started by <paramref name="source"/> that no event has closed yet, newest first.
     /// </summary>
     public static List<SnowportId> OpenGroups(EventLog log, byte source)
@@ -303,7 +376,7 @@ public static class UndoLog
             if (
                 e.Group != SnowportId.Empty
                 && met.Add(e.Group)
-                && !e.Close
+                && e.End == GroupEnd.None
                 && e.Group.source == source
             )
                 open.Add(e.Group);
@@ -342,11 +415,27 @@ public static class UndoLog
 
     /// <summary>
     /// The events <paramref name="e"/> may have changed, for a store to recompute what they wrote.
-    /// For a reversal, the events older than it of the unit its reversals come down to; for any other
-    /// event, itself.
+    /// <list type="bullet">
+    /// <item>For a reversal, the events older than it of the unit its reversals come down to.</item>
+    /// <item>
+    /// For an event that ends a group, or one in a group that was canceled, the group's events up to it,
+    /// since how a group ends decides whether it's canceled.
+    /// </item>
+    /// <item>For any other event, itself.</item>
+    /// </list>
     /// </summary>
-    public static IEnumerable<TableEvent> Changes(EventLog log, TableEvent e) =>
-        e.Undo == null ? [e] : Members(log, UnitOf(log, e.Id), log.IndexOf(e.Id) - 1);
+    public static IEnumerable<TableEvent> Changes(EventLog log, TableEvent e)
+    {
+        if (e.Undo != null)
+            return Members(log, UnitOf(log, e.Id), log.IndexOf(e.Id) - 1);
+        if (e.Group == SnowportId.Empty)
+            return [e];
+
+        var group = new List<TableEvent>(Members(log, e.Group, log.IndexOf(e.Id)));
+        return e.End != GroupEnd.None || group.Exists(m => m.End == GroupEnd.Canceled)
+            ? group
+            : [e];
+    }
 
     /// <summary>
     /// The events whose history entry is in effect, newest first. For an action, that's not being
@@ -355,10 +444,12 @@ public static class UndoLog
     public static IEnumerable<TableEvent> InEffect(EventLog log)
     {
         var reversed = new HashSet<SnowportId>();
+        var ends = new Ends(log);
         for (int i = log.Count - 1; i >= 0; i--)
         {
             var e = log.GetAt(i).Value;
-            if (InEffect(reversed, e))
+            bool inEffect = InEffect(reversed, e);
+            if (!ends.Canceled(e, i) && inEffect)
                 yield return e;
         }
     }

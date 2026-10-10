@@ -30,12 +30,16 @@ public partial class VcDeck : VisualComponentBase
 
     public override float MaxAxisSize => Math.Max(_height, _width);
 
-    /// <summary>
-    /// For showing how many cards are on this deck.
-    /// </summary>
-    public void SetCount(int count)
+    public override void _EnterTree()
     {
-        _componentCount.Text = count.ToString();
+        base._EnterTree();
+        RecordService.Instance.Watch(this, SyncCount);
+    }
+
+    private void SyncCount(IRecordReader R)
+    {
+        if (R.Get<ComponentState>(Reference) is { } deck && !R.IsBeingDragged(deck))
+            _componentCount.Text = R.TokensOn(deck).Count.ToString();
     }
 
     /// <summary>

@@ -10,6 +10,9 @@ public partial class PlayerHandsPanel : Panel
 
     private VBoxContainer _playerHandsContainer;
 
+    [Export]
+    private PackedScene _opponentHandScene;
+
     public event EventHandler<bool> IsShowingChanged;
 
     public override void _Ready()
@@ -64,20 +67,10 @@ public partial class PlayerHandsPanel : Panel
 
     private (VBoxContainer Row, Label Label) AddRow(int seat)
     {
-        var row = new VBoxContainer();
+        var row = _opponentHandScene.Instantiate<VBoxContainer>();
         _playerHandsContainer.AddChild(row);
-        row.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-
-        var label = new Label();
-        row.AddChild(label);
-
-        var hand = new HandRow { Back = true };
-        row.AddChild(hand);
-        hand.Seat = seat;
-        hand.CustomMinimumSize = new Vector2(0, 50);
-        hand.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-
-        return (row, label);
+        row.GetNode<HandRow>("HandRow").Seat = seat;
+        return (row, row.GetNode<Label>("Label"));
     }
 
     public override void _Process(double delta) { }

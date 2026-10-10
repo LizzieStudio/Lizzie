@@ -20,8 +20,20 @@ public sealed record ProjectGameSettings : Replicated
 
     public Color TableColor { get; init; } = new Color(0.28f, 0.60f, 0.41f, 1f);
 
-    /// <summary>Index into the rotation-step option list (15°, 30°, 45°, 60°, 90°, 180°).</summary>
+    /// <summary>
+    /// The rotation steps to choose from, in degrees, in the order the rotation-step dropdowns list them.
+    /// </summary>
+    public static readonly ImmutableArray<float> RotationSteps = [15, 30, 45, 60, 90, 180];
+
+    /// <summary>
+    /// Index into <see cref="RotationSteps"/>.
+    /// </summary>
     public int RotationStepIndex { get; init; } = 0;
+
+    /// <summary>
+    /// The current rotation step.
+    /// </summary>
+    public float RotationStep() => RotationSteps[RotationStepIndex];
 
     // Players tab
     public bool AllowObservers { get; init; } = false;
@@ -57,13 +69,18 @@ public record ProjectPlayerSettings
 
     /// <summary>
     /// The container id for this seat's hand.
-    /// The hand belongs to the seat, not the player.
     /// </summary>
     public SnowTag HandRef { get; init; } = SnowTag.Empty;
 
     /// <summary>
-    /// The container id for what this seat's player is dragging.
-    /// The cursor belongs to the seat, not the player.
+    /// The container id for what this seat's player is dragging over the table.
     /// </summary>
     public SnowTag CursorRef { get; init; } = SnowTag.Empty;
+
+    /// <summary>
+    /// The container id for what this seat's player is dragging over their hand.
+    /// It isn't in the hand, and it isn't on the table.
+    /// Importantly, it's kept private, allowing for card flipping before a card reaches the table.
+    /// </summary>
+    public SnowTag HandHoldRef { get; init; } = SnowTag.Empty;
 }

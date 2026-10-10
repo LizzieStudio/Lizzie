@@ -133,6 +133,8 @@ public partial class VcToken : VisualComponentBase
     public override GeometryInstance3D DragMesh => _mainMesh;
     public override float MaxAxisSize => Math.Max(_height, _width);
 
+    public Vector2 Size => new(_width, _height);
+
     private float _flipRate = 720; //degrees per second
     private float _targetZ;
     private bool _flipInProcess;

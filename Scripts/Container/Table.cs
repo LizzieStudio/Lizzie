@@ -6,7 +6,7 @@ using Godot;
 /// Holds a node for every component record in the current game.
 /// Creates and removes the nodes, who then render their record.
 /// </summary>
-public partial class Table : Node
+public partial class Table : Node3D
 {
     public TextureFactory TextureFactory { get; set; }
 

@@ -2,15 +2,25 @@ using System;
 using Godot;
 
 /// <summary>
-/// Shows one card in a hand, drawn from its token's face or back texture.
+/// Shows one card in a hand.
 /// </summary>
-public partial class HandCard : TextureRect
+public partial class HandCard : PanelContainer
 {
+    // An empty panel with room around the card for the selection outline.
+    private static readonly Theme OutlineRoom = MakeTheme();
+
+    private static Theme MakeTheme()
+    {
+        var room = new StyleBoxEmpty();
+        foreach (var side in new[] { Side.Left, Side.Top, Side.Right, Side.Bottom })
+            room.SetContentMargin(side, SelectionHighlight.OutlineWidth);
+        var theme = new Theme();
+        theme.SetStylebox("panel", nameof(PanelContainer), room);
+        return theme;
+    }
+
     private SnowTag _reference;
 
-    /// <summary>
-    /// The card this row shows.
-    /// </summary>
     public SnowTag Reference
     {
         get => _reference;
@@ -21,17 +31,37 @@ public partial class HandCard : TextureRect
         }
     }
 
+    /// <remarks>
+    /// Used when the card is in an opponent's hand.
+    /// </remarks>
+    public bool AlwaysShowBack { get; set; }
+
     /// <summary>
-    /// Whether to show the card's back rather than its face.
+    /// The card's size in cm.
     /// </summary>
-    public bool Back { get; set; }
+    public Vector2 TableSize { get; private set; } = HandRow.TableSize(null);
+
+    /// <summary>
+    /// The card's turn about Y in the hand, in radians.
+    /// </summary>
+    public float Yaw { get; private set; }
+
+    private TextureRect _face;
 
     // The node whose textures are shown, which the table replaces when the card's prototype or row changes.
     private VcToken _card;
 
+    public override void _Ready()
+    {
+        // Built in code, since its room comes from the outline's width.
+        Theme = OutlineRoom;
+        _face = GetNode<TextureRect>("Face");
+    }
+
     public override void _EnterTree()
     {
         RecordService.Instance.Watch(this, Sync);
+        RecordService.Instance.Watch(this, SyncSelection);
     }
 
     public override void _ExitTree()
@@ -46,7 +76,21 @@ public partial class HandCard : TextureRect
             R.GetIncludingDeleted<Prototype>(state.PrototypeRef);
 
         SetCard(ProjectService.Instance.GameObjects.GetComponent(Reference) as VcToken);
-        Texture = _card == null ? null : CardTexture(_card, Back);
+        Yaw = state?.Rotation.Y ?? 0;
+        TableSize = HandRow.TableSize(_card);
+        _face.Texture =
+            _card == null || state == null
+                ? null
+                : CardTexture(_card, AlwaysShowBack || IsFaceDown(state));
+    }
+
+    private void SyncSelection(IRecordReader R)
+    {
+        var target = new RecordTarget(Reference);
+        var colors = R.SelectionColors(s =>
+            s.Within == SnowTag.Empty && s.Targets.Contains(target)
+        );
+        SelectionHighlight.Outline(this, "panel", colors, target);
     }
 
     private void SetCard(VcToken card)
@@ -62,15 +106,25 @@ public partial class HandCard : TextureRect
 
     private void OnTexturesChanged() => RecordService.Instance.QueueSync(this);
 
-    public override void _GuiInput(InputEvent e)
+    public static bool IsFaceDown(ComponentState s) => Mathf.Cos(s.Rotation.Z) < 0;
+
+    public static float ScreenRotation(float yaw) => -yaw;
+
+    public static float CameraYaw(Camera3D camera)
     {
-        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
-        {
-            var go = ProjectService.Instance.GameObjects;
-            go.StartDraw(go.BuildDraw([Reference]));
-            AcceptEvent();
-        }
+        var across = camera.GlobalBasis.X;
+        return Mathf.Atan2(-across.Z, across.X);
     }
+
+    /// <summary>
+    /// A held card's record turned <paramref name="angle"/> about Y, along with its offset from what holds it.
+    /// </summary>
+    public static ComponentState Turned(ComponentState s, float angle) =>
+        s with
+        {
+            Rotation = s.Rotation with { Y = s.Rotation.Y + angle },
+            Position = new Basis(Vector3.Up, angle) * s.PositionAt(0),
+        };
 
     /// <summary>
     /// The card's cropped texture from the sheet, or null before it has one.

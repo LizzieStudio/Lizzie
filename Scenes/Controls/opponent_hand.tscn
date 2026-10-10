@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://bob3g28fu22ko"]
+
+[ext_resource type="PackedScene" uid="uid://g1hurherohq0" path="res://Scenes/Controls/hand_row.tscn" id="1_row"]
+
+[node name="OpponentHand" type="VBoxContainer" unique_id=10498057]
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="." unique_id=1019526600]
+layout_mode = 2
+
+[node name="HandRow" parent="." unique_id=920494465 instance=ExtResource("1_row")]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+Back = true
+PixelsPerCm = 5.6243

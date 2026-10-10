@@ -75,7 +75,7 @@ public partial class SelectionOutline : Node
         var slot = System.Array.IndexOf(Palette, null);
         if (slot < 0)
         {
-            // One local color and one per player never fill the palette, so this is a leak.
+            // The hover colors and one per seat never fill the palette, so this is a leak.
             GD.PushError(
                 $"The selection outline's palette is full ({Palette.Length} colors), so {color} is drawn in another's color."
             );

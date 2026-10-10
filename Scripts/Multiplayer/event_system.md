@@ -46,7 +46,7 @@ The effective ZOrder is then
 
 ## Tracking Children
 
-The set of cards in a deck are tracked on the cards by a containerId property with the SnowTag of the deck. The containerId is the source-of-truth on containment. The deck maintains a cache of its children, but it is only a cache. The order of components, as stated above, is determined by their ZOrder. Any changes in containment must change the containerId of the children and any changes in order inside a container, like shuffling, must change the children's ZOrder.
+The set of cards in a deck are tracked on the cards by a containerId property with the SnowTag of the deck. The containerId is the source-of-truth on containment, and nothing keeps a copy of a container's contents. The order of components, as stated above, is determined by their ZOrder. Any changes in containment must change the containerId of the children and any changes in order inside a container, like shuffling, must change the children's ZOrder.
 
 This is more resilient to bugs. If two clients pulled a card off of a deck at the same time, the host would need to consolidate what that means for the deck's "children" array. With the containerId property, one client would just "wipe-out" the other clients changes as one of the writes to containerId wins.
 

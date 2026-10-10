@@ -5,7 +5,7 @@ using Godot;
 /// <para>Makes clicks for right-click context menus behave as expected.</para>
 ///
 /// <para>
-/// A right-click anywhere opens the command menu for the view under it.
+/// A right-click anywhere opens the command menu for the view of the window it's on.
 /// Views can select on the key-down event to add the target to the selection.
 /// Other than that, an <see cref="ICommandView"/> doesn't have to do anything.
 /// </para>
@@ -16,13 +16,6 @@ using Godot;
 public static class ClickRouting
 {
     private static bool _installed;
-
-    // Where the right button last went down. Used for a threshold distance.
-    private static Vector2 _rightPressAt;
-
-    // Whether the held right button has moved past the threshold, making it a drag, not a click.
-    // This is a "threshold switch". Once it's past that point, moving back to the start doesn't reverse it.
-    private static bool _rightDragged;
 
     /// <summary>Applies the rules to every click in <paramref name="root"/>, the main window.</summary>
     public static void Install(Window root)
@@ -36,13 +29,6 @@ public static class ClickRouting
 
     private static void OnWindowInput(Window root, InputEvent e)
     {
-        if (
-            e is InputEventMouseMotion motion
-            && motion.ButtonMask.HasFlag(MouseButtonMask.Right)
-            && motion.Position.DistanceTo(_rightPressAt) >= root.GuiDragThreshold
-        )
-            _rightDragged = true;
-
         // The wheel is a button too, but scrolling shouldn't move focus or close the menu.
         if (
             e
@@ -53,18 +39,12 @@ public static class ClickRouting
         )
             return;
 
-        if (button.ButtonIndex == MouseButton.Right)
-        {
-            if (button.Pressed)
-            {
-                _rightPressAt = button.Position;
-                _rightDragged = false;
-            }
-            else if (!_rightDragged)
-                OpenMenu(root, button.Position);
-        }
         if (!button.Pressed)
+        {
+            if (button.ButtonIndex == MouseButton.Right)
+                OpenMenu(root, button.Position);
             return;
+        }
 
         // First, since closing the menu hands focus back to the window under it.
         CommandMenu.CloseUnlessOver(button.Position);
@@ -73,44 +53,34 @@ public static class ClickRouting
             FocusWindowAt(root, button.Position);
     }
 
+    /// <summary>
+    /// Opens the menu of the focused window's view.
+    /// </summary>
     private static void OpenMenu(Window root, Vector2 at)
     {
-        var window = WindowAt(root, at) ?? root;
-
+        // Nothing else can be used while a modal window is open.
+        // Don't open a menu mid-drag or over a popup.
+        // A captured mouse is steering something, like the camera's rotation, so its release isn't a click.
         if (
-            window is Popup
-            || root.GetEmbeddedSubwindows().Any(w => w.Visible && w.Exclusive && w != window)
+            root.GetEmbeddedSubwindows().Any(w => w.Visible && w.Exclusive)
+            || WindowAt(root, at) is Popup
             || ImGuiInterop.ClaimingMouse
+            || Input.IsMouseButtonPressed(MouseButton.Left)
+            || Input.MouseMode == Input.MouseModeEnum.Captured
         )
             return;
 
-        var control = window.GuiGetHoveredControl();
-        while (control != null && control.MouseFilter != Control.MouseFilterEnum.Stop)
-            control = control.GetParentControl();
+        var window = CommandViews.FocusedWindow(root);
         // A text box keeps the Godot native context menu.
         // This is similar to the strategy of applications like Google Sheets.
-        if (control is LineEdit or TextEdit && control.HasFocus())
+        if (window.GuiGetHoveredControl() is (LineEdit or TextEdit) and var box && box.HasFocus())
             return;
 
-        var view = CommandViews.Of(control ?? (Node)window);
-        // In the main window, controls like the menu bar draw over the table but aren't part of it.
-        // They reach the table's view (arriving here) but we don't want to open a menu for them.
-        if (window == root && control != null && view == CommandViews.Of(root))
+        if (CommandViews.Find(window) is not { } view)
             return;
-        // Don't open a menu mid-drag
-        if (view == null || Input.IsMouseButtonPressed(MouseButton.Left))
-            return;
-
-        // We defer so that the view can handle the click first.
-        // This is often used to select the item clicked so that it's included.
-        Callable
-            .From(() =>
-            {
-                // Writes a text box being edited, so the menu acts on what it shows.
-                window.GuiReleaseFocus();
-                CommandMenu.Show((Vector2I)at, view);
-            })
-            .CallDeferred();
+        // Writes a text box being edited, so the menu acts on what it shows.
+        window.GuiReleaseFocus();
+        CommandMenu.Show((Vector2I)at, view);
     }
 
     /// <summary>The embedded window at <paramref name="point"/>, or null for the main window.</summary>
@@ -120,7 +90,9 @@ public static class ClickRouting
             .Where(w => w.Visible)
             .LastOrDefault(w => Frame(w).HasPoint(point));
 
-    /// <summary>Focuses the embedded window at <paramref name="point"/>, or the main window if there is none.</summary>
+    /// <summary>
+    /// Focuses the embedded window at <paramref name="point"/>, or the main window if there is none.
+    /// </summary>
     private static void FocusWindowAt(Window root, Vector2 point)
     {
         var windows = root.GetEmbeddedSubwindows().Where(w => w.Visible).ToList();

@@ -172,18 +172,9 @@ public static class CommandMenu
 
     private static void Open(PopupMenu menu, Vector2I position)
     {
-        menu.Visible = true;
-        // Fits the menu to its items before placing it.
+        menu.Position = position;
         menu.ResetSize();
-
-        // Opens away from the edges it would overflow, and stays in the window.
-        var size = menu.Size;
-        var bounds = (Vector2I)menu.GetParent<Viewport>().GetVisibleRect().Size;
-        if (position.X + size.X > bounds.X)
-            position.X -= size.X;
-        if (position.Y + size.Y > bounds.Y)
-            position.Y -= size.Y;
-        menu.Position = position.Clamp(Vector2I.Zero, (bounds - size).Max(Vector2I.Zero));
+        menu.Popup();
     }
 
     // Made on first use, in the main window.

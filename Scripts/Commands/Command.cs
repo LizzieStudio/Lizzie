@@ -515,6 +515,14 @@ public static class CommandViews
         Of(viewport.GuiGetFocusOwner() ?? (Node)viewport);
 
     /// <summary>
+    /// The focused embedded window, or <paramref name="root"/>.
+    /// </summary>
+    public static Window FocusedWindow(Window root) =>
+        root.GetEmbeddedSubwindows()
+            .FirstOrDefault(w => w.Visible && w.HasFocus() && w is not Popup)
+        ?? root;
+
+    /// <summary>
     /// The view that <paramref name="node"/> is in.
     /// </summary>
     public static ICommandView Of(Node node)

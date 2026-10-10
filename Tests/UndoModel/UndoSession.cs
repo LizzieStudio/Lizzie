@@ -64,7 +64,16 @@ public abstract record Op
     /// <summary>Reversals Undo or Redo. The expected implementation decides the flag.</summary>
     public sealed record Reversal(byte Source, bool Redo, TestScope Scope) : Op;
 
-    /// <summary>The player leaves, and the host closes and undoes their open gestures.</summary>
+    /// <summary>Cancels the player's gesture, if one is going.</summary>
+    public sealed record Cancel(byte Source) : Op;
+
+    /// <summary>
+    /// A whole gesture that's canceled: its first event, <paramref name="Moves"/> more, and the cancel,
+    /// all but the cancel writing <paramref name="Record"/>. Closes a gesture left open first.
+    /// </summary>
+    public sealed record CanceledGesture(byte Source, int Record, int Moves) : Op;
+
+    /// <summary>The player leaves, and the host cancels their open gestures.</summary>
     public sealed record Leave(byte Source) : Op;
 
     /// <summary>
@@ -166,10 +175,26 @@ public sealed class UndoSession
                     {
                         Id = NextId(g.Source),
                         Group = head,
-                        Close = true,
+                        End = GroupEnd.Closed,
                     },
                     g.Record
                 );
+                break;
+
+            case Op.CanceledGesture c:
+                CloseOpen(c.Source);
+                var canceledHead = NextId(c.Source);
+                Record(new TableEvent { Id = canceledHead, Group = canceledHead }, c.Record);
+                for (int i = 0; i < c.Moves; i++)
+                    Record(
+                        new TableEvent { Id = NextId(c.Source), Group = canceledHead },
+                        c.Record
+                    );
+                Record(CancelOnly(canceledHead, c.Source));
+                break;
+
+            case Op.Cancel c when _open.Remove(c.Source, out var canceled):
+                Record(CancelOnly(canceled, c.Source));
                 break;
 
             case Op.Start s:
@@ -185,7 +210,7 @@ public sealed class UndoSession
                     {
                         Id = NextId(e.Source),
                         Group = group,
-                        Close = true,
+                        End = GroupEnd.Closed,
                     },
                     e.Record
                 );
@@ -226,16 +251,7 @@ public sealed class UndoSession
 
             case Op.Leave l when l.Source != Host:
                 foreach (var open in _driver.OpenGroups(Log, l.Source))
-                {
-                    Record(CloseOnly(open, Host));
-                    Record(
-                        new TableEvent
-                        {
-                            Id = NextId(Snowport.AdminSource),
-                            Undo = new UndoFlag { Reverses = open },
-                        }
-                    );
-                }
+                    Record(CancelOnly(open, Host));
                 _open.Remove(l.Source);
                 break;
 
@@ -288,7 +304,15 @@ public sealed class UndoSession
         {
             Id = NextId(source),
             Group = group,
-            Close = true,
+            End = GroupEnd.Closed,
+        };
+
+    private TableEvent CancelOnly(SnowportId group, byte source) =>
+        new()
+        {
+            Id = NextId(source),
+            Group = group,
+            End = GroupEnd.Canceled,
         };
 
     private SnowportId NextId(byte source)
@@ -346,7 +370,10 @@ public sealed class UndoSession
             Log.Values.Select(e =>
             {
                 string group = e.Group == SnowportId.Empty ? "" : $" in {Name(e.Group)}";
-                string close = e.Close ? " close" : "";
+                string close =
+                    e.End == GroupEnd.Canceled ? " cancel"
+                    : e.End == GroupEnd.Closed ? " close"
+                    : "";
                 string what = e.Undo is { } f
                     ? Describe(f)
                     : string.Join(
@@ -409,6 +436,15 @@ public static class UndoSessions
 
     private static readonly Gen<Op> Leaves = Gen.Byte[2, 4].Select(s => (Op)new Op.Leave(s));
 
+    private static readonly Gen<Op> Cancels = Source.Select(s => (Op)new Op.Cancel(s));
+
+    private static readonly Gen<Op> CanceledGestures = Gen.Select(
+        Source,
+        Record,
+        Gen.Int[0, 2],
+        (s, record, moves) => (Op)new Op.CanceledGesture(s, record, moves)
+    );
+
     private static readonly Gen<Op> RawFlags = Gen.Select(
         Source,
         Gen.Int[0, 1000],
@@ -445,6 +481,8 @@ public static class UndoSessions
         (5, Gestures),
         (10, Starts),
         (10, Ends),
+        (4, Cancels),
+        (3, CanceledGestures),
         (30, Reversals),
         (10, Concurrents),
         (3, Leaves),
@@ -457,6 +495,8 @@ public static class UndoSessions
         (5, Gestures),
         (10, Starts),
         (10, Ends),
+        (4, Cancels),
+        (3, CanceledGestures),
         (30, Reversals),
         (10, Concurrents),
         (3, Leaves),
@@ -524,6 +564,11 @@ public static class UndoSessions
         Gen.Int[0, 2],
         (record, moves) => (Op)new Op.Gesture(Me, record, moves)
     );
+    private static readonly Gen<Op> MyCanceledGestures = Gen.Select(
+        Record,
+        Gen.Int[0, 2],
+        (record, moves) => (Op)new Op.CanceledGesture(Me, record, moves)
+    );
     private static readonly Gen<Op> MyUndos = Gen.Const(
         (Op)new Op.Reversal(Me, false, new TestScope(ScopeKind.Mine, 0))
     );
@@ -532,12 +577,13 @@ public static class UndoSessions
     );
 
     /// <summary>
-    /// One player's actions, gestures and Undo reversals in their own scope,
+    /// One player's actions, gestures (some canceled) and Undo reversals in their own scope,
     /// among another player's actions they can't undo.
     /// </summary>
     public static readonly Gen<Op[]> SinglePlayerUndos = Gen.Frequency(
         (30, MyActs),
         (10, MyGestures),
+        (5, MyCanceledGestures),
         (10, OthersActs),
         (30, MyUndos)
     ).Array[0, 40];
@@ -546,6 +592,7 @@ public static class UndoSessions
     public static readonly Gen<Op[]> SinglePlayer = Gen.Frequency(
         (30, MyActs),
         (10, MyGestures),
+        (5, MyCanceledGestures),
         (10, OthersActs),
         (30, MyUndos),
         (25, MyRedos)

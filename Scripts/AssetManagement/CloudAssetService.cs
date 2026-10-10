@@ -101,14 +101,7 @@ namespace Lizzie.AssetManagement
                 var bytes = ms.ToArray();
 
                 var image = new Image();
-                var err = image.LoadPngFromBuffer(bytes);
-                if (err != Error.Ok)
-                    err = image.LoadJpgFromBuffer(bytes);
-                if (err != Error.Ok)
-                    err = image.LoadWebpFromBuffer(bytes);
-                if (err != Error.Ok)
-                    err = image.LoadBmpFromBuffer(bytes);
-
+                var err = Decode(image, bytes);
                 if (err != Error.Ok)
                 {
                     var s =
@@ -127,6 +120,33 @@ namespace Lizzie.AssetManagement
                 return (s, new Image());
             }
         }
+
+        /// <summary>
+        /// Detects the file type and decodes it using the proper loader.
+        /// </summary>
+        private static Error Decode(Image image, byte[] b) =>
+            b switch
+            {
+                [0x89, (byte)'P', (byte)'N', (byte)'G', ..] => image.LoadPngFromBuffer(b),
+                [0xFF, 0xD8, ..] => image.LoadJpgFromBuffer(b),
+                [
+                    (byte)'R',
+                    (byte)'I',
+                    (byte)'F',
+                    (byte)'F',
+                    _,
+                    _,
+                    _,
+                    _,
+                    (byte)'W',
+                    (byte)'E',
+                    (byte)'B',
+                    (byte)'P',
+                    ..,
+                ] => image.LoadWebpFromBuffer(b),
+                [(byte)'B', (byte)'M', ..] => image.LoadBmpFromBuffer(b),
+                _ => Error.FileUnrecognized,
+            };
 
         /// <summary>
         /// Writes information for an image error message:

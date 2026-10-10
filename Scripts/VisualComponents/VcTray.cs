@@ -132,26 +132,17 @@ public partial class VcTray : VisualComponentGroup
         }
     }
 
-    protected override void OnChildrenChanged() { }
-
-    public override Replicated[] DragDraw(int quantity)
-    {
-        // Players without a seat can't drag.
-        var cursor = RecordService.Instance.LocalCursor();
-        if (_prototype == null || cursor == SnowTag.Empty)
-            return [];
-
-        return
-        [
-            new ComponentState
-            {
-                Id = Snowport.Clock.CreateTag(),
-                PrototypeRef = _prototype.Id,
-                ContainerRef = cursor,
-                ZOrder = new ZOrder(ZTarget.Top, 0, Snowport.Clock.Create()),
-            },
-        ];
-    }
+    public override ComponentState[] DragDraw() =>
+        _prototype == null
+            ? []
+            :
+            [
+                new ComponentState
+                {
+                    Id = Snowport.Clock.CreateTag(),
+                    PrototypeRef = _prototype.Id,
+                },
+            ];
 }
 
 [JsonName("TrayParameters")]

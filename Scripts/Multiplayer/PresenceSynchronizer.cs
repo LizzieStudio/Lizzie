@@ -3,10 +3,10 @@ using System.Collections.Immutable;
 using Godot;
 
 /// <summary>
-/// Tracks session state in multiplayer.
+/// Tracks the players at the table.
 /// <list type="bullet">
 /// <item>seat requests, which it writes to <see cref="Seating"/></item>
-/// <item>each client's cursor position, which <see cref="CursorOverlay"/> draws</item>
+/// <item>each player's cursor position, which <see cref="CursorOverlay"/> draws</item>
 /// </list>
 /// </summary>
 public partial class PresenceSynchronizer : Node
@@ -16,35 +16,17 @@ public partial class PresenceSynchronizer : Node
 
     private const double SendInterval = 1.0 / 30.0;
 
-    private const float MoveEpsilon = 0.1f;
-
-    private static Vector3 Miss => DragPlane.Miss;
-
     private DragPlane _dragPlane;
 
     private double _sendAccumulator;
-    private Vector3 _lastSentPosition = Miss;
 
-    // The local player's cursor, kept apart so it stays theirs when their source changes.
-    private Vector3? _localPosition;
-
-    // The other players' cursors, by source.
+    // Every player's cursor, by source. The local player's is the one this machine updates.
     private readonly Dictionary<byte, Vector3> _positions = new();
 
-    public bool TryGetCursor(byte source, out Vector3 pos)
-    {
-        if (source == Snowport.Clock.source)
-        {
-            pos = _localPosition.GetValueOrDefault();
-            return _localPosition.HasValue;
-        }
-        return _positions.TryGetValue(source, out pos);
-    }
-
     /// <summary>
-    /// The cursor positions of other players on the table.
+    /// Every player's cursor position on the table, by source.
     /// </summary>
-    public IReadOnlyDictionary<byte, Vector3> RemoteCursors => _positions;
+    public IReadOnlyDictionary<byte, Vector3> Cursors => _positions;
 
     public override void _EnterTree()
     {
@@ -65,24 +47,12 @@ public partial class PresenceSynchronizer : Node
     public void ClearContext()
     {
         _dragPlane = null;
-        _lastSentPosition = Miss;
         ClearCursors();
     }
 
     #region Seats
 
     private static RecordService R => RecordService.Instance;
-
-    /// <summary>
-    /// The cursor position of the seated player whose cursor container is <paramref name="cursorRef"/>.
-    /// </summary>
-    public bool TryGetCursor(SnowTag cursorRef, out Vector3 pos)
-    {
-        if (R.HolderOf(cursorRef) is byte source)
-            return TryGetCursor(source, out pos);
-        pos = default;
-        return false;
-    }
 
     /// <summary>
     /// Asks for a seat for the local player, or <see cref="SeatingReader.NoSeat"/> to observe.
@@ -111,20 +81,6 @@ public partial class PresenceSynchronizer : Node
         if (seated && seats.Count == 1)
             return;
         WriteSeats(ImmutableDictionary<byte, int>.Empty.Add(source, seated ? current : 0));
-    }
-
-    /// <summary>On the server, free the seat held by a disconnected peer's source.</summary>
-    public void ReleaseSeatForPeer(int peerId)
-    {
-        var mm = MultiplayerManager.Instance;
-        if (mm?.IsServer != true)
-            return;
-        if (!mm.Players.TryGetValue(peerId, out var pi))
-            return;
-
-        var seats = R.Single<Seating>().Seats;
-        if (seats.ContainsKey(pi.Source))
-            WriteSeats(seats.Remove(pi.Source));
     }
 
     [Rpc(
@@ -191,34 +147,20 @@ public partial class PresenceSynchronizer : Node
 
     public override void _Process(double delta)
     {
-        if (_dragPlane == null)
+        if (_dragPlane?.GetCursorProjection() is not { } pos)
             return;
-
-        var pos = _dragPlane.GetCursorProjection();
-        if (pos != Miss)
-            _localPosition = pos;
-
-        if (MultiplayerManager.Instance != null)
-            RemoveStaleCursors(MultiplayerManager.Instance);
-
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
+        _positions[Snowport.Clock.source] = pos;
 
         _sendAccumulator += delta;
         if (_sendAccumulator < SendInterval)
             return;
         _sendAccumulator = 0;
 
-        if (pos == Miss)
-            return;
-        if (_lastSentPosition != Miss && pos.DistanceTo(_lastSentPosition) < MoveEpsilon)
-            return;
-        _lastSentPosition = pos;
-
-        if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ClientReceiveCursor), (int)Snowport.Clock.source, pos);
-        else
-            RpcId(1, nameof(ServerReceiveCursor), (int)Snowport.Clock.source, pos);
+        if (
+            Multiplayer.MultiplayerPeer?.GetConnectionStatus()
+            == MultiplayerPeer.ConnectionStatus.Connected
+        )
+            Rpc(nameof(ReceiveCursor), pos);
     }
 
     [Rpc(
@@ -226,78 +168,35 @@ public partial class PresenceSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
     )]
-    private void ServerReceiveCursor(int source, Vector3 pos)
+    private void ReceiveCursor(Vector3 pos)
     {
-        var mm = MultiplayerManager.Instance;
-        if (mm?.IsServer != true)
-            return;
-
-        var senderId = Multiplayer.GetRemoteSenderId();
-        UpdateCursor((byte)source, pos);
-
-        foreach (var player in mm.Players)
-        {
-            if (player.Key == senderId || player.Key == 1)
-                continue;
-            RpcId(player.Key, nameof(ClientReceiveCursor), source, pos);
-        }
+        if (
+            MultiplayerManager.Instance.Players.TryGetValue(
+                Multiplayer.GetRemoteSenderId(),
+                out var player
+            )
+            && player.Source != Snowport.AdminSource
+        )
+            _positions[player.Source] = pos;
     }
 
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
-    )]
-    private void ClientReceiveCursor(int source, Vector3 pos)
-    {
-        UpdateCursor((byte)source, pos);
-    }
+    /// <summary>
+    /// The cursor position of the seated player whose cursor container is <paramref name="cursorRef"/>.
+    /// </summary>
+    public Vector3? CursorOf(SnowTag cursorRef) =>
+        R.HolderOf(cursorRef) is byte source && _positions.TryGetValue(source, out var pos)
+            ? pos
+            : null;
 
-    private void UpdateCursor(byte source, Vector3 pos)
-    {
-        if (_dragPlane == null)
-            return;
-        if (source == Snowport.Clock.source)
-            return;
+    /// <summary>
+    /// Forgets the cursor of <paramref name="source"/>, a player who left.
+    /// </summary>
+    public void RemoveCursor(byte source) => _positions.Remove(source);
 
-        _positions[source] = pos;
-    }
-
-    private static bool IsSourceConnected(MultiplayerManager mm, byte source)
-    {
-        foreach (var p in mm.Players.Values)
-        {
-            if (p.Source == source)
-                return true;
-        }
-
-        return false;
-    }
-
-    private void RemoveStaleCursors(MultiplayerManager mm)
-    {
-        if (_positions.Count == 0)
-            return;
-
-        List<byte> stale = null;
-        foreach (var source in _positions.Keys)
-        {
-            if (!IsSourceConnected(mm, source))
-                (stale ??= new List<byte>()).Add(source);
-        }
-
-        if (stale == null)
-            return;
-
-        foreach (var source in stale)
-            _positions.Remove(source);
-    }
-
-    private void ClearCursors()
-    {
-        _localPosition = null;
-        _positions.Clear();
-    }
+    /// <summary>
+    /// Forgets every cursor.
+    /// </summary>
+    public void ClearCursors() => _positions.Clear();
 
     #endregion
 }
