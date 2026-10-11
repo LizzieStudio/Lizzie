@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices.ObjectiveC;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -1087,11 +1084,9 @@ public partial class TextureFactory : SubViewport
 
     public enum TextureObjectType
     {
-        Text,
-        CoreShape,
-        ExtendedShape,
-        UserShape,
-        RectangleFrame,
+        Text = 0,
+        CoreShape = 1,
+        RectangleFrame = 2,
     }
 
     public class TextureDefinition
