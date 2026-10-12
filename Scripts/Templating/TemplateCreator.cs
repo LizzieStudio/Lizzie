@@ -639,33 +639,9 @@ public partial class TemplateCreator : Window
 
         var id = Snowport.Clock.CreateTag();
 
-        TemplateElement t = new TextElement(); //for now - delete once all switch elements are populated
-
-        switch (_selectedElement.ElementType)
-        {
-            case ITemplateElement.TemplateElementType.Text:
-                t = new TextElement();
-                break;
-            case ITemplateElement.TemplateElementType.Box:
-                break;
-            case ITemplateElement.TemplateElementType.Image:
-                t = new ImageElement();
-                break;
-            case ITemplateElement.TemplateElementType.Note:
-                break;
-            case ITemplateElement.TemplateElementType.Circle:
-                break;
-            case ITemplateElement.TemplateElementType.Polygon:
-                break;
-            case ITemplateElement.TemplateElementType.Table:
-                break;
-            case ITemplateElement.TemplateElementType.Line:
-                break;
-            case ITemplateElement.TemplateElementType.Container:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        var t = TemplateEngine.BuildTemplateElement(
+            TemplateEngine.MapTemplateElementToProjectFormat(_selectedElement)
+        );
 
         var elementName = CreateUniqueElementName(_selectedElement.ElementName);
 
@@ -675,23 +651,7 @@ public partial class TemplateCreator : Window
 
         t.Id = id;
         t.ElementName = elementName;
-
-        t.Parameters.Clear();
-
-        foreach (var e in _selectedElement.Parameters)
-        {
-            t.Parameters.Add(
-                new TemplateParameter
-                {
-                    Name = e.Name,
-                    Value = e.Value,
-                    Type = e.Type,
-                }
-            );
-        }
-
         _templateElements.Add(t);
-        { }
 
         _elementTree.SetSelected(ni, 0);
 

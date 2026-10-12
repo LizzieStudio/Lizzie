@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Text.RegularExpressions;
 using Godot;
+using static TextureFactory.TextureObject;
 
 namespace Lizzie.Scripts.Templating;
 
@@ -20,7 +21,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "X",
-                Value = "{HalfWidth}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -28,7 +29,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "Y",
-                Value = "{HalfHeight}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -36,7 +37,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "Width",
-                Value = "{Width}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -44,7 +45,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "Height",
-                Value = "{Height}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -106,7 +107,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return string.Empty;
 
-        return ProcessKeywords(p.Value, context);
+        return Substitute(p.Value, context);
     }
 
     public int EvaluateNumberParameter(
@@ -119,7 +120,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return 0;
 
-        var o = ProcessKeywords(p.Value, context);
+        var o = Substitute(p.Value, context);
 
         int.TryParse(o, out var result);
         return result;
@@ -135,7 +136,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return HorizontalAlignment.Left;
 
-        var o = ProcessKeywords(p.Value, context);
+        var o = Substitute(p.Value, context);
 
         switch (o)
         {
@@ -160,7 +161,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return VerticalAlignment.Top;
 
-        var o = ProcessKeywords(p.Value, context);
+        var o = Substitute(p.Value, context);
 
         switch (o)
         {
@@ -185,7 +186,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return Colors.Black;
 
-        var s = ProcessKeywords(p.Value, context);
+        var s = Substitute(p.Value, context);
 
         return Color.FromString(s, Colors.Black);
     }
@@ -200,17 +201,17 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return false;
 
-        var o = ProcessKeywords(p.Value, context);
+        var o = Substitute(p.Value, context);
 
         if (string.IsNullOrWhiteSpace(o))
             return false;
 
         var c = o.ToUpper()[0];
 
-        return (c == 'T' || c == 'Y' || c == '1');
+        return c == 'T' || c == 'Y' || c == '1';
     }
 
-    private TextureFactory.TextureObject.AnchorPoint EvaluateAnchorParameter(
+    private AnchorPoint EvaluateAnchorParameter(
         IList<TemplateParameter> parameters,
         string key,
         TextureContext context
@@ -218,9 +219,9 @@ public class TemplateElement : ITemplateElement
     {
         var p = parameters.FirstOrDefault(x => x.Name == key);
         if (p == null)
-            return TextureFactory.TextureObject.AnchorPoint.TopLeft;
+            return AnchorPoint.TopLeft;
 
-        return TextureFactory.TextureObject.AnchorStringToEnum(ProcessKeywords(p.Value, context));
+        return AnchorStringToEnum(Substitute(p.Value, context));
     }
 
     public TrackElement.TrackTypeEnum EvaluateTrackParameter(
@@ -233,47 +234,23 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return TrackElement.TrackTypeEnum.Horizontal;
 
-        return TextureFactory.TextureObject.TrackStringToEnum(ProcessKeywords(p.Value, context));
+        return TrackStringToEnum(Substitute(p.Value, context));
     }
 
-    private string ProcessKeywords(string parameterVal, TextureContext context)
-    {
-        var s = parameterVal.Replace(
-            "{Width}",
-            context.ParentSize.X.ToString(),
-            StringComparison.InvariantCultureIgnoreCase
+    /// <summary>
+    /// Replaces each {Column} in <paramref name="text"/> with the current row's value.
+    /// </summary>
+    public static string Substitute(string text, TextureContext context) =>
+        Regex.Replace(
+            text,
+            @"\{([^{}]+)\}",
+            match =>
+                context.CurrentRow is { } row
+                && context.DataSet?.Columns.FirstOrDefault(c => c.Name == match.Groups[1].Value)
+                    is { } column
+                    ? row.Data.GetValueOrDefault(column.Id, string.Empty)
+                    : match.Value
         );
-
-        s = s.Replace(
-            "{Height}",
-            context.ParentSize.Y.ToString(),
-            StringComparison.InvariantCultureIgnoreCase
-        );
-
-        s = s.Replace(
-            "{HalfWidth}",
-            ((int)(context.ParentSize.X / 2)).ToString(),
-            StringComparison.InvariantCultureIgnoreCase
-        );
-
-        s = s.Replace(
-            "{HalfHeight}",
-            ((int)(context.ParentSize.Y / 2)).ToString(),
-            StringComparison.InvariantCultureIgnoreCase
-        );
-
-        if (context.DataSet != null && context.CurrentRow != null)
-        {
-            var data = context.CurrentRow.Data;
-            foreach (var col in context.DataSet.Columns)
-            {
-                var r = "{" + col.Name + "}";
-                s = s.Replace(r, data.GetValueOrDefault(col.Id, string.Empty));
-            }
-        }
-
-        return s;
-    }
 
     #endregion
 }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Godot;
 using Lizzie.Scripts.Templating;
 
@@ -37,16 +36,6 @@ public class FrameElement : TemplateElement
                 Type = TemplateParameter.TemplateParameterType.Color,
             }
         );
-
-        UpdateBounds();
-    }
-
-    private void UpdateBounds()
-    {
-        SetParameterValue("Width", "100");
-        SetParameterValue("Height", "100");
-        SetParameterValue("X", "70");
-        SetParameterValue("Y", "70");
     }
 
     public override List<TextureFactory.TextureObject> GetElementData(TextureContext context)

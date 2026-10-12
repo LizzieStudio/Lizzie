@@ -237,11 +237,6 @@ public partial class TextureFactory : SubViewport
         }
     }
 
-    public static Vector2 GetTextBounds(Font font, int fontSize, string text)
-    {
-        return font.GetStringSize(text, fontSize: fontSize);
-    }
-
     private void RenderRectangleText(TextureObject obj, bool wrap = false)
     {
         // Strip tags for measurement:

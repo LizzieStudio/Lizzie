@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Globalization;
 using Godot;
 
 namespace Lizzie.Scripts.Templating;
@@ -55,16 +54,6 @@ public class ImageElement : TemplateElement
                 Type = TemplateParameter.TemplateParameterType.Boolean,
             }
         );
-        UpdateBounds();
-    }
-
-    private void UpdateBounds()
-    {
-        var textSize = TextureFactory.GetTextBounds(new SystemFont(), 12, "Lipsum Orem");
-        SetParameterValue("Width", "100");
-        SetParameterValue("Height", "100");
-        SetParameterValue("X", "70");
-        SetParameterValue("Y", "70");
     }
 
     public override List<TextureFactory.TextureObject> GetElementData(TextureContext context)
