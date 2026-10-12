@@ -57,6 +57,14 @@ public class TemplateElement : ITemplateElement
                 Value = "0",
             }
         );
+        Parameters.Add(
+            new TemplateParameter()
+            {
+                Type = TemplateParameter.TemplateParameterType.Boolean,
+                Name = "Visible",
+                Value = "True",
+            }
+        );
     }
 
     public SnowTag Id { get; set; } = SnowTag.Empty;
@@ -76,6 +84,9 @@ public class TemplateElement : ITemplateElement
     {
         return new List<TextureFactory.TextureObject>();
     }
+
+    public bool IsVisible(TextureContext context) =>
+        EvaluateBooleanParameter(_parameters, "Visible", context);
 
     public List<ITemplateElement> Children { get; } = new();
 
@@ -202,15 +213,11 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return false;
 
-        var o = Substitute(p.Value, context);
-
-        if (string.IsNullOrWhiteSpace(o))
-            return false;
-
-        var c = o.ToUpper()[0];
-
-        return c == 'T' || c == 'Y' || c == '1';
+        return IsTruthy(Substitute(p.Value, context));
     }
+
+    public static bool IsTruthy(string value) =>
+        value.Trim().ToLowerInvariant() is not ("" or "0" or "false" or "f" or "no" or "n");
 
     private AnchorPoint EvaluateAnchorParameter(
         IList<TemplateParameter> parameters,
@@ -280,6 +287,8 @@ public interface ITemplateElement
     IList<TemplateParameter> Parameters { get; }
 
     IList<TextureFactory.TextureObject> GetElementData(TextureContext context);
+
+    bool IsVisible(TextureContext context);
 
     SnowTag Id { get; set; }
 

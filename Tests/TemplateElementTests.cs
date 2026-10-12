@@ -75,4 +75,61 @@ public class TemplateElementTests
         var shape = new ImageElement().GetElementData(new TextureContext()).Single();
         Assert.True(shape.Quantity == 1, $"A new image drew {shape.Quantity}, expected 1.");
     }
+
+    [Theory]
+    [InlineData("True", true)]
+    [InlineData("Yes", true)]
+    [InlineData("3", true)]
+    [InlineData("anything", true)]
+    [InlineData("", false)]
+    [InlineData(" ", false)]
+    [InlineData("0", false)]
+    [InlineData("false", false)]
+    [InlineData("F", false)]
+    [InlineData("No", false)]
+    [InlineData("n", false)]
+    public void AYesNoValueIsOffOnlyWhenBlankZeroFalseOrNo(string value, bool expected)
+    {
+        var actual = TemplateElement.IsTruthy(value);
+        Assert.True(
+            actual == expected,
+            $"\"{value}\" is {(actual ? "on" : "off")}, expected {(expected ? "on" : "off")}."
+        );
+    }
+
+    [Theory]
+    [InlineData(typeof(TextElement))]
+    [InlineData(typeof(ImageElement))]
+    [InlineData(typeof(FrameElement))]
+    [InlineData(typeof(TrackElement))]
+    public void ANewElementIsVisible(Type type)
+    {
+        var element = (TemplateElement)Activator.CreateInstance(type);
+        Assert.True(element.IsVisible(new TextureContext()), $"A new {type.Name} is hidden.");
+    }
+
+    [Theory]
+    [InlineData("3", true)]
+    [InlineData("", false)]
+    public void VisibleFollowsABoundColumn(string cell, bool expected)
+    {
+        var pips = new Column { Id = new SnowTag(1), Name = "Pips" };
+        var context = new TextureContext
+        {
+            DataSet = new DataSet { Id = new SnowTag(10), Columns = [pips] },
+            CurrentRow = new DataRow
+            {
+                Id = new SnowTag(11),
+                Data = ImmutableDictionary<SnowTag, string>.Empty.Add(pips.Id, cell),
+            },
+        };
+        var element = new ImageElement();
+        element.SetParameterValue("Visible", "{Pips}");
+
+        var actual = element.IsVisible(context);
+        Assert.True(
+            actual == expected,
+            $"An image with Visible {{Pips}} = \"{cell}\" is {(actual ? "shown" : "hidden")}."
+        );
+    }
 }

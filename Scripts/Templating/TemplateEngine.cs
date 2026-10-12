@@ -43,7 +43,10 @@ public static class TemplateEngine
         static int Pixels(float size, int percent) =>
             (int)MathF.Round(size * percent / 100f, MidpointRounding.AwayFromZero);
 
-        foreach (var l in element.GetElementData(_textureContext))
+        var objects = element.IsVisible(_textureContext)
+            ? element.GetElementData(_textureContext)
+            : [];
+        foreach (var l in objects)
         {
             td.Objects.Add(
                 new TextureFactory.TextureObject
@@ -68,11 +71,11 @@ public static class TemplateEngine
                     Quantity = l.Quantity,
                 }
             );
+        }
 
-            foreach (var c in element.Children)
-            {
-                MapElementToObject(td, c, _textureContext);
-            }
+        foreach (var c in element.Children)
+        {
+            MapElementToObject(td, c, _textureContext);
         }
     }
 
