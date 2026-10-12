@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using Lizzie.Scripts.Templating;
@@ -39,18 +40,19 @@ public static class TemplateEngine
         TextureContext _textureContext
     )
     {
+        var size = _textureContext.ParentSize;
+        static int Pixels(float size, int percent) =>
+            (int)MathF.Round(size * percent / 100f, MidpointRounding.AwayFromZero);
+
         foreach (var l in element.GetElementData(_textureContext))
         {
-            float sW = _textureContext.ParentSize.X / 100f;
-            float sH = _textureContext.ParentSize.Y / 100f;
-
             td.Objects.Add(
                 new TextureFactory.TextureObject
                 {
-                    Width = (int)(sW * l.Width),
-                    Height = (int)(sH * l.Height),
-                    CenterX = (int)(sW * l.CenterX),
-                    CenterY = (int)(sH * l.CenterY),
+                    Width = Pixels(size.X, l.Width),
+                    Height = Pixels(size.Y, l.Height),
+                    CenterX = Pixels(size.X, l.CenterX),
+                    CenterY = Pixels(size.Y, l.CenterY),
                     Anchor = l.Anchor,
                     Multiline = l.Multiline,
                     Text = l.Text,

@@ -568,13 +568,11 @@ public partial class VcToken : VisualComponentBase
         if (faceFrame < 0)
             return;
 
-        int cellW = (int)(ft.Width * 10 * BASE_DPI);
-        int cellH = (int)(ft.Height * 10 * BASE_DPI);
+        var (cellW, cellH) = ft.Pixels(10 * BASE_DPI);
         if (cellW <= 0 || cellH <= 0)
             return;
 
-        int backCellW = bt != null ? (int)(bt.Width * 10 * BASE_DPI) : cellW;
-        int backCellH = bt != null ? (int)(bt.Height * 10 * BASE_DPI) : cellH;
+        var (backCellW, backCellH) = bt?.Pixels(10 * BASE_DPI) ?? (cellW, cellH);
 
         int hframes = (int)Math.Ceiling(Math.Sqrt(n));
         int vframes = (int)Math.Ceiling((double)n / hframes);

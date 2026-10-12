@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
@@ -20,6 +21,16 @@ public record Template : Replicated
     public string SizeTemplate { get; init; }
     public float Width { get; init; }
     public float Height { get; init; }
+
+    /// <summary>
+    /// The template's size in whole pixels at <paramref name="pixelsPerInch"/>.
+    /// </summary>
+    public (int Width, int Height) Pixels(float pixelsPerInch) =>
+        (
+            (int)MathF.Round(Width * pixelsPerInch, MidpointRounding.AwayFromZero),
+            (int)MathF.Round(Height * pixelsPerInch, MidpointRounding.AwayFromZero)
+        );
+
     public ImmutableArray<ImmutableDictionary<string, string>> Elements { get; init; } =
         ImmutableArray<ImmutableDictionary<string, string>>.Empty;
 

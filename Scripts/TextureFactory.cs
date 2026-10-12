@@ -208,6 +208,8 @@ public partial class TextureFactory : SubViewport
             bgRect.Color = obj.BackgroundColor;
             bgRect.Position = new Vector2(pW, pH);
             bgRect.Size = new Vector2(scaleWidth, scaleHeight);
+            bgRect.PivotOffset = new Vector2(scaleWidth / 2, scaleHeight / 2);
+            bgRect.RotationDegrees = obj.RotationDegrees;
             _viewport.AddChild(bgRect);
         }
 
