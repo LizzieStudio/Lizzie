@@ -2,10 +2,15 @@
 
 [ext_resource type="Script" uid="uid://bjsykaoceokhe" path="res://Scripts/AssetManagement/ImageManager.cs" id="1_oe4yn"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="3_rcwif"]
+[ext_resource type="Script" uid="uid://bs7yopf4sckdw" path="res://Scripts/Controls/FocusEditGroup.cs" id="4_fcsgr"]
+[ext_resource type="Shader" uid="uid://cxy0bv3yujydo" path="res://Shaders/frame_grid.gdshader" id="5_frgrd"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_frgrd"]
+shader = ExtResource("5_frgrd")
 
 [node name="ImageManager" type="Window" unique_id=1595850932]
 oversampling_override = 1.0
-title = "ImageManager"
+title = "Images"
 initial_position = 2
 size = Vector2i(600, 400)
 script = ExtResource("1_oe4yn")
@@ -25,6 +30,13 @@ layout_mode = 2
 [node name="Toolbar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1120376067]
 layout_mode = 2
 
+[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=50094247]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+tooltip_text = "Back to all the images."
+text = "Back"
+
 [node name="AddNewButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1421907643]
 unique_name_in_owner = true
 layout_mode = 2
@@ -32,6 +44,7 @@ text = "Add New"
 
 [node name="RemoveButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=998356568]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 text = "Remove"
 
@@ -44,17 +57,18 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Close"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=831685732]
+[node name="Library" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=831685732]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TileContainer" type="HFlowContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=1336304993]
+[node name="TileContainer" type="HFlowContainer" parent="MarginContainer/VBoxContainer/Library" unique_id=1336304993]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="AddImagePanel" type="Panel" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=23214448]
+[node name="AddImagePanel" type="Panel" parent="MarginContainer/VBoxContainer/Library" unique_id=23214448]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(200, 150)
@@ -63,23 +77,23 @@ size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_styles/panel = ExtResource("3_rcwif")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel" unique_id=1278981682]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Library/AddImagePanel" unique_id=1278981682]
 layout_mode = 1
 offset_right = 191.0
 offset_bottom = 136.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer" unique_id=1480480400]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer" unique_id=1480480400]
 layout_mode = 2
 
-[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer" unique_id=555832750]
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer" unique_id=555832750]
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1050739579]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1050739579]
 layout_mode = 2
 text = "Service"
 
-[node name="CloudService" type="OptionButton" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1325240250]
+[node name="CloudService" type="OptionButton" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1325240250]
 unique_name_in_owner = true
 layout_mode = 2
 item_count = 3
@@ -90,32 +104,116 @@ popup/item_1/id = 1
 popup/item_2/text = "OneDrive"
 popup/item_2/id = 2
 
-[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1500212282]
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1500212282]
 layout_mode = 2
 text = "URL"
 
-[node name="UrlInput" type="LineEdit" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=478212971]
+[node name="UrlInput" type="LineEdit" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=478212971]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Label3" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=851393597]
+[node name="Label3" type="Label" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=851393597]
 layout_mode = 2
 text = "Name"
 
-[node name="NameInput" type="LineEdit" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1557635290]
+[node name="NameInput" type="LineEdit" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1557635290]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer" unique_id=1546665641]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer" unique_id=1546665641]
 layout_mode = 2
 size_flags_horizontal = 8
 
-[node name="AddImageButton" type="Button" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=606209130]
+[node name="AddImageButton" type="Button" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=606209130]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Add"
 
-[node name="CancelImageButton" type="Button" parent="MarginContainer/VBoxContainer/ScrollContainer/AddImagePanel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=109525484]
+[node name="CancelImageButton" type="Button" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=109525484]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Cancel"
+
+[node name="ImageView" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1238407623]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Image" type="TextureRect" parent="MarginContainer/VBoxContainer/ImageView" unique_id=225554867]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_frgrd")
+layout_mode = 2
+size_flags_vertical = 3
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LayoutBar" type="HFlowContainer" parent="MarginContainer/VBoxContainer/ImageView" unique_id=1454939598]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+
+[node name="ColumnsField" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar" unique_id=1730613640]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/ColumnsField" unique_id=1277964416]
+layout_mode = 2
+text = "Columns"
+
+[node name="Columns" type="SpinBox" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/ColumnsField" unique_id=1138830623]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+tooltip_text = "How many frames across the image."
+min_value = 1.0
+value = 1.0
+allow_greater = true
+update_on_text_changed = true
+
+[node name="FocusEditGroup" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/ColumnsField/Columns" unique_id=574073253]
+script = ExtResource("4_fcsgr")
+
+[node name="RowsField" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar" unique_id=1292537069]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/RowsField" unique_id=1892852283]
+layout_mode = 2
+text = "Rows"
+
+[node name="Rows" type="SpinBox" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/RowsField" unique_id=844099189]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+tooltip_text = "How many frames down the image."
+min_value = 1.0
+value = 1.0
+allow_greater = true
+update_on_text_changed = true
+
+[node name="FocusEditGroup" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/RowsField/Rows" unique_id=1662995125]
+script = ExtResource("4_fcsgr")
+
+[node name="CountField" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar" unique_id=234966159]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/CountField" unique_id=326824022]
+layout_mode = 2
+text = "Count"
+
+[node name="CountSet" type="CheckBox" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/CountField" unique_id=110035951]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Leave out the empty frames at the end. Unchecked uses every frame."
+
+[node name="Count" type="SpinBox" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/CountField" unique_id=1318041689]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+tooltip_text = "How many frames hold images, counting row by row."
+min_value = 1.0
+value = 1.0
+allow_greater = true
+update_on_text_changed = true
+editable = false
+
+[node name="FocusEditGroup" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/CountField/Count" unique_id=1272030034]
+script = ExtResource("4_fcsgr")

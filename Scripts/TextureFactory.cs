@@ -78,14 +78,14 @@ public partial class TextureFactory : SubViewport
         var project = ProjectService.Instance.CurrentProject;
         if (project != null)
         {
-            var pendingAssets = new List<Lizzie.AssetManagement.Asset>();
+            var pendingAssets = new List<ImageAsset>();
             foreach (var obj in definition.Objects)
             {
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
                     var asset = RecordService
-                        .Instance.Get<Asset>(a => a.Name == imageName)
+                        .Instance.Get<ImageAsset>(a => a.Name == imageName)
                         .FirstOrDefault();
                     if (asset != null && !AssetImageCache.Instance.IsDownloaded(asset))
                     {
@@ -456,7 +456,7 @@ public partial class TextureFactory : SubViewport
     {
         if (
             RecordService
-                .Instance.Get<Asset>(x =>
+                .Instance.Get<ImageAsset>(x =>
                     string.Equals(x.Name, name, StringComparison.CurrentCultureIgnoreCase)
                 )
                 .Count > 0
@@ -475,7 +475,7 @@ public partial class TextureFactory : SubViewport
             if (IsIconUserDefined(useName))
             {
                 var asset = RecordService
-                    .Instance.Get<Asset>(a =>
+                    .Instance.Get<ImageAsset>(a =>
                         string.Equals(a.Name, useName, StringComparison.CurrentCultureIgnoreCase)
                     )
                     .FirstOrDefault();
@@ -952,7 +952,7 @@ public partial class TextureFactory : SubViewport
         {
             string imageName = obj.Text.Substring(2);
             var asset = RecordService
-                .Instance.Get<Asset>(a => a.Name == imageName)
+                .Instance.Get<ImageAsset>(a => a.Name == imageName)
                 .FirstOrDefault();
             var assetImage = AssetImageCache.Instance.GetImage(asset);
             if (assetImage != null)

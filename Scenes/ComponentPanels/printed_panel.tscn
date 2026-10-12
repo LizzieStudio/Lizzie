@@ -530,6 +530,21 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=283566052]
+layout_mode = 2
+
+[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=49238213]
+layout_mode = 2
+text = "Frames  "
+horizontal_alignment = 2
+
+[node name="GridFrontFrames" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=1491268480]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "All"
+tooltip_text = "Which frames of the image to use, counting from 1, like 1-52 or 1-3, 5*2, (7-12)/2. Blank uses every frame."
+
 [node name="HBoxContainer6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=519252428]
 layout_mode = 2
 
@@ -544,57 +559,20 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="GridSingleBack" type="CheckButton" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=1274019345]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 0
-button_pressed = true
-text = "Single Back"
-
-[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=283566052]
-layout_mode = 2
-
-[node name="Label10" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=49238213]
-layout_mode = 2
-text = "Cols  "
-horizontal_alignment = 2
-
-[node name="GridCols" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=1491268480]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-size_flags_horizontal = 0
-alignment = 2
-
 [node name="HBoxContainer8" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=248741003]
 layout_mode = 2
 
 [node name="Label12" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1351769633]
 layout_mode = 2
-text = "Rows  "
+text = "Frames  "
 horizontal_alignment = 2
 
-[node name="GridRows" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1022792488]
+[node name="GridBackFrames" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1022792488]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_horizontal = 0
-alignment = 2
-
-[node name="HBoxContainer9" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer" unique_id=2130162290]
-layout_mode = 2
-
-[node name="Label13" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer9" unique_id=1699713823]
-layout_mode = 2
-text = "# Tokens  "
-horizontal_alignment = 2
-
-[node name="GridCardCount" type="LineEdit" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Grid/MarginContainer/VBoxContainer/HBoxContainer9" unique_id=1062244030]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-size_flags_horizontal = 0
-alignment = 2
+size_flags_horizontal = 3
+placeholder_text = "All"
+tooltip_text = "Which frames of the image to use, counting from 1, like 1-52 or 1-3, 5*2, (7-12)/2. Blank uses every frame."
 
 [node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=805627747]
 visible = false

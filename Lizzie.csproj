@@ -17,7 +17,6 @@
     <None Remove="Tests/**" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Scripts\AssetManagement\README.md" />
     <None Include="Scripts\Multiplayer\README.md" />
     <None Include="Scripts\RangeExpressions.md" />
   </ItemGroup>

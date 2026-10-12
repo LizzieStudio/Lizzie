@@ -78,6 +78,7 @@ public partial class PageControl : HBoxContainer
             {
                 _itemCount = value;
             }
+            CurrentItem = Math.Min(CurrentItem, _itemCount - 1);
             UpdateMultiLabel();
         }
     }

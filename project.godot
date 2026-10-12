@@ -22,7 +22,6 @@ config/icon="uid://dtoajk1ds5abr"
 [autoload]
 
 ProjectService="*uid://cxbjtcxn44v75"
-Utility="*res://Scenes/Utility.tscn"
 EventBus="*uid://dg3sv0bbkjbc2"
 MultiplayerManager="*uid://bdusjpa55red6"
 EventSynchronizer="*uid://cmji5njsmymf0"

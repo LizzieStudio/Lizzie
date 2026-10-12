@@ -15,3 +15,6 @@ addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll~*.TMP
 /Tests/obj/
 # Snapshot test output
 /Tests/*.received.json
+
+# VS Code specific files
+.vscode/

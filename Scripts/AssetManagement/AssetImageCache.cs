@@ -3,7 +3,7 @@ using Godot;
 using Lizzie.AssetManagement;
 
 /// <summary>
-/// Holds lazy-loaded image data for assets, keyed by <see cref="ReplicatedExtensions.SheetKey"/>.
+/// Holds lazy-loaded image data for assets, keyed by the images cloud-path.
 /// </summary>
 public class AssetImageCache
 {
@@ -22,22 +22,23 @@ public class AssetImageCache
     private readonly Dictionary<string, Image> _images = new();
 
     /// <summary>Whether the asset's image has been downloaded and cached.</summary>
-    public bool IsDownloaded(Asset asset) => asset != null && _images.ContainsKey(asset.SheetKey());
+    public bool IsDownloaded(ImageAsset asset) =>
+        asset != null && _images.ContainsKey(asset.CloudPath);
 
     /// <summary>The cached image for the asset, or null if it has not been downloaded.</summary>
-    public Image GetImage(Asset asset)
+    public Image GetImage(ImageAsset asset)
     {
         if (asset == null)
             return null;
-        return _images.TryGetValue(asset.SheetKey(), out var image) ? image : null;
+        return _images.TryGetValue(asset.CloudPath, out var image) ? image : null;
     }
 
     /// <summary>Stores the downloaded image for the asset.</summary>
-    public void Store(Asset asset, Image image)
+    public void Store(ImageAsset asset, Image image)
     {
         if (asset == null || image == null)
             return;
-        _images[asset.SheetKey()] = image;
+        _images[asset.CloudPath] = image;
     }
 
     public void Clear() => _images.Clear();

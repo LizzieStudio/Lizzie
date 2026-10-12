@@ -328,7 +328,6 @@ public partial class ComponentPreview : Panel
 
     private void ChangePage(object sender, ItemSelectedEventArgs e)
     {
-        CurrentItem = _pageControl.GetCurrentItem();
         ItemSelected?.Invoke(this, new ItemSelectedEventArgs(CurrentItem));
     }
 
@@ -351,7 +350,10 @@ public partial class ComponentPreview : Panel
         }
     }
 
-    public int CurrentItem { get; set; }
+    /// <summary>
+    /// The item the page control shows.
+    /// </summary>
+    public int CurrentItem => _pageControl.CurrentItem;
 
     public event EventHandler<ItemSelectedEventArgs> ItemSelected;
 

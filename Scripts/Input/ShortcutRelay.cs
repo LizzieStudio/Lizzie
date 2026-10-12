@@ -108,10 +108,12 @@ public partial class ShortcutRelay : Node
             if (focus == null)
                 return;
 
+            // A SpinBox keeps focus on its inner LineEdit, but its arrows are part of it too.
+            var area = focus.GetParent() is SpinBox spinBox ? spinBox : focus;
             // local is the position of the click relative to the corner of the focused input
-            var local = focus.GetGlobalTransformWithCanvas().AffineInverse() * click.Position;
+            var local = area.GetGlobalTransformWithCanvas().AffineInverse() * click.Position;
             // if the position of the click is not in the focused input, forcably defocus the input
-            if (!new Rect2(Vector2.Zero, focus.Size).HasPoint(local))
+            if (!new Rect2(Vector2.Zero, area.Size).HasPoint(local))
                 GetViewport().GuiReleaseFocus();
         }
     }

@@ -1,8 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 
@@ -13,46 +10,6 @@ namespace Lizzie.AssetManagement
     /// </summary>
     public class DropboxProvider : ICloudProvider
     {
-        private string _accessToken;
-        private string _baseFolderPath;
-        private readonly System.Net.Http.HttpClient _httpClient;
-
-        public bool IsInitialized { get; private set; }
-
-        public DropboxProvider()
-        {
-            _httpClient = new System.Net.Http.HttpClient();
-        }
-
-        public Task InitializeAsync(string baseFolderUrl, string credentials)
-        {
-            try
-            {
-                // Parse credentials JSON to get access token
-                var credJson = JsonSerializer.Deserialize<DropboxCredentials>(credentials);
-                _accessToken = credJson?.AccessToken;
-
-                if (string.IsNullOrEmpty(_accessToken))
-                {
-                    throw new Exception("Dropbox access token is required");
-                }
-
-                _baseFolderPath = NormalizePath(baseFolderUrl);
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
-
-                IsInitialized = true;
-                GD.Print($"Dropbox provider initialized with base folder: {_baseFolderPath}");
-                return Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"Failed to initialize Dropbox provider: {ex.Message}");
-                IsInitialized = false;
-                throw;
-            }
-        }
-
         public async Task<Stream> DownloadPublicFileStreamAsync(string publicUrl)
         {
             try
@@ -92,21 +49,6 @@ namespace Lizzie.AssetManagement
             }
 
             return url;
-        }
-
-        private string NormalizePath(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return "";
-            path = path.Replace("\\", "/");
-            if (!path.StartsWith("/"))
-                path = "/" + path;
-            return path.TrimEnd('/');
-        }
-
-        private class DropboxCredentials
-        {
-            public string AccessToken { get; set; }
         }
     }
 }

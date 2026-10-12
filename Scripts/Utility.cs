@@ -4,15 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
-public partial class Utility : Node
+public static class Utility
 {
-    public static Utility Instance { get; private set; }
-
-    public override void _EnterTree()
-    {
-        Instance = this;
-    }
-
     /// <summary>
     /// This function parses a string like "1-6, SKIP, +2" into a string array.
     /// (which in this case would be 1, 2, 3, 4, 5, 6, SKIP, +2)
@@ -125,6 +118,17 @@ public partial class Utility : Node
             return 0;
 
         return 0.95f / Mathf.Max(size.X, size.Y);
+    }
+
+    /// <summary>
+    /// Tints a field's text red if <paramref name="valid"/> is false.
+    /// </summary>
+    public static void MarkValidity(this LineEdit field, bool valid)
+    {
+        if (valid)
+            field.RemoveThemeColorOverride("font_color");
+        else
+            field.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
     }
 
     public static ImageTexture LoadTexture(string filename)

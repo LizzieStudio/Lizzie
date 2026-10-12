@@ -1,9 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 
@@ -14,50 +10,6 @@ namespace Lizzie.AssetManagement
     /// </summary>
     public class OneDriveProvider : ICloudProvider
     {
-        private string _accessToken;
-        private string _baseFolderPath;
-        private readonly System.Net.Http.HttpClient _httpClient;
-
-        public bool IsInitialized { get; private set; }
-
-        public OneDriveProvider()
-        {
-            _httpClient = new System.Net.Http.HttpClient();
-        }
-
-        public Task InitializeAsync(string baseFolderUrl, string credentials)
-        {
-            try
-            {
-                // Parse credentials JSON to get access token
-                var credJson = JsonSerializer.Deserialize<OneDriveCredentials>(credentials);
-                _accessToken = credJson?.AccessToken;
-
-                if (string.IsNullOrEmpty(_accessToken))
-                {
-                    throw new Exception("OneDrive access token is required");
-                }
-
-                _baseFolderPath = NormalizePath(baseFolderUrl);
-
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-                    "Bearer",
-                    _accessToken
-                );
-
-                IsInitialized = true;
-                GD.Print($"OneDrive provider initialized with base folder: {_baseFolderPath}");
-                return Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"Failed to initialize OneDrive provider: {ex.Message}");
-                IsInitialized = false;
-                throw;
-            }
-        }
-
         public async Task<Stream> DownloadPublicFileStreamAsync(string publicUrl)
         {
             try
@@ -104,18 +56,6 @@ namespace Lizzie.AssetManagement
             }
 
             return url;
-        }
-
-        private string NormalizePath(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return "";
-            return path.Replace("\\", "/").Trim('/');
-        }
-
-        private class OneDriveCredentials
-        {
-            public string AccessToken { get; set; }
         }
     }
 }

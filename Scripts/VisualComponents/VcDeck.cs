@@ -98,7 +98,8 @@ public partial class VcDeck : VisualComponentBase
 
             case VcToken.TokenBuildMode.Grid:
             {
-                for (int i = 0; i < parameters.GridCount; i++)
+                var count = parameters.GridFrameCount(RecordService.Instance);
+                for (int i = 0; i < count; i++)
                     yield return (i, SnowTag.Empty);
                 break;
             }

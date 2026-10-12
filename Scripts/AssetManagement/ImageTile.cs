@@ -7,8 +7,6 @@ public partial class ImageTile : MarginContainer
     private Label _imageName;
     private TextureRect _thumbnail;
 
-    private bool _selected;
-
     private SnowTag _reference;
 
     /// <summary>The asset this tile shows.</summary>
@@ -36,7 +34,6 @@ public partial class ImageTile : MarginContainer
         _thumbnail = GetNode<TextureRect>("%Thumbnail");
 
         MouseFilter = MouseFilterEnum.Stop;
-        UpdateSelectedVisual();
     }
 
     public override void _GuiInput(InputEvent @event)
@@ -47,20 +44,9 @@ public partial class ImageTile : MarginContainer
         }
     }
 
-    public void SetSelected(bool selected)
-    {
-        _selected = selected;
-        UpdateSelectedVisual();
-    }
-
-    private void UpdateSelectedVisual()
-    {
-        Modulate = _selected ? new Color(0.6f, 0.8f, 1f) : Colors.White;
-    }
-
     private async void Sync(IRecordReader R)
     {
-        var asset = R.Get<Asset>(Reference);
+        var asset = R.Get<ImageAsset>(Reference);
         if (asset == null)
             return;
 

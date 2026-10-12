@@ -134,6 +134,19 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     }
 
     /// <summary>
+    /// Calls <paramref name="change"/> with the current version of record <paramref name="id"/>,
+    /// then passes the result to <see cref="Write"/>. Does nothing if the record is missing or deleted.
+    ///
+    /// <inheritdoc cref="Write"/>
+    /// </summary>
+    public void Update<T>(SnowTag id, Func<T, T> change)
+        where T : Replicated
+    {
+        if (Get<T>(id) is { } record)
+            Write(change(record));
+    }
+
+    /// <summary>
     /// Writes records as one event made by <paramref name="command"/>, even if there are none,
     /// so the command's listeners hear it.
     /// </summary>

@@ -1671,11 +1671,6 @@ public partial class TemplateCreator : Window
         }
 
         var rows = R.GetRows(datasetRef);
-        _pageControl.CurrentItem = Math.Clamp(
-            _pageControl.CurrentItem,
-            0,
-            Math.Max(rows.Count - 1, 0)
-        );
         _pageControl.SetItemCount(rows.Count);
         _pageControl.Show();
 

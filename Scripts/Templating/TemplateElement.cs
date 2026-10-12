@@ -121,7 +121,7 @@ public class TemplateElement : ITemplateElement
 
         var o = ProcessKeywords(p.Value, context);
 
-        _ = int.TryParse(o, out var result) ? result : 0;
+        int.TryParse(o, out var result);
         return result;
     }
 

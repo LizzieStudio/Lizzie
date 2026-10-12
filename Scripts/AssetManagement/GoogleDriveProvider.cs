@@ -1,9 +1,6 @@
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Godot;
@@ -15,51 +12,6 @@ namespace Lizzie.AssetManagement
     /// </summary>
     public class GoogleDriveProvider : ICloudProvider
     {
-        private string _accessToken;
-        private string _baseFolderId;
-        private readonly System.Net.Http.HttpClient _httpClient;
-
-        public bool IsInitialized { get; private set; }
-
-        public GoogleDriveProvider()
-        {
-            _httpClient = new System.Net.Http.HttpClient();
-        }
-
-        public Task InitializeAsync(string baseFolderUrl, string credentials)
-        {
-            try
-            {
-                // Parse credentials JSON to get access token
-                var credJson = JsonSerializer.Deserialize<GoogleDriveCredentials>(credentials);
-                _accessToken = credJson?.AccessToken;
-
-                if (string.IsNullOrEmpty(_accessToken))
-                {
-                    throw new Exception("Google Drive access token is required");
-                }
-
-                // Extract folder ID from URL or use directly
-                _baseFolderId = ExtractFolderId(baseFolderUrl);
-
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-                    "Bearer",
-                    _accessToken
-                );
-
-                IsInitialized = true;
-                GD.Print($"Google Drive provider initialized with base folder ID: {_baseFolderId}");
-                return Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"Failed to initialize Google Drive provider: {ex.Message}");
-                IsInitialized = false;
-                throw;
-            }
-        }
-
         public async Task<Stream> DownloadPublicFileStreamAsync(string publicUrl)
         {
             try
@@ -180,35 +132,6 @@ namespace Lizzie.AssetManagement
             }
 
             return null;
-        }
-
-        private string ExtractFolderId(string folderUrl)
-        {
-            if (string.IsNullOrEmpty(folderUrl))
-                return "root";
-
-            // If it's already just an ID, return it
-            if (!folderUrl.Contains("/") && !folderUrl.Contains("drive.google.com"))
-            {
-                return folderUrl;
-            }
-
-            // Extract from URL like https://drive.google.com/drive/folders/{folderId}
-            var parts = folderUrl.Split('/');
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] == "folders" && i + 1 < parts.Length)
-                {
-                    return parts[i + 1].Split('?')[0]; // Remove query parameters if any
-                }
-            }
-
-            return folderUrl;
-        }
-
-        private class GoogleDriveCredentials
-        {
-            public string AccessToken { get; set; }
         }
     }
 }

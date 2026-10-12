@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 
@@ -13,28 +11,13 @@ namespace Lizzie.AssetManagement
     public class CloudAssetService
     {
         private ICloudProvider _provider;
-        private CloudProviderType _providerType;
-        private readonly Dictionary<SnowTag, Asset> _assets;
-
-        public CloudAssetService()
-        {
-            _assets = new Dictionary<SnowTag, Asset>();
-        }
 
         /// <summary>
         /// Initialize the service with a specific cloud provider
         /// </summary>
         /// <param name="providerType">Type of cloud provider</param>
-        /// <param name="baseFolderUrl">Base folder URL in the cloud</param>
-        /// <param name="credentials">Provider-specific credentials (JSON format)</param>
-        public async Task InitializeAsync(
-            CloudProviderType providerType,
-            string baseFolderUrl,
-            string credentials
-        )
+        public void Initialize(CloudProviderType providerType)
         {
-            _providerType = providerType;
-
             _provider = providerType switch
             {
                 CloudProviderType.Dropbox => new DropboxProvider(),
@@ -42,12 +25,6 @@ namespace Lizzie.AssetManagement
                 CloudProviderType.OneDrive => new OneDriveProvider(),
                 _ => throw new ArgumentException($"Unsupported provider type: {providerType}"),
             };
-
-            if (!string.IsNullOrEmpty(baseFolderUrl) && !string.IsNullOrEmpty(credentials))
-            {
-                await _provider.InitializeAsync(baseFolderUrl, credentials);
-                GD.Print($"CloudAssetService initialized with {providerType} provider");
-            }
         }
 
         /// <summary>
@@ -60,7 +37,7 @@ namespace Lizzie.AssetManagement
             if (_provider == null)
             {
                 throw new InvalidOperationException(
-                    "Provider not initialized. Call InitializeAsync first."
+                    "Provider not initialized. Call Initialize first."
                 );
             }
 
@@ -89,11 +66,7 @@ namespace Lizzie.AssetManagement
             try
             {
                 var service = new CloudAssetService();
-                await service.InitializeAsync(
-                    CloudProviderType.GoogleDrive,
-                    string.Empty,
-                    string.Empty
-                );
+                service.Initialize(CloudProviderType.GoogleDrive);
 
                 using var stream = await service.DownloadPublicFileStreamAsync(url);
                 using var ms = new MemoryStream();

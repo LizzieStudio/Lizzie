@@ -68,10 +68,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private ImageSelector _gridFrontImageSelector;
     private ImageSelector _gridBackImageSelector;
-    private LineEdit _gridRowCount;
-    private LineEdit _gridColCount;
-    private LineEdit _gridCardCount;
-    private CheckButton _gridSingleBack;
+    private LineEdit _gridFrontFrames;
+    private LineEdit _gridBackFrames;
 
     private record ShapePreset(string Label, int Shape, float W = 0f, float H = 0f, float T = 0f);
 
@@ -106,6 +104,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IRecordReader R)
     {
+        if (_tabs.CurrentTab == 3)
+        {
+            var count = GridParams(new DeckParameters()).GridFrameCount(R);
+            _preview.ItemCount = count;
+            _preview.MultiItemMode = count > 1;
+        }
+
         var dataset = R.Get<DataSet>(_datasetRef);
         if (_tabs.CurrentTab == 4)
         {
@@ -194,7 +199,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         {
             if (tab == 1)
                 GenerateQuickCards();
-            else if (tab == 4)
+            else if (tab == 3 || tab == 4)
                 RecordService.Instance.QueueSync(this);
             UpdatePreview();
         };
@@ -352,15 +357,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _gridBackImageSelector = GetNode<ImageSelector>("%BackImageSelector");
         _gridBackImageSelector.ImageSelected += BackImageSelected;
 
-        _gridRowCount = GetNode<LineEdit>("%GridRows");
-        _gridRowCount.TextChanged += _ => GenerateGridTokens();
-        _gridColCount = GetNode<LineEdit>("%GridCols");
-        _gridColCount.TextChanged += _ => GenerateGridTokens();
-        _gridCardCount = GetNode<LineEdit>("%GridCardCount");
-        _gridCardCount.TextChanged += _ => GenerateGridTokens();
-
-        _gridSingleBack = GetNode<CheckButton>("%GridSingleBack");
-        _gridSingleBack.Pressed += GenerateGridTokens;
+        _gridFrontFrames = GetNode<LineEdit>("%GridFrontFrames");
+        _gridFrontFrames.TextChanged += _ => GenerateGridTokens();
+        _gridBackFrames = GetNode<LineEdit>("%GridBackFrames");
+        _gridBackFrames.TextChanged += _ => GenerateGridTokens();
     }
 
     private void InitializeMultiBindings()
@@ -437,39 +437,42 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         {
             _preview.ItemCount = _quickCards.Count;
             _preview.MultiItemMode = _quickCards.Count > 1;
-            ChangePreviewToken(0);
+            UpdatePreview();
         }
     }
 
     private SnowTag _frontGridImage;
     private SnowTag _backGridImage;
 
-    private async void FrontImageSelected(SnowTag Id)
+    private void FrontImageSelected(SnowTag Id)
     {
         _frontGridImage = Id;
-        UpdatePreview();
+        GenerateGridTokens();
     }
 
-    private async void BackImageSelected(SnowTag Id)
+    private void BackImageSelected(SnowTag Id)
     {
         _backGridImage = Id;
-        UpdatePreview();
+        GenerateGridTokens();
     }
-
-    private int _gridRows;
-    private int _gridCols;
-    private int _gridCount;
 
     private void GenerateGridTokens()
     {
-        int.TryParse(_gridRowCount.Text, out _gridRows);
-        int.TryParse(_gridColCount.Text, out _gridCols);
-        int.TryParse(_gridCardCount.Text, out _gridCount);
-
-        _preview.ItemCount = _gridCount;
-        _preview.MultiItemMode = _gridCount > 1;
-        ChangePreviewToken(0);
+        _gridFrontFrames.MarkValidity(RangeExpressions.TryParse(_gridFrontFrames.Text, out _));
+        _gridBackFrames.MarkValidity(RangeExpressions.TryParse(_gridBackFrames.Text, out _));
+        RecordService.Instance.QueueSync(this);
     }
+
+    private DeckParameters GridParams(DeckParameters d) =>
+        d with
+        {
+            FrontGridImageKey = _frontGridImage,
+            BackGridImageKey = _backGridImage,
+            FrontGridFrames = _gridFrontFrames.Text,
+            BackGridFrames = _gridBackFrames.Text,
+            Mode = VcToken.TokenBuildMode.Grid,
+            DifferentBack = true,
+        };
 
     private void EditFrontTemplate() =>
         EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _frontTemplateRef });
@@ -630,18 +633,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 break;
 
             case 3:
-                d = d with
-                {
-                    FrontGridImageKey = _frontGridImage,
-                    BackGridImageKey = _backGridImage,
-                    GridRows = _gridRows,
-                    GridCols = _gridCols,
-                    GridCount = _gridCount,
-                    Mode = VcToken.TokenBuildMode.Grid,
-                    DifferentBack = true,
-                    GridSingleBack = _gridSingleBack.ButtonPressed,
-                };
-                if (_gridCount > 1)
+                d = GridParams(d);
+                if (d.GridFrameCount(RecordService.Instance) > 1)
                     spawnAsDeck = true;
                 break;
 
@@ -679,13 +672,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var (rowIndex, rowId) = GetRow(_curToken);
+        var (rowIndex, rowId) = GetRow(_preview.CurrentItem);
         _preview.Build(GetParams(), rowIndex, rowId, TextureFactory);
     }
 
     private (int Index, SnowTag Id) GetRow(int rowNum)
     {
-        if (_tabs.CurrentTab == 1 || _datasetRef == SnowTag.Empty)
+        if (_tabs.CurrentTab != 4 || _datasetRef == SnowTag.Empty)
             return (rowNum, SnowTag.Empty);
         var rows = RecordService.Instance.GetRows(_datasetRef);
         if (rowNum < 0 || rowNum >= rows.Count)
@@ -693,16 +686,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         return (-1, rows[rowNum].Id);
     }
 
-    private int _curToken;
-
-    private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e) =>
-        ChangePreviewToken(e.Index);
-
-    private void ChangePreviewToken(int token)
-    {
-        _curToken = token;
-        UpdatePreview();
-    }
+    private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e) => UpdatePreview();
 
     public override void DisplayPrototype(Prototype prototype)
     {
@@ -791,19 +775,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             }
         }
 
-        _gridRowCount.Text = p.GridRows > 0 ? p.GridRows.ToString() : "";
-        _gridColCount.Text = p.GridCols > 0 ? p.GridCols.ToString() : "";
-        _gridCardCount.Text = p.GridCount > 0 ? p.GridCount.ToString() : "";
-        int.TryParse(_gridRowCount.Text, out _gridRows);
-        int.TryParse(_gridColCount.Text, out _gridCols);
-        int.TryParse(_gridCardCount.Text, out _gridCount);
-        _preview.ItemCount = _gridCount;
-
         _gridFrontImageSelector.SetSelectedImage(p.FrontGridImageKey);
-
+        _frontGridImage = p.FrontGridImageKey;
         _gridBackImageSelector.SetSelectedImage(p.BackGridImageKey);
-
-        _gridSingleBack.ButtonPressed = p.GridSingleBack;
+        _backGridImage = p.BackGridImageKey;
+        _gridFrontFrames.Text = p.FrontGridFrames;
+        _gridBackFrames.Text = p.BackGridFrames;
+        GenerateGridTokens();
 
         _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
         _frontTemplateRef = p.FrontTemplate;

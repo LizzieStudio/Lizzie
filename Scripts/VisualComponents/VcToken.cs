@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
@@ -213,15 +212,10 @@ public partial class VcToken : VisualComponentBase
 
         //Grid Parameters
         _frontGridImageKey = p.FrontGridImageKey;
-        _frontMasterAsset = R.Get<Asset>(_frontGridImageKey);
+        _frontMasterAsset = R.Get<ImageAsset>(_frontGridImageKey);
 
         _backGridImageKey = p.BackGridImageKey;
-        _backMasterAsset = R.Get<Asset>(_backGridImageKey);
-
-        _gridRows = p.GridRows;
-        _gridCols = p.GridCols;
-        _gridCount = p.GridCount;
-        _gridSingleBack = p.GridSingleBack;
+        _backMasterAsset = R.Get<ImageAsset>(_backGridImageKey);
 
         _tokenType = p.Type;
 
@@ -240,24 +234,22 @@ public partial class VcToken : VisualComponentBase
 
         if (_mode == TokenBuildMode.Grid)
         {
-            int cols = Math.Max(_gridCols, 1);
-            int rows = Math.Max(_gridRows, 1);
-            int idx = Math.Max(DataSetRowIndex, 0);
-            _faceHframes = cols;
-            _faceVframes = rows;
-            _faceFrame = idx;
-            if (_gridSingleBack)
-            {
-                _backHframes = 1;
-                _backVframes = 1;
-                _backFrame = 0;
-            }
-            else
-            {
-                _backHframes = cols;
-                _backVframes = rows;
-                _backFrame = idx;
-            }
+            var (front, back) = p.GridFrames(R);
+            int card = Math.Max(DataSetRowIndex, 0);
+            _frontGridFace = GridFace(_frontMasterAsset, front, card);
+            _backGridFace = GridFace(_backMasterAsset, back, card);
+            if (_frontGridFace is (var frontLayout, var frontFrame))
+                (_faceHframes, _faceVframes, _faceFrame) = (
+                    frontLayout.Columns,
+                    frontLayout.Rows,
+                    frontFrame
+                );
+            if (_backGridFace is (var backLayout, var backFrame))
+                (_backHframes, _backVframes, _backFrame) = (
+                    backLayout.Columns,
+                    backLayout.Rows,
+                    backFrame
+                );
         }
 
         Build(R);
@@ -472,33 +464,32 @@ public partial class VcToken : VisualComponentBase
             CreateCustomBackTexture();
     }
 
+    /// <summary>
+    /// The image frame a grid card shows on one side, or null.
+    /// </summary>
+    private static (GridLayout Layout, int Frame)? GridFace(
+        ImageAsset asset,
+        int[] values,
+        int card
+    ) =>
+        asset != null && card < values.Length && asset.Layout.Frame(values[card]) is int frame
+            ? (asset.Layout, frame)
+            : null;
+
     private void BuildGrid()
     {
-        if (_frontMasterAsset == null)
-        {
-            ApplyGridFaceTexture(new ImageTexture());
-        }
-        else
-        {
-            _ = BuildGridFace(_frontMasterAsset);
-        }
-
+        int build = ++_gridBuild;
+        BuildGridFace(_frontGridFace == null ? null : _frontMasterAsset, build);
         if (_differentBack)
-        {
-            if (_backMasterAsset == null)
-            {
-                ApplyGridBackTexture(new ImageTexture());
-            }
-            else
-            {
-                _ = BuildGridBack(_backMasterAsset);
-            }
-        }
+            BuildGridBack(_backGridFace == null ? null : _backMasterAsset, build);
     }
 
-    private async Task BuildGridFace(Asset asset)
+    private async void BuildGridFace(ImageAsset asset, int build)
     {
-        ApplyGridFaceTexture(await TextureCache.Instance.GetOrCreateAssetTexture(asset));
+        var texture = await TextureCache.Instance.GetOrCreateAssetTexture(asset);
+        // The card may have been freed, or rebuilt, while the image loaded.
+        if (IsInstanceValid(this) && build == _gridBuild)
+            ApplyGridFaceTexture(texture ?? MissingFrameTexture);
     }
 
     private void ApplyGridFaceTexture(Texture2D texture)
@@ -509,9 +500,11 @@ public partial class VcToken : VisualComponentBase
         MapFrontTexture();
     }
 
-    private async Task BuildGridBack(Asset asset)
+    private async void BuildGridBack(ImageAsset asset, int build)
     {
-        ApplyGridBackTexture(await TextureCache.Instance.GetOrCreateAssetTexture(asset));
+        var texture = await TextureCache.Instance.GetOrCreateAssetTexture(asset);
+        if (IsInstanceValid(this) && build == _gridBuild)
+            ApplyGridBackTexture(texture ?? MissingFrameTexture);
     }
 
     private void ApplyGridBackTexture(Texture2D texture)
@@ -1154,11 +1147,7 @@ public partial class VcToken : VisualComponentBase
         _mapBackTextureRequired = false;
         _backTextureGenerated = true;
         _mainMesh.SetSurfaceOverrideMaterial(BackSurface, FaceMaterial(BackTexture));
-
-        if (!_gridSingleBack)
-        {
-            SetFrame("back_rect", _backHframes, _backVframes, _backFrame);
-        }
+        SetFrame("back_rect", _backHframes, _backVframes, _backFrame);
     }
 
     private void SetFrame(string face, int hframes, int vframes, int frame)
@@ -1229,18 +1218,25 @@ public partial class VcToken : VisualComponentBase
     private int _backFontSize;
 
     //grid parameters
-    private Asset _frontMasterAsset;
-    private Asset _backMasterAsset;
+    private ImageAsset _frontMasterAsset;
+    private ImageAsset _backMasterAsset;
     private SnowTag _frontGridImageKey;
     private SnowTag _backGridImageKey;
 
-    private int _gridRows;
-    private int _gridCols;
+    private (GridLayout Layout, int Frame)? _frontGridFace;
+    private (GridLayout Layout, int Frame)? _backGridFace;
 
-    private int _gridCount;
-    private bool _gridSingleBack;
+    /// <summary>
+    /// Counts grid builds to throw out stale load callbacks.
+    /// </summary>
+    private int _gridBuild;
 
-    //private int _gridIndex;
+    /// <summary>
+    /// Shown in place of a grid frame that doesn't exist.
+    /// </summary>
+    private static readonly Texture2D MissingFrameTexture = GD.Load<Texture2D>(
+        "res://Textures/missing_frame.png"
+    );
 
     private int _faceHframes = 1;
     private int _faceVframes = 1;
@@ -1292,10 +1288,40 @@ public abstract record PrintedParameters : ComponentParameters
 
     public SnowTag FrontGridImageKey { get; init; }
     public SnowTag BackGridImageKey { get; init; }
-    public int GridRows { get; init; }
-    public int GridCols { get; init; }
-    public int GridCount { get; init; }
-    public bool GridSingleBack { get; init; }
+
+    /// <summary>
+    /// The front image's Range Expression provided by the user.
+    /// </summary>
+    public string FrontGridFrames { get; init; } = "";
+
+    /// <summary>
+    /// The back image's Range Expression provided by the user.
+    /// </summary>
+    public string BackGridFrames { get; init; } = "";
+
+    /// <summary>
+    /// Computes how many cards a grid deck should have.
+    /// </summary>
+    public int GridFrameCount(IRecordReader R)
+    {
+        var (front, back) = GridFrames(R);
+        return Math.Max(front.Count(), back.Count());
+    }
+
+    /// <summary>
+    /// The 1-based frame indexes each grid card shows on its front and back.
+    /// </summary>
+    public (int[] Front, int[] Back) GridFrames(IRecordReader R)
+    {
+        var front = R.Get<ImageAsset>(FrontGridImageKey)?.Layout ?? GridLayout.Single;
+        var back = R.Get<ImageAsset>(BackGridImageKey)?.Layout ?? GridLayout.Single;
+        front.TryParse(FrontGridFrames, out var frontValues);
+        back.TryParse(BackGridFrames, out var backValues);
+        int count = Math.Max(frontValues.Length, backValues.Length);
+        front.TryParse(FrontGridFrames, out frontValues, count);
+        back.TryParse(BackGridFrames, out backValues, count);
+        return (frontValues, backValues);
+    }
 
     public SnowTag FrontTemplate { get; init; }
     public SnowTag BackTemplate { get; init; }

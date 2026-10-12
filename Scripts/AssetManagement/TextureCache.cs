@@ -23,7 +23,7 @@ public class TextureCache
 
     private readonly Dictionary<string, List<Action<Texture2D>>> _pending = new();
 
-    public async Task<Texture2D> GetOrCreateAssetTexture(Asset asset)
+    public async Task<Texture2D> GetOrCreateAssetTexture(ImageAsset asset)
     {
         if (asset == null)
             return null;
@@ -32,7 +32,7 @@ public class TextureCache
         if (image == null)
             return null;
 
-        var key = asset.SheetKey();
+        var key = asset.CloudPath;
         if (_assetCache.TryGetValue(key, out var cached))
             return cached;
 

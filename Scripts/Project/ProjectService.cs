@@ -403,9 +403,9 @@ public partial class ProjectService : Node
         RecordService.Instance.WriteAdmin(settings with { Players = builder.ToImmutable() });
     }
 
-    private readonly Dictionary<SnowTag, Task> _inFlightFetches = new();
+    private readonly Dictionary<string, Task> _inFlightFetches = new();
 
-    public async Task<Image> FetchImageAsync(Asset asset)
+    public async Task<Image> FetchImageAsync(ImageAsset asset)
     {
         if (asset == null)
             return null;
@@ -416,10 +416,10 @@ public partial class ProjectService : Node
         Task fetch;
         lock (_inFlightFetches)
         {
-            if (!_inFlightFetches.TryGetValue(asset.Id, out fetch))
+            if (!_inFlightFetches.TryGetValue(asset.CloudPath, out fetch))
             {
                 fetch = DownloadAssetAsync(asset);
-                _inFlightFetches[asset.Id] = fetch;
+                _inFlightFetches[asset.CloudPath] = fetch;
             }
         }
 
@@ -432,12 +432,12 @@ public partial class ProjectService : Node
             lock (_inFlightFetches)
             {
                 if (
-                    _inFlightFetches.TryGetValue(asset.Id, out var current)
+                    _inFlightFetches.TryGetValue(asset.CloudPath, out var current)
                     && current == fetch
                     && fetch.IsCompleted
                 )
                 {
-                    _inFlightFetches.Remove(asset.Id);
+                    _inFlightFetches.Remove(asset.CloudPath);
                 }
             }
         }
@@ -445,16 +445,12 @@ public partial class ProjectService : Node
         return AssetImageCache.Instance.GetImage(asset);
     }
 
-    private static async Task DownloadAssetAsync(Asset asset)
+    private static async Task DownloadAssetAsync(ImageAsset asset)
     {
         try
         {
             var service = new CloudAssetService();
-            await service.InitializeAsync(
-                CloudProviderType.GoogleDrive,
-                string.Empty,
-                string.Empty
-            );
+            service.Initialize(CloudProviderType.GoogleDrive);
 
             var r = await service.DownloadImageAsync(asset.CloudPath);
 

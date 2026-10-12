@@ -23,36 +23,6 @@
           {
             "properties": {
               "$type": {
-                "const": "Asset"
-              },
-              "type": {
-                "type": "integer"
-              },
-              "name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "cloudPath": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "id"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "properties": {
-              "$type": {
                 "const": "ComponentState"
               },
               "prototypeRef": true,
@@ -159,6 +129,51 @@
                   },
                   "additionalProperties": false
                 }
+              },
+              "id": true,
+              "deleted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "ImageAsset"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cloudPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "layout": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "integer"
+                  },
+                  "rows": {
+                    "type": "integer"
+                  },
+                  "count": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
               },
               "id": true,
               "deleted": {
@@ -469,17 +484,17 @@
                       },
                       "frontGridImageKey": true,
                       "backGridImageKey": true,
-                      "gridRows": {
-                        "type": "integer"
+                      "frontGridFrames": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
-                      "gridCols": {
-                        "type": "integer"
-                      },
-                      "gridCount": {
-                        "type": "integer"
-                      },
-                      "gridSingleBack": {
-                        "type": "boolean"
+                      "backGridFrames": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "frontTemplate": true,
                       "backTemplate": true,
@@ -717,17 +732,17 @@
                       },
                       "frontGridImageKey": true,
                       "backGridImageKey": true,
-                      "gridRows": {
-                        "type": "integer"
+                      "frontGridFrames": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
-                      "gridCols": {
-                        "type": "integer"
-                      },
-                      "gridCount": {
-                        "type": "integer"
-                      },
-                      "gridSingleBack": {
-                        "type": "boolean"
+                      "backGridFrames": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "frontTemplate": true,
                       "backTemplate": true,
