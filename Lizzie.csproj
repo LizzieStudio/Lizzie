@@ -9,6 +9,7 @@
   <ItemGroup>
     <!-- Must match the version the imgui-godot addon was built against. -->
     <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+    <PackageReference Include="Superpower" Version="3.2.1" />
   </ItemGroup>
   <ItemGroup>
     <!-- The test project builds separately and references this one. -->
@@ -18,5 +19,6 @@
   <ItemGroup>
     <None Include="Scripts\AssetManagement\README.md" />
     <None Include="Scripts\Multiplayer\README.md" />
+    <None Include="Scripts\RangeExpressions.md" />
   </ItemGroup>
 </Project>

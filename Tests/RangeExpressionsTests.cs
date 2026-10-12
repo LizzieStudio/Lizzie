@@ -1,0 +1,138 @@
+using System.Diagnostics;
+using System.Linq;
+using Xunit;
+
+public class RangeExpressionsTests
+{
+    [Theory]
+    [InlineData("", "[]")]
+    [InlineData("  ", "[]")]
+    [InlineData("3", "[3]")]
+    [InlineData("1-3,5,7", "[1, 2, 3, 5, 7]")]
+    [InlineData("1 2,,3", "[1, 2, 3]")]
+    [InlineData("2-3, 1-2", "[2, 3, 1, 2]")]
+    [InlineData("3-1", "[3, 2, 1]")]
+    [InlineData("1 - 3", "[1, 2, 3]")]
+    [InlineData("1*3", "[1, 1, 1]")]
+    [InlineData("1-2*2", "[1, 2, 1, 2]")]
+    [InlineData("(1, 3-4)*2", "[1, 3, 4, 1, 3, 4]")]
+    [InlineData("2*0", "[]")]
+    [InlineData("2-7/2", "[2, 4, 6]")]
+    [InlineData("(1, 3-6, 8-10)/3", "[1, 5, 9]")]
+    [InlineData("(1,3,5)/1", "[1, 3, 5]")]
+    [InlineData("1-3*3/2", "[1, 3, 2, 1, 3]")]
+    [InlineData("1-3/2*3", "[1, 3, 1, 3, 1, 3]")]
+    [InlineData("1,3*2", "[1, 3, 3]")]
+    [InlineData("((1,2)*2, 3)/2", "[1, 1, 3]")]
+    public void Parses(string input, string expected) => Check(input, null, true, expected);
+
+    [Theory]
+    [InlineData(",1,,2,", "[1, 2]")]
+    [InlineData("(,1,,2,)*2", "[1, 2, 1, 2]")]
+    [InlineData("3-*,", "[]")]
+    public void IgnoresExtraCommas(string input, string expected) =>
+        Check(input, null, true, expected);
+
+    [Theory]
+    [InlineData("3*5", "[3, 3, 3, 3, 3]")]
+    [InlineData("3 *2", "[3, 3]")]
+    [InlineData("3*, 5", "[3, 5]")]
+    [InlineData("3* 5", "[3, 5]")]
+    [InlineData("1-3 * 2", "[1, 2, 3, 2]")]
+    public void TheNumberMustTouchItsOperator(string input, string expected) =>
+        Check(input, null, true, expected);
+
+    [Theory]
+    [InlineData("1-3*", "[1, 2, 3]")]
+    [InlineData("3-*", "[]")]
+    [InlineData("1, 3-*, 9", "[1, 9]")]
+    public void WithoutACountUnboundedRepeatsOnceAndOpenRangesAreEmpty(
+        string input,
+        string expected
+    ) => Check(input, null, true, expected);
+
+    [Theory]
+    [InlineData("1-2", 5, "[1, 2, 1, 2, 1]")]
+    [InlineData("1-5", 3, "[1, 2, 3]")]
+    [InlineData("", 3, "[]")]
+    [InlineData("1-5", 0, "[]")]
+    [InlineData("1, 3*, 5", 5, "[1, 3, 3, 3, 5]")]
+    [InlineData("1, 3-100*, 2", 5, "[1, 3, 4, 5, 2]")]
+    [InlineData("1, 3-*", 5, "[1, 3, 4, 5, 6]")]
+    [InlineData("(1,2)*, 9", 6, "[1, 2, 1, 2, 1, 9]")]
+    [InlineData("1, 3-5*, 7", 2, "[1, 7]")]
+    [InlineData("1, 3-5*, 7", 1, "[1]")]
+    [InlineData("1, 3-*, 7", 2, "[1, 7]")]
+    [InlineData("2*0*, 1", 3, "[1, 1, 1]")]
+    public void FitsTheCount(string input, int count, string expected) =>
+        Check(input, count, true, expected);
+
+    [Theory]
+    [InlineData("1,3-", "[1]")]
+    [InlineData("1-", "[]")]
+    [InlineData("-2", "[]")]
+    [InlineData("3-,5", "[]")]
+    [InlineData("1, 3-, 5", "[1]")]
+    [InlineData("1, -3", "[1]")]
+    [InlineData("1, 3,*2", "[1, 3]")]
+    [InlineData("1, (,)", "[1]")]
+    [InlineData("3/ 5", "[3]")]
+    [InlineData("1, 3/0", "[1]")]
+    [InlineData("1, 3*, 4*", "[1, 3]")]
+    [InlineData("1, 3-*, 4-*", "[1]")]
+    [InlineData("1, (2-*)", "[1]")]
+    [InlineData("1, (2*)", "[1]")]
+    [InlineData("1, 2-*/2", "[1]")]
+    [InlineData("1, 2-*2", "[1]")]
+    [InlineData("1, 2**3", "[1, 2]")]
+    [InlineData("1, ()", "[1]")]
+    [InlineData("1, (2", "[1]")]
+    [InlineData("1, 2)", "[1, 2]")]
+    [InlineData("1, x, 2", "[1]")]
+    [InlineData("1, 99999999999", "[1]")]
+    [InlineData("1, 2*99999999999", "[1]")]
+    public void FailsWithTheExpressionsBeforeTheError(string input, string expected) =>
+        Check(input, null, false, expected);
+
+    [Theory]
+    [InlineData("1, 3-", 3, "[1, 1, 1]")]
+    [InlineData("1-", 3, "[]")]
+    [InlineData("1, 2*, 3*", 4, "[1, 2, 2, 2]")]
+    public void FailsAndStillFitsTheCount(string input, int count, string expected) =>
+        Check(input, count, false, expected);
+
+    [Theory]
+    [InlineData("1-10000", null, true, 10000)]
+    [InlineData("1*10000", null, true, 10000)]
+    [InlineData("1-*", 10000, true, 10000)]
+    [InlineData("1-10001", null, false, 0)]
+    [InlineData("10001-1", null, false, 0)]
+    [InlineData("1*10001", null, false, 0)]
+    [InlineData("(1-5000, 1-5001)", null, false, 0)]
+    [InlineData("1-20000/2", null, false, 0)]
+    [InlineData("5, 1-9999, 1-2", null, false, 10000)]
+    [InlineData("1-*", 20000, false, 10000)]
+    [InlineData("1-20000", 5, false, 0)]
+    public void StopsAtTheCap(string input, int? count, bool ok, int length)
+    {
+        var parsed = RangeExpressions.TryParse(input, out var output, count);
+        Assert.True(
+            parsed == ok && output.Length == length,
+            $"{Call(input, count)} returned {parsed} with {output.Length} values, expected {ok} with {length}."
+        );
+    }
+
+    [StackTraceHidden]
+    private static void Check(string input, int? count, bool ok, string expected)
+    {
+        var parsed = RangeExpressions.TryParse(input, out var output, count);
+        var actual = $"[{string.Join(", ", output)}]";
+        Assert.True(
+            parsed == ok && actual == expected,
+            $"{Call(input, count)} returned {parsed} with {actual}, expected {ok} with {expected}."
+        );
+    }
+
+    private static string Call(string input, int? count) =>
+        $"RangeExpressions.TryParse(\"{input}\"{(count is int c ? $", count: {c}" : "")})";
+}
