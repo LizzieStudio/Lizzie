@@ -57,30 +57,22 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Close"
 
-[node name="Library" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=831685732]
+[node name="Library" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=831685732]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TileContainer" type="HFlowContainer" parent="MarginContainer/VBoxContainer/Library" unique_id=1336304993]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="AddImagePanel" type="Panel" parent="MarginContainer/VBoxContainer/Library" unique_id=23214448]
+[node name="AddImagePanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/Library" unique_id=23214448]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(200, 150)
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_styles/panel = ExtResource("3_rcwif")
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Library/AddImagePanel" unique_id=1278981682]
-layout_mode = 1
-offset_right = 191.0
-offset_bottom = 136.0
+layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer" unique_id=1480480400]
 layout_mode = 2
@@ -89,21 +81,6 @@ layout_mode = 2
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1050739579]
-layout_mode = 2
-text = "Service"
-
-[node name="CloudService" type="OptionButton" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1325240250]
-unique_name_in_owner = true
-layout_mode = 2
-item_count = 3
-popup/item_0/text = "Google Drive"
-popup/item_0/id = 0
-popup/item_1/text = "Dropbox"
-popup/item_1/id = 1
-popup/item_2/text = "OneDrive"
-popup/item_2/id = 2
-
 [node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1500212282]
 layout_mode = 2
 text = "URL"
@@ -111,6 +88,7 @@ text = "URL"
 [node name="UrlInput" type="LineEdit" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=478212971]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Label3" type="Label" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=851393597]
 layout_mode = 2
@@ -119,6 +97,7 @@ text = "Name"
 [node name="NameInput" type="LineEdit" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer/GridContainer" unique_id=1557635290]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Library/AddImagePanel/MarginContainer/VBoxContainer" unique_id=1546665641]
 layout_mode = 2
@@ -133,6 +112,16 @@ text = "Add"
 unique_name_in_owner = true
 layout_mode = 2
 text = "Cancel"
+
+[node name="Tiles" type="ScrollContainer" parent="MarginContainer/VBoxContainer/Library" unique_id=898002970]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TileContainer" type="HFlowContainer" parent="MarginContainer/VBoxContainer/Library/Tiles" unique_id=1336304993]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
 [node name="ImageView" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1238407623]
 unique_name_in_owner = true

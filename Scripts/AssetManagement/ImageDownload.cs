@@ -1,96 +1,80 @@
 using System;
-using System.IO;
+using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using Godot;
 
 namespace Lizzie.AssetManagement
 {
     /// <summary>
-    /// Service for managing cloud-stored assets
+    /// Downloads images from links, including Google Drive and Dropbox share links.
     /// </summary>
-    public class CloudAssetService
+    public static class ImageDownload
     {
-        private ICloudProvider _provider;
-
-        /// <summary>
-        /// Initialize the service with a specific cloud provider
-        /// </summary>
-        /// <param name="providerType">Type of cloud provider</param>
-        public void Initialize(CloudProviderType providerType)
+        private static readonly System.Net.Http.HttpClient Client = new(
+            new System.Net.Http.SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            }
+        )
         {
-            _provider = providerType switch
+            DefaultRequestHeaders =
             {
-                CloudProviderType.Dropbox => new DropboxProvider(),
-                CloudProviderType.GoogleDrive => new GoogleDriveProvider(),
-                CloudProviderType.OneDrive => new OneDriveProvider(),
-                _ => throw new ArgumentException($"Unsupported provider type: {providerType}"),
-            };
-        }
+                UserAgent = { new ProductInfoHeaderValue("Mozilla", "5.0") },
+            },
+        };
 
-        /// <summary>
-        /// Download a publicly accessible file to a stream without authentication
-        /// </summary>
-        /// <param name="publicUrl">Public URL to the file</param>
-        /// <returns>Stream containing the file data</returns>
-        public async Task<Stream> DownloadPublicFileStreamAsync(string publicUrl)
-        {
-            if (_provider == null)
-            {
-                throw new InvalidOperationException(
-                    "Provider not initialized. Call Initialize first."
-                );
-            }
-
-            try
-            {
-                var stream = await _provider.DownloadPublicFileStreamAsync(publicUrl);
-                GD.Print($"Public file downloaded to stream");
-                return stream;
-            }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"Failed to download public file to stream: {ex.Message}");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Downloads an image from a Google Drive public URL and applies it as the texture
-        /// on <see cref="_testSprite"/>. The image is decoded entirely in-memory; nothing is
-        /// written to disk.
-        /// </summary>
-        /// <param name="url">Public URL to download from</param>
-        /// <returns>Record (string, image). If success, string is empty. Otherwise it contains the error message </returns>
-        public async Task<(string, Image)> DownloadImageAsync(string url)
+        public static async Task<Image> DownloadAsync(string url)
         {
             try
             {
-                var service = new CloudAssetService();
-                service.Initialize(CloudProviderType.GoogleDrive);
-
-                using var stream = await service.DownloadPublicFileStreamAsync(url);
-                using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
-                var bytes = ms.ToArray();
-
+                var bytes = await Client.GetByteArrayAsync(DirectLink(url)).ConfigureAwait(false);
                 var image = new Image();
                 var err = Decode(image, bytes);
-                if (err != Error.Ok)
-                {
-                    var s =
-                        $"DownloadImage failed to decode {url}: {GetImageError(bytes)} "
-                        + $"(Godot decode error {(int)err} {err})";
-                    GD.PrintErr(s);
-                    return (s, new Image());
-                }
-
-                return (string.Empty, image);
+                if (err == Error.Ok)
+                    return image;
+                GD.PrintErr(
+                    $"Couldn't decode the image at {url}: {GetImageError(bytes)} "
+                        + $"(Godot decode error {(int)err} {err})"
+                );
             }
             catch (Exception ex)
             {
-                var s = $"DownloadImage failed for {url}: {ex.Message}";
-                GD.PrintErr(s);
-                return (s, new Image());
+                GD.PrintErr($"Couldn't download {url}: {ex.Message}");
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Converts a "share" link into a direct link for Google Drive or Dropbox,
+        /// otherwise returns the link.
+        /// </summary>
+        public static string DirectLink(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                return url;
+            var query = HttpUtility.ParseQueryString(uri.Query);
+            switch (uri.Host)
+            {
+                case "drive.google.com":
+                case "docs.google.com":
+                    // Share links look like /file/d/{id}/view, /file/u/0/d/{id}/view,
+                    // /open?id={id} or /uc?id={id}.
+                    var match = Regex.Match(uri.AbsolutePath, @"^/file/(?:u/\d+/)?d/([^/]+)");
+                    var id = match.Success ? match.Groups[1].Value : query["id"];
+                    // confirm=t skips the "can't scan this file" page for most files.
+                    return id == null
+                        ? url
+                        : $"https://drive.usercontent.google.com/download?id={id}&export=download&confirm=t";
+                case "www.dropbox.com":
+                case "dropbox.com":
+                    query["dl"] = "1";
+                    return new UriBuilder(uri) { Query = query.ToString() }
+                        .Uri
+                        .AbsoluteUri;
+                default:
+                    return url;
             }
         }
 
@@ -121,12 +105,6 @@ namespace Lizzie.AssetManagement
                 _ => Error.FileUnrecognized,
             };
 
-        /// <summary>
-        /// Writes information for an image error message:
-        /// * if the bytes are HTML instead of an image
-        /// * the detected image format,
-        /// * the dimensions and color space.
-        /// </summary>
         private static string GetImageError(byte[] b)
         {
             if (b == null || b.Length == 0)
@@ -156,7 +134,6 @@ namespace Lizzie.AssetManagement
                 + $"{b[0]:X2} {b[1]:X2} {b[2]:X2} {b[3]:X2})";
         }
 
-        /// <summary>Writes information for a JPEG error message.</summary>
         private static string GetJpegError(byte[] b)
         {
             int p = 2;

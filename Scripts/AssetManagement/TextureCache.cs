@@ -28,7 +28,7 @@ public class TextureCache
         if (asset == null)
             return null;
 
-        var image = await ProjectService.Instance.FetchImageAsync(asset);
+        var image = await AssetImageCache.Instance.FetchImageAsync(asset);
         if (image == null)
             return null;
 

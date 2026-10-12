@@ -51,7 +51,7 @@ public partial class ImageTile : MarginContainer
             return;
 
         _imageName.Text = asset.Name;
-        var image = await ProjectService.Instance.FetchImageAsync(asset);
+        var image = await AssetImageCache.Instance.FetchImageAsync(asset);
         // The tile may have been removed or retargeted while the image loaded.
         if (!IsInstanceValid(this) || asset.Id != Reference)
             return;

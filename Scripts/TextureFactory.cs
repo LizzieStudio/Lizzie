@@ -87,7 +87,7 @@ public partial class TextureFactory : SubViewport
                     var asset = RecordService
                         .Instance.Get<ImageAsset>(a => a.Name == imageName)
                         .FirstOrDefault();
-                    if (asset != null && !AssetImageCache.Instance.IsDownloaded(asset))
+                    if (asset != null && AssetImageCache.Instance.GetImage(asset) == null)
                     {
                         pendingAssets.Add(asset);
                     }
@@ -100,7 +100,7 @@ public partial class TextureFactory : SubViewport
                 var tasks = new List<System.Threading.Tasks.Task>();
                 foreach (var asset in pendingAssets)
                 {
-                    tasks.Add(ProjectService.Instance.FetchImageAsync(asset));
+                    tasks.Add(AssetImageCache.Instance.FetchImageAsync(asset));
                 }
                 await System.Threading.Tasks.Task.WhenAll(tasks);
                 _waitingForAsset = false;

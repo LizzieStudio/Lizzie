@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
 /// <summary>
-/// Holds lazy-loaded image data for assets, keyed by the images cloud-path.
+/// Downloads each asset's image once and keeps it, keyed by the image's cloud path.
 /// </summary>
 public class AssetImageCache
 {
@@ -19,27 +20,36 @@ public class AssetImageCache
         }
     }
 
-    private readonly Dictionary<string, Image> _images = new();
+    private readonly Dictionary<string, Task<Image>> _images = new();
 
-    /// <summary>Whether the asset's image has been downloaded and cached.</summary>
-    public bool IsDownloaded(ImageAsset asset) =>
-        asset != null && _images.ContainsKey(asset.CloudPath);
-
-    /// <summary>The cached image for the asset, or null if it has not been downloaded.</summary>
-    public Image GetImage(ImageAsset asset)
+    /// <summary>
+    /// The asset's image, cached for future calls.
+    /// The task resolves to null if the download failed.
+    /// Calling this method again will retry the download.
+    /// </summary>
+    public async Task<Image> FetchImageAsync(ImageAsset asset)
     {
         if (asset == null)
             return null;
-        return _images.TryGetValue(asset.CloudPath, out var image) ? image : null;
+
+        var path = asset.CloudPath;
+        if (!_images.TryGetValue(path, out var fetch))
+            _images[path] = fetch = ImageDownload.DownloadAsync(path);
+
+        var image = await fetch;
+        // After a failed download, another caller may have started a new one.
+        if (image == null && _images.GetValueOrDefault(path) == fetch)
+            _images.Remove(path);
+        return image;
     }
 
-    /// <summary>Stores the downloaded image for the asset.</summary>
-    public void Store(ImageAsset asset, Image image)
-    {
-        if (asset == null || image == null)
-            return;
-        _images[asset.CloudPath] = image;
-    }
-
-    public void Clear() => _images.Clear();
+    /// <summary>
+    /// The cached image, or null.
+    /// </summary>
+    public Image GetImage(ImageAsset asset) =>
+        asset != null
+        && _images.TryGetValue(asset.CloudPath, out var fetch)
+        && fetch.IsCompletedSuccessfully
+            ? fetch.Result
+            : null;
 }

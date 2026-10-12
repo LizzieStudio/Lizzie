@@ -50,7 +50,7 @@ public class GridLayoutTests
 
     [Fact]
     public void AnAssetWithoutAPathIsNotDownloaded() =>
-        Assert.False(AssetImageCache.Instance.IsDownloaded(new ImageAsset { Id = new SnowTag(1) }));
+        Assert.Null(AssetImageCache.Instance.GetImage(new ImageAsset { Id = new SnowTag(1) }));
 
     [Fact]
     public void LayoutSurvivesSaving()

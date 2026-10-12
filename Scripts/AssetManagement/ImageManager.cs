@@ -10,7 +10,7 @@ public partial class ImageManager : Window, ICommandView
     private Button _removeButton;
     private Button _closeButton;
 
-    private Panel _addPanel;
+    private PanelContainer _addPanel;
     private Button _addImageButton;
     private Button _cancelImageButton;
 
@@ -66,7 +66,7 @@ public partial class ImageManager : Window, ICommandView
         _removeButton.Pressed += OnRemovePressed;
         _closeButton.Pressed += OnClosePressed;
 
-        _addPanel = GetNode<Panel>("%AddImagePanel");
+        _addPanel = GetNode<PanelContainer>("%AddImagePanel");
         _addImageButton = GetNode<Button>("%AddImageButton");
         _addImageButton.Pressed += OnAddImagePressed;
         _cancelImageButton = GetNode<Button>("%CancelImageButton");
