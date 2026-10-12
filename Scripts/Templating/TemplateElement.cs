@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Godot;
@@ -122,8 +123,8 @@ public class TemplateElement : ITemplateElement
 
         var o = Substitute(p.Value, context);
 
-        int.TryParse(o, out var result);
-        return result;
+        double.TryParse(o, NumberStyles.Float, CultureInfo.InvariantCulture, out var result);
+        return (int)Math.Round(result, MidpointRounding.AwayFromZero);
     }
 
     public HorizontalAlignment EvaluateHorizontalAlignmentParameter(

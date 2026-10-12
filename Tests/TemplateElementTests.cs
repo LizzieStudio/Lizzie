@@ -28,4 +28,20 @@ public class TemplateElementTests
                 + "expected it inside the card, 0..100 percent."
         );
     }
+
+    [Theory]
+    [InlineData("16", 16)]
+    [InlineData("16.5", 17)]
+    [InlineData("16.4", 16)]
+    [InlineData("-2.5", -3)]
+    [InlineData("16,5", 0)]
+    [InlineData("wide", 0)]
+    public void NumbersRoundToTheNearestWhole(string value, int expected)
+    {
+        var element = new TextElement();
+        element.SetParameterValue("X", value);
+
+        var actual = element.EvaluateNumberParameter(element.Parameters, "X", new TextureContext());
+        Assert.True(actual == expected, $"\"{value}\" evaluated to {actual}, expected {expected}.");
+    }
 }

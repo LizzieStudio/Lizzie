@@ -528,16 +528,15 @@ public partial class TemplateCreator : Window
         float scaleX = 100 / _textureContext.ParentSize.X;
         float scaleY = 100 / _textureContext.ParentSize.Y;
 
-        UpdateParamControl(
-            "X",
-            ((int)(scaleX * (m.l + w / 2f))).ToString(CultureInfo.InvariantCulture)
-        );
-        UpdateParamControl(
-            "Y",
-            ((int)(scaleY * (m.t + h / 2f))).ToString(CultureInfo.InvariantCulture)
-        );
-        UpdateParamControl("Width", ((int)(scaleX * w)).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Height", ((int)(scaleY * h)).ToString(CultureInfo.InvariantCulture));
+        static string Percent(float value) =>
+            MathF
+                .Round(value, MidpointRounding.AwayFromZero)
+                .ToString(CultureInfo.InvariantCulture);
+
+        UpdateParamControl("X", Percent(scaleX * (m.l + w / 2f)));
+        UpdateParamControl("Y", Percent(scaleY * (m.t + h / 2f)));
+        UpdateParamControl("Width", Percent(scaleX * w));
+        UpdateParamControl("Height", Percent(scaleY * h));
 
         _updateRequired = true;
     }
