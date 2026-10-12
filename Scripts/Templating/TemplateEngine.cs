@@ -65,6 +65,7 @@ public static class TemplateEngine
                     Stretch = l.Stretch,
                     BackgroundColor = l.BackgroundColor,
                     RotationDegrees = l.RotationDegrees,
+                    Quantity = l.Quantity,
                 }
             );
 

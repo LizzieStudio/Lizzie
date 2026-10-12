@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Lizzie.Scripts.Templating;
 using Xunit;
@@ -43,5 +44,35 @@ public class TemplateElementTests
 
         var actual = element.EvaluateNumberParameter(element.Parameters, "X", new TextureContext());
         Assert.True(actual == expected, $"\"{value}\" evaluated to {actual}, expected {expected}.");
+    }
+
+    [Fact]
+    public void ImagesCarryABoundQuantity()
+    {
+        var pips = new Column { Id = new SnowTag(1), Name = "Pips" };
+        var context = new TextureContext
+        {
+            DataSet = new DataSet { Id = new SnowTag(10), Columns = [pips] },
+            CurrentRow = new DataRow
+            {
+                Id = new SnowTag(11),
+                Data = ImmutableDictionary<SnowTag, string>.Empty.Add(pips.Id, "3"),
+            },
+        };
+        var element = new ImageElement();
+        element.SetParameterValue("Quantity", "{Pips}");
+
+        var shape = element.GetElementData(context).Single();
+        Assert.True(
+            shape.Quantity == 3,
+            $"An image with Quantity {{Pips}} = 3 drew {shape.Quantity}."
+        );
+    }
+
+    [Fact]
+    public void ANewImageDrawsOneShape()
+    {
+        var shape = new ImageElement().GetElementData(new TextureContext()).Single();
+        Assert.True(shape.Quantity == 1, $"A new image drew {shape.Quantity}, expected 1.");
     }
 }

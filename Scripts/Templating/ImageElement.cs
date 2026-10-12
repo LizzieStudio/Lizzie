@@ -54,6 +54,15 @@ public class ImageElement : TemplateElement
                 Type = TemplateParameter.TemplateParameterType.Boolean,
             }
         );
+
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Quantity",
+                Value = "1",
+                Type = TemplateParameter.TemplateParameterType.Number,
+            }
+        );
     }
 
     public override List<TextureFactory.TextureObject> GetElementData(TextureContext context)
@@ -73,6 +82,7 @@ public class ImageElement : TemplateElement
         t.Text = EvaluateTextParameter(Parameters, "Image", context);
         t.ForegroundColor = EvaluateColorParameter(Parameters, "Foreground", context);
         t.Stretch = EvaluateBooleanParameter(Parameters, "Stretch", context);
+        t.Quantity = EvaluateNumberParameter(Parameters, "Quantity", context);
         l.Add(t);
         return l;
     }
