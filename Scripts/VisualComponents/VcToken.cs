@@ -196,7 +196,7 @@ public partial class VcToken : VisualComponentBase
         _frontImage = p.FrontImage;
         _backImage = p.BackImage;
 
-        _shape = p.Shape;
+        Shape = (TokenShape)p.Shape;
         _mode = p.Mode;
 
         // Quick parameters
@@ -297,15 +297,14 @@ public partial class VcToken : VisualComponentBase
         YHeight = _thickness;
         Scale = new Vector3(_width, _thickness, _height);
 
-        var shape = (TokenShape)_shape;
-        if (!Meshes.TryGetValue(shape, out var mesh))
+        if (!Meshes.TryGetValue(Shape, out var mesh))
         {
-            var ring = GetFaceRing(shape);
+            var ring = GetFaceRing(Shape);
             mesh = new ArrayMesh();
             CommitFaceSurface(mesh, ring, +FaceH, mirrorU: false);
             CommitFaceSurface(mesh, ring, -FaceH, mirrorU: true);
             CommitSideSurface(mesh, ring);
-            Meshes[shape] = mesh;
+            Meshes[Shape] = mesh;
         }
         _mainMesh.Mesh = mesh;
         _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, BlankFace);
@@ -315,7 +314,7 @@ public partial class VcToken : VisualComponentBase
         SetFrame("back_rect", 1, 1, 0);
 
         ShapeProfiles.Clear();
-        ShapeProfiles.Add(ShapeProfile(shape, _width, _height));
+        ShapeProfiles.Add(ShapeProfile(Shape, _width, _height));
     }
 
     /// <summary>
@@ -715,10 +714,10 @@ public partial class VcToken : VisualComponentBase
         int backH = singleBack ? 1 : hframes;
         int backV = singleBack ? 1 : vframes;
 
-        string frontKey = QuickDeckSheetKey(cards, _shape, cellW, cellH, hframes, vframes, "f");
+        string frontKey = QuickDeckSheetKey(cards, cellW, cellH, hframes, vframes, "f");
         string backKey = singleBack
-            ? QuickDeckSingleBackKey(cards[0], _shape, cellW, cellH)
-            : QuickDeckSheetKey(cards, _shape, cellW, cellH, hframes, vframes, "b");
+            ? QuickDeckSingleBackKey(cards[0], cellW, cellH)
+            : QuickDeckSheetKey(cards, cellW, cellH, hframes, vframes, "b");
 
         ApplySheetWhenReady(
             textureFactory,
@@ -805,8 +804,7 @@ public partial class VcToken : VisualComponentBase
                             Quantity = 1,
                         },
                         _height,
-                        _width,
-                        _shape
+                        _width
                     )
                 );
             }
@@ -838,8 +836,7 @@ public partial class VcToken : VisualComponentBase
                             Quantity = 1,
                         },
                         _height,
-                        _width,
-                        _shape
+                        _width
                     )
                 );
             }
@@ -908,7 +905,6 @@ public partial class VcToken : VisualComponentBase
 
     private static string QuickDeckSheetKey(
         ImmutableArray<QuickCardData> cards,
-        int shape,
         int cellW,
         int cellH,
         int hframes,
@@ -920,7 +916,6 @@ public partial class VcToken : VisualComponentBase
         sb.Append("qd-").Append(side).Append(':');
         sb.Append(cellW).Append('x').Append(cellH).Append(':');
         sb.Append(hframes).Append('x').Append(vframes).Append(':');
-        sb.Append(shape).Append(':');
         foreach (var c in cards)
         {
             if (side == "f")
@@ -931,17 +926,11 @@ public partial class VcToken : VisualComponentBase
         return sb.ToString();
     }
 
-    private static string QuickDeckSingleBackKey(
-        QuickCardData card,
-        int shape,
-        int cellW,
-        int cellH
-    )
+    private static string QuickDeckSingleBackKey(QuickCardData card, int cellW, int cellH)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append("qd-bsingle:");
         sb.Append(cellW).Append('x').Append(cellH).Append(':');
-        sb.Append(shape).Append(':');
         sb.Append(card.CardBackValue).Append('|').Append(card.CardBackColor.ToHtml());
         return sb.ToString();
     }
@@ -958,7 +947,7 @@ public partial class VcToken : VisualComponentBase
         if (!File.Exists(_frontImage))
             return;
 
-        FaceTexture = LoadClipped(_frontImage);
+        FaceTexture = LoadImage(_frontImage);
         _frontTextureGenerated = true;
 
         if (!_differentBack)
@@ -973,18 +962,14 @@ public partial class VcToken : VisualComponentBase
         if (!File.Exists(_backImage))
             return;
 
-        BackTexture = LoadClipped(_backImage);
+        BackTexture = LoadImage(_backImage);
         _backTextureGenerated = true;
     }
 
-    // An uploaded image, transparent outside the token's shape, so the hand shows its shape too.
-    private ImageTexture LoadClipped(string path)
-    {
-        var image = Image.LoadFromFile(path);
-        return image == null
-            ? new ImageTexture()
-            : ImageTexture.CreateFromImage(((TokenShape)_shape).Clip(image));
-    }
+    private static ImageTexture LoadImage(string path) =>
+        Image.LoadFromFile(path) is { } image
+            ? ImageTexture.CreateFromImage(image)
+            : new ImageTexture();
 
     private void CreateQuickFrontTexture(TextureFactory textureFactory)
     {
@@ -1009,15 +994,14 @@ public partial class VcToken : VisualComponentBase
         QuickTextureField qtf
     )
     {
-        return BuildQuickTextureDefinition(bgColor, qtf, _height, _width, _shape);
+        return BuildQuickTextureDefinition(bgColor, qtf, _height, _width);
     }
 
     private static TextureFactory.TextureDefinition BuildQuickTextureDefinition(
         Color bgColor,
         QuickTextureField qtf,
         float height,
-        float width,
-        int shape
+        float width
     )
     {
         int sH = 256;
@@ -1050,25 +1034,6 @@ public partial class VcToken : VisualComponentBase
                 ForegroundColor = Colors.Black,
                 Quantity = 1,
             };
-        }
-
-        switch (shape)
-        {
-            case 0:
-                td.Shape = TokenShape.Rectangle;
-                break;
-
-            case 1:
-                td.Shape = TokenShape.Circle;
-                break;
-
-            case 2:
-                td.Shape = TokenShape.HexPoint;
-                break;
-
-            case 3:
-                td.Shape = TokenShape.HexFlat;
-                break;
         }
 
         td.Objects.Add(
@@ -1184,7 +1149,7 @@ public partial class VcToken : VisualComponentBase
         var fg = (qtf?.ForegroundColor ?? Colors.Black).ToHtml();
         var type = (int)(qtf?.FaceType ?? TextureFactory.TextureObjectType.Text);
         var qty = qtf?.Quantity ?? 1;
-        return $"qs-{side}:{_shape}:{(int)(_width * 256)}x{(int)(_height * 256)}:{bgColor.ToHtml()}:{type}:{qty}:{fg}:{caption}";
+        return $"qs-{side}:{(int)(_width * 256)}x{(int)(_height * 256)}:{bgColor.ToHtml()}:{type}:{qty}:{fg}:{caption}";
     }
 
     private void FinalizeBackTexture(ImageTexture t)
@@ -1203,7 +1168,8 @@ public partial class VcToken : VisualComponentBase
     private float _thickness;
     private string _frontImage;
     private string _backImage;
-    private int _shape;
+
+    public TokenShape Shape { get; private set; }
     private TokenBuildMode _mode;
     private Color _frontBgColor;
     private QuickTextureField _frontField;

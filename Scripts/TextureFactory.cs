@@ -126,12 +126,6 @@ public partial class TextureFactory : SubViewport
             _activeQueueEntry.TextureDefinition.Height
         );
 
-        if (definition.Shape.Mask() is { } mask)
-        {
-            tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
-            tr.Texture = ImageTexture.CreateFromImage(mask.GetImage());
-        }
-
         var bgRect = new ColorRect();
         bgRect.Color = definition.BackgroundColor;
         bgRect.Size = new Vector2(definition.Width, definition.Height);
@@ -1090,7 +1084,6 @@ public partial class TextureFactory : SubViewport
     {
         public int Width { get; set; } = 256;
         public int Height { get; set; } = 256;
-        public TokenShape Shape { get; set; } = TokenShape.Rectangle;
         public Color BackgroundColor { get; set; } = Colors.White;
         public List<TextureObject> Objects { get; set; } = new List<TextureObject>();
     }

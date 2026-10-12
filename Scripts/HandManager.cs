@@ -24,10 +24,10 @@ public partial class HandManager : Panel
     private Texture2D _closeIcon;
 
     // The scene's drag preview, which is duplicated when creating previews of held cards.
-    private TextureRect _dragPreview;
+    private CardFace _dragPreview;
 
     // A preview for each card held over a hand, with the card and side it shows.
-    private readonly List<(TextureRect Rect, VcToken Card, bool Back)> _previews = new();
+    private readonly List<(CardFace Rect, VcToken Card, bool Back)> _previews = new();
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -44,7 +44,7 @@ public partial class HandManager : Panel
         GetTree().Root.SizeChanged += OnWindowResized;
 
         _hand = GetNode<HandRow>("%HandRow");
-        _dragPreview = GetNode<TextureRect>("%DragPreview");
+        _dragPreview = GetNode<CardFace>("%DragPreview");
         _previews.Add((_dragPreview, null, false));
     }
 
@@ -123,7 +123,7 @@ public partial class HandManager : Panel
         {
             if (i == _previews.Count)
             {
-                var copy = (TextureRect)_dragPreview.Duplicate();
+                var copy = (CardFace)_dragPreview.Duplicate();
                 AddChild(copy);
                 _previews.Add((copy, null, false));
             }
@@ -135,7 +135,7 @@ public partial class HandManager : Panel
             bool back = HandCard.IsFaceDown(s);
             if (card != shown || back != shownBack)
             {
-                rect.Texture = card == null ? null : HandCard.CardTexture(card, back);
+                rect.ShowCard(card, back);
                 _previews[i] = (rect, card, back);
             }
 

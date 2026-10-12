@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://bux026a2v4f2b" path="res://Scripts/Commands/CommandDivider.cs" id="cmd_divider"]
 [ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandItem.cs" id="cmd_item"]
 [ext_resource type="Script" uid="uid://b5mdnpo6px318" path="res://Scripts/Commands/CommandMenuButton.cs" id="cmd_menu"]
+[ext_resource type="PackedScene" uid="uid://bwkfdirtxku3d" path="res://Scenes/Controls/card_face.tscn" id="2_cface"]
 
 [node name="PrimaryScene" type="Node" unique_id=410470090 node_paths=PackedStringArray("_textureFactory")]
 script = ExtResource("1_hibmt")
@@ -214,13 +215,11 @@ offset_right = 24.0
 offset_bottom = 28.0
 icon = ExtResource("4_n88ql")
 
-[node name="DragPreview" type="TextureRect" parent="UI/Hand" unique_id=1579015371]
+[node name="DragPreview" parent="UI/Hand" unique_id=1579015371 instance=ExtResource("2_cface")]
 unique_name_in_owner = true
 visible = false
 z_index = 10
 layout_mode = 0
-mouse_filter = 2
-expand_mode = 1
 
 [node name="Mode" type="HBoxContainer" parent="UI" unique_id=1351550218]
 anchors_preset = 3

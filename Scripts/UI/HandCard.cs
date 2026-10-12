@@ -46,7 +46,7 @@ public partial class HandCard : PanelContainer
     /// </summary>
     public float Yaw { get; private set; }
 
-    private TextureRect _face;
+    private CardFace _face;
 
     // The node whose textures are shown, which the table replaces when the card's prototype or row changes.
     private VcToken _card;
@@ -55,7 +55,7 @@ public partial class HandCard : PanelContainer
     {
         // Built in code, since its room comes from the outline's width.
         Theme = OutlineRoom;
-        _face = GetNode<TextureRect>("Face");
+        _face = GetNode<CardFace>("Face");
     }
 
     public override void _EnterTree()
@@ -78,10 +78,10 @@ public partial class HandCard : PanelContainer
         SetCard(ProjectService.Instance.GameObjects.GetComponent(Reference) as VcToken);
         Yaw = state?.Rotation.Y ?? 0;
         TableSize = HandRow.TableSize(_card);
-        _face.Texture =
-            _card == null || state == null
-                ? null
-                : CardTexture(_card, AlwaysShowBack || IsFaceDown(state));
+        if (state == null)
+            _face.ShowCard(null, false);
+        else
+            _face.ShowCard(_card, AlwaysShowBack || IsFaceDown(state));
     }
 
     private void SyncSelection(IRecordReader R)
@@ -125,23 +125,4 @@ public partial class HandCard : PanelContainer
             Rotation = s.Rotation with { Y = s.Rotation.Y + angle },
             Position = new Basis(Vector3.Up, angle) * s.PositionAt(0),
         };
-
-    /// <summary>
-    /// The card's cropped texture from the sheet, or null before it has one.
-    /// </summary>
-    public static AtlasTexture CardTexture(VcToken card, bool back)
-    {
-        var sheet = back ? card.BackTexture : card.FaceTexture;
-
-        if (sheet == null || sheet.GetWidth() == 0 || sheet.GetHeight() == 0)
-            return null;
-
-        int hframes = Math.Max(1, back ? card.BackHframes : card.FaceHframes);
-        int vframes = Math.Max(1, back ? card.BackVframes : card.FaceVframes);
-        int frame = back ? card.BackFrame : card.FaceFrame;
-        int frameW = sheet.GetWidth() / hframes;
-        int frameH = sheet.GetHeight() / vframes;
-        var region = new Rect2(frame % hframes * frameW, frame / hframes * frameH, frameW, frameH);
-        return new AtlasTexture { Atlas = sheet, Region = region };
-    }
 }
