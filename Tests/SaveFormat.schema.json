@@ -389,18 +389,6 @@
                       "differentBack": {
                         "type": "boolean"
                       },
-                      "frontImage": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "backImage": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
                       "frontBgColor": true,
                       "backBgColor": true,
                       "quickFront": {
@@ -656,18 +644,6 @@
                       },
                       "differentBack": {
                         "type": "boolean"
-                      },
-                      "frontImage": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "backImage": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
                       },
                       "frontBgColor": true,
                       "backBgColor": true,

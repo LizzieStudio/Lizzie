@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -167,14 +166,16 @@ public partial class VcToken : VisualComponentBase
         RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
     }
 
+    /// <summary>
+    /// How a token gets its textures. Saves store the number, so values must not change.
+    /// </summary>
     public enum TokenBuildMode
     {
-        QuickCard,
-        Custom,
-        Grid,
-        Template,
-        Nandeck,
-        QuickDeck, //need to parse the QuickBuild string to pull out the caption
+        QuickCard = 0,
+        Grid = 2,
+        Template = 3,
+        Nandeck = 4,
+        QuickDeck = 5,
     }
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)
@@ -198,9 +199,6 @@ public partial class VcToken : VisualComponentBase
         _width = p.Width / 10;
 
         _thickness = Math.Max(p.Thickness / 10f, 0.03f);
-
-        _frontImage = p.FrontImage;
-        _backImage = p.BackImage;
 
         Shape = (TokenShape)p.Shape;
         _mode = p.Mode;
@@ -255,10 +253,6 @@ public partial class VcToken : VisualComponentBase
             case TokenBuildMode.QuickCard:
             case TokenBuildMode.QuickDeck:
                 BuildQuick(TextureFactory, GetPrototype(R));
-                break;
-
-            case TokenBuildMode.Custom:
-                BuildCustom();
                 break;
 
             case TokenBuildMode.Grid:
@@ -480,13 +474,6 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
-    private void BuildCustom()
-    {
-        CreateCustomFrontTexture();
-        if (_differentBack)
-            CreateCustomBackTexture();
-    }
-
     /// <summary>
     /// The image frame a grid card shows on one side, or null.
     /// </summary>
@@ -696,35 +683,6 @@ public partial class VcToken : VisualComponentBase
 
     private void BuildImport() { }
 
-    private void CreateCustomFrontTexture()
-    {
-        if (!File.Exists(_frontImage))
-            return;
-
-        FaceTexture = LoadImage(_frontImage);
-        _frontTextureGenerated = true;
-
-        if (!_differentBack)
-        {
-            BackTexture = FaceTexture;
-            _backTextureGenerated = true;
-        }
-    }
-
-    private void CreateCustomBackTexture()
-    {
-        if (!File.Exists(_backImage))
-            return;
-
-        BackTexture = LoadImage(_backImage);
-        _backTextureGenerated = true;
-    }
-
-    private static ImageTexture LoadImage(string path) =>
-        Image.LoadFromFile(path) is { } image
-            ? ImageTexture.CreateFromImage(image)
-            : new ImageTexture();
-
     private bool _mapFrontTextureRequired;
 
     private void MapFrontTexture()
@@ -778,8 +736,6 @@ public partial class VcToken : VisualComponentBase
     private float _height;
     private float _width;
     private float _thickness;
-    private string _frontImage;
-    private string _backImage;
 
     public TokenShape Shape { get; private set; }
     private TokenBuildMode _mode;
@@ -833,9 +789,6 @@ public abstract record PrintedParameters : ComponentParameters
     public int Shape { get; init; }
     public VcToken.TokenBuildMode Mode { get; init; }
     public bool DifferentBack { get; init; }
-
-    public string FrontImage { get; init; } = "";
-    public string BackImage { get; init; } = "";
 
     public Color FrontBgColor { get; init; } = Colors.Black;
     public Color BackBgColor { get; init; } = Colors.Black;

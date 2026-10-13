@@ -12,19 +12,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private LineEdit _widthInput;
     private LineEdit _thicknessInput;
 
-    private LineEdit _frontImage;
-    private LineEdit _backImage;
-
-    private Button _frontButton;
-    private Button _backButton;
-
-    private HBoxContainer _customBackRow;
-
     private ColorPickerButton _quickBackgroundColor;
     private ColorPickerButton _quickBackgroundColor2;
 
     private CheckBox _quickBackCheckbox;
-    private CheckBox _customBackCheckbox;
 
     private OptionButton _typePicker;
     private OptionButton _shapePicker;
@@ -104,7 +95,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IRecordReader R)
     {
-        if (_tabs.CurrentTab == 3)
+        if (_tabs.CurrentTab == 2)
         {
             var count = GridParams(new DeckParameters()).GridFrameCount(R);
             _preview.ItemCount = count;
@@ -112,7 +103,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         }
 
         var dataset = R.Get<DataSet>(_datasetRef);
-        if (_tabs.CurrentTab == 4)
+        if (_tabs.CurrentTab == 3)
         {
             _preview.MultiItemMode = dataset != null;
             if (dataset != null)
@@ -171,16 +162,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _widthRow = GetNode<HBoxContainer>("%WidthRow");
         _heightLabel = GetNode<Label>("%HeightLabel");
 
-        _frontImage = GetNode<LineEdit>("%FrontFile");
-        _backImage = GetNode<LineEdit>("%BackFile");
-        _customBackCheckbox = GetNode<CheckBox>("%CustomDifferentBack");
-        _customBackCheckbox.Pressed += OnCustomBackCheckboxChange;
-        _customBackRow = GetNode<HBoxContainer>("%CustomBackFileRow");
-        _frontButton = GetNode<Button>("%FrontFileButton");
-        _frontButton.Pressed += GetFrontFile;
-        _backButton = GetNode<Button>("%BackFileButton");
-        _backButton.Pressed += GetBackFile;
-
         _quickBackgroundColor = GetNode<ColorPickerButton>("%TopBgColor");
         _quickBackCheckbox = GetNode<CheckBox>("%ToggleBack");
         _frontField = GetNode<QuickTextureEntry>("%FrontField");
@@ -199,11 +180,11 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         {
             if (tab == 1)
                 GenerateQuickCards();
-            else if (tab == 3 || tab == 4)
+            else if (tab == 2 || tab == 3)
                 RecordService.Instance.QueueSync(this);
             else
             {
-                // A Quick card or a Custom image is a single card.
+                // A Quick card is a single card.
                 _preview.ItemCount = 1;
                 _preview.MultiItemMode = false;
             }
@@ -218,7 +199,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         InitializeMultiBindings();
 
         OnQuickBackCheckboxChange();
-        OnCustomBackCheckboxChange();
         OnTypeChanged(0);
         QuickSuitCountChanged(3);
         GenerateQuickCards();
@@ -541,11 +521,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-    private void OnCustomBackCheckboxChange()
-    {
-        _customBackRow.Visible = _customBackCheckbox.ButtonPressed;
-    }
-
     private void OnQuickBackCheckboxChange()
     {
         ShowQuickBack();
@@ -558,26 +533,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         h4.Visible = _quickBackCheckbox.ButtonPressed;
         _backField.Visible = _quickBackCheckbox.ButtonPressed;
     }
-
-    private void GetFrontFile() =>
-        ShowFileDialog(
-            "Select Front Image File",
-            file =>
-            {
-                _frontImage.Text = file;
-                UpdatePreview();
-            }
-        );
-
-    private void GetBackFile() =>
-        ShowFileDialog(
-            "Select Back Image File",
-            file =>
-            {
-                _backImage.Text = file;
-                UpdatePreview();
-            }
-        );
 
     public override ComponentParameters GetParams()
     {
@@ -592,8 +547,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             Height = height,
             Width = width,
             Thickness = ParamToFloat(_thicknessInput.Text),
-            FrontImage = _frontImage.Text,
-            BackImage = _backImage.Text,
             Shape = shape,
             FrontBgColor = _quickBackgroundColor.Color,
             Type = _typePicker.Selected switch
@@ -631,20 +584,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 break;
 
             case 2:
-                d = d with
-                {
-                    Mode = VcToken.TokenBuildMode.Custom,
-                    DifferentBack = _customBackCheckbox.ButtonPressed,
-                };
-                break;
-
-            case 3:
                 d = GridParams(d);
                 if (d.GridFrameCount(RecordService.Instance) > 1)
                     spawnAsDeck = true;
                 break;
 
-            case 4:
+            case 3:
                 d = d with { Mode = VcToken.TokenBuildMode.Template };
                 d = d with
                 {
@@ -684,7 +629,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private (int Index, SnowTag Id) GetRow(int rowNum)
     {
-        if (_tabs.CurrentTab != 4 || _datasetRef == SnowTag.Empty)
+        if (_tabs.CurrentTab != 3 || _datasetRef == SnowTag.Empty)
             return (rowNum, SnowTag.Empty);
         var rows = RecordService.Instance.GetRows(_datasetRef);
         if (rowNum < 0 || rowNum >= rows.Count)
@@ -739,8 +684,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _heightInput.Text = p.Height > 0 ? p.Height.ToString() : "";
         _widthInput.Text = p.Width > 0 ? p.Width.ToString() : "";
         _thicknessInput.Text = p.Thickness.ToString();
-        _frontImage.Text = p.FrontImage;
-        _backImage.Text = p.BackImage;
 
         _quickBackgroundColor.Color = p.FrontBgColor;
         _quickBackgroundColor2.Color = p.BackBgColor;
@@ -748,20 +691,15 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _frontField.SetQuickTextureField(p.QuickFront);
         _backField.SetQuickTextureField(p.QuickBack);
 
-        {
-            bool differentBack = p.DifferentBack;
-            _quickBackCheckbox.ButtonPressed = differentBack;
-            _customBackCheckbox.ButtonPressed = differentBack;
-            ShowQuickBack();
-        }
+        _quickBackCheckbox.ButtonPressed = p.DifferentBack;
+        ShowQuickBack();
 
         _tabs.CurrentTab = p.Mode switch
         {
             VcToken.TokenBuildMode.QuickCard => 0,
             VcToken.TokenBuildMode.QuickDeck => 1,
-            VcToken.TokenBuildMode.Custom => 2,
-            VcToken.TokenBuildMode.Grid => 3,
-            VcToken.TokenBuildMode.Template => 4,
+            VcToken.TokenBuildMode.Grid => 2,
+            VcToken.TokenBuildMode.Template => 3,
             _ => 0,
         };
 

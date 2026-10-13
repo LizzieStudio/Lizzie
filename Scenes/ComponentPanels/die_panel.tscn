@@ -227,18 +227,9 @@ FieldCaption = "Side 19"
 layout_mode = 2
 FieldCaption = "Side 20"
 
-[node name="Image" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=488316813]
-visible = false
-layout_mode = 2
-metadata/_tab_index = 1
-
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Image" unique_id=1023684477]
-layout_mode = 2
-text = "Side 1"
-
 [node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1818089421]
 layout_mode = 2
-metadata/_tab_index = 2
+metadata/_tab_index = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template" unique_id=587209092]
 layout_mode = 2

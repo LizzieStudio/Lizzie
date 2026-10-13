@@ -250,10 +250,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
                 break;
 
             case 1:
-                p = p with { Mode = VcToken.TokenBuildMode.Custom };
-                break;
-
-            case 2:
                 p = p with { Mode = VcToken.TokenBuildMode.Template };
 
                 p = p with { FrontTemplate = _frontTemplateRef, Dataset = _datasetRef };
@@ -352,8 +348,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _tabContainer.CurrentTab = p.Mode switch
         {
             VcToken.TokenBuildMode.QuickCard => 0,
-            VcToken.TokenBuildMode.Custom => 1,
-            VcToken.TokenBuildMode.Template => 2,
+            VcToken.TokenBuildMode.Template => 1,
             _ => 0,
         };
 

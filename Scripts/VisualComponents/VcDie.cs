@@ -139,8 +139,6 @@ public partial class VcDie : VisualComponentBase
             case TokenBuildMode.QuickCard:
                 BuildQuick();
                 break;
-            case TokenBuildMode.Custom:
-                break;
             case TokenBuildMode.Template:
                 BuildTemplate(R);
                 break;
