@@ -246,7 +246,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         switch (_tabContainer.CurrentTab)
         {
             case 0:
-                p = p with { Mode = VcToken.TokenBuildMode.Quick, Sides = PackageSides() };
+                p = p with { Mode = VcToken.TokenBuildMode.QuickCard, Sides = PackageSides() };
                 break;
 
             case 1:
@@ -351,7 +351,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         // Restore tab/mode
         _tabContainer.CurrentTab = p.Mode switch
         {
-            VcToken.TokenBuildMode.Quick => 0,
+            VcToken.TokenBuildMode.QuickCard => 0,
             VcToken.TokenBuildMode.Custom => 1,
             VcToken.TokenBuildMode.Template => 2,
             _ => 0,

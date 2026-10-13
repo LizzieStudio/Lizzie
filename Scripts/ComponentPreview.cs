@@ -258,7 +258,12 @@ public partial class ComponentPreview : Panel
         _component.DataSetRowIndex = rowIndex;
         _component.DataSetRowId = rowId;
         _component.TextureFactory = textureFactory;
-        _component.DraftPrototype = new Prototype { Id = SnowTag.Empty, Parameters = parameters };
+        _component.DraftPrototype = new Prototype
+        {
+            Id = SnowTag.Empty,
+            LastUpdateId = Snowport.Clock.Create(),
+            Parameters = parameters,
+        };
     }
 
     public void Build(

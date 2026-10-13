@@ -19,9 +19,7 @@ public class TextureCache
     }
 
     private readonly Dictionary<string, Texture2D> _assetCache = new();
-    private readonly Dictionary<string, Texture2D> _derivedCache = new();
-
-    private readonly Dictionary<string, List<Action<Texture2D>>> _pending = new();
+    private readonly Dictionary<string, Task<Texture2D>> _derivedCache = new();
 
     public async Task<Texture2D> GetOrCreateAssetTexture(ImageAsset asset)
     {
@@ -41,54 +39,21 @@ public class TextureCache
         return tex;
     }
 
-    public void PutDerived(string key, Texture2D tex)
+    /// <summary>
+    /// Returns the cached texture under <paramref name="key"/>.
+    /// If it doesn't exist, runs <paramref name="build"/>, caches the result, then returns it.
+    /// </summary>
+    public Task<Texture2D> GetOrBuildDerived(string key, Func<Task<Texture2D>> build)
     {
-        if (string.IsNullOrEmpty(key) || tex == null)
-            return;
-        _derivedCache[key] = tex;
-        if (_pending.TryGetValue(key, out var waiters))
-        {
-            _pending.Remove(key);
-            foreach (var w in waiters)
-                w?.Invoke(tex);
-        }
-    }
-
-    public bool RequestDerived(string key, Action<Texture2D> onReady)
-    {
-        if (string.IsNullOrEmpty(key))
-        {
-            onReady?.Invoke(null);
-            return false;
-        }
-        if (_derivedCache.TryGetValue(key, out var cached))
-        {
-            onReady?.Invoke(cached);
-            return false;
-        }
-        if (_pending.TryGetValue(key, out var existing))
-        {
-            if (onReady != null)
-                existing.Add(onReady);
-            return false;
-        }
-        var waiters = new List<Action<Texture2D>>();
-        if (onReady != null)
-            waiters.Add(onReady);
-        _pending[key] = waiters;
-        return true;
+        if (!_derivedCache.TryGetValue(key, out var texture))
+            _derivedCache[key] = texture = build();
+        return texture;
     }
 
     public void Clear()
     {
         _assetCache.Clear();
         _derivedCache.Clear();
-        foreach (var waiters in _pending.Values)
-        {
-            foreach (var w in waiters)
-                w?.Invoke(null);
-        }
-        _pending.Clear();
     }
 
     private static Texture2D BuildCompressedTexture(Image source)

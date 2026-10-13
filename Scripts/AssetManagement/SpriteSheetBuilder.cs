@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Godot;
 
 public class SpriteSheetBuilder
@@ -10,7 +11,7 @@ public class SpriteSheetBuilder
     private readonly int _vframes;
     private readonly int _cellW;
     private readonly int _cellH;
-    private readonly Action<Texture2D> _onComplete;
+    private readonly TaskCompletionSource<Texture2D> _done = new();
     private Image _sheet;
     private int _nextIndex;
 
@@ -20,8 +21,7 @@ public class SpriteSheetBuilder
         int cellW,
         int cellH,
         int hframes,
-        int vframes,
-        Action<Texture2D> onComplete
+        int vframes
     )
     {
         _factory = factory;
@@ -30,13 +30,13 @@ public class SpriteSheetBuilder
         _cellH = cellH;
         _hframes = Math.Max(hframes, 1);
         _vframes = Math.Max(vframes, 1);
-        _onComplete = onComplete;
     }
 
-    public void Start()
+    public Task<Texture2D> Start()
     {
         _sheet = Image.CreateEmpty(_cellW * _hframes, _cellH * _vframes, false, Image.Format.Rgba8);
         QueueNext();
+        return _done.Task;
     }
 
     private void QueueNext()
@@ -76,7 +76,6 @@ public class SpriteSheetBuilder
         _sheet.GenerateMipmaps();
         _sheet.Compress(Image.CompressMode.S3Tc, Image.CompressSource.Generic);
 
-        var tex = ImageTexture.CreateFromImage(_sheet);
-        _onComplete?.Invoke(tex);
+        _done.SetResult(ImageTexture.CreateFromImage(_sheet));
     }
 }

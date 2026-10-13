@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
@@ -168,7 +169,7 @@ public partial class VcToken : VisualComponentBase
 
     public enum TokenBuildMode
     {
-        Quick,
+        QuickCard,
         Custom,
         Grid,
         Template,
@@ -181,6 +182,11 @@ public partial class VcToken : VisualComponentBase
         base.Setup(parameters, R);
         Apply((PrintedParameters)parameters, R);
     }
+
+    /// <summary>
+    /// Counts builds so a stale build can be thrown out.
+    /// </summary>
+    private int _build;
 
     /// <summary>Sizes and textures the token from its parameters and the records they reference.</summary>
     private void Apply(PrintedParameters p, IRecordReader R)
@@ -199,16 +205,7 @@ public partial class VcToken : VisualComponentBase
         Shape = (TokenShape)p.Shape;
         _mode = p.Mode;
 
-        // Quick parameters
-        _frontBgColor = p.FrontBgColor;
-        _frontField = p.QuickFront;
-        _backField = p.QuickBack;
-
-        _frontFontSize = p.FrontFontSize;
         _differentBack = p.DifferentBack;
-
-        _backBgColor = p.BackBgColor;
-        _backFontSize = p.BackFontSize;
 
         //Grid Parameters
         _frontGridImageKey = p.FrontGridImageKey;
@@ -252,17 +249,17 @@ public partial class VcToken : VisualComponentBase
                 );
         }
 
-        Build(R);
-    }
-
-    private void Build(IRecordReader R)
-    {
         BuildToken();
 
+        _build++;
         switch (_mode)
         {
-            case TokenBuildMode.Quick:
-                BuildQuick(TextureFactory);
+            case TokenBuildMode.QuickCard:
+                BuildQuickCard(TextureFactory, GetPrototype(R));
+                break;
+
+            case TokenBuildMode.QuickDeck:
+                BuildQuickDeck(TextureFactory);
                 break;
 
             case TokenBuildMode.Custom:
@@ -280,19 +277,12 @@ public partial class VcToken : VisualComponentBase
             case TokenBuildMode.Nandeck:
                 BuildNanDeck();
                 break;
-
-            case TokenBuildMode.QuickDeck:
-                BuildQuickDeck(TextureFactory);
-                break;
         }
     }
 
     private void BuildToken()
     {
         _mainMesh = GetNode<MeshInstance3D>("SideMesh");
-
-        //FaceSprite = GetNode<Sprite3D>("FrontSprite");
-        //BackSprite = GetNode<Sprite3D>("BackSprite");
 
         YHeight = _thickness;
         Scale = new Vector3(_width, _thickness, _height);
@@ -449,11 +439,26 @@ public partial class VcToken : VisualComponentBase
         st.Commit(mesh);
     }
 
-    private void BuildQuick(TextureFactory textureFactory)
+    private void BuildQuickCard(TextureFactory textureFactory, Prototype prototype)
     {
-        CreateQuickFrontTexture(textureFactory);
-        if (_differentBack)
-            CreateQuickBackTexture(textureFactory);
+        var p = (PrintedParameters)prototype.Parameters;
+        ComputeCellSize(_height, _width, out var cellW, out var cellH);
+        Sheet Side(string side, Color background, QuickTextureField field) =>
+            new(
+                $"quick:{prototype.SheetKey()}:{side}",
+                QuickTemplate.Template,
+                QuickTemplate.DataSet,
+                [QuickTemplate.Row(background, field)],
+                cellW,
+                cellH
+            );
+
+        BuildSheets(
+            textureFactory,
+            Side("f", p.FrontBgColor, p.QuickFront),
+            _differentBack ? Side("b", p.BackBgColor, p.QuickBack) : null,
+            0
+        );
     }
 
     private void BuildCustom()
@@ -477,17 +482,17 @@ public partial class VcToken : VisualComponentBase
 
     private void BuildGrid()
     {
-        int build = ++_gridBuild;
-        BuildGridFace(_frontGridFace == null ? null : _frontMasterAsset, build);
+        BuildGridFace(_frontGridFace == null ? null : _frontMasterAsset);
         if (_differentBack)
-            BuildGridBack(_backGridFace == null ? null : _backMasterAsset, build);
+            BuildGridBack(_backGridFace == null ? null : _backMasterAsset);
     }
 
-    private async void BuildGridFace(ImageAsset asset, int build)
+    private async void BuildGridFace(ImageAsset asset)
     {
+        int build = _build;
         var texture = await TextureCache.Instance.GetOrCreateAssetTexture(asset);
         // The card may have been freed, or rebuilt, while the image loaded.
-        if (IsInstanceValid(this) && build == _gridBuild)
+        if (IsInstanceValid(this) && build == _build)
             ApplyGridFaceTexture(texture ?? MissingFrameTexture);
     }
 
@@ -499,10 +504,11 @@ public partial class VcToken : VisualComponentBase
         MapFrontTexture();
     }
 
-    private async void BuildGridBack(ImageAsset asset, int build)
+    private async void BuildGridBack(ImageAsset asset)
     {
+        int build = _build;
         var texture = await TextureCache.Instance.GetOrCreateAssetTexture(asset);
-        if (IsInstanceValid(this) && build == _gridBuild)
+        if (IsInstanceValid(this) && build == _build)
             ApplyGridBackTexture(texture ?? MissingFrameTexture);
     }
 
@@ -512,25 +518,8 @@ public partial class VcToken : VisualComponentBase
         MapBackTexture();
     }
 
-    private void ApplyDerivedSheet(
-        Texture2D front,
-        Texture2D back,
-        int faceHframes,
-        int faceVframes,
-        int faceFrame,
-        int backHframes,
-        int backVframes,
-        int backFrame
-    )
+    private void UpdateDerivedSheet()
     {
-        _faceHframes = faceHframes;
-        _faceVframes = faceVframes;
-        _faceFrame = faceFrame;
-        _backHframes = backHframes;
-        _backVframes = backVframes;
-        _backFrame = backFrame;
-        FaceTexture = front;
-        BackTexture = back;
         _frontTextureGenerated = true;
         _backTextureGenerated = true;
         MapFrontTexture();
@@ -559,141 +548,119 @@ public partial class VcToken : VisualComponentBase
             return;
 
         var rows = R.GetRows(_datasetRef);
-        int n = rows.Count;
-        if (n == 0)
+        if (rows.Count == 0)
             return;
 
         int faceFrame = rows.FindIndex(r => r.Id == DataSetRowId);
         if (faceFrame < 0)
             return;
 
-        var (cellW, cellH) = ft.Pixels(10 * BASE_DPI);
-        if (cellW <= 0 || cellH <= 0)
-            return;
-
-        var (backCellW, backCellH) = bt?.Pixels(10 * BASE_DPI) ?? (cellW, cellH);
-
-        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
-        int vframes = (int)Math.Ceiling((double)n / hframes);
-
         string rowsKey = rows.SheetKey();
-        string frontKey = $"tpl:{ft.SheetKey()}:{ds.SheetKey()}:{rowsKey}";
-        string backKey = bt != null ? $"tpl:{bt.SheetKey()}:{ds.SheetKey()}:{rowsKey}" : null;
-
-        Texture2D front = null;
-        Texture2D back = null;
-        bool backReady = bt == null;
-
-        void Apply()
+        Sheet Side(Template template)
         {
-            if (front == null || !backReady)
-                return;
-            var effectiveBack = bt == null ? front : back;
-            if (effectiveBack == null)
-                return;
-
-            ApplyDerivedSheet(
-                front,
-                effectiveBack,
-                hframes,
-                vframes,
-                faceFrame,
-                hframes,
-                vframes,
-                faceFrame
-            );
-        }
-
-        bool weBuildFront = TextureCache.Instance.RequestDerived(
-            frontKey,
-            t =>
-            {
-                front = t;
-                Apply();
-            }
-        );
-
-        bool weBuildBack = false;
-        if (bt != null)
-        {
-            weBuildBack = TextureCache.Instance.RequestDerived(
-                backKey,
-                t =>
-                {
-                    back = t;
-                    backReady = true;
-                    Apply();
-                }
-            );
-        }
-
-        if (weBuildFront)
-            StartTemplateSheetBuild(
-                textureFactory,
-                ft,
+            if (template == null)
+                return null;
+            var (cellW, cellH) = template.Pixels(10 * BASE_DPI);
+            if (cellW <= 0 || cellH <= 0)
+                return null;
+            return new(
+                $"tpl:{template.SheetKey()}:{ds.SheetKey()}:{rowsKey}",
+                template,
                 ds,
                 rows,
                 cellW,
-                cellH,
-                hframes,
-                vframes,
-                frontKey
+                cellH
             );
+        }
 
-        if (weBuildBack)
-            StartTemplateSheetBuild(
-                textureFactory,
-                bt,
-                ds,
-                rows,
-                backCellW,
-                backCellH,
-                hframes,
-                vframes,
-                backKey
-            );
+        var front = Side(ft);
+        if (front == null)
+            return;
+
+        BuildSheets(textureFactory, front, Side(bt), faceFrame);
     }
 
     private const float BASE_DPI = 10f;
 
-    private static void StartTemplateSheetBuild(
-        TextureFactory factory,
-        Template template,
-        DataSet dataset,
-        List<DataRow> rows,
-        int cellW,
-        int cellH,
-        int hframes,
-        int vframes,
-        string cacheKey
+    /// <summary>
+    /// One side's sheet: <see cref="Template"/> drawn once per row, each in a
+    /// <see cref="CellWidth"/> by <see cref="CellHeight"/> cell, and cached under <see cref="Key"/>.
+    /// </summary>
+    private sealed record Sheet(
+        string Key,
+        Template Template,
+        DataSet DataSet,
+        List<DataRow> Rows,
+        int CellWidth,
+        int CellHeight
+    );
+
+    /// <summary>
+    /// Shows <paramref name="frame"/> of the front and back sheets, building whichever isn't
+    /// cached yet. With no <paramref name="back"/>, the back shows the front.
+    /// </summary>
+    private async void BuildSheets(
+        TextureFactory textureFactory,
+        Sheet front,
+        Sheet back,
+        int frame
     )
     {
-        var defs = new List<TextureFactory.TextureDefinition>(rows.Count);
-        var ctx = new TextureContext
+        int build = _build;
+        int n = front.Rows.Count;
+        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
+        int vframes = (int)Math.Ceiling((double)n / hframes);
+
+        Task<Texture2D> Request(Sheet sheet) =>
+            TextureCache.Instance.GetOrBuildDerived(
+                sheet.Key,
+                () =>
+                {
+                    var defs = new List<TextureFactory.TextureDefinition>(sheet.Rows.Count);
+                    var ctx = new TextureContext
+                    {
+                        DataSet = sheet.DataSet,
+                        Dpi = 10 * BASE_DPI,
+                        ParentSize = new Vector2(sheet.CellWidth, sheet.CellHeight),
+                    };
+                    foreach (var row in sheet.Rows)
+                    {
+                        ctx.CurrentRow = row;
+                        defs.Add(TemplateEngine.GenerateTextureDefinition(sheet.Template, ctx));
+                    }
+                    return new SpriteSheetBuilder(
+                        textureFactory,
+                        defs,
+                        sheet.CellWidth,
+                        sheet.CellHeight,
+                        hframes,
+                        vframes
+                    ).Start();
+                }
+            );
+
+        var frontSheet = Request(front);
+        var backSheet = back == null ? frontSheet : Request(back);
+        var frontTexture = await frontSheet;
+        var backTexture = await backSheet;
+        // The card may have been freed, or rebuilt, while the sheets rendered.
+        if (IsInstanceValid(this) && build == _build)
         {
-            DataSet = dataset,
-            Dpi = 10 * BASE_DPI,
-            ParentSize = new Vector2(cellW, cellH),
-        };
-        foreach (var row in rows)
-        {
-            ctx.CurrentRow = row;
-            defs.Add(TemplateEngine.GenerateTextureDefinition(template, ctx));
+            _faceHframes = hframes;
+            _faceVframes = vframes;
+            _faceFrame = frame;
+            _backHframes = hframes;
+            _backVframes = vframes;
+            _backFrame = frame;
+            FaceTexture = frontTexture;
+            BackTexture = backTexture;
+            UpdateDerivedSheet();
         }
-        new SpriteSheetBuilder(
-            factory,
-            defs,
-            cellW,
-            cellH,
-            hframes,
-            vframes,
-            tex => TextureCache.Instance.PutDerived(cacheKey, tex)
-        ).Start();
     }
 
     private ImmutableArray<QuickCardData> _quickCardList = new();
 
-    private void BuildQuickDeck(TextureFactory textureFactory)
+    private async void BuildQuickDeck(TextureFactory textureFactory)
     {
         int faceFrame = DataSetRowIndex;
         if (faceFrame < 0)
@@ -719,136 +686,87 @@ public partial class VcToken : VisualComponentBase
             ? QuickDeckSingleBackKey(cards[0], cellW, cellH)
             : QuickDeckSheetKey(cards, cellW, cellH, hframes, vframes, "b");
 
-        ApplySheetWhenReady(
-            textureFactory,
-            cards,
+        int build = _build;
+        var frontSheet = TextureCache.Instance.GetOrBuildDerived(
             frontKey,
+            () =>
+            {
+                var defs = new List<TextureFactory.TextureDefinition>(cards.Length);
+                foreach (var card in cards)
+                {
+                    defs.Add(
+                        BuildQuickTextureDefinition(
+                            card.BackgroundColor,
+                            new QuickTextureField
+                            {
+                                Caption = card.Caption,
+                                FaceType = TextureFactory.TextureObjectType.Text,
+                                ForegroundColor = Colors.Black,
+                                Quantity = 1,
+                            },
+                            _height,
+                            _width
+                        )
+                    );
+                }
+                return new SpriteSheetBuilder(
+                    textureFactory,
+                    defs,
+                    cellW,
+                    cellH,
+                    hframes,
+                    vframes
+                ).Start();
+            }
+        );
+        var backSheet = TextureCache.Instance.GetOrBuildDerived(
             backKey,
-            cellW,
-            cellH,
-            hframes,
-            vframes,
-            backH,
-            backV,
-            faceFrame,
-            backFrameIndex,
-            singleBack
-        );
-    }
-
-    private void ApplySheetWhenReady(
-        TextureFactory textureFactory,
-        ImmutableArray<QuickCardData> cards,
-        string frontKey,
-        string backKey,
-        int cellW,
-        int cellH,
-        int hframes,
-        int vframes,
-        int backH,
-        int backV,
-        int faceFrame,
-        int backFrameIndex,
-        bool singleBack
-    )
-    {
-        Texture2D front = null;
-        Texture2D back = null;
-
-        void Apply()
-        {
-            if (front == null || back == null)
-                return;
-            ApplyDerivedSheet(
-                front,
-                back,
-                hframes,
-                vframes,
-                faceFrame,
-                backH,
-                backV,
-                backFrameIndex
-            );
-        }
-
-        bool weBuildFront = TextureCache.Instance.RequestDerived(
-            frontKey,
-            t =>
+            () =>
             {
-                front = t;
-                Apply();
-            }
-        );
-        bool weBuildBack = TextureCache.Instance.RequestDerived(
-            backKey,
-            t =>
-            {
-                back = t;
-                Apply();
+                var defs = new List<TextureFactory.TextureDefinition>();
+                var backCards = singleBack ? [cards[0]] : cards;
+                foreach (var card in backCards)
+                {
+                    defs.Add(
+                        BuildQuickTextureDefinition(
+                            card.CardBackColor,
+                            new QuickTextureField
+                            {
+                                Caption = card.CardBackValue,
+                                FaceType = TextureFactory.TextureObjectType.Text,
+                                ForegroundColor = Colors.Black,
+                                Quantity = 1,
+                            },
+                            _height,
+                            _width
+                        )
+                    );
+                }
+                return new SpriteSheetBuilder(
+                    textureFactory,
+                    defs,
+                    cellW,
+                    cellH,
+                    backH,
+                    backV
+                ).Start();
             }
         );
 
-        if (weBuildFront)
+        var frontTexture = await frontSheet;
+        var backTexture = await backSheet;
+        // The card may have been freed, or rebuilt, while the sheets rendered.
+        if (IsInstanceValid(this) && build == _build)
         {
-            var defs = new List<TextureFactory.TextureDefinition>(cards.Length);
-            foreach (var card in cards)
-            {
-                defs.Add(
-                    BuildQuickTextureDefinition(
-                        card.BackgroundColor,
-                        new QuickTextureField
-                        {
-                            Caption = card.Caption,
-                            FaceType = TextureFactory.TextureObjectType.Text,
-                            ForegroundColor = Colors.Black,
-                            Quantity = 1,
-                        },
-                        _height,
-                        _width
-                    )
-                );
-            }
-            new SpriteSheetBuilder(
-                textureFactory,
-                defs,
-                cellW,
-                cellH,
-                hframes,
-                vframes,
-                tex => TextureCache.Instance.PutDerived(frontKey, tex)
-            ).Start();
-        }
-
-        if (weBuildBack)
-        {
-            var defs = new List<TextureFactory.TextureDefinition>();
-            var backCards = singleBack ? [cards[0]] : cards;
-            foreach (var card in backCards)
-            {
-                defs.Add(
-                    BuildQuickTextureDefinition(
-                        card.CardBackColor,
-                        new QuickTextureField
-                        {
-                            Caption = card.CardBackValue,
-                            FaceType = TextureFactory.TextureObjectType.Text,
-                            ForegroundColor = Colors.Black,
-                            Quantity = 1,
-                        },
-                        _height,
-                        _width
-                    )
-                );
-            }
-            new SpriteSheetBuilder(
-                textureFactory,
-                defs,
-                cellW,
-                cellH,
-                backH,
-                backV,
-                tex => TextureCache.Instance.PutDerived(backKey, tex)
-            ).Start();
+            _faceHframes = hframes;
+            _faceVframes = vframes;
+            _faceFrame = faceFrame;
+            _backHframes = backH;
+            _backVframes = backV;
+            _backFrame = backFrameIndex;
+            FaceTexture = frontTexture;
+            BackTexture = backTexture;
+            UpdateDerivedSheet();
         }
     }
 
@@ -971,32 +889,6 @@ public partial class VcToken : VisualComponentBase
             ? ImageTexture.CreateFromImage(image)
             : new ImageTexture();
 
-    private void CreateQuickFrontTexture(TextureFactory textureFactory)
-    {
-        var key = QuickSingleKey(_frontBgColor, _frontField, side: "f");
-        bool weBuild = TextureCache.Instance.RequestDerived(
-            key,
-            tex =>
-            {
-                if (tex is ImageTexture it)
-                    FinalizeFrontTexture(it);
-            }
-        );
-        if (!weBuild)
-            return;
-
-        var td = CreateQuickTextureDefinition(_frontBgColor, _frontField);
-        textureFactory.GenerateTexture(td, t => TextureCache.Instance.PutDerived(key, t));
-    }
-
-    private TextureFactory.TextureDefinition CreateQuickTextureDefinition(
-        Color bgColor,
-        QuickTextureField qtf
-    )
-    {
-        return BuildQuickTextureDefinition(bgColor, qtf, _height, _width);
-    }
-
     private static TextureFactory.TextureDefinition BuildQuickTextureDefinition(
         Color bgColor,
         QuickTextureField qtf,
@@ -1025,17 +917,6 @@ public partial class VcToken : VisualComponentBase
             Width = sW,
         };
 
-        if (qtf == null)
-        {
-            qtf = new QuickTextureField
-            {
-                Caption = string.Empty,
-                FaceType = TextureFactory.TextureObjectType.Text,
-                ForegroundColor = Colors.Black,
-                Quantity = 1,
-            };
-        }
-
         td.Objects.Add(
             new TextureFactory.TextureObject
             {
@@ -1057,22 +938,6 @@ public partial class VcToken : VisualComponentBase
         );
 
         return td;
-    }
-
-    private void FinalizeFrontTexture(ImageTexture t)
-    {
-        FaceTexture = t;
-
-        if (!_differentBack)
-        {
-            _backTextureGenerated = true;
-
-            BackTexture = t;
-        }
-
-        TextureReady = _frontTextureGenerated && _backTextureGenerated;
-
-        MapFrontTexture();
     }
 
     private bool _mapFrontTextureRequired;
@@ -1125,44 +990,6 @@ public partial class VcToken : VisualComponentBase
         );
     }
 
-    private void CreateQuickBackTexture(TextureFactory textureFactory)
-    {
-        var key = QuickSingleKey(_backBgColor, _backField, side: "b");
-        bool weBuild = TextureCache.Instance.RequestDerived(
-            key,
-            tex =>
-            {
-                if (tex is ImageTexture it)
-                    FinalizeBackTexture(it);
-            }
-        );
-        if (!weBuild)
-            return;
-
-        var td = CreateQuickTextureDefinition(_backBgColor, _backField);
-        textureFactory.GenerateTexture(td, t => TextureCache.Instance.PutDerived(key, t));
-    }
-
-    private string QuickSingleKey(Color bgColor, QuickTextureField qtf, string side)
-    {
-        var caption = qtf?.Caption ?? string.Empty;
-        var fg = (qtf?.ForegroundColor ?? Colors.Black).ToHtml();
-        var type = (int)(qtf?.FaceType ?? TextureFactory.TextureObjectType.Text);
-        var qty = qtf?.Quantity ?? 1;
-        return $"qs-{side}:{(int)(_width * 256)}x{(int)(_height * 256)}:{bgColor.ToHtml()}:{type}:{qty}:{fg}:{caption}";
-    }
-
-    private void FinalizeBackTexture(ImageTexture t)
-    {
-        _backTextureGenerated = true;
-
-        BackTexture = t;
-
-        TextureReady = _frontTextureGenerated && _backTextureGenerated;
-
-        MapBackTexture();
-    }
-
     private float _height;
     private float _width;
     private float _thickness;
@@ -1171,15 +998,9 @@ public partial class VcToken : VisualComponentBase
 
     public TokenShape Shape { get; private set; }
     private TokenBuildMode _mode;
-    private Color _frontBgColor;
-    private QuickTextureField _frontField;
-    private QuickTextureField _backField;
     private bool _differentBack;
-    private Color _backBgColor;
 
     private TokenType _tokenType;
-    private int _frontFontSize;
-    private int _backFontSize;
 
     //grid parameters
     private ImageAsset _frontMasterAsset;
@@ -1189,11 +1010,6 @@ public partial class VcToken : VisualComponentBase
 
     private (GridLayout Layout, int Frame)? _frontGridFace;
     private (GridLayout Layout, int Frame)? _backGridFace;
-
-    /// <summary>
-    /// Counts grid builds to throw out stale load callbacks.
-    /// </summary>
-    private int _gridBuild;
 
     /// <summary>
     /// Shown in place of a grid frame that doesn't exist.

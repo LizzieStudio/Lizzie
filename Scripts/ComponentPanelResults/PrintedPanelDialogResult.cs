@@ -606,7 +606,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             case 0:
                 d = d with
                 {
-                    Mode = VcToken.TokenBuildMode.Quick,
+                    Mode = VcToken.TokenBuildMode.QuickCard,
                     QuickFront = _frontField.GetQuickTextureField(),
                     QuickBack = _backField.GetQuickTextureField(),
                     DifferentBack = _quickBackCheckbox.ButtonPressed,
@@ -751,7 +751,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _tabs.CurrentTab = p.Mode switch
         {
-            VcToken.TokenBuildMode.Quick => 0,
+            VcToken.TokenBuildMode.QuickCard => 0,
             VcToken.TokenBuildMode.QuickDeck => 1,
             VcToken.TokenBuildMode.Custom => 2,
             VcToken.TokenBuildMode.Grid => 3,

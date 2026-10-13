@@ -136,7 +136,7 @@ public partial class VcDie : VisualComponentBase
 
         switch (_mode)
         {
-            case TokenBuildMode.Quick:
+            case TokenBuildMode.QuickCard:
                 BuildQuick();
                 break;
             case TokenBuildMode.Custom:

@@ -7,6 +7,12 @@
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_frgrd"]
 shader = ExtResource("5_frgrd")
+shader_parameter/columns = 1
+shader_parameter/rows = 1
+shader_parameter/count = 1
+shader_parameter/line_color = Color(1, 0, 1, 0.9)
+shader_parameter/line_width = 1.5
+shader_parameter/unused_color = Color(0.5, 0.5, 0.5, 0.75)
 
 [node name="ImageManager" type="Window" unique_id=1595850932]
 oversampling_override = 1.0
@@ -201,8 +207,8 @@ tooltip_text = "How many frames hold images, counting row by row."
 min_value = 1.0
 value = 1.0
 allow_greater = true
-update_on_text_changed = true
 editable = false
+update_on_text_changed = true
 
 [node name="FocusEditGroup" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/CountField/Count" unique_id=1272030034]
 script = ExtResource("4_fcsgr")
