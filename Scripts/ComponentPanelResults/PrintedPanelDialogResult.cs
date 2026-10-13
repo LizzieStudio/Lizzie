@@ -201,6 +201,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
                 GenerateQuickCards();
             else if (tab == 3 || tab == 4)
                 RecordService.Instance.QueueSync(this);
+            else
+            {
+                // A Quick card or a Custom image is a single card.
+                _preview.ItemCount = 1;
+                _preview.MultiItemMode = false;
+            }
             UpdatePreview();
         };
 

@@ -220,8 +220,6 @@ public partial class VcToken : VisualComponentBase
         _backTemplateRef = p.BackTemplate;
         _datasetRef = p.Dataset;
 
-        _quickCardList = p.QuickCardData;
-
         _faceHframes = 1;
         _faceVframes = 1;
         _faceFrame = 0;
@@ -255,11 +253,8 @@ public partial class VcToken : VisualComponentBase
         switch (_mode)
         {
             case TokenBuildMode.QuickCard:
-                BuildQuickCard(TextureFactory, GetPrototype(R));
-                break;
-
             case TokenBuildMode.QuickDeck:
-                BuildQuickDeck(TextureFactory);
+                BuildQuick(TextureFactory, GetPrototype(R));
                 break;
 
             case TokenBuildMode.Custom:
@@ -439,26 +434,50 @@ public partial class VcToken : VisualComponentBase
         st.Commit(mesh);
     }
 
-    private void BuildQuickCard(TextureFactory textureFactory, Prototype prototype)
+    private void BuildQuick(TextureFactory textureFactory, Prototype prototype)
     {
         var p = (PrintedParameters)prototype.Parameters;
         ComputeCellSize(_height, _width, out var cellW, out var cellH);
-        Sheet Side(string side, Color background, QuickTextureField field) =>
+        Sheet Side(string side, List<DataRow> rows) =>
             new(
                 $"quick:{prototype.SheetKey()}:{side}",
                 QuickTemplate.Template,
                 QuickTemplate.DataSet,
-                [QuickTemplate.Row(background, field)],
+                rows,
                 cellW,
                 cellH
             );
 
-        BuildSheets(
-            textureFactory,
-            Side("f", p.FrontBgColor, p.QuickFront),
-            _differentBack ? Side("b", p.BackBgColor, p.QuickBack) : null,
-            0
-        );
+        if (_mode == TokenBuildMode.QuickCard)
+        {
+            BuildSheets(
+                textureFactory,
+                Side("f", [QuickTemplate.Row(p.FrontBgColor, p.QuickFront)]),
+                _differentBack ? Side("b", [QuickTemplate.Row(p.BackBgColor, p.QuickBack)]) : null,
+                0
+            );
+        }
+        else if (_mode == TokenBuildMode.QuickDeck)
+        {
+            var cards = p.QuickDeckCards();
+            if (DataSetRowIndex < 0 || cards.Count == 0)
+                return;
+            DataRow Text(Color background, string caption) =>
+                QuickTemplate.Row(
+                    background,
+                    new QuickTextureField { Caption = caption, ForegroundColor = Colors.Black }
+                );
+            BuildSheets(
+                textureFactory,
+                Side("f", cards.Select(c => Text(c.BackgroundColor, c.Caption)).ToList()),
+                Side("b", cards.Select(c => Text(c.CardBackColor, c.CardBackValue)).ToList()),
+                DataSetRowIndex
+            );
+        }
+        else
+        {
+            throw new NotImplementedException("BuildQuick can only handle QuickCard and QuickDeck");
+        }
     }
 
     private void BuildCustom()
@@ -658,157 +677,6 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
-    private ImmutableArray<QuickCardData> _quickCardList = new();
-
-    private async void BuildQuickDeck(TextureFactory textureFactory)
-    {
-        int faceFrame = DataSetRowIndex;
-        if (faceFrame < 0)
-            return;
-
-        var cards = ExpandQuickCardList(_quickCardList);
-        int n = cards.Length;
-        if (n == 0)
-            return;
-
-        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
-        int vframes = (int)Math.Ceiling((double)n / hframes);
-
-        ComputeCellSize(_height, _width, out var cellW, out var cellH);
-
-        bool singleBack = AllBacksIdentical(cards);
-        int backFrameIndex = singleBack ? 0 : faceFrame;
-        int backH = singleBack ? 1 : hframes;
-        int backV = singleBack ? 1 : vframes;
-
-        string frontKey = QuickDeckSheetKey(cards, cellW, cellH, hframes, vframes, "f");
-        string backKey = singleBack
-            ? QuickDeckSingleBackKey(cards[0], cellW, cellH)
-            : QuickDeckSheetKey(cards, cellW, cellH, hframes, vframes, "b");
-
-        int build = _build;
-        var frontSheet = TextureCache.Instance.GetOrBuildDerived(
-            frontKey,
-            () =>
-            {
-                var defs = new List<TextureFactory.TextureDefinition>(cards.Length);
-                foreach (var card in cards)
-                {
-                    defs.Add(
-                        BuildQuickTextureDefinition(
-                            card.BackgroundColor,
-                            new QuickTextureField
-                            {
-                                Caption = card.Caption,
-                                FaceType = TextureFactory.TextureObjectType.Text,
-                                ForegroundColor = Colors.Black,
-                                Quantity = 1,
-                            },
-                            _height,
-                            _width
-                        )
-                    );
-                }
-                return new SpriteSheetBuilder(
-                    textureFactory,
-                    defs,
-                    cellW,
-                    cellH,
-                    hframes,
-                    vframes
-                ).Start();
-            }
-        );
-        var backSheet = TextureCache.Instance.GetOrBuildDerived(
-            backKey,
-            () =>
-            {
-                var defs = new List<TextureFactory.TextureDefinition>();
-                var backCards = singleBack ? [cards[0]] : cards;
-                foreach (var card in backCards)
-                {
-                    defs.Add(
-                        BuildQuickTextureDefinition(
-                            card.CardBackColor,
-                            new QuickTextureField
-                            {
-                                Caption = card.CardBackValue,
-                                FaceType = TextureFactory.TextureObjectType.Text,
-                                ForegroundColor = Colors.Black,
-                                Quantity = 1,
-                            },
-                            _height,
-                            _width
-                        )
-                    );
-                }
-                return new SpriteSheetBuilder(
-                    textureFactory,
-                    defs,
-                    cellW,
-                    cellH,
-                    backH,
-                    backV
-                ).Start();
-            }
-        );
-
-        var frontTexture = await frontSheet;
-        var backTexture = await backSheet;
-        // The card may have been freed, or rebuilt, while the sheets rendered.
-        if (IsInstanceValid(this) && build == _build)
-        {
-            _faceHframes = hframes;
-            _faceVframes = vframes;
-            _faceFrame = faceFrame;
-            _backHframes = backH;
-            _backVframes = backV;
-            _backFrame = backFrameIndex;
-            FaceTexture = frontTexture;
-            BackTexture = backTexture;
-            UpdateDerivedSheet();
-        }
-    }
-
-    private static ImmutableArray<QuickCardData> ExpandQuickCardList(
-        ImmutableArray<QuickCardData> source
-    )
-    {
-        var cards = ImmutableArray.CreateBuilder<QuickCardData>();
-        foreach (var q in source)
-        {
-            foreach (var v in Utility.ParseValueRanges(q.Caption))
-            {
-                cards.Add(
-                    new QuickCardData
-                    {
-                        Caption = v,
-                        BackgroundColor = q.BackgroundColor,
-                        CardBackValue = q.CardBackValue,
-                        CardBackColor = q.CardBackColor,
-                    }
-                );
-            }
-        }
-        return cards.ToImmutable();
-    }
-
-    private static bool AllBacksIdentical(ImmutableArray<QuickCardData> cards)
-    {
-        if (cards.Length <= 1)
-            return true;
-        var first = cards[0];
-        for (int i = 1; i < cards.Length; i++)
-        {
-            if (
-                cards[i].CardBackValue != first.CardBackValue
-                || cards[i].CardBackColor != first.CardBackColor
-            )
-                return false;
-        }
-        return true;
-    }
-
     private static void ComputeCellSize(float height, float width, out int cellW, out int cellH)
     {
         cellW = 256;
@@ -819,38 +687,6 @@ public partial class VcToken : VisualComponentBase
             cellW = (int)(width * 256 / height);
         else
             cellH = (int)(height * 256 / width);
-    }
-
-    private static string QuickDeckSheetKey(
-        ImmutableArray<QuickCardData> cards,
-        int cellW,
-        int cellH,
-        int hframes,
-        int vframes,
-        string side
-    )
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.Append("qd-").Append(side).Append(':');
-        sb.Append(cellW).Append('x').Append(cellH).Append(':');
-        sb.Append(hframes).Append('x').Append(vframes).Append(':');
-        foreach (var c in cards)
-        {
-            if (side == "f")
-                sb.Append(c.Caption).Append('|').Append(c.BackgroundColor.ToHtml()).Append(';');
-            else
-                sb.Append(c.CardBackValue).Append('|').Append(c.CardBackColor.ToHtml()).Append(';');
-        }
-        return sb.ToString();
-    }
-
-    private static string QuickDeckSingleBackKey(QuickCardData card, int cellW, int cellH)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.Append("qd-bsingle:");
-        sb.Append(cellW).Append('x').Append(cellH).Append(':');
-        sb.Append(card.CardBackValue).Append('|').Append(card.CardBackColor.ToHtml());
-        return sb.ToString();
     }
 
     private bool _frontTextureGenerated;
@@ -888,57 +724,6 @@ public partial class VcToken : VisualComponentBase
         Image.LoadFromFile(path) is { } image
             ? ImageTexture.CreateFromImage(image)
             : new ImageTexture();
-
-    private static TextureFactory.TextureDefinition BuildQuickTextureDefinition(
-        Color bgColor,
-        QuickTextureField qtf,
-        float height,
-        float width
-    )
-    {
-        int sH = 256;
-        int sW = 256;
-
-        if (height <= 0 || width <= 0)
-            return new TextureFactory.TextureDefinition();
-        if (height > width)
-        {
-            sW = (int)(width * 256 / height);
-        }
-        else
-        {
-            sH = (int)(height * 256 / width);
-        }
-
-        var td = new TextureFactory.TextureDefinition
-        {
-            BackgroundColor = bgColor,
-            Height = sH,
-            Width = sW,
-        };
-
-        td.Objects.Add(
-            new TextureFactory.TextureObject
-            {
-                Scale = 0.8f,
-                Width = sW,
-                Height = sH,
-                CenterX = sW / 2,
-                CenterY = sH / 2,
-                Multiline = true,
-                Text = qtf.Caption,
-                ForegroundColor = qtf.ForegroundColor,
-                Font = new SystemFont(),
-                Type = qtf.FaceType,
-                Autosize = true,
-                Quantity = qtf.Quantity,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            }
-        );
-
-        return td;
-    }
 
     private bool _mapFrontTextureRequired;
 
@@ -1065,6 +850,24 @@ public abstract record PrintedParameters : ComponentParameters
 
     public ImmutableArray<QuickCardData> QuickCardData { get; init; } =
         ImmutableArray<QuickCardData>.Empty;
+
+    /// <summary>
+    /// Converts Quick Deck parameters into a bunch of Quick Card data.
+    /// </summary>
+    public List<QuickCardData> QuickDeckCards() =>
+        QuickCardData
+            .SelectMany(q =>
+                Utility
+                    .ParseValueRanges(q.Caption)
+                    .Select(v => new QuickCardData
+                    {
+                        Caption = v,
+                        BackgroundColor = q.BackgroundColor,
+                        CardBackValue = q.CardBackValue,
+                        CardBackColor = q.CardBackColor,
+                    })
+            )
+            .ToList();
 
     public SnowTag FrontGridImageKey { get; init; }
     public SnowTag BackGridImageKey { get; init; }

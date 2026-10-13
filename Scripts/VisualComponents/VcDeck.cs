@@ -77,15 +77,9 @@ public partial class VcDeck : VisualComponentBase
         {
             case VcToken.TokenBuildMode.QuickDeck:
             {
-                int cardNum = 0;
-                foreach (var q in parameters.QuickCardData)
-                {
-                    foreach (var _ in Utility.ParseValueRanges(q.Caption))
-                    {
-                        yield return (cardNum, SnowTag.Empty);
-                        cardNum++;
-                    }
-                }
+                var count = parameters.QuickDeckCards().Count;
+                for (int i = 0; i < count; i++)
+                    yield return (i, SnowTag.Empty);
                 break;
             }
 
