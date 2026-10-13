@@ -39,21 +39,25 @@ columns = 2
 
 [node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=895177348]
 layout_mode = 2
-text = "Name  "
-horizontal_alignment = 2
+text = "Name:"
 
 [node name="ItemName" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=196439806]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="LabelType" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=981779475]
 layout_mode = 2
 text = "Type:"
 
-[node name="TypePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1816476011]
+[node name="HFlowContainer" type="HFlowContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1332181841]
+layout_mode = 2
+
+[node name="TypePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer/HFlowContainer" unique_id=1816476011]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 selected = 0
 item_count = 3
 popup/item_0/text = "Card"
@@ -63,13 +67,10 @@ popup/item_1/id = 1
 popup/item_2/text = "Board"
 popup/item_2/id = 2
 
-[node name="LabelShape" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=-1294967295]
-layout_mode = 2
-text = "Shape:"
-
-[node name="ShapePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=-1294967294]
+[node name="ShapePicker" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer/HFlowContainer" unique_id=-1294967294]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 item_count = 1
 popup/item_0/text = "Custom"
 popup/item_0/id = 0
@@ -98,60 +99,48 @@ theme_override_colors/icon_pressed_color = Color(0.329412, 0.533333, 0.992157, 1
 toggle_mode = true
 button_group = SubResource("ButtonGroup_orient")
 
-[node name="WidthLabel" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1731445939]
+[node name="HFlowContainer" type="HFlowContainer" parent="HBoxContainer/VBoxContainer" unique_id=260578148]
+layout_mode = 2
+
+[node name="SizeLabel" type="Label" parent="HBoxContainer/VBoxContainer/HFlowContainer" unique_id=2138815539]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Width"
+text = "W × H × D"
 horizontal_alignment = 2
 
-[node name="WidthRow" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=319433435]
+[node name="Width" type="LineEdit" parent="HBoxContainer/VBoxContainer/HFlowContainer" unique_id=779175243]
 unique_name_in_owner = true
 layout_mode = 2
-
-[node name="Width" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/WidthRow" unique_id=991591035]
-unique_name_in_owner = true
-layout_mode = 2
+size_flags_horizontal = 3
 text = "25"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/WidthRow" unique_id=144760602]
-layout_mode = 2
-text = "mm"
-
-[node name="HeightLabel" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1815128949]
+[node name="X" type="Label" parent="HBoxContainer/VBoxContainer/HFlowContainer" unique_id=1255365399]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Height"
+text = "×"
 horizontal_alignment = 2
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=21825889]
-layout_mode = 2
-
-[node name="Height" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=709309258]
+[node name="Height" type="LineEdit" parent="HBoxContainer/VBoxContainer/HFlowContainer" unique_id=2020176562]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 text = "25"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=745669444]
+[node name="X2" type="Label" parent="HBoxContainer/VBoxContainer/HFlowContainer" unique_id=1885041880]
 layout_mode = 2
-text = "mm"
-
-[node name="Label11" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=1085386115]
-layout_mode = 2
-text = "Thickness"
+text = "×"
 horizontal_alignment = 2
 
-[node name="HBoxContainer7" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=404480909]
-layout_mode = 2
-
-[node name="Thickness" type="LineEdit" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7" unique_id=676056749]
+[node name="Thickness" type="LineEdit" parent="HBoxContainer/VBoxContainer/HFlowContainer" unique_id=1644265692]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 text = "2"
 alignment = 2
 
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer7" unique_id=2141174891]
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/HFlowContainer" unique_id=1542941534]
 layout_mode = 2
 text = "mm"
 
@@ -474,8 +463,8 @@ horizontal_alignment = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "All"
 tooltip_text = "Which frames of the image to use, counting from 1, like 1-52 or 1-3, 5*2, (7-12)/2. Blank uses every frame."
+placeholder_text = "All"
 
 [node name="HBoxContainer6" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs/Image/MarginContainer/VBoxContainer" unique_id=519252428]
 layout_mode = 2
@@ -503,8 +492,8 @@ horizontal_alignment = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "All"
 tooltip_text = "Which frames of the image to use, counting from 1, like 1-52 or 1-3, 5*2, (7-12)/2. Blank uses every frame."
+placeholder_text = "All"
 
 [node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/Tabs" unique_id=805627747]
 visible = false

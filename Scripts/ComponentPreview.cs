@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Godot;
 
 public partial class ComponentPreview : Panel
@@ -258,13 +259,23 @@ public partial class ComponentPreview : Panel
         _component.DataSetRowIndex = rowIndex;
         _component.DataSetRowId = rowId;
         _component.TextureFactory = textureFactory;
+
+        var json = JsonSerializer.Serialize(parameters, LizzieJson.EventOptions);
+        if (json != _draftJson)
+        {
+            _draftJson = json;
+            _draftVersion = Snowport.Clock.Create();
+        }
         _component.DraftPrototype = new Prototype
         {
             Id = SnowTag.Empty,
-            LastUpdateId = Snowport.Clock.Create(),
+            LastUpdateId = _draftVersion,
             Parameters = parameters,
         };
     }
+
+    private string _draftJson;
+    private SnowportId _draftVersion;
 
     public void Build(
         Prototype prototype,

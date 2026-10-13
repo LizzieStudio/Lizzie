@@ -27,9 +27,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private Texture2D _iconLandscape;
     private Texture2D _iconHexPoint;
     private Texture2D _iconHexFlat;
-    private Label _widthLabel;
-    private HBoxContainer _widthRow;
-    private Label _heightLabel;
+    private Label _sizeLabel;
+    private Label _widthTimes;
 
     private TabContainer _tabs;
 
@@ -158,9 +157,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _iconHexPoint = GD.Load<Texture2D>("res://Textures/UI/hex_point_up.svg");
         _iconHexFlat = GD.Load<Texture2D>("res://Textures/UI/hex_edge_up.svg");
 
-        _widthLabel = GetNode<Label>("%WidthLabel");
-        _widthRow = GetNode<HBoxContainer>("%WidthRow");
-        _heightLabel = GetNode<Label>("%HeightLabel");
+        _sizeLabel = GetNode<Label>("%SizeLabel");
+        _widthTimes = GetNode<Label>("%X");
 
         _quickBackgroundColor = GetNode<ColorPickerButton>("%TopBgColor");
         _quickBackCheckbox = GetNode<CheckBox>("%ToggleBack");
@@ -301,12 +299,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         bool isCircle = shape == 1;
         bool isHex = shape == 2 || shape == 3;
 
-        _widthLabel.Visible = isRect;
-        _widthRow.Visible = isRect;
-        _heightLabel.Text =
-            isCircle ? "Diameter"
-            : isRect ? "Height"
-            : "Size";
+        _widthInput.Visible = isRect;
+        _widthTimes.Visible = isRect;
+        _sizeLabel.Text =
+            isCircle ? "Radius × D"
+            : isRect ? "W × H × D"
+            : "Size × D";
         _orientationLabel.Visible = !isCircle;
         _orientationRow.Visible = !isCircle;
 
