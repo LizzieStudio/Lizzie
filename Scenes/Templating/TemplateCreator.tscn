@@ -180,6 +180,10 @@ unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Height"
 
+[node name="Unit" type="Label" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer/SizeControls" unique_id=1333305317]
+layout_mode = 2
+text = "mm"
+
 [node name="OverlayControls" type="HBoxContainer" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=785369400]
 unique_name_in_owner = true
 visible = false
@@ -564,20 +568,28 @@ popup/item_3/id = 3
 popup/item_4/text = "Custom"
 popup/item_4/id = 4
 
-[node name="NTWidth" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=595419660]
+[node name="NTSizeFields" type="HBoxContainer" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1790214724]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="NTWidth" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=595419660]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Width"
 
-[node name="NTX" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1031830595]
+[node name="NTX" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=1031830595]
 unique_name_in_owner = true
 layout_mode = 2
 text = "x"
 
-[node name="NTHeight" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=345043771]
+[node name="NTHeight" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=345043771]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Height"
+
+[node name="NTUnit" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=911673429]
+layout_mode = 2
+text = "mm"
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer" unique_id=1435365704]
 layout_mode = 2

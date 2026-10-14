@@ -135,7 +135,7 @@ public partial class TemplateCreator : Window
     {
         if (_fitRequired)
         {
-            OnStandardSizeChanged(0);
+            ShowSize();
         }
     }
 
@@ -156,11 +156,11 @@ public partial class TemplateCreator : Window
         _closeButton.Pressed += RequestClose;
 
         _heightInput = GetNode<LineEdit>("%Height");
-        _heightInput.TextChanged += HeightWidthChange;
+        _heightInput.TextChanged += OnSizeTyped;
         _heightInput.TextChanged += _ => SetHasUnsavedChanges();
 
         _widthInput = GetNode<LineEdit>("%Width");
-        _widthInput.TextChanged += HeightWidthChange;
+        _widthInput.TextChanged += OnSizeTyped;
         _widthInput.TextChanged += _ => SetHasUnsavedChanges();
 
         _sizeControls = GetNode<HBoxContainer>("%SizeControls");
@@ -172,7 +172,6 @@ public partial class TemplateCreator : Window
         _cardSizes.ItemSelected += OnStandardSizeChanged;
         _cardSizes.ItemSelected += _ => SetHasUnsavedChanges();
         InitializeStandardSizes();
-        OnStandardSizeChanged(0);
 
         _dataSetSelector = GetNode<DataSetSelector>("%Dataset");
         _dataSetSelector.DataSetSelected += OnDatasetChanged;
@@ -304,20 +303,11 @@ public partial class TemplateCreator : Window
         }
 
         //change sizes
-        var size = CurrentTemplate.SizeTemplate;
-
-        if (!string.IsNullOrEmpty(size))
-        {
-            for (int i = 0; i < _cardSizes.ItemCount; i++)
-            {
-                if (_cardSizes.GetItemText(i) == size)
-                {
-                    _cardSizes.Select(i);
-                    OnStandardSizeChanged(i);
-                    break;
-                }
-            }
-        }
+        var size = _standardSizes.ContainsKey(CurrentTemplate.SizeTemplate ?? "")
+            ? CurrentTemplate.SizeTemplate
+            : CustomSize;
+        SelectSize(_cardSizes, size);
+        OnStandardSizeChanged(_cardSizes.Selected);
 
         //set up element tree
         _elementTree.Clear();
@@ -402,9 +392,6 @@ public partial class TemplateCreator : Window
         EditCurrentTemplate(t =>
             t with
             {
-                SizeTemplate = _curSizeType,
-                Width = _curWidth,
-                Height = _curHeight,
                 Elements = TemplateEngine
                     .MapTemplateElementsToProjectFormat(_hierarchicalElements)
                     .Select(d => d.ToImmutableDictionary())
@@ -951,7 +938,14 @@ public partial class TemplateCreator : Window
 
     #region Sizes
 
-    private Dictionary<string, (float, float)> _standardSizes;
+    private const string CustomSize = "Custom";
+    private const float MmPerInch = 25.4f;
+
+    /// <summary>
+    /// Card sizes in inches. "Custom" is the template's own size.
+    /// Dice have their number of sides as the width and 0 as the height.
+    /// </summary>
+    private Dictionary<string, (float Width, float Height)> _standardSizes;
 
     private void InitializeStandardSizes()
     {
@@ -960,15 +954,13 @@ public partial class TemplateCreator : Window
         _standardSizes.Add("Bridge", (2.25f, 3.5f));
         _standardSizes.Add("Mini Euro", (1.75f, 2.5f));
         _standardSizes.Add("Tarot", (2.75f, 4.75f));
-        _standardSizes.Add("Custom", (0, 0));
+        _standardSizes.Add(CustomSize, (0, 0));
 
         _cardSizes.Clear();
         foreach (var kv in _standardSizes)
         {
             _cardSizes.AddItem(kv.Key);
         }
-
-        //die standard sizes have the die size as width and 0 as height.
 
         _standardSizes.Add("D4", (4, 0));
         _standardSizes.Add("D6", (6, 0));
@@ -986,49 +978,74 @@ public partial class TemplateCreator : Window
         _cardSizes.AddItem("D20");
     }
 
-    private float _curHeight;
-    private float _curWidth;
-    private string _curSizeType;
+    private bool IsDie(string size) => size != CustomSize && _standardSizes[size].Height == 0;
+
+    private static string Millimeters(float inches) => (inches * MmPerInch).ToString("f1");
+
+    private static void SelectSize(OptionButton sizes, string size)
+    {
+        for (int i = 0; i < sizes.ItemCount; i++)
+        {
+            if (sizes.GetItemText(i) == size)
+                sizes.Select(i);
+        }
+    }
 
     private void OnStandardSizeChanged(long index)
     {
         if (CurrentTemplate == null)
             return;
 
-        _curSizeType = _cardSizes.Text;
+        var name = _cardSizes.GetItemText((int)index);
+        var size =
+            name == CustomSize
+                ? (CurrentTemplate.Width, CurrentTemplate.Height)
+                : _standardSizes[name];
+        EditCurrentTemplate(t =>
+            t with
+            {
+                SizeTemplate = name,
+                Width = size.Width,
+                Height = size.Height,
+            }
+        );
+        ShowSize();
+    }
 
-        if (!_standardSizes.TryGetValue(_curSizeType, out var size))
+    private void OnSizeTyped(string text)
+    {
+        if (CurrentTemplate == null)
             return;
 
-        _curWidth = size.Item1;
-        _curHeight = size.Item2;
-        EditCurrentTemplate(t => t with { SizeTemplate = _curSizeType });
+        float.TryParse(_widthInput.Text, out var w);
+        float.TryParse(_heightInput.Text, out var h);
+        SelectSize(_cardSizes, CustomSize);
+        EditCurrentTemplate(t =>
+            t with
+            {
+                SizeTemplate = CustomSize,
+                Width = w / MmPerInch,
+                Height = h / MmPerInch,
+            }
+        );
+        HeightWidthChange(text);
+    }
 
-        if (_curWidth == 0 && _curHeight == 0)
-        {
-            ShowCardMode();
-            _heightInput.Text = (CurrentTemplate.Height).ToString("f1");
-            _widthInput.Text = (CurrentTemplate.Width).ToString("f1");
-            _curWidth = CurrentTemplate.Width;
-            _curHeight = CurrentTemplate.Height;
-            HeightWidthChange(string.Empty);
+    private void ShowSize()
+    {
+        if (CurrentTemplate == null)
             return;
-            //both = 0 means custom size.
-        }
 
-        if (_curHeight == 0)
+        if (IsDie(CurrentTemplate.SizeTemplate))
         {
-            //die mode
-            ShowDieMode(_curWidth);
+            ShowDieMode(CurrentTemplate.Width);
             return;
         }
 
         ShowCardMode();
 
-        float conversion = 25.4f;
-
-        _heightInput.Text = (_curHeight * conversion).ToString("f1");
-        _widthInput.Text = (_curWidth * conversion).ToString("f1");
+        _widthInput.Text = Millimeters(CurrentTemplate.Width);
+        _heightInput.Text = Millimeters(CurrentTemplate.Height);
 
         HeightWidthChange(string.Empty);
     }
@@ -1091,9 +1108,6 @@ public partial class TemplateCreator : Window
                 throw new ArgumentOutOfRangeException(nameof(sides), sides, null);
         }
 
-        _curWidth = w;
-        _curHeight = h;
-
         InitializeFit(w, h);
 
         var image = t.GetImage();
@@ -1113,6 +1127,7 @@ public partial class TemplateCreator : Window
     private LineEdit _newTemplateName;
     private LineEdit _newTemplateWidth;
     private LineEdit _newTemplateHeight;
+    private Control _newTemplateSizeFields;
     private OptionButton _newTemplateSize;
 
     private void InitializeNewTemplateDialog()
@@ -1128,20 +1143,23 @@ public partial class TemplateCreator : Window
         _newTemplateName.TextChanged += _ => UpdateNewTemplateOkButton();
 
         _newTemplateWidth = GetNode<LineEdit>("%NTWidth");
-        _newTemplateWidth.TextChanged += _ => UpdateNewTemplateOkButton();
+        _newTemplateWidth.TextChanged += NewTemplateSizeTyped;
 
         _newTemplateHeight = GetNode<LineEdit>("%NTHeight");
-        _newTemplateHeight.TextChanged += _ => UpdateNewTemplateOkButton();
+        _newTemplateHeight.TextChanged += NewTemplateSizeTyped;
+
+        _newTemplateSizeFields = GetNode<Control>("%NTSizeFields");
 
         _newTemplateSize = GetNode<OptionButton>("%NTSize");
         _newTemplateSize.ItemSelected += NewTemplateStandardSizeChanged;
-        NewTemplateStandardSizeChanged(0);
 
         _newTemplateSize.Clear();
         foreach (var kv in _standardSizes)
         {
             _newTemplateSize.AddItem(kv.Key);
         }
+        _newTemplateSize.Select(0);
+        NewTemplateStandardSizeChanged(0);
     }
 
     private void UpdateNewTemplateOkButton()
@@ -1150,21 +1168,27 @@ public partial class TemplateCreator : Window
         float.TryParse(_newTemplateHeight.Text, out var h);
 
         _newTemplateOk.Disabled =
-            string.IsNullOrWhiteSpace(_newTemplateName.Text) || h <= 0 || w <= 0;
+            string.IsNullOrWhiteSpace(_newTemplateName.Text)
+            || !IsDie(_newTemplateSize.Text) && (h <= 0 || w <= 0);
     }
 
     private void OnNewTemplateOkPressed()
     {
+        var size = _newTemplateSize.Text;
         float.TryParse(_newTemplateWidth.Text, out var w);
         float.TryParse(_newTemplateHeight.Text, out var h);
+        var inches =
+            size == CustomSize
+                ? (Width: w / MmPerInch, Height: h / MmPerInch)
+                : _standardSizes[size];
 
         var t = new Template
         {
             Id = Snowport.Clock.CreateTag(),
             Name = _newTemplateName.Text,
-            SizeTemplate = _newTemplateSize.Text,
-            Width = w,
-            Height = h,
+            SizeTemplate = size,
+            Width = inches.Width,
+            Height = inches.Height,
         };
 
         RecordService.Instance.Write(t);
@@ -1191,25 +1215,22 @@ public partial class TemplateCreator : Window
 
     private void NewTemplateStandardSizeChanged(long index)
     {
-        var cardType = _newTemplateSize.Text;
+        var name = _newTemplateSize.GetItemText((int)index);
+        _newTemplateSizeFields.Visible = !IsDie(name);
 
-        if (!_standardSizes.TryGetValue(cardType, out var size))
-            return;
-
-        var w = size.Item1;
-        var h = size.Item2;
-
-        if (w == 0 || h == 0)
-            return;
-
-        float conversion = 25.4f;
-
-        _newTemplateHeight.Text = (h * conversion).ToString("f1");
-        _newTemplateWidth.Text = (w * conversion).ToString("f1");
+        if (name != CustomSize && !IsDie(name))
+        {
+            _newTemplateWidth.Text = Millimeters(_standardSizes[name].Width);
+            _newTemplateHeight.Text = Millimeters(_standardSizes[name].Height);
+        }
 
         UpdateNewTemplateOkButton();
+    }
 
-        HeightWidthChange(string.Empty);
+    private void NewTemplateSizeTyped(string text)
+    {
+        SelectSize(_newTemplateSize, CustomSize);
+        UpdateNewTemplateOkButton();
     }
 
     private void UpdateProject()
@@ -1585,10 +1606,10 @@ public partial class TemplateCreator : Window
         //_previewOverlay.SetSize(new Vector2(sw, sh));
         //_previewOverlay.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
 
-        _previewDpi = 25.4f * sw / w;
+        _previewDpi = MmPerInch * sw / w;
 
         _textureContext.ParentSize = new Vector2(sw, sh);
-        _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
+        _textureContext.Dpi = MmPerInch * _textureContext.ParentSize.Y / h;
 
         ZoomFit();
     }

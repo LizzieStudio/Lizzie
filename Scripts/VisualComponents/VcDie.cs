@@ -359,8 +359,8 @@ public partial class VcDie : VisualComponentBase
         tx.Objects.Add(DuplicateFace(to, 48, 169, 0, sides[5]));
         tx.Objects.Add(DuplicateFace(to, 128, 169, 0, sides[6]));
         tx.Objects.Add(DuplicateFace(to, 212, 169, 0, sides[7]));
-        tx.Objects.Add(DuplicateFace(to, 169, 266, 180, sides[8]));
-        tx.Objects.Add(DuplicateFace(to, 88, 266, 180, sides[9]));
+        tx.Objects.Add(DuplicateFace(to, 169, 209, 180, sides[8]));
+        tx.Objects.Add(DuplicateFace(to, 88, 209, 180, sides[9]));
 
         return tx;
     }
