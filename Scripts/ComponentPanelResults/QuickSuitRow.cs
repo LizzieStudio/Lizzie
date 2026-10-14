@@ -21,7 +21,17 @@ public partial class QuickSuitRow : HBoxContainer
     [Export]
     private CheckBox _showText;
 
+    [Export]
+    private Button _remove;
+
     public event Action Changed;
+
+    public event Action Removed;
+
+    public bool Removable
+    {
+        set => _remove.Disabled = !value;
+    }
 
     private static readonly IconLibrary Icons = new();
 
@@ -43,6 +53,7 @@ public partial class QuickSuitRow : HBoxContainer
             Changed?.Invoke();
         };
         _showText.Toggled += _ => Changed?.Invoke();
+        _remove.Pressed += () => Removed?.Invoke();
     }
 
     // The icons include the project's images, so the list follows them.
@@ -69,6 +80,20 @@ public partial class QuickSuitRow : HBoxContainer
 
     // The first item, "None", stands for no icon.
     private string IconAt(int index) => index == 0 ? "" : _icon.GetItemText(index);
+
+    /// <summary>
+    /// Whether or not this is for a die.
+    ///
+    /// <para>This hides the background color and the show-text checkbox.</para>
+    /// </summary>
+    public bool Dice
+    {
+        set
+        {
+            _background.Visible = !value;
+            _showText.Visible = !value;
+        }
+    }
 
     public QuickSuit Suit
     {

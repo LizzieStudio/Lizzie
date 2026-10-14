@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -10,49 +9,77 @@ using Godot;
 public partial class QuickSideTab : SideTab
 {
     [Export]
-    private SpinBox _suitCount;
+    private VBoxContainer _suits;
 
     [Export]
-    private VBoxContainer _suits;
+    private Button _add;
 
     [Export]
     private PackedScene _suitRow;
 
     private IEnumerable<QuickSuitRow> Rows => _suits.GetChildren().OfType<QuickSuitRow>();
 
+    private bool _dice;
+
+    /// <summary>
+    /// Whether or not this is for a die, which hides some settings.
+    /// </summary>
+    public bool Dice
+    {
+        set
+        {
+            _dice = value;
+            foreach (var row in Rows)
+                row.Dice = value;
+        }
+    }
+
     public override void _Ready()
     {
         foreach (var row in Rows)
-            row.Changed += RaiseChanged;
-        _suitCount.ValueChanged += count =>
+            Connect(row);
+        // Adding a new row copies the last one with a modified color.
+        _add.Pressed += () =>
         {
-            Resize((int)count);
+            var last = Rows.Last().Suit;
+            AddRow(last with { Background = NextColor(last.Background) });
             RaiseChanged();
         };
     }
 
-    /// <summary>
-    /// Adds or removes rows
-    ///
-    /// <para>Added rows copy the one above it with a new color.</para>
-    /// </summary>
-    private void Resize(int count)
+    private void AddRow(QuickSuit suit)
+    {
+        var row = _suitRow.Instantiate<QuickSuitRow>();
+        _suits.AddChild(row);
+        row.Suit = suit;
+        row.Dice = _dice;
+        Connect(row);
+    }
+
+    private void Connect(QuickSuitRow row)
+    {
+        row.Changed += RaiseChanged;
+        row.Removed += () =>
+        {
+            RemoveRow(row);
+            RaiseChanged();
+        };
+        ShowRemovable();
+    }
+
+    private void RemoveRow(QuickSuitRow row)
+    {
+        _suits.RemoveChild(row);
+        row.QueueFree();
+        ShowRemovable();
+    }
+
+    // The last row stays, so there's always a row to copy.
+    private void ShowRemovable()
     {
         var rows = Rows.ToList();
-        for (int i = rows.Count; i < count; i++)
-        {
-            var above = rows[^1].Suit;
-            var row = _suitRow.Instantiate<QuickSuitRow>();
-            _suits.AddChild(row);
-            row.Suit = above with { Background = NextColor(above.Background) };
-            row.Changed += RaiseChanged;
-            rows.Add(row);
-        }
-        foreach (var row in rows.Skip(count))
-        {
-            _suits.RemoveChild(row);
-            row.QueueFree();
-        }
+        foreach (var row in rows)
+            row.Removable = rows.Count > 1;
     }
 
     /// <summary>
@@ -72,11 +99,10 @@ public partial class QuickSideTab : SideTab
     {
         if (side is not QuickSide quick)
             return false;
-        int count = Math.Max(quick.Suits.Length, 1);
-        _suitCount.SetValueNoSignal(count);
-        Resize(count);
-        foreach (var (row, suit) in Rows.Zip(quick.Suits))
-            row.Suit = suit;
+        foreach (var row in Rows.ToList())
+            RemoveRow(row);
+        foreach (var suit in quick.Suits.IsEmpty ? [new QuickSuit()] : quick.Suits)
+            AddRow(suit);
         return true;
     }
 }

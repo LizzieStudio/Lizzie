@@ -23,7 +23,7 @@ public abstract record SideParameters
 }
 
 /// <summary>
-/// Cards drawn with <see cref="QuickTemplate"/>.
+/// Cards drawn with <see cref="QuickTemplate"/>, or the faces of a die drawn with <see cref="DieTemplate"/>.
 /// </summary>
 [JsonName("QuickSide")]
 public sealed record QuickSide : SideParameters
@@ -31,16 +31,23 @@ public sealed record QuickSide : SideParameters
     public ImmutableArray<QuickSuit> Suits { get; init; } = [];
 
     /// <summary>
+    /// Each suit's values as a Sequence Expression. Blank values make one blank card or face.
+    /// </summary>
+    public string[] Expressions() =>
+        Suits
+            .Select(suit => string.IsNullOrWhiteSpace(suit.Values) ? "\"\"" : suit.Values)
+            .ToArray();
+
+    /// <summary>
     /// Each card's suit and value, in order.
     /// </summary>
     public List<(QuickSuit Suit, string Value)> Cards() =>
         Suits
-            .SelectMany(suit =>
+            .Zip(Expressions())
+            .SelectMany(s =>
             {
-                if (string.IsNullOrWhiteSpace(suit.Values))
-                    return [(suit, "")];
-                SequenceExpressions.TryParseStrings(suit.Values, out var values);
-                return values.Select(value => (suit, value));
+                SequenceExpressions.TryParseStrings(s.Second, out var values);
+                return values.Select(value => (s.First, value));
             })
             .ToList();
 

@@ -26,9 +26,9 @@ public readonly record struct PrototypeItemRef(int Number, SnowTag FrontRow, Sno
         parameters switch
         {
             PrintedParameters printed => printed.Card(0, R),
-            DieParameters { Mode: VcToken.TokenBuildMode.Template } die => new(
+            DieParameters { Faces: TemplateSide side } => new(
                 0,
-                R.GetRows(die.Dataset).FirstOrDefault()?.Id ?? SnowTag.Empty,
+                R.GetRows(side.Dataset).FirstOrDefault()?.Id ?? SnowTag.Empty,
                 SnowTag.Empty
             ),
             _ => None,

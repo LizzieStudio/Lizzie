@@ -71,6 +71,7 @@ public partial class Table : Node3D
                 var scene = Utility.ComponentTypeToScenePath(
                     proto.Type,
                     proto.Parameters,
+                    R,
                     s.IsItem
                 );
                 return (scene, s.PrototypeRef, s.Card);

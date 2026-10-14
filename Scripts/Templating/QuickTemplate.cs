@@ -11,7 +11,10 @@ public static class QuickTemplate
     /// <summary>
     /// The most icons a card can show. A larger number shows one.
     /// </summary>
-    public const int MaxIcons = 13;
+    /// <remarks>
+    /// There's a bug in the icon code that starts at 10. Once we fix that, we can raise this.
+    /// </remarks>
+    public const int MaxIcons = 9;
 
     private static readonly Column Background = new() { Id = new SnowTag(1), Name = "Background" };
     private static readonly Column Foreground = new() { Id = new SnowTag(2), Name = "Foreground" };
@@ -81,11 +84,7 @@ public static class QuickTemplate
     {
         bool hasIcon = suit.Icon != "";
         string text = suit.ShowText ? value : "";
-        int icons =
-            int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var n)
-            && n <= MaxIcons
-                ? n
-                : 1;
+        int icons = Icons(value);
         return new DataRow
         {
             Id = SnowTag.Empty,
@@ -101,7 +100,18 @@ public static class QuickTemplate
         };
     }
 
-    private static ImmutableDictionary<string, string> Element(
+    /// <summary>
+    /// How many icons <paramref name="value"/> should show.
+    ///
+    /// <para>Parses the int, but if it's greater than <see cref="MaxIcons"/>, returns 1.</para>
+    /// </summary>
+    public static int Icons(string value) =>
+        int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var n)
+        && n <= MaxIcons
+            ? n
+            : 1;
+
+    public static ImmutableDictionary<string, string> Element(
         params (string Name, string Value)[] parameters
     )
     {

@@ -4,7 +4,7 @@ using Godot;
 public partial class TemplateSelector : OptionButton
 {
     private SnowTag _selected = SnowTag.Empty;
-    private Template.TemplateTarget _target = Template.TemplateTarget.Flat;
+    private Func<Template, bool> _shows = t => t.Sides == 0;
 
     public override void _EnterTree()
     {
@@ -17,18 +17,15 @@ public partial class TemplateSelector : OptionButton
     }
 
     /// <summary>
-    /// Only templates for this target are listed.
+    /// Filters which templates are listed. Shows printed templates by default.
     /// </summary>
-    public Template.TemplateTarget Target
+    public Func<Template, bool> Shows
     {
-        get => _target;
+        get => _shows;
         set
         {
-            if (_target != value)
-            {
-                _target = value;
-                RecordService.Instance.QueueSync(this);
-            }
+            _shows = value;
+            RecordService.Instance.QueueSync(this);
         }
     }
 
@@ -37,7 +34,7 @@ public partial class TemplateSelector : OptionButton
         Clear();
         AddItem("(none)", SnowTag.Empty);
 
-        foreach (var t in R.Get<Template>(t => t.Target == _target))
+        foreach (var t in R.Get<Template>(_shows))
         {
             AddItem(t.Name, t.Id);
         }

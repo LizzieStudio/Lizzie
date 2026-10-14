@@ -74,7 +74,7 @@ public static class SequenceExpressions
         .Build();
 
     /// <summary>
-    /// Parses the <paramref name="input"/> Sequence Expression into the <paramref name="output"/> list of values,
+    /// Parses the <paramref name="input"/> Sequence Expression(s) into the <paramref name="output"/> list of values,
     /// returning false on an error.
     /// </summary>
     /// <param name="input">The Sequence Expression: <c>1-3, J*2, "Draw, then discard"</c></param>
@@ -88,7 +88,20 @@ public static class SequenceExpressions
     /// <returns>Whether or not the parse completed without errors.</returns>
     public static bool TryParseStrings(string input, out string[] output, int? count = null)
     {
-        var ok = Parse(input, count, false, out var values);
+        var ok = TryParseStrings([input], out var values, count);
+        output = values.Select(v => v.Value).ToArray();
+        return ok;
+    }
+
+    /// <inheritdoc cref="TryParseStrings(string, out string[], int?)"/>
+    /// <param name="inputs">The Sequence Expressions: <c>1-3, J*2, "Draw, then discard"</c></param>
+    public static bool TryParseStrings(
+        IReadOnlyList<string> inputs,
+        out (int Input, string Value)[] output,
+        int? count = null
+    )
+    {
+        var ok = Parse(inputs, count, false, out var values);
         output = values.ToArray();
         return ok;
     }
@@ -99,22 +112,35 @@ public static class SequenceExpressions
     /// </summary>
     public static bool TryParseNumbers(string input, out int[] output, int? count = null)
     {
-        var ok = Parse(input, count, true, out var values);
-        output = values.Select(int.Parse).ToArray();
+        var ok = Parse([input], count, true, out var values);
+        output = values.Select(v => int.Parse(v.Value)).ToArray();
         return ok;
     }
 
-    private static bool Parse(string input, int? count, bool numbers, out List<string> values)
+    /// <summary>
+    /// The fewest values the <paramref name="inputs"/> make as one sequence.
+    /// </summary>
+    /// <remarks>
+    /// This is currently just used for the dice faces.
+    /// </remarks>
+    public static (int Fewest, bool Unbounded, bool Ok) Measure(IReadOnlyList<string> inputs)
     {
-        input ??= "";
-        var items = new List<Item>();
-        var ok = new Reader(input, Tokenizer.Tokenize(input).ToArray()).List(0, items, true);
-        int text = numbers ? items.FindIndex(i => !i.Values.All(IsNumber)) : -1;
-        if (text >= 0)
-        {
-            items.RemoveRange(text, items.Count - text);
-            ok = false;
-        }
+        var items = Items(inputs, false, out var ok);
+        return (
+            items.Sum(i => i.Item.Values.Count),
+            items.Any(i => i.Item.Unbounded != Unbounded.No),
+            ok
+        );
+    }
+
+    private static bool Parse(
+        IReadOnlyList<string> inputs,
+        int? count,
+        bool numbers,
+        out List<(int Input, string Value)> values
+    )
+    {
+        var items = Items(inputs, numbers, out var ok);
         if (count > MaxValues)
         {
             count = MaxValues;
@@ -122,6 +148,36 @@ public static class SequenceExpressions
         }
         values = Fit(items, count);
         return ok;
+    }
+
+    /// <summary>
+    /// The top-level items of the <paramref name="inputs"/>, each with the index of its input, up to the first error.
+    /// </summary>
+    private static List<(int Input, Item Item)> Items(
+        IReadOnlyList<string> inputs,
+        bool numbers,
+        out bool ok
+    )
+    {
+        var items = new List<(int Input, Item Item)>();
+        ok = true;
+        for (int input = 0; input < inputs.Count && ok; input++)
+        {
+            var text = inputs[input] ?? "";
+            var own = new List<Item>();
+            ok = new Reader(text, Tokenizer.Tokenize(text).ToArray()).List(0, own, true);
+            int error = own.FindIndex(i =>
+                numbers && !i.Values.All(IsNumber)
+                || i.Unbounded != Unbounded.No && items.Any(o => o.Item.Unbounded != Unbounded.No)
+            );
+            if (error >= 0)
+            {
+                own.RemoveRange(error, own.Count - error);
+                ok = false;
+            }
+            items.AddRange(own.Select(item => (input, item)));
+        }
+        return items;
     }
 
     private static bool IsNumber(string value) =>
@@ -322,24 +378,31 @@ public static class SequenceExpressions
     private static List<string> Every(List<string> s, int? step) =>
         s == null || step is not int n || n == 0 ? null : s.Where((_, i) => i % n == 0).ToList();
 
-    private static List<string> Fit(List<Item> items, int? count)
+    private static List<(int Input, string Value)> Fit(
+        List<(int Input, Item Item)> items,
+        int? count
+    )
     {
         // How many values the unbounded expression gets: whatever the bounded ones leave of the count.
-        var bounded = items.Where(i => i.Unbounded == Unbounded.No).Sum(i => i.Values.Count);
+        var bounded = items
+            .Where(i => i.Item.Unbounded == Unbounded.No)
+            .Sum(i => i.Item.Values.Count);
         var room = Math.Max((count ?? 0) - bounded, 0);
-        var values = items.SelectMany(item =>
-            item.Unbounded switch
-            {
-                Unbounded.No => item.Values,
-                Unbounded.Repeat => count == null ? item.Values : Cycle(item.Values, room),
-                _ => Enumerable
-                    .Range(0, room)
-                    .Select(i => (int.Parse(item.Values[0]) + i).ToString()),
-            }
+        var values = items.SelectMany(i =>
+            (
+                i.Item.Unbounded switch
+                {
+                    Unbounded.No => i.Item.Values,
+                    Unbounded.Repeat => count == null ? i.Item.Values : Cycle(i.Item.Values, room),
+                    _ => Enumerable
+                        .Range(0, room)
+                        .Select(n => (int.Parse(i.Item.Values[0]) + n).ToString()),
+                }
+            ).Select(value => (i.Input, value))
         );
         return count is int c ? Cycle(values.ToList(), c).ToList() : values.ToList();
     }
 
-    private static IEnumerable<string> Cycle(List<string> values, int count) =>
+    private static IEnumerable<T> Cycle<T>(List<T> values, int count) =>
         values.Count == 0 ? [] : Enumerable.Range(0, count).Select(i => values[i % values.Count]);
 }

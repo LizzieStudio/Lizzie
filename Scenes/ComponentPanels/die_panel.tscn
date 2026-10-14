@@ -2,12 +2,9 @@
 
 [ext_resource type="Script" uid="uid://c4j00mcp5m0od" path="res://Scripts/ComponentPanelResults/DiePanelDialogResult.cs" id="1_5kaje"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="2_6el8t"]
-[ext_resource type="PackedScene" uid="uid://bqjj4fvs81gaw" path="res://Scenes/ComponentPanels/quick_texture_entry.tscn" id="3_ap6wc"]
-[ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="3_b5pde"]
-[ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="4_dssel"]
-[ext_resource type="PackedScene" uid="uid://ddvtf4fbcgjk4" path="res://Scenes/Controls/TemplateSelector.tscn" id="5_tsel"]
+[ext_resource type="PackedScene" uid="uid://bye0ocp5vwokd" path="res://Scenes/ComponentPanels/side_editor.tscn" id="3_faces"]
 
-[node name="DiePanel" type="MarginContainer" unique_id=1725091934 node_paths=PackedStringArray("_quickSideEntries")]
+[node name="DiePanel" type="MarginContainer" unique_id=1725091934]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -18,7 +15,6 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 script = ExtResource("1_5kaje")
-_quickSideEntries = [NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry2"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry3"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry4"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry5"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry6"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry7"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry8"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry9"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry10"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry11"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry12"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry13"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry14"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry15"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry16"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry17"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry18"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry19"), NodePath("HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2/QuickTextureEntry20")]
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=361911315]
 layout_mode = 2
@@ -79,20 +75,20 @@ layout_mode = 2
 [node name="Sides" type="OptionButton" parent="HBoxContainer/VBoxContainer/GridContainer/HBoxContainer3" unique_id=595810219]
 unique_name_in_owner = true
 layout_mode = 2
-selected = 1
+selected = 0
 item_count = 6
-popup/item_0/text = "4"
+popup/item_0/text = "Auto"
 popup/item_0/id = 0
 popup/item_1/text = "6"
-popup/item_1/id = 1
+popup/item_1/id = 6
 popup/item_2/text = "8"
-popup/item_2/id = 2
+popup/item_2/id = 8
 popup/item_3/text = "10"
-popup/item_3/id = 3
+popup/item_3/id = 10
 popup/item_4/text = "12"
-popup/item_4/id = 4
+popup/item_4/id = 12
 popup/item_5/text = "20"
-popup/item_5/id = 5
+popup/item_5/id = 20
 
 [node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/GridContainer" unique_id=493772543]
 custom_minimum_size = Vector2(80, 0)
@@ -131,153 +127,11 @@ theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="TabContainer" type="TabContainer" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=1431477564]
+[node name="Faces" parent="HBoxContainer/VBoxContainer/MarginContainer" unique_id=142426775 instance=ExtResource("3_faces")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
-current_tab = 2
-
-[node name="Quick Sides" type="ScrollContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=11125790]
-visible = false
-layout_mode = 2
-horizontal_scroll_mode = 0
-metadata/_tab_index = 0
-
-[node name="Quick Sides2" type="GridContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides" unique_id=1672260361]
-custom_minimum_size = Vector2(0, 200)
-layout_mode = 2
-
-[node name="QuickTextureEntry" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1035217495 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 1"
-
-[node name="QuickTextureEntry2" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=762155132 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 2"
-
-[node name="QuickTextureEntry3" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1045927218 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 3"
-
-[node name="QuickTextureEntry4" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1977593481 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 4"
-
-[node name="QuickTextureEntry5" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=465954499 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 5"
-
-[node name="QuickTextureEntry6" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=951985329 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 6"
-
-[node name="QuickTextureEntry7" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=2025367394 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 7"
-
-[node name="QuickTextureEntry8" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1256737540 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 8"
-
-[node name="QuickTextureEntry9" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=856757649 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 9"
-
-[node name="QuickTextureEntry10" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1666495654 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 10"
-
-[node name="QuickTextureEntry11" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1213120595 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 11"
-
-[node name="QuickTextureEntry12" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=830872677 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 12"
-
-[node name="QuickTextureEntry13" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1334058858 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 13"
-
-[node name="QuickTextureEntry14" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=2098169205 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 14"
-
-[node name="QuickTextureEntry15" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1443179091 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 15"
-
-[node name="QuickTextureEntry16" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1862353721 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 16"
-
-[node name="QuickTextureEntry17" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=258054692 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 17"
-
-[node name="QuickTextureEntry18" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=1077392024 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 18"
-
-[node name="QuickTextureEntry19" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=639395864 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 19"
-
-[node name="QuickTextureEntry20" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Quick Sides/Quick Sides2" unique_id=360437325 instance=ExtResource("3_ap6wc")]
-layout_mode = 2
-FieldCaption = "Side 20"
-
-[node name="Template" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer" unique_id=1818089421]
-layout_mode = 2
-metadata/_tab_index = 1
-
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template" unique_id=587209092]
-layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
-
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer" unique_id=1071694883]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer" unique_id=1264663274]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=698176118]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-text = "Template:"
-
-[node name="FrontTemplateList" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1796966430 instance=ExtResource("5_tsel")]
-unique_name_in_owner = true
-layout_mode = 2
-fit_to_longest_item = false
-
-[node name="EditFrontTemplateButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1223203755]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Template Editor"
-icon = ExtResource("3_b5pde")
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer" unique_id=1704337453]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=2048004565]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-text = "DataSet:"
-
-[node name="DatasetList" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=825345651 instance=ExtResource("4_dssel")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="EditDatasetButton" type="Button" parent="HBoxContainer/VBoxContainer/MarginContainer/TabContainer/Template/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=225263054]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "DataSet Editor"
-icon = ExtResource("3_b5pde")
+_dice = true
 
 [node name="Preview" parent="HBoxContainer" unique_id=1142160244 instance=ExtResource("2_6el8t")]
 unique_name_in_owner = true

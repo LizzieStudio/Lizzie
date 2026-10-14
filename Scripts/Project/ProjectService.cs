@@ -410,7 +410,11 @@ public partial class ProjectService : Node
         TextureFactory textureFactory
     )
     {
-        var scenePath = Utility.ComponentTypeToScenePath(prototype.Type, prototype.Parameters);
+        var scenePath = Utility.ComponentTypeToScenePath(
+            prototype.Type,
+            prototype.Parameters,
+            RecordService.Instance
+        );
 
         VisualComponentBase component = SpawnComponent(scenePath);
 

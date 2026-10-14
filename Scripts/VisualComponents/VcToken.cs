@@ -166,15 +166,6 @@ public partial class VcToken : VisualComponentBase
         RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
     }
 
-    /// <summary>
-    /// How a token gets its textures. Saves store the number, so values must not change.
-    /// </summary>
-    public enum TokenBuildMode
-    {
-        QuickCard = 0,
-        Template = 3,
-    }
-
     protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {
         base.Setup(parameters, R);

@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="8_dataset"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="9_pencil"]
 [ext_resource type="PackedScene" uid="uid://boxmo6a5jmo47" path="res://Scenes/Controls/number_sequence_edit.tscn" id="10_frames"]
+[ext_resource type="Texture2D" uid="uid://bxxrywcqqymtw" path="res://Textures/UI/add.svg" id="11_add"]
 
 [node name="SideEditor" type="TabContainer" unique_id=1883320168 node_paths=PackedStringArray("_tabs")]
 size_flags_horizontal = 3
@@ -25,32 +26,24 @@ theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 metadata/_tab_index = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Quick" unique_id=624624777 node_paths=PackedStringArray("_suitCount", "_suits")]
+[node name="VBoxContainer" type="VBoxContainer" parent="Quick" unique_id=624624777 node_paths=PackedStringArray("_suits", "_add")]
 layout_mode = 2
 script = ExtResource("2_quick")
-_suitCount = NodePath("SuitCountRow/SuitCount")
 _suits = NodePath("Suits")
+_add = NodePath("Add")
 _suitRow = ExtResource("5_row")
-
-[node name="SuitCountRow" type="HBoxContainer" parent="Quick/VBoxContainer" unique_id=598816696]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="Quick/VBoxContainer/SuitCountRow" unique_id=62555844]
-layout_mode = 2
-text = "Suits  "
-
-[node name="SuitCount" type="SpinBox" parent="Quick/VBoxContainer/SuitCountRow" unique_id=6251141]
-layout_mode = 2
-min_value = 1.0
-max_value = 99.0
-value = 1.0
-rounded = true
 
 [node name="Suits" type="VBoxContainer" parent="Quick/VBoxContainer" unique_id=1256489649]
 layout_mode = 2
 
 [node name="QuickSuitRow" parent="Quick/VBoxContainer/Suits" unique_id=652457814 instance=ExtResource("5_row")]
 layout_mode = 2
+
+[node name="Add" type="Button" parent="Quick/VBoxContainer" unique_id=265025835]
+layout_mode = 2
+tooltip_text = "Add a row, copying the last one in a new color"
+icon = ExtResource("11_add")
+icon_alignment = 1
 
 [node name="Image" type="MarginContainer" parent="." unique_id=559312437]
 visible = false

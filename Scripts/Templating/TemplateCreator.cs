@@ -12,9 +12,6 @@ public partial class TemplateCreator : Window
     private TextureRect _preview;
 
     [Export]
-    private Texture2D _d4_overlay;
-
-    [Export]
     private Texture2D _d6_overlay;
 
     [Export]
@@ -968,15 +965,13 @@ public partial class TemplateCreator : Window
             _cardSizes.AddItem(kv.Key);
         }
 
-        _standardSizes.Add("D4", (4, 0));
-        _standardSizes.Add("D6", (6, 0));
-        _standardSizes.Add("D8", (8, 0));
-        _standardSizes.Add("D10", (10, 0));
-        _standardSizes.Add("D12", (12, 0));
-        _standardSizes.Add("D20", (20, 0));
+        _standardSizes.Add("D6", (0, 0));
+        _standardSizes.Add("D8", (0, 0));
+        _standardSizes.Add("D10", (0, 0));
+        _standardSizes.Add("D12", (0, 0));
+        _standardSizes.Add("D20", (0, 0));
 
         _cardSizes.AddSeparator();
-        _cardSizes.AddItem("D4");
         _cardSizes.AddItem("D6");
         _cardSizes.AddItem("D8");
         _cardSizes.AddItem("D10");
@@ -984,7 +979,7 @@ public partial class TemplateCreator : Window
         _cardSizes.AddItem("D20");
     }
 
-    private bool IsDie(string size) => size != CustomSize && _standardSizes[size].Height == 0;
+    private static bool IsDie(string size) => Template.SidesOf(size) > 0;
 
     private static string Millimeters(float inches) => (inches * MmPerInch).ToString("f1");
 
@@ -1042,9 +1037,11 @@ public partial class TemplateCreator : Window
         if (CurrentTemplate == null)
             return;
 
-        if (IsDie(CurrentTemplate.SizeTemplate))
+        _textureContext.TriangleFaces = CurrentTemplate.TriangleFaces;
+
+        if (CurrentTemplate.Sides > 0)
         {
-            ShowDieMode(CurrentTemplate.Width);
+            ShowDieMode(CurrentTemplate.Sides);
             return;
         }
 
@@ -1056,10 +1053,10 @@ public partial class TemplateCreator : Window
         HeightWidthChange(string.Empty);
     }
 
-    private void ShowDieMode(float index)
+    private void ShowDieMode(int sides)
     {
         _sizeControls.Visible = false;
-        InitOverlay((int)index);
+        InitOverlay(sides);
         _overlayControls.Visible = true;
         OnOverlayToggle();
     }
@@ -1083,18 +1080,11 @@ public partial class TemplateCreator : Window
 
     private void InitOverlay(int sides)
     {
-        var h = 256;
-        var w = 256;
-
         Texture2D t;
 
         switch (sides)
         {
-            case 4:
-                t = _d4_overlay;
-                break;
             case 6:
-                h = 170;
                 t = _d6_overlay;
                 break;
             case 8:
@@ -1114,7 +1104,8 @@ public partial class TemplateCreator : Window
                 throw new ArgumentOutOfRangeException(nameof(sides), sides, null);
         }
 
-        InitializeFit(w, h);
+        var net = DieTemplate.NetSize(sides);
+        InitializeFit(net.X, net.Y);
 
         var image = t.GetImage();
         var s = _preview.GetSize();
@@ -1675,4 +1666,9 @@ public class TextureContext()
     public DataSet DataSet { get; set; }
 
     public DataRow CurrentRow { get; set; }
+
+    /// <summary>
+    /// Fits text and icons inside a triangle, for the faces of a d8 or d20.
+    /// </summary>
+    public bool TriangleFaces { get; set; }
 }

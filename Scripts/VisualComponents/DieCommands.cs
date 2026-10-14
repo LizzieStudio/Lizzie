@@ -27,7 +27,7 @@ public static class DieCommands
         NumberKeys = true,
         // Every face any of the dice has. A smaller die ignores the faces it lacks.
         NumberLimit = (R, dice) =>
-            dice.Select(d => Parameters(R, d) is { } p ? VcDie.Faces(p).Length : 0)
+            dice.Select(d => Parameters(R, d) is { } p ? VcDie.FaceRotations(p, R).Length : 0)
                 .DefaultIfEmpty()
                 .Max(),
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Die,
@@ -43,15 +43,20 @@ public static class DieCommands
     /// </summary>
     private static ComponentState Rolled(IRecordReader R, ComponentState die)
     {
-        if (Parameters(R, die) is not { SideCount: > 0 } p)
+        if (Parameters(R, die) is not { } p)
             return die;
-        int side = Random.Shared.Next(p.SideCount) + 1;
-        return VcDie.FaceRotation(p, side) is { } rotation ? die with { Rotation = rotation } : die;
+        int side = Random.Shared.Next(VcDie.FaceRotations(p, R).Length) + 1;
+        return VcDie.FaceRotation(p, side, R) is { } rotation
+            ? die with
+            {
+                Rotation = rotation,
+            }
+            : die;
     }
 
     /// <summary>The die turned to show <paramref name="face"/>, or null if it has no such face.</summary>
     private static ComponentState Showing(IRecordReader R, ComponentState die, int face) =>
-        Parameters(R, die) is { } p && VcDie.FaceRotation(p, face) is { } rotation
+        Parameters(R, die) is { } p && VcDie.FaceRotation(p, face, R) is { } rotation
             ? die with
             {
                 Rotation = rotation,

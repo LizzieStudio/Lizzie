@@ -69,6 +69,7 @@ public static class TemplateEngine
                     BackgroundColor = l.BackgroundColor,
                     RotationDegrees = l.RotationDegrees,
                     Quantity = l.Quantity,
+                    TriangleFace = _textureContext.TriangleFaces,
                 }
             );
         }

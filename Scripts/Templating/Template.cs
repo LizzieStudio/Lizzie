@@ -5,17 +5,6 @@ using System.Text.Json.Serialization;
 [JsonName("Template")]
 public record Template : Replicated
 {
-    public enum TemplateTarget
-    {
-        Flat,
-        D4,
-        D6,
-        D8,
-        D10,
-        D12,
-        D20,
-    }
-
     public string Name { get; init; }
 
     public string SizeTemplate { get; init; }
@@ -34,30 +23,23 @@ public record Template : Replicated
     public ImmutableArray<ImmutableDictionary<string, string>> Elements { get; init; } =
         ImmutableArray<ImmutableDictionary<string, string>>.Empty;
 
+    /// <summary>
+    /// For dice, the number of sides. Otherwise 0 for printed templates
+    /// </summary>
     [JsonIgnore]
-    public TemplateTarget Target
-    {
-        get
-        {
-            switch (SizeTemplate)
-            {
-                case "D4":
-                    return TemplateTarget.D4;
-                case "D6":
-                    return TemplateTarget.D6;
-                case "D8":
-                    return TemplateTarget.D8;
-                case "D10":
-                    return TemplateTarget.D10;
-                case "D12":
-                    return TemplateTarget.D12;
-                case "D20":
-                    return TemplateTarget.D20;
-            }
+    public int Sides => SidesOf(SizeTemplate);
 
-            return TemplateTarget.Flat;
-        }
-    }
+    /// <summary>
+    /// Parses the int out of a die-string, like 8 for "D8".
+    /// </summary>
+    public static int SidesOf(string sizeTemplate) =>
+        sizeTemplate is ['D', .. var sides] && int.TryParse(sides, out var n) ? n : 0;
+
+    /// <summary>
+    /// Whether or not this is a die with triangle faces.
+    /// </summary>
+    [JsonIgnore]
+    public bool TriangleFaces => Sides is 8 or 20;
 
     public SnowTag DataSet { get; init; }
 }

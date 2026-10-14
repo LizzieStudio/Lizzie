@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 /// <summary>
@@ -36,6 +37,26 @@ public partial class TemplateSideTab : SideTab
             EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _templateRef });
         _editDataset.Pressed += () =>
             EventBus.Instance.Publish(new ShowDatasetEditor { DatasetRef = _datasetRef });
+    }
+
+    /// <summary>
+    /// Filters which templates are listed.
+    /// If a selected template is filtered, it's deselected.
+    /// </summary>
+    public Func<Template, bool> ShowsTemplates
+    {
+        set
+        {
+            _template.Shows = value;
+            if (
+                RecordService.Instance.Get<Template>(_templateRef) is { } template
+                && !value(template)
+            )
+            {
+                _templateRef = SnowTag.Empty;
+                _template.SelectedTemplate = SnowTag.Empty;
+            }
+        }
     }
 
     public override SideParameters Side =>

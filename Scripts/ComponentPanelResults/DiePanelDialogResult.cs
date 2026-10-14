@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using Godot;
 
 public partial class DiePanelDialogResult : ComponentPanelDialogResult
@@ -10,52 +7,35 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private LineEdit _diameterInput;
     private OptionButton _sidesInput;
     private ColorPickerButton _dieColor;
-
-    private TabContainer _tabContainer;
+    private SideEditor _faces;
     private ComponentPreview _preview;
 
-    private TemplateSelector _frontTemplatePicker;
-    private Button _editFrontTemplateButton;
-
-    private DataSetSelector _datasetPicker;
-    private Button _datasetEditorButton;
-
-    [Export]
-    private QuickTextureEntry[] _quickSideEntries;
-
-    private IconLibrary _iconLibrary = new();
+    // The scene the preview shows, or null while the panel is inactive.
+    private string _previewScene;
 
     public override void _Ready()
     {
         _nameInput = GetNode<LineEdit>("%ComponentName");
         _diameterInput = GetNode<LineEdit>("%Diameter");
-        _diameterInput.TextChanged += text => UpdatePreview();
+        _diameterInput.TextChanged += _ => Refresh();
 
         _sidesInput = GetNode<OptionButton>("%Sides");
-        _sidesInput.ItemSelected += SidesInputOnItemSelected;
-
-        InitializeTemplates();
+        _sidesInput.ItemSelected += _ =>
+        {
+            ShowTemplates();
+            Refresh();
+        };
 
         _dieColor = GetNode<ColorPickerButton>("%DieColor");
-        _dieColor.ColorChanged += color => UpdatePreview();
+        _dieColor.ColorChanged += _ => Refresh();
+
+        _faces = GetNode<SideEditor>("%Faces");
+        _faces.Changed += Refresh;
+        _faces.Side = new QuickSide { Suits = [new QuickSuit { Values = "1-6" }] };
+        ShowTemplates();
 
         _preview = GetNode<ComponentPreview>("%Preview");
-        _preview.ItemSelected += PreviewOnItemSelected;
-
-        _tabContainer = GetNode<TabContainer>("%TabContainer");
-        _tabContainer.CurrentTab = 0;
-        _tabContainer.TabChanged += t => UpdatePreview();
-
-        int i = 0;
-        foreach (var l in _quickSideEntries)
-        {
-            l.TextValue = (i + 1).ToString();
-            l.FieldChanged += (sender, args) => UpdatePreview();
-            l.SetIcons(_iconLibrary);
-            i++;
-        }
-
-        UpdateQuickSidesVisibility();
+        _preview.ItemSelected += (_, _) => UpdatePreview();
     }
 
     public override void _EnterTree()
@@ -63,222 +43,61 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         RecordService.Instance.Watch(this, Sync);
     }
 
+    private void Refresh() => RecordService.Instance.QueueSync(this);
+
+    private int SideCount => _sidesInput.GetSelectedId();
+
+    private void ShowTemplates()
+    {
+        int sides = SideCount;
+        _faces.ShowsTemplates = t => sides == 0 ? t.Sides > 0 : t.Sides == sides;
+    }
+
     private void Sync(IRecordReader R)
     {
-        var dataset = R.Get<DataSet>(_datasetRef);
-        _preview.MultiItemMode = dataset != null;
-        if (dataset != null)
-            _preview.ItemCount = R.GetRows(_datasetRef).Count;
+        var p = Parameters();
+        _sidesInput.SetItemText(0, $"Auto (d{(p with { SideCount = 0 }).Resolve(R).Sides})");
 
-        UpdatePreview();
-    }
+        int count = p.Faces is TemplateSide side ? R.GetRows(side.Dataset).Count : 1;
+        _preview.ItemCount = count;
+        _preview.MultiItemMode = count > 1;
 
-    private int _curDie;
-
-    private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e)
-    {
-        _curDie = e.Index;
-        UpdatePreview();
-    }
-
-    private void InitializeTemplates()
-    {
-        _frontTemplatePicker = GetNode<TemplateSelector>("%FrontTemplateList");
-        _frontTemplatePicker.TemplateSelected += OnFrontTemplateChanged;
-        _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
-        _editFrontTemplateButton.Pressed += EditFrontTemplate;
-
-        _datasetPicker = GetNode<DataSetSelector>("%DatasetList");
-        _datasetPicker.DataSetSelected += OnDatasetChanged;
-
-        _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
-        _datasetEditorButton.Pressed += EditDataset;
-
-        UpdateTemplateTarget();
-    }
-
-    private void UpdateTemplateTarget()
-    {
-        int.TryParse(_sidesInput.Text, out var sides);
-        var target = SidesToTarget(sides);
-        _frontTemplatePicker.Target = target;
-
-        var template = RecordService.Instance.Get<Template>(_frontTemplateRef);
-        if (template != null && template.Target != target)
-        {
-            _frontTemplateRef = SnowTag.Empty;
-            _frontTemplatePicker.SelectedTemplate = SnowTag.Empty;
-        }
-    }
-
-    private Template.TemplateTarget SidesToTarget(int sides)
-    {
-        switch (sides)
-        {
-            case 4:
-                return Template.TemplateTarget.D4;
-            case 6:
-                return Template.TemplateTarget.D6;
-            case 8:
-                return Template.TemplateTarget.D8;
-            case 10:
-                return Template.TemplateTarget.D10;
-            case 12:
-                return Template.TemplateTarget.D12;
-            case 20:
-                return Template.TemplateTarget.D20;
-        }
-
-        return Template.TemplateTarget.D6;
-    }
-
-    private SnowTag _datasetRef = SnowTag.Empty;
-
-    private void OnDatasetChanged(SnowTag datasetRef)
-    {
-        _datasetRef = datasetRef;
-        RecordService.Instance.QueueSync(this);
-    }
-
-    private SnowTag _frontTemplateRef = SnowTag.Empty;
-
-    private void OnFrontTemplateChanged(SnowTag templateRef)
-    {
-        _frontTemplateRef = templateRef;
-        RecordService.Instance.QueueSync(this);
-    }
-
-    private void EditFrontTemplate()
-    {
-        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _frontTemplateRef });
-    }
-
-    private void EditDataset()
-    {
-        EventBus.Instance.Publish(new ShowDatasetEditor { DatasetRef = _datasetRef });
+        if (_previewScene != null && _previewScene != Utility.DieScene(p, R))
+            Activate();
+        else
+            UpdatePreview();
     }
 
     public override void Activate()
     {
-        var comp = GetPreviewComponent();
-        _preview.SetComponent(comp, new Vector3(Mathf.DegToRad(-45), 0, 0));
+        _previewScene = Utility.DieScene(Parameters(), RecordService.Instance);
+        var die = GD.Load<PackedScene>(_previewScene).Instantiate<VcDie>();
+        _preview.SetComponent(die, new Vector3(Mathf.DegToRad(-45), 0, 0));
         UpdatePreview();
-    }
-
-    private VcDie GetPreviewComponent()
-    {
-        string shape = "VcD6s.tscn";
-
-        switch (_sidesInput.Selected)
-        {
-            case 0:
-                shape = "vc_d_4.tscn";
-                break;
-
-            case 1:
-                shape = "VcD6s.tscn";
-                break;
-
-            case 2:
-                shape = "VcD8.tscn";
-                break;
-
-            case 3:
-                shape = "VcD10.tscn";
-                break;
-
-            case 4:
-                shape = "VcD12.tscn";
-                break;
-
-            case 5:
-                shape = "VcD20.tscn";
-                break;
-        }
-
-        var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/Dice/{shape}");
-        var vc = scene.Instantiate<VcDie>();
-        return vc;
     }
 
     public override void Deactivate()
     {
+        _previewScene = null;
         _preview.ClearComponent();
     }
 
-    private void SidesInputOnItemSelected(long index)
-    {
-        UpdateQuickSidesVisibility();
-        UpdateTemplateTarget();
-        Activate();
-    }
-
-    private void UpdateQuickSidesVisibility()
-    {
-        if (_quickSideEntries.Length < 20)
-            return;
-
-        if (int.TryParse(_sidesInput.Text, out var target))
-        {
-            for (int i = 0; i < 20; i++)
-            {
-                _quickSideEntries[i].Visible = (i < target);
-            }
-        }
-    }
-
-    public override ComponentParameters GetParams()
-    {
-        var dia = ParamToFloat(_diameterInput.Text);
-
-        var p = new DieParameters
+    private DieParameters Parameters() =>
+        new()
         {
             ComponentName = _nameInput.Text,
-            Size = dia,
+            Size = ParamToFloat(_diameterInput.Text),
             Color = _dieColor.Color,
+            SideCount = SideCount,
+            Faces = _faces.Side,
         };
 
-        if (int.TryParse(_sidesInput.Text, out var sides))
-        {
-            p = p with { SideCount = sides };
-        }
-
-        switch (_tabContainer.CurrentTab)
-        {
-            case 0:
-                p = p with { Mode = VcToken.TokenBuildMode.QuickCard, Sides = PackageSides() };
-                break;
-
-            case 1:
-                p = p with { Mode = VcToken.TokenBuildMode.Template };
-
-                p = p with { FrontTemplate = _frontTemplateRef, Dataset = _datasetRef };
-                break;
-        }
-
-        return p;
-    }
-
-    private ImmutableArray<QuickTextureField> PackageSides()
-    {
-        if (!int.TryParse(_sidesInput.Text, out var sides))
-            return ImmutableArray<QuickTextureField>.Empty;
-
-        var s = new QuickTextureField[sides];
-
-        for (int i = 0; i < sides; i++)
-        {
-            s[i] = _quickSideEntries[i].GetQuickTextureField();
-        }
-
-        return s.ToImmutableArray();
-    }
+    public override ComponentParameters GetParams() => Parameters();
 
     private void UpdatePreview()
     {
-        //normalize the size
-        var dia = ParamToFloat(_diameterInput.Text);
-        if (dia == 0)
+        var p = Parameters();
+        if (p.Size == 0)
         {
             _preview.SetComponentVisibility(false);
             return;
@@ -286,19 +105,12 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
+        var row = p.Faces.Row(_preview.CurrentItem, RecordService.Instance);
         _preview.Build(
-            GetParams(),
-            new PrototypeItemRef(_curDie, GetRow(_curDie), SnowTag.Empty),
+            p,
+            new PrototypeItemRef(_preview.CurrentItem, row, SnowTag.Empty),
             TextureFactory
         );
-    }
-
-    private SnowTag GetRow(int rowNum)
-    {
-        var rows = RecordService.Instance.GetRows(_datasetRef);
-        if (rowNum < 0 || rowNum >= rows.Count)
-            return SnowTag.Empty;
-        return rows[rowNum].Id;
     }
 
     public override void DisplayPrototype(Prototype prototype)
@@ -307,73 +119,24 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _nameInput.Text = prototype.Name;
         _diameterInput.Text = p.Size.ToString();
         _dieColor.Color = p.Color;
-
-        if (p.Sides.Length > 0)
-        {
-            var sides = p.Sides;
-            for (int i = 0; i < sides.Length && i < _quickSideEntries.Length; i++)
-            {
-                _quickSideEntries[i].SetQuickTextureField(sides[i]);
-            }
-
-            // Set the sides dropdown based on array length
-            int sideIndex = sides.Length switch
-            {
-                4 => 0,
-                6 => 1,
-                8 => 2,
-                10 => 3,
-                12 => 4,
-                20 => 5,
-                _ => 1,
-            };
-            _sidesInput.Select(sideIndex);
-            SidesInputOnItemSelected(sideIndex);
-        }
-        else if (p.SideCount > 0)
-        {
-            int sideCount = p.SideCount;
-            int sideIndex = sideCount switch
-            {
-                4 => 0,
-                6 => 1,
-                8 => 2,
-                10 => 3,
-                12 => 4,
-                20 => 5,
-                _ => 1,
-            };
-            _sidesInput.Select(sideIndex);
-            SidesInputOnItemSelected(sideIndex);
-        }
-
-        // Restore tab/mode
-        _tabContainer.CurrentTab = p.Mode switch
-        {
-            VcToken.TokenBuildMode.QuickCard => 0,
-            VcToken.TokenBuildMode.Template => 1,
-            _ => 0,
-        };
-
-        // Restore template
-        _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
-        _frontTemplateRef = p.FrontTemplate;
-
-        // Restore dataset
-        _datasetPicker.SelectedDataSet = p.Dataset;
-        _datasetRef = p.Dataset;
-        RecordService.Instance.QueueSync(this);
+        _sidesInput.Select(_sidesInput.GetItemIndex(p.SideCount));
+        ShowTemplates();
+        _faces.Side = p.Faces;
+        Activate();
+        Refresh();
     }
 
     public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
-        var p = parameters as DieParameters;
+        var p = (DieParameters)parameters;
 
-        if (string.IsNullOrEmpty(p?.ComponentName))
+        if (string.IsNullOrEmpty(p.ComponentName))
             ret.Add("Name may not be blank");
-        if ((p?.Size ?? 0) <= 0)
+        if (p.Size <= 0)
             ret.Add("Diameter must be > 0");
+        if (p.Resolve(RecordService.Instance).Error is { } error)
+            ret.Add(error);
 
         return ret;
     }

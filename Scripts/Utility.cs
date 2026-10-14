@@ -63,6 +63,7 @@ public static class Utility
     public static string ComponentTypeToScenePath(
         VisualComponentBase.VisualComponentType componentType,
         ComponentParameters parameters,
+        IRecordReader R,
         bool isCard = false,
         bool previewMode = false
     )
@@ -86,7 +87,7 @@ public static class Utility
             }
 
             case VisualComponentBase.VisualComponentType.Die:
-                return DieScene(parameters);
+                return DieScene((DieParameters)parameters, R);
 
             case VisualComponentBase.VisualComponentType.Mesh:
                 break;
@@ -138,48 +139,9 @@ public static class Utility
         return $"res://Scenes/VisualComponents/{shape}";
     }
 
-    /// <summary>The scene that shows a die, or empty for a number of sides no die has.</summary>
-    public static string DieScene(ComponentParameters parameters)
-    {
-        var sides = parameters is DieParameters die
-            ? (die.SideCount > 0 ? die.SideCount : die.Sides.Length)
-            : 0;
-
-        if (sides == 0)
-            return $"res://Scenes/VisualComponents/Dice/VcD6s.tscn";
-
-        string shape = string.Empty;
-
-        switch (sides)
-        {
-            case 4:
-                shape = "vc_d_4.tscn";
-                break;
-
-            case 6:
-                shape = "VcD6s.tscn";
-                break;
-
-            case 8:
-                shape = "VcD8.tscn";
-                break;
-
-            case 10:
-                shape = "VcD10.tscn";
-                break;
-
-            case 12:
-                shape = "VcD12.tscn";
-                break;
-
-            case 20:
-                shape = "VcD20.tscn";
-                break;
-
-            default:
-                return string.Empty;
-        }
-
-        return $"res://Scenes/VisualComponents/Dice/{shape}";
-    }
+    /// <summary>
+    /// The scene that shows a die.
+    /// </summary>
+    public static string DieScene(DieParameters die, IRecordReader R) =>
+        DieParameters.Scenes[die.Resolve(R).Sides];
 }

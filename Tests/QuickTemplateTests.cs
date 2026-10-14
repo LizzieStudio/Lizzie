@@ -66,8 +66,8 @@ public class QuickTemplateTests
     [Theory]
     [InlineData("J")]
     [InlineData("-3")]
-    [InlineData("21")]
-    public void AValueThatIsNotANumberUpToTwentyDrawsOneIcon(string value)
+    [InlineData("10")]
+    public void AValueThatIsNotANumberUpToNineDrawsOneIcon(string value)
     {
         var drawn = Draw(Stars, value);
 

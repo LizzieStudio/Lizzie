@@ -287,6 +287,7 @@ public partial class ComponentPreview : Panel
         var s = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
+            RecordService.Instance,
             card != PrototypeItemRef.None,
             true
         );

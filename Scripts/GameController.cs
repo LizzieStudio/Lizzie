@@ -49,11 +49,11 @@ public partial class GameController : Node
 
         if (
             e.AllRows
-            && prototype.Parameters is DieParameters { Mode: VcToken.TokenBuildMode.Template } die
-            && RecordService.Instance.Get<DataSet>(die.Dataset) != null
+            && prototype.Parameters is DieParameters { Faces: TemplateSide side } die
+            && RecordService.Instance.Get<DataSet>(side.Dataset) != null
         )
         {
-            SpawnRows(prototype, die.Dataset, die.Size / 10f, components);
+            SpawnRows(prototype, side.Dataset, die.Size / 10f, components);
         }
         else
         {
@@ -110,6 +110,7 @@ public partial class GameController : Node
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
+            RecordService.Instance,
             card != PrototypeItemRef.None
         );
         if (string.IsNullOrEmpty(scenePath))

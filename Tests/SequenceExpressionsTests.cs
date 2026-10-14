@@ -146,6 +146,40 @@ public class SequenceExpressionsTests
         );
     }
 
+    [Theory]
+    [InlineData("1-2|A-C", null, true, "[0:1, 0:2, 1:A, 1:B, 1:C]")]
+    [InlineData("1-2|A", 6, true, "[0:1, 0:2, 1:A, 0:1, 0:2, 1:A]")]
+    [InlineData("1-2|A, B*", 6, true, "[0:1, 0:2, 1:A, 1:B, 1:B, 1:B]")]
+    [InlineData("1-*|A", 6, true, "[0:1, 0:2, 0:3, 0:4, 0:5, 1:A]")]
+    [InlineData("1-4|A", 3, true, "[0:1, 0:2, 0:3]")]
+    [InlineData("1*|A*|B", 4, false, "[0:1, 0:1, 0:1, 0:1]")]
+    [InlineData("1, (|A", null, false, "[0:1]")]
+    public void ParsesSeveralInputsAsOne(string inputs, int? count, bool ok, string expected)
+    {
+        var parsed = SequenceExpressions.TryParseStrings(inputs.Split('|'), out var output, count);
+        var actual = $"[{string.Join(", ", output.Select(v => $"{v.Input}:{v.Value}"))}]";
+        Assert.True(
+            parsed == ok && actual == expected,
+            $"Parsing \"{inputs}\" as one{(count is int c ? $" with count {c}" : "")} returned {parsed} with "
+                + $"{actual}, expected {ok} with {expected}."
+        );
+    }
+
+    [Theory]
+    [InlineData("1-3|A", 4, false, true)]
+    [InlineData("1-3*|A", 4, true, true)]
+    [InlineData("1, 3-*|A", 3, true, true)]
+    [InlineData("\"\"|", 1, false, true)]
+    [InlineData("1-3*|A*", 3, true, false)]
+    public void MeasuresTheFewestValues(string inputs, int fewest, bool unbounded, bool ok)
+    {
+        var actual = SequenceExpressions.Measure(inputs.Split('|'));
+        Assert.True(
+            actual == (fewest, unbounded, ok),
+            $"Measuring \"{inputs}\" gave {actual}, expected ({fewest}, {unbounded}, {ok})."
+        );
+    }
+
     [StackTraceHidden]
     private static void Check(string input, int? count, bool ok, string expected)
     {

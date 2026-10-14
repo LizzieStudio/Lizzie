@@ -537,39 +537,56 @@
                         "type": "number"
                       },
                       "color": true,
-                      "sides": {
-                        "type": "array",
-                        "items": {
-                          "type": [
-                            "object",
-                            "null"
-                          ],
-                          "properties": {
-                            "faceType": {
-                              "type": "integer"
-                            },
-                            "foregroundColor": true,
-                            "caption": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "quantity": {
-                              "type": "integer"
-                            }
-                          },
-                          "additionalProperties": false
-                        }
-                      },
                       "sideCount": {
                         "type": "integer"
                       },
-                      "mode": {
-                        "type": "integer"
+                      "faces": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "image": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "suits": {
+                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "template": true,
+                              "dataset": true
+                            },
+                            "additionalProperties": false
+                          }
+                        ]
                       },
-                      "frontTemplate": true,
-                      "dataset": true,
                       "componentName": {
                         "type": [
                           "string",
