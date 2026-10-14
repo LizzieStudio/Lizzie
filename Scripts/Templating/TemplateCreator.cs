@@ -516,7 +516,7 @@ public partial class TemplateCreator : Window
 
         static string Percent(float value) =>
             MathF
-                .Round(value, MidpointRounding.AwayFromZero)
+                .Round(value, 2, MidpointRounding.AwayFromZero)
                 .ToString(CultureInfo.InvariantCulture);
 
         UpdateParamControl("X", Percent(scaleX * (m.l + w / 2f)));
@@ -866,8 +866,8 @@ public partial class TemplateCreator : Window
         if (d.Count == 1)
         {
             var te = d[0];
-            var p = new Vector2I(te.CenterX, te.CenterY);
-            br = new Rect2I(p, te.Width, te.Height);
+            var p = new Vector2I((int)te.CenterX, (int)te.CenterY);
+            br = new Rect2I(p, (int)te.Width, (int)te.Height);
         }
         else
         {

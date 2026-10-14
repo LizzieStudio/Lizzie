@@ -92,11 +92,11 @@ public class TemplateElement : ITemplateElement
 
     protected void UpdateCoreParameterData(TextureFactory.TextureObject to, TextureContext context)
     {
-        to.CenterX = EvaluateNumberParameter(_parameters, "X", context);
-        to.CenterY = EvaluateNumberParameter(_parameters, "Y", context);
+        to.CenterX = EvaluateFloatParameter(_parameters, "X", context);
+        to.CenterY = EvaluateFloatParameter(_parameters, "Y", context);
         to.Anchor = EvaluateAnchorParameter(_parameters, "Anchor", context);
-        to.Height = EvaluateNumberParameter(_parameters, "Height", context);
-        to.Width = EvaluateNumberParameter(_parameters, "Width", context);
+        to.Height = EvaluateFloatParameter(_parameters, "Height", context);
+        to.Width = EvaluateFloatParameter(_parameters, "Width", context);
         to.RotationDegrees = EvaluateNumberParameter(_parameters, "Rotation", context);
     }
 
@@ -122,7 +122,24 @@ public class TemplateElement : ITemplateElement
         return Substitute(p.Value, context);
     }
 
+    /// <summary>
+    /// The number parameter <paramref name="key"/>, rounded to a whole number.
+    /// </summary>
     public int EvaluateNumberParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    ) =>
+        (int)
+            MathF.Round(
+                EvaluateFloatParameter(parameters, key, context),
+                MidpointRounding.AwayFromZero
+            );
+
+    /// <summary>
+    /// The number parameter <paramref name="key"/>, or 0 when it's missing or isn't a number.
+    /// </summary>
+    public float EvaluateFloatParameter(
         IList<TemplateParameter> parameters,
         string key,
         TextureContext context
@@ -132,10 +149,13 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return 0;
 
-        var o = Substitute(p.Value, context);
-
-        double.TryParse(o, NumberStyles.Float, CultureInfo.InvariantCulture, out var result);
-        return (int)Math.Round(result, MidpointRounding.AwayFromZero);
+        float.TryParse(
+            Substitute(p.Value, context),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var result
+        );
+        return result;
     }
 
     public HorizontalAlignment EvaluateHorizontalAlignmentParameter(

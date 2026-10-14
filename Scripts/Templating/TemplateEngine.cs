@@ -40,8 +40,8 @@ public static class TemplateEngine
     )
     {
         var size = _textureContext.ParentSize;
-        static int Pixels(float size, int percent) =>
-            (int)MathF.Round(size * percent / 100f, MidpointRounding.AwayFromZero);
+        static float Pixels(float size, float percent) =>
+            MathF.Round(size * percent / 100f, MidpointRounding.AwayFromZero);
 
         var objects = element.IsVisible(_textureContext)
             ? element.GetElementData(_textureContext)
@@ -59,7 +59,6 @@ public static class TemplateEngine
                     Multiline = l.Multiline,
                     Text = l.Text,
                     ForegroundColor = l.ForegroundColor,
-                    Font = new SystemFont(),
                     FontSize = l.FontSize,
                     Autosize = l.Autosize,
                     HorizontalAlignment = l.HorizontalAlignment,

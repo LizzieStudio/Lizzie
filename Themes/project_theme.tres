@@ -1,5 +1,10 @@
 [gd_resource type="Theme" format=3 uid="uid://bo5iegtjuondi"]
 
+[ext_resource type="FontFile" uid="uid://bwdildvf6oi4x" path="res://Fonts/NotoSans/NotoSans-Regular.ttf" id="1_regular"]
+[ext_resource type="FontFile" uid="uid://ddqa2ny0nkyj5" path="res://Fonts/NotoSans/NotoSans-Bold.ttf" id="2_bold"]
+[ext_resource type="FontFile" uid="uid://b51l6ag7svfco" path="res://Fonts/NotoSans/NotoSans-Italic.ttf" id="3_italic"]
+[ext_resource type="FontFile" uid="uid://db1iaf7u4g8jl" path="res://Fonts/NotoSans/NotoSans-BoldItalic.ttf" id="4_bold_italic"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
 content_margin_left = 8.0
 content_margin_top = 2.0
@@ -8,4 +13,8 @@ content_margin_bottom = 2.0
 bg_color = Color(0, 0, 0, 1)
 
 [resource]
+default_font = ExtResource("1_regular")
+RichTextLabel/fonts/bold_font = ExtResource("2_bold")
+RichTextLabel/fonts/bold_italics_font = ExtResource("4_bold_italic")
+RichTextLabel/fonts/italics_font = ExtResource("3_italic")
 TooltipPanel/styles/panel = SubResource("StyleBoxFlat_tooltip")

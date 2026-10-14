@@ -47,6 +47,35 @@ public class TemplateElementTests
     }
 
     [Fact]
+    public void PositionsKeepFractionsOfAPercent()
+    {
+        var element = new TextElement();
+        element.SetParameterValue("X", "16.5");
+
+        var drawn = element.GetElementData(new TextureContext()).Single();
+        Assert.True(drawn.CenterX == 16.5f, $"X \"16.5\" drew at {drawn.CenterX}, expected 16.5.");
+    }
+
+    [Fact]
+    public void TrackBoxesFillTheTrack()
+    {
+        var track = new TrackElement();
+        track.SetParameterValue("Track Type", "Horizontal");
+        track.SetParameterValue("X", "50");
+        track.SetParameterValue("Width", "100");
+        track.SetParameterValue("# of Boxes", "3");
+
+        // The first frame is the whole track; the rest are its boxes.
+        var boxes = track.GetElementData(new TextureContext()).Skip(1).ToList();
+        float left = boxes.Min(b => b.CenterX - b.Width / 2),
+            right = boxes.Max(b => b.CenterX + b.Width / 2);
+        Assert.True(
+            Math.Abs(left) < 0.001 && Math.Abs(right - 100) < 0.001,
+            $"3 boxes across a 100% track span {left}..{right}, expected 0..100."
+        );
+    }
+
+    [Fact]
     public void ImagesCarryABoundQuantity()
     {
         var pips = new Column { Id = new SnowTag(1), Name = "Pips" };

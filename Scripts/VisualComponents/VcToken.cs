@@ -222,8 +222,8 @@ public partial class VcToken : VisualComponentBase
         _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, BlankFace);
         _mainMesh.SetSurfaceOverrideMaterial(BackSurface, BlankFace);
         _mainMesh.SetSurfaceOverrideMaterial(SideSurface, SideMaterial);
-        SetFrame("front_rect", 1, 1, 0);
-        SetFrame("back_rect", 1, 1, 0);
+        SetFrame("front_rect", GridLayout.Single, 0);
+        SetFrame("back_rect", GridLayout.Single, 0);
 
         ShapeProfiles.Clear();
         ShapeProfiles.Add(ShapeProfile(Shape, _width, _height));
@@ -364,7 +364,7 @@ public partial class VcToken : VisualComponentBase
     /// <summary>
     /// A side's texture, as it loads, and which frame of it the card shows.
     /// </summary>
-    private sealed record SideView(Task<Texture2D> Texture, int Columns, int Rows, int Frame);
+    private sealed record SideView(Task<Texture2D> Texture, GridLayout Layout, int Frame);
 
     /// <summary>
     /// What <paramref name="side"/> shows on this card, or null when it shows nothing.
@@ -389,17 +389,21 @@ public partial class VcToken : VisualComponentBase
                 var cards = quick.Cards();
                 if (cards.Count == 0)
                     return null;
-                ComputeCellSize(_height, _width, out var cellW, out var cellH);
+                // Cards that repeat are only drawn once.
+                // This isn't exhaustive, but it catches things like A*2
+                var distinct = cards.Distinct().ToList();
                 return SheetView(
                     new Sheet(
                         $"quick:{prototype.SheetKey()}:{key}",
-                        QuickTemplate.Template,
+                        QuickTemplate.Template with
+                        {
+                            Width = _width / CmPerInch,
+                            Height = _height / CmPerInch,
+                        },
                         QuickTemplate.DataSet,
-                        cards.Select(c => QuickTemplate.Row(c.Suit, c.Value)).ToList(),
-                        cellW,
-                        cellH
+                        distinct.Select(c => QuickTemplate.Row(c.Suit, c.Value)).ToList()
                     ),
-                    n % cards.Count
+                    distinct.IndexOf(cards[n % cards.Count])
                 );
             }
 
@@ -412,11 +416,10 @@ public partial class VcToken : VisualComponentBase
                     || n >= values.Length
                     || asset.Layout.Frame(values[n]) is not int frame
                 )
-                    return new SideView(Task.FromResult(MissingFrameTexture), 1, 1, 0);
+                    return new SideView(Task.FromResult(MissingFrameTexture), GridLayout.Single, 0);
                 return new SideView(
                     TextureCache.Instance.GetOrCreateAssetTexture(asset),
-                    asset.Layout.Columns,
-                    asset.Layout.Rows,
+                    asset.Layout,
                     frame
                 );
             }
@@ -429,17 +432,14 @@ public partial class VcToken : VisualComponentBase
                     return null;
                 var rows = R.GetRows(templateSide.Dataset);
                 int frame = rows.FindIndex(r => r.Id == row);
-                var (cellW, cellH) = template.Pixels(10 * BASE_DPI);
-                if (frame < 0 || cellW <= 0 || cellH <= 0)
+                if (frame < 0)
                     return null;
                 return SheetView(
                     new Sheet(
                         $"tpl:{template.SheetKey()}:{dataset.SheetKey()}:{rows.SheetKey()}",
                         template,
                         dataset,
-                        rows,
-                        cellW,
-                        cellH
+                        rows
                     ),
                     frame
                 );
@@ -450,29 +450,28 @@ public partial class VcToken : VisualComponentBase
         }
     }
 
-    private const float BASE_DPI = 10f;
+    private const float CmPerInch = 2.54f;
+
+    private const float PixelsPerInch = 100;
 
     /// <summary>
-    /// One side's sheet: <see cref="Template"/> drawn once per row, each in a
-    /// <see cref="CellWidth"/> by <see cref="CellHeight"/> cell, and cached under <see cref="Key"/>.
+    /// One side's sheet.
     /// </summary>
-    private sealed record Sheet(
-        string Key,
-        Template Template,
-        DataSet DataSet,
-        List<DataRow> Rows,
-        int CellWidth,
-        int CellHeight
-    );
+    private sealed record Sheet(string Key, Template Template, DataSet DataSet, List<DataRow> Rows);
 
     /// <summary>
     /// Shows <paramref name="frame"/> of <paramref name="sheet"/>, building it if it isn't cached yet.
     /// </summary>
     private SideView SheetView(Sheet sheet, int frame)
     {
-        int n = sheet.Rows.Count;
-        int columns = (int)Math.Ceiling(Math.Sqrt(n));
-        int rows = (int)Math.Ceiling((double)n / columns);
+        var (width, height) = sheet.Template.Pixels(PixelsPerInch);
+        if (width <= 0 || height <= 0)
+            return null;
+        var (layout, cellWidth, cellHeight) = SpriteSheetBuilder.Grid(
+            width,
+            height,
+            sheet.Rows.Count
+        );
         var texture = TextureCache.Instance.GetOrBuildDerived(
             sheet.Key,
             () =>
@@ -481,8 +480,8 @@ public partial class VcToken : VisualComponentBase
                 var ctx = new TextureContext
                 {
                     DataSet = sheet.DataSet,
-                    Dpi = 10 * BASE_DPI,
-                    ParentSize = new Vector2(sheet.CellWidth, sheet.CellHeight),
+                    Dpi = PixelsPerInch,
+                    ParentSize = new Vector2(cellWidth, cellHeight),
                 };
                 foreach (var row in sheet.Rows)
                 {
@@ -492,14 +491,14 @@ public partial class VcToken : VisualComponentBase
                 return new SpriteSheetBuilder(
                     TextureFactory,
                     defs,
-                    sheet.CellWidth,
-                    sheet.CellHeight,
-                    columns,
-                    rows
+                    cellWidth,
+                    cellHeight,
+                    layout.Columns,
+                    layout.Rows
                 ).Start();
             }
         );
-        return new SideView(texture, columns, rows, frame);
+        return new SideView(texture, layout, frame);
     }
 
     /// <summary>
@@ -514,28 +513,16 @@ public partial class VcToken : VisualComponentBase
             return;
         if (front != null)
         {
-            (_faceHframes, _faceVframes, _faceFrame) = (front.Columns, front.Rows, front.Frame);
+            (FaceLayout, FaceFrame) = (front.Layout, front.Frame);
             FaceTexture = frontTexture ?? MissingFrameTexture;
             MapFrontTexture();
         }
         if (back != null)
         {
-            (_backHframes, _backVframes, _backFrame) = (back.Columns, back.Rows, back.Frame);
+            (BackLayout, BackFrame) = (back.Layout, back.Frame);
             BackTexture = backTexture ?? MissingFrameTexture;
             MapBackTexture();
         }
-    }
-
-    private static void ComputeCellSize(float height, float width, out int cellW, out int cellH)
-    {
-        cellW = 256;
-        cellH = 256;
-        if (height <= 0 || width <= 0)
-            return;
-        if (height > width)
-            cellW = (int)(width * 256 / height);
-        else
-            cellH = (int)(height * 256 / width);
     }
 
     private bool _frontTextureGenerated;
@@ -556,7 +543,7 @@ public partial class VcToken : VisualComponentBase
         _frontTextureGenerated = true;
         _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, FaceMaterial(FaceTexture));
 
-        SetFrame("front_rect", _faceHframes, _faceVframes, _faceFrame);
+        SetFrame("front_rect", FaceLayout, FaceFrame);
     }
 
     private bool _mapBackTextureRequired;
@@ -573,13 +560,13 @@ public partial class VcToken : VisualComponentBase
         _mapBackTextureRequired = false;
         _backTextureGenerated = true;
         _mainMesh.SetSurfaceOverrideMaterial(BackSurface, FaceMaterial(BackTexture));
-        SetFrame("back_rect", _backHframes, _backVframes, _backFrame);
+        SetFrame("back_rect", BackLayout, BackFrame);
     }
 
-    private void SetFrame(string face, int hframes, int vframes, int frame)
+    private void SetFrame(string face, GridLayout layout, int frame)
     {
-        int cols = Math.Max(hframes, 1);
-        int rows = Math.Max(vframes, 1);
+        int cols = Math.Max(layout.Columns, 1);
+        int rows = Math.Max(layout.Rows, 1);
         int col = frame % cols;
         int row = frame / cols;
         _mainMesh.SetInstanceShaderParameter(
@@ -603,19 +590,11 @@ public partial class VcToken : VisualComponentBase
         "res://Textures/missing_frame.png"
     );
 
-    private int _faceHframes = 1;
-    private int _faceVframes = 1;
-    private int _faceFrame = 0;
-    private int _backHframes = 1;
-    private int _backVframes = 1;
-    private int _backFrame = 0;
+    public GridLayout FaceLayout { get; private set; } = GridLayout.Single;
+    public int FaceFrame { get; private set; }
 
-    public int FaceHframes => _faceHframes;
-    public int FaceVframes => _faceVframes;
-    public int FaceFrame => _faceFrame;
-    public int BackHframes => _backHframes;
-    public int BackVframes => _backVframes;
-    public int BackFrame => _backFrame;
+    public GridLayout BackLayout { get; private set; } = GridLayout.Single;
+    public int BackFrame { get; private set; }
 
     public enum TokenType
     {

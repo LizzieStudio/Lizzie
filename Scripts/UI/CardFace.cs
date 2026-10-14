@@ -27,8 +27,9 @@ public partial class CardFace : TextureRect
         if (sheet == null || sheet.GetWidth() == 0 || sheet.GetHeight() == 0)
             return null;
 
-        int hframes = Math.Max(1, back ? card.BackHframes : card.FaceHframes);
-        int vframes = Math.Max(1, back ? card.BackVframes : card.FaceVframes);
+        var layout = back ? card.BackLayout : card.FaceLayout;
+        int hframes = Math.Max(1, layout.Columns);
+        int vframes = Math.Max(1, layout.Rows);
         int frame = back ? card.BackFrame : card.FaceFrame;
         int frameW = sheet.GetWidth() / hframes;
         int frameH = sheet.GetHeight() / vframes;

@@ -14,6 +14,14 @@ public partial class TextureFactory : SubViewport
         _viewport = this;
     }
 
+    /// <summary>
+    /// The font to use.
+    /// </summary>
+    /// <remarks>
+    /// We're currently using Noto Sans, which is free and has a lot of coverage.
+    /// </remarks>
+    private static Font TextFont => ThemeDB.GetProjectTheme().DefaultFont;
+
     private int _frameCount;
     private bool _generated;
 
@@ -255,7 +263,7 @@ public partial class TextureFactory : SubViewport
         int fontSize = obj.FontSize;
         if (obj.Autosize)
         {
-            fontSize = AutosizeFont(measureText, obj.Font, obj.Height, obj.Width, 6, 72, wrap);
+            fontSize = AutosizeFont(measureText, TextFont, obj.Height, obj.Width, 6, 72, wrap);
         }
 
         if (fontSize == 0)
@@ -266,7 +274,7 @@ public partial class TextureFactory : SubViewport
         {
             // Measure the wrapped size and clamp to obj.Height.
             float wrapWidth = obj.Width * 0.9f;
-            Vector2 wrappedSize = obj.Font.GetMultilineStringSize(
+            Vector2 wrappedSize = TextFont.GetMultilineStringSize(
                 measureText,
                 width: (int)wrapWidth,
                 fontSize: fontSize
@@ -282,7 +290,7 @@ public partial class TextureFactory : SubViewport
         {
             // Single-line: shrink the label to the measured text size so that
             // MoveOriginForAlignment places it correctly for all three alignments.
-            Vector2 singleSize = obj.Font.GetStringSize(measureText, fontSize: fontSize);
+            Vector2 singleSize = TextFont.GetStringSize(measureText, fontSize: fontSize);
 
             if (singleSize.X == 0 || singleSize.Y == 0)
                 return;
@@ -299,8 +307,10 @@ public partial class TextureFactory : SubViewport
         label.ScrollActive = false;
         label.Size = labelSize;
         label.AddThemeColorOverride("default_color", obj.ForegroundColor);
-        label.AddThemeFontOverride("normal_font", obj.Font);
         label.AddThemeFontSizeOverride("normal_font_size", fontSize);
+        label.AddThemeFontSizeOverride("bold_font_size", fontSize);
+        label.AddThemeFontSizeOverride("italics_font_size", fontSize);
+        label.AddThemeFontSizeOverride("bold_italics_font_size", fontSize);
 
         if (wrap)
         {
@@ -311,7 +321,7 @@ public partial class TextureFactory : SubViewport
 
         // Build content segment by segment so [img] tags become real AddImage calls,
         // scaled to match the font line height.
-        PopulateRichTextLabel(label, obj.Text, obj.Font, fontSize, obj.ForegroundColor);
+        PopulateRichTextLabel(label, obj.Text, TextFont, fontSize, obj.ForegroundColor);
 
         if (wrap)
             label.Pop();
@@ -725,7 +735,7 @@ public partial class TextureFactory : SubViewport
         if (obj.Quantity < 5)
         {
             //triangles for 2-4
-            int b4 = obj.Width / 4;
+            int b4 = (int)(obj.Width / 4);
             h2 = (int)(Math.Sqrt(3) * obj.Width / 4);
 
             tris[0] = new Vector3(0, h2, 0);
@@ -741,7 +751,7 @@ public partial class TextureFactory : SubViewport
             float s2 = 0.7f;
             float x2 = 0.1f;
             h2 = (int)(Math.Sqrt(3) * obj.Width / 6);
-            b6 = obj.Width / 6;
+            b6 = (int)(obj.Width / 6);
             tris[0] = new Vector3(0, 2 * h2, 0);
             tris[1] = new Vector3(-b6, h2 * x1, 0);
             tris[2] = new Vector3(0, h2 * 2 * s1, 180);
@@ -843,7 +853,7 @@ public partial class TextureFactory : SubViewport
 
     private void RenderTriangleText(TextureObject obj)
     {
-        Vector2 textSize = obj.Font.GetStringSize(obj.Text, fontSize: 12);
+        Vector2 textSize = TextFont.GetStringSize(obj.Text, fontSize: 12);
         if (textSize.Y == 0)
             return;
 
@@ -861,7 +871,6 @@ public partial class TextureFactory : SubViewport
         {
             CenterX = (int)newX,
             CenterY = (int)newY,
-            Font = obj.Font,
             Height = (int)bounds.Y,
             Width = (int)bounds.X,
             Multiline = obj.Multiline,
@@ -875,7 +884,7 @@ public partial class TextureFactory : SubViewport
         RenderRectangleText(o, o.Multiline);
     }
 
-    private static Vector2 ScaleRectangleInTriangle(int triangleSide, float aspectRatio)
+    private static Vector2 ScaleRectangleInTriangle(float triangleSide, float aspectRatio)
     {
         if (aspectRatio == 0)
         {
@@ -917,7 +926,6 @@ public partial class TextureFactory : SubViewport
         {
             CenterX = (int)newX,
             CenterY = (int)newY,
-            Font = obj.Font,
             Height = (int)bounds.Y,
             Width = (int)bounds.X,
             Multiline = obj.Multiline,
@@ -1044,8 +1052,8 @@ public partial class TextureFactory : SubViewport
     private static int AutosizeFont(
         string caption,
         Font font,
-        int height,
-        int width,
+        float height,
+        float width,
         int minSize,
         int maxSize,
         bool wrap = false
@@ -1061,11 +1069,8 @@ public partial class TextureFactory : SubViewport
                 ? font.GetMultilineStringSize(caption, width: (int)targetWidth, fontSize: size)
                 : font.GetStringSize(caption, fontSize: size);
 
-            bool tooBig = wrap
-                ? measured.Y > targetHeight
-                : measured.X > targetWidth || measured.Y > targetHeight;
-
-            if (tooBig)
+            // A single word bigger than one line won't wrap, so we still have to measure.
+            if (measured.X > targetWidth || measured.Y > targetHeight)
                 return last;
 
             last = size;
@@ -1116,7 +1121,6 @@ public partial class TextureFactory : SubViewport
             TriangleFace = obj.TriangleFace;
             Text = obj.Text;
             ForegroundColor = obj.ForegroundColor;
-            Font = obj.Font;
             Height = obj.Height;
             Width = obj.Width;
             CenterX = obj.CenterX;
@@ -1135,15 +1139,14 @@ public partial class TextureFactory : SubViewport
         public string Text { get; set; }
         public Color ForegroundColor { get; set; } = Colors.Black;
         public Color BackgroundColor { get; set; } = Colors.Transparent;
-        public Font Font { get; set; }
 
         public int FontSize { get; set; } = 12;
 
         public bool Autosize { get; set; } = true;
-        public int Height { get; set; }
-        public int Width { get; set; }
-        public int CenterX { get; set; }
-        public int CenterY { get; set; }
+        public float Height { get; set; }
+        public float Width { get; set; }
+        public float CenterX { get; set; }
+        public float CenterY { get; set; }
 
         public float Scale { get; set; } = 1f;
 
