@@ -60,6 +60,7 @@ folder_colors={
 [gui]
 
 common/drag_threshold=5
+theme/custom="uid://bo5iegtjuondi"
 
 [input]
 

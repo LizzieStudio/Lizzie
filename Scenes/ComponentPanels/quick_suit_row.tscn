@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cn3pcewp6eemn"]
 
 [ext_resource type="Script" uid="uid://kjnvgfygtrw7" path="res://Scripts/ComponentPanelResults/QuickSuitRow.cs" id="1_row"]
+[ext_resource type="PackedScene" uid="uid://c1m4xx5vxyd0r" path="res://Scenes/Controls/text_sequence_edit.tscn" id="2_values"]
 
 [node name="QuickSuitRow" type="HBoxContainer" unique_id=1052625006 node_paths=PackedStringArray("_background", "_foreground", "_values", "_icon", "_showText")]
 script = ExtResource("1_row")
@@ -23,13 +24,12 @@ layout_mode = 2
 tooltip_text = "Text and icon color"
 edit_alpha = false
 
-[node name="Values" type="LineEdit" parent="." unique_id=164643204]
+[node name="Values" parent="." unique_id=164643204 instance=ExtResource("2_values")]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-tooltip_text = "One card per value, like 1-10, J, Q, K. Put text with commas in quotes: \"Draw, then discard\"."
-text = "1-6"
-placeholder_text = "1-10, J, Q, K"
+tooltip_text = "One card per value"
+placeholder_text = "A, 2-10, J, Q, K"
 
 [node name="Icon" type="OptionButton" parent="." unique_id=581463800]
 layout_mode = 2

@@ -68,7 +68,7 @@ public class TrackElement : TemplateElement
             {
                 Name = "Box Text",
                 Value = string.Empty,
-                Type = TemplateParameter.TemplateParameterType.Text,
+                Type = TemplateParameter.TemplateParameterType.Sequence,
             }
         );
 
@@ -86,14 +86,7 @@ public class TrackElement : TemplateElement
     {
         var l = new List<TextureFactory.TextureObject>();
 
-        SequenceExpressions.TryParse(
-            EvaluateTextParameter(Parameters, "Box Text", context),
-            out var boxValues
-        );
-        var spaceValue = EvaluateNumberParameter(Parameters, "# of Boxes", context);
-
-        //the number of spaces on the track is the greater of the defined contents or just the number entered by the user
-        var spaceCount = Math.Max(boxValues.Length, spaceValue);
+        var spaceCount = EvaluateNumberParameter(Parameters, "# of Boxes", context);
 
         var foregroundColor = EvaluateColorParameter(Parameters, "Stroke Color", context);
         var fontColor = EvaluateColorParameter(Parameters, "Text Color", context);
@@ -122,6 +115,12 @@ public class TrackElement : TemplateElement
         {
             spaceCount = Math.Max(1, spaceCount); //Make sure there's at least one space. Maybe just don't render instead?
         }
+
+        SequenceExpressions.TryParseStrings(
+            EvaluateTextParameter(Parameters, "Box Text", context),
+            out var boxValues,
+            spaceCount
+        );
 
         var spaces = new List<SpaceDef>();
 

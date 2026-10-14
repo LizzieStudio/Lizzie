@@ -132,4 +132,34 @@ public class TemplateElementTests
             $"An image with Visible {{Pips}} = \"{cell}\" is {(actual ? "shown" : "hidden")}."
         );
     }
+
+    [Theory]
+    [InlineData("Vertical", "4", "1*", "[1, 1, 1, 1]")]
+    [InlineData("Vertical", "4", "1, 2, 3", "[1, 2, 3, 1]")]
+    [InlineData("Vertical", "4", "1-6", "[1, 2, 3, 4]")]
+    [InlineData("Vertical", "4", "Start, 2-*", "[Start, 2, 3, 4]")]
+    [InlineData("Vertical", "4", "", "[]")]
+    [InlineData("Perimeter", "4", "A*", "[A, A, A, A, A, A, A, A]")]
+    public void BoxTextIsFittedToTheBoxes(
+        string trackType,
+        string boxes,
+        string text,
+        string expected
+    )
+    {
+        var element = new TrackElement();
+        element.SetParameterValue("Track Type", trackType);
+        element.SetParameterValue("# of Boxes", boxes);
+        element.SetParameterValue("Box Text", text);
+
+        var texts = element
+            .GetElementData(new TextureContext())
+            .Where(o => o.Type == TextureFactory.TextureObjectType.Text)
+            .Select(o => o.Text);
+        var actual = $"[{string.Join(", ", texts)}]";
+        Assert.True(
+            actual == expected,
+            $"A {trackType} track with {boxes} boxes and Box Text \"{text}\" shows {actual}, expected {expected}."
+        );
+    }
 }

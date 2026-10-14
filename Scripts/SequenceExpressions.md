@@ -1,10 +1,14 @@
 # Sequence Expressions
 
-Sequence Expressions (SeqEx) is a domain specific language for specifying sequences of integers. It's similar to the text you write to specify pages for printing: `1-3,5,7`. SeqEx turns a string like this into an array of integers: `[1,2,3,5,7]`. For most applications, like selecting a card from a deck, the first item is `1`.
+Sequence Expressions (SeqEx) is a domain specific language for specifying sequences of strings or integers. It's similar to the text you write to specify pages for printing, `1-3, 5, 7`, but may include text and character, `1, 3, Skip, J-L`. SeqEx turns a string like this into an array of strings: `["1", "3", "Skip", "J", "K", "L"]`.
 
-The parser uses the signature `bool TryParse(string input, out int[] output, int? count = null)` which returns true when it succeeded. Whether it succeeds or fails, however, it returns an array of any integers that it was able to find in the input string. Expressions are separated by commas or whitespace, and extra commas are ignored (`,1,,2,` resolves to `[1, 2]`). It will also return partial results even if the input has an error. For example, if the input is `1,3-`, the parse would fail, but it would also return `[1]` for the part of the input that it could understand.
+The parser uses the signature `bool TryParseStrings(string input, out string[] output, int? count = null)` which returns true when it succeeded. Whether it succeeds or fails, however, it returns an array of any strings that it was able to find in the input string. Expressions are separated by commas, their strings are trimmed, and extra commas are ignored (`, 1 ,, B ,` resolves to `["1", "B"]`).
 
-The two standard features are plain numbers `3` and ranges `1-3`. Duplicate numbers are allowed and input order is preserved, so `2-3, 1-2` resolves to `[2, 3, 1, 2]`. You can also specify ranges that descend: `3-1` resolves to `[3, 2, 1]`.
+Input strings are trimmed, but they may still have spaces: `A, Skip Next, B` resolves to `["A", "Skip Next", "B"]`. Commas are interpreted as a separator, so if you want a comma, you must escape the string by surrounding it with quotes: `A, "Draw, Discard", B` resolves to `["A", "Draw, Discard", "B"]`. The parser will return partial results even if the input has an error. For example, if the input is `1,"B`, the parse would fail, but it would also return `["1"]` for the part of the input that it could understand.
+
+There is another call for when you want to specify a sequence of numbers, `bool TryParseNumbers(string input, out int[] output, int? count = null)`. It follows the same rules but will parse the output into integers before returning and will error out if any element isn't an integer. For most applications, like selecting a card from a deck, the elements are treated as if they're 1-indexed.
+
+The two standard features are plain strings, which can have spaces, `Skip Next`, and ranges, `1-3` or `A-F`. Duplicate numbers are allowed and input order is preserved, so `2-3, 1-2` with number parsing resolves to `[2, 3, 1, 2]`. You can also specify ranges that descend: `C-A` resolves to `["C", "B", "A"]`.
 
 You can take a sequence s and repeat it N times with the suffix `*N`. For example:
 * Repeating a number: `1*3` resolves to `[1, 1, 1]`
@@ -12,21 +16,25 @@ You can take a sequence s and repeat it N times with the suffix `*N`. For exampl
 * Repeating a sequence: `(1, 3-4)*2` resolves to `[1, 3, 4, 1, 3, 4]`
 * Repeating 0 times returns nothing: `2*0` resolves to `[]`
 
-You can take every Nth integer of a sequence s, starting at the first, using the suffix `/N`. For example:
+You can take every Nth item of a sequence s, starting at the first, using the suffix `/N`. For example:
 * Take every 2nd integer from a range: `2-7/2` resolves to `[2, 4, 6]`
 * Take every 3rd integer from a sequence: `(1, 3-6, 8-10)/3` resolves to `[1, 5, 9]`
 * `/1` is a no-op: `(1,3,5)/1` resolves to `[1, 3, 5]`
 * `/0` returns false for an error
 
+All of these features work for string parsing as well.
+* Repeating: `(A, B)*2` resolves to `["A", "B", "A", "B"]`
+* Nth string: `A-F/2` resolves to `["A", "C", "E"]`
+
 As with most languages, expressions can be arbitrarily nested with operations, so you can combine operations like:
 * Repeat a range and take every 2nd number: `1-3*3/2` resolves to `[1, 3, 2, 1, 3]`.
 * Take every 2nd number from a range and repeat it: `1-3/2*3` resolves to `[1, 3, 1, 3, 1, 3]`.
 
-More precisely, numbers `5`, ranges `1-5`, and sequences, `(1,5)` are all single expressions. The postfix unary operators, `*N` and `/N` work on whatever expression they follow and also create expressions. This means `1,3*2` resolves to `[1, 3, 3]`. Both `*N` and `/N` do not allow for whitespace, so `* 5` and `/ 5` are either different operations or errors.
+More precisely, numbers `5`, ranges `1-5`, and sequences, `(1,5)` are all single expressions. The postfix unary operators, `*N` and `/N` work on whatever expression they follow and also create expressions. This means `1,3*2` resolves to `[1, 3, 3]`. Both `*N` and `/N` do not allow for whitespace, so `* 5` and `/ 5` parsed with `TryParseNumbers` are either different operations or errors. With `TryParseStrings` they will likely become `"* 5"` and `"/ 5"` instead, so be aware that `TryParseStrings` will likely mask errors.
 
-TryParse has an optional argument for adding a count: `TryParse(string input, out int[] output, int? count = null)`, which specifies how many integers to get back. If the sequence has fewer integers than the count, it is repeated to cover the difference. If the sequence has more integers than the count, they are trimmed to get down to the count. This applies even when there is an error: `1, 3-` with a count of 3 resolves to `[1, 1, 1]`. An empty output, however, is always empty: `1-` resolves to `[]` with any count.
+`TryParseStrings` and `TryParseNumbers` have an optional argument for adding a count, `TryParseNumbers(string input, out int[] output, int? count = null)`, which specifies how many items to get back. If the sequence has fewer items than the count, it is repeated to cover the difference, and if the sequence has more items than the count, they are trimmed to get down to the count. This applies even when there is an error: `1, 3-` in `TryParseNumbers` with a count of 3 resolves to `[1, 1, 1]`. An empty output, however, is always empty: `1-` in `TryParseNumbers` resolves to `[]` with any count.
 
-There is one feature that providing a count gives you, however. You can always include a single repetition in the input string which does not specify a number: `1-3*`. Normally, this is not repeated (`*1`), but when you specify a count and the sequence would produce fewer integers than the count, the one unbounded repetition is repeated to cover the difference. For example, parsing `1, 3*, 5` with a count of 5 would produce `[1, 3, 3, 3, 5]`.
+There is one additional language feature that providing a count gives you, however. You can always include a single "unbounded" repetition in the input string which does not specify a number: `1-3*`. Normally, this is not repeated (`*1`), but when you specify a count and the sequence would produce fewer integers than the count, the one unbounded repetition is repeated to cover the difference. For example, parsing `1, 3*, 5` with a count of 5 would produce `[1, 3, 3, 3, 5]`.
 
 When a sequence would produce more integers than the count, the `*` sequence is instead trimmed to fit the sequence into the count. This makes `*` useful when you want to make a range shorter. For example, you can specify `1, 3-100*, 2` with no expectation to ever use a count greater than 100. To get an unbounded range, however, you can simply end a range in `*`: `1-*`. This will continue the range for as long as is necessary to fill out the count: `1, 3-*` with a count of 5 would resolve to `[1, 3, 4, 5, 6]`.
 

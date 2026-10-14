@@ -39,7 +39,7 @@ public sealed record QuickSide : SideParameters
             {
                 if (string.IsNullOrWhiteSpace(suit.Values))
                     return [(suit, "")];
-                SequenceExpressions.TryParse(suit.Values, out var values);
+                SequenceExpressions.TryParseStrings(suit.Values, out var values);
                 return values.Select(value => (suit, value));
             })
             .ToList();

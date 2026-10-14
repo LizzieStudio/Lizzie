@@ -58,6 +58,7 @@ public partial class TemplateCreator : Window
     private PackedScene _verJustifyParam;
     private PackedScene _imageParam;
     private PackedScene _trackTypeParam;
+    private PackedScene _sequenceParam;
 
     private ITemplateElement _selectedElement;
     private TreeItem _rootItem;
@@ -478,6 +479,7 @@ public partial class TemplateCreator : Window
         _verJustifyParam = GD.Load<PackedScene>("res://Scenes/Templating/VerJustifyParam.tscn");
         _imageParam = GD.Load<PackedScene>("res://Scenes/Templating/ImageParam.tscn");
         _trackTypeParam = GD.Load<PackedScene>("res://Scenes/Templating/TrackTypeParam.tscn");
+        _sequenceParam = GD.Load<PackedScene>("res://Scenes/Templating/SequenceParam.tscn");
     }
 
     private void HeightWidthChange(string newtext)
@@ -793,6 +795,10 @@ public partial class TemplateCreator : Window
 
                 case TemplateParameter.TemplateParameterType.TrackType:
                     t = _trackTypeParam.Instantiate<PopupParamControl>();
+                    break;
+
+                case TemplateParameter.TemplateParameterType.Sequence:
+                    t = _sequenceParam.Instantiate<NumericParamControl>();
                     break;
 
                 default:

@@ -44,17 +44,6 @@ public static class Utility
         return 0.95f / Mathf.Max(size.X, size.Y);
     }
 
-    /// <summary>
-    /// Tints a field's text red if <paramref name="valid"/> is false.
-    /// </summary>
-    public static void MarkValidity(this LineEdit field, bool valid)
-    {
-        if (valid)
-            field.RemoveThemeColorOverride("font_color");
-        else
-            field.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
-    }
-
     public static ImageTexture LoadTexture(string filename)
     {
         var image = new Image();

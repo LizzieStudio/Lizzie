@@ -310,6 +310,7 @@ public class TemplateParameter
         VerticalAlignment,
         Image,
         TrackType,
+        Sequence,
     }
 
     public TemplateParameterType Type { get; set; }

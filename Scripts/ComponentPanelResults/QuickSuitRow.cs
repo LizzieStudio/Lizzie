@@ -13,7 +13,7 @@ public partial class QuickSuitRow : HBoxContainer
     private ColorPickerButton _foreground;
 
     [Export]
-    private LineEdit _values;
+    private SequenceEdit _values;
 
     [Export]
     private OptionButton _icon;
@@ -36,11 +36,7 @@ public partial class QuickSuitRow : HBoxContainer
     {
         _background.ColorChanged += _ => Changed?.Invoke();
         _foreground.ColorChanged += _ => Changed?.Invoke();
-        _values.TextChanged += _ =>
-        {
-            MarkValues();
-            Changed?.Invoke();
-        };
+        _values.TextChanged += _ => Changed?.Invoke();
         _icon.ItemSelected += index =>
         {
             _iconName = IconAt((int)index);
@@ -74,9 +70,6 @@ public partial class QuickSuitRow : HBoxContainer
     // The first item, "None", stands for no icon.
     private string IconAt(int index) => index == 0 ? "" : _icon.GetItemText(index);
 
-    private void MarkValues() =>
-        _values.MarkValidity(SequenceExpressions.TryParse(_values.Text, out _));
-
     public QuickSuit Suit
     {
         get =>
@@ -96,7 +89,6 @@ public partial class QuickSuitRow : HBoxContainer
             _iconName = value.Icon;
             SelectIcon();
             _showText.SetPressedNoSignal(value.ShowText);
-            MarkValues();
         }
     }
 }

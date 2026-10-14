@@ -160,7 +160,7 @@ public class SequenceExpressionsTests
     [StackTraceHidden]
     private static void CheckText(string input, bool ok, string expected)
     {
-        var parsed = SequenceExpressions.TryParse(input, out var output);
+        var parsed = SequenceExpressions.TryParseStrings(input, out var output);
         var actual = $"[{string.Join(", ", output)}]";
         Assert.True(
             parsed == ok && actual == expected,

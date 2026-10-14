@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://ddvtf4fbcgjk4" path="res://Scenes/Controls/TemplateSelector.tscn" id="7_template"]
 [ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="8_dataset"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="9_pencil"]
+[ext_resource type="PackedScene" uid="uid://boxmo6a5jmo47" path="res://Scenes/Controls/number_sequence_edit.tscn" id="10_frames"]
 
 [node name="SideEditor" type="TabContainer" unique_id=1883320168 node_paths=PackedStringArray("_tabs")]
 size_flags_horizontal = 3
@@ -84,10 +85,10 @@ layout_mode = 2
 layout_mode = 2
 text = "Frames  "
 
-[node name="Frames" type="LineEdit" parent="Image/VBoxContainer/FramesRow" unique_id=1854479664]
+[node name="Frames" parent="Image/VBoxContainer/FramesRow" unique_id=1854479664 instance=ExtResource("10_frames")]
 layout_mode = 2
 size_flags_horizontal = 3
-tooltip_text = "Which frames of the image to use, counting from 1, like 1-52 or 1-3, 5*2, (7-12)/2. Blank uses every frame."
+tooltip_text = "Which frames of the image to use."
 placeholder_text = "All"
 
 [node name="Template" type="MarginContainer" parent="." unique_id=1050288335]

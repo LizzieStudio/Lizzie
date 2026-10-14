@@ -86,7 +86,7 @@ public static class SequenceExpressions
     /// When included, the unbounded expression grows or shrinks to fit.
     /// </param>
     /// <returns>Whether or not the parse completed without errors.</returns>
-    public static bool TryParse(string input, out string[] output, int? count = null)
+    public static bool TryParseStrings(string input, out string[] output, int? count = null)
     {
         var ok = Parse(input, count, false, out var values);
         output = values.ToArray();
@@ -94,7 +94,7 @@ public static class SequenceExpressions
     }
 
     /// <summary>
-    /// Like <see cref="TryParse(string, out string[], int?)"/>, but every value must be a whole number:
+    /// Like <see cref="TryParseStrings(string, out string[], int?)"/>, but every value must be a whole number:
     /// a value that isn't one is an error.
     /// </summary>
     public static bool TryParseNumbers(string input, out int[] output, int? count = null)

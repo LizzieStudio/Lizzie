@@ -9,7 +9,7 @@ public partial class ImageSideTab : SideTab
     private ImageSelector _image;
 
     [Export]
-    private LineEdit _frames;
+    private SequenceEdit _frames;
 
     private SnowTag _imageRef = SnowTag.Empty;
 
@@ -20,15 +20,8 @@ public partial class ImageSideTab : SideTab
             _imageRef = id;
             RaiseChanged();
         };
-        _frames.TextChanged += _ =>
-        {
-            MarkFrames();
-            RaiseChanged();
-        };
+        _frames.TextChanged += _ => RaiseChanged();
     }
-
-    private void MarkFrames() =>
-        _frames.MarkValidity(SequenceExpressions.TryParseNumbers(_frames.Text, out _));
 
     public override SideParameters Side =>
         new ImageSide { Image = _imageRef, Frames = _frames.Text };
@@ -40,7 +33,6 @@ public partial class ImageSideTab : SideTab
         _imageRef = image.Image;
         _image.SetSelectedImage(image.Image);
         _frames.Text = image.Frames;
-        MarkFrames();
         return true;
     }
 }
