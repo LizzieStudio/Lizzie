@@ -140,13 +140,11 @@ public partial class VcToken : VisualComponentBase
         BuildToken();
 
         var prototype = GetPrototype(R);
-        int count = p.CardCount(R);
         // Each view holds its sheet once, so a back that shows the front gets its own view.
-        Face? FrontView() => View(p.Front, "f", Card.FrontRow, prototype, count, R);
+        Face? FrontView() => View(p.Front, "f", Card.FrontRow, prototype, R);
         var front = FrontView();
         var back =
-            (p.Back == null ? null : View(p.Back, "b", Card.BackRow, prototype, count, R))
-            ?? FrontView();
+            (p.Back == null ? null : View(p.Back, "b", Card.BackRow, prototype, R)) ?? FrontView();
         ShowSides(front ?? Face.Blank, back ?? Face.Blank);
     }
 
@@ -311,13 +309,11 @@ public partial class VcToken : VisualComponentBase
     /// </summary>
     /// <param name="key">The key to use for the texture cache.</param>
     /// <param name="row">The dataset row this side shows, for a template.</param>
-    /// <param name="count">How many cards the prototype has.</param>
     private Face? View(
         SideParameters side,
         string key,
         SnowTag row,
         Prototype prototype,
-        int count,
         IRecordReader R
     )
     {
@@ -332,23 +328,41 @@ public partial class VcToken : VisualComponentBase
                 // Cards that repeat are only drawn once.
                 // This isn't exhaustive, but it catches things like A*2
                 var distinct = cards.Distinct().ToList();
-                return SheetView(
-                    $"quick:{prototype.SheetKey()}:{key}",
+                var drawing = new Drawing(
                     QuickTemplate.Template with
                     {
                         Width = _width / CmPerInch,
                         Height = _height / CmPerInch,
                     },
                     QuickTemplate.DataSet,
-                    distinct.Select(c => QuickTemplate.Row(c.Suit, c.Value)).ToList(),
-                    distinct.IndexOf(cards[n % cards.Count])
+                    distinct
+                        .Select(
+                            (c, i) =>
+                                QuickTemplate.Row(c.Suit, c.Value) with
+                                {
+                                    Id = new SnowTag(i + 1),
+                                }
+                        )
+                        .ToList()
+                );
+                var sheet = Sheet.Acquire(
+                    $"quick:{prototype.SheetKey()}:{key}",
+                    TextureFactory,
+                    _ => drawing
+                );
+                return new Face(
+                    sheet,
+                    sheet.Frame(new SnowTag(distinct.IndexOf(cards[n % cards.Count]) + 1))
                 );
             }
 
             case ImageSide image:
             {
                 var asset = R.Get<ImageAsset>(image.Image);
-                var values = image.FrameValues(R, count);
+                var values = image.FrameValues(
+                    R,
+                    ((PrintedParameters)prototype.Parameters).CardCount(R)
+                );
                 if (
                     asset == null
                     || n >= values.Length
@@ -365,21 +379,16 @@ public partial class VcToken : VisualComponentBase
 
             case TemplateSide templateSide:
             {
-                var template = R.Get<Template>(templateSide.Template);
-                var dataset = R.Get<DataSet>(templateSide.Dataset);
-                if (template == null || dataset == null)
-                    return null;
-                var rows = R.GetRows(templateSide.Dataset);
-                int frame = rows.FindIndex(r => r.Id == row);
-                if (frame < 0)
-                    return null;
-                return SheetView(
-                    $"tpl:{template.SheetKey()}:{dataset.SheetKey()}:{rows.SheetKey()}",
-                    template,
-                    dataset,
-                    rows,
-                    frame
+                var sheet = Sheet.Acquire(
+                    $"tpl:{templateSide.Template}:{templateSide.Dataset}",
+                    TextureFactory,
+                    R => new Drawing(
+                        R.Get<Template>(templateSide.Template),
+                        R.Get<DataSet>(templateSide.Dataset),
+                        R.GetRows(templateSide.Dataset)
+                    )
                 );
+                return new Face(sheet, sheet.Frame(row));
             }
 
             default:
@@ -388,54 +397,6 @@ public partial class VcToken : VisualComponentBase
     }
 
     private const float CmPerInch = 2.54f;
-
-    private const float PixelsPerInch = 100;
-
-    /// <summary>
-    /// Shows <paramref name="frame"/> of the sheet drawing <paramref name="rows"/> with <paramref name="template"/>.
-    /// </summary>
-    /// <param name="key">Names the sheet. Sheets with the same key look the same.</param>
-    private Face? SheetView(
-        string key,
-        Template template,
-        DataSet dataSet,
-        List<DataRow> rows,
-        int frame
-    )
-    {
-        var (width, height) = template.Pixels(PixelsPerInch);
-        if (width <= 0 || height <= 0)
-            return null;
-        var (layout, cellWidth, cellHeight) = SpriteSheetBuilder.Grid(width, height, rows.Count);
-        var sheet = Sheet.Acquire(
-            key,
-            layout,
-            token =>
-            {
-                var cells = new List<TextureFactory.TextureDefinition>(rows.Count);
-                var ctx = new TextureContext
-                {
-                    DataSet = dataSet,
-                    Dpi = PixelsPerInch,
-                    ParentSize = new Vector2(cellWidth, cellHeight),
-                };
-                foreach (var row in rows)
-                {
-                    ctx.CurrentRow = row;
-                    cells.Add(TemplateEngine.GenerateTextureDefinition(template, ctx));
-                }
-                return SpriteSheetBuilder.Build(
-                    TextureFactory,
-                    cells,
-                    layout,
-                    cellWidth,
-                    cellHeight,
-                    token
-                );
-            }
-        );
-        return new Face(sheet, frame);
-    }
 
     /// <summary>
     /// Shows <paramref name="front"/> and <paramref name="back"/> once their sheets load.
@@ -467,12 +428,18 @@ public partial class VcToken : VisualComponentBase
             return;
         _loading = null;
         Release((Front, Back));
+        Front.Sheet.Changed -= OnSheetChanged;
+        Back.Sheet.Changed -= OnSheetChanged;
         (Front, Back) = (front, back);
+        Front.Sheet.Changed += OnSheetChanged;
+        Back.Sheet.Changed += OnSheetChanged;
         ShowFaces();
         TexturesChanged?.Invoke();
         if (_next != null)
             LoadNext();
     }
+
+    private void OnSheetChanged() => TexturesChanged?.Invoke();
 
     private static void Release((Face Front, Face Back)? faces)
     {
@@ -499,6 +466,8 @@ public partial class VcToken : VisualComponentBase
         Release(_next);
         Release(_loading);
         Release((Front, Back));
+        Front.Sheet.Changed -= OnSheetChanged;
+        Back.Sheet.Changed -= OnSheetChanged;
     }
 
     private float _height;

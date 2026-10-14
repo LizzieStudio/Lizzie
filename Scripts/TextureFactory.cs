@@ -10,6 +10,15 @@ public partial class TextureFactory : SubViewport
 {
     private IconLibrary _iconLibrary = new();
 
+    /// <summary>
+    /// Holds the nodes that keep sheets up to date.
+    /// </summary>
+    /// <remarks>
+    /// This allows us to use <see cref="RecordService.Watch"/> calls.
+    /// </remarks>
+    [Export]
+    public Node Drawings { get; set; }
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {

@@ -6,11 +6,10 @@ using Godot;
 using Lizzie.AssetManagement;
 
 /// <summary>
-/// A grid image for tokens.
+/// A grid image for tokens. Used to show downloaded images and local renders.
 /// </summary>
 /// <remarks>
-/// You have to manually <see cref="Acquire"/> once per face,
-/// and <see cref="Release"/> when the face is done with it.
+/// You have to manually call <c>Acquire</c> once per face, and <see cref="Release"/> when the face is done with it.
 /// </remarks>
 public sealed class Sheet
 {
@@ -36,8 +35,9 @@ public sealed class Sheet
     private int _faces;
     private Func<CancellationToken, Task<Texture2D>> _build;
     private Task _loaded;
+    private SheetDrawing _drawing;
 
-    public GridLayout Layout { get; }
+    public GridLayout Layout { get; private set; }
 
     /// <summary>
     /// The material to show this sheet.
@@ -49,41 +49,77 @@ public sealed class Sheet
     /// </summary>
     public Texture2D Texture { get; private set; }
 
+    /// <summary>
+    /// Invoked when <see cref="Texture"/> or <see cref="Layout"/> changes.
+    /// </summary>
+    public event Action Changed;
+
     private Sheet(string key, GridLayout layout, Texture2D texture = null)
     {
         _key = key;
-        Layout = layout;
-        Material.SetShaderParameter(
-            "grid",
-            new Vector2I(Math.Max(layout.Columns, 1), Math.Max(layout.Rows, 1))
-        );
-        SetTexture(texture);
+        Show(texture, layout);
         if (key == null)
             _loaded = Task.CompletedTask;
     }
 
     /// <summary>
-    /// Holds the sheet under <paramref name="key"/>, creating it with <paramref name="build"/> if it hasn't been already.
+    /// Holds the image sheet under <paramref name="key"/>, creating it with <paramref name="build"/> if it hasn't been already.
     /// </summary>
     /// <param name="build">Makes the image, once <see cref="Load"/> is first called. If it's canceled, it can return null.</param>
     public static Sheet Acquire(
         string key,
         GridLayout layout,
         Func<CancellationToken, Task<Texture2D>> build
-    )
+    ) => Hold(key, () => new Sheet(key, layout) { _build = build });
+
+    /// <summary>
+    /// Holds the drawn sheet under <paramref name="key"/>, creating it with <paramref name="build"/> if it hasn't been already.
+    /// Faces pick their frame with <see cref="Frame"/>.
+    /// </summary>
+    /// <param name="source">Reads what the sheet shows. The sheet redraws when what it read changes.</param>
+    public static Sheet Acquire(
+        string key,
+        TextureFactory factory,
+        Func<IRecordReader, Drawing> source
+    ) =>
+        Hold(
+            key,
+            () =>
+            {
+                var sheet = new Sheet(key, GridLayout.Single);
+                sheet._drawing = new SheetDrawing
+                {
+                    Sheet = sheet,
+                    Factory = factory,
+                    Source = source,
+                    Token = sheet._cancel.Token,
+                };
+                factory.Drawings.AddChild(sheet._drawing);
+                return sheet;
+            }
+        );
+
+    private static Sheet Hold(string key, Func<Sheet> create)
     {
         if (!Sheets.TryGetValue(key, out var sheet))
-            Sheets[key] = sheet = new Sheet(key, layout) { _build = build };
+            Sheets[key] = sheet = create();
         sheet._faces++;
         return sheet;
     }
 
     /// <summary>
+    /// Gets the frame of a drawn sheet that shows <paramref name="row"/>.
+    /// </summary>
+    public int Frame(SnowTag row) => _drawing.Frame(row);
+
+    /// <summary>
     /// Starts building the image if it hasn't started.
     /// </summary>
-    /// <returns>Completes when <see cref="Texture"/> is set, or when the sheet is dropped before
-    /// then.</returns>
-    public Task Load() => _loaded ??= Build();
+    /// <returns>
+    /// Completes when <see cref="Texture"/> is set or when the sheet is dropped.
+    /// For a drawn sheet, when every frame faces asked for is drawn.
+    /// </returns>
+    public Task Load() => _drawing?.Loaded() ?? (_loaded ??= Build());
 
     private async Task Build()
     {
@@ -100,16 +136,25 @@ public sealed class Sheet
         }
         if (_cancel.IsCancellationRequested)
             return;
-        SetTexture(texture ?? Missing.Texture);
+        Show(texture ?? Missing.Texture, Layout);
         // Faces made after this try again, say once a failed download can succeed.
         if (texture == null && Sheets.GetValueOrDefault(_key) == this)
             Sheets.Remove(_key);
     }
 
-    private void SetTexture(Texture2D texture)
+    /// <summary>
+    /// Shows <paramref name="texture"/>, a grid with <paramref name="layout"/>.
+    /// </summary>
+    public void Show(Texture2D texture, GridLayout layout)
     {
         Texture = texture;
+        Layout = layout;
         Material.SetShaderParameter("albedo_texture", texture);
+        Material.SetShaderParameter(
+            "grid",
+            new Vector2I(Math.Max(layout.Columns, 1), Math.Max(layout.Rows, 1))
+        );
+        Changed?.Invoke();
     }
 
     /// <summary>
@@ -121,6 +166,8 @@ public sealed class Sheet
         if (_key == null || --_faces > 0)
             return;
         _cancel.Cancel();
+        if (GodotObject.IsInstanceValid(_drawing))
+            _drawing.QueueFree();
         if (Sheets.GetValueOrDefault(_key) == this)
             Sheets.Remove(_key);
     }

@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Godot;
 using Lizzie.AssetManagement;
 
 public static class SpriteSheetBuilder
@@ -43,42 +39,5 @@ public static class SpriteSheetBuilder
                 (int)(cellHeight * scale) / 4 * 4
             );
         return (new GridLayout(columns, rows, count), cellWidth, cellHeight);
-    }
-
-    /// <summary>
-    /// Draws each of <paramref name="cells"/> into its own cell of a <paramref name="layout"/> grid.
-    /// </summary>
-    /// <returns>The sheet, or null if <paramref name="token"/> was canceled first.</returns>
-    public static async Task<Texture2D> Build(
-        TextureFactory factory,
-        List<TextureFactory.TextureDefinition> cells,
-        GridLayout layout,
-        int cellWidth,
-        int cellHeight,
-        CancellationToken token
-    )
-    {
-        var sheet = Image.CreateEmpty(
-            cellWidth * layout.Columns,
-            cellHeight * layout.Rows,
-            false,
-            Image.Format.Rgba8
-        );
-        for (int i = 0; i < cells.Count; i++)
-        {
-            var cell = await factory.Render(cells[i], token);
-            if (token.IsCancellationRequested)
-                return null;
-            if (cell != null)
-                sheet.BlitRect(
-                    cell,
-                    new Rect2I(Vector2I.Zero, cell.GetSize()),
-                    new Vector2I(i % layout.Columns * cellWidth, i / layout.Columns * cellHeight)
-                );
-        }
-
-        sheet.GenerateMipmaps();
-        sheet.Compress(Image.CompressMode.S3Tc, Image.CompressSource.Generic);
-        return ImageTexture.CreateFromImage(sheet);
     }
 }
