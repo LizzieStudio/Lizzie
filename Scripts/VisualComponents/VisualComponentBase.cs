@@ -20,8 +20,6 @@ public abstract partial class VisualComponentBase : Area3D
         Zone = 12,
     }
 
-    public bool TextureReady { get; set; }
-
     public virtual VisualComponentType ComponentType { get; set; }
     protected GeometryInstance3D MainMesh;
 
@@ -122,7 +120,6 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     protected virtual void Setup(ComponentParameters parameters, IRecordReader R)
     {
-        TextureReady = false;
         ShapeProfiles.Clear();
 
         if (parameters != null && !string.IsNullOrEmpty(parameters.ComponentName))

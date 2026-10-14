@@ -17,23 +17,26 @@ public partial class CardFace : TextureRect
     {
         Texture = card?.Shape.Mask();
         ClipChildren = Texture == null ? ClipChildrenMode.Disabled : ClipChildrenMode.Only;
-        _card.Texture = card == null ? null : CardTexture(card, back);
+        _card.Texture = card == null ? null : CardTexture(back ? card.Back : card.Front);
     }
 
-    private static AtlasTexture CardTexture(VcToken card, bool back)
+    private static AtlasTexture CardTexture(Face face)
     {
-        var sheet = back ? card.BackTexture : card.FaceTexture;
-
-        if (sheet == null || sheet.GetWidth() == 0 || sheet.GetHeight() == 0)
+        var sheet = face.Sheet.Texture;
+        if (sheet == null)
             return null;
 
-        var layout = back ? card.BackLayout : card.FaceLayout;
+        var layout = face.Sheet.Layout;
         int hframes = Math.Max(1, layout.Columns);
         int vframes = Math.Max(1, layout.Rows);
-        int frame = back ? card.BackFrame : card.FaceFrame;
         int frameW = sheet.GetWidth() / hframes;
         int frameH = sheet.GetHeight() / vframes;
-        var region = new Rect2(frame % hframes * frameW, frame / hframes * frameH, frameW, frameH);
+        var region = new Rect2(
+            face.Frame % hframes * frameW,
+            face.Frame / hframes * frameH,
+            frameW,
+            frameH
+        );
         return new AtlasTexture { Atlas = sheet, Region = region };
     }
 }

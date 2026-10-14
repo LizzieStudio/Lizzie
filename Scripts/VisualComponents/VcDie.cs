@@ -101,7 +101,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     /// <summary>Sizes and textures the die from its parameters and the records they reference.</summary>
-    private void Apply(DieParameters p, IRecordReader R)
+    private async void Apply(DieParameters p, IRecordReader R)
     {
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
@@ -141,15 +141,11 @@ public partial class VcDie : VisualComponentBase
             TriangleFaces = template.TriangleFaces,
         };
         var tx = TemplateEngine.GenerateTextureDefinition(template, tc);
-        TextureFactory.GenerateTexture(tx, TextureDone);
-    }
-
-    private void TextureDone(ImageTexture texture)
-    {
+        var image = await TextureFactory.Render(tx);
         if (!IsInstanceValid(_mainMesh) || _mainMesh == null)
             return;
         var mat = new StandardMaterial3D();
-        mat.AlbedoTexture = texture;
+        mat.AlbedoTexture = ImageTexture.CreateFromImage(image);
         _mainMesh.MaterialOverride = mat;
     }
 }

@@ -1,38 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
-public class SpriteSheetBuilder
+public static class SpriteSheetBuilder
 {
-    private readonly TextureFactory _factory;
-    private readonly List<TextureFactory.TextureDefinition> _defs;
-    private readonly int _hframes;
-    private readonly int _vframes;
-    private readonly int _cellW;
-    private readonly int _cellH;
-    private readonly TaskCompletionSource<Texture2D> _done = new();
-    private Image _sheet;
-    private int _nextIndex;
-
-    public SpriteSheetBuilder(
-        TextureFactory factory,
-        List<TextureFactory.TextureDefinition> defs,
-        int cellW,
-        int cellH,
-        int hframes,
-        int vframes
-    )
-    {
-        _factory = factory;
-        _defs = defs;
-        _cellW = cellW;
-        _cellH = cellH;
-        _hframes = Math.Max(hframes, 1);
-        _vframes = Math.Max(vframes, 1);
-    }
-
     /// <summary>
     /// The widest or tallest sheet.
     /// </summary>
@@ -71,50 +45,40 @@ public class SpriteSheetBuilder
         return (new GridLayout(columns, rows, count), cellWidth, cellHeight);
     }
 
-    public Task<Texture2D> Start()
+    /// <summary>
+    /// Draws each of <paramref name="cells"/> into its own cell of a <paramref name="layout"/> grid.
+    /// </summary>
+    /// <returns>The sheet, or null if <paramref name="token"/> was canceled first.</returns>
+    public static async Task<Texture2D> Build(
+        TextureFactory factory,
+        List<TextureFactory.TextureDefinition> cells,
+        GridLayout layout,
+        int cellWidth,
+        int cellHeight,
+        CancellationToken token
+    )
     {
-        _sheet = Image.CreateEmpty(_cellW * _hframes, _cellH * _vframes, false, Image.Format.Rgba8);
-        QueueNext();
-        return _done.Task;
-    }
-
-    private void QueueNext()
-    {
-        if (_nextIndex >= _defs.Count)
+        var sheet = Image.CreateEmpty(
+            cellWidth * layout.Columns,
+            cellHeight * layout.Rows,
+            false,
+            Image.Format.Rgba8
+        );
+        for (int i = 0; i < cells.Count; i++)
         {
-            Finish();
-            return;
-        }
-
-        int idx = _nextIndex++;
-        _factory.GenerateTexture(_defs[idx], tex => OnCellReady(idx, tex));
-    }
-
-    private void OnCellReady(int index, ImageTexture tex)
-    {
-        if (tex != null)
-        {
-            var cellImg = tex.GetImage();
-            if (cellImg != null)
-            {
-                int col = index % _hframes;
-                int row = index / _hframes;
-                _sheet.BlitRect(
-                    cellImg,
-                    new Rect2I(0, 0, cellImg.GetWidth(), cellImg.GetHeight()),
-                    new Vector2I(col * _cellW, row * _cellH)
+            var cell = await factory.Render(cells[i], token);
+            if (token.IsCancellationRequested)
+                return null;
+            if (cell != null)
+                sheet.BlitRect(
+                    cell,
+                    new Rect2I(Vector2I.Zero, cell.GetSize()),
+                    new Vector2I(i % layout.Columns * cellWidth, i / layout.Columns * cellHeight)
                 );
-            }
         }
 
-        QueueNext();
-    }
-
-    private void Finish()
-    {
-        _sheet.GenerateMipmaps();
-        _sheet.Compress(Image.CompressMode.S3Tc, Image.CompressSource.Generic);
-
-        _done.SetResult(ImageTexture.CreateFromImage(_sheet));
+        sheet.GenerateMipmaps();
+        sheet.Compress(Image.CompressMode.S3Tc, Image.CompressSource.Generic);
+        return ImageTexture.CreateFromImage(sheet);
     }
 }

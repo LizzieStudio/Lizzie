@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
@@ -19,7 +18,6 @@ public class TextureCache
     }
 
     private readonly Dictionary<string, Texture2D> _assetCache = new();
-    private readonly Dictionary<string, Task<Texture2D>> _derivedCache = new();
 
     public async Task<Texture2D> GetOrCreateAssetTexture(ImageAsset asset)
     {
@@ -39,21 +37,10 @@ public class TextureCache
         return tex;
     }
 
-    /// <summary>
-    /// Returns the cached texture under <paramref name="key"/>.
-    /// If it doesn't exist, runs <paramref name="build"/>, caches the result, then returns it.
-    /// </summary>
-    public Task<Texture2D> GetOrBuildDerived(string key, Func<Task<Texture2D>> build)
-    {
-        if (!_derivedCache.TryGetValue(key, out var texture))
-            _derivedCache[key] = texture = build();
-        return texture;
-    }
-
     public void Clear()
     {
         _assetCache.Clear();
-        _derivedCache.Clear();
+        Sheet.Clear();
     }
 
     private static Texture2D BuildCompressedTexture(Image source)

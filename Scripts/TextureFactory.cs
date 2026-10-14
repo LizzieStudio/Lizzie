@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -46,10 +48,19 @@ public partial class TextureFactory : SubViewport
             }
         }
 
-        if (!_waitingForAsset && _activeQueueEntry == null && _textureGenerationQueue.Count > 0)
+        while (
+            !_waitingForAsset
+            && _activeQueueEntry == null
+            && _textureGenerationQueue.TryDequeue(out var entry)
+        )
         {
-            _activeQueueEntry = _textureGenerationQueue.Dequeue();
-            PreFetchAssetsAndInitiate(_activeQueueEntry.TextureDefinition);
+            if (entry.Token.IsCancellationRequested)
+            {
+                entry.Done.SetResult(null);
+                continue;
+            }
+            _activeQueueEntry = entry;
+            PreFetchAssetsAndInitiate(entry.TextureDefinition);
         }
     }
 
@@ -63,22 +74,16 @@ public partial class TextureFactory : SubViewport
     private Queue<TextureQueueEntry> _textureGenerationQueue = new();
 
     /// <summary>
-    /// Generate a texture
+    /// Draws <paramref name="definition"/>.
     /// </summary>
-    public void GenerateTexture(
-        TextureDefinition definition,
-        Action<ImageTexture> textureReadyCallback
-    )
+    /// <returns>The drawing, or null if <paramref name="token"/> was canceled before it started.</returns>
+    public Task<Image> Render(TextureDefinition definition, CancellationToken token = default)
     {
         ExpandMultipleShapes(definition);
 
-        var tqe = new TextureQueueEntry
-        {
-            TextureDefinition = definition,
-            TextureReadyCallback = textureReadyCallback,
-        };
-
-        _textureGenerationQueue.Enqueue(tqe);
+        var entry = new TextureQueueEntry { TextureDefinition = definition, Token = token };
+        _textureGenerationQueue.Enqueue(entry);
+        return entry.Done.Task;
     }
 
     private async void PreFetchAssetsAndInitiate(TextureDefinition definition)
@@ -105,12 +110,12 @@ public partial class TextureFactory : SubViewport
             if (pendingAssets.Count > 0)
             {
                 _waitingForAsset = true;
-                var tasks = new List<System.Threading.Tasks.Task>();
+                var tasks = new List<Task>();
                 foreach (var asset in pendingAssets)
                 {
                     tasks.Add(AssetImageCache.Instance.FetchImageAsync(asset));
                 }
-                await System.Threading.Tasks.Task.WhenAll(tasks);
+                await Task.WhenAll(tasks);
                 _waitingForAsset = false;
             }
         }
@@ -1035,18 +1040,15 @@ public partial class TextureFactory : SubViewport
 
     private void AfterRender()
     {
-        var texture = _viewport.GetTexture();
-        var image = texture.GetImage();
-
-        // Create ImageTexture from the rendered image
-        var imageTexture = ImageTexture.CreateFromImage(image);
-
-        _activeQueueEntry.TextureReadyCallback?.Invoke(imageTexture);
+        var image = _viewport.GetTexture().GetImage();
+        var done = _activeQueueEntry.Done;
 
         //cleanup
         foreach (var c in _viewport.GetChildren())
             c.QueueFree();
         _activeQueueEntry = null;
+
+        done.SetResult(image);
     }
 
     private static int AutosizeFont(
@@ -1206,7 +1208,8 @@ public partial class TextureFactory : SubViewport
 
     private class TextureQueueEntry
     {
-        public TextureDefinition TextureDefinition { get; set; }
-        public Action<ImageTexture> TextureReadyCallback { get; set; }
+        public TextureDefinition TextureDefinition { get; init; }
+        public CancellationToken Token { get; init; }
+        public TaskCompletionSource<Image> Done { get; } = new();
     }
 }

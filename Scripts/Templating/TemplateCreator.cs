@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using Godot;
 using Lizzie.Scripts.Templating;
 
@@ -69,7 +70,7 @@ public partial class TemplateCreator : Window
     private LineEdit _heightInput;
     private LineEdit _widthInput;
 
-    private Timer _updateTimer;
+    private Godot.Timer _updateTimer;
     private bool _updateRequired;
 
     private Button _newButton;
@@ -411,7 +412,7 @@ public partial class TemplateCreator : Window
         _boundsRect.Hide();
         _boundsRect.BoundsChanged += BoundsChanged;
 
-        _updateTimer = GetNode<Timer>("Timer");
+        _updateTimer = GetNode<Godot.Timer>("Timer");
         _updateTimer.Timeout += UpdateTimerExpired;
         _updateTimer.Start();
 
@@ -825,11 +826,16 @@ public partial class TemplateCreator : Window
 
         var td = TemplateEngine.GenerateTextureDefinition(_hierarchicalElements, _textureContext);
 
-        TextureFactory.GenerateTexture(td, UpdatePreview);
+        UpdatePreview(td);
 
         if (updateBounds)
             UpdateBoundsRect();
     }
+
+    /// <summary>
+    /// Used to cancel drawing the preview, but only if it hasn't started yet.
+    /// </summary>
+    private CancellationTokenSource _previewDrawing = new();
 
     private void ClearParameters()
     {
@@ -932,10 +938,17 @@ public partial class TemplateCreator : Window
         UpdateTexture(true, true);
     }
 
-    private void UpdatePreview(ImageTexture texture)
+    private async void UpdatePreview(TextureFactory.TextureDefinition definition)
     {
-        _preview.Texture = texture;
+        _previewDrawing.Cancel();
+        _previewDrawing = new();
+        var token = _previewDrawing.Token;
+        var image = await TextureFactory.Render(definition, token);
+        if (!token.IsCancellationRequested)
+            _preview.Texture = ImageTexture.CreateFromImage(image);
     }
+
+    public override void _ExitTree() => _previewDrawing.Cancel();
 
     public TextureFactory TextureFactory { get; set; }
 

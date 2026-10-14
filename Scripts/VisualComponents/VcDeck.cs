@@ -88,8 +88,6 @@ public partial class VcDeck : VisualComponentBase
         Scale = new Vector3(_width, Thickness, _height);
 
         ShapeProfiles.Add(VcToken.ShapeProfile((TokenShape)p.Shape, _width, _height));
-
-        TextureReady = true;
     }
 
     private float _height;

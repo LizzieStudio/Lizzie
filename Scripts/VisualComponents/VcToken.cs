@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Godot;
@@ -36,61 +35,28 @@ public partial class VcToken : VisualComponentBase
         AlbedoColor = new Color(0.506f, 0.506f, 0.506f),
     };
 
-    private static readonly Shader FaceShader = GD.Load<Shader>(
-        "res://Shaders/token_face.gdshader"
-    );
-
-    // A face with no texture yet, which shows white.
-    private static readonly ShaderMaterial BlankFace = new() { Shader = FaceShader };
-
-    private static readonly ConditionalWeakTable<Texture2D, ShaderMaterial> FaceMaterials = new();
-
     /// <summary>
-    /// The material shared by every face showing <paramref name="texture"/>.
+    /// What the front shows.
     /// </summary>
-    private static ShaderMaterial FaceMaterial(Texture2D texture)
-    {
-        if (texture == null)
-            return BlankFace;
-        if (!FaceMaterials.TryGetValue(texture, out var material))
-        {
-            material = new ShaderMaterial { Shader = FaceShader };
-            material.SetShaderParameter("albedo_texture", texture);
-            FaceMaterials.Add(texture, material);
-        }
-        return material;
-    }
-
-    private Texture2D _faceTexture = new ImageTexture();
-    private Texture2D _backTexture;
-
-    public Texture2D FaceTexture
-    {
-        get => _faceTexture;
-        private set
-        {
-            _faceTexture = value;
-
-            if (_mainMesh != null && value != null)
-                _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, FaceMaterial(value));
-            TexturesChanged?.Invoke();
-        }
-    }
-
-    public Texture2D BackTexture
-    {
-        get => _backTexture;
-        set
-        {
-            _backTexture = value;
-            if (_mainMesh != null && value != null)
-                _mainMesh.SetSurfaceOverrideMaterial(BackSurface, FaceMaterial(value));
-            TexturesChanged?.Invoke();
-        }
-    }
+    public Face Front { get; private set; } = Face.Blank;
 
     /// <summary>
-    /// Called when the face or back texture is changes.
+    /// What the back shows.
+    /// </summary>
+    public Face Back { get; private set; } = Face.Blank;
+
+    /// <summary>
+    /// The faces that are currently rendering.
+    /// </summary>
+    private (Face Front, Face Back)? _loading;
+
+    /// <summary>
+    /// The faces to render after <see cref="_loading"/>. Newer faces replace them before they start.
+    /// </summary>
+    private (Face Front, Face Back)? _next;
+
+    /// <summary>
+    /// Called when the front or back changes.
     /// </summary>
     public event Action TexturesChanged;
 
@@ -107,23 +73,8 @@ public partial class VcToken : VisualComponentBase
             ProcessFlip(delta);
         }
 
-        if (_mapFrontTextureRequired)
-        {
-            MapFrontTexture();
-        }
-
-        if (_mapBackTextureRequired)
-        {
-            MapBackTexture();
-        }
-
-        if (!TextureReady)
-        {
-            TextureReady = _frontTextureGenerated && _backTextureGenerated;
-        }
-
         // Idle optimization.
-        if (!_flipInProcess && !_mapFrontTextureRequired && !_mapBackTextureRequired)
+        if (!_flipInProcess)
             SetProcess(false);
 
         base._Process(delta);
@@ -172,11 +123,6 @@ public partial class VcToken : VisualComponentBase
         Apply((PrintedParameters)parameters, R);
     }
 
-    /// <summary>
-    /// Counts builds so a stale build can be thrown out.
-    /// </summary>
-    private int _build;
-
     /// <summary>Sizes and textures the token from its parameters and the records they reference.</summary>
     private void Apply(PrintedParameters p, IRecordReader R)
     {
@@ -193,13 +139,15 @@ public partial class VcToken : VisualComponentBase
 
         BuildToken();
 
-        _build++;
         var prototype = GetPrototype(R);
         int count = p.CardCount(R);
-        var front = View(p.Front, "f", Card.FrontRow, prototype, count, R);
+        // Each view holds its sheet once, so a back that shows the front gets its own view.
+        Face? FrontView() => View(p.Front, "f", Card.FrontRow, prototype, count, R);
+        var front = FrontView();
         var back =
-            p.Back == null ? front : View(p.Back, "b", Card.BackRow, prototype, count, R) ?? front;
-        ShowSides(front, back);
+            (p.Back == null ? null : View(p.Back, "b", Card.BackRow, prototype, count, R))
+            ?? FrontView();
+        ShowSides(front ?? Face.Blank, back ?? Face.Blank);
     }
 
     private void BuildToken()
@@ -219,11 +167,8 @@ public partial class VcToken : VisualComponentBase
             Meshes[Shape] = mesh;
         }
         _mainMesh.Mesh = mesh;
-        _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, BlankFace);
-        _mainMesh.SetSurfaceOverrideMaterial(BackSurface, BlankFace);
         _mainMesh.SetSurfaceOverrideMaterial(SideSurface, SideMaterial);
-        SetFrame("front_rect", GridLayout.Single, 0);
-        SetFrame("back_rect", GridLayout.Single, 0);
+        ShowFaces();
 
         ShapeProfiles.Clear();
         ShapeProfiles.Add(ShapeProfile(Shape, _width, _height));
@@ -362,17 +307,12 @@ public partial class VcToken : VisualComponentBase
     }
 
     /// <summary>
-    /// A side's texture, as it loads, and which frame of it the card shows.
-    /// </summary>
-    private sealed record SideView(Task<Texture2D> Texture, GridLayout Layout, int Frame);
-
-    /// <summary>
     /// What <paramref name="side"/> shows on this card, or null when it shows nothing.
     /// </summary>
     /// <param name="key">The key to use for the texture cache.</param>
     /// <param name="row">The dataset row this side shows, for a template.</param>
     /// <param name="count">How many cards the prototype has.</param>
-    private SideView View(
+    private Face? View(
         SideParameters side,
         string key,
         SnowTag row,
@@ -393,16 +333,14 @@ public partial class VcToken : VisualComponentBase
                 // This isn't exhaustive, but it catches things like A*2
                 var distinct = cards.Distinct().ToList();
                 return SheetView(
-                    new Sheet(
-                        $"quick:{prototype.SheetKey()}:{key}",
-                        QuickTemplate.Template with
-                        {
-                            Width = _width / CmPerInch,
-                            Height = _height / CmPerInch,
-                        },
-                        QuickTemplate.DataSet,
-                        distinct.Select(c => QuickTemplate.Row(c.Suit, c.Value)).ToList()
-                    ),
+                    $"quick:{prototype.SheetKey()}:{key}",
+                    QuickTemplate.Template with
+                    {
+                        Width = _width / CmPerInch,
+                        Height = _height / CmPerInch,
+                    },
+                    QuickTemplate.DataSet,
+                    distinct.Select(c => QuickTemplate.Row(c.Suit, c.Value)).ToList(),
                     distinct.IndexOf(cards[n % cards.Count])
                 );
             }
@@ -416,12 +354,13 @@ public partial class VcToken : VisualComponentBase
                     || n >= values.Length
                     || asset.Layout.Frame(values[n]) is not int frame
                 )
-                    return new SideView(Task.FromResult(MissingFrameTexture), GridLayout.Single, 0);
-                return new SideView(
-                    TextureCache.Instance.GetOrCreateAssetTexture(asset),
+                    return new Face(Sheet.Missing, 0);
+                var sheet = Sheet.Acquire(
+                    $"asset:{asset.CloudPath}:{asset.Layout}",
                     asset.Layout,
-                    frame
+                    _ => TextureCache.Instance.GetOrCreateAssetTexture(asset)
                 );
+                return new Face(sheet, frame);
             }
 
             case TemplateSide templateSide:
@@ -435,12 +374,10 @@ public partial class VcToken : VisualComponentBase
                 if (frame < 0)
                     return null;
                 return SheetView(
-                    new Sheet(
-                        $"tpl:{template.SheetKey()}:{dataset.SheetKey()}:{rows.SheetKey()}",
-                        template,
-                        dataset,
-                        rows
-                    ),
+                    $"tpl:{template.SheetKey()}:{dataset.SheetKey()}:{rows.SheetKey()}",
+                    template,
+                    dataset,
+                    rows,
                     frame
                 );
             }
@@ -455,124 +392,113 @@ public partial class VcToken : VisualComponentBase
     private const float PixelsPerInch = 100;
 
     /// <summary>
-    /// One side's sheet.
+    /// Shows <paramref name="frame"/> of the sheet drawing <paramref name="rows"/> with <paramref name="template"/>.
     /// </summary>
-    private sealed record Sheet(string Key, Template Template, DataSet DataSet, List<DataRow> Rows);
-
-    /// <summary>
-    /// Shows <paramref name="frame"/> of <paramref name="sheet"/>, building it if it isn't cached yet.
-    /// </summary>
-    private SideView SheetView(Sheet sheet, int frame)
+    /// <param name="key">Names the sheet. Sheets with the same key look the same.</param>
+    private Face? SheetView(
+        string key,
+        Template template,
+        DataSet dataSet,
+        List<DataRow> rows,
+        int frame
+    )
     {
-        var (width, height) = sheet.Template.Pixels(PixelsPerInch);
+        var (width, height) = template.Pixels(PixelsPerInch);
         if (width <= 0 || height <= 0)
             return null;
-        var (layout, cellWidth, cellHeight) = SpriteSheetBuilder.Grid(
-            width,
-            height,
-            sheet.Rows.Count
-        );
-        var texture = TextureCache.Instance.GetOrBuildDerived(
-            sheet.Key,
-            () =>
+        var (layout, cellWidth, cellHeight) = SpriteSheetBuilder.Grid(width, height, rows.Count);
+        var sheet = Sheet.Acquire(
+            key,
+            layout,
+            token =>
             {
-                var defs = new List<TextureFactory.TextureDefinition>(sheet.Rows.Count);
+                var cells = new List<TextureFactory.TextureDefinition>(rows.Count);
                 var ctx = new TextureContext
                 {
-                    DataSet = sheet.DataSet,
+                    DataSet = dataSet,
                     Dpi = PixelsPerInch,
                     ParentSize = new Vector2(cellWidth, cellHeight),
                 };
-                foreach (var row in sheet.Rows)
+                foreach (var row in rows)
                 {
                     ctx.CurrentRow = row;
-                    defs.Add(TemplateEngine.GenerateTextureDefinition(sheet.Template, ctx));
+                    cells.Add(TemplateEngine.GenerateTextureDefinition(template, ctx));
                 }
-                return new SpriteSheetBuilder(
+                return SpriteSheetBuilder.Build(
                     TextureFactory,
-                    defs,
+                    cells,
+                    layout,
                     cellWidth,
                     cellHeight,
-                    layout.Columns,
-                    layout.Rows
-                ).Start();
+                    token
+                );
             }
         );
-        return new SideView(texture, layout, frame);
+        return new Face(sheet, frame);
     }
 
     /// <summary>
-    /// Shows each side once its texture loads.
+    /// Shows <paramref name="front"/> and <paramref name="back"/> once their sheets load.
     /// </summary>
-    private async void ShowSides(SideView front, SideView back)
+    /// <remarks>
+    /// When a bunch of rapid updates happen to a token, it will continue showing a texture,
+    /// but occasionally replace it with a new one. To achieve this, we keep three sheets in a queue.
+    /// <list type="number">
+    /// <item>The displayed sheet, which could be outdated.</item>
+    /// <item>The sheet that's currently rendering to replace it, which isn't canceled when a change is queued.</item>
+    /// <item>The unrendered sheet that's next in line to render when 2 is done, but is replaced when a change is queued.</item>
+    /// </list>
+    /// This allows the texture to update even when changes are happening rapidly, like with a color picker.
+    /// </remarks>
+    private void ShowSides(Face front, Face back)
     {
-        int build = _build;
-        var frontTexture = front == null ? null : await front.Texture;
-        var backTexture = back == null ? null : await back.Texture;
-        if (!IsInstanceValid(this) || build != _build)
+        Release(_next);
+        _next = (front, back);
+        if (_loading == null)
+            LoadNext();
+    }
+
+    private async void LoadNext()
+    {
+        var (front, back) = _next.Value;
+        (_loading, _next) = (_next, null);
+        await Task.WhenAll(front.Sheet.Load(), back.Sheet.Load());
+        if (!IsInstanceValid(this))
             return;
-        if (front != null)
+        _loading = null;
+        Release((Front, Back));
+        (Front, Back) = (front, back);
+        ShowFaces();
+        TexturesChanged?.Invoke();
+        if (_next != null)
+            LoadNext();
+    }
+
+    private static void Release((Face Front, Face Back)? faces)
+    {
+        if (faces is var (front, back))
         {
-            (FaceLayout, FaceFrame) = (front.Layout, front.Frame);
-            FaceTexture = frontTexture ?? MissingFrameTexture;
-            MapFrontTexture();
-        }
-        if (back != null)
-        {
-            (BackLayout, BackFrame) = (back.Layout, back.Frame);
-            BackTexture = backTexture ?? MissingFrameTexture;
-            MapBackTexture();
+            front.Sheet.Release();
+            back.Sheet.Release();
         }
     }
 
-    private bool _frontTextureGenerated;
-    private bool _backTextureGenerated;
-
-    private bool _mapFrontTextureRequired;
-
-    private void MapFrontTexture()
+    private void ShowFaces()
     {
-        if (_mainMesh == null)
-        {
-            _mapFrontTextureRequired = true;
-            SetProcess(true);
-            return;
-        }
-
-        _mapFrontTextureRequired = false;
-        _frontTextureGenerated = true;
-        _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, FaceMaterial(FaceTexture));
-
-        SetFrame("front_rect", FaceLayout, FaceFrame);
+        _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, Front.Sheet.Material);
+        _mainMesh.SetSurfaceOverrideMaterial(BackSurface, Back.Sheet.Material);
+        _mainMesh.SetInstanceShaderParameter("front_frame", Front.Frame);
+        _mainMesh.SetInstanceShaderParameter("back_frame", Back.Frame);
     }
 
-    private bool _mapBackTextureRequired;
-
-    private void MapBackTexture()
+    public override void _Notification(int what)
     {
-        if (_mainMesh == null)
-        {
-            _mapBackTextureRequired = true;
-            SetProcess(true);
+        base._Notification(what);
+        if (what != NotificationPredelete)
             return;
-        }
-
-        _mapBackTextureRequired = false;
-        _backTextureGenerated = true;
-        _mainMesh.SetSurfaceOverrideMaterial(BackSurface, FaceMaterial(BackTexture));
-        SetFrame("back_rect", BackLayout, BackFrame);
-    }
-
-    private void SetFrame(string face, GridLayout layout, int frame)
-    {
-        int cols = Math.Max(layout.Columns, 1);
-        int rows = Math.Max(layout.Rows, 1);
-        int col = frame % cols;
-        int row = frame / cols;
-        _mainMesh.SetInstanceShaderParameter(
-            face,
-            new Vector4((float)col / cols, (float)row / rows, 1f / cols, 1f / rows)
-        );
+        Release(_next);
+        Release(_loading);
+        Release((Front, Back));
     }
 
     private float _height;
@@ -582,19 +508,6 @@ public partial class VcToken : VisualComponentBase
     public TokenShape Shape { get; private set; }
 
     private TokenType _tokenType;
-
-    /// <summary>
-    /// Shown in place of a grid frame that doesn't exist.
-    /// </summary>
-    private static readonly Texture2D MissingFrameTexture = GD.Load<Texture2D>(
-        "res://Textures/missing_frame.png"
-    );
-
-    public GridLayout FaceLayout { get; private set; } = GridLayout.Single;
-    public int FaceFrame { get; private set; }
-
-    public GridLayout BackLayout { get; private set; } = GridLayout.Single;
-    public int BackFrame { get; private set; }
 
     public enum TokenType
     {
