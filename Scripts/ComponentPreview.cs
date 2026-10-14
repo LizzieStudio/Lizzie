@@ -244,20 +244,18 @@ public partial class ComponentPreview : Panel
     }
 
     public void Build(ComponentParameters parameters, TextureFactory textureFactory) =>
-        Build(parameters, -1, SnowTag.Empty, textureFactory);
+        Build(parameters, PrototypeItemRef.None, textureFactory);
 
     public void Build(
         ComponentParameters parameters,
-        int rowIndex,
-        SnowTag rowId,
+        PrototypeItemRef card,
         TextureFactory textureFactory
     )
     {
         if (_component == null)
             return;
 
-        _component.DataSetRowIndex = rowIndex;
-        _component.DataSetRowId = rowId;
+        _component.Card = card;
         _component.TextureFactory = textureFactory;
 
         var json = JsonSerializer.Serialize(parameters, LizzieJson.EventOptions);
@@ -277,32 +275,25 @@ public partial class ComponentPreview : Panel
     private string _draftJson;
     private SnowportId _draftVersion;
 
-    public void Build(
-        Prototype prototype,
-        int rowIndex,
-        SnowTag rowId,
-        TextureFactory textureFactory
-    )
+    public void Build(Prototype prototype, PrototypeItemRef card, TextureFactory textureFactory)
     {
-        var c = SpawnComponent(prototype, rowIndex, rowId);
+        var c = SpawnComponent(prototype, card);
         c.TextureFactory = textureFactory;
         SetComponent(c, GetRotationVector(prototype.Type));
     }
 
-    private VisualComponentBase SpawnComponent(Prototype prototype, int rowIndex, SnowTag rowId)
+    private VisualComponentBase SpawnComponent(Prototype prototype, PrototypeItemRef card)
     {
         var s = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            rowIndex,
-            rowId,
+            card != PrototypeItemRef.None,
             true
         );
         var scene = GD.Load<PackedScene>(s);
         var c = scene.Instantiate<VisualComponentBase>();
         c.PrototypeRef = prototype.Id;
-        c.DataSetRowIndex = rowIndex;
-        c.DataSetRowId = rowId;
+        c.Card = card;
         return c;
     }
 

@@ -196,7 +196,7 @@ public partial class VcDie : VisualComponentBase
 
     private void BuildTemplate(IRecordReader R)
     {
-        var row = R.Get<DataRow>(DataSetRowId);
+        var row = R.Get<DataRow>(Card.FrontRow);
 
         var tc = new TextureContext
         {

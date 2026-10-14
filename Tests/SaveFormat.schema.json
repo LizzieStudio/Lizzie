@@ -51,10 +51,17 @@
                 ],
                 "additionalProperties": false
               },
-              "dataSetRowIndex": {
-                "type": "integer"
+              "card": {
+                "type": "object",
+                "properties": {
+                  "number": {
+                    "type": "integer"
+                  },
+                  "frontRow": true,
+                  "backRow": true
+                },
+                "additionalProperties": false
               },
-              "dataSetRowId": true,
               "containerRef": true,
               "id": true,
               "deleted": {
@@ -383,110 +390,129 @@
                       "shape": {
                         "type": "integer"
                       },
-                      "mode": {
-                        "type": "integer"
-                      },
-                      "differentBack": {
-                        "type": "boolean"
-                      },
-                      "frontBgColor": true,
-                      "backBgColor": true,
-                      "quickFront": {
+                      "front": {
                         "type": [
                           "object",
                           "null"
                         ],
-                        "properties": {
-                          "faceType": {
-                            "type": "integer"
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "image": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "foregroundColor": true,
-                          "caption": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "suits": {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "background": true,
+                                    "foreground": true,
+                                    "values": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "icon": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "showText": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "quantity": {
-                            "type": "integer"
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "template": true,
+                              "dataset": true
+                            },
+                            "additionalProperties": false
                           }
-                        },
-                        "additionalProperties": false
+                        ]
                       },
-                      "quickBack": {
+                      "back": {
                         "type": [
                           "object",
                           "null"
                         ],
-                        "properties": {
-                          "faceType": {
-                            "type": "integer"
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "image": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "foregroundColor": true,
-                          "caption": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "suits": {
+                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "quantity": {
-                            "type": "integer"
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "template": true,
+                              "dataset": true
+                            },
+                            "additionalProperties": false
                           }
-                        },
-                        "additionalProperties": false
-                      },
-                      "frontFontSize": {
-                        "type": "integer"
-                      },
-                      "backFontSize": {
-                        "type": "integer"
+                        ]
                       },
                       "type": {
                         "type": "integer"
                       },
-                      "quickCardData": {
-                        "type": "array",
-                        "items": {
-                          "type": [
-                            "object",
-                            "null"
-                          ],
-                          "properties": {
-                            "backgroundColor": true,
-                            "caption": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "cardBackColor": true,
-                            "cardBackValue": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "additionalProperties": false
-                        }
-                      },
-                      "frontGridImageKey": true,
-                      "backGridImageKey": true,
-                      "frontGridFrames": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "backGridFrames": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "frontTemplate": true,
-                      "backTemplate": true,
-                      "dataset": true,
                       "componentName": {
                         "type": [
                           "string",
@@ -639,90 +665,103 @@
                       "shape": {
                         "type": "integer"
                       },
-                      "mode": {
-                        "type": "integer"
-                      },
-                      "differentBack": {
-                        "type": "boolean"
-                      },
-                      "frontBgColor": true,
-                      "backBgColor": true,
-                      "quickFront": {
+                      "front": {
                         "type": [
                           "object",
                           "null"
                         ],
-                        "properties": {
-                          "faceType": {
-                            "type": "integer"
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "image": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "foregroundColor": true,
-                          "caption": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "suits": {
+                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "quantity": {
-                            "type": "integer"
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "template": true,
+                              "dataset": true
+                            },
+                            "additionalProperties": false
                           }
-                        },
-                        "additionalProperties": false
+                        ]
                       },
-                      "quickBack": {
+                      "back": {
                         "type": [
                           "object",
                           "null"
                         ],
-                        "properties": {
-                          "faceType": {
-                            "type": "integer"
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "image": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "foregroundColor": true,
-                          "caption": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "suits": {
+                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                              }
+                            },
+                            "additionalProperties": false
                           },
-                          "quantity": {
-                            "type": "integer"
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "template": true,
+                              "dataset": true
+                            },
+                            "additionalProperties": false
                           }
-                        },
-                        "additionalProperties": false
-                      },
-                      "frontFontSize": {
-                        "type": "integer"
-                      },
-                      "backFontSize": {
-                        "type": "integer"
+                        ]
                       },
                       "type": {
                         "type": "integer"
                       },
-                      "quickCardData": {
-                        "type": "array",
-                        "items": {
-                          "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/quickCardData/items"
-                        }
-                      },
-                      "frontGridImageKey": true,
-                      "backGridImageKey": true,
-                      "frontGridFrames": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "backGridFrames": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "frontTemplate": true,
-                      "backTemplate": true,
-                      "dataset": true,
                       "componentName": {
                         "type": [
                           "string",

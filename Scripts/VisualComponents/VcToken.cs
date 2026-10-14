@@ -172,10 +172,7 @@ public partial class VcToken : VisualComponentBase
     public enum TokenBuildMode
     {
         QuickCard = 0,
-        Grid = 2,
         Template = 3,
-        Nandeck = 4,
-        QuickDeck = 5,
     }
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)
@@ -201,72 +198,17 @@ public partial class VcToken : VisualComponentBase
         _thickness = Math.Max(p.Thickness / 10f, 0.03f);
 
         Shape = (TokenShape)p.Shape;
-        _mode = p.Mode;
-
-        _differentBack = p.DifferentBack;
-
-        //Grid Parameters
-        _frontGridImageKey = p.FrontGridImageKey;
-        _frontMasterAsset = R.Get<ImageAsset>(_frontGridImageKey);
-
-        _backGridImageKey = p.BackGridImageKey;
-        _backMasterAsset = R.Get<ImageAsset>(_backGridImageKey);
-
         _tokenType = p.Type;
-
-        _frontTemplateRef = p.FrontTemplate;
-        _backTemplateRef = p.BackTemplate;
-        _datasetRef = p.Dataset;
-
-        _faceHframes = 1;
-        _faceVframes = 1;
-        _faceFrame = 0;
-        _backHframes = 1;
-        _backVframes = 1;
-        _backFrame = 0;
-
-        if (_mode == TokenBuildMode.Grid)
-        {
-            var (front, back) = p.GridFrames(R);
-            int card = Math.Max(DataSetRowIndex, 0);
-            _frontGridFace = GridFace(_frontMasterAsset, front, card);
-            _backGridFace = GridFace(_backMasterAsset, back, card);
-            if (_frontGridFace is (var frontLayout, var frontFrame))
-                (_faceHframes, _faceVframes, _faceFrame) = (
-                    frontLayout.Columns,
-                    frontLayout.Rows,
-                    frontFrame
-                );
-            if (_backGridFace is (var backLayout, var backFrame))
-                (_backHframes, _backVframes, _backFrame) = (
-                    backLayout.Columns,
-                    backLayout.Rows,
-                    backFrame
-                );
-        }
 
         BuildToken();
 
         _build++;
-        switch (_mode)
-        {
-            case TokenBuildMode.QuickCard:
-            case TokenBuildMode.QuickDeck:
-                BuildQuick(TextureFactory, GetPrototype(R));
-                break;
-
-            case TokenBuildMode.Grid:
-                BuildGrid();
-                break;
-
-            case TokenBuildMode.Template:
-                BuildTemplate(TextureFactory, R);
-                break;
-
-            case TokenBuildMode.Nandeck:
-                BuildNanDeck();
-                break;
-        }
+        var prototype = GetPrototype(R);
+        int count = p.CardCount(R);
+        var front = View(p.Front, "f", Card.FrontRow, prototype, count, R);
+        var back =
+            p.Back == null ? front : View(p.Back, "b", Card.BackRow, prototype, count, R) ?? front;
+        ShowSides(front, back);
     }
 
     private void BuildToken()
@@ -428,162 +370,93 @@ public partial class VcToken : VisualComponentBase
         st.Commit(mesh);
     }
 
-    private void BuildQuick(TextureFactory textureFactory, Prototype prototype)
-    {
-        var p = (PrintedParameters)prototype.Parameters;
-        ComputeCellSize(_height, _width, out var cellW, out var cellH);
-        Sheet Side(string side, List<DataRow> rows) =>
-            new(
-                $"quick:{prototype.SheetKey()}:{side}",
-                QuickTemplate.Template,
-                QuickTemplate.DataSet,
-                rows,
-                cellW,
-                cellH
-            );
-
-        if (_mode == TokenBuildMode.QuickCard)
-        {
-            BuildSheets(
-                textureFactory,
-                Side("f", [QuickTemplate.Row(p.FrontBgColor, p.QuickFront)]),
-                _differentBack ? Side("b", [QuickTemplate.Row(p.BackBgColor, p.QuickBack)]) : null,
-                0
-            );
-        }
-        else if (_mode == TokenBuildMode.QuickDeck)
-        {
-            var cards = p.QuickDeckCards();
-            if (DataSetRowIndex < 0 || cards.Count == 0)
-                return;
-            DataRow Text(Color background, string caption) =>
-                QuickTemplate.Row(
-                    background,
-                    new QuickTextureField { Caption = caption, ForegroundColor = Colors.Black }
-                );
-            BuildSheets(
-                textureFactory,
-                Side("f", cards.Select(c => Text(c.BackgroundColor, c.Caption)).ToList()),
-                Side("b", cards.Select(c => Text(c.CardBackColor, c.CardBackValue)).ToList()),
-                DataSetRowIndex
-            );
-        }
-        else
-        {
-            throw new NotImplementedException("BuildQuick can only handle QuickCard and QuickDeck");
-        }
-    }
+    /// <summary>
+    /// A side's texture, as it loads, and which frame of it the card shows.
+    /// </summary>
+    private sealed record SideView(Task<Texture2D> Texture, int Columns, int Rows, int Frame);
 
     /// <summary>
-    /// The image frame a grid card shows on one side, or null.
+    /// What <paramref name="side"/> shows on this card, or null when it shows nothing.
     /// </summary>
-    private static (GridLayout Layout, int Frame)? GridFace(
-        ImageAsset asset,
-        int[] values,
-        int card
-    ) =>
-        asset != null && card < values.Length && asset.Layout.Frame(values[card]) is int frame
-            ? (asset.Layout, frame)
-            : null;
-
-    private void BuildGrid()
+    /// <param name="key">The key to use for the texture cache.</param>
+    /// <param name="row">The dataset row this side shows, for a template.</param>
+    /// <param name="count">How many cards the prototype has.</param>
+    private SideView View(
+        SideParameters side,
+        string key,
+        SnowTag row,
+        Prototype prototype,
+        int count,
+        IRecordReader R
+    )
     {
-        BuildGridFace(_frontGridFace == null ? null : _frontMasterAsset);
-        if (_differentBack)
-            BuildGridBack(_backGridFace == null ? null : _backMasterAsset);
-    }
-
-    private async void BuildGridFace(ImageAsset asset)
-    {
-        int build = _build;
-        var texture = await TextureCache.Instance.GetOrCreateAssetTexture(asset);
-        // The card may have been freed, or rebuilt, while the image loaded.
-        if (IsInstanceValid(this) && build == _build)
-            ApplyGridFaceTexture(texture ?? MissingFrameTexture);
-    }
-
-    private void ApplyGridFaceTexture(Texture2D texture)
-    {
-        if (!_differentBack)
-            _backTextureGenerated = true;
-        FaceTexture = texture;
-        MapFrontTexture();
-    }
-
-    private async void BuildGridBack(ImageAsset asset)
-    {
-        int build = _build;
-        var texture = await TextureCache.Instance.GetOrCreateAssetTexture(asset);
-        if (IsInstanceValid(this) && build == _build)
-            ApplyGridBackTexture(texture ?? MissingFrameTexture);
-    }
-
-    private void ApplyGridBackTexture(Texture2D texture)
-    {
-        BackTexture = texture;
-        MapBackTexture();
-    }
-
-    private void UpdateDerivedSheet()
-    {
-        _frontTextureGenerated = true;
-        _backTextureGenerated = true;
-        MapFrontTexture();
-        MapBackTexture();
-    }
-
-    private SnowTag _frontTemplateRef;
-    private SnowTag _backTemplateRef;
-    private SnowTag _datasetRef;
-
-    private void BuildTemplate(TextureFactory textureFactory, IRecordReader R)
-    {
-        _differentBack = true;
-
-        if (_height <= 0 || _width <= 0)
-            return;
-
-        if (_frontTemplateRef == SnowTag.Empty)
-            return;
-
-        var ft = R.Get<Template>(_frontTemplateRef);
-        var ds = R.Get<DataSet>(_datasetRef);
-        var bt = R.Get<Template>(_backTemplateRef);
-
-        if (ft is null || ds is null)
-            return;
-
-        var rows = R.GetRows(_datasetRef);
-        if (rows.Count == 0)
-            return;
-
-        int faceFrame = rows.FindIndex(r => r.Id == DataSetRowId);
-        if (faceFrame < 0)
-            return;
-
-        string rowsKey = rows.SheetKey();
-        Sheet Side(Template template)
+        int n = Math.Max(Card.Number, 0);
+        switch (side)
         {
-            if (template == null)
+            case QuickSide quick:
+            {
+                var cards = quick.Cards();
+                if (cards.Count == 0)
+                    return null;
+                ComputeCellSize(_height, _width, out var cellW, out var cellH);
+                return SheetView(
+                    new Sheet(
+                        $"quick:{prototype.SheetKey()}:{key}",
+                        QuickTemplate.Template,
+                        QuickTemplate.DataSet,
+                        cards.Select(c => QuickTemplate.Row(c.Suit, c.Value)).ToList(),
+                        cellW,
+                        cellH
+                    ),
+                    n % cards.Count
+                );
+            }
+
+            case ImageSide image:
+            {
+                var asset = R.Get<ImageAsset>(image.Image);
+                var values = image.FrameValues(R, count);
+                if (
+                    asset == null
+                    || n >= values.Length
+                    || asset.Layout.Frame(values[n]) is not int frame
+                )
+                    return new SideView(Task.FromResult(MissingFrameTexture), 1, 1, 0);
+                return new SideView(
+                    TextureCache.Instance.GetOrCreateAssetTexture(asset),
+                    asset.Layout.Columns,
+                    asset.Layout.Rows,
+                    frame
+                );
+            }
+
+            case TemplateSide templateSide:
+            {
+                var template = R.Get<Template>(templateSide.Template);
+                var dataset = R.Get<DataSet>(templateSide.Dataset);
+                if (template == null || dataset == null)
+                    return null;
+                var rows = R.GetRows(templateSide.Dataset);
+                int frame = rows.FindIndex(r => r.Id == row);
+                var (cellW, cellH) = template.Pixels(10 * BASE_DPI);
+                if (frame < 0 || cellW <= 0 || cellH <= 0)
+                    return null;
+                return SheetView(
+                    new Sheet(
+                        $"tpl:{template.SheetKey()}:{dataset.SheetKey()}:{rows.SheetKey()}",
+                        template,
+                        dataset,
+                        rows,
+                        cellW,
+                        cellH
+                    ),
+                    frame
+                );
+            }
+
+            default:
                 return null;
-            var (cellW, cellH) = template.Pixels(10 * BASE_DPI);
-            if (cellW <= 0 || cellH <= 0)
-                return null;
-            return new(
-                $"tpl:{template.SheetKey()}:{ds.SheetKey()}:{rowsKey}",
-                template,
-                ds,
-                rows,
-                cellW,
-                cellH
-            );
         }
-
-        var front = Side(ft);
-        if (front == null)
-            return;
-
-        BuildSheets(textureFactory, front, Side(bt), faceFrame);
     }
 
     private const float BASE_DPI = 10f;
@@ -602,65 +475,63 @@ public partial class VcToken : VisualComponentBase
     );
 
     /// <summary>
-    /// Shows <paramref name="frame"/> of the front and back sheets, building whichever isn't
-    /// cached yet. With no <paramref name="back"/>, the back shows the front.
+    /// Shows <paramref name="frame"/> of <paramref name="sheet"/>, building it if it isn't cached yet.
     /// </summary>
-    private async void BuildSheets(
-        TextureFactory textureFactory,
-        Sheet front,
-        Sheet back,
-        int frame
-    )
+    private SideView SheetView(Sheet sheet, int frame)
+    {
+        int n = sheet.Rows.Count;
+        int columns = (int)Math.Ceiling(Math.Sqrt(n));
+        int rows = (int)Math.Ceiling((double)n / columns);
+        var texture = TextureCache.Instance.GetOrBuildDerived(
+            sheet.Key,
+            () =>
+            {
+                var defs = new List<TextureFactory.TextureDefinition>(sheet.Rows.Count);
+                var ctx = new TextureContext
+                {
+                    DataSet = sheet.DataSet,
+                    Dpi = 10 * BASE_DPI,
+                    ParentSize = new Vector2(sheet.CellWidth, sheet.CellHeight),
+                };
+                foreach (var row in sheet.Rows)
+                {
+                    ctx.CurrentRow = row;
+                    defs.Add(TemplateEngine.GenerateTextureDefinition(sheet.Template, ctx));
+                }
+                return new SpriteSheetBuilder(
+                    TextureFactory,
+                    defs,
+                    sheet.CellWidth,
+                    sheet.CellHeight,
+                    columns,
+                    rows
+                ).Start();
+            }
+        );
+        return new SideView(texture, columns, rows, frame);
+    }
+
+    /// <summary>
+    /// Shows each side once its texture loads.
+    /// </summary>
+    private async void ShowSides(SideView front, SideView back)
     {
         int build = _build;
-        int n = front.Rows.Count;
-        int hframes = (int)Math.Ceiling(Math.Sqrt(n));
-        int vframes = (int)Math.Ceiling((double)n / hframes);
-
-        Task<Texture2D> Request(Sheet sheet) =>
-            TextureCache.Instance.GetOrBuildDerived(
-                sheet.Key,
-                () =>
-                {
-                    var defs = new List<TextureFactory.TextureDefinition>(sheet.Rows.Count);
-                    var ctx = new TextureContext
-                    {
-                        DataSet = sheet.DataSet,
-                        Dpi = 10 * BASE_DPI,
-                        ParentSize = new Vector2(sheet.CellWidth, sheet.CellHeight),
-                    };
-                    foreach (var row in sheet.Rows)
-                    {
-                        ctx.CurrentRow = row;
-                        defs.Add(TemplateEngine.GenerateTextureDefinition(sheet.Template, ctx));
-                    }
-                    return new SpriteSheetBuilder(
-                        textureFactory,
-                        defs,
-                        sheet.CellWidth,
-                        sheet.CellHeight,
-                        hframes,
-                        vframes
-                    ).Start();
-                }
-            );
-
-        var frontSheet = Request(front);
-        var backSheet = back == null ? frontSheet : Request(back);
-        var frontTexture = await frontSheet;
-        var backTexture = await backSheet;
-        // The card may have been freed, or rebuilt, while the sheets rendered.
-        if (IsInstanceValid(this) && build == _build)
+        var frontTexture = front == null ? null : await front.Texture;
+        var backTexture = back == null ? null : await back.Texture;
+        if (!IsInstanceValid(this) || build != _build)
+            return;
+        if (front != null)
         {
-            _faceHframes = hframes;
-            _faceVframes = vframes;
-            _faceFrame = frame;
-            _backHframes = hframes;
-            _backVframes = vframes;
-            _backFrame = frame;
-            FaceTexture = frontTexture;
-            BackTexture = backTexture;
-            UpdateDerivedSheet();
+            (_faceHframes, _faceVframes, _faceFrame) = (front.Columns, front.Rows, front.Frame);
+            FaceTexture = frontTexture ?? MissingFrameTexture;
+            MapFrontTexture();
+        }
+        if (back != null)
+        {
+            (_backHframes, _backVframes, _backFrame) = (back.Columns, back.Rows, back.Frame);
+            BackTexture = backTexture ?? MissingFrameTexture;
+            MapBackTexture();
         }
     }
 
@@ -679,10 +550,6 @@ public partial class VcToken : VisualComponentBase
     private bool _frontTextureGenerated;
     private bool _backTextureGenerated;
 
-    private void BuildNanDeck() { }
-
-    private void BuildImport() { }
-
     private bool _mapFrontTextureRequired;
 
     private void MapFrontTexture()
@@ -699,9 +566,6 @@ public partial class VcToken : VisualComponentBase
         _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, FaceMaterial(FaceTexture));
 
         SetFrame("front_rect", _faceHframes, _faceVframes, _faceFrame);
-
-        if (!_differentBack)
-            BackTexture = FaceTexture;
     }
 
     private bool _mapBackTextureRequired;
@@ -738,19 +602,8 @@ public partial class VcToken : VisualComponentBase
     private float _thickness;
 
     public TokenShape Shape { get; private set; }
-    private TokenBuildMode _mode;
-    private bool _differentBack;
 
     private TokenType _tokenType;
-
-    //grid parameters
-    private ImageAsset _frontMasterAsset;
-    private ImageAsset _backMasterAsset;
-    private SnowTag _frontGridImageKey;
-    private SnowTag _backGridImageKey;
-
-    private (GridLayout Layout, int Frame)? _frontGridFace;
-    private (GridLayout Layout, int Frame)? _backGridFace;
 
     /// <summary>
     /// Shown in place of a grid frame that doesn't exist.
@@ -787,81 +640,26 @@ public abstract record PrintedParameters : ComponentParameters
     public float Width { get; init; }
     public float Thickness { get; init; }
     public int Shape { get; init; }
-    public VcToken.TokenBuildMode Mode { get; init; }
-    public bool DifferentBack { get; init; }
 
-    public Color FrontBgColor { get; init; } = Colors.Black;
-    public Color BackBgColor { get; init; } = Colors.Black;
+    public SideParameters Front { get; init; }
 
-    public QuickTextureField QuickFront { get; init; } = new();
-    public QuickTextureField QuickBack { get; init; } = new();
-
-    public int FrontFontSize { get; init; }
-    public int BackFontSize { get; init; }
+    /// <summary>
+    /// What the back shows, or null to show the front on both sides.
+    /// </summary>
+    public SideParameters Back { get; init; }
 
     public VcToken.TokenType Type { get; init; }
 
-    public ImmutableArray<QuickCardData> QuickCardData { get; init; } =
-        ImmutableArray<QuickCardData>.Empty;
+    /// <summary>
+    /// How many cards there are. The max of both sides.
+    /// </summary>
+    public int CardCount(IRecordReader R) => Math.Max(Front?.Count(R) ?? 0, Back?.Count(R) ?? 0);
 
     /// <summary>
-    /// Converts Quick Deck parameters into a bunch of Quick Card data.
+    /// Card <paramref name="n"/> of this prototype.
     /// </summary>
-    public List<QuickCardData> QuickDeckCards() =>
-        QuickCardData
-            .SelectMany(q =>
-                Utility
-                    .ParseValueRanges(q.Caption)
-                    .Select(v => new QuickCardData
-                    {
-                        Caption = v,
-                        BackgroundColor = q.BackgroundColor,
-                        CardBackValue = q.CardBackValue,
-                        CardBackColor = q.CardBackColor,
-                    })
-            )
-            .ToList();
-
-    public SnowTag FrontGridImageKey { get; init; }
-    public SnowTag BackGridImageKey { get; init; }
-
-    /// <summary>
-    /// The front image's Range Expression provided by the user.
-    /// </summary>
-    public string FrontGridFrames { get; init; } = "";
-
-    /// <summary>
-    /// The back image's Range Expression provided by the user.
-    /// </summary>
-    public string BackGridFrames { get; init; } = "";
-
-    /// <summary>
-    /// Computes how many cards a grid deck should have.
-    /// </summary>
-    public int GridFrameCount(IRecordReader R)
-    {
-        var (front, back) = GridFrames(R);
-        return Math.Max(front.Count(), back.Count());
-    }
-
-    /// <summary>
-    /// The 1-based frame indexes each grid card shows on its front and back.
-    /// </summary>
-    public (int[] Front, int[] Back) GridFrames(IRecordReader R)
-    {
-        var front = R.Get<ImageAsset>(FrontGridImageKey)?.Layout ?? GridLayout.Single;
-        var back = R.Get<ImageAsset>(BackGridImageKey)?.Layout ?? GridLayout.Single;
-        front.TryParse(FrontGridFrames, out var frontValues);
-        back.TryParse(BackGridFrames, out var backValues);
-        int count = Math.Max(frontValues.Length, backValues.Length);
-        front.TryParse(FrontGridFrames, out frontValues, count);
-        back.TryParse(BackGridFrames, out backValues, count);
-        return (frontValues, backValues);
-    }
-
-    public SnowTag FrontTemplate { get; init; }
-    public SnowTag BackTemplate { get; init; }
-    public SnowTag Dataset { get; init; }
+    public PrototypeItemRef Card(int n, IRecordReader R) =>
+        new(n, Front?.Row(n, R) ?? SnowTag.Empty, Back?.Row(n, R) ?? SnowTag.Empty);
 }
 
 [JsonName("TokenParameters")]

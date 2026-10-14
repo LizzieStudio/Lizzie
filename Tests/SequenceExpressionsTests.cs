@@ -2,14 +2,14 @@ using System.Diagnostics;
 using System.Linq;
 using Xunit;
 
-public class RangeExpressionsTests
+public class SequenceExpressionsTests
 {
     [Theory]
     [InlineData("", "[]")]
     [InlineData("  ", "[]")]
     [InlineData("3", "[3]")]
     [InlineData("1-3,5,7", "[1, 2, 3, 5, 7]")]
-    [InlineData("1 2,,3", "[1, 2, 3]")]
+    [InlineData(" 1 , 2,,3 ", "[1, 2, 3]")]
     [InlineData("2-3, 1-2", "[2, 3, 1, 2]")]
     [InlineData("3-1", "[3, 2, 1]")]
     [InlineData("1 - 3", "[1, 2, 3]")]
@@ -37,8 +37,6 @@ public class RangeExpressionsTests
     [InlineData("3*5", "[3, 3, 3, 3, 3]")]
     [InlineData("3 *2", "[3, 3]")]
     [InlineData("3*, 5", "[3, 5]")]
-    [InlineData("3* 5", "[3, 5]")]
-    [InlineData("1-3 * 2", "[1, 2, 3, 2]")]
     public void TheNumberMustTouchItsOperator(string input, string expected) =>
         Check(input, null, true, expected);
 
@@ -76,7 +74,10 @@ public class RangeExpressionsTests
     [InlineData("1, -3", "[1]")]
     [InlineData("1, 3,*2", "[1, 3]")]
     [InlineData("1, (,)", "[1]")]
-    [InlineData("3/ 5", "[3]")]
+    [InlineData("3/ 5", "[]")]
+    [InlineData("3* 5", "[]")]
+    [InlineData("1-3 * 2", "[]")]
+    [InlineData("1, 2 3", "[1]")]
     [InlineData("1, 3/0", "[1]")]
     [InlineData("1, 3*, 4*", "[1, 3]")]
     [InlineData("1, 3-*, 4-*", "[1]")]
@@ -84,15 +85,38 @@ public class RangeExpressionsTests
     [InlineData("1, (2*)", "[1]")]
     [InlineData("1, 2-*/2", "[1]")]
     [InlineData("1, 2-*2", "[1]")]
-    [InlineData("1, 2**3", "[1, 2]")]
+    [InlineData("1, 2**3", "[1]")]
     [InlineData("1, ()", "[1]")]
     [InlineData("1, (2", "[1]")]
-    [InlineData("1, 2)", "[1, 2]")]
+    [InlineData("1, 2)", "[1]")]
     [InlineData("1, x, 2", "[1]")]
     [InlineData("1, 99999999999", "[1]")]
     [InlineData("1, 2*99999999999", "[1]")]
     public void FailsWithTheExpressionsBeforeTheError(string input, string expected) =>
         Check(input, null, false, expected);
+
+    [Theory]
+    [InlineData("1-3, J, Q, K", "[1, 2, 3, J, Q, K]")]
+    [InlineData("A-E", "[A, B, C, D, E]")]
+    [InlineData("C-A", "[C, B, A]")]
+    [InlineData("a-c", "[a, b, c]")]
+    [InlineData("a-C, Z-a", "[a-C, Z-a]")]
+    [InlineData("(J, Q)*2", "[J, Q, J, Q]")]
+    [InlineData(" Draw two , Skip ", "[Draw two, Skip]")]
+    [InlineData("Skip (2), +2, J2, 1 2", "[Skip (2), +2, J2, 1 2]")]
+    [InlineData("AB-CD, 1-", "[AB-CD, 1-]")]
+    [InlineData("007, 1/2, 5*", "[007, 1, 5]")]
+    [InlineData("\"Draw, then discard\", \"1-5\"", "[Draw, then discard, 1-5]")]
+    [InlineData("(\"a, b\")*2", "[a, b, a, b]")]
+    public void ParsesText(string input, string expected) => CheckText(input, true, expected);
+
+    [Theory]
+    [InlineData("A, \"open", "[A]")]
+    [InlineData("A, (B", "[A]")]
+    [InlineData("A, B)", "[A]")]
+    [InlineData("A, ()", "[A]")]
+    public void FailsOnUnclosedQuotesAndParentheses(string input, string expected) =>
+        CheckText(input, false, expected);
 
     [Theory]
     [InlineData("1, 3-", 3, "[1, 1, 1]")]
@@ -115,7 +139,7 @@ public class RangeExpressionsTests
     [InlineData("1-20000", 5, false, 0)]
     public void StopsAtTheCap(string input, int? count, bool ok, int length)
     {
-        var parsed = RangeExpressions.TryParse(input, out var output, count);
+        var parsed = SequenceExpressions.TryParseNumbers(input, out var output, count);
         Assert.True(
             parsed == ok && output.Length == length,
             $"{Call(input, count)} returned {parsed} with {output.Length} values, expected {ok} with {length}."
@@ -125,7 +149,7 @@ public class RangeExpressionsTests
     [StackTraceHidden]
     private static void Check(string input, int? count, bool ok, string expected)
     {
-        var parsed = RangeExpressions.TryParse(input, out var output, count);
+        var parsed = SequenceExpressions.TryParseNumbers(input, out var output, count);
         var actual = $"[{string.Join(", ", output)}]";
         Assert.True(
             parsed == ok && actual == expected,
@@ -133,6 +157,17 @@ public class RangeExpressionsTests
         );
     }
 
+    [StackTraceHidden]
+    private static void CheckText(string input, bool ok, string expected)
+    {
+        var parsed = SequenceExpressions.TryParse(input, out var output);
+        var actual = $"[{string.Join(", ", output)}]";
+        Assert.True(
+            parsed == ok && actual == expected,
+            $"SequenceExpressions.TryParse(\"{input}\") returned {parsed} with {actual}, expected {ok} with {expected}."
+        );
+    }
+
     private static string Call(string input, int? count) =>
-        $"RangeExpressions.TryParse(\"{input}\"{(count is int c ? $", count: {c}" : "")})";
+        $"SequenceExpressions.TryParseNumbers(\"{input}\"{(count is int c ? $", count: {c}" : "")})";
 }

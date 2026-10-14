@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://cn3pcewp6eemn"]
+
+[ext_resource type="Script" uid="uid://kjnvgfygtrw7" path="res://Scripts/ComponentPanelResults/QuickSuitRow.cs" id="1_row"]
+
+[node name="QuickSuitRow" type="HBoxContainer" unique_id=1052625006 node_paths=PackedStringArray("_background", "_foreground", "_values", "_icon", "_showText")]
+script = ExtResource("1_row")
+_background = NodePath("Background")
+_foreground = NodePath("Foreground")
+_values = NodePath("Values")
+_icon = NodePath("Icon")
+_showText = NodePath("ShowText")
+
+[node name="Background" type="ColorPickerButton" parent="." unique_id=2122599136]
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+tooltip_text = "Background color"
+color = Color(1, 0, 0, 1)
+edit_alpha = false
+
+[node name="Foreground" type="ColorPickerButton" parent="." unique_id=638948339]
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+tooltip_text = "Text and icon color"
+edit_alpha = false
+
+[node name="Values" type="LineEdit" parent="." unique_id=164643204]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "One card per value, like 1-10, J, Q, K. Put text with commas in quotes: \"Draw, then discard\"."
+text = "1-6"
+placeholder_text = "1-10, J, Q, K"
+
+[node name="Icon" type="OptionButton" parent="." unique_id=581463800]
+layout_mode = 2
+tooltip_text = "Each card shows as many icons as its number, or one."
+fit_to_longest_item = false
+item_count = 1
+popup/item_0/id = 0
+
+[node name="ShowText" type="CheckBox" parent="." unique_id=127509008]
+layout_mode = 2
+tooltip_text = "Show each card's value as text"
+button_pressed = true
+text = "Text"

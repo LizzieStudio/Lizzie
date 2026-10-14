@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using Godot;
-using Lizzie.AssetManagement;
 
 public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 {
@@ -11,11 +8,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private LineEdit _heightInput;
     private LineEdit _widthInput;
     private LineEdit _thicknessInput;
-
-    private ColorPickerButton _quickBackgroundColor;
-    private ColorPickerButton _quickBackgroundColor2;
-
-    private CheckBox _quickBackCheckbox;
 
     private OptionButton _typePicker;
     private OptionButton _shapePicker;
@@ -30,36 +22,11 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private Label _sizeLabel;
     private Label _widthTimes;
 
-    private TabContainer _tabs;
-
     private ComponentPreview _preview;
-    private QuickTextureEntry _frontField;
-    private QuickTextureEntry _backField;
 
-    private const int MaxQuickSuitCount = 8;
-    private ColorPickerButton[] _quickSuitColors = new ColorPickerButton[MaxQuickSuitCount];
-    private LineEdit[] _quickSuitValues = new LineEdit[MaxQuickSuitCount];
-    private HBoxContainer[] _quickSuitRows = new HBoxContainer[MaxQuickSuitCount];
-    private OptionButton _quickSuitCount;
-    private ColorPickerButton _quickBackColor;
-    private LineEdit _quickBackText;
-    private List<QuickCardData> _quickCards = new();
-    private List<QuickCardData> _quickSuits = new();
-    private int _suitCount;
-
-    private IconLibrary _iconLibrary = new();
-
-    private TemplateSelector _frontTemplatePicker;
-    private Button _editFrontTemplateButton;
-    private TemplateSelector _backTemplatePicker;
-    private Button _editBackTemplateButton;
-    private DataSetSelector _datasetPicker;
-    private Button _datasetEditorButton;
-
-    private ImageSelector _gridFrontImageSelector;
-    private ImageSelector _gridBackImageSelector;
-    private LineEdit _gridFrontFrames;
-    private LineEdit _gridBackFrames;
+    private SideEditor _front;
+    private SideEditor _back;
+    private CheckBox _sameAsFront;
 
     private record ShapePreset(string Label, int Shape, float W = 0f, float H = 0f, float T = 0f);
 
@@ -94,21 +61,9 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IRecordReader R)
     {
-        if (_tabs.CurrentTab == 2)
-        {
-            var count = GridParams(new DeckParameters()).GridFrameCount(R);
-            _preview.ItemCount = count;
-            _preview.MultiItemMode = count > 1;
-        }
-
-        var dataset = R.Get<DataSet>(_datasetRef);
-        if (_tabs.CurrentTab == 3)
-        {
-            _preview.MultiItemMode = dataset != null;
-            if (dataset != null)
-                _preview.ItemCount = R.GetRows(_datasetRef).Count;
-        }
-
+        int count = Parameters().CardCount(R);
+        _preview.ItemCount = count;
+        _preview.MultiItemMode = count > 1;
         UpdatePreview();
     }
 
@@ -160,47 +115,27 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _sizeLabel = GetNode<Label>("%SizeLabel");
         _widthTimes = GetNode<Label>("%X");
 
-        _quickBackgroundColor = GetNode<ColorPickerButton>("%TopBgColor");
-        _quickBackCheckbox = GetNode<CheckBox>("%ToggleBack");
-        _frontField = GetNode<QuickTextureEntry>("%FrontField");
-        _frontField.FieldChanged += (sender, args) => UpdatePreview();
-        _frontField.SetIcons(_iconLibrary);
-        _quickBackgroundColor.ColorChanged += _ => UpdatePreview();
-        _quickBackCheckbox.Pressed += OnQuickBackCheckboxChange;
-        _quickBackgroundColor2 = GetNode<ColorPickerButton>("%BottomBgColor");
-        _quickBackgroundColor2.ColorChanged += _ => UpdatePreview();
-        _backField = GetNode<QuickTextureEntry>("%BackField");
-        _backField.FieldChanged += (sender, args) => UpdatePreview();
-        _backField.SetIcons(_iconLibrary);
-
-        _tabs = GetNode<TabContainer>("%Tabs");
-        _tabs.TabSelected += tab =>
+        _front = GetNode<SideEditor>("%Front");
+        _back = GetNode<SideEditor>("%Back");
+        _sameAsFront = GetNode<CheckBox>("%SameAsFront");
+        _front.Changed += Refresh;
+        _back.Changed += Refresh;
+        _sameAsFront.Toggled += same =>
         {
-            if (tab == 1)
-                GenerateQuickCards();
-            else if (tab == 2 || tab == 3)
-                RecordService.Instance.QueueSync(this);
-            else
-            {
-                // A Quick card is a single card.
-                _preview.ItemCount = 1;
-                _preview.MultiItemMode = false;
-            }
-            UpdatePreview();
+            _back.Visible = !same;
+            Refresh();
         };
 
         _preview = GetNode<ComponentPreview>("%Preview");
         _preview.ItemSelected += PreviewOnItemSelected;
 
-        InitializeTemplates();
-        InitializeGridBindings();
-        InitializeMultiBindings();
-
-        OnQuickBackCheckboxChange();
         OnTypeChanged(0);
-        QuickSuitCountChanged(3);
-        GenerateQuickCards();
     }
+
+    /// <summary>
+    /// Counts the cards again and redraws the preview, since a side changed.
+    /// </summary>
+    private void Refresh() => RecordService.Instance.QueueSync(this);
 
     private string TypeKey() =>
         _typePicker.Selected switch
@@ -314,182 +249,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         UpdateOrientationButtons();
     }
 
-    private void InitializeTemplates()
-    {
-        _frontTemplatePicker = GetNode<TemplateSelector>("%FrontTemplateList");
-        _frontTemplatePicker.TemplateSelected += OnFrontTemplateChanged;
-        _editFrontTemplateButton = GetNode<Button>("%EditFrontTemplateButton");
-        _editFrontTemplateButton.Pressed += EditFrontTemplate;
-
-        _backTemplatePicker = GetNode<TemplateSelector>("%BackTemplateList");
-        _backTemplatePicker.TemplateSelected += OnBackTemplateChanged;
-        _editBackTemplateButton = GetNode<Button>("%EditBackTemplateButton");
-        _editBackTemplateButton.Pressed += EditBackTemplate;
-
-        _datasetPicker = GetNode<DataSetSelector>("%DatasetList");
-        _datasetPicker.DataSetSelected += OnDatasetChanged;
-
-        _datasetEditorButton = GetNode<Button>("%EditDatasetButton");
-        _datasetEditorButton.Pressed += EditDataset;
-    }
-
-    private void InitializeGridBindings()
-    {
-        _gridFrontImageSelector = GetNode<ImageSelector>("%FrontImageSelector");
-        _gridFrontImageSelector.ImageSelected += FrontImageSelected;
-
-        _gridBackImageSelector = GetNode<ImageSelector>("%BackImageSelector");
-        _gridBackImageSelector.ImageSelected += BackImageSelected;
-
-        _gridFrontFrames = GetNode<LineEdit>("%GridFrontFrames");
-        _gridFrontFrames.TextChanged += _ => GenerateGridTokens();
-        _gridBackFrames = GetNode<LineEdit>("%GridBackFrames");
-        _gridBackFrames.TextChanged += _ => GenerateGridTokens();
-    }
-
-    private void InitializeMultiBindings()
-    {
-        for (int i = 0; i < MaxQuickSuitCount; i++)
-        {
-            _quickSuitColors[i] = GetNode<ColorPickerButton>($"%QuickSuit{i + 1}Color");
-            _quickSuitValues[i] = GetNode<LineEdit>($"%QuickSuit{i + 1}Contents");
-            _quickSuitRows[i] = GetNode<HBoxContainer>($"%QSRow{i + 1}");
-
-            _quickSuitColors[i].ColorChanged += _ => GenerateQuickCards();
-            _quickSuitValues[i].TextChanged += _ => GenerateQuickCards();
-        }
-
-        _quickSuitCount = GetNode<OptionButton>("%QuickSuitCount");
-        _quickSuitCount.ItemSelected += QuickSuitCountChanged;
-
-        _quickBackColor = GetNode<ColorPickerButton>("%QuickBackColor");
-        _quickBackColor.ColorChanged += _ => GenerateQuickCards();
-
-        _quickBackText = GetNode<LineEdit>("%QuickBackText");
-        _quickBackText.TextChanged += _ => GenerateQuickCards();
-    }
-
-    private void QuickSuitCountChanged(long suitCount)
-    {
-        for (int i = 0; i < _quickSuitRows.Length; i++)
-            _quickSuitRows[i].Visible = suitCount > i - 1;
-
-        GenerateQuickCards();
-    }
-
-    private void LoadQuickSuits()
-    {
-        _quickSuits.Clear();
-        _suitCount = _quickSuitCount.Selected + 1;
-        for (int i = 0; i < _suitCount; i++)
-        {
-            _quickSuits.Add(
-                new QuickCardData
-                {
-                    BackgroundColor = _quickSuitColors[i].Color,
-                    Caption = _quickSuitValues[i].Text,
-                    CardBackColor = _quickBackColor.Color,
-                    CardBackValue = _quickBackText.Text,
-                }
-            );
-        }
-    }
-
-    private void GenerateQuickCards()
-    {
-        _suitCount = _quickSuitCount.Selected + 1;
-        _quickCards.Clear();
-
-        for (int i = 0; i < _suitCount; i++)
-        {
-            var values = Utility.ParseValueRanges(_quickSuitValues[i].Text);
-            foreach (var v in values)
-            {
-                _quickCards.Add(
-                    new QuickCardData
-                    {
-                        BackgroundColor = _quickSuitColors[i].Color,
-                        Caption = v,
-                        CardBackColor = _quickBackColor.Color,
-                        CardBackValue = _quickBackText.Text,
-                    }
-                );
-            }
-        }
-
-        if (_tabs?.CurrentTab == 1)
-        {
-            _preview.ItemCount = _quickCards.Count;
-            _preview.MultiItemMode = _quickCards.Count > 1;
-            UpdatePreview();
-        }
-    }
-
-    private SnowTag _frontGridImage;
-    private SnowTag _backGridImage;
-
-    private void FrontImageSelected(SnowTag Id)
-    {
-        _frontGridImage = Id;
-        GenerateGridTokens();
-    }
-
-    private void BackImageSelected(SnowTag Id)
-    {
-        _backGridImage = Id;
-        GenerateGridTokens();
-    }
-
-    private void GenerateGridTokens()
-    {
-        _gridFrontFrames.MarkValidity(RangeExpressions.TryParse(_gridFrontFrames.Text, out _));
-        _gridBackFrames.MarkValidity(RangeExpressions.TryParse(_gridBackFrames.Text, out _));
-        RecordService.Instance.QueueSync(this);
-    }
-
-    private DeckParameters GridParams(DeckParameters d) =>
-        d with
-        {
-            FrontGridImageKey = _frontGridImage,
-            BackGridImageKey = _backGridImage,
-            FrontGridFrames = _gridFrontFrames.Text,
-            BackGridFrames = _gridBackFrames.Text,
-            Mode = VcToken.TokenBuildMode.Grid,
-            DifferentBack = true,
-        };
-
-    private void EditFrontTemplate() =>
-        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _frontTemplateRef });
-
-    private void EditBackTemplate() =>
-        EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _backTemplateRef });
-
-    private void EditDataset() =>
-        EventBus.Instance.Publish(new ShowDatasetEditor { DatasetRef = _datasetRef });
-
-    private SnowTag _datasetRef = SnowTag.Empty;
-
-    private void OnDatasetChanged(SnowTag datasetRef)
-    {
-        _datasetRef = datasetRef;
-        RecordService.Instance.QueueSync(this);
-    }
-
-    private SnowTag _frontTemplateRef = SnowTag.Empty;
-    private SnowTag _backTemplateRef = SnowTag.Empty;
-
-    private void OnFrontTemplateChanged(SnowTag templateRef)
-    {
-        _frontTemplateRef = templateRef;
-        RecordService.Instance.QueueSync(this);
-    }
-
-    private void OnBackTemplateChanged(SnowTag templateRef)
-    {
-        _backTemplateRef = templateRef;
-        RecordService.Instance.QueueSync(this);
-    }
-
     public override void Activate()
     {
         var comp = GetPreviewComponent();
@@ -519,93 +278,36 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-    private void OnQuickBackCheckboxChange()
-    {
-        ShowQuickBack();
-        UpdatePreview();
-    }
-
-    private void ShowQuickBack()
-    {
-        var h4 = GetNode<HBoxContainer>("%BottomBgContainer");
-        h4.Visible = _quickBackCheckbox.ButtonPressed;
-        _backField.Visible = _quickBackCheckbox.ButtonPressed;
-    }
-
     public override ComponentParameters GetParams()
+    {
+        var d = Parameters();
+        // More than one card spawns as a deck.
+        return d.CardCount(RecordService.Instance) > 1 ? d : d.CloneAs<TokenParameters>();
+    }
+
+    private DeckParameters Parameters()
     {
         int shape = GetEffectiveShape();
 
         float height = ParamToFloat(_heightInput.Text);
         float width = shape == 0 ? ParamToFloat(_widthInput.Text) : height;
 
-        var d = new DeckParameters
+        return new DeckParameters
         {
             ComponentName = _nameInput.Text,
             Height = height,
             Width = width,
             Thickness = ParamToFloat(_thicknessInput.Text),
             Shape = shape,
-            FrontBgColor = _quickBackgroundColor.Color,
             Type = _typePicker.Selected switch
             {
                 0 => VcToken.TokenType.Card,
                 2 => VcToken.TokenType.Board,
                 _ => VcToken.TokenType.Token,
             },
-            FrontFontSize = 24,
+            Front = _front.Side,
+            Back = _sameAsFront.ButtonPressed ? null : _back.Side,
         };
-
-        bool spawnAsDeck = false;
-
-        switch (_tabs.CurrentTab)
-        {
-            case 0:
-                d = d with
-                {
-                    Mode = VcToken.TokenBuildMode.QuickCard,
-                    QuickFront = _frontField.GetQuickTextureField(),
-                    QuickBack = _backField.GetQuickTextureField(),
-                    DifferentBack = _quickBackCheckbox.ButtonPressed,
-                };
-                break;
-
-            case 1:
-                LoadQuickSuits();
-                d = d with
-                {
-                    QuickCardData = _quickSuits.ToImmutableArray(),
-                    DifferentBack = true,
-                    Mode = VcToken.TokenBuildMode.QuickDeck,
-                };
-                spawnAsDeck = true;
-                break;
-
-            case 2:
-                d = GridParams(d);
-                if (d.GridFrameCount(RecordService.Instance) > 1)
-                    spawnAsDeck = true;
-                break;
-
-            case 3:
-                d = d with { Mode = VcToken.TokenBuildMode.Template };
-                d = d with
-                {
-                    FrontTemplate = _frontTemplateRef,
-                    BackTemplate = _backTemplateRef,
-                    Dataset = _datasetRef,
-                };
-                if (RecordService.Instance.Get<DataSet>(_datasetRef) != null)
-                    spawnAsDeck = true;
-                break;
-        }
-
-        d = d with { BackBgColor = _quickBackgroundColor2.Color, BackFontSize = 24 };
-
-        if (spawnAsDeck)
-            return d;
-
-        return d.CloneAs<TokenParameters>();
     }
 
     private void UpdatePreview()
@@ -621,18 +323,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var (rowIndex, rowId) = GetRow(_preview.CurrentItem);
-        _preview.Build(GetParams(), rowIndex, rowId, TextureFactory);
-    }
-
-    private (int Index, SnowTag Id) GetRow(int rowNum)
-    {
-        if (_tabs.CurrentTab != 3 || _datasetRef == SnowTag.Empty)
-            return (rowNum, SnowTag.Empty);
-        var rows = RecordService.Instance.GetRows(_datasetRef);
-        if (rowNum < 0 || rowNum >= rows.Count)
-            return (-1, SnowTag.Empty);
-        return (-1, rows[rowNum].Id);
+        var parameters = (PrintedParameters)GetParams();
+        _preview.Build(
+            parameters,
+            parameters.Card(_preview.CurrentItem, RecordService.Instance),
+            TextureFactory
+        );
     }
 
     private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e) => UpdatePreview();
@@ -683,56 +379,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _widthInput.Text = p.Width > 0 ? p.Width.ToString() : "";
         _thicknessInput.Text = p.Thickness.ToString();
 
-        _quickBackgroundColor.Color = p.FrontBgColor;
-        _quickBackgroundColor2.Color = p.BackBgColor;
-
-        _frontField.SetQuickTextureField(p.QuickFront);
-        _backField.SetQuickTextureField(p.QuickBack);
-
-        _quickBackCheckbox.ButtonPressed = p.DifferentBack;
-        ShowQuickBack();
-
-        _tabs.CurrentTab = p.Mode switch
-        {
-            VcToken.TokenBuildMode.QuickCard => 0,
-            VcToken.TokenBuildMode.QuickDeck => 1,
-            VcToken.TokenBuildMode.Grid => 2,
-            VcToken.TokenBuildMode.Template => 3,
-            _ => 0,
-        };
-
-        if (p.QuickCardData is { Length: > 0 } quickData)
-        {
-            _quickSuitCount.Select(Math.Min(quickData.Length - 1, MaxQuickSuitCount - 1));
-            QuickSuitCountChanged(_quickSuitCount.Selected);
-            for (int i = 0; i < quickData.Length && i < MaxQuickSuitCount; i++)
-            {
-                _quickSuitColors[i].Color = quickData[i].BackgroundColor;
-                _quickSuitValues[i].Text = quickData[i].Caption;
-            }
-            if (quickData.Length > 0)
-            {
-                _quickBackColor.Color = quickData[0].CardBackColor;
-                _quickBackText.Text = quickData[0].CardBackValue;
-            }
-        }
-
-        _gridFrontImageSelector.SetSelectedImage(p.FrontGridImageKey);
-        _frontGridImage = p.FrontGridImageKey;
-        _gridBackImageSelector.SetSelectedImage(p.BackGridImageKey);
-        _backGridImage = p.BackGridImageKey;
-        _gridFrontFrames.Text = p.FrontGridFrames;
-        _gridBackFrames.Text = p.BackGridFrames;
-        GenerateGridTokens();
-
-        _frontTemplatePicker.SelectedTemplate = p.FrontTemplate;
-        _frontTemplateRef = p.FrontTemplate;
-
-        _backTemplatePicker.SelectedTemplate = p.BackTemplate;
-        _backTemplateRef = p.BackTemplate;
-
-        _datasetPicker.SelectedDataSet = p.Dataset;
-        _datasetRef = p.Dataset;
+        _front.Side = p.Front;
+        _sameAsFront.ButtonPressed = p.Back == null;
+        if (p.Back != null)
+            _back.Side = p.Back;
         RecordService.Instance.QueueSync(this);
 
         UpdateDimensionUI();

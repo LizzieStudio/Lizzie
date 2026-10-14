@@ -200,10 +200,14 @@ public partial class PrototypeManifest : Window, ICommandView
 
         var prototypes = R.Get<Prototype>().ToList();
 
-        // The Qty column. A deck's cards carry the deck's prototype and a data row, so only
-        // components without a row are counted, which counts each deck once.
+        // The Qty column.
+        // We filter a deck's cards so that they aren't counted.
         var counts = R.Get<ComponentState>(s =>
-                s.DataSetRowIndex < 0 && s.DataSetRowId == SnowTag.Empty
+                !(
+                    s.IsItem
+                    && R.GetIncludingDeleted<Prototype>(s.PrototypeRef)?.Type
+                        == VisualComponentBase.VisualComponentType.Deck
+                )
             )
             .GroupBy(s => s.PrototypeRef)
             .ToDictionary(g => g.Key, g => g.Count());
@@ -284,30 +288,9 @@ public partial class PrototypeManifest : Window, ICommandView
         //update the preview
         _preview.ClearComponent();
 
-        int rowIndex = 0;
-        SnowTag rowId = SnowTag.Empty;
+        var card = PrototypeItemRef.First(SelectedPrototype.Parameters, RecordService.Instance);
 
-        SnowTag datasetParam = SnowTag.Empty;
-        if (SelectedPrototype.Parameters is PrintedParameters pp)
-        {
-            datasetParam = pp.Dataset;
-        }
-        else if (SelectedPrototype.Parameters is DieParameters dp)
-        {
-            datasetParam = dp.Dataset;
-        }
-
-        if (datasetParam != SnowTag.Empty)
-        {
-            var rows = RecordService.Instance.GetRows(datasetParam);
-            if (rows.Count > 0)
-            {
-                rowIndex = -1;
-                rowId = rows[0].Id;
-            }
-        }
-
-        _preview.Build(SelectedPrototype, rowIndex, rowId, TextureFactory);
+        _preview.Build(SelectedPrototype, card, TextureFactory);
     }
 
     public TextureFactory TextureFactory { get; set; }

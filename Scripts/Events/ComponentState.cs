@@ -27,8 +27,7 @@ public record ComponentState : Replicated
             PrototypeRef = c.PrototypeRef,
             Position = c.Position,
             Rotation = c.Rotation,
-            DataSetRowIndex = c.DataSetRowIndex,
-            DataSetRowId = c.DataSetRowId,
+            Card = c.Card,
         };
 
     public SnowTag PrototypeRef { get; init; }
@@ -80,9 +79,7 @@ public record ComponentState : Replicated
     public ZOrder ZOrder { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public int DataSetRowIndex { get; init; } = -1;
-
-    public SnowTag DataSetRowId { get; init; } = SnowTag.Empty;
+    public PrototypeItemRef Card { get; init; } = PrototypeItemRef.None;
 
     /// <summary>
     /// What holds this component:
@@ -101,9 +98,17 @@ public record ComponentState : Replicated
     [JsonIgnore]
     public bool IsOnTable => ContainerRef == SnowTag.Empty;
 
-    /// <summary>Whether it's one of a deck's cards, rather than the deck itself.</summary>
+    /// <summary>
+    /// Whether it's one of its prototype's printed items.
+    ///
+    /// <list type="bullet">
+    /// <item>a deck's card</item>
+    /// <item>a single printed component</item>
+    /// <item>a die spawned for a dataset row</item>
+    /// </list>
+    /// </summary>
     [JsonIgnore]
-    public bool IsCard => DataSetRowIndex >= 0 || DataSetRowId != SnowTag.Empty;
+    public bool IsItem => Card != PrototypeItemRef.None;
 
     /// <summary>
     /// A deck's cards, or the components whose <see cref="ContainerRef"/> is this one, like a bag's or a tray's.
@@ -145,13 +150,13 @@ public record ComponentState : Replicated
     }
 
     /// <summary>
-    /// Its prototype and, for a card made from a dataset, its row.
+    /// Its prototype and, for a card made from a dataset, its rows.
     /// </summary>
     /// <remarks>
     /// This will need to be extended as new references are invented.
     /// </remarks>
     public override IEnumerable<Target> Referenced(IRecordReader R) =>
-        DataSetRowId == SnowTag.Empty
-            ? [new RecordTarget(PrototypeRef)]
-            : [new RecordTarget(PrototypeRef), new RecordTarget(DataSetRowId)];
+        new[] { PrototypeRef, Card.FrontRow, Card.BackRow }
+            .Where(id => id != SnowTag.Empty)
+            .Select(id => new RecordTarget(id));
 }

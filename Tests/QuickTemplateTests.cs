@@ -9,13 +9,16 @@ public class QuickTemplateTests
     private static readonly Color Cream = Color.Color8(255, 242, 204);
     private static readonly Color Red = Color.Color8(204, 26, 26);
 
-    /// <summary>The objects the Quick template draws for one face, in drawing order.</summary>
-    private static List<TextureFactory.TextureObject> Draw(QuickTextureField field)
+    private static readonly QuickSuit Suit = new() { Background = Cream, Foreground = Red };
+    private static readonly QuickSuit Stars = Suit with { Icon = "Star" };
+
+    /// <summary>The objects the Quick template draws for one card, in drawing order.</summary>
+    private static List<TextureFactory.TextureObject> Draw(QuickSuit suit, string value)
     {
         var context = new TextureContext
         {
             DataSet = QuickTemplate.DataSet,
-            CurrentRow = QuickTemplate.Row(Cream, field),
+            CurrentRow = QuickTemplate.Row(suit, value),
         };
         return QuickTemplate
             .Template.Elements.Select(TemplateEngine.BuildTemplateElement)
@@ -25,53 +28,85 @@ public class QuickTemplateTests
     }
 
     [Fact]
-    public void ATextFaceDrawsItsCaptionOverTheBackground()
+    public void ACardWithoutAnIconDrawsItsValueLargeOverTheBackground()
     {
-        var drawn = Draw(new QuickTextureField { Caption = "No", ForegroundColor = Red });
+        var drawn = Draw(Suit, "No");
 
-        AssertTypes(
-            drawn,
-            TextureFactory.TextureObjectType.RectangleFrame,
-            TextureFactory.TextureObjectType.Text
-        );
-        var (background, text) = (drawn[0], drawn[1]);
+        AssertTypes(drawn, Frame, Text, Text);
+        var (background, large, corner) = (drawn[0], drawn[1], drawn[2]);
         Assert.True(
             background.BackgroundColor.IsEqualApprox(Cream),
             $"The background is {background.BackgroundColor}, expected {Cream}."
         );
         Assert.True(
-            text.Text == "No" && text.ForegroundColor.IsEqualApprox(Red),
-            $"The text is \"{text.Text}\" in {text.ForegroundColor}, expected \"No\" in {Red}."
+            large.Text == "No" && large.ForegroundColor.IsEqualApprox(Red) && corner.Text == "",
+            $"The text is \"{large.Text}\" in {large.ForegroundColor} with \"{corner.Text}\" in the corner, "
+                + $"expected \"No\" in {Red} with nothing in the corner."
         );
     }
 
     [Fact]
-    public void AShapeFaceDrawsItsShapeQuantityTimes()
+    public void ACardWithAnIconDrawsItsValueInTheCornerAndThatManyIcons()
     {
-        var drawn = Draw(
-            new QuickTextureField
-            {
-                FaceType = TextureFactory.TextureObjectType.CoreShape,
-                Caption = "Star",
-                ForegroundColor = Red,
-                Quantity = 3,
-            }
-        );
+        var drawn = Draw(Stars, "3");
 
-        AssertTypes(
-            drawn,
-            TextureFactory.TextureObjectType.RectangleFrame,
-            TextureFactory.TextureObjectType.Text,
-            TextureFactory.TextureObjectType.CoreShape
-        );
-        var (text, shape) = (drawn[1], drawn[2]);
-        Assert.True(text.Text == "", $"A shape face also draws the text \"{text.Text}\".");
+        AssertTypes(drawn, Frame, Text, Text, Shape);
+        var (large, corner, icons) = (drawn[1], drawn[2], drawn[3]);
         Assert.True(
-            shape.Text == "Star" && shape.Quantity == 3 && shape.ForegroundColor.IsEqualApprox(Red),
-            $"The shape is {shape.Quantity} \"{shape.Text}\" in {shape.ForegroundColor}, "
+            large.Text == "" && corner.Text == "3",
+            $"The text is \"{large.Text}\" with \"{corner.Text}\" in the corner, expected only \"3\" in the corner."
+        );
+        Assert.True(
+            icons.Text == "Star" && icons.Quantity == 3 && icons.ForegroundColor.IsEqualApprox(Red),
+            $"The icons are {icons.Quantity} \"{icons.Text}\" in {icons.ForegroundColor}, "
                 + $"expected 3 \"Star\" in {Red}."
         );
     }
+
+    [Theory]
+    [InlineData("J")]
+    [InlineData("-3")]
+    [InlineData("21")]
+    public void AValueThatIsNotANumberUpToTwentyDrawsOneIcon(string value)
+    {
+        var drawn = Draw(Stars, value);
+
+        AssertTypes(drawn, Frame, Text, Text, Shape);
+        Assert.True(
+            drawn[3].Quantity == 1,
+            $"\"{value}\" draws {drawn[3].Quantity} icons, expected 1."
+        );
+    }
+
+    [Fact]
+    public void ZeroDrawsNoIcons()
+    {
+        var drawn = Draw(Stars, "0");
+
+        AssertTypes(drawn, Frame, Text, Text);
+        Assert.True(drawn[2].Text == "0", $"The corner shows \"{drawn[2].Text}\", expected \"0\".");
+    }
+
+    [Fact]
+    public void HidingTheTextLeavesOnlyTheIcons()
+    {
+        var drawn = Draw(Stars with { ShowText = false }, "3");
+
+        AssertTypes(drawn, Frame, Text, Text, Shape);
+        Assert.True(
+            drawn[1].Text == "" && drawn[2].Text == "" && drawn[3].Quantity == 3,
+            $"Drew the text \"{drawn[1].Text}\" and \"{drawn[2].Text}\" with {drawn[3].Quantity} icons, "
+                + "expected no text and 3 icons."
+        );
+    }
+
+    private const TextureFactory.TextureObjectType Frame = TextureFactory
+        .TextureObjectType
+        .RectangleFrame;
+    private const TextureFactory.TextureObjectType Text = TextureFactory.TextureObjectType.Text;
+    private const TextureFactory.TextureObjectType Shape = TextureFactory
+        .TextureObjectType
+        .CoreShape;
 
     [StackTraceHidden]
     private static void AssertTypes(

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using Godot;
 
 /// <summary>
@@ -7,18 +8,24 @@ using Godot;
 /// </summary>
 public static class QuickTemplate
 {
+    /// <summary>
+    /// The most icons a card can show. A larger number shows one.
+    /// </summary>
+    public const int MaxIcons = 13;
+
     private static readonly Column Background = new() { Id = new SnowTag(1), Name = "Background" };
     private static readonly Column Foreground = new() { Id = new SnowTag(2), Name = "Foreground" };
     private static readonly Column Text = new() { Id = new SnowTag(3), Name = "Text" };
-    private static readonly Column Shape = new() { Id = new SnowTag(4), Name = "Shape" };
-    private static readonly Column Quantity = new() { Id = new SnowTag(5), Name = "Quantity" };
+    private static readonly Column Corner = new() { Id = new SnowTag(4), Name = "Corner" };
+    private static readonly Column Icon = new() { Id = new SnowTag(5), Name = "Icon" };
+    private static readonly Column Quantity = new() { Id = new SnowTag(6), Name = "Quantity" };
 
     public static DataSet DataSet { get; } =
         new()
         {
             Id = SnowTag.Empty,
             Name = "Quick",
-            Columns = [Background, Foreground, Text, Shape, Quantity],
+            Columns = [Background, Foreground, Text, Corner, Icon, Quantity],
         };
 
     public static Template Template { get; } =
@@ -45,34 +52,51 @@ public static class QuickTemplate
                     ("Wrap Text", "True")
                 ),
                 Element(
+                    ("Type", "Text"),
+                    ("X", "14"),
+                    ("Y", "10"),
+                    ("Width", "24"),
+                    ("Height", "16"),
+                    ("Text", "{Corner}"),
+                    ("Foreground", "{Foreground}"),
+                    ("Autosize", "True")
+                ),
+                Element(
                     ("Type", "Image"),
+                    ("Y", "58"),
                     ("Width", "80"),
-                    ("Height", "80"),
-                    ("Image", "{Shape}"),
+                    ("Height", "72"),
+                    ("Image", "{Icon}"),
                     ("Foreground", "{Foreground}"),
                     ("Quantity", "{Quantity}"),
-                    ("Visible", "{Shape}") // an empty image name draws the "not found" icon
+                    ("Visible", "{Icon}") // an empty image name draws the "not found" icon
                 ),
             ],
         };
 
     /// <summary>
-    /// Creates the row for one face.
+    /// Creates the row for the card showing <paramref name="value"/> in <paramref name="suit"/>.
     /// </summary>
-    public static DataRow Row(Color background, QuickTextureField field)
+    public static DataRow Row(QuickSuit suit, string value)
     {
-        var caption = field?.Caption ?? string.Empty;
-        bool isShape = field?.FaceType == TextureFactory.TextureObjectType.CoreShape;
+        bool hasIcon = suit.Icon != "";
+        string text = suit.ShowText ? value : "";
+        int icons =
+            int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var n)
+            && n <= MaxIcons
+                ? n
+                : 1;
         return new DataRow
         {
             Id = SnowTag.Empty,
             Data = new Dictionary<SnowTag, string>
             {
-                [Background.Id] = background.ToHtml(),
-                [Foreground.Id] = (field?.ForegroundColor ?? Colors.Black).ToHtml(),
-                [Text.Id] = isShape ? string.Empty : caption,
-                [Shape.Id] = isShape ? caption : string.Empty,
-                [Quantity.Id] = (field?.Quantity ?? 1).ToString(),
+                [Background.Id] = suit.Background.ToHtml(),
+                [Foreground.Id] = suit.Foreground.ToHtml(),
+                [Text.Id] = hasIcon ? "" : text,
+                [Corner.Id] = hasIcon ? text : "",
+                [Icon.Id] = hasIcon && icons > 0 ? suit.Icon : "",
+                [Quantity.Id] = icons.ToString(),
             }.ToImmutableDictionary(),
         };
     }

@@ -57,7 +57,11 @@ public partial class GameController : Node
         }
         else
         {
-            var component = SingleComponentSpawn(prototype, e.DataSetRowIndex, e.DataSetRowId);
+            var card =
+                e.Card != PrototypeItemRef.None || prototype.Parameters is DeckParameters
+                    ? e.Card
+                    : PrototypeItemRef.First(prototype.Parameters, RecordService.Instance);
+            var component = SingleComponentSpawn(prototype, card);
             if (component != null)
                 components.Add((component, Vector3.Zero));
         }
@@ -81,9 +85,12 @@ public partial class GameController : Node
 
         float spacing = size * 1.5f;
 
-        foreach (var r in rows)
+        for (int n = 0; n < rows.Count; n++)
         {
-            var mc = SingleComponentSpawn(prototype, -1, r.Id);
+            var mc = SingleComponentSpawn(
+                prototype,
+                new PrototypeItemRef(n, rows[n].Id, SnowTag.Empty)
+            );
 
             if (mc != null)
             {
@@ -98,17 +105,12 @@ public partial class GameController : Node
         }
     }
 
-    private VisualComponentBase SingleComponentSpawn(
-        Prototype prototype,
-        int rowIndex,
-        SnowTag rowId
-    )
+    private VisualComponentBase SingleComponentSpawn(Prototype prototype, PrototypeItemRef card)
     {
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            rowIndex,
-            rowId
+            card != PrototypeItemRef.None
         );
         if (string.IsNullOrEmpty(scenePath))
         {
@@ -125,8 +127,7 @@ public partial class GameController : Node
         }
 
         component.PrototypeRef = prototype.Id;
-        component.DataSetRowIndex = rowIndex;
-        component.DataSetRowId = rowId;
+        component.Card = card;
 
         component.TextureFactory = _textureFactory;
         return component;

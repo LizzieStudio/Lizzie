@@ -40,13 +40,13 @@ namespace Lizzie.AssetManagement
         public int? Frame(int value) => value >= 1 && value <= FrameCount() ? value - 1 : null;
 
         /// <summary>
-        /// Parses which frames to use with <see cref="RangeExpressions.TryParse"/>.
-        /// A blank expression means every frame, up to <see cref="RangeExpressions.MaxValues"/>.
+        /// Parses which frames to use with <see cref="SequenceExpressions.TryParseNumbers"/>.
+        /// A blank expression means every frame, up to <see cref="SequenceExpressions.MaxValues"/>.
         /// </summary>
         public bool TryParse(string expression, out int[] values, int? count = null) =>
-            RangeExpressions.TryParse(
+            SequenceExpressions.TryParseNumbers(
                 string.IsNullOrWhiteSpace(expression)
-                    ? $"1-{System.Math.Min(FrameCount(), RangeExpressions.MaxValues)}"
+                    ? $"1-{System.Math.Min(FrameCount(), SequenceExpressions.MaxValues)}"
                     : expression,
                 out values,
                 count

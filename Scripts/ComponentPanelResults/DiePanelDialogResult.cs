@@ -286,8 +286,11 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var rowId = GetRow(_curDie);
-        _preview.Build(GetParams(), -1, rowId, TextureFactory);
+        _preview.Build(
+            GetParams(),
+            new PrototypeItemRef(_curDie, GetRow(_curDie), SnowTag.Empty),
+            TextureFactory
+        );
     }
 
     private SnowTag GetRow(int rowNum)

@@ -86,8 +86,9 @@ public class TrackElement : TemplateElement
     {
         var l = new List<TextureFactory.TextureObject>();
 
-        var boxValues = Utility.ParseValueRanges(
-            EvaluateTextParameter(Parameters, "Box Text", context)
+        SequenceExpressions.TryParse(
+            EvaluateTextParameter(Parameters, "Box Text", context),
+            out var boxValues
         );
         var spaceValue = EvaluateNumberParameter(Parameters, "# of Boxes", context);
 

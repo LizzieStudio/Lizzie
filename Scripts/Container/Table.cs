@@ -61,7 +61,7 @@ public partial class Table : Node3D
     {
         var (deleted, created) = R.GetChanged<
             ComponentState,
-            (string Scene, SnowTag Proto, int Row, SnowTag RowId)
+            (string Scene, SnowTag Proto, PrototypeItemRef Card)
         >(
             (R, s) =>
             {
@@ -71,10 +71,9 @@ public partial class Table : Node3D
                 var scene = Utility.ComponentTypeToScenePath(
                     proto.Type,
                     proto.Parameters,
-                    s.DataSetRowIndex,
-                    s.DataSetRowId
+                    s.IsItem
                 );
-                return (scene, s.PrototypeRef, s.DataSetRowIndex, s.DataSetRowId);
+                return (scene, s.PrototypeRef, s.Card);
             }
         );
 

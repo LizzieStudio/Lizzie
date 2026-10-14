@@ -42,9 +42,9 @@ public class GridLayoutTests
     {
         bool parsed = new GridLayout(101, 100).TryParse("", out var values);
         Assert.True(
-            parsed && values.Length == RangeExpressions.MaxValues,
+            parsed && values.Length == SequenceExpressions.MaxValues,
             $"A blank expression on 10,100 frames returned {parsed} with {values.Length} values, "
-                + $"expected true with {RangeExpressions.MaxValues}."
+                + $"expected true with {SequenceExpressions.MaxValues}."
         );
     }
 

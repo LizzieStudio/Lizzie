@@ -1,0 +1,141 @@
+[gd_scene format=3 uid="uid://bye0ocp5vwokd"]
+
+[ext_resource type="Script" uid="uid://cq5pr15je8s6j" path="res://Scripts/ComponentPanelResults/SideEditor.cs" id="1_editor"]
+[ext_resource type="Script" uid="uid://cp7wlp5djv1kk" path="res://Scripts/ComponentPanelResults/QuickSideTab.cs" id="2_quick"]
+[ext_resource type="Script" uid="uid://bpgo8u8la1rmp" path="res://Scripts/ComponentPanelResults/ImageSideTab.cs" id="3_image"]
+[ext_resource type="Script" uid="uid://d16g0ehlod7ow" path="res://Scripts/ComponentPanelResults/TemplateSideTab.cs" id="4_template"]
+[ext_resource type="PackedScene" uid="uid://cn3pcewp6eemn" path="res://Scenes/ComponentPanels/quick_suit_row.tscn" id="5_row"]
+[ext_resource type="PackedScene" uid="uid://byv8s3wlrrbwb" path="res://Scenes/Controls/ImageSelector.tscn" id="6_image"]
+[ext_resource type="PackedScene" uid="uid://ddvtf4fbcgjk4" path="res://Scenes/Controls/TemplateSelector.tscn" id="7_template"]
+[ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/DataSetSelector.tscn" id="8_dataset"]
+[ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="9_pencil"]
+
+[node name="SideEditor" type="TabContainer" unique_id=1883320168 node_paths=PackedStringArray("_tabs")]
+size_flags_horizontal = 3
+current_tab = 0
+script = ExtResource("1_editor")
+_tabs = [NodePath("Quick/VBoxContainer"), NodePath("Image/VBoxContainer"), NodePath("Template/VBoxContainer")]
+
+[node name="Quick" type="MarginContainer" parent="." unique_id=1079316895]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+metadata/_tab_index = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Quick" unique_id=624624777 node_paths=PackedStringArray("_suitCount", "_suits")]
+layout_mode = 2
+script = ExtResource("2_quick")
+_suitCount = NodePath("SuitCountRow/SuitCount")
+_suits = NodePath("Suits")
+_suitRow = ExtResource("5_row")
+
+[node name="SuitCountRow" type="HBoxContainer" parent="Quick/VBoxContainer" unique_id=598816696]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Quick/VBoxContainer/SuitCountRow" unique_id=62555844]
+layout_mode = 2
+text = "Suits  "
+
+[node name="SuitCount" type="SpinBox" parent="Quick/VBoxContainer/SuitCountRow" unique_id=6251141]
+layout_mode = 2
+min_value = 1.0
+max_value = 99.0
+value = 1.0
+rounded = true
+
+[node name="Suits" type="VBoxContainer" parent="Quick/VBoxContainer" unique_id=1256489649]
+layout_mode = 2
+
+[node name="QuickSuitRow" parent="Quick/VBoxContainer/Suits" unique_id=652457814 instance=ExtResource("5_row")]
+layout_mode = 2
+
+[node name="Image" type="MarginContainer" parent="." unique_id=559312437]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+metadata/_tab_index = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Image" unique_id=1395542527 node_paths=PackedStringArray("_image", "_frames")]
+layout_mode = 2
+script = ExtResource("3_image")
+_image = NodePath("ImageRow/ImageSelector")
+_frames = NodePath("FramesRow/Frames")
+
+[node name="ImageRow" type="HBoxContainer" parent="Image/VBoxContainer" unique_id=1818202006]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Image/VBoxContainer/ImageRow" unique_id=52215982]
+layout_mode = 2
+text = "Image  "
+
+[node name="ImageSelector" parent="Image/VBoxContainer/ImageRow" unique_id=1938796384 instance=ExtResource("6_image")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FramesRow" type="HBoxContainer" parent="Image/VBoxContainer" unique_id=154782622]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Image/VBoxContainer/FramesRow" unique_id=1472722612]
+layout_mode = 2
+text = "Frames  "
+
+[node name="Frames" type="LineEdit" parent="Image/VBoxContainer/FramesRow" unique_id=1854479664]
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Which frames of the image to use, counting from 1, like 1-52 or 1-3, 5*2, (7-12)/2. Blank uses every frame."
+placeholder_text = "All"
+
+[node name="Template" type="MarginContainer" parent="." unique_id=1050288335]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+metadata/_tab_index = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Template" unique_id=1565478081 node_paths=PackedStringArray("_template", "_editTemplate", "_dataset", "_editDataset")]
+layout_mode = 2
+script = ExtResource("4_template")
+_template = NodePath("TemplateRow/TemplateList")
+_editTemplate = NodePath("TemplateRow/EditTemplate")
+_dataset = NodePath("DatasetRow/DatasetList")
+_editDataset = NodePath("DatasetRow/EditDataset")
+
+[node name="TemplateRow" type="HBoxContainer" parent="Template/VBoxContainer" unique_id=1519663577]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Template/VBoxContainer/TemplateRow" unique_id=327733505]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Template:"
+
+[node name="TemplateList" parent="Template/VBoxContainer/TemplateRow" unique_id=1903000399 instance=ExtResource("7_template")]
+layout_mode = 2
+fit_to_longest_item = false
+
+[node name="EditTemplate" type="Button" parent="Template/VBoxContainer/TemplateRow" unique_id=1484337924]
+layout_mode = 2
+tooltip_text = "Template Editor"
+icon = ExtResource("9_pencil")
+
+[node name="DatasetRow" type="HBoxContainer" parent="Template/VBoxContainer" unique_id=541809769]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Template/VBoxContainer/DatasetRow" unique_id=1682498648]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "DataSet:"
+
+[node name="DatasetList" parent="Template/VBoxContainer/DatasetRow" unique_id=2077028222 instance=ExtResource("8_dataset")]
+layout_mode = 2
+
+[node name="EditDataset" type="Button" parent="Template/VBoxContainer/DatasetRow" unique_id=1932239799]
+layout_mode = 2
+tooltip_text = "DataSet Editor"
+icon = ExtResource("9_pencil")

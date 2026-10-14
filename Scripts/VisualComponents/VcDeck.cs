@@ -54,50 +54,20 @@ public partial class VcDeck : VisualComponentBase
         if (proto?.Parameters is not PrintedParameters parameters)
             return [];
 
-        return EnumerateCardRows(parameters)
+        var R = RecordService.Instance;
+        return Enumerable
+            .Range(0, parameters.CardCount(R))
             .Reverse()
-            .Select(row => new ComponentState
+            .Select(n => new ComponentState
             {
                 Id = Snowport.Clock.CreateTag(),
                 PrototypeRef = PrototypeRef,
-                DataSetRowIndex = row.Index,
-                DataSetRowId = row.Id,
+                Card = parameters.Card(n, R),
                 X = self.X,
                 Z = self.Z,
                 Rotation = new Vector3(0, self.Rotation.Y, Mathf.Pi),
             })
             .ToList();
-    }
-
-    private static IEnumerable<(int Index, SnowTag Id)> EnumerateCardRows(
-        PrintedParameters parameters
-    )
-    {
-        switch (parameters.Mode)
-        {
-            case VcToken.TokenBuildMode.QuickDeck:
-            {
-                var count = parameters.QuickDeckCards().Count;
-                for (int i = 0; i < count; i++)
-                    yield return (i, SnowTag.Empty);
-                break;
-            }
-
-            case VcToken.TokenBuildMode.Template:
-            {
-                foreach (var row in RecordService.Instance.GetRows(parameters.Dataset))
-                    yield return (-1, row.Id);
-                break;
-            }
-
-            case VcToken.TokenBuildMode.Grid:
-            {
-                var count = parameters.GridFrameCount(RecordService.Instance);
-                for (int i = 0; i < count; i++)
-                    yield return (i, SnowTag.Empty);
-                break;
-            }
-        }
     }
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)

@@ -48,8 +48,7 @@ public abstract partial class VisualComponentBase : Area3D
         if (record != null)
         {
             PrototypeRef = record.PrototypeRef;
-            DataSetRowIndex = record.DataSetRowIndex;
-            DataSetRowId = record.DataSetRowId;
+            Card = record.Card;
         }
 
         // Builds first, so the first placement knows the component's height.
@@ -258,15 +257,9 @@ public abstract partial class VisualComponentBase : Area3D
         RecordService.Instance.GetIncludingDeleted<ComponentState>(Reference);
 
     /// <summary>
-    /// Index for grid and quick deck cards.
-    /// Defaults to <c>-1</c>
+    /// Which of its prototype's cards this is, or <see cref="PrototypeItemRef.None"/>.
     /// </summary>
-    public virtual int DataSetRowIndex { get; set; } = -1;
-
-    /// <summary>
-    /// The dataset row that supplies this card's templating data. Defaults to <see cref="SnowTag.Empty"/>.
-    /// </summary>
-    public virtual SnowTag DataSetRowId { get; set; } = SnowTag.Empty;
+    public PrototypeItemRef Card { get; set; } = PrototypeItemRef.None;
 
     protected float _yHeight;
 

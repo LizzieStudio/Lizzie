@@ -1,6 +1,6 @@
-# Range Expressions
+# Sequence Expressions
 
-Range Expressions (RanEx) is a domain specific language for specifying sequences of integers. It's similar to the text you write to specify pages for printing: `1-3,5,7`. RanEx turns a string like this into an array of integers: `[1,2,3,5,7]`. For most applications, like selecting a card from a deck, the first item is `1`.
+Sequence Expressions (SeqEx) is a domain specific language for specifying sequences of integers. It's similar to the text you write to specify pages for printing: `1-3,5,7`. SeqEx turns a string like this into an array of integers: `[1,2,3,5,7]`. For most applications, like selecting a card from a deck, the first item is `1`.
 
 The parser uses the signature `bool TryParse(string input, out int[] output, int? count = null)` which returns true when it succeeded. Whether it succeeds or fails, however, it returns an array of any integers that it was able to find in the input string. Expressions are separated by commas or whitespace, and extra commas are ignored (`,1,,2,` resolves to `[1, 2]`). It will also return partial results even if the input has an error. For example, if the input is `1,3-`, the parse would fail, but it would also return `[1]` for the part of the input that it could understand.
 

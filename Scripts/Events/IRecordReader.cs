@@ -181,7 +181,7 @@ public static class RecordReaderExtensions
         var type =
             R.GetIncludingDeleted<Prototype>(s.PrototypeRef)?.Type
             ?? VisualComponentBase.VisualComponentType.Unset;
-        return type == VisualComponentBase.VisualComponentType.Deck && s.IsCard
+        return type == VisualComponentBase.VisualComponentType.Deck && s.IsItem
             ? VisualComponentBase.VisualComponentType.Token
             : type;
     }

@@ -18,6 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\Multiplayer\README.md" />
-    <None Include="Scripts\RangeExpressions.md" />
+    <None Include="Scripts\SequenceExpressions.md" />
   </ItemGroup>
 </Project>

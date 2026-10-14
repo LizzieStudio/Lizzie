@@ -26,12 +26,7 @@ public partial class ComponentPreviewPopup : Window
         if (prototype == null)
             return;
 
-        _preview.Build(
-            prototype,
-            component.DataSetRowIndex,
-            component.DataSetRowId,
-            textureFactory
-        );
+        _preview.Build(prototype, component.Card, textureFactory);
         _preview.SpinStop();
         Show();
     }

@@ -7,82 +7,6 @@ using Godot;
 public static class Utility
 {
     /// <summary>
-    /// This function parses a string like "1-6, SKIP, +2" into a string array.
-    /// (which in this case would be 1, 2, 3, 4, 5, 6, SKIP, +2)
-    /// Also can understand single character ranges like "A-J"
-    /// </summary>
-    /// <param name="input">string to parse</param>
-    /// <returns>resulting array</returns>
-    public static string[] ParseValueRanges(string input)
-    {
-        if (string.IsNullOrEmpty(input))
-            return Array.Empty<string>();
-        var sInput = input.Replace(" ", string.Empty);
-
-        var pages = new List<string>();
-        var ranges = sInput.Split(',');
-
-        foreach (var range in ranges)
-        {
-            if (range.Contains('-'))
-            {
-                var sBound = range.Split('-');
-                if (sBound.Length != 2)
-                    continue;
-
-                if (int.TryParse(sBound[0], out var low) && int.TryParse(sBound[1], out var high))
-                {
-                    if (high < low)
-                    {
-                        var r = Enumerable.Range(high, low - high + 1).ToArray().Reverse();
-                        pages.AddRange(r.Select(s => s.ToString()));
-                    }
-                    else
-                    {
-                        pages.AddRange(
-                            Enumerable
-                                .Range(low, high - low + 1)
-                                .ToArray()
-                                .Select(s => s.ToString())
-                        );
-                    }
-                }
-                else if (sBound[0].Length == 1 && sBound[1].Length == 1)
-                {
-                    //ASCII single character mode
-                    char c1 = sBound[0][0];
-                    char c2 = sBound[1][0];
-
-                    if (char.IsAscii(c1) && char.IsAscii(c2))
-                    {
-                        var a1 = (int)c1;
-                        var a2 = (int)c2;
-
-                        if (a1 > a2)
-                            (a1, a2) = (a2, a1);
-
-                        for (int i = a1; i <= a2; i++)
-                        {
-                            pages.Add(((char)i).ToString());
-                        }
-                    }
-                }
-                else
-                {
-                    //just give up and add the original string
-                    pages.Add(range);
-                }
-            }
-            else
-            {
-                pages.Add(range);
-            }
-        }
-
-        return pages.ToArray();
-    }
-
-    /// <summary>
     /// Returns all pairs of positive integers whose product equals the input value.
     /// Each pair is ordered with the smaller number first.
     /// </summary>
@@ -150,8 +74,7 @@ public static class Utility
     public static string ComponentTypeToScenePath(
         VisualComponentBase.VisualComponentType componentType,
         ComponentParameters parameters,
-        int rowIndex = -1,
-        SnowTag? rowId = null,
+        bool isCard = false,
         bool previewMode = false
     )
     {
@@ -168,7 +91,6 @@ public static class Utility
 
             case VisualComponentBase.VisualComponentType.Deck:
             {
-                bool isCard = rowIndex >= 0 || (rowId != null && rowId != SnowTag.Empty);
                 if (!isCard && !previewMode)
                     return "res://Scenes/VisualComponents/VcDeck.tscn";
                 return TokenScene(parameters);
