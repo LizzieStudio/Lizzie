@@ -15,6 +15,9 @@ public partial class VcDie : VisualComponentBase
     private Vector3[] _sideRotations;
 
     private MeshInstance3D _mainMesh;
+    private readonly FaceLoader _faces;
+
+    public VcDie() => _faces = new FaceLoader(ShowNet);
 
     public override void _Ready()
     {
@@ -100,8 +103,10 @@ public partial class VcDie : VisualComponentBase
         Apply((DieParameters)parameters, R);
     }
 
-    /// <summary>Sizes and textures the die from its parameters and the records they reference.</summary>
-    private async void Apply(DieParameters p, IRecordReader R)
+    /// <summary>
+    /// Sizes the die from its parameters and loads its net.
+    /// </summary>
+    private void Apply(DieParameters p, IRecordReader R)
     {
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
@@ -114,39 +119,16 @@ public partial class VcDie : VisualComponentBase
 
         Scale = new Vector3(size, size, size);
 
-        var (template, dataset, row) = p.Faces switch
-        {
-            QuickSide quick => (
-                DieTemplate.Template(_sides),
-                DieTemplate.DataSet(_sides),
-                DieTemplate.Row(p.Color, quick, _sides)
-            ),
-            TemplateSide side => (
-                R.Get<Template>(side.Template),
-                R.Get<DataSet>(side.Dataset),
-                R.Get<DataRow>(Card.FrontRow)
-            ),
-            _ => default,
-        };
-        if (template == null)
-            return;
+        _faces.Load(GetPrototype(R), Card, TextureFactory, R);
+    }
 
-        var tc = new TextureContext
-        {
-            CurrentRow = row,
-            DataSet = dataset,
-            Dpi = 100,
-            // Twice the net's pixels.
-            ParentSize = DieTemplate.NetSize(_sides) * 2,
-            TriangleFaces = template.TriangleFaces,
-        };
-        var tx = TemplateEngine.GenerateTextureDefinition(template, tc);
-        var image = await TextureFactory.Render(tx);
-        if (!IsInstanceValid(_mainMesh) || _mainMesh == null)
-            return;
-        var mat = new StandardMaterial3D();
-        mat.AlbedoTexture = ImageTexture.CreateFromImage(image);
-        _mainMesh.MaterialOverride = mat;
+    private void ShowNet() => _mainMesh.MaterialOverride = _faces.Front.Material;
+
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+        if (what == NotificationPredelete)
+            _faces.Drop();
     }
 }
 

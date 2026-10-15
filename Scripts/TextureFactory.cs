@@ -86,7 +86,7 @@ public partial class TextureFactory : SubViewport
     /// Draws <paramref name="definition"/>.
     /// </summary>
     /// <returns>The drawing, or null if <paramref name="token"/> was canceled before it started.</returns>
-    public Task<Image> Render(TextureDefinition definition, CancellationToken token = default)
+    public Task<Image> Render(TextureDefinition definition, CancellationToken token)
     {
         ExpandMultipleShapes(definition);
 

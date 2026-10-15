@@ -45,7 +45,7 @@ public sealed class FaceSet
                 var set = new FaceSet(key);
                 set._drawing = new FaceDrawing
                 {
-                    Set = set,
+                    FaceSet = set,
                     Factory = factory,
                     Source = source,
                     Token = set._cancel.Token,

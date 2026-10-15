@@ -152,10 +152,16 @@ public static class DieTemplate
             ],
         };
 
+    // How many of a net's pixels make an inch of the drawn die template.
+    private const float NetPixelsPerInch = 50;
+
     /// <summary>
-    /// The size of a die's net, in pixels.
+    /// The size a die template is drawn at, in inches, or (0, 0) for a die with no net.
     /// </summary>
-    public static Vector2I NetSize(int sides) => new(Nets[sides].Width, Nets[sides].Height);
+    public static (float Width, float Height) Size(int sideCount) =>
+        Nets.TryGetValue(sideCount, out var net)
+            ? (net.Width / NetPixelsPerInch, net.Height / NetPixelsPerInch)
+            : default;
 
     public static Template Template(int sides)
     {
@@ -214,6 +220,17 @@ public static class DieTemplate
     }
 
     /// <summary>
+    /// The id of the one row a Quick die draws.
+    /// </summary>
+    public static SnowTag NetRow => SnowTag.Empty;
+
+    /// <summary>
+    /// What a Quick die with <paramref name="sideCount"/> draws.
+    /// </summary>
+    public static Drawing Drawing(DieParameters die, QuickSide side, int sideCount) =>
+        new(Template(sideCount), DataSet(sideCount), [Row(die.Color, side, sideCount)]);
+
+    /// <summary>
     /// The row that draws a die of <paramref name="color"/> with <paramref name="sides"/> sides. Its faces
     /// show the values of <paramref name="side"/>'s suits as one sequence, fitted to the sides.
     /// </summary>
@@ -233,6 +250,6 @@ public static class DieTemplate
             data[Quantity(n).Id] = icons.ToString(CultureInfo.InvariantCulture);
             data[Foreground(n).Id] = suit.Foreground.ToHtml();
         }
-        return new DataRow { Id = SnowTag.Empty, Data = data.ToImmutable() };
+        return new DataRow { Id = NetRow, Data = data.ToImmutable() };
     }
 }

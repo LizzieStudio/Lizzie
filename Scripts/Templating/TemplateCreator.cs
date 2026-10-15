@@ -305,6 +305,10 @@ public partial class TemplateCreator : Window
         var size = _standardSizes.ContainsKey(CurrentTemplate.SizeTemplate ?? "")
             ? CurrentTemplate.SizeTemplate
             : CustomSize;
+        // Templates can't change from printed to dice or vice versa, so they only list valid sizes.
+        _cardSizes.Clear();
+        foreach (var name in _standardSizes.Keys.Where(n => IsDie(n) == CurrentTemplate.Sides > 0))
+            _cardSizes.AddItem(name);
         SelectSize(_cardSizes, size);
         OnStandardSizeChanged(_cardSizes.Selected);
 
@@ -971,25 +975,11 @@ public partial class TemplateCreator : Window
         _standardSizes.Add("Mini Euro", (1.75f, 2.5f));
         _standardSizes.Add("Tarot", (2.75f, 4.75f));
         _standardSizes.Add(CustomSize, (0, 0));
-
-        _cardSizes.Clear();
-        foreach (var kv in _standardSizes)
-        {
-            _cardSizes.AddItem(kv.Key);
-        }
-
         _standardSizes.Add("D6", (0, 0));
         _standardSizes.Add("D8", (0, 0));
         _standardSizes.Add("D10", (0, 0));
         _standardSizes.Add("D12", (0, 0));
         _standardSizes.Add("D20", (0, 0));
-
-        _cardSizes.AddSeparator();
-        _cardSizes.AddItem("D6");
-        _cardSizes.AddItem("D8");
-        _cardSizes.AddItem("D10");
-        _cardSizes.AddItem("D12");
-        _cardSizes.AddItem("D20");
     }
 
     private static bool IsDie(string size) => Template.SidesOf(size) > 0;
@@ -1117,8 +1107,8 @@ public partial class TemplateCreator : Window
                 throw new ArgumentOutOfRangeException(nameof(sides), sides, null);
         }
 
-        var net = DieTemplate.NetSize(sides);
-        InitializeFit(net.X, net.Y);
+        var (width, height) = DieTemplate.Size(sides);
+        InitializeFit(width * MmPerInch, height * MmPerInch);
 
         var image = t.GetImage();
         var s = _preview.GetSize();
@@ -1569,8 +1559,6 @@ public partial class TemplateCreator : Window
 
     private const float MarginScale = 0.9f;
 
-    private float _previewDpi;
-
     private void InitializeCardFit()
     {
         float.TryParse(_widthInput.Text, out var w);
@@ -1615,8 +1603,6 @@ public partial class TemplateCreator : Window
 
         //_previewOverlay.SetSize(new Vector2(sw, sh));
         //_previewOverlay.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
-
-        _previewDpi = MmPerInch * sw / w;
 
         _textureContext.ParentSize = new Vector2(sw, sh);
         _textureContext.Dpi = MmPerInch * _textureContext.ParentSize.Y / h;

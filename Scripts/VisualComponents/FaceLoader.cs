@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Lizzie.AssetManagement;
 
@@ -19,8 +18,6 @@ using Lizzie.AssetManagement;
 /// <param name="shown">Called when <see cref="Front"/> and <see cref="Back"/> change.</param>
 public sealed class FaceLoader(Action shown)
 {
-    private const float CmPerInch = 2.54f;
-
     /// <summary>
     /// What the front shows.
     /// </summary>
@@ -37,25 +34,31 @@ public sealed class FaceLoader(Action shown)
 
     /// <summary>
     /// Shows <paramref name="item"/> of <paramref name="prototype"/> once its faces load.
+    /// A die shows its net on the front.
     /// </summary>
     public void Load(
-        PrintedParameters p,
-        PrototypeItemRef item,
         Prototype prototype,
+        PrototypeItemRef item,
         TextureFactory factory,
         IRecordReader R
     )
     {
-        // Each view holds its set once, so a back that shows the front gets its own view.
-        Face FrontView() => View(p, p.Front, "f", item, item.FrontRow, prototype, factory, R);
-        var front = FrontView();
-        var back =
-            (
-                p.Back == null
-                    ? null
-                    : View(p, p.Back, "b", item, item.BackRow, prototype, factory, R)
-            ) ?? FrontView();
-        Queue(front ?? Face.Blank, back ?? Face.Blank);
+        Face View(SideParameters side, string key, SnowTag row) =>
+            SideView(side, key, item, row, prototype, factory, R);
+        switch (prototype.Parameters)
+        {
+            case PrintedParameters p:
+                // Each view holds its set once, so a back that shows the front gets its own view.
+                var front = View(p.Front, "f", item.FrontRow);
+                var back =
+                    (p.Back == null ? null : View(p.Back, "b", item.BackRow))
+                    ?? View(p.Front, "f", item.FrontRow);
+                Queue(front ?? Face.Blank, back ?? Face.Blank);
+                break;
+            case DieParameters p:
+                Queue(View(p.Faces, "f", item.FrontRow) ?? Face.Blank, Face.Blank);
+                break;
+        }
     }
 
     /// <summary>
@@ -87,8 +90,7 @@ public sealed class FaceLoader(Action shown)
     /// </summary>
     /// <param name="key">The key to use for the texture cache.</param>
     /// <param name="row">The dataset row this side shows, for a template.</param>
-    private static Face View(
-        PrintedParameters p,
+    private static Face SideView(
         SideParameters side,
         string key,
         PrototypeItemRef item,
@@ -101,34 +103,29 @@ public sealed class FaceLoader(Action shown)
         int n = Math.Max(item.Number, 0);
         switch (side)
         {
-            case QuickSide quick:
+            case QuickSide quick when prototype.Parameters is PrintedParameters p:
             {
-                var cards = quick.Cards();
-                if (cards.Count == 0)
+                if (QuickTemplate.CardRow(quick, n) is not SnowTag cardRow)
                     return null;
-                // Cards that repeat are only drawn once.
-                // This isn't exhaustive, but it catches things like A*2
-                var distinct = cards.Distinct().ToList();
-                var drawing = new Drawing(
-                    QuickTemplate.Template with
-                    {
-                        Width = p.Width / 10f / CmPerInch,
-                        Height = p.Height / 10f / CmPerInch,
-                    },
-                    QuickTemplate.DataSet,
-                    distinct
-                        .Select(
-                            (c, i) =>
-                                QuickTemplate.Row(c.Suit, c.Value) with
-                                {
-                                    Id = new SnowTag(i + 1),
-                                }
-                        )
-                        .ToList()
-                );
                 return FaceSet
-                    .Acquire($"quick:{prototype.SheetKey()}:{key}", factory, _ => drawing)
-                    .Face(new SnowTag(distinct.IndexOf(cards[n % cards.Count]) + 1));
+                    .Acquire(
+                        $"quick:{prototype.SheetKey()}:{key}",
+                        factory,
+                        _ => QuickTemplate.Drawing(p, quick)
+                    )
+                    .Face(cardRow);
+            }
+
+            case QuickSide quick when prototype.Parameters is DieParameters die:
+            {
+                int sides = die.Resolve(R).Sides;
+                return FaceSet
+                    .Acquire(
+                        $"quick:{prototype.SheetKey()}:{key}",
+                        factory,
+                        _ => DieTemplate.Drawing(die, quick, sides)
+                    )
+                    .Face(DieTemplate.NetRow);
             }
 
             case ImageSide image:

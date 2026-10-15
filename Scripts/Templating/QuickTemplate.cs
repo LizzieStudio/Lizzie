@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Linq;
 using Godot;
 
 /// <summary>
@@ -15,6 +16,8 @@ public static class QuickTemplate
     /// There's a bug in the icon code that starts at 10. Once we fix that, we can raise this.
     /// </remarks>
     public const int MaxIcons = 9;
+
+    private const float CmPerInch = 2.54f;
 
     private static readonly Column Background = new() { Id = new SnowTag(1), Name = "Background" };
     private static readonly Column Foreground = new() { Id = new SnowTag(2), Name = "Foreground" };
@@ -76,6 +79,37 @@ public static class QuickTemplate
                 ),
             ],
         };
+
+    /// <summary>
+    /// What <paramref name="side"/> of a printed component draws.
+    /// </summary>
+    /// <remarks>
+    /// Cards that repeat are only drawn once. This isn't exhaustive, but it catches things like A*2.
+    /// </remarks>
+    public static Drawing Drawing(PrintedParameters p, QuickSide side) =>
+        new(
+            Template with
+            {
+                Width = p.Width / 10f / CmPerInch,
+                Height = p.Height / 10f / CmPerInch,
+            },
+            DataSet,
+            side.Cards()
+                .Distinct()
+                .Select((c, i) => Row(c.Suit, c.Value) with { Id = new SnowTag(i + 1) })
+                .ToList()
+        );
+
+    /// <summary>
+    /// The row of <see cref="Drawing"/> that card <paramref name="n"/> shows, or null when the side has no cards.
+    /// </summary>
+    public static SnowTag? CardRow(QuickSide side, int n)
+    {
+        var cards = side.Cards();
+        if (cards.Count == 0)
+            return null;
+        return new SnowTag(cards.Distinct().ToList().IndexOf(cards[n % cards.Count]) + 1);
+    }
 
     /// <summary>
     /// Creates the row for the card showing <paramref name="value"/> in <paramref name="suit"/>.

@@ -13,12 +13,16 @@ public record Template : Replicated
 
     /// <summary>
     /// The template's size in whole pixels at <paramref name="pixelsPerInch"/>.
+    /// A die template is the size of its net (<see cref="DieTemplate.Size"/>).
     /// </summary>
-    public (int Width, int Height) Pixels(float pixelsPerInch) =>
-        (
-            (int)MathF.Round(Width * pixelsPerInch, MidpointRounding.AwayFromZero),
-            (int)MathF.Round(Height * pixelsPerInch, MidpointRounding.AwayFromZero)
+    public (int Width, int Height) Pixels(float pixelsPerInch)
+    {
+        var (width, height) = Sides > 0 ? DieTemplate.Size(Sides) : (Width, Height);
+        return (
+            (int)MathF.Round(width * pixelsPerInch, MidpointRounding.AwayFromZero),
+            (int)MathF.Round(height * pixelsPerInch, MidpointRounding.AwayFromZero)
         );
+    }
 
     public ImmutableArray<ImmutableDictionary<string, string>> Elements { get; init; } =
         ImmutableArray<ImmutableDictionary<string, string>>.Empty;

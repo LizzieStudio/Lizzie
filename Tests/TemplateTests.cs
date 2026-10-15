@@ -23,4 +23,16 @@ public class TemplateTests
             $"A {width} x {height} in template is {actual} px at 100 per inch, expected ({pixelsWide}, {pixelsHigh})."
         );
     }
+
+    [Theory]
+    [InlineData("D6", 512, 340)]
+    [InlineData("D20", 512, 512)]
+    public void ADieTemplateIsTheSizeOfItsNet(string size, int pixelsWide, int pixelsHigh)
+    {
+        var actual = new Template { Id = new SnowTag(1), SizeTemplate = size }.Pixels(100);
+        Assert.True(
+            actual == (pixelsWide, pixelsHigh),
+            $"A {size} template is {actual} px at 100 per inch, expected ({pixelsWide}, {pixelsHigh})."
+        );
+    }
 }

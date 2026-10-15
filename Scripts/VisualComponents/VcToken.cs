@@ -113,7 +113,7 @@ public partial class VcToken : VisualComponentBase
         _tokenType = p.Type;
 
         BuildToken();
-        _faces.Load(p, Card, GetPrototype(R), TextureFactory, R);
+        _faces.Load(GetPrototype(R), Card, TextureFactory, R);
     }
 
     private void BuildToken()

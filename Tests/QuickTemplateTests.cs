@@ -100,6 +100,25 @@ public class QuickTemplateTests
         );
     }
 
+    [Fact]
+    public void RepeatedCardsAreDrawnOnce()
+    {
+        var side = new QuickSide { Suits = [Suit with { Values = "A, A, 2" }] };
+        var p = new DeckParameters { Width = 63.5f, Height = 88.9f };
+
+        var drawing = QuickTemplate.Drawing(p, side);
+        var rows = Enumerable
+            .Range(0, 4)
+            .Select(n => QuickTemplate.CardRow(side, n).ToString())
+            .ToList();
+
+        Assert.True(
+            drawing.Rows.Count == 2 && string.Join(", ", rows) == "1, 1, 2, 1",
+            $"Drew {drawing.Rows.Count} cards, shown by cards 1-4 as rows {string.Join(", ", rows)}; "
+                + "expected 2 cards, shown as rows 1, 1, 2, 1."
+        );
+    }
+
     private const TextureFactory.TextureObjectType Frame = TextureFactory
         .TextureObjectType
         .RectangleFrame;

@@ -24,7 +24,7 @@ public partial class FaceDrawing : Node
 {
     private const float PixelsPerInch = 100;
 
-    public FaceSet Set { get; init; }
+    public FaceSet FaceSet { get; init; }
     public TextureFactory Factory { get; init; }
 
     /// <summary>
@@ -63,7 +63,7 @@ public partial class FaceDrawing : Node
     {
         if (!_cells.TryGetValue(row, out var cell))
         {
-            _cells[row] = cell = new Cell(new Face(Set));
+            _cells[row] = cell = new Cell(new Face(FaceSet));
             RecordService.Instance.QueueSync(this);
         }
         return cell.Face;
@@ -95,6 +95,7 @@ public partial class FaceDrawing : Node
                                     DataSet = dataSet,
                                     Dpi = PixelsPerInch,
                                     ParentSize = new Vector2(width, height),
+                                    TriangleFaces = template.TriangleFaces,
                                 }
                             )
                     )
