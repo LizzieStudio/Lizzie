@@ -284,7 +284,6 @@ public partial class GameObjects : Node3D
         }
 
         _table.AddChild(component);
-        RecordService.Instance.SyncNow(component);
 
         QueueStackingUpdate();
     }

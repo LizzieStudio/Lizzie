@@ -23,7 +23,6 @@ public partial class VcTray : VisualComponentGroup
         {
             if (c is Node3D n)
             {
-                UpdateChildScale(n);
                 n.Rotate(Vector3.Up, (float)delta);
                 //n.Rotate(Vector3.Right, (float)(delta * 1.3));
             }
@@ -58,6 +57,8 @@ public partial class VcTray : VisualComponentGroup
         {
             Scale = new Vector3(Width, Height, Length);
         }
+
+        _prototypeSpawnPoint.Scale = Vector3.One / Scale;
 
         YHeight = Height * 2;
 
@@ -111,22 +112,8 @@ public partial class VcTray : VisualComponentGroup
             _prototype,
             TextureFactory
         );
+        c.Built += () => c.Position = new Vector3(0, c.YHeight, 0);
         _prototypeSpawnPoint.AddChild(c);
-        RecordService.Instance.SyncNow(c);
-        UpdateChildScale(c);
-        c.Position += new Vector3(0, c.YHeight, 0);
-    }
-
-    private Vector3 _lastScale;
-
-    private void UpdateChildScale(Node3D c)
-    {
-        if (Math.Abs(c.Scale.Length() - _lastScale.Length()) >= 0.05f)
-        {
-            var s = c.Scale;
-            _lastScale = new Vector3(s.X / Width, s.Y / Height, s.Z / Length);
-            c.Scale = _lastScale;
-        }
     }
 
     public override ComponentState[] DragDraw() =>

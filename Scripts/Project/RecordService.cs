@@ -287,20 +287,6 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         }
     }
 
-    /// <summary>
-    /// Runs the Node's Watch functions immediately.
-    /// Useful if you need to measure the node.
-    /// </summary>
-    public void SyncNow(Node owner)
-    {
-        // Copied, since a Sync can add or remove watchers, e.g. a tray adding its display node.
-        foreach (var watcher in _watchers.Where(w => w.Owner == owner).ToList())
-        {
-            _dirty.Remove(watcher);
-            watcher.Run();
-        }
-    }
-
     private void Unwatch(Watcher watcher)
     {
         _watchers.Remove(watcher);
