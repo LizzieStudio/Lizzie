@@ -35,7 +35,7 @@ public static class DieCommands
     };
 
     private static DieParameters Parameters(IRecordReader R, ComponentState die) =>
-        R.GetIncludingDeleted<Prototype>(die.PrototypeRef)?.Parameters as DieParameters;
+        R.GetIncludingDeleted(Prototype.ById, die.PrototypeRef)?.Parameters as DieParameters;
 
     /// <summary>
     /// The die rolled to a random face. The rolling player picks the face.

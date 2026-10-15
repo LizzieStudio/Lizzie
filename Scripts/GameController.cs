@@ -37,7 +37,7 @@ public partial class GameController : Node
 
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
-        var prototype = RecordService.Instance.GetIncludingDeleted<Prototype>(e.PrototypeRef);
+        var prototype = RecordService.Instance.GetIncludingDeleted(Prototype.ById, e.PrototypeRef);
         if (prototype == null)
         {
             GD.PrintErr($"SpawnPrototype: prototype {e.PrototypeRef} not found");
@@ -49,7 +49,7 @@ public partial class GameController : Node
         if (
             e.AllRows
             && prototype.Parameters is DieParameters { Faces: TemplateSide side } die
-            && RecordService.Instance.Get<DataSet>(side.Dataset) != null
+            && RecordService.Instance.Get(DataSet.ById, side.Dataset) != null
         )
         {
             SpawnRows(prototype, side.Dataset, die.Size / 10f, components);

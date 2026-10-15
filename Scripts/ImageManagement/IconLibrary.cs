@@ -150,7 +150,7 @@ public class IconLibrary : Dictionary<string, IconEntry>
         }
 
         //put in user-image block
-        var assets = R.Get<ImageAsset>();
+        var assets = R.Get(ImageAsset.All);
         if (assets.Count > 0)
         {
             button.AddSeparator();

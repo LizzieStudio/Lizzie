@@ -372,7 +372,8 @@ public partial class TemplateCreator : Window
         if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
-        var switched = RecordService.Instance.Get<Template>(
+        var switched = RecordService.Instance.Get(
+            Template.ById,
             _templateNameSelector.GetItemId((int)index)
         );
         if (switched != null)
@@ -1184,7 +1185,7 @@ public partial class TemplateCreator : Window
     {
         _templateNameSelector.Clear();
 
-        foreach (var t in R.Get<Template>().OrderBy(v => v.Name))
+        foreach (var t in R.Get(Template.All).OrderBy(v => v.Name))
         {
             _templateNameSelector.AddItem(t.Name, t.Id);
         }
@@ -1221,7 +1222,10 @@ public partial class TemplateCreator : Window
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = RecordService.Instance.Get<Template>(_templateNameSelector.GetItemId(0));
+        CurrentTemplate = RecordService.Instance.Get(
+            Template.ById,
+            _templateNameSelector.GetItemId(0)
+        );
 
         MapDataset();
     }
@@ -1614,7 +1618,7 @@ public partial class TemplateCreator : Window
         _updateRequired = true;
 
         var datasetRef = CurrentTemplate?.DataSet ?? SnowTag.Empty;
-        var dataset = R.Get<DataSet>(datasetRef);
+        var dataset = R.Get(DataSet.ById, datasetRef);
         if (dataset == null)
         {
             _textureContext.DataSet = null;

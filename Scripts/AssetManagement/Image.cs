@@ -8,6 +8,19 @@ namespace Lizzie.AssetManagement
     {
         public static readonly Id<ImageAsset, SnowTag> ById = new(r => r.Id);
 
+        public static readonly All<ImageAsset> All = new();
+
+        /// <summary>
+        /// The images with each name, ignoring case. Read it with <see cref="NameKey"/> of the name.
+        /// </summary>
+        public static readonly Group<ImageAsset, string> ByName = new(a => NameKey(a.Name));
+
+        /// <summary>
+        /// The key of <paramref name="name"/> in <see cref="ByName"/>.
+        /// Just <paramref name="name"/> uppercase and normalized.
+        /// </summary>
+        public static string NameKey(string name) => name?.ToUpperInvariant();
+
         /// <summary>
         /// User-defined name for the image
         /// </summary>

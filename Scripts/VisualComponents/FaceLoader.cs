@@ -130,7 +130,7 @@ public sealed class FaceLoader(Action shown)
 
             case ImageSide image:
             {
-                var asset = R.Get<ImageAsset>(image.Image);
+                var asset = R.Get(ImageAsset.ById, image.Image);
                 var values = image.FrameValues(
                     R,
                     ((PrintedParameters)prototype.Parameters).CardCount(R)
@@ -151,8 +151,8 @@ public sealed class FaceLoader(Action shown)
                         $"tpl:{templateSide.Template}:{templateSide.Dataset}",
                         factory,
                         R => new Drawing(
-                            R.Get<Template>(templateSide.Template),
-                            R.Get<DataSet>(templateSide.Dataset),
+                            R.Get(Template.ById, templateSide.Template),
+                            R.Get(DataSet.ById, templateSide.Dataset),
                             R.GetRows(templateSide.Dataset)
                         )
                     )

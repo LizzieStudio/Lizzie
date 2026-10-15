@@ -174,7 +174,7 @@ public sealed record DieParameters : ComponentParameters
 
         if (Faces is TemplateSide side)
         {
-            int net = R.Get<Template>(side.Template)?.Sides ?? 0;
+            int net = R.Get(Template.ById, side.Template)?.Sides ?? 0;
             if (SideCount > 0)
                 return net == 0 || net == SideCount
                     ? (SideCount, null)

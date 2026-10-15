@@ -433,7 +433,7 @@ public partial class UI : CanvasLayer
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
-        var p = RecordService.Instance.GetIncludingDeleted<Prototype>(editEvent.PrototypeId);
+        var p = RecordService.Instance.GetIncludingDeleted(Prototype.ById, editEvent.PrototypeId);
         if (p == null)
         {
             return;

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 
 public partial class TemplateSelector : OptionButton
@@ -34,7 +35,7 @@ public partial class TemplateSelector : OptionButton
         Clear();
         AddItem("(none)", SnowTag.Empty);
 
-        foreach (var t in R.Get<Template>(_shows))
+        foreach (var t in R.Get(Template.All).Where(_shows))
         {
             AddItem(t.Name, t.Id);
         }

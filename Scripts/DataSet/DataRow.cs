@@ -10,6 +10,11 @@ public record DataRow : Replicated
 {
     public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);
 
+    /// <summary>
+    /// The rows of each dataset, in no order. <see cref="RecordReaderExtensions.GetRows"/> sorts them.
+    /// </summary>
+    public static readonly Group<DataRow, SnowTag> ByDataSet = new(r => r.DataSetId);
+
     /// <summary>The dataset this row belongs to.</summary>
     public SnowTag DataSetId { get; init; }
 
@@ -22,7 +27,7 @@ public record DataRow : Replicated
 
     /// <summary>A cell for each of the dataset's columns.</summary>
     public override IEnumerable<Target> Contents(IRecordReader R) =>
-        R.Get<DataSet>(DataSetId)?.Columns.Select(c => new CellTarget(Id, c.Id)) ?? [];
+        R.Get(DataSet.ById, DataSetId)?.Columns.Select(c => new CellTarget(Id, c.Id)) ?? [];
 
     /// <summary>A row is inside its dataset.</summary>
     public override IEnumerable<Target> Containers(IRecordReader R) =>
@@ -43,7 +48,7 @@ public record DataRow : Replicated
 public sealed record CellTarget(SnowTag RowId, SnowTag ColumnId) : Target
 {
     public override IEnumerable<Target> Containers(IRecordReader R) =>
-        R.Get<DataRow>(RowId) is { } row
+        R.Get(DataRow.ById, RowId) is { } row
             ? [new RecordTarget(row.Id), new ColumnTarget(row.DataSetId, ColumnId)]
             : [];
 }

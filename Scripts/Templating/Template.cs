@@ -7,6 +7,8 @@ public record Template : Replicated
 {
     public static readonly Id<Template, SnowTag> ById = new(r => r.Id);
 
+    public static readonly All<Template> All = new();
+
     public string Name { get; init; }
 
     public string SizeTemplate { get; init; }

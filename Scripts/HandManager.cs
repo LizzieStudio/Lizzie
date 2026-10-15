@@ -135,7 +135,7 @@ public partial class HandManager : Panel
             var (rect, shown) = _previews[i];
 
             // A card can be flipped, or its prototype edited, while it's held.
-            var prototype = R.GetIncludingDeleted<Prototype>(s.PrototypeRef);
+            var prototype = R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef);
             var shows = (prototype, s.Card, HandCard.IsFaceDown(s));
             if (shows != shown)
             {

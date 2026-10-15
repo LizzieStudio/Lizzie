@@ -50,7 +50,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _prototypeList.Clear();
         _prototypeList.AddItem("(none)", SnowTag.Empty);
 
-        foreach (var p in R.Get<Prototype>())
+        foreach (var p in R.Get(Prototype.All))
             _prototypeList.AddItem(p.Name, p.Id);
 
         UpdatePrototypeSelection();

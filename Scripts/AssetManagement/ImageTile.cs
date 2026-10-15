@@ -46,7 +46,7 @@ public partial class ImageTile : MarginContainer
 
     private async void Sync(IRecordReader R)
     {
-        var asset = R.Get<ImageAsset>(Reference);
+        var asset = R.Get(ImageAsset.ById, Reference);
         if (asset == null)
             return;
 

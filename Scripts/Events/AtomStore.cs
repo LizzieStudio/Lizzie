@@ -36,8 +36,6 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
 
     Replicated IReplicatedStore.Find(SnowTag tag) => tag is I id ? Find(id) : null;
 
-    public IEnumerable<T> All => _atoms.Values;
-
     public IReadOnlyCollection<T> InGroup<G>(Group<T, G> group, G key) =>
         key is null ? [] : IndexOf(group).Atoms(key);
 

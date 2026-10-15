@@ -49,7 +49,7 @@ public partial class TemplateSideTab : SideTab
         {
             _template.Shows = value;
             if (
-                RecordService.Instance.Get<Template>(_templateRef) is { } template
+                RecordService.Instance.Get(Template.ById, _templateRef) is { } template
                 && !value(template)
             )
             {

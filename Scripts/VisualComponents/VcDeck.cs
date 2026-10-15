@@ -50,7 +50,7 @@ public partial class VcDeck : VisualComponentBase
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
             return [];
-        var proto = RecordService.Instance.GetIncludingDeleted<Prototype>(PrototypeRef);
+        var proto = RecordService.Instance.GetIncludingDeleted(Prototype.ById, PrototypeRef);
         if (proto?.Parameters is not PrintedParameters parameters)
             return [];
 

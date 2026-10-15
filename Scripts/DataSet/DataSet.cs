@@ -7,6 +7,8 @@ public record DataSet : Replicated
 {
     public static readonly Id<DataSet, SnowTag> ById = new(r => r.Id);
 
+    public static readonly All<DataSet> All = new();
+
     public string Name { get; init; }
 
     /// <summary>
@@ -28,9 +30,8 @@ public record Column
 public sealed record ColumnTarget(SnowTag DataSetId, SnowTag ColumnId) : Target
 {
     public override IEnumerable<Target> Contents(IRecordReader R) =>
-        R.Get<DataSet>(DataSetId)?.Columns.Any(c => c.Id == ColumnId) == true
-            ? R.Get<DataRow>(r => r.DataSetId == DataSetId)
-                .Select(r => new CellTarget(r.Id, ColumnId))
+        R.Get(DataSet.ById, DataSetId)?.Columns.Any(c => c.Id == ColumnId) == true
+            ? R.Get(DataRow.ByDataSet, DataSetId).Select(r => new CellTarget(r.Id, ColumnId))
             : [];
 
     public override IEnumerable<Target> Containers(IRecordReader R) =>

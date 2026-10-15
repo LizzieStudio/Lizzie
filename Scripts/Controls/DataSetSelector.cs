@@ -20,7 +20,7 @@ public partial class DataSetSelector : OptionButton
         Clear();
         AddItem("(none)", SnowTag.Empty);
 
-        foreach (var d in R.Get<DataSet>())
+        foreach (var d in R.Get(DataSet.All))
         {
             AddItem(d.Name, d.Id);
         }

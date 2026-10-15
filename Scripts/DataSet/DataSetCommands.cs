@@ -69,13 +69,13 @@ public static class DataSetCommands
         Noun = ("Column", "Columns"),
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
-        AppliesTo = (R, t) => HasColumn(R.Get<DataSet>(t.DataSetId), t.ColumnId),
+        AppliesTo = (R, t) => HasColumn(R.Get(DataSet.ById, t.DataSetId), t.ColumnId),
         Effects = (R, columns, _) =>
             columns
                 .GroupBy(t => t.DataSetId)
                 .Select(g =>
                 {
-                    var ds = R.Get<DataSet>(g.Key);
+                    var ds = R.Get(DataSet.ById, g.Key);
                     var ids = g.Select(t => t.ColumnId).ToHashSet();
                     return ds with { Columns = ds.Columns.RemoveAll(c => ids.Contains(c.Id)) };
                 }),
@@ -137,7 +137,8 @@ public static class DataSetCommands
         ds?.Columns.Any(c => c.Id == columnId) == true;
 
     private static bool CellExists(IRecordReader R, CellTarget t) =>
-        R.Get<DataRow>(t.RowId) is { } row && HasColumn(R.Get<DataSet>(row.DataSetId), t.ColumnId);
+        R.Get(DataRow.ById, t.RowId) is { } row
+        && HasColumn(R.Get(DataSet.ById, row.DataSetId), t.ColumnId);
 
     /// <summary>The rows and columns the cells span, in the grid's order, and the dataset's rows and columns.</summary>
     private static (
@@ -147,9 +148,9 @@ public static class DataSetCommands
         List<SnowTag> AllColumns
     ) Block(IRecordReader R, IReadOnlyList<CellTarget> cells)
     {
-        var dataSetId = R.Get<DataRow>(cells[0].RowId).DataSetId;
+        var dataSetId = R.Get(DataRow.ById, cells[0].RowId).DataSetId;
         var allRows = R.GetRows(dataSetId);
-        var allColumns = R.Get<DataSet>(dataSetId).Columns.Select(c => c.Id).ToList();
+        var allColumns = R.Get(DataSet.ById, dataSetId).Columns.Select(c => c.Id).ToList();
         var rowIds = cells.Select(c => c.RowId).ToHashSet();
         var columnIds = cells.Select(c => c.ColumnId).ToHashSet();
         return (
@@ -224,7 +225,7 @@ public static class DataSetCommands
             .GroupBy(v => v.Cell.RowId)
             .Select(g =>
                 g.Aggregate(
-                    R.Get<DataRow>(g.Key),
+                    R.Get(DataRow.ById, g.Key),
                     (row, v) => row.WithCell(v.Cell.ColumnId, v.Value)
                 )
             );

@@ -30,7 +30,7 @@ public partial class ImageSelector : Control
         _optionDropdown.Clear();
         _optionDropdown.AddItem("(none)", SnowTag.Empty);
 
-        foreach (var asset in R.Get<ImageAsset>())
+        foreach (var asset in R.Get(ImageAsset.All))
             _optionDropdown.AddItem(asset.Name, asset.Id);
 
         UpdateSelection();

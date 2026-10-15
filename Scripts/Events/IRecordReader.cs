@@ -5,7 +5,7 @@ using Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Reads project records.
-/// Soft-deleted records are only returned by <see cref="GetIncludingDeleted{T}"/>.
+/// Soft-deleted records are only returned by the GetIncludingDeleted reads.
 /// A reader passed to a watched Sync records every read as a dependency.
 /// </summary>
 public interface IRecordReader
@@ -24,22 +24,6 @@ public interface IRecordReader
     T GetIncludingDeleted<T>(SnowTag id)
         where T : Replicated;
 
-    /// <summary>The records that exist, in the order of <paramref name="ids"/>.</summary>
-    IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
-        where T : Replicated;
-
-    /// <summary>Every record that passes <paramref name="filter"/>, which must only read the record.</summary>
-    IReadOnlyList<T> Get<T>(Func<T, bool> filter)
-        where T : Replicated;
-
-    /// <summary>Every record that passes <paramref name="filter"/>, even if it is deleted.</summary>
-    IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
-        where T : Replicated;
-
-    /// <summary>Every record, including ones added later.</summary>
-    IReadOnlyList<T> Get<T>()
-        where T : Replicated;
-
     /// <summary>
     /// <para>The one record of a <see cref="SingletonAttribute"/> type, like the project settings.</para>
     /// <para>
@@ -48,37 +32,6 @@ public interface IRecordReader
     /// </para>
     /// </summary>
     T Single<T>()
-        where T : Replicated;
-
-    /// <summary>
-    /// <para>
-    /// Maps every live record of <typeparamref name="T"/> to a key, then uses those keys to produce two lists of SnowTags and keys: deletions and creations.
-    /// Deletions carry the previous key and creations carry the new one.
-    /// To determine presence in a list, the key for each record is compared with the previous key generated for that record.
-    /// </para>
-    /// <list type="bullet">
-    /// <item>If the two keys are different and the previous key wasn't null, the record appears in deletions.</item>
-    /// <item>If the two keys are different and the new key isn't null, the record appears in creations.</item>
-    /// </list>
-    /// <para>The expectation is that you will delete the nodes in deletions and create the nodes in creations.</para>
-    /// When <paramref name="keyFn"/> returns null, this effectively means "no child".
-    /// If both projections returned a non-null key but the keys are different, that record appears in both deletions and creations.
-    /// <strong>Only one call of GetChanged per record type per Sync.</strong>
-    /// </summary>
-    SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
-        where T : Replicated
-        where K : struct;
-
-    /// <summary>
-    /// <para>
-    /// Produces two lists of SnowTags: deletions and creations.
-    /// A record that existed previously but was since deleted or undone will be included in deletions.
-    /// A record that did not exist or was deleted previously will be included in creations.
-    /// </para>
-    /// <para>The expectation is that you will delete the nodes in deletions and create the nodes in creations.</para>
-    /// <strong>Only one call of GetChanged per record type per Sync.</strong>
-    /// </summary>
-    SwapLists GetChanged<T>()
         where T : Replicated;
 
     /// <summary>
@@ -119,46 +72,25 @@ public interface IRecordReader
     /// Maps every atom with <paramref name="key"/> in <paramref name="group"/> through <paramref name="project"/>,
     /// and compares each atom's result with the one from the previous Sync.
     /// <list type="bullet">
-    /// <item>If the results differ and the previous one wasn't null, the atom appears in deletions, with its previous value and result.</item>
-    /// <item>If the results differ and the new one isn't null, the atom appears in creations, with its new value and result.</item>
+    /// <item>If the results differ and the previous one wasn't null, the atom appears in removed, with its previous value and result.</item>
+    /// <item>If the results differ and the new one isn't null, the atom appears in added, with its new value and result.</item>
     /// </list>
-    /// <para>The expectation is that you will delete the nodes in deletions and create the nodes in creations.</para>
+    /// <para>The expectation is that you will remove the nodes in removed and add the nodes in added.</para>
     /// When <paramref name="project"/> returns null, this effectively means "no child".
-    /// <strong>Only one call of GetChanged per group key per Sync.</strong>
+    /// <strong>Only one call of Diff per group key per Sync.</strong>
     /// </summary>
-    SwapLists<T, V> GetChanged<T, G, V>(
-        Group<T, G> group,
-        G key,
-        Func<IRecordReader, T, V?> project
-    )
+    GroupDiff<T, V> Diff<T, G, V>(Group<T, G> group, G key, Func<IRecordReader, T, V?> project)
         where T : Replicated
         where V : struct;
 }
 
 /// <summary>
-/// The children a parent should delete and the children a parent should create, from <see cref="IRecordReader.GetChanged{T}"/>.
+/// The children a parent should remove, as last projected, and the children it should add,
+/// from <see cref="IRecordReader.Diff{T, G, V}"/>.
 /// </summary>
-public readonly record struct SwapLists(
-    IReadOnlyList<SnowTag> Deleted,
-    IReadOnlyList<SnowTag> Created
-);
-
-/// <summary>
-/// The children a parent should delete, with their previous keys, and the children a parent
-/// should create, with their new keys, from <see cref="IRecordReader.GetChanged{T, K}"/>.
-/// </summary>
-public readonly record struct SwapLists<K>(
-    IReadOnlyList<(SnowTag Id, K Key)> Deleted,
-    IReadOnlyList<(SnowTag Id, K Key)> Created
-);
-
-/// <summary>
-/// The children a parent should delete, as last projected, and the children it should create,
-/// from <see cref="IRecordReader.GetChanged{T, G, V}"/>.
-/// </summary>
-public readonly record struct SwapLists<T, V>(
-    IReadOnlyList<(T Atom, V Value)> Deleted,
-    IReadOnlyList<(T Atom, V Value)> Created
+public readonly record struct GroupDiff<T, V>(
+    IReadOnlyList<(T Atom, V Value)> Removed,
+    IReadOnlyList<(T Atom, V Value)> Added
 );
 
 public static class RecordReaderExtensions
@@ -171,14 +103,25 @@ public static class RecordReaderExtensions
     public static int Count<T>(this IRecordReader R, All<T> all)
         where T : Replicated => R.Count(all, true);
 
-    /// <inheritdoc cref="IRecordReader.GetChanged{T, G, V}"/>
-    public static SwapLists<T, V> GetChanged<T, V>(
+    /// <inheritdoc cref="IRecordReader.Diff{T, G, V}"/>
+    public static GroupDiff<T, V> Diff<T, V>(
         this IRecordReader R,
         All<T> all,
         Func<IRecordReader, T, V?> project
     )
         where T : Replicated
-        where V : struct => R.GetChanged(all, true, project);
+        where V : struct => R.Diff(all, true, project);
+
+    /// <summary>
+    /// The atoms that left or joined <paramref name="key"/> of <paramref name="group"/> since the previous Sync.
+    /// <strong>Only one call of Diff per group key per Sync.</strong>
+    /// </summary>
+    public static GroupDiff<T, bool> Diff<T, G>(this IRecordReader R, Group<T, G> group, G key)
+        where T : Replicated => R.Diff<T, G, bool>(group, key, (_, _) => true);
+
+    /// <inheritdoc cref="Diff{T, G}(IRecordReader, Group{T, G}, G)"/>
+    public static GroupDiff<T, bool> Diff<T>(this IRecordReader R, All<T> all)
+        where T : Replicated => R.Diff(all, true);
 
     /// <summary>
     /// The command that last wrote <paramref name="record"/>'s current state, or null when there was no command attached.
@@ -196,7 +139,7 @@ public static class RecordReaderExtensions
         if (datasetRef == SnowTag.Empty)
             return new List<DataRow>();
 
-        var rows = R.Get<DataRow>(r => r.DataSetId == datasetRef).ToList();
+        var rows = R.Get(DataRow.ByDataSet, datasetRef).ToList();
         rows.Sort(
             (a, b) =>
             {
@@ -218,7 +161,7 @@ public static class RecordReaderExtensions
         int Toward(string a, string b) => RowRank.Comparer.Compare(a, b) * (after ? 1 : -1);
 
         string nearest = null;
-        foreach (var other in R.GetIncludingDeleted<DataRow>(r => r.DataSetId == row.DataSetId))
+        foreach (var other in R.GetIncludingDeleted(DataRow.ByDataSet, row.DataSetId))
         {
             if (
                 Toward(other.Rank, row.Rank) > 0
@@ -235,7 +178,7 @@ public static class RecordReaderExtensions
     /// The highest rank in a dataset, counting deleted rows, or null if it has none.
     /// </summary>
     public static string LastRank(this IRecordReader R, SnowTag datasetRef) =>
-        R.GetIncludingDeleted<DataRow>(r => r.DataSetId == datasetRef)
+        R.GetIncludingDeleted(DataRow.ByDataSet, datasetRef)
             .Select(r => r.Rank)
             .Max(RowRank.Comparer);
 
@@ -258,7 +201,7 @@ public static class RecordReaderExtensions
     )
     {
         var type =
-            R.GetIncludingDeleted<Prototype>(s.PrototypeRef)?.Type
+            R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef)?.Type
             ?? VisualComponentBase.VisualComponentType.Unset;
         return type == VisualComponentBase.VisualComponentType.Deck && s.IsItem
             ? VisualComponentBase.VisualComponentType.Token

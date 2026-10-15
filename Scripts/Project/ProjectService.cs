@@ -163,7 +163,7 @@ public partial class ProjectService : Node
     private static T CreateIfMissing<T>()
         where T : Replicated
     {
-        if (R.Get<T>().Count > 0)
+        if (R.Count(Singleton<T>.All) > 0)
             return null;
 
         Replicated record = Activator.CreateInstance<T>();

@@ -85,7 +85,8 @@ public partial class ImageManager : Window, ICommandView
         _columns = GetNode<SpinBox>("%Columns");
         var columnsEdits = _columns.GetNode<FocusEditGroup>("FocusEditGroup");
         _columns.ValueChanged += value =>
-            columnsEdits.Update<ImageAsset>(
+            columnsEdits.Update(
+                ImageAsset.ById,
                 _open,
                 a => a with { Layout = a.Layout with { Columns = (int)value } }
             );
@@ -93,14 +94,16 @@ public partial class ImageManager : Window, ICommandView
         _rows = GetNode<SpinBox>("%Rows");
         var rowsEdits = _rows.GetNode<FocusEditGroup>("FocusEditGroup");
         _rows.ValueChanged += value =>
-            rowsEdits.Update<ImageAsset>(
+            rowsEdits.Update(
+                ImageAsset.ById,
                 _open,
                 a => a with { Layout = a.Layout with { Rows = (int)value } }
             );
 
         _countSet = GetNode<CheckBox>("%CountSet");
         _countSet.Toggled += on =>
-            RecordService.Instance.Update<ImageAsset>(
+            RecordService.Instance.Update(
+                ImageAsset.ById,
                 _open,
                 a =>
                     a with
@@ -115,7 +118,8 @@ public partial class ImageManager : Window, ICommandView
         _count = GetNode<SpinBox>("%Count");
         var countEdits = _count.GetNode<FocusEditGroup>("FocusEditGroup");
         _count.ValueChanged += value =>
-            countEdits.Update<ImageAsset>(
+            countEdits.Update(
+                ImageAsset.ById,
                 _open,
                 a => a with { Layout = a.Layout with { Count = (int)value } }
             );
@@ -132,7 +136,7 @@ public partial class ImageManager : Window, ICommandView
     }
 
     private void OnRemovePressed() =>
-        RecordService.Instance.Update<ImageAsset>(_open, a => a with { Deleted = true });
+        RecordService.Instance.Update(ImageAsset.ById, _open, a => a with { Deleted = true });
 
     /// <summary>
     /// For when the user clicks an image to see it,
@@ -186,14 +190,14 @@ public partial class ImageManager : Window, ICommandView
 
     private void Sync(IRecordReader R)
     {
-        var (deleted, created) = R.GetChanged<ImageAsset>();
+        var (removed, added) = R.Diff(ImageAsset.All);
 
-        foreach (var id in deleted)
-            RemoveImageTile(id);
-        foreach (var id in created)
-            AddImageTile(id);
+        foreach (var (a, _) in removed)
+            RemoveImageTile(a.Id);
+        foreach (var (a, _) in added)
+            AddImageTile(a.Id);
 
-        var open = R.Get<ImageAsset>(_open);
+        var open = R.Get(ImageAsset.ById, _open);
         _library.Visible = _addNewButton.Visible = open == null;
         _imageView.Visible = _backButton.Visible = _removeButton.Visible = open != null;
         Title = open == null ? "Images" : $"Images: {open.Name}";

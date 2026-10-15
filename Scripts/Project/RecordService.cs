@@ -132,15 +132,15 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     }
 
     /// <summary>
-    /// Calls <paramref name="change"/> with the current version of record <paramref name="id"/>,
+    /// Calls <paramref name="change"/> with the current version of the atom with <paramref name="id"/>,
     /// then passes the result to <see cref="Write"/>. Does nothing if the record is missing or deleted.
     ///
     /// <inheritdoc cref="Write"/>
     /// </summary>
-    public void Update<T>(SnowTag id, Func<T, T> change)
+    public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
         where T : Replicated
     {
-        if (Get<T>(id) is { } record)
+        if (Get(byId, id) is { } record)
             Write(change(record));
     }
 
@@ -339,12 +339,6 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     {
         foreach (var watcher in _dependencies.Affected(store.Touched(changes)))
             MarkDirty(watcher);
-
-        foreach (var watcher in _watchers)
-        {
-            if (!_dirty.Contains(watcher) && watcher.Affected(store.RecordType, changes))
-                MarkDirty(watcher);
-        }
     }
 
     void IRecordServiceMachinery.MarkDirty(Watcher watcher) => MarkDirty(watcher);
@@ -422,22 +416,10 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
             ? r
             : null;
 
-    public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
-        where T : Replicated => ids.Select(Get<T>).Where(r => r != null).ToArray();
-
-    public IReadOnlyList<T> Get<T>(Func<T, bool> filter)
-        where T : Replicated => StoreOf<T>().All.Where(r => !r.Deleted && filter(r)).ToArray();
-
-    public IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
-        where T : Replicated => StoreOf<T>().All.Where(filter).ToArray();
-
-    public IReadOnlyList<T> Get<T>()
-        where T : Replicated => StoreOf<T>().All.Where(r => !r.Deleted).ToArray();
-
     public T Single<T>()
         where T : Replicated
     {
-        var records = Get<T>();
+        var records = this.Get(Singleton<T>.All);
         if (records.Count == 1)
             return records[0];
         throw new InvalidOperationException(
@@ -463,26 +445,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         where T : Replicated => StoreOf<T>().Count(group, key);
 
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
-    public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
-        where T : Replicated
-        where K : struct
-    {
-        throw new InvalidOperationException(
-            "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."
-        );
-    }
-
-    /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
-    public SwapLists GetChanged<T>()
-        where T : Replicated
-    {
-        throw new InvalidOperationException(
-            "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."
-        );
-    }
-
-    /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
-    public SwapLists<T, V> GetChanged<T, G, V>(
+    public GroupDiff<T, V> Diff<T, G, V>(
         Group<T, G> group,
         G key,
         Func<IRecordReader, T, V?> project
@@ -491,9 +454,21 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         where V : struct
     {
         throw new InvalidOperationException(
-            "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."
+            "Diff can only be called on the IRecordReader passed to a Watch's Sync."
         );
     }
 
     #endregion
+}
+
+/// <summary>
+/// Every atom of a singleton type, which <see cref="RecordService.Single"/> reads.
+/// </summary>
+/// <remarks>
+/// This is just syntactic sugar.
+/// </remarks>
+internal static class Singleton<T>
+    where T : Replicated
+{
+    public static readonly All<T> All = new();
 }

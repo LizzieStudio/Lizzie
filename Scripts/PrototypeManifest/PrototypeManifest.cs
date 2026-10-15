@@ -160,7 +160,10 @@ public partial class PrototypeManifest : Window, ICommandView
         if (_selectedPrototype == null)
             return;
 
-        var existingNames = RecordService.Instance.Get<Prototype>().Select(p => p.Name).ToHashSet();
+        var existingNames = RecordService
+            .Instance.Get(Prototype.All)
+            .Select(p => p.Name)
+            .ToHashSet();
 
         // Strip any existing trailing " (N)" suffix before generating the new name
         var baseName = System.Text.RegularExpressions.Regex.Replace(
@@ -192,7 +195,7 @@ public partial class PrototypeManifest : Window, ICommandView
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
 
-        var prototypes = R.Get<Prototype>().ToList();
+        var prototypes = R.Get(Prototype.All).ToList();
 
         // The Qty column.
         // We filter a deck's cards so that they aren't counted.
@@ -200,7 +203,7 @@ public partial class PrototypeManifest : Window, ICommandView
             .Where(s =>
                 !(
                     s.IsItem
-                    && R.GetIncludingDeleted<Prototype>(s.PrototypeRef)?.Type
+                    && R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef)?.Type
                         == VisualComponentBase.VisualComponentType.Deck
                 )
             )
@@ -273,7 +276,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (prototypeRef == _selectedPrototype?.Id)
             return;
 
-        var prototype = RecordService.Instance.Get<Prototype>(prototypeRef);
+        var prototype = RecordService.Instance.Get(Prototype.ById, prototypeRef);
         if (prototype != null)
             SelectedPrototype = prototype;
     }

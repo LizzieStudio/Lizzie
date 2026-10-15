@@ -48,9 +48,6 @@ public interface IReplicatedStore
 public interface IAtomStore<T> : IReplicatedStore
     where T : Replicated
 {
-    /// <summary>Every atom, deleted ones included.</summary>
-    IEnumerable<T> All { get; }
-
     /// <summary>
     /// The atoms with <paramref name="key"/> in <paramref name="group"/>, deleted ones included.
     /// The group is indexed on first read and kept up to date from then on.

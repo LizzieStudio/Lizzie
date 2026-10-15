@@ -104,7 +104,7 @@ public partial class HandRow : Control
                     CardSize(
                         TableSize(
                             RecordService
-                                .Instance.GetIncludingDeleted<Prototype>(s.PrototypeRef)
+                                .Instance.GetIncludingDeleted(Prototype.ById, s.PrototypeRef)
                                 ?.Parameters as PrintedParameters
                         ),
                         HandCard.ScreenRotation(s.Rotation.Y)

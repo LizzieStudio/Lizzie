@@ -26,10 +26,10 @@ public partial class FocusEditGroup : Node
     }
 
     /// <inheritdoc cref="RecordService.Update"/>
-    public void Update<T>(SnowTag id, Func<T, T> change)
+    public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
         where T : Replicated
     {
-        if (RecordService.Instance.Get<T>(id) is not { } record)
+        if (RecordService.Instance.Get(byId, id) is not { } record)
             return;
         if (_group == SnowportId.Empty)
             _group = RecordService.Instance.Open(change(record));

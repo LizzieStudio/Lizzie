@@ -18,7 +18,7 @@ public partial class CardFace : TextureRect
     /// </summary>
     public void ShowCard(ComponentState s, bool back, IRecordReader R)
     {
-        var prototype = s == null ? null : R.GetIncludingDeleted<Prototype>(s.PrototypeRef);
+        var prototype = s == null ? null : R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef);
         var p = prototype?.Parameters as PrintedParameters;
         Texture = p == null ? null : ((TokenShape)p.Shape).Mask();
         ClipChildren = Texture == null ? ClipChildrenMode.Disabled : ClipChildrenMode.Only;

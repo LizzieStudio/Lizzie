@@ -241,8 +241,8 @@ public partial class DatasetEditor : Window, ICommandView
         // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
         // so the editor stays on it, where redo brings it back.
         var ds = SelectionScope.TryGet(R, out var id)
-            ? R.Get<DataSet>(id)
-            : R.Get<DataSet>().FirstOrDefault();
+            ? R.Get(DataSet.ById, id)
+            : R.Get(DataSet.All).FirstOrDefault();
         if (ds != null)
             SelectionScope.Set(ds.Id);
 
@@ -1064,7 +1064,7 @@ public partial class DatasetEditor : Window, ICommandView
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
             DataSetCommands.NewColumn(
-                R.Get<DataSet>(columns[0].DataSetId),
+                R.Get(DataSet.ById, columns[0].DataSetId),
                 ColumnIndex(R, columns[0])
             ),
     };
@@ -1078,14 +1078,15 @@ public partial class DatasetEditor : Window, ICommandView
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
             DataSetCommands.NewColumn(
-                R.Get<DataSet>(columns[0].DataSetId),
+                R.Get(DataSet.ById, columns[0].DataSetId),
                 ColumnIndex(R, columns[0]) + 1
             ),
     };
 
     // The column's place in its dataset, or -1 if it's gone.
     private static int ColumnIndex(IRecordReader R, ColumnTarget t) =>
-        R.Get<DataSet>(t.DataSetId)?.Columns.Select(c => c.Id).ToList().IndexOf(t.ColumnId) ?? -1;
+        R.Get(DataSet.ById, t.DataSetId)?.Columns.Select(c => c.Id).ToList().IndexOf(t.ColumnId)
+        ?? -1;
 
     private void RenameColumn(ColumnTarget column)
     {

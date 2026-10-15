@@ -103,7 +103,7 @@ public sealed record ImageSide : SideParameters
     }
 
     public GridLayout Layout(IRecordReader R) =>
-        R.Get<ImageAsset>(Image)?.Layout ?? GridLayout.Single;
+        R.Get(ImageAsset.ById, Image)?.Layout ?? GridLayout.Single;
 
     public override int Count(IRecordReader R) => FrameValues(R).Length;
 }

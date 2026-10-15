@@ -68,7 +68,7 @@ public partial class VcTray : VisualComponentGroup
 
         ShapeProfiles.Add(new OffsetShape2D(r));
 
-        _prototype = R.Get<Prototype>(p.Prototype);
+        _prototype = R.Get(Prototype.ById, p.Prototype);
 
         UpdateNameLabel();
         CreateTrayPrototype();

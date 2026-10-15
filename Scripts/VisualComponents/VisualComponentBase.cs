@@ -90,7 +90,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>The prototype this component shows. Possibly a draft or even deleted.</summary>
     protected Prototype GetPrototype(IRecordReader R) =>
-        DraftPrototype ?? R.GetIncludingDeleted<Prototype>(PrototypeRef);
+        DraftPrototype ?? R.GetIncludingDeleted(Prototype.ById, PrototypeRef);
 
     private Tween _yTween;
     private float _targetY;

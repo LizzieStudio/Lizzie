@@ -59,14 +59,14 @@ public partial class Table : Node3D
     /// </summary>
     private void Sync(IRecordReader R)
     {
-        var (deleted, created) = R.GetChanged<
+        var (removed, added) = R.Diff<
             ComponentState,
             (string Scene, SnowTag Proto, PrototypeItemRef Card)
         >(
             ComponentState.All,
             (R, s) =>
             {
-                var proto = R.GetIncludingDeleted<Prototype>(s.PrototypeRef);
+                var proto = R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef);
                 if (proto == null)
                     return null;
                 var scene = Utility.ComponentTypeToScenePath(
@@ -79,9 +79,9 @@ public partial class Table : Node3D
             }
         );
 
-        foreach (var (s, _) in deleted)
+        foreach (var (s, _) in removed)
             RemoveComponent(s.Id);
-        foreach (var (s, key) in created)
+        foreach (var (s, key) in added)
             AddComponent(s.Id, key.Scene);
 
         Changed?.Invoke();

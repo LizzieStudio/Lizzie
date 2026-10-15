@@ -97,7 +97,7 @@ public partial class TextureFactory : SubViewport
                 {
                     string imageName = obj.Text.Substring(2);
                     var asset = RecordService
-                        .Instance.Get<ImageAsset>(a => a.Name == imageName)
+                        .Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
                         .FirstOrDefault();
                     if (asset != null && AssetImageCache.Instance.GetImage(asset) == null)
                     {
@@ -450,18 +450,8 @@ public partial class TextureFactory : SubViewport
         return true;
     }
 
-    private bool IsIconUserDefined(string name)
-    {
-        if (
-            RecordService
-                .Instance.Get<ImageAsset>(x =>
-                    string.Equals(x.Name, name, StringComparison.CurrentCultureIgnoreCase)
-                )
-                .Count > 0
-        )
-            return true;
-        return false;
-    }
+    private bool IsIconUserDefined(string name) =>
+        RecordService.Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(name)).Count > 0;
 
     private Texture2D ResolveIconTexture(string name)
     {
@@ -473,9 +463,7 @@ public partial class TextureFactory : SubViewport
             if (IsIconUserDefined(useName))
             {
                 var asset = RecordService
-                    .Instance.Get<ImageAsset>(a =>
-                        string.Equals(a.Name, useName, StringComparison.CurrentCultureIgnoreCase)
-                    )
+                    .Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(useName))
                     .FirstOrDefault();
 
                 var image = AssetImageCache.Instance.GetImage(asset);
@@ -948,7 +936,7 @@ public partial class TextureFactory : SubViewport
         {
             string imageName = obj.Text.Substring(2);
             var asset = RecordService
-                .Instance.Get<ImageAsset>(a => a.Name == imageName)
+                .Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
                 .FirstOrDefault();
             var assetImage = AssetImageCache.Instance.GetImage(asset);
             if (assetImage != null)
