@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Godot;
-using Lizzie.AssetManagement;
 using Lizzie.Replication.Machinery;
 
 public partial class ProjectService : Node
@@ -88,7 +86,7 @@ public partial class ProjectService : Node
 
             if (replaced)
             {
-                TextureCache.Instance.Clear();
+                FaceSet.Clear();
                 RecordService.Instance.Machinery().Clear();
             }
 

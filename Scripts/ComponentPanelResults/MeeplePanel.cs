@@ -20,7 +20,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private Color _onColor = new Color(0.2f, 0.6f, 1.0f); // Blue
     private Color _offColor = new Color(0.15f, 0.15f, 0.15f); // Dark gray
-    private Color _hoverColor = new Color(0.3f, 0.3f, 0.3f); // Light gray
 
     private LineEdit _nameInput;
     private LineEdit _heightInput;

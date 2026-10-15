@@ -218,11 +218,10 @@ public partial class ImageManager : Window, ICommandView
     {
         _loaded = asset.Id;
         _image.Texture = null;
-        // The same texture the cards use, rather than another upload of the image.
-        var texture = await TextureCache.Instance.GetOrCreateAssetTexture(asset);
+        var image = await AssetImageCache.Instance.FetchImageAsync(asset);
         // safety checks to make sure nothing changed during the load
-        if (IsInstanceValid(this) && _loaded == asset.Id)
-            _image.Texture = texture;
+        if (IsInstanceValid(this) && _loaded == asset.Id && image != null)
+            _image.Texture = ImageTexture.CreateFromImage(image);
     }
 
     private void AddImageTile(SnowTag id)

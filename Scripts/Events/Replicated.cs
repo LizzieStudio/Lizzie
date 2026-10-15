@@ -35,7 +35,7 @@ public abstract record Replicated
     /// <summary>
     /// A cache key that changes whenever the record is updated.
     /// </summary>
-    public string SheetKey() => $"{Id:X8}{LastUpdateId:X16}";
+    public string VersionKey() => $"{Id:X8}{LastUpdateId:X16}";
 
     /// <summary>
     /// What's directly inside this record, like a deck's cards or a DataRow's cells.
@@ -54,20 +54,6 @@ public abstract record Replicated
     /// Not followed further.
     /// </summary>
     public virtual IEnumerable<Target> Referenced(IRecordReader R) => [];
-}
-
-public static class ReplicatedExtensions
-{
-    /// <summary>
-    /// A cache key that changes whenever any of the records is updated.
-    /// </summary>
-    public static string SheetKey(this IEnumerable<Replicated> items)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var item in items)
-            sb.Append(item.SheetKey());
-        return sb.ToString();
-    }
 }
 
 /// <summary>

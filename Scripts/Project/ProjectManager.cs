@@ -1,17 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text.Json;
 using Godot;
-using FileAccess = Godot.FileAccess;
 
 public partial class ProjectManager : Panel
 {
     private Button _createButton;
     private Button _closeButton;
-    private Button _openButton;
 
     private HBoxContainer _createPanel;
     private Button _createCancel;
@@ -32,7 +25,6 @@ public partial class ProjectManager : Panel
 
         _closeButton = GetNode<Button>("%CloseButton");
         _closeButton.Pressed += OnClose;
-        _openButton = GetNode<Button>("%OpenButton");
     }
 
     private void CreateExecuteOnPressed()

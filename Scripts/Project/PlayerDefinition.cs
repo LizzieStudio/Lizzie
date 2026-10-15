@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 public partial class PlayerDefinition : HBoxContainer

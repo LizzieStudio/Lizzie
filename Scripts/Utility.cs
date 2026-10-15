@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using Godot;
 
 public static class Utility
 {
@@ -34,30 +31,6 @@ public static class Utility
         }
 
         return pairs.ToArray();
-    }
-
-    public static float PixelSize(Vector2 size)
-    {
-        if (size.X == 0 || size.Y == 0)
-            return 0;
-
-        return 0.95f / Mathf.Max(size.X, size.Y);
-    }
-
-    public static ImageTexture LoadTexture(string filename)
-    {
-        var image = new Image();
-        var err = image.Load(filename);
-        GD.Print(err);
-
-        if (err == Error.Ok)
-        {
-            var texture = new ImageTexture();
-            texture.SetImage(image);
-            return texture;
-        }
-
-        return new ImageTexture();
     }
 
     public static string ComponentTypeToScenePath(

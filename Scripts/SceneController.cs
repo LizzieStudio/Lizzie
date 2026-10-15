@@ -11,10 +11,6 @@ public partial class SceneController : Node3D, ICommandView
     private CameraManager _cameraManager;
     private GameObjects _gameObjects;
 
-    private VcMeeple _meepletest;
-
-    private Sprite3D _testSprite;
-
     public override void _Ready()
     {
         _cameraManager = GetNode<CameraManager>("Cameras");
@@ -135,12 +131,6 @@ public partial class SceneController : Node3D, ICommandView
             default:
                 throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
         }
-    }
-
-    private void TextureDone(ImageTexture obj)
-    {
-        var d = obj.GetImage();
-        //d.SavePng(@"c:\winwam5\tfTest.png");
     }
 
     public void EnterSpawnMode(List<(VisualComponentBase Component, Vector3 Delta)> components)

@@ -94,15 +94,10 @@ public class TemplateElement : ITemplateElement
     {
         to.CenterX = EvaluateFloatParameter(_parameters, "X", context);
         to.CenterY = EvaluateFloatParameter(_parameters, "Y", context);
-        to.Anchor = EvaluateAnchorParameter(_parameters, "Anchor", context);
         to.Height = EvaluateFloatParameter(_parameters, "Height", context);
         to.Width = EvaluateFloatParameter(_parameters, "Width", context);
         to.RotationDegrees = EvaluateNumberParameter(_parameters, "Rotation", context);
     }
-
-    public event EventHandler<EventArgs> ElementUpdated;
-
-    protected virtual void OnElementUpdated() => ElementUpdated?.Invoke(this, EventArgs.Empty);
 
     #region Parameter Processing
 
@@ -239,19 +234,6 @@ public class TemplateElement : ITemplateElement
     public static bool IsTruthy(string value) =>
         value.Trim().ToLowerInvariant() is not ("" or "0" or "false" or "f" or "no" or "n");
 
-    private AnchorPoint EvaluateAnchorParameter(
-        IList<TemplateParameter> parameters,
-        string key,
-        TextureContext context
-    )
-    {
-        var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null)
-            return AnchorPoint.TopLeft;
-
-        return AnchorStringToEnum(Substitute(p.Value, context));
-    }
-
     public TrackElement.TrackTypeEnum EvaluateTrackParameter(
         IList<TemplateParameter> parameters,
         string key,
@@ -288,14 +270,7 @@ public interface ITemplateElement
     public enum TemplateElementType
     {
         Text,
-        Box,
         Image,
-        Note,
-        Circle,
-        Polygon,
-        Table,
-        Line,
-        Container,
         Frame,
         Track,
     }
@@ -324,7 +299,6 @@ public class TemplateParameter
         Text,
         Number,
         Color,
-        Anchor,
         Boolean,
         HorizontalAlignment,
         VerticalAlignment,

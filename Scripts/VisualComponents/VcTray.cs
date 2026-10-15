@@ -1,13 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Godot;
 
 public partial class VcTray : VisualComponentGroup
 {
     private Prototype _prototype;
-    private VisualComponentBase _contents;
-    private string _contentsDataRow;
     private Node3D _prototypeSpawnPoint;
 
     public override void _Ready()

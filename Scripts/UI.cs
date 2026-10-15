@@ -1,17 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
 using Godot;
 
 public partial class UI : CanvasLayer
 {
-    [Export]
-    private Color highlightFontColor;
-
-    [Export]
-    private Color baseFontColor;
-
     private HBoxContainer modeButtons;
 
     public event EventHandler<SceneModeChangeArgs> SceneModeChange;
@@ -20,11 +11,6 @@ public partial class UI : CanvasLayer
     private TemplateCreator _templateCreator;
 
     private Label _componentName;
-
-    private GameController _gameController;
-    private GameObjects _gameObjects;
-
-    private TabContainer _componentTabs;
 
     private ProjectManager _projectManager;
 
@@ -72,8 +58,6 @@ public partial class UI : CanvasLayer
         GetTree().AutoAcceptQuit = false;
 
         modeButtons = GetNode<HBoxContainer>("Mode");
-        var buttons = modeButtons.GetChildren();
-        baseFontColor = new Color(1, 1, 1, 1);
 
         SetSceneMode(Config.Registry.Get<SceneMode>("SceneMode"));
 
@@ -297,11 +281,6 @@ public partial class UI : CanvasLayer
         _imageManager.QueueFree();
     }
 
-    public void SetGameController(GameController gameController)
-    {
-        _gameController = gameController;
-    }
-
     private void OpenSampleProject()
     {
         if (ProjectService.Instance.LoadProject(ProjectService.SampleProjectName) != null)
@@ -451,7 +430,6 @@ public partial class UI : CanvasLayer
     }
 
     private ComponentDefinition _editPanel;
-    private SnowTag _editingPrototypeId;
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
@@ -460,7 +438,6 @@ public partial class UI : CanvasLayer
         {
             return;
         }
-        _editingPrototypeId = editEvent.PrototypeId;
 
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
         _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
@@ -478,12 +455,6 @@ public partial class UI : CanvasLayer
     {
         _editPanel.Hide();
         _editPanel.QueueFree();
-        _editingPrototypeId = SnowTag.Empty;
-    }
-
-    private void OnInsertPressed()
-    {
-        _componentDefinition.Visible = true;
     }
 
     private void CloseComponentDefinition(object sender, EventArgs e)
@@ -533,15 +504,6 @@ public partial class UI : CanvasLayer
     private void _on_play_3d_pressed()
     {
         SetSceneMode(SceneMode.ThreeDFixed);
-    }
-
-    private void TextureTest()
-    {
-        var sv = GetNode<SubViewport>("SubViewport");
-        var target = GetNode<TextureRect>("TestRect");
-
-        var t = sv.GetTexture();
-        target.Texture = t;
     }
 
     public void UpdateHoveredName(VisualComponentBase component)

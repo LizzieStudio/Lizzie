@@ -18,9 +18,6 @@ public partial class PrototypeManifest : Window, ICommandView
     private Button _spawnProto;
     private Button _deleteProto;
 
-    private Button _deleteAllUnused;
-    private Button _hideUnused;
-
     private Prototype _selectedPrototype;
     private Prototype SelectedPrototype
     {
@@ -69,9 +66,6 @@ public partial class PrototypeManifest : Window, ICommandView
 
         _deleteProto = GetNode<Button>("%DeleteProto");
         _deleteProto.Pressed += DeletePrototype;
-
-        _deleteAllUnused = GetNode<Button>("%DeleteUnused");
-        _hideUnused = GetNode<Button>("%HideUnused");
 
         InitializePrototypeGrid();
     }

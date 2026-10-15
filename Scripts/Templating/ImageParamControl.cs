@@ -6,11 +6,8 @@ public partial class ImageParamControl : HBoxContainer, IParamControl
 {
     private Label _label;
     private LineEdit _value;
-    private ColorPickerButton _colorPicker;
     private MenuButton _iconList;
     private PopupMenu _popupMenu;
-
-    private OptionButton _qtyPicker;
     private TemplateParameter _parameter;
     private bool _readyComplete;
 
@@ -55,8 +52,6 @@ public partial class ImageParamControl : HBoxContainer, IParamControl
     {
         icons.LoadPopupMenu(_popupMenu);
     }
-
-    private string _fieldName;
 
     private void MapParam()
     {

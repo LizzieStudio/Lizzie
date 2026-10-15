@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using Godot;
 
 /// <summary>
 /// Utilities to create an in-memory template and dataset for quick cards.

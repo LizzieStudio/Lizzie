@@ -19,12 +19,6 @@ public partial class TextureFactory : SubViewport
     [Export]
     public Node Drawings { get; set; }
 
-    // Called when the node enters the scene tree for the first time.
-    public override void _Ready()
-    {
-        _viewport = this;
-    }
-
     /// <summary>
     /// The font to use.
     /// </summary>
@@ -32,9 +26,6 @@ public partial class TextureFactory : SubViewport
     /// We're currently using Noto Sans, which is free and has a lot of coverage.
     /// </remarks>
     private static Font TextFont => ThemeDB.GetProjectTheme().DefaultFont;
-
-    private int _frameCount;
-    private bool _generated;
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta)
@@ -73,7 +64,6 @@ public partial class TextureFactory : SubViewport
         }
     }
 
-    SubViewport _viewport;
     private int _viewportUpdating;
     private TextureQueueEntry _activeQueueEntry;
     private int _skip;
@@ -135,11 +125,10 @@ public partial class TextureFactory : SubViewport
     private void InitiateTextureGeneration(TextureDefinition definition)
     {
         // For drawing, we need to render to a texture using a viewport
-        // Create a SubViewport for rendering
-        _viewport.Size = new Vector2I(definition.Width, definition.Height);
-        _viewport.RenderTargetClearMode = SubViewport.ClearMode.Always;
-        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
-        _viewport.TransparentBg = true;
+        Size = new Vector2I(definition.Width, definition.Height);
+        RenderTargetClearMode = SubViewport.ClearMode.Always;
+        RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        TransparentBg = true;
 
         var tr = new TextureRect();
 
@@ -153,9 +142,9 @@ public partial class TextureFactory : SubViewport
         bgRect.Size = new Vector2(definition.Width, definition.Height);
         tr.AddChild(bgRect);
 
-        _viewport.AddChild(tr);
+        AddChild(tr);
 
-        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
 
         _viewportUpdating = 2;
         _skip = 0;
@@ -164,29 +153,23 @@ public partial class TextureFactory : SubViewport
     private void GenerateSecondaryTexture(TextureDefinition definition)
     {
         //cleanup
-        foreach (var c in _viewport.GetChildren())
+        foreach (var c in GetChildren())
             c.QueueFree();
 
-        // Create a ColorRect for the background
-        var bgRect = new ColorRect();
-        bgRect.Color = definition.BackgroundColor;
-        bgRect.Size = new Vector2(definition.Width, definition.Height);
-        //_viewport.AddChild(bgRect);
-
         var tr = new TextureRect();
-        var texture = _viewport.GetTexture();
+        var texture = GetTexture();
         var image = texture.GetImage();
         tr.Size = new Vector2(
             _activeQueueEntry.TextureDefinition.Width,
             _activeQueueEntry.TextureDefinition.Height
         );
         tr.Texture = ImageTexture.CreateFromImage(image);
-        _viewport.AddChild(tr);
+        AddChild(tr);
 
         RenderObjects(definition);
 
         // Get the rendered texture
-        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
 
         _viewportUpdating = 2;
         _skip++;
@@ -226,7 +209,7 @@ public partial class TextureFactory : SubViewport
             bgRect.Size = new Vector2(scaleWidth, scaleHeight);
             bgRect.PivotOffset = new Vector2(scaleWidth / 2, scaleHeight / 2);
             bgRect.RotationDegrees = obj.RotationDegrees;
-            _viewport.AddChild(bgRect);
+            AddChild(bgRect);
         }
 
         var tr = new ReferenceRect();
@@ -240,7 +223,7 @@ public partial class TextureFactory : SubViewport
         tr.PivotOffset = new Vector2(scaleWidth / 2, scaleHeight / 2);
         tr.RotationDegrees = obj.RotationDegrees;
 
-        _viewport.AddChild(tr);
+        AddChild(tr);
     }
 
     private void RenderText(TextureObject obj)
@@ -343,7 +326,7 @@ public partial class TextureFactory : SubViewport
         label.Position = MoveOriginForAlignment(obj, labelSize);
         label.PivotOffset = new Vector2(labelSize.X / 2f, labelSize.Y / 2f);
         label.RotationDegrees = obj.RotationDegrees;
-        _viewport.AddChild(label);
+        AddChild(label);
     }
 
     // Matches [iconname] or [iconname color=value], excluding the BBCode tags [b], [/b], [i], [/i], [u], [/u].
@@ -1044,16 +1027,16 @@ public partial class TextureFactory : SubViewport
         //tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
-        _viewport.AddChild(tr);
+        AddChild(tr);
     }
 
     private void AfterRender()
     {
-        var image = _viewport.GetTexture().GetImage();
+        var image = GetTexture().GetImage();
         var done = _activeQueueEntry.Done;
 
         //cleanup
-        foreach (var c in _viewport.GetChildren())
+        foreach (var c in GetChildren())
             c.QueueFree();
         _activeQueueEntry = null;
 
@@ -1106,25 +1089,7 @@ public partial class TextureFactory : SubViewport
 
     public class TextureObject
     {
-        public enum AnchorPoint
-        {
-            TopLeft,
-            TopCenter,
-            TopRight,
-            MiddleLeft,
-            MiddleCenter,
-            MiddleRight,
-            BottomLeft,
-            BottomCenter,
-            BottomRight,
-        };
-
-        public TextureObject()
-        {
-            CenterX = Width / 2;
-            CenterY = Height / 2;
-            Anchor = AnchorPoint.MiddleCenter;
-        }
+        public TextureObject() { }
 
         public TextureObject(TextureObject obj)
         {
@@ -1136,7 +1101,6 @@ public partial class TextureFactory : SubViewport
             Width = obj.Width;
             CenterX = obj.CenterX;
             CenterY = obj.CenterY;
-            Anchor = obj.Anchor;
             RotationDegrees = obj.RotationDegrees;
             Quantity = obj.Quantity;
             Multiline = obj.Multiline;
@@ -1161,7 +1125,6 @@ public partial class TextureFactory : SubViewport
 
         public float Scale { get; set; } = 1f;
 
-        public AnchorPoint Anchor { get; set; }
         public int RotationDegrees { get; set; }
         public bool Multiline { get; set; }
 
@@ -1171,34 +1134,6 @@ public partial class TextureFactory : SubViewport
         public VerticalAlignment VerticalAlignment { get; set; } = VerticalAlignment.Top;
 
         public bool Stretch { get; set; } = false;
-
-        public static AnchorPoint AnchorStringToEnum(string anchor)
-        {
-            switch (anchor.ToLower())
-            {
-                case "tl":
-                    return AnchorPoint.TopLeft;
-                case "tc":
-                    return AnchorPoint.TopCenter;
-                case "tr":
-                    return AnchorPoint.TopRight;
-                case "ml":
-                    return AnchorPoint.MiddleLeft;
-                case "mc":
-                    return AnchorPoint.MiddleCenter;
-                case "mr":
-                    return AnchorPoint.MiddleRight;
-                case "bl":
-                    return AnchorPoint.BottomLeft;
-                case "bc":
-                    return AnchorPoint.BottomCenter;
-                case "br":
-                    return AnchorPoint.BottomRight;
-
-                default:
-                    return AnchorPoint.TopLeft;
-            }
-        }
 
         public static TrackElement.TrackTypeEnum TrackStringToEnum(string trackType)
         {

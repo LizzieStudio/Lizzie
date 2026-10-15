@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Godot;
 
 /// <summary>
 /// The permission tier a zone grants a given player over a component inside it.

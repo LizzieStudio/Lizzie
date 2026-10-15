@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
@@ -110,7 +109,6 @@ public partial class VcToken : VisualComponentBase
         _thickness = Math.Max(p.Thickness / 10f, 0.03f);
 
         Shape = (TokenShape)p.Shape;
-        _tokenType = p.Type;
 
         BuildToken();
         _faces.Load(GetPrototype(R), Card, TextureFactory, R);
@@ -290,8 +288,6 @@ public partial class VcToken : VisualComponentBase
     private float _thickness;
 
     public TokenShape Shape { get; private set; }
-
-    private TokenType _tokenType;
 
     public enum TokenType
     {

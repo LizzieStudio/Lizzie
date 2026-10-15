@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 
 public abstract partial class VisualComponentBase : Area3D
@@ -33,8 +32,6 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     public virtual List<OffsetShape2D> ShapeProfiles { get; set; } = new();
-
-    private float _curScale = 1;
 
     public override void _EnterTree()
     {
@@ -91,13 +88,6 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>The prototype this component shows. Possibly a draft or even deleted.</summary>
     protected Prototype GetPrototype(IRecordReader R) =>
         DraftPrototype ?? R.GetIncludingDeleted<Prototype>(PrototypeRef);
-
-    public override void _Ready()
-    {
-        _curScale = 1;
-
-        base._Ready();
-    }
 
     private Tween _yTween;
     private float _targetY;
@@ -532,22 +522,6 @@ public abstract partial class VisualComponentBase : Area3D
         var mat = new StandardMaterial3D();
         mat.AlbedoColor = color;
         objMesh.MaterialOverride = mat;
-    }
-
-    protected ImageTexture LoadTexture(string filename)
-    {
-        var image = new Image();
-        var err = image.Load(filename);
-        GD.Print(err);
-
-        if (err == Error.Ok)
-        {
-            var texture = new ImageTexture();
-            texture.SetImage(image);
-            return texture;
-        }
-
-        return new ImageTexture();
     }
 
     /// <summary>

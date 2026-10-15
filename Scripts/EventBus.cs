@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Godot;
-using Lizzie.AssetManagement;
 
 /// <summary>
 /// Global event bus for decoupled communication between components

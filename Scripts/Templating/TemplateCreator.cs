@@ -50,7 +50,6 @@ public partial class TemplateCreator : Window
     private PackedScene _stringParam;
     private PackedScene _numberParam;
     private PackedScene _colorParam;
-    private PackedScene _anchorParam;
     private PackedScene _boolParam;
     private PackedScene _horJustifyParam;
     private PackedScene _verJustifyParam;
@@ -75,8 +74,6 @@ public partial class TemplateCreator : Window
 
     private Button _newButton;
     private Button _saveButton;
-    private Button _duplicateButton;
-    private Button _zoomButton;
     private Panel _previewWindow;
     private DataSetSelector _dataSetSelector;
 
@@ -148,8 +145,6 @@ public partial class TemplateCreator : Window
 
         _saveButton = GetNode<Button>("%SaveButton");
         _saveButton.Pressed += SaveTemplate;
-
-        _duplicateButton = GetNode<Button>("%DuplicateButton");
 
         _closeButton = GetNode<Button>("%CloseButton");
         _closeButton.Pressed += RequestClose;
@@ -475,7 +470,6 @@ public partial class TemplateCreator : Window
         _stringParam = GD.Load<PackedScene>("res://Scenes/Templating/StringParam.tscn");
         _numberParam = GD.Load<PackedScene>("res://Scenes/Templating/NumericParam.tscn");
         _colorParam = GD.Load<PackedScene>("res://Scenes/Templating/ColorParam.tscn");
-        _anchorParam = GD.Load<PackedScene>("res://Scenes/Templating/AnchorParam.tscn");
         _boolParam = GD.Load<PackedScene>("res://Scenes/Templating/BooleanParam.tscn");
         _horJustifyParam = GD.Load<PackedScene>("res://Scenes/Templating/HorJustifyParam.tscn");
         _verJustifyParam = GD.Load<PackedScene>("res://Scenes/Templating/VerJustifyParam.tscn");
@@ -484,7 +478,7 @@ public partial class TemplateCreator : Window
         _sequenceParam = GD.Load<PackedScene>("res://Scenes/Templating/SequenceParam.tscn");
     }
 
-    private void HeightWidthChange(string newtext)
+    private void HeightWidthChange()
     {
         InitializeCardFit();
         _updateRequired = true;
@@ -682,7 +676,7 @@ public partial class TemplateCreator : Window
     {
         var id = Snowport.Clock.CreateTag();
 
-        TemplateElement t = new TextElement();
+        TemplateElement t;
 
         string prefix = type.ToString();
 
@@ -692,22 +686,8 @@ public partial class TemplateCreator : Window
                 t = new TextElement();
                 break;
 
-            case ITemplateElement.TemplateElementType.Box:
-                break;
             case ITemplateElement.TemplateElementType.Image:
                 t = new ImageElement();
-                break;
-            case ITemplateElement.TemplateElementType.Note:
-                break;
-            case ITemplateElement.TemplateElementType.Circle:
-                break;
-            case ITemplateElement.TemplateElementType.Polygon:
-                break;
-            case ITemplateElement.TemplateElementType.Table:
-                break;
-            case ITemplateElement.TemplateElementType.Line:
-                break;
-            case ITemplateElement.TemplateElementType.Container:
                 break;
             case ITemplateElement.TemplateElementType.Frame:
                 t = new FrameElement();
@@ -773,9 +753,6 @@ public partial class TemplateCreator : Window
                     break;
                 case TemplateParameter.TemplateParameterType.Color:
                     t = _colorParam.Instantiate<ColorParamControl>();
-                    break;
-                case TemplateParameter.TemplateParameterType.Anchor:
-                    t = _anchorParam.Instantiate<ListParamControl>();
                     break;
                 case TemplateParameter.TemplateParameterType.Boolean:
                     t = _boolParam.Instantiate<BooleanParamControl>();
@@ -1032,7 +1009,7 @@ public partial class TemplateCreator : Window
                 Height = h / MmPerInch,
             }
         );
-        HeightWidthChange(text);
+        HeightWidthChange();
     }
 
     private void ShowSize()
@@ -1053,7 +1030,7 @@ public partial class TemplateCreator : Window
         _widthInput.Text = Millimeters(CurrentTemplate.Width);
         _heightInput.Text = Millimeters(CurrentTemplate.Height);
 
-        HeightWidthChange(string.Empty);
+        HeightWidthChange();
     }
 
     private void ShowDieMode(int sides)

@@ -7,7 +7,6 @@ public partial class BooleanParamControl : HBoxContainer, IParamControl
     // Called when the node enters the scene tree for the first time.
     private Label _label;
     private CheckButton _value;
-    private Button _script;
     private LineEdit _text;
 
     private TemplateParameter _parameter;
@@ -26,8 +25,6 @@ public partial class BooleanParamControl : HBoxContainer, IParamControl
             _value.ButtonPressed = TemplateElement.IsTruthy(text);
             RaiseParameterUpdated();
         };
-
-        _script = GetNode<Button>("Formula");
 
         if (_parameter != null)
         {

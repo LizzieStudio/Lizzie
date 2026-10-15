@@ -83,9 +83,9 @@ public partial class FaceDrawing : Node
                 (drawable ? byId.GetValueOrDefault(row) : null) is { } data
                     ? new Wanted(
                         $"{width}x{height}:"
-                            + template.SheetKey()
-                            + dataSet.SheetKey()
-                            + data.SheetKey(),
+                            + template.VersionKey()
+                            + dataSet.VersionKey()
+                            + data.VersionKey(),
                         () =>
                             TemplateEngine.GenerateTextureDefinition(
                                 template,

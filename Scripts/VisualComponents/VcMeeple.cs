@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
@@ -138,12 +137,9 @@ public partial class VcMeeple : VisualComponentBase
 
     public override GeometryInstance3D DragMesh => MainMesh;
 
-    public override float MaxAxisSize => Math.Max(Math.Max(Height, Width), Length);
+    public override float MaxAxisSize => Height;
 
     private float Height;
-    private float Width;
-    private float Length;
-    private Color CubeColor;
 
     /// <summary>
     /// Creates a cube mesh object with specified parameters

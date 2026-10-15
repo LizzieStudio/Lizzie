@@ -109,7 +109,7 @@ public sealed class FaceLoader(Action shown)
                     return null;
                 return FaceSet
                     .Acquire(
-                        $"quick:{prototype.SheetKey()}:{key}",
+                        $"quick:{prototype.VersionKey()}:{key}",
                         factory,
                         _ => QuickTemplate.Drawing(p, quick)
                     )
@@ -121,7 +121,7 @@ public sealed class FaceLoader(Action shown)
                 int sides = die.Resolve(R).Sides;
                 return FaceSet
                     .Acquire(
-                        $"quick:{prototype.SheetKey()}:{key}",
+                        $"quick:{prototype.VersionKey()}:{key}",
                         factory,
                         _ => DieTemplate.Drawing(die, quick, sides)
                     )

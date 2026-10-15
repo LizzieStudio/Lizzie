@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel.Design.Serialization;
 using Godot;
 using Lizzie.Scripts.Templating;
 
@@ -8,7 +7,6 @@ public partial class PopupParamControl : HBoxContainer, IParamControl
     // Called when the node enters the scene tree for the first time.
     private Label _label;
     private LineEdit _value;
-    private Button _script;
     private MenuButton _listPicker;
     private PopupMenu _popup;
     private TemplateParameter _parameter;
@@ -19,7 +17,6 @@ public partial class PopupParamControl : HBoxContainer, IParamControl
     {
         _label = GetNode<Label>("Caption");
         _value = GetNode<LineEdit>("LineEdit");
-        _script = GetNode<Button>("Formula");
         _listPicker = GetNode<MenuButton>("Panel/MenuButton");
         _popup = _listPicker.GetPopup();
         _popup.IndexPressed += OnOptionSelected;

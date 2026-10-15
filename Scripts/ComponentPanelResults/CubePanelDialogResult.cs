@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -32,9 +31,6 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
     {
         UpdatePreview();
     }
-
-    private bool _subviewportInitComplete;
-    private int _subViewportFrames = 3;
 
     public override void Activate()
     {

@@ -55,7 +55,6 @@ public static class TemplateEngine
                     Height = Pixels(size.Y, l.Height),
                     CenterX = Pixels(size.X, l.CenterX),
                     CenterY = Pixels(size.Y, l.CenterY),
-                    Anchor = l.Anchor,
                     Multiline = l.Multiline,
                     Text = l.Text,
                     ForegroundColor = l.ForegroundColor,

@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using Godot;
 
 public partial class BoundsRect : MarginContainer
@@ -159,11 +158,6 @@ public partial class BoundsRect : MarginContainer
     private bool _dragLeft;
     private bool _dragRight;
     private Vector2 _dragLast;
-
-    private int _startMarginTop;
-    private int _startMarginBottom;
-    private int _startMarginLeft;
-    private int _startMarginRight;
 
     private bool _dragOutside; //the user started dragging outside the marquee, so don't do anything even if the mouse moves inside
 

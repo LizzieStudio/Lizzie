@@ -61,14 +61,6 @@ public class TextElement : TemplateElement
                 Type = TemplateParameter.TemplateParameterType.Boolean,
             }
         );
-        Parameters.Add(
-            new TemplateParameter
-            {
-                Name = "Wrap Text",
-                Value = "False",
-                Type = TemplateParameter.TemplateParameterType.Boolean,
-            }
-        );
         SetParameterValue("Width", "60");
         SetParameterValue("Height", "20");
     }

@@ -21,7 +21,6 @@ public partial class GameController : Node
 
         _uiController = GetNode<UI>("UI");
         _uiController.SceneModeChange += OnSceneModeChange;
-        _uiController.SetGameController(this);
 
         EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawnPrototype);
 

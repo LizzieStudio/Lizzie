@@ -6,7 +6,6 @@ public partial class NumericParamControl : HBoxContainer, IParamControl
 {
     private Label _label;
     private LineEdit _value;
-    private Button _script;
 
     private TemplateParameter _parameter;
     private bool _readyComplete;
@@ -16,7 +15,6 @@ public partial class NumericParamControl : HBoxContainer, IParamControl
     {
         _label = GetNode<Label>("Caption");
         _value = GetNode<LineEdit>("LineEdit");
-        _script = GetNode<Button>("Formula");
 
         if (_parameter != null)
         {

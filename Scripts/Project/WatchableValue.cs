@@ -4,7 +4,7 @@ using Lizzie.Replication.Machinery;
 /// <summary>
 /// <para>A local value that a Watch can read like a record.</para>
 ///
-/// A Watch that reads a <see cref="WatchableValue{0}"/> through its <see cref="IRecordReader"/> runs again at the end of the frame after the value changes.
+/// A Watch that reads a <see cref="T"/> through its <see cref="IRecordReader"/> runs again at the end of the frame after the value changes.
 /// It isn't synchronized during multiplayer or saved with the project. It starts unset.
 /// </summary>
 public sealed class WatchableValue<T>

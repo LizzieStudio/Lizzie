@@ -6,8 +6,6 @@ using Godot;
 
 public partial class VcBag : VisualComponentGroup
 {
-    private VisualComponentBase _contents;
-    private string _contentsDataRow;
     private Label3D _componentCount;
 
     public override void _Ready()

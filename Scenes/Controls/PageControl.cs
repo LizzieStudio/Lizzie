@@ -27,16 +27,6 @@ public partial class PageControl : HBoxContainer
         _lastItem.Pressed += () => SetPreviewItem(int.MaxValue);
     }
 
-    public void SetCurrentItem(int index)
-    {
-        _curItemLabel.Text = $"Item {index}";
-    }
-
-    public int GetCurrentItem()
-    {
-        return CurrentItem;
-    }
-
     public void SetItemCount(int count)
     {
         ItemCount = count;
