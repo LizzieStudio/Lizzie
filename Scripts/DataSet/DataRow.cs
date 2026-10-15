@@ -8,6 +8,8 @@ using System.Linq;
 [JsonName("DataRow")]
 public record DataRow : Replicated
 {
+    public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);
+
     /// <summary>The dataset this row belongs to.</summary>
     public SnowTag DataSetId { get; init; }
 

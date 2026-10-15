@@ -10,6 +10,8 @@ using Godot;
 [JsonName("ComponentState")]
 public record ComponentState : Replicated
 {
+    public static readonly Id<ComponentState, SnowTag> ById = new(r => r.Id);
+
     /// <summary>
     /// The state last written for a component.
     /// </summary>

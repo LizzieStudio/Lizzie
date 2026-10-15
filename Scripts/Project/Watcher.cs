@@ -14,17 +14,23 @@ public sealed class Watcher : IRecordReader
     private readonly Action<IRecordReader> _sync;
     private readonly IRecordReader _source;
 
+    // the query values this watcher read
+    private readonly DependencyIndex<Watcher> _index;
+
     // per record type, predicates that are true for records this watcher read
     private readonly Dictionary<Type, List<Func<object, bool>>> _dependencies = new();
-
-    // SnowTags observed
-    private readonly HashSet<SnowTag> _ids = new();
 
     // per record type, the values its Project returned on the previous run
     private readonly Dictionary<Type, object> _projections = new();
 
     // record types projected during the current run
     private readonly HashSet<Type> _projected = new();
+
+    // per group key, each atom's id and what GetChanged projected for it on the previous run
+    private readonly Dictionary<(Query, object), object> _swaps = new();
+
+    // group values GetChanged compared during the current run
+    private readonly HashSet<(Query, object)> _swapped = new();
 
     public Node Owner { get; }
 
@@ -33,19 +39,22 @@ public sealed class Watcher : IRecordReader
     /// <summary>Registration order, which breaks ties between watchers at the same depth.</summary>
     public long Sequence { get; } = _nextSequence++;
 
-    public Watcher(Node owner, Action<IRecordReader> sync, IRecordReader source)
+    public Watcher(
+        Node owner,
+        Action<IRecordReader> sync,
+        IRecordReader source,
+        DependencyIndex<Watcher> index
+    )
     {
         Owner = owner;
         _sync = sync;
         _source = source;
+        _index = index;
     }
 
-    /// <summary>Whether any change touches a record read by the last run.</summary>
+    /// <summary>Whether any change matches a predicate read by the last run.</summary>
     public bool Affected(Type type, IReadOnlyList<RecordChange> changes)
     {
-        if (_ids.Count > 0 && changes.Any(c => IsReadById(c.Old) || IsReadById(c.New)))
-            return true;
-
         if (!_dependencies.TryGetValue(type, out var predicates))
             return false;
 
@@ -65,14 +74,13 @@ public sealed class Watcher : IRecordReader
         return false;
     }
 
-    private bool IsReadById(object record) => record is Replicated r && _ids.Contains(r.Id);
-
     /// <summary>Replaces the dependencies with the ones read by a fresh run.</summary>
     public void Run()
     {
+        _index.Clear(this);
         _dependencies.Clear();
-        _ids.Clear();
         _projected.Clear();
+        _swapped.Clear();
         try
         {
             _sync(this);
@@ -94,23 +102,30 @@ public sealed class Watcher : IRecordReader
         where T : Replicated =>
         Depend(typeof(T), o => o is T record && !record.Deleted && matches(record));
 
+    private void Depend(Query query, object value, bool count = false)
+    {
+        if (value != null)
+            _index.Add(this, query, value, count);
+    }
+
     public T Get<T>(SnowTag id)
         where T : Replicated
     {
-        Depend<T>(r => r.Id == id);
+        Depend(AtomId.For(typeof(T)), id);
         return _source.Get<T>(id);
     }
 
     public Replicated Get(SnowTag id)
     {
-        _ids.Add(id);
+        foreach (var byId in AtomId.BySnowTag)
+            Depend(byId, id);
         return _source.Get(id);
     }
 
     public T GetIncludingDeleted<T>(SnowTag id)
         where T : Replicated
     {
-        Depend(typeof(T), o => o is T record && record.Id == id);
+        Depend(AtomId.For(typeof(T)), id);
         return _source.GetIncludingDeleted<T>(id);
     }
 
@@ -118,8 +133,8 @@ public sealed class Watcher : IRecordReader
         where T : Replicated
     {
         var list = ids.ToArray();
-        var set = list.ToHashSet();
-        Depend<T>(r => set.Contains(r.Id));
+        foreach (var id in list)
+            Depend(AtomId.For(typeof(T)), id);
         return _source.Get<T>(list);
     }
 
@@ -193,5 +208,79 @@ public sealed class Watcher : IRecordReader
             deleted.Select(d => d.Id).ToArray(),
             created.Select(c => c.Id).ToArray()
         );
+    }
+
+    public T Get<T, I>(Id<T, I> byId, I id)
+        where T : Replicated
+    {
+        Depend(byId, id);
+        return _source.Get(byId, id);
+    }
+
+    public T GetIncludingDeleted<T, I>(Id<T, I> byId, I id)
+        where T : Replicated
+    {
+        Depend(byId, id);
+        return _source.GetIncludingDeleted(byId, id);
+    }
+
+    public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
+        where T : Replicated
+    {
+        Depend(group, key);
+        return _source.Get(group, key);
+    }
+
+    public IReadOnlyList<T> GetIncludingDeleted<T, G>(Group<T, G> group, G key)
+        where T : Replicated
+    {
+        Depend(group, key);
+        return _source.GetIncludingDeleted(group, key);
+    }
+
+    public int Count<T, G>(Group<T, G> group, G key)
+        where T : Replicated
+    {
+        Depend(group, key, count: true);
+        return _source.Count(group, key);
+    }
+
+    public SwapLists<T, V> GetChanged<T, G, V>(
+        Group<T, G> group,
+        G key,
+        Func<IRecordReader, T, V?> project
+    )
+        where T : Replicated
+        where V : struct
+    {
+        var slot = (group, (object)key);
+        if (!_swapped.Add(slot))
+            throw new InvalidOperationException(
+                $"GetChanged was already called for {key} of a {typeof(T).Name} group during this Sync."
+            );
+
+        var byId = AtomId.For(typeof(T));
+        var previous = _swaps.TryGetValue(slot, out var p)
+            ? (Dictionary<object, (T Atom, V Value)>)p
+            : new();
+        var current = new Dictionary<object, (T Atom, V Value)>();
+        foreach (var atom in Get(group, key))
+            if (project(this, atom) is V projected)
+                current[byId.Of(atom)] = (atom, projected);
+
+        var deleted = new List<(T, V)>();
+        var created = new List<(T, V)>();
+        var comparer = EqualityComparer<V>.Default;
+
+        // a missing entry counts as a null result
+        foreach (var (id, old) in previous)
+            if (!current.TryGetValue(id, out var now) || !comparer.Equals(old.Value, now.Value))
+                deleted.Add(old);
+        foreach (var (id, now) in current)
+            if (!previous.TryGetValue(id, out var old) || !comparer.Equals(old.Value, now.Value))
+                created.Add(now);
+
+        _swaps[slot] = current;
+        return new SwapLists<T, V>(deleted, created);
     }
 }

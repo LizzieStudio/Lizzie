@@ -5,6 +5,8 @@ using System.Linq;
 [JsonName("DataSet")]
 public record DataSet : Replicated
 {
+    public static readonly Id<DataSet, SnowTag> ById = new(r => r.Id);
+
     public string Name { get; init; }
 
     /// <summary>

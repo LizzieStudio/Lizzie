@@ -13,6 +13,8 @@ using Godot;
 [JsonName("Selection")]
 public record Selection : Replicated
 {
+    public static readonly Id<Selection, SnowTag> ById = new(r => r.Id);
+
     /// <summary>The source of the player who owns this selection.</summary>
     public byte Player { get; init; }
 

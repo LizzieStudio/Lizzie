@@ -80,6 +80,59 @@ public interface IRecordReader
     /// </summary>
     SwapLists GetChanged<T>()
         where T : Replicated;
+
+    /// <summary>
+    /// Gets the atom with <paramref name="id"/>, or null if it is missing or deleted.
+    /// </summary>
+    T Get<T, I>(Id<T, I> byId, I id)
+        where T : Replicated;
+
+    /// <summary>
+    /// Gets the atom with <paramref name="id"/>, even if it is deleted.
+    /// Returns null if it was never written, or if its writes were undone.
+    /// </summary>
+    T GetIncludingDeleted<T, I>(Id<T, I> byId, I id)
+        where T : Replicated;
+
+    /// <summary>
+    /// Gets the atoms with <paramref name="key"/> in <paramref name="group"/> that aren't deleted.
+    /// </summary>
+    IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
+        where T : Replicated;
+
+    /// <summary>
+    /// Gets the atoms with <paramref name="key"/> in <paramref name="group"/> even if they're deleted.
+    /// </summary>
+    IReadOnlyList<T> GetIncludingDeleted<T, G>(Group<T, G> group, G key)
+        where T : Replicated;
+
+    /// <summary>
+    /// How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't deleted.
+    /// </summary>
+    /// <remarks>
+    /// A watch that reads only this reruns only when the count changes, not when the atom values change.
+    /// </remarks>
+    int Count<T, G>(Group<T, G> group, G key)
+        where T : Replicated;
+
+    /// <summary>
+    /// Maps every atom with <paramref name="key"/> in <paramref name="group"/> through <paramref name="project"/>,
+    /// and compares each atom's result with the one from the previous Sync.
+    /// <list type="bullet">
+    /// <item>If the results differ and the previous one wasn't null, the atom appears in deletions, with its previous value and result.</item>
+    /// <item>If the results differ and the new one isn't null, the atom appears in creations, with its new value and result.</item>
+    /// </list>
+    /// <para>The expectation is that you will delete the nodes in deletions and create the nodes in creations.</para>
+    /// When <paramref name="project"/> returns null, this effectively means "no child".
+    /// <strong>Only one call of GetChanged per group key per Sync.</strong>
+    /// </summary>
+    SwapLists<T, V> GetChanged<T, G, V>(
+        Group<T, G> group,
+        G key,
+        Func<IRecordReader, T, V?> project
+    )
+        where T : Replicated
+        where V : struct;
 }
 
 /// <summary>
@@ -99,8 +152,34 @@ public readonly record struct SwapLists<K>(
     IReadOnlyList<(SnowTag Id, K Key)> Created
 );
 
+/// <summary>
+/// The children a parent should delete, as last projected, and the children it should create,
+/// from <see cref="IRecordReader.GetChanged{T, G, V}"/>.
+/// </summary>
+public readonly record struct SwapLists<T, V>(
+    IReadOnlyList<(T Atom, V Value)> Deleted,
+    IReadOnlyList<(T Atom, V Value)> Created
+);
+
 public static class RecordReaderExtensions
 {
+    /// <summary>Every atom of <typeparamref name="T"/> that isn't deleted.</summary>
+    public static IReadOnlyList<T> Get<T>(this IRecordReader R, All<T> all)
+        where T : Replicated => R.Get(all, true);
+
+    /// <summary>How many atoms of <typeparamref name="T"/> aren't deleted.</summary>
+    public static int Count<T>(this IRecordReader R, All<T> all)
+        where T : Replicated => R.Count(all, true);
+
+    /// <inheritdoc cref="IRecordReader.GetChanged{T, G, V}"/>
+    public static SwapLists<T, V> GetChanged<T, V>(
+        this IRecordReader R,
+        All<T> all,
+        Func<IRecordReader, T, V?> project
+    )
+        where T : Replicated
+        where V : struct => R.GetChanged(all, true, project);
+
     /// <summary>
     /// The command that last wrote <paramref name="record"/>'s current state, or null when there was no command attached.
     /// If the last command was an undo or a redo, this falls back to the last effective command (before any reversed event).

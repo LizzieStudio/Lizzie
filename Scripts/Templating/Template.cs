@@ -5,6 +5,8 @@ using System.Text.Json.Serialization;
 [JsonName("Template")]
 public record Template : Replicated
 {
+    public static readonly Id<Template, SnowTag> ById = new(r => r.Id);
+
     public string Name { get; init; }
 
     public string SizeTemplate { get; init; }

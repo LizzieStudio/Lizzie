@@ -16,6 +16,8 @@ using Godot;
 [JsonName("Seating")]
 public sealed record Seating : Replicated
 {
+    public static readonly Id<Seating, SnowTag> ById = new(r => r.Id);
+
     /// <summary>The seat of each seated player. Players without a seat are missing.</summary>
     public ImmutableDictionary<byte, int> Seats { get; init; } =
         ImmutableDictionary<byte, int>.Empty;

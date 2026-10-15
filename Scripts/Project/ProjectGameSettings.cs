@@ -9,6 +9,8 @@ using Godot;
 [JsonName("ProjectGameSettings")]
 public sealed record ProjectGameSettings : Replicated
 {
+    public static readonly Id<ProjectGameSettings, SnowTag> ById = new(r => r.Id);
+
     // Setup tab
     public bool StartIn2D { get; init; } = false;
     public bool EnablePlayerHands { get; init; } = false;

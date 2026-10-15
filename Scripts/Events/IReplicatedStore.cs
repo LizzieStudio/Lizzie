@@ -29,9 +29,34 @@ public interface IReplicatedStore
     /// <summary>Sends one notification for everything merged during a bulk load.</summary>
     void FlushBulkLoad();
 
+    /// <summary>
+    /// The queries and values whose results <paramref name="changes"/> touched:
+    /// each atom's id, and its group keys before and after in every group read so far.
+    /// </summary>
+    IEnumerable<Touch> Touched(IReadOnlyList<RecordChange> changes);
+
     /// <summary>The record with <paramref name="id"/> even if it is deleted, or null if this store doesn't hold it.</summary>
     Replicated Find(SnowTag id);
 
     /// <summary>The current value of every record that's saved with the project.</summary>
     IEnumerable<Replicated> SavedRecords();
+}
+
+/// <summary>
+/// The store of <typeparamref name="T"/>, read without knowing the type of its ids.
+/// </summary>
+public interface IAtomStore<T> : IReplicatedStore
+    where T : Replicated
+{
+    /// <summary>Every atom, deleted ones included.</summary>
+    IEnumerable<T> All { get; }
+
+    /// <summary>
+    /// The atoms with <paramref name="key"/> in <paramref name="group"/>, deleted ones included.
+    /// The group is indexed on first read and kept up to date from then on.
+    /// </summary>
+    IReadOnlyCollection<T> InGroup<G>(Group<T, G> group, G key);
+
+    /// <summary>How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't deleted.</summary>
+    int Count<G>(Group<T, G> group, G key);
 }

@@ -6,6 +6,8 @@ namespace Lizzie.AssetManagement
     [JsonName("ImageAsset")]
     public record ImageAsset : Replicated
     {
+        public static readonly Id<ImageAsset, SnowTag> ById = new(r => r.Id);
+
         /// <summary>
         /// User-defined name for the image
         /// </summary>

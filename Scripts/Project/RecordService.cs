@@ -22,6 +22,9 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
 
     private readonly HashSet<Watcher> _watchers = new();
 
+    // which watchers read which query values
+    private readonly DependencyIndex<Watcher> _dependencies = new();
+
     // watchers to rerun at the end of the frame
     private readonly HashSet<Watcher> _dirty = new();
 
@@ -70,30 +73,25 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
             ScheduleForListeners(e);
     }
 
-    /// <summary>A new, empty store for records of <paramref name="type"/>.</summary>
-    private static IReplicatedStore NewStore(Type type) =>
-        (IReplicatedStore)
-            Activator.CreateInstance(typeof(ReplicatedDictionary<>).MakeGenericType(type));
+    /// <summary>A new, empty store for records of <paramref name="type"/>, held by the type's <see cref="AtomId"/>.</summary>
+    private static IReplicatedStore NewStore(Type type)
+    {
+        var byId = AtomId.For(type);
+        return (IReplicatedStore)
+            Activator.CreateInstance(typeof(AtomStore<,>).MakeGenericType(type, byId.IdType), byId);
+    }
 
     private IReplicatedStore AddStore(IReplicatedStore store)
     {
-        var type = store.RecordType;
-        _stores.Add(type, store);
-        store.Changed += changes => OnRecordsChanged(type, changes);
+        _stores.Add(store.RecordType, store);
+        store.Changed += changes => OnRecordsChanged(store, changes);
         return store;
     }
 
     /// <summary>The store for <typeparamref name="T"/>, made empty if nothing has read or written one yet.</summary>
-    private S StoreOf<T, S>()
-        where S : IReplicatedStore, new() =>
-        _stores.GetValueOrDefault(typeof(T)) switch
-        {
-            null => (S)AddStore(new S()),
-            S store => store,
-            var other => throw new InvalidOperationException(
-                $"{typeof(T).Name} is held in a {other.GetType().Name}, not a {typeof(S).Name}"
-            ),
-        };
+    private IAtomStore<T> StoreOf<T>()
+        where T : Replicated =>
+        (IAtomStore<T>)(_stores.GetValueOrDefault(typeof(T)) ?? AddStore(NewStore(typeof(T))));
 
     /// <inheritdoc/>
     void IRecordServiceMachinery.Clear()
@@ -267,7 +265,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     /// </summary>
     public void Watch(Node owner, Action<IRecordReader> sync)
     {
-        var watcher = new Watcher(owner, sync, this);
+        var watcher = new Watcher(owner, sync, this, _dependencies);
         _watchers.Add(watcher);
         owner.Connect(
             Node.SignalName.TreeExiting,
@@ -307,6 +305,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     {
         _watchers.Remove(watcher);
         _dirty.Remove(watcher);
+        _dependencies.Clear(watcher);
     }
 
     /// <summary>
@@ -336,11 +335,14 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         QueueFlush();
     }
 
-    private void OnRecordsChanged(Type type, IReadOnlyList<RecordChange> changes)
+    private void OnRecordsChanged(IReplicatedStore store, IReadOnlyList<RecordChange> changes)
     {
+        foreach (var watcher in _dependencies.Affected(store.Touched(changes)))
+            MarkDirty(watcher);
+
         foreach (var watcher in _watchers)
         {
-            if (!_dirty.Contains(watcher) && watcher.Affected(type, changes))
+            if (!_dirty.Contains(watcher) && watcher.Affected(store.RecordType, changes))
                 MarkDirty(watcher);
         }
     }
@@ -408,14 +410,11 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
 
     #region IRecordReader
 
-    private IReadOnlyDictionary<SnowTag, T> RecordsOf<T>()
-        where T : Replicated => StoreOf<T, ReplicatedDictionary<T>>().Records;
-
     public T Get<T>(SnowTag id)
-        where T : Replicated => RecordsOf<T>().TryGetValue(id, out var r) && !r.Deleted ? r : null;
+        where T : Replicated => GetIncludingDeleted<T>(id) is { Deleted: false } r ? r : null;
 
     public T GetIncludingDeleted<T>(SnowTag id)
-        where T : Replicated => RecordsOf<T>().GetValueOrDefault(id);
+        where T : Replicated => (T)StoreOf<T>().Find(id);
 
     public Replicated Get(SnowTag id) =>
         _stores.Values.Select(s => s.Find(id)).FirstOrDefault(r => r != null)
@@ -424,22 +423,16 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
             : null;
 
     public IReadOnlyList<T> Get<T>(IEnumerable<SnowTag> ids)
-        where T : Replicated
-    {
-        var records = RecordsOf<T>();
-        return ids.Select(id => records.GetValueOrDefault(id))
-            .Where(r => r != null && !r.Deleted)
-            .ToArray();
-    }
+        where T : Replicated => ids.Select(Get<T>).Where(r => r != null).ToArray();
 
     public IReadOnlyList<T> Get<T>(Func<T, bool> filter)
-        where T : Replicated => RecordsOf<T>().Values.Where(r => !r.Deleted && filter(r)).ToArray();
+        where T : Replicated => StoreOf<T>().All.Where(r => !r.Deleted && filter(r)).ToArray();
 
     public IReadOnlyList<T> GetIncludingDeleted<T>(Func<T, bool> filter)
-        where T : Replicated => RecordsOf<T>().Values.Where(filter).ToArray();
+        where T : Replicated => StoreOf<T>().All.Where(filter).ToArray();
 
     public IReadOnlyList<T> Get<T>()
-        where T : Replicated => RecordsOf<T>().Values.Where(r => !r.Deleted).ToArray();
+        where T : Replicated => StoreOf<T>().All.Where(r => !r.Deleted).ToArray();
 
     public T Single<T>()
         where T : Replicated
@@ -454,6 +447,21 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         );
     }
 
+    public T Get<T, I>(Id<T, I> byId, I id)
+        where T : Replicated => GetIncludingDeleted(byId, id) is { Deleted: false } r ? r : null;
+
+    public T GetIncludingDeleted<T, I>(Id<T, I> byId, I id)
+        where T : Replicated => ((AtomStore<T, I>)StoreOf<T>()).Find(id);
+
+    public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
+        where T : Replicated => StoreOf<T>().InGroup(group, key).Where(r => !r.Deleted).ToArray();
+
+    public IReadOnlyList<T> GetIncludingDeleted<T, G>(Group<T, G> group, G key)
+        where T : Replicated => StoreOf<T>().InGroup(group, key).ToArray();
+
+    public int Count<T, G>(Group<T, G> group, G key)
+        where T : Replicated => StoreOf<T>().Count(group, key);
+
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
     public SwapLists<K> GetChanged<T, K>(Func<IRecordReader, T, K?> keyFn)
         where T : Replicated
@@ -467,6 +475,20 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
     public SwapLists GetChanged<T>()
         where T : Replicated
+    {
+        throw new InvalidOperationException(
+            "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."
+        );
+    }
+
+    /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
+    public SwapLists<T, V> GetChanged<T, G, V>(
+        Group<T, G> group,
+        G key,
+        Func<IRecordReader, T, V?> project
+    )
+        where T : Replicated
+        where V : struct
     {
         throw new InvalidOperationException(
             "GetChanged can only be called on the IRecordReader passed to a Watch's Sync."
