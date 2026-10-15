@@ -267,10 +267,10 @@ public static class RecordReaderExtensions
 
     /// <summary>The VcTokens stacked exactly on a deck, top first.</summary>
     public static List<ComponentState> TokensOn(this IRecordReader R, ComponentState deck) =>
-        R.Get<ComponentState>(s =>
-                s.IsOnTable && s.X == deck.X && s.Z == deck.Z && s.ZOrder > deck.ZOrder
+        R.Get(ComponentState.OnTableAt, (deck.X, deck.Z))
+            .Where(s =>
+                s.ZOrder > deck.ZOrder && R.Kind(s) == VisualComponentBase.VisualComponentType.Token
             )
-            .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Token)
             .OrderByDescending(s => s.ZOrder)
             .ToList();
 

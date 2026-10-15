@@ -62,7 +62,7 @@ public partial class HandCard : PanelContainer
 
     private void Sync(IRecordReader R)
     {
-        var state = R.Get<ComponentState>(Reference);
+        var state = R.Get(ComponentState.ById, Reference);
         var prototype = state == null ? null : R.GetIncludingDeleted<Prototype>(state.PrototypeRef);
         Yaw = state?.Rotation.Y ?? 0;
         TableSize = HandRow.TableSize(prototype?.Parameters as PrintedParameters);
@@ -72,9 +72,7 @@ public partial class HandCard : PanelContainer
     private void SyncSelection(IRecordReader R)
     {
         var target = new RecordTarget(Reference);
-        var colors = R.SelectionColors(s =>
-            s.Within == SnowTag.Empty && s.Targets.Contains(target)
-        );
+        var colors = R.SelectionColors(SnowTag.Empty);
         SelectionHighlight.Outline(this, "panel", colors, target);
     }
 

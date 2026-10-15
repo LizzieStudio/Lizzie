@@ -67,8 +67,6 @@ public static class PlayerHandService
         if (container == SnowTag.Empty)
             return [];
 
-        return R.Get<ComponentState>(s => s.ContainerRef == container)
-            .OrderBy(s => s.ZOrder)
-            .ToList();
+        return R.Get(ComponentState.ByContainer, container).OrderBy(s => s.ZOrder).ToList();
     }
 }

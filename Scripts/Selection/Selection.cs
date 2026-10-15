@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -14,6 +13,16 @@ using Godot;
 public record Selection : Replicated
 {
     public static readonly Id<Selection, SnowTag> ById = new(r => r.Id);
+
+    /// <summary>
+    /// Every player's selection in each place, by <see cref="Within"/>.
+    /// </summary>
+    public static readonly Group<Selection, SnowTag> ByWithin = new(s => s.Within);
+
+    /// <summary>
+    /// Each player's selections, by <see cref="Player"/>.
+    /// </summary>
+    public static readonly Group<Selection, byte> ByPlayer = new(s => s.Player);
 
     /// <summary>The source of the player who owns this selection.</summary>
     public byte Player { get; init; }
@@ -34,22 +43,23 @@ public record Selection : Replicated
 public static class LocalSelection
 {
     /// <summary>
-    /// The color to show each selected target in, among the selections <paramref name="which"/> picks.
+    /// The selection color to show each target in.
+    /// If <paramref name="within"/> is a SnowTag, gets the selection in that dataset
+    /// If <paramref name="within"/> is <see cref="SnowTag.Empty"/>, gets the selection for the table.
     ///
     /// <para>
     /// A target shows in the seat color of the player who selected it most recently,
     /// with the local player taking priority.
-    /// The <paramref name="which"/> should filter as many selections as possible to avoid observing extraneous records.
     /// </para>
     /// </summary>
     public static IReadOnlyDictionary<Target, Color> SelectionColors(
         this IRecordReader R,
-        Func<Selection, bool> which
+        SnowTag within
     )
     {
         var local = Snowport.Clock.source;
         var colors = new Dictionary<Target, Color>();
-        var newestFirst = R.Get(which)
+        var newestFirst = R.Get(Selection.ByWithin, within)
             .OrderByDescending(s => s.Player == local)
             .ThenByDescending(s => s.LastUpdateId);
         foreach (var selection in newestFirst)
@@ -66,8 +76,7 @@ public static class LocalSelection
     /// Null if they have not yet selected anything there.
     /// </summary>
     public static Selection GetSelection(this IRecordReader R, SnowTag within = default) =>
-        R.Get<Selection>(s => s.Player == Snowport.Clock.source && s.Within == within)
-            .FirstOrDefault();
+        R.Get(Selection.ByWithin, within).FirstOrDefault(s => s.Player == Snowport.Clock.source);
 
     /// <summary>The ids of the records of type <typeparamref name="T"/> the local player has selected on the table.</summary>
     public static IEnumerable<SnowTag> GetSelection<T>(this IRecordReader R)

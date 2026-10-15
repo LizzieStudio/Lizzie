@@ -12,6 +12,20 @@ public record ComponentState : Replicated
 {
     public static readonly Id<ComponentState, SnowTag> ById = new(r => r.Id);
 
+    public static readonly All<ComponentState> All = new();
+
+    /// <summary>
+    /// The components in each container, by <see cref="ContainerRef"/>. <see cref="SnowTag.Empty"/> holds the ones on the table.
+    /// </summary>
+    public static readonly Group<ComponentState, SnowTag> ByContainer = new(s => s.ContainerRef);
+
+    /// <summary>
+    /// The components on the table at each exact spot, such as a deck and the cards stacked on it.
+    /// </summary>
+    public static readonly Group<ComponentState, (int X, int Z)?> OnTableAt = new(s =>
+        s.IsOnTable ? (s.X, s.Z) : null
+    );
+
     /// <summary>
     /// The state last written for a component.
     /// </summary>
@@ -123,7 +137,7 @@ public record ComponentState : Replicated
         var containedComponents =
             R.Kind(this) == VisualComponentBase.VisualComponentType.Deck
                 ? R.TokensOn(this)
-                : R.Get<ComponentState>(c => c.ContainerRef == Id);
+                : R.Get(ByContainer, Id);
 
         return containedComponents.Select(c => new RecordTarget(c.Id));
     }
@@ -138,16 +152,17 @@ public record ComponentState : Replicated
     {
         // A hand or a cursor isn't a component, so it isn't found.
         if (!IsOnTable)
-            return R.Get<ComponentState>(ContainerRef) is { } container
+            return R.Get(ById, ContainerRef) is { } container
                 ? [new RecordTarget(container.Id)]
                 : [];
 
         if (R.Kind(this) != VisualComponentBase.VisualComponentType.Token)
             return [];
 
-        // A filter may only read the record, so the kind is checked after.
-        return R.Get<ComponentState>(d => d.IsOnTable && d.X == X && d.Z == Z && d.ZOrder < ZOrder)
-            .Where(d => R.Kind(d) == VisualComponentBase.VisualComponentType.Deck)
+        return R.Get(OnTableAt, (X, Z))
+            .Where(d =>
+                d.ZOrder < ZOrder && R.Kind(d) == VisualComponentBase.VisualComponentType.Deck
+            )
             .Select(d => new RecordTarget(d.Id));
     }
 

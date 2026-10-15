@@ -987,7 +987,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// </summary>
     private void SyncSelection(IRecordReader R, SnowTag datasetId)
     {
-        var colors = R.SelectionColors(s => s.Within == datasetId);
+        var colors = R.SelectionColors(datasetId);
         foreach (var header in _headerCells)
             SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnId));
         foreach (var view in _views)

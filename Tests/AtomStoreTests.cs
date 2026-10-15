@@ -183,6 +183,19 @@ public class AtomStoreTests
     }
 
     [Fact]
+    public void AFirstWriteTouchesOnlyItsNewGroupKey()
+    {
+        _store.InGroup(ByContainer, Tag(5));
+
+        AssertTouched(
+            TouchesOf(Component(1, container: 5)),
+            new Touch(ComponentState.ById, Tag(1), false),
+            new Touch(ByContainer, Tag(5), false),
+            new Touch(ByContainer, Tag(5), true)
+        );
+    }
+
+    [Fact]
     public void GroupsNotReadYetAreNotTouched()
     {
         Write(Component(1, container: 5));

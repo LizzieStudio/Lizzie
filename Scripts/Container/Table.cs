@@ -63,6 +63,7 @@ public partial class Table : Node3D
             ComponentState,
             (string Scene, SnowTag Proto, PrototypeItemRef Card)
         >(
+            ComponentState.All,
             (R, s) =>
             {
                 var proto = R.GetIncludingDeleted<Prototype>(s.PrototypeRef);
@@ -78,10 +79,10 @@ public partial class Table : Node3D
             }
         );
 
-        foreach (var (id, _) in deleted)
-            RemoveComponent(id);
-        foreach (var (id, key) in created)
-            AddComponent(id, key.Scene);
+        foreach (var (s, _) in deleted)
+            RemoveComponent(s.Id);
+        foreach (var (s, key) in created)
+            AddComponent(s.Id, key.Scene);
 
         Changed?.Invoke();
     }

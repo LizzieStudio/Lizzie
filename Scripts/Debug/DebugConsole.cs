@@ -158,7 +158,7 @@ public partial class DebugConsole : Node
     /// </summary>
     private void Spam(int count)
     {
-        var states = RecordService.Instance?.Get<ComponentState>().ToArray();
+        var states = RecordService.Instance?.Get(ComponentState.All).ToArray();
         if (EventSynchronizer.Instance == null || states == null || states.Length == 0)
         {
             Log("Spam needs at least one component on the table.");

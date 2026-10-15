@@ -229,7 +229,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
         private bool In(T atom, out G key)
         {
             key = atom == null ? default : group.Of(atom);
-            return key is not null;
+            return atom != null && key is not null;
         }
     }
 }

@@ -196,7 +196,8 @@ public partial class PrototypeManifest : Window, ICommandView
 
         // The Qty column.
         // We filter a deck's cards so that they aren't counted.
-        var counts = R.Get<ComponentState>(s =>
+        var counts = R.Get(ComponentState.All)
+            .Where(s =>
                 !(
                     s.IsItem
                     && R.GetIncludingDeleted<Prototype>(s.PrototypeRef)?.Type

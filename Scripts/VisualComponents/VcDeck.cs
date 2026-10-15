@@ -38,7 +38,7 @@ public partial class VcDeck : VisualComponentBase
 
     private void SyncCount(IRecordReader R)
     {
-        if (R.Get<ComponentState>(Reference) is { } deck && !R.IsBeingDragged(deck))
+        if (R.Get(ComponentState.ById, Reference) is { } deck && !R.IsBeingDragged(deck))
             _componentCount.Text = R.TokensOn(deck).Count.ToString();
     }
 

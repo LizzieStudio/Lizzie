@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 public abstract partial class VisualComponentBase : Area3D
@@ -39,7 +40,7 @@ public abstract partial class VisualComponentBase : Area3D
 
         // Normal nodes never change, since the Table replaces the node when they do.
         // Previews have no record and keep their own.
-        var record = RecordService.Instance.GetIncludingDeleted<ComponentState>(Reference);
+        var record = RecordService.Instance.GetIncludingDeleted(ComponentState.ById, Reference);
         if (record != null)
         {
             PrototypeRef = record.PrototypeRef;
@@ -61,8 +62,10 @@ public abstract partial class VisualComponentBase : Area3D
         _isMine = selection?.Contains(target) == true;
         _localColor = R.SeatColor(local);
         _nothingSelected = selection?.IsEmpty != false;
-        var others = R.SelectionColors(s => s.Player != local && s.Targets.Contains(target));
-        _othersColor = others.TryGetValue(target, out var color) ? color : null;
+        var other = R.Get(Selection.ByWithin, SnowTag.Empty)
+            .Where(s => s.Player != local && s.Targets.Contains(target))
+            .MaxBy(s => s.LastUpdateId);
+        _othersColor = other == null ? null : R.SeatColor(other.Player);
         UpdateHighlight();
     }
 
@@ -138,7 +141,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     private void SyncState(IRecordReader R)
     {
-        var s = R.Get<ComponentState>(Reference);
+        var s = R.Get(ComponentState.ById, Reference);
         if (s == null)
             return;
 
@@ -241,7 +244,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// The component's record, or null for a node without one, such as a spawn preview.
     /// </summary>
     public ComponentState State =>
-        RecordService.Instance.GetIncludingDeleted<ComponentState>(Reference);
+        RecordService.Instance.GetIncludingDeleted(ComponentState.ById, Reference);
 
     /// <summary>
     /// Which of its prototype's cards this is, or <see cref="PrototypeItemRef.None"/>.

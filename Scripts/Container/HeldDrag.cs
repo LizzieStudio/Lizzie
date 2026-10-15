@@ -26,7 +26,7 @@ public sealed partial class HeldDrag : RefCounted
     /// The records of the components it holds.
     /// </summary>
     public IEnumerable<ComponentState> Records(IRecordReader R) =>
-        R.Get<ComponentState>(Components);
+        Components.Select(id => R.Get(ComponentState.ById, id)).Where(s => s != null);
 
     /// <summary>
     /// The records of the held VcTokens, which can go into a hand.

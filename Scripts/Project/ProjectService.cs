@@ -265,7 +265,7 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.AbandonGroups(source);
         var seating = R.Single<Seating>();
         RecordService.Instance.WriteAdmin(
-            R.Get<Selection>(s => s.Player == source)
+            R.Get(Selection.ByPlayer, source)
                 .Select(s => s with { Deleted = true })
                 .Append<Replicated>(seating with { Seats = seating.Seats.Remove(source) })
         );

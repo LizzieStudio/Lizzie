@@ -26,10 +26,10 @@ public partial class VcBag : VisualComponentGroup
     }
 
     private void SyncCount(IRecordReader R) =>
-        _componentCount.Text = Contents(R).Count().ToString();
+        _componentCount.Text = R.Count(ComponentState.ByContainer, Reference).ToString();
 
     private IEnumerable<ComponentState> Contents(IRecordReader R) =>
-        R.Get<ComponentState>(s => s.ContainerRef == Reference);
+        R.Get(ComponentState.ByContainer, Reference);
 
     protected override void Setup(ComponentParameters parameters, IRecordReader R)
     {

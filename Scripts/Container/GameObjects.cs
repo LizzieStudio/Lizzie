@@ -833,14 +833,12 @@ public partial class GameObjects : Node3D
     /// </summary>
     private IEnumerable<VisualComponentBase> GetDraggingObjects()
     {
-        var cursors = RecordService.Instance.Cursors();
-        return Nodes(
-            RecordService.Instance.Get<ComponentState>(s => cursors.Contains(s.ContainerRef))
-        );
+        var R = RecordService.Instance;
+        return Nodes(R.Cursors().SelectMany(c => R.Get(ComponentState.ByContainer, c)));
     }
 
     private IEnumerable<VisualComponentBase> GetNotDraggingObjects() =>
-        Nodes(RecordService.Instance.Get<ComponentState>(s => s.IsOnTable));
+        Nodes(RecordService.Instance.Get(ComponentState.ByContainer, SnowTag.Empty));
 
     /// <summary>
     /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.
@@ -921,7 +919,7 @@ public partial class GameObjects : Node3D
     private static (int X, int Z) SnapDelta(List<ComponentState> dropped)
     {
         var R = RecordService.Instance;
-        var targets = R.Get<ComponentState>(s => s.IsOnTable)
+        var targets = R.Get(ComponentState.ByContainer, SnowTag.Empty)
             .Where(s =>
                 R.Kind(s)
                     is VisualComponentBase.VisualComponentType.Token
