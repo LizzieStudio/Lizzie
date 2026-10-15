@@ -11,7 +11,7 @@ public partial class TextureFactory : SubViewport
     private IconLibrary _iconLibrary = new();
 
     /// <summary>
-    /// Holds the nodes that keep sheets up to date.
+    /// Holds the nodes that keep faces up to date.
     /// </summary>
     /// <remarks>
     /// This allows us to use <see cref="RecordService.Watch"/> calls.

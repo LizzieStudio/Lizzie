@@ -103,7 +103,9 @@ public partial class HandRow : Control
                 .Select(s =>
                     CardSize(
                         TableSize(
-                            ProjectService.Instance.GameObjects.GetComponent(s.Id) as VcToken
+                            RecordService
+                                .Instance.GetIncludingDeleted<Prototype>(s.PrototypeRef)
+                                ?.Parameters as PrintedParameters
                         ),
                         HandCard.ScreenRotation(s.Rotation.Y)
                     ).Width
@@ -181,10 +183,10 @@ public partial class HandRow : Control
     public float PixelsPerCm { get; set; } = 21;
 
     /// <summary>
-    /// The size of <paramref name="card"/> on the table, in cm.
+    /// The size of a card with <paramref name="p"/> on the table, in cm, or a standard card's size.
     /// </summary>
-    public static Vector2 TableSize(VcToken card) =>
-        card is { Size.Y: > 0 } ? card.Size : new(6.35f, 8.89f);
+    public static Vector2 TableSize(PrintedParameters p) =>
+        p is { Height: > 0 } ? new(p.Width / 10, p.Height / 10) : new(6.35f, 8.89f);
 
     /// <summary>
     /// The size of a card <paramref name="tableSize"/> on the table in cm, turned <paramref name="rotation"/> on screen,

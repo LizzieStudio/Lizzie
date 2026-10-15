@@ -40,7 +40,7 @@ public class TextureCache
     public void Clear()
     {
         _assetCache.Clear();
-        Sheet.Clear();
+        FaceSet.Clear();
     }
 
     private static Texture2D BuildCompressedTexture(Image source)

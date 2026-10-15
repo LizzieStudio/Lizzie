@@ -48,9 +48,6 @@ public partial class HandCard : PanelContainer
 
     private CardFace _face;
 
-    // The node whose textures are shown, which the table replaces when the card's prototype or row changes.
-    private VcToken _card;
-
     public override void _Ready()
     {
         // Built in code, since its room comes from the outline's width.
@@ -64,24 +61,13 @@ public partial class HandCard : PanelContainer
         RecordService.Instance.Watch(this, SyncSelection);
     }
 
-    public override void _ExitTree()
-    {
-        SetCard(null);
-    }
-
     private void Sync(IRecordReader R)
     {
         var state = R.Get<ComponentState>(Reference);
-        if (state != null)
-            R.GetIncludingDeleted<Prototype>(state.PrototypeRef);
-
-        SetCard(ProjectService.Instance.GameObjects.GetComponent(Reference) as VcToken);
+        var prototype = state == null ? null : R.GetIncludingDeleted<Prototype>(state.PrototypeRef);
         Yaw = state?.Rotation.Y ?? 0;
-        TableSize = HandRow.TableSize(_card);
-        if (state == null)
-            _face.ShowCard(null, false);
-        else
-            _face.ShowCard(_card, AlwaysShowBack || IsFaceDown(state));
+        TableSize = HandRow.TableSize(prototype?.Parameters as PrintedParameters);
+        _face.ShowCard(state, state != null && (AlwaysShowBack || IsFaceDown(state)), R);
     }
 
     private void SyncSelection(IRecordReader R)
@@ -92,19 +78,6 @@ public partial class HandCard : PanelContainer
         );
         SelectionHighlight.Outline(this, "panel", colors, target);
     }
-
-    private void SetCard(VcToken card)
-    {
-        if (card == _card)
-            return;
-        if (IsInstanceValid(_card))
-            _card.TexturesChanged -= OnTexturesChanged;
-        _card = card;
-        if (_card != null)
-            _card.TexturesChanged += OnTexturesChanged;
-    }
-
-    private void OnTexturesChanged() => RecordService.Instance.QueueSync(this);
 
     public static bool IsFaceDown(ComponentState s) => Mathf.Cos(s.Rotation.Z) < 0;
 

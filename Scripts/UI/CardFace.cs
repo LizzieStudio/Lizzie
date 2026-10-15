@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 /// <summary>
@@ -7,36 +6,42 @@ using Godot;
 public partial class CardFace : TextureRect
 {
     private TextureRect _card;
+    private readonly FaceLoader _faces;
+    private bool _back;
+
+    public CardFace() => _faces = new FaceLoader(ShowFace);
 
     public override void _Ready() => _card = GetNode<TextureRect>("Card");
 
     /// <summary>
-    /// Shows <paramref name="card"/>'s back or face, or nothing for null.
+    /// Shows card <paramref name="s"/>'s back or face, or nothing for null.
     /// </summary>
-    public void ShowCard(VcToken card, bool back)
+    public void ShowCard(ComponentState s, bool back, IRecordReader R)
     {
-        Texture = card?.Shape.Mask();
+        var prototype = s == null ? null : R.GetIncludingDeleted<Prototype>(s.PrototypeRef);
+        var p = prototype?.Parameters as PrintedParameters;
+        Texture = p == null ? null : ((TokenShape)p.Shape).Mask();
         ClipChildren = Texture == null ? ClipChildrenMode.Disabled : ClipChildrenMode.Only;
-        _card.Texture = card == null ? null : CardTexture(back ? card.Back : card.Front);
+        _card.Visible = p != null;
+        _back = back;
+        ShowFace();
+        if (p == null)
+            _faces.Clear();
+        else
+            _faces.Load(
+                p,
+                s.Card,
+                prototype,
+                ProjectService.Instance.GameObjects.TextureFactory,
+                R
+            );
     }
 
-    private static AtlasTexture CardTexture(Face face)
-    {
-        var sheet = face.Sheet.Texture;
-        if (sheet == null)
-            return null;
+    private void ShowFace() => _card.Texture = (_back ? _faces.Back : _faces.Front).Texture;
 
-        var layout = face.Sheet.Layout;
-        int hframes = Math.Max(1, layout.Columns);
-        int vframes = Math.Max(1, layout.Rows);
-        int frameW = sheet.GetWidth() / hframes;
-        int frameH = sheet.GetHeight() / vframes;
-        var region = new Rect2(
-            face.Frame % hframes * frameW,
-            face.Frame / hframes * frameH,
-            frameW,
-            frameH
-        );
-        return new AtlasTexture { Atlas = sheet, Region = region };
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete)
+            _faces.Drop();
     }
 }

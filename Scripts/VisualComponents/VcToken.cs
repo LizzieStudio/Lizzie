@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Godot;
-using Lizzie.AssetManagement;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using Vector2 = Godot.Vector2;
 
@@ -35,30 +33,9 @@ public partial class VcToken : VisualComponentBase
         AlbedoColor = new Color(0.506f, 0.506f, 0.506f),
     };
 
-    /// <summary>
-    /// What the front shows.
-    /// </summary>
-    public Face Front { get; private set; } = Face.Blank;
+    private readonly FaceLoader _faces;
 
-    /// <summary>
-    /// What the back shows.
-    /// </summary>
-    public Face Back { get; private set; } = Face.Blank;
-
-    /// <summary>
-    /// The faces that are currently rendering.
-    /// </summary>
-    private (Face Front, Face Back)? _loading;
-
-    /// <summary>
-    /// The faces to render after <see cref="_loading"/>. Newer faces replace them before they start.
-    /// </summary>
-    private (Face Front, Face Back)? _next;
-
-    /// <summary>
-    /// Called when the front or back changes.
-    /// </summary>
-    public event Action TexturesChanged;
+    public VcToken() => _faces = new FaceLoader(ShowFaces);
 
     public override void _Ready()
     {
@@ -82,8 +59,6 @@ public partial class VcToken : VisualComponentBase
 
     public override GeometryInstance3D DragMesh => _mainMesh;
     public override float MaxAxisSize => Math.Max(_height, _width);
-
-    public Vector2 Size => new(_width, _height);
 
     private float _flipRate = 720; //degrees per second
     private float _targetZ;
@@ -138,14 +113,7 @@ public partial class VcToken : VisualComponentBase
         _tokenType = p.Type;
 
         BuildToken();
-
-        var prototype = GetPrototype(R);
-        // Each view holds its sheet once, so a back that shows the front gets its own view.
-        Face? FrontView() => View(p.Front, "f", Card.FrontRow, prototype, R);
-        var front = FrontView();
-        var back =
-            (p.Back == null ? null : View(p.Back, "b", Card.BackRow, prototype, R)) ?? FrontView();
-        ShowSides(front ?? Face.Blank, back ?? Face.Blank);
+        _faces.Load(p, Card, GetPrototype(R), TextureFactory, R);
     }
 
     private void BuildToken()
@@ -304,170 +272,17 @@ public partial class VcToken : VisualComponentBase
         st.Commit(mesh);
     }
 
-    /// <summary>
-    /// What <paramref name="side"/> shows on this card, or null when it shows nothing.
-    /// </summary>
-    /// <param name="key">The key to use for the texture cache.</param>
-    /// <param name="row">The dataset row this side shows, for a template.</param>
-    private Face? View(
-        SideParameters side,
-        string key,
-        SnowTag row,
-        Prototype prototype,
-        IRecordReader R
-    )
-    {
-        int n = Math.Max(Card.Number, 0);
-        switch (side)
-        {
-            case QuickSide quick:
-            {
-                var cards = quick.Cards();
-                if (cards.Count == 0)
-                    return null;
-                // Cards that repeat are only drawn once.
-                // This isn't exhaustive, but it catches things like A*2
-                var distinct = cards.Distinct().ToList();
-                var drawing = new Drawing(
-                    QuickTemplate.Template with
-                    {
-                        Width = _width / CmPerInch,
-                        Height = _height / CmPerInch,
-                    },
-                    QuickTemplate.DataSet,
-                    distinct
-                        .Select(
-                            (c, i) =>
-                                QuickTemplate.Row(c.Suit, c.Value) with
-                                {
-                                    Id = new SnowTag(i + 1),
-                                }
-                        )
-                        .ToList()
-                );
-                var sheet = Sheet.Acquire(
-                    $"quick:{prototype.SheetKey()}:{key}",
-                    TextureFactory,
-                    _ => drawing
-                );
-                return new Face(
-                    sheet,
-                    sheet.Frame(new SnowTag(distinct.IndexOf(cards[n % cards.Count]) + 1))
-                );
-            }
-
-            case ImageSide image:
-            {
-                var asset = R.Get<ImageAsset>(image.Image);
-                var values = image.FrameValues(
-                    R,
-                    ((PrintedParameters)prototype.Parameters).CardCount(R)
-                );
-                if (
-                    asset == null
-                    || n >= values.Length
-                    || asset.Layout.Frame(values[n]) is not int frame
-                )
-                    return new Face(Sheet.Missing, 0);
-                var sheet = Sheet.Acquire(
-                    $"asset:{asset.CloudPath}:{asset.Layout}",
-                    asset.Layout,
-                    _ => TextureCache.Instance.GetOrCreateAssetTexture(asset)
-                );
-                return new Face(sheet, frame);
-            }
-
-            case TemplateSide templateSide:
-            {
-                var sheet = Sheet.Acquire(
-                    $"tpl:{templateSide.Template}:{templateSide.Dataset}",
-                    TextureFactory,
-                    R => new Drawing(
-                        R.Get<Template>(templateSide.Template),
-                        R.Get<DataSet>(templateSide.Dataset),
-                        R.GetRows(templateSide.Dataset)
-                    )
-                );
-                return new Face(sheet, sheet.Frame(row));
-            }
-
-            default:
-                return null;
-        }
-    }
-
-    private const float CmPerInch = 2.54f;
-
-    /// <summary>
-    /// Shows <paramref name="front"/> and <paramref name="back"/> once their sheets load.
-    /// </summary>
-    /// <remarks>
-    /// When a bunch of rapid updates happen to a token, it will continue showing a texture,
-    /// but occasionally replace it with a new one. To achieve this, we keep three sheets in a queue.
-    /// <list type="number">
-    /// <item>The displayed sheet, which could be outdated.</item>
-    /// <item>The sheet that's currently rendering to replace it, which isn't canceled when a change is queued.</item>
-    /// <item>The unrendered sheet that's next in line to render when 2 is done, but is replaced when a change is queued.</item>
-    /// </list>
-    /// This allows the texture to update even when changes are happening rapidly, like with a color picker.
-    /// </remarks>
-    private void ShowSides(Face front, Face back)
-    {
-        Release(_next);
-        _next = (front, back);
-        if (_loading == null)
-            LoadNext();
-    }
-
-    private async void LoadNext()
-    {
-        var (front, back) = _next.Value;
-        (_loading, _next) = (_next, null);
-        await Task.WhenAll(front.Sheet.Load(), back.Sheet.Load());
-        if (!IsInstanceValid(this))
-            return;
-        _loading = null;
-        Release((Front, Back));
-        Front.Sheet.Changed -= OnSheetChanged;
-        Back.Sheet.Changed -= OnSheetChanged;
-        (Front, Back) = (front, back);
-        Front.Sheet.Changed += OnSheetChanged;
-        Back.Sheet.Changed += OnSheetChanged;
-        ShowFaces();
-        TexturesChanged?.Invoke();
-        if (_next != null)
-            LoadNext();
-    }
-
-    private void OnSheetChanged() => TexturesChanged?.Invoke();
-
-    private static void Release((Face Front, Face Back)? faces)
-    {
-        if (faces is var (front, back))
-        {
-            front.Sheet.Release();
-            back.Sheet.Release();
-        }
-    }
-
     private void ShowFaces()
     {
-        _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, Front.Sheet.Material);
-        _mainMesh.SetSurfaceOverrideMaterial(BackSurface, Back.Sheet.Material);
-        _mainMesh.SetInstanceShaderParameter("front_frame", Front.Frame);
-        _mainMesh.SetInstanceShaderParameter("back_frame", Back.Frame);
+        _mainMesh.SetSurfaceOverrideMaterial(FrontSurface, _faces.Front.Material);
+        _mainMesh.SetSurfaceOverrideMaterial(BackSurface, _faces.Back.Material);
     }
 
     public override void _Notification(int what)
     {
         base._Notification(what);
-        if (what != NotificationPredelete)
-            return;
-        Release(_next);
-        Release(_loading);
-        Release((Front, Back));
-        Front.Sheet.Changed -= OnSheetChanged;
-        Back.Sheet.Changed -= OnSheetChanged;
+        if (what == NotificationPredelete)
+            _faces.Drop();
     }
 
     private float _height;

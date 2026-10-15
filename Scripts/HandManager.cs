@@ -26,8 +26,11 @@ public partial class HandManager : Panel
     // The scene's drag preview, which is duplicated when creating previews of held cards.
     private CardFace _dragPreview;
 
-    // A preview for each card held over a hand, with the card and side it shows.
-    private readonly List<(CardFace Rect, VcToken Card, bool Back)> _previews = new();
+    // A preview for each card held over a hand, with what it shows, or null when it's hidden.
+    private readonly List<(
+        CardFace Rect,
+        (Prototype Prototype, PrototypeItemRef Card, bool Back)? Shown
+    )> _previews = new();
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -45,7 +48,7 @@ public partial class HandManager : Panel
 
         _hand = GetNode<HandRow>("%HandRow");
         _dragPreview = GetNode<CardFace>("%DragPreview");
-        _previews.Add((_dragPreview, null, false));
+        _previews.Add((_dragPreview, null));
     }
 
     public override void _EnterTree()
@@ -125,22 +128,26 @@ public partial class HandManager : Panel
             {
                 var copy = (CardFace)_dragPreview.Duplicate();
                 AddChild(copy);
-                _previews.Add((copy, null, false));
+                _previews.Add((copy, null));
             }
             var s = cards[i];
-            var card = ProjectService.Instance.GameObjects.GetComponent(s.Id) as VcToken;
-            var (rect, shown, shownBack) = _previews[i];
+            var R = RecordService.Instance;
+            var (rect, shown) = _previews[i];
 
-            // A card can be flipped while it's held.
-            bool back = HandCard.IsFaceDown(s);
-            if (card != shown || back != shownBack)
+            // A card can be flipped, or its prototype edited, while it's held.
+            var prototype = R.GetIncludingDeleted<Prototype>(s.PrototypeRef);
+            var shows = (prototype, s.Card, HandCard.IsFaceDown(s));
+            if (shows != shown)
             {
-                rect.ShowCard(card, back);
-                _previews[i] = (rect, card, back);
+                rect.ShowCard(s, shows.Item3, R);
+                _previews[i] = (rect, shows);
             }
 
             float rotation = HandCard.ScreenRotation(s.Rotation.Y);
-            var (size, _) = row.CardSize(HandRow.TableSize(card), rotation);
+            var (size, _) = row.CardSize(
+                HandRow.TableSize(prototype?.Parameters as PrintedParameters),
+                rotation
+            );
             var offset = s.PositionAt(0);
             rect.Size = size;
             rect.PivotOffset = size / 2;
@@ -149,13 +156,24 @@ public partial class HandManager : Panel
             rect.Visible = true;
         }
         for (int i = cards.Count; i < _previews.Count; i++)
-            _previews[i].Rect.Visible = false;
+            HidePreview(i);
     }
 
     public void HideDragPreview()
     {
-        foreach (var preview in _previews)
-            preview.Rect.Visible = false;
+        for (int i = 0; i < _previews.Count; i++)
+            HidePreview(i);
+    }
+
+    // Hides preview i and lets go of the faces it showed.
+    private void HidePreview(int i)
+    {
+        var (rect, shown) = _previews[i];
+        rect.Visible = false;
+        if (shown == null)
+            return;
+        rect.ShowCard(null, false, RecordService.Instance);
+        _previews[i] = (rect, null);
     }
 
     #endregion
