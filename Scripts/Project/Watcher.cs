@@ -112,13 +112,6 @@ public sealed class Watcher : IRecordReader
         return _source.Get(group, key);
     }
 
-    public IReadOnlyList<T> GetIncludingDeleted<T, G>(Group<T, G> group, G key)
-        where T : Replicated
-    {
-        Depend(group, key);
-        return _source.GetIncludingDeleted(group, key);
-    }
-
     public int Count<T, G>(Group<T, G> group, G key)
         where T : Replicated
     {

@@ -10,8 +10,9 @@ using System.Text;
 /// This ensures that you can always insert a row in-between two other rows if you need to.
 ///
 /// <para>
-/// Every rank ends with a character unique to the source that made it,
-/// so two players inserting at roughly the same time still produce different ranks.
+/// Every rank ends with a stamp, a fixed-length encoding of a unique <see cref="SnowportId"/>,
+/// so no two ranks are ever equal, and there is always room for a new rank between any two.
+/// A new rank only has to differ from its two neighbors, so callers never need to look at other rows.
 /// </para>
 /// </summary>
 public static class RowRank
@@ -23,11 +24,15 @@ public static class RowRank
     // The problem is that we can't guarentee that that rank won't be taken.
     // We can always add more characters to make a unique rank, but not necessarily the other way around.
     // Therefore, we have to never end a rank with the lowest character. We only use it for the occasional middle character.
-    // The 64 unique source numbers then translate to <c>-</c> through <c>z</c>.
+    // Stamps use the 64 characters <c>-</c> through <c>z</c>, one per 6 bits.
     private const string Alphabet =
         "+-/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private const int Min_Digit = 0;
     private const int Max_Digit = 65;
+
+    // A SnowportId has 53 bits, which takes 9 characters.
+    // Every stamp has the same length, or a short rank plus its stamp could spell a long rank plus a different stamp.
+    private const int StampLength = 9;
 
     public static readonly IComparer<string> Comparer = System.StringComparer.Ordinal;
 
@@ -36,14 +41,27 @@ public static class RowRank
     private static char Chr(int i) => Alphabet[i];
 
     /// <summary>
-    /// Returns a rank strictly between <paramref name="prev"/> and <paramref name="next"/>, made by <paramref name="source"/>.
+    /// Returns a rank strictly between <paramref name="prev"/> and <paramref name="next"/>, ending with <paramref name="stamp"/>.
     /// If <paramref name="prev"/> is null, get a rank below <paramref name="next"/>.
     /// If <paramref name="next"/> is null, get a rank above <paramref name="prev"/>.
     /// </summary>
-    public static string New(string prev, string next, byte source) =>
+    public static string New(string prev, string next, SnowportId stamp) =>
         // Added characters never change the order.
         // If ABC < ABD < ABE, then the same is true for any extension of ABD...
-        Between(prev, next) + Chr(source + 1);
+        Between(prev, next) + Stamp(stamp);
+
+    /// <summary>
+    /// The stamp's digits in reverse order.
+    /// The lower digits change more often, which keeps ranks made between them short.
+    /// </summary>
+    private static string Stamp(SnowportId stamp)
+    {
+        long bits = stamp;
+        var result = new StringBuilder(StampLength);
+        for (int i = 0; i < StampLength; i++, bits >>= 6)
+            result.Append(Chr((int)(bits & 63) + 1));
+        return result.ToString();
+    }
 
     private static string Between(string prev, string next)
     {

@@ -424,9 +424,6 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
         where T : Replicated => StoreOf<T>().InGroup(group, key).Where(r => !r.Deleted).ToArray();
 
-    public IReadOnlyList<T> GetIncludingDeleted<T, G>(Group<T, G> group, G key)
-        where T : Replicated => StoreOf<T>().InGroup(group, key).ToArray();
-
     public int Count<T, G>(Group<T, G> group, G key)
         where T : Replicated => StoreOf<T>().Count(group, key);
 

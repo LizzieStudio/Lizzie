@@ -62,7 +62,7 @@ public static class CsvImport
                     data = data.SetItem(dataset.Columns[c].Id, line[c]);
             }
 
-            rank = RowRank.New(rank, null, Snowport.Clock.source);
+            rank = RowRank.New(rank, null, Snowport.Clock.Create());
             records.Add(
                 new DataRow
                 {

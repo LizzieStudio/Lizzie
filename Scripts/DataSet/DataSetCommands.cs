@@ -17,7 +17,7 @@ public static class DataSetCommands
         ActsOn = Context.View,
         ShowInMenu = false,
         Effects = (R, sets, _) =>
-            NewRow(sets[0].Id, RowRank.New(R.LastRank(sets[0].Id), null, Snowport.Clock.source)),
+            NewRow(sets[0].Id, RowRank.New(R.LastRank(sets[0].Id), null, Snowport.Clock.Create())),
     };
 
     /// <summary>Adds a column after the last. The dataset editor's add buttons run it.</summary>
@@ -189,7 +189,6 @@ public static class DataSetCommands
         var (rows, columns, allRows, allColumns) = Block(R, cells);
         int top = allRows.IndexOf(rows[0]);
         int left = allColumns.IndexOf(columns[0]);
-        // New rows go after every rank used so far, even deleted rows', which undo could bring back.
         string rank = R.LastRank(rows[0].DataSetId);
 
         var written = new List<DataRow>();
@@ -202,7 +201,7 @@ public static class DataSetCommands
                     {
                         Id = Snowport.Clock.CreateTag(),
                         DataSetId = rows[0].DataSetId,
-                        Rank = rank = RowRank.New(rank, null, Snowport.Clock.source),
+                        Rank = rank = RowRank.New(rank, null, Snowport.Clock.Create()),
                     };
             for (int c = 0; c < grid[r].Length && left + c < allColumns.Count; c++)
                 row = row.WithCell(allColumns[left + c], grid[r][c]);
