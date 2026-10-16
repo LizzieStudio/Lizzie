@@ -46,8 +46,11 @@ public static class SaveCompaction
             }
         }
 
-        return kept.OrderBy(a => a.Id)
-            .ThenBy(a => a.GetType().Name, StringComparer.Ordinal)
+        return kept.OrderBy(a => a.GetType().Name, StringComparer.Ordinal)
+            .ThenBy(
+                a => a,
+                Comparer<Replicated>.Create((a, b) => AtomId.For(a.GetType()).Compare(a, b))
+            )
             .ToArray();
     }
 
@@ -66,10 +69,6 @@ public static class SaveCompaction
             tags.Remove(SnowTag.Empty);
             keys.Add(tags);
         }
-
-        // A singleton has no group yet, so it would be lost.
-        if (atom.GetType().IsDefined(typeof(SingletonAttribute), false))
-            keys.Add([]);
         return keys;
     }
 

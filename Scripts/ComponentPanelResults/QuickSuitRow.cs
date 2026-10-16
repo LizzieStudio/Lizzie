@@ -57,7 +57,7 @@ public partial class QuickSuitRow : HBoxContainer
     }
 
     // The icons include the project's images, so the list follows them.
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         _icon.Clear();
         _icon.AddItem("None");

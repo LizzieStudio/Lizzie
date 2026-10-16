@@ -15,7 +15,7 @@ public partial class DataSetSelector : OptionButton
         ItemSelected += OnItemSelected;
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         Clear();
         AddItem("(none)", SnowTag.Empty);

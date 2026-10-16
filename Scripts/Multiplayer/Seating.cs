@@ -11,12 +11,11 @@ using Godot;
 /// A player without a seat watches, whether they chose to observe or haven't chosen yet.
 /// </para>
 /// </summary>
-[Singleton]
 [NotSaved]
 [JsonName("Seating")]
 public sealed record Seating : Replicated
 {
-    public static readonly Id<Seating, SnowTag> ById = new(r => r.Id);
+    public static readonly Singleton<Seating> Only = new();
 
     /// <summary>The seat of each seated player. Players without a seat are missing.</summary>
     public ImmutableDictionary<byte, int> Seats { get; init; } =
@@ -34,19 +33,19 @@ public static class SeatingReader
 
     /// <summary>The seat a player is sitting in, or <see cref="NoSeat"/>.</summary>
     public static int SeatOf(this IRecordReader R, byte source) =>
-        R.Single<Seating>().Seats.TryGetValue(source, out var seat) ? seat : NoSeat;
+        R.Get(Seating.Only).Seats.TryGetValue(source, out var seat) ? seat : NoSeat;
 
     /// <summary>The seat the local player is sitting in, or <see cref="NoSeat"/>.</summary>
     public static int LocalSeat(this IRecordReader R) => R.SeatOf(Snowport.Clock.source);
 
     /// <summary>Whether a player is sitting in <paramref name="seat"/>. <see cref="NoSeat"/> is never taken.</summary>
     public static bool IsSeatTaken(this IRecordReader R, int seat) =>
-        R.Single<Seating>().Seats.Values.Contains(seat);
+        R.Get(Seating.Only).Seats.Values.Contains(seat);
 
     /// <summary>A seat's settings, or null for <see cref="NoSeat"/> or a seat that's been removed.</summary>
     public static ProjectPlayerSettings SeatSettings(this IRecordReader R, int seat)
     {
-        var players = R.Single<ProjectGameSettings>().Players;
+        var players = R.Get(ProjectGameSettings.Only).Players;
         return seat >= 0 && seat < players.Length ? players[seat] : null;
     }
 
@@ -73,8 +72,8 @@ public static class SeatingReader
     /// </summary>
     public static byte? HolderOf(this IRecordReader R, SnowTag cursorRef)
     {
-        var players = R.Single<ProjectGameSettings>().Players;
-        foreach (var (source, seat) in R.Single<Seating>().Seats)
+        var players = R.Get(ProjectGameSettings.Only).Players;
+        foreach (var (source, seat) in R.Get(Seating.Only).Seats)
             if (
                 seat < players.Length
                 && (players[seat].CursorRef == cursorRef || players[seat].HandHoldRef == cursorRef)

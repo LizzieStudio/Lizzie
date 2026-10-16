@@ -53,7 +53,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _faces.ShowsTemplates = t => sides == 0 ? t.Sides > 0 : t.Sides == sides;
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var p = Parameters();
         _sidesInput.SetItemText(0, $"Auto (d{(p with { SideCount = 0 }).Resolve(R).Sides})");

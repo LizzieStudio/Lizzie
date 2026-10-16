@@ -58,7 +58,11 @@ public static class UndoCommands
         SideEffects = (cs, _) =>
         {
             var ids = cs.Select(c => c.Id).ToHashSet();
-            Issue(UndoComponentChanges, UndoLog.Undo, (_, record) => ids.Contains(record.Id));
+            Issue(
+                UndoComponentChanges,
+                UndoLog.Undo,
+                (_, record) => record is ComponentState s && ids.Contains(s.Id)
+            );
         },
     };
 

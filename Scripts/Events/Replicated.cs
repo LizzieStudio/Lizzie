@@ -7,20 +7,16 @@ using System.Text.Json.Serialization;
 /// <para>
 /// Write records with <see cref="RecordService.Write(IEnumerable{IChange})"/>,
 /// or return them from a command's <see cref="Command.Effects"/>.
-/// Delete them by writing <see cref="RecordReaderExtensions.Delete"/>.
+/// Unset them by writing <see cref="RecordReaderExtensions.Unset"/>.
 /// </para>
 /// </summary>
 /// <remarks>
-/// Every record type needs a <see cref="JsonNameAttribute"/>, the name it's saved and sent under.
+/// Every record type needs a <see cref="JsonNameAttribute"/>, the name it's saved and sent under,
+/// and an <see cref="Id{T, I}"/> named ById, or a <see cref="Singleton{T}"/> named Only.
 /// </remarks>
 [JsonPolymorphic]
 public abstract record Replicated : IChange
 {
-    /// <summary>
-    /// The record's identity, usually created with <see cref="Snowport.CreateTag"/>.
-    /// </summary>
-    public required SnowTag Id { get; init; }
-
     /// <summary>
     /// What's directly inside this record, like a deck's cards or a DataRow's cells.
     /// These are followed recursively, so only list direct contents.
@@ -46,15 +42,3 @@ public abstract record Replicated : IChange
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class NotSavedAttribute : Attribute;
-
-/// <summary>
-/// <para>Exactly one record of this type exists, accessed with <see cref="IRecordReader.Single{T}"/>.</para>
-/// <para>
-/// The method <see cref="ProjectService.EnsureSingletons"/> will create this record during table setup, so it always exists.
-/// </para>
-/// </summary>
-/// <remarks>
-/// Important: The type needs a default constructor without parameters
-/// </remarks>
-[AttributeUsage(AttributeTargets.Class)]
-public sealed class SingletonAttribute : Attribute;

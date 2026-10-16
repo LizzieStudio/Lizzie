@@ -59,7 +59,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         RecordService.Instance.Watch(this, Sync);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         int count = Parameters().CardCount(R);
         _preview.ItemCount = count;

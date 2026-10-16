@@ -1,6 +1,6 @@
 /// <summary>
 /// Something an event does to one atom.
-/// 
+///
 /// <list type="bullet">
 /// <item>writes its whole value, as a <see cref="Replicated"/></item>
 /// <item>unsets it, as an <see cref="Unset"/></item>

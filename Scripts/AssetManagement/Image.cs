@@ -8,6 +8,11 @@ namespace Lizzie.AssetManagement
     {
         public static readonly Id<ImageAsset, SnowTag> ById = new(r => r.Id);
 
+        /// <summary>
+        /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+        /// </summary>
+        public required SnowTag Id { get; init; }
+
         public static readonly All<ImageAsset> All = new();
 
         /// <summary>

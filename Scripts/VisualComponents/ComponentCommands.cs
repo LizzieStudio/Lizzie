@@ -77,7 +77,7 @@ public static class ComponentCommands
     };
 
     private static float RotationStep(IRecordReader R) =>
-        R.Single<ProjectGameSettings>().RotationStep();
+        R.Get(ProjectGameSettings.Only).RotationStep();
 
     // Deleting or restacking what someone is dragging would fight the drag.
     private static bool NotHeld(IRecordReader R, ComponentState c) => !R.IsBeingDragged(c);

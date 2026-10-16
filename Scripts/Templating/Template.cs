@@ -7,6 +7,11 @@ public record Template : Replicated
 {
     public static readonly Id<Template, SnowTag> ById = new(r => r.Id);
 
+    /// <summary>
+    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// </summary>
+    public required SnowTag Id { get; init; }
+
     public static readonly All<Template> All = new();
 
     public string Name { get; init; }

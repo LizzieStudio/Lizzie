@@ -236,7 +236,7 @@ public partial class DatasetEditor : Window, ICommandView
         SetInputAsHandled();
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
         // so the editor stays on it, where redo brings it back.

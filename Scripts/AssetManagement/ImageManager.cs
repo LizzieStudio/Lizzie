@@ -192,7 +192,7 @@ public partial class ImageManager : Window, ICommandView
         UpdateButtons(true);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var (removed, added) = R.Diff(ImageAsset.All);
 

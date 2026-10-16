@@ -69,7 +69,7 @@ public partial class FaceDrawing : Node
         return cell.Face;
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var (template, dataSet, rows) = Source(R);
         var (width, height) = template?.Pixels(PixelsPerInch) ?? default;

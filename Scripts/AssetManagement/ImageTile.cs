@@ -44,7 +44,7 @@ public partial class ImageTile : MarginContainer
         }
     }
 
-    private async void Sync(IRecordReader R)
+    private async void Sync(IWatchReader R)
     {
         var asset = R.Get(ImageAsset.ById, Reference);
         if (asset == null)

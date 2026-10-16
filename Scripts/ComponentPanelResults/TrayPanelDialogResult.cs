@@ -45,12 +45,12 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         RecordService.Instance.Watch(this, Sync);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         _prototypeList.Clear();
         _prototypeList.AddItem("(none)", SnowTag.Empty);
 
-        foreach (var p in R.Get(Prototype.All))
+        foreach (var p in R.Get(Prototype.Live))
             _prototypeList.AddItem(p.Name, p.Id);
 
         UpdatePrototypeSelection();

@@ -115,7 +115,6 @@ public partial class ProjectService : Node
     {
         CurrentProject = new Project { Filename = filename };
         HasUnsavedChanges = false;
-        EnsureSingletons();
         EnsureSeatContainers();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
     }
@@ -127,47 +126,6 @@ public partial class ProjectService : Node
     {
         GameObjects?.ResetForLoad();
         NewGame();
-    }
-
-    /// <summary>
-    /// Reflects to get every type marked <see cref="SingletonAttribute"/> which table setup needs to create.
-    /// </summary>
-    private static readonly Type[] SingletonTypes = typeof(ProjectService)
-        .Assembly.GetTypes()
-        .Where(t => t.IsDefined(typeof(SingletonAttribute), false))
-        .ToArray();
-
-    /// <summary>
-    /// Creates each <see cref="SingletonAttribute"/> record the table is missing in one admin event.
-    /// The host or a solo player runs it after a new game or a load.
-    /// </summary>
-    public void EnsureSingletons()
-    {
-        if (MultiplayerManager.Instance?.HasAuthority() == false)
-            return;
-
-        var create = typeof(ProjectService).GetMethod(
-            nameof(CreateIfMissing),
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        RecordService.Instance.WriteAdmin(
-            SingletonTypes
-                .Select(type => (Replicated)create.MakeGenericMethod(type).Invoke(null, null))
-                .Where(record => record != null)
-        );
-    }
-
-    /// <summary>
-    /// A new <typeparamref name="T"/> with its defaults, or null if the table has one.
-    /// </summary>
-    private static T CreateIfMissing<T>()
-        where T : Replicated
-    {
-        if (R.Count(Singleton<T>.All) > 0)
-            return null;
-
-        Replicated record = Activator.CreateInstance<T>();
-        return (T)(record with { Id = Snowport.Clock.CreateTag() });
     }
 
     public Project LoadProject(string name)
@@ -235,7 +193,6 @@ public partial class ProjectService : Node
     {
         SeedTagsFromLog();
         EndBulkLoad();
-        EnsureSingletons();
         EnsureSeatContainers();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
 
@@ -263,7 +220,7 @@ public partial class ProjectService : Node
     public void AbandonPlayer(byte source)
     {
         EventSynchronizer.Instance?.AbandonGroups(source);
-        var seating = R.Single<Seating>();
+        var seating = R.Get(Seating.Only);
         RecordService.Instance.WriteAdmin(
             R.Get(Selection.ByPlayer, source)
                 .Select(R.Unset)
@@ -366,7 +323,7 @@ public partial class ProjectService : Node
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
 
-        var settings = R.Single<ProjectGameSettings>();
+        var settings = R.Get(ProjectGameSettings.Only);
         var builder = settings.Players.ToBuilder();
         bool changed = false;
         for (int i = 0; i < builder.Count; i++)

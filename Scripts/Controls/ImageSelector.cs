@@ -25,7 +25,7 @@ public partial class ImageSelector : Control
 
     private void ShowImageEditor() { }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         _optionDropdown.Clear();
         _optionDropdown.AddItem("(none)", SnowTag.Empty);

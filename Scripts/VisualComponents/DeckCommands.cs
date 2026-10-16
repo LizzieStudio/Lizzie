@@ -77,7 +77,7 @@ public static class DeckCommands
         var cards = R.TokensOn(deck).Take(count).ToList();
         var stamp = Snowport.Clock.Create();
 
-        if (R.Single<ProjectGameSettings>().EnablePlayerHands)
+        if (R.Get(ProjectGameSettings.Only).EnablePlayerHands)
         {
             // A player without a seat has no hand to draw into.
             int seat = R.LocalSeat();
@@ -135,7 +135,7 @@ public static class DeckCommands
     /// </summary>
     private static List<int> DealSeats(IRecordReader R)
     {
-        var players = R.Single<ProjectGameSettings>().Players.Length;
+        var players = R.Get(ProjectGameSettings.Only).Players.Length;
         if (players == 0)
             return null;
 

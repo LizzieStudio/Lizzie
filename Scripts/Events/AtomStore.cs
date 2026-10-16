@@ -171,7 +171,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
     /// </summary>
     private sealed class Index<G>(Group<T, G> group) : IIndex
     {
-        private readonly Dictionary<G, Dictionary<I, T>> _buckets = new(group.Comparer);
+        private readonly Dictionary<G, Dictionary<I, T>> _buckets = new();
 
         public IReadOnlyList<T> Atoms(G key) =>
             _buckets.TryGetValue(key, out var bucket) ? bucket.Values.ToArray() : [];
@@ -206,7 +206,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
         {
             bool inOld = In(old, out var was);
             bool inNew = In(now, out var willBe);
-            bool same = inOld && inNew && group.Comparer.Equals(was, willBe);
+            bool same = inOld && inNew && EqualityComparer<G>.Default.Equals(was, willBe);
 
             if (inOld)
                 yield return new Touch(group, was, false);

@@ -7,6 +7,11 @@ public record DataSet : Replicated
 {
     public static readonly Id<DataSet, SnowTag> ById = new(r => r.Id);
 
+    /// <summary>
+    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// </summary>
+    public required SnowTag Id { get; init; }
+
     public static readonly All<DataSet> All = new();
 
     public string Name { get; init; }

@@ -37,9 +37,9 @@ public partial class PlayerHandsPanel : Panel
 
     private readonly Dictionary<int, (VBoxContainer Row, Label Label)> _rows = new();
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
-        var players = R.Single<ProjectGameSettings>().Players;
+        var players = R.Get(ProjectGameSettings.Only).Players;
         int localSeat = R.LocalSeat();
 
         // the local player is shown in HandManager, not here

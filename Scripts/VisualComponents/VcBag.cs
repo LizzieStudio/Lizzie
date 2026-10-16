@@ -25,7 +25,7 @@ public partial class VcBag : VisualComponentGroup
         RecordService.Instance.Watch(this, SyncCount);
     }
 
-    private void SyncCount(IRecordReader R) =>
+    private void SyncCount(IWatchReader R) =>
         _componentCount.Text = R.Count(ComponentState.ByContainer, Reference).ToString();
 
     private IEnumerable<ComponentState> Contents(IRecordReader R) =>

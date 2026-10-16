@@ -7,16 +7,14 @@ using Lizzie.Replication.Machinery;
 /// <summary>A record for sessions to write. Faces are unique, so every write can be told apart.</summary>
 public sealed record TestRecord : Replicated
 {
+    public required SnowTag Id { get; init; }
+
     public int Face { get; init; }
 }
 
 /// <summary>A singleton record for sessions to write, like the project settings.</summary>
-[Singleton]
 public sealed record TestValue : Replicated
 {
-    /// <summary>Its id, apart from the <see cref="TestRecord"/>s'.</summary>
-    public const int SingletonId = 100;
-
     public string Text { get; init; }
 }
 
@@ -41,7 +39,7 @@ public sealed record TestScope(ScopeKind Kind, int Mask)
                 ScopeKind.Mine => author == me,
                 ScopeKind.Others => author != me,
                 _ => true,
-            } && (Mask == 0 || record is TestRecord && (Mask & (1 << (record.Id - 1))) != 0);
+            } && (Mask == 0 || record is TestRecord r && (Mask & (1 << (r.Id - 1))) != 0);
 
     public override string ToString() => Mask == 0 ? $"{Kind}" : $"{Kind} records {Mask}";
 }
@@ -335,9 +333,7 @@ public sealed class UndoSession
                 new TestRecord { Id = record, Face = (int)(long)e.Id * 10 + records.Count }
             );
         for (int i = 0; i < values; i++)
-            records.Add(
-                new TestValue { Id = TestValue.SingletonId, Text = $"{e.Id}.{records.Count}" }
-            );
+            records.Add(new TestValue { Text = $"{e.Id}.{records.Count}" });
         if (records.Count > 0)
             e.Records = records.ToArray();
 

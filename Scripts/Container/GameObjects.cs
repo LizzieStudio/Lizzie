@@ -805,7 +805,7 @@ public partial class GameObjects : Node3D
 
         float yaw = nearest.Rotation.Y;
         float step = Mathf.DegToRad(
-            RecordService.Instance.Single<ProjectGameSettings>().RotationStep()
+            RecordService.Instance.Get(ProjectGameSettings.Only).RotationStep()
         );
         return Mathf.Snapped(yaw - camera, step) - yaw;
     }

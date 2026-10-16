@@ -91,7 +91,7 @@ public partial class TemplateCreator : Window
         RecordService.Instance.Watch(this, Sync);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         LoadTemplateNameSelector(R);
         _templateNameSelector.Select(

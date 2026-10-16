@@ -58,7 +58,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     // Internal
     // -------------------------------------------------------------------------
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var selected = _seatList.GetSelectedItems();
         int? selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : R.LocalSeat();
@@ -66,7 +66,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         _seatList.Clear();
         _seatIndexMap.Clear();
 
-        var settings = R.Single<ProjectGameSettings>();
+        var settings = R.Get(ProjectGameSettings.Only);
 
         for (int i = 0; i < settings.Players.Length; i++)
         {

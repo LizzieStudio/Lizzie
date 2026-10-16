@@ -60,7 +60,7 @@ public partial class HandCard : PanelContainer
         RecordService.Instance.Watch(this, SyncSelection);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var state = R.Get(ComponentState.ById, Reference);
         var prototype = state == null ? null : R.Get(Prototype.ById, state.PrototypeRef);
@@ -69,7 +69,7 @@ public partial class HandCard : PanelContainer
         _face.ShowCard(state, state != null && (AlwaysShowBack || IsFaceDown(state)), R);
     }
 
-    private void SyncSelection(IRecordReader R)
+    private void SyncSelection(IWatchReader R)
     {
         var target = new RecordTarget(Reference);
         var colors = R.SelectionColors(SnowTag.Empty);

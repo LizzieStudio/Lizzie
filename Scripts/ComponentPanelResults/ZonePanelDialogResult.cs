@@ -38,9 +38,9 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         RecordService.Instance.Watch(this, Sync);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
-        var players = R.Single<ProjectGameSettings>().Players;
+        var players = R.Get(ProjectGameSettings.Only).Players;
 
         while (_seatRows.Count > players.Length)
         {

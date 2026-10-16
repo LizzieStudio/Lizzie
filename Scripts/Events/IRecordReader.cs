@@ -26,17 +26,6 @@ public interface IRecordReader
     SnowportId Version(Replicated atom);
 
     /// <summary>
-    /// The one record of a <see cref="SingletonAttribute"/> type, like the project settings.
-    ///
-    /// <para>
-    /// Table setup creates it, so it should always exist.
-    /// Throws if there's none or several.
-    /// </para>
-    /// </summary>
-    T Single<T>()
-        where T : Replicated;
-
-    /// <summary>
     /// Gets the atom with <paramref name="id"/>, or null if it is missing or unset.
     /// </summary>
     T Get<T, I>(Id<T, I> byId, I id)
@@ -56,7 +45,16 @@ public interface IRecordReader
     /// </remarks>
     int Count<T, G>(Group<T, G> group, G key)
         where T : Replicated;
+}
 
+/// <summary>
+/// Used to get atoms and observe them for changes.
+/// </summary>
+/// <remarks>
+/// Only to be used with <see cref="RecordService.Watch"/>.
+/// </remarks>
+public interface IWatchReader : IRecordReader
+{
     /// <summary>
     /// Maps every atom with <paramref name="key"/> in <paramref name="group"/> through <paramref name="project"/>,
     /// and compares each atom's result with the one from the previous Sync.
@@ -75,7 +73,7 @@ public interface IRecordReader
 
 /// <summary>
 /// The children a parent should remove, as last projected, and the children it should add,
-/// from <see cref="IRecordReader.Diff{T, G, V}"/>.
+/// from <see cref="IWatchReader.Diff{T, G, V}"/>.
 /// </summary>
 public readonly record struct GroupDiff<T, V>(
     IReadOnlyList<(T Atom, V Value)> Removed,
@@ -84,6 +82,12 @@ public readonly record struct GroupDiff<T, V>(
 
 public static class RecordReaderExtensions
 {
+    /// <summary>
+    /// The one atom of a singleton type, or a new one with its defaults until the first write.
+    /// </summary>
+    public static T Get<T>(this IRecordReader R, Singleton<T> only)
+        where T : Replicated, new() => R.Get(only, default) ?? only.Unwritten;
+
     /// <summary>
     /// The atoms <paramref name="all"/> lists.
     /// </summary>
@@ -96,9 +100,9 @@ public static class RecordReaderExtensions
     public static int Count<T>(this IRecordReader R, All<T> all)
         where T : Replicated => R.Count(all, true);
 
-    /// <inheritdoc cref="IRecordReader.Diff{T, G, V}"/>
+    /// <inheritdoc cref="IWatchReader.Diff{T, G, V}"/>
     public static GroupDiff<T, V> Diff<T, V>(
-        this IRecordReader R,
+        this IWatchReader R,
         All<T> all,
         Func<IRecordReader, T, V?> project
     )
@@ -109,11 +113,11 @@ public static class RecordReaderExtensions
     /// The atoms that left or joined <paramref name="key"/> of <paramref name="group"/> since the previous Sync.
     /// <strong>Only one call of Diff per group key per Sync.</strong>
     /// </summary>
-    public static GroupDiff<T, bool> Diff<T, G>(this IRecordReader R, Group<T, G> group, G key)
+    public static GroupDiff<T, bool> Diff<T, G>(this IWatchReader R, Group<T, G> group, G key)
         where T : Replicated => R.Diff<T, G, bool>(group, key, (_, _) => true);
 
     /// <inheritdoc cref="Diff{T, G}(IRecordReader, Group{T, G}, G)"/>
-    public static GroupDiff<T, bool> Diff<T>(this IRecordReader R, All<T> all)
+    public static GroupDiff<T, bool> Diff<T>(this IWatchReader R, All<T> all)
         where T : Replicated => R.Diff(all, true);
 
     /// <summary>
@@ -210,7 +214,7 @@ public static class RecordReaderExtensions
     /// </list>
     /// </summary>
     public static HashSet<SnowTag> Cursors(this IRecordReader R) =>
-        R.Single<ProjectGameSettings>()
+        R.Get(ProjectGameSettings.Only)
             .Players.SelectMany(p => new[] { p.CursorRef, p.HandHoldRef })
             .Where(c => c != SnowTag.Empty)
             .ToHashSet();
@@ -220,7 +224,7 @@ public static class RecordReaderExtensions
     /// </summary>
     public static bool IsBeingDragged(this IRecordReader R, ComponentState c) =>
         !c.IsOnTable
-        && R.Single<ProjectGameSettings>()
+        && R.Get(ProjectGameSettings.Only)
             .Players.Any(p => p.CursorRef == c.ContainerRef || p.HandHoldRef == c.ContainerRef);
 
     /// <summary>
@@ -228,7 +232,7 @@ public static class RecordReaderExtensions
     /// </summary>
     public static bool IsHeldOverHand(this IRecordReader R, ComponentState c) =>
         !c.IsOnTable
-        && R.Single<ProjectGameSettings>().Players.Any(p => p.HandHoldRef == c.ContainerRef);
+        && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandHoldRef == c.ContainerRef);
 
     /// <summary>
     /// True if it's inside a container, such as a bag or a player's hand, rather than on the table.
@@ -241,5 +245,5 @@ public static class RecordReaderExtensions
     /// </summary>
     public static bool IsInHand(this IRecordReader R, ComponentState c) =>
         !c.IsOnTable
-        && R.Single<ProjectGameSettings>().Players.Any(p => p.HandRef == c.ContainerRef);
+        && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandRef == c.ContainerRef);
 }

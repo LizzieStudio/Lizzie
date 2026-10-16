@@ -57,7 +57,7 @@ public partial class Table : Node3D
     /// <summary>
     /// Keeps one node per live component whose prototype is avialable.
     /// </summary>
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var (removed, added) = R.Diff<
             ComponentState,

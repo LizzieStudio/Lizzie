@@ -161,7 +161,7 @@ public partial class PrototypeManifest : Window, ICommandView
             return;
 
         var existingNames = RecordService
-            .Instance.Get(Prototype.All)
+            .Instance.Get(Prototype.Live)
             .Select(p => p.Name)
             .ToHashSet();
 
@@ -190,12 +190,12 @@ public partial class PrototypeManifest : Window, ICommandView
         RecordService.Instance.Write(duplicate);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
 
-        var prototypes = R.Get(Prototype.All).ToList();
+        var prototypes = R.Get(Prototype.Live).ToList();
 
         // The Qty column.
         // We filter a deck's cards so that they aren't counted.

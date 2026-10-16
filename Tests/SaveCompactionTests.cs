@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -24,10 +25,20 @@ public class SaveCompactionTests
     private static TableEvent Load(string json) =>
         JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
 
+    private static SnowTag IdOf(Replicated atom) =>
+        atom switch
+        {
+            ComponentState s => s.Id,
+            Prototype p => p.Id,
+            DataSet d => d.Id,
+            DataRow r => r.Id,
+            _ => throw new ArgumentException($"No id for a {atom.GetType().Name}."),
+        };
+
     [StackTraceHidden]
     private static void AssertKept(IEnumerable<Replicated> atoms, params int[] expected)
     {
-        var kept = SaveCompaction.Collect(atoms).Select(a => a.Id).OrderBy(t => t).ToArray();
+        var kept = SaveCompaction.Collect(atoms).Select(IdOf).OrderBy(t => t).ToArray();
         var want = expected.Select(n => Tag(n)).OrderBy(t => t).ToArray();
         Assert.True(
             kept.SequenceEqual(want),

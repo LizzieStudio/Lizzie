@@ -54,7 +54,7 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>Shows which players have this component selected.</summary>
-    private void SyncSelection(IRecordReader R)
+    private void SyncSelection(IWatchReader R)
     {
         var target = new RecordTarget(Reference);
         var local = Snowport.Clock.source;
@@ -119,7 +119,7 @@ public abstract partial class VisualComponentBase : Area3D
             ComponentName = parameters.ComponentName;
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var proto = GetPrototype(R);
         if (proto == null || TextureFactory == null)
@@ -139,7 +139,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Applies the component's record, animated by the command that wrote it if the write is recent enough.
     /// </summary>
-    private void SyncState(IRecordReader R)
+    private void SyncState(IWatchReader R)
     {
         var s = R.Get(ComponentState.ById, Reference);
         if (s == null)

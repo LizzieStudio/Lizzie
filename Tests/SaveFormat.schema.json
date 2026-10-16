@@ -25,6 +25,7 @@
               "$type": {
                 "const": "ComponentState"
               },
+              "id": true,
               "prototypeRef": true,
               "x": {
                 "type": "integer"
@@ -62,8 +63,7 @@
                 },
                 "additionalProperties": false
               },
-              "containerRef": true,
-              "id": true
+              "containerRef": true
             },
             "required": [
               "id"
@@ -75,6 +75,7 @@
               "$type": {
                 "const": "DataRow"
               },
+              "id": true,
               "dataSetId": true,
               "rank": {
                 "type": [
@@ -93,8 +94,7 @@
                     "null"
                   ]
                 }
-              },
-              "id": true
+              }
             },
             "required": [
               "id"
@@ -106,6 +106,7 @@
               "$type": {
                 "const": "DataSet"
               },
+              "id": true,
               "name": {
                 "type": [
                   "string",
@@ -130,8 +131,7 @@
                   },
                   "additionalProperties": false
                 }
-              },
-              "id": true
+              }
             },
             "required": [
               "id"
@@ -143,6 +143,7 @@
               "$type": {
                 "const": "ImageAsset"
               },
+              "id": true,
               "name": {
                 "type": [
                   "string",
@@ -172,8 +173,7 @@
                   }
                 },
                 "additionalProperties": false
-              },
-              "id": true
+              }
             },
             "required": [
               "id"
@@ -270,12 +270,8 @@
                   "string",
                   "null"
                 ]
-              },
-              "id": true
+              }
             },
-            "required": [
-              "id"
-            ],
             "additionalProperties": false
           },
           {
@@ -283,6 +279,7 @@
               "$type": {
                 "const": "Prototype"
               },
+              "id": true,
               "name": {
                 "type": [
                   "string",
@@ -858,8 +855,7 @@
                     "additionalProperties": false
                   }
                 ]
-              },
-              "id": true
+              }
             },
             "required": [
               "id"
@@ -879,12 +875,8 @@
                 "additionalProperties": {
                   "type": "integer"
                 }
-              },
-              "id": true
+              }
             },
-            "required": [
-              "id"
-            ],
             "additionalProperties": false
           },
           {
@@ -892,6 +884,7 @@
               "$type": {
                 "const": "Selection"
               },
+              "id": true,
               "player": {
                 "type": "integer"
               },
@@ -952,8 +945,7 @@
                     }
                   ]
                 }
-              },
-              "id": true
+              }
             },
             "required": [
               "id"
@@ -965,6 +957,7 @@
               "$type": {
                 "const": "Template"
               },
+              "id": true,
               "name": {
                 "type": [
                   "string",
@@ -998,8 +991,7 @@
                   }
                 }
               },
-              "dataSet": true,
-              "id": true
+              "dataSet": true
             },
             "required": [
               "id"

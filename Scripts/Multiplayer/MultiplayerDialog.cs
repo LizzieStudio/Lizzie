@@ -116,7 +116,7 @@ public partial class MultiplayerDialog : Window
         RecordService.Instance.QueueSync(this);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         _playerList.Clear();
 

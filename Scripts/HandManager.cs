@@ -180,7 +180,7 @@ public partial class HandManager : Panel
 
     #region Hand Management
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         _hand.Seat = R.LocalSeat();
     }

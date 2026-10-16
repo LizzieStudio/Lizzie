@@ -80,9 +80,9 @@ public partial class ProjectSettingsDialog : Window
         RecordService.Instance.Watch(this, Sync);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
-        var next = R.Single<ProjectGameSettings>();
+        var next = R.Get(ProjectGameSettings.Only);
         if (_baseline == null)
         {
             Load(next);
@@ -241,7 +241,7 @@ public partial class ProjectSettingsDialog : Window
     /// </summary>
     private ProjectGameSettings ReadUi()
     {
-        var current = RecordService.Instance.Single<ProjectGameSettings>();
+        var current = RecordService.Instance.Get(ProjectGameSettings.Only);
         return current with
         {
             StartIn2D = _2dToggle.ButtonPressed,

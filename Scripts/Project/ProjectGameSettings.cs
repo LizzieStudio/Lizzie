@@ -5,11 +5,10 @@ using Godot;
 /// <summary>
 /// Persisted settings for a project, edited via the Project Settings dialog.
 /// </summary>
-[Singleton]
 [JsonName("ProjectGameSettings")]
 public sealed record ProjectGameSettings : Replicated
 {
-    public static readonly Id<ProjectGameSettings, SnowTag> ById = new(r => r.Id);
+    public static readonly Singleton<ProjectGameSettings> Only = new();
 
     // Setup tab
     public bool StartIn2D { get; init; } = false;

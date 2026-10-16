@@ -17,9 +17,9 @@ public partial class TableSurface : StaticBody3D
         RecordService.Instance.Watch(this, Sync);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
-        var s = R.Single<ProjectGameSettings>();
+        var s = R.Get(ProjectGameSettings.Only);
 
         _mesh.Size =
             s.TableUnits == 0 // feet

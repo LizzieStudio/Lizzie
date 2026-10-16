@@ -30,7 +30,7 @@ public partial class TemplateSelector : OptionButton
         }
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         Clear();
         AddItem("(none)", SnowTag.Empty);

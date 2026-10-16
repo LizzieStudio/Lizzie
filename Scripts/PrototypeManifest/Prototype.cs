@@ -6,9 +6,14 @@ public record Prototype : Replicated
     public static readonly Id<Prototype, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
+    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// </summary>
+    public required SnowTag Id { get; init; }
+
+    /// <summary>
     /// Gets all prototypes that aren't deleted.
     /// </summary>
-    public static readonly All<Prototype> All = new(p => !p.Deleted);
+    public static readonly All<Prototype> Live = new(p => !p.Deleted);
 
     public string Name { get; init; }
 

@@ -43,9 +43,9 @@ public partial class UI : CanvasLayer
         RecordService.Instance.Watch(this, Sync);
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
-        var s = R.Single<ProjectGameSettings>();
+        var s = R.Get(ProjectGameSettings.Only);
         HandManager.Visible = s.EnablePlayerHands;
         _opponentHands.Visible = s.EnablePlayerHands;
         _rotationStep.Selected = s.RotationStepIndex;
@@ -136,7 +136,7 @@ public partial class UI : CanvasLayer
 
     private void ShowPlayerPositionDialog()
     {
-        var settings = RecordService.Instance.Single<ProjectGameSettings>();
+        var settings = RecordService.Instance.Get(ProjectGameSettings.Only);
 
         // Don't open if there are no player slots and observers are not allowed.
         if (settings.Players.Length == 0 && !settings.AllowObservers)
@@ -168,7 +168,7 @@ public partial class UI : CanvasLayer
 
     private void RotationStepSelected(long index)
     {
-        var settings = RecordService.Instance.Single<ProjectGameSettings>();
+        var settings = RecordService.Instance.Get(ProjectGameSettings.Only);
         RecordService.Instance.Write(settings with { RotationStepIndex = (int)index });
     }
 

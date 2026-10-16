@@ -103,7 +103,7 @@ public partial class CommandButton : Button
         Pressed += Run;
     }
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         if (Command == null)
             return;

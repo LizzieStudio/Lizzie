@@ -76,7 +76,7 @@ public partial class PresenceSynchronizer : Node
             return;
 
         var source = Snowport.Clock.source;
-        var seats = R.Single<Seating>().Seats;
+        var seats = R.Get(Seating.Only).Seats;
         var seated = seats.TryGetValue(source, out var current);
         if (seated && seats.Count == 1)
             return;
@@ -119,14 +119,14 @@ public partial class PresenceSynchronizer : Node
 
     private static void Seat(byte source, int seat)
     {
-        var seats = R.Single<Seating>().Seats;
+        var seats = R.Get(Seating.Only).Seats;
         WriteSeats(
             seat == SeatingReader.NoSeat ? seats.Remove(source) : seats.SetItem(source, seat)
         );
     }
 
     private static void WriteSeats(ImmutableDictionary<byte, int> seats) =>
-        R.WriteAdmin(R.Single<Seating>() with { Seats = seats });
+        R.WriteAdmin(R.Get(Seating.Only) with { Seats = seats });
 
     [Rpc(
         MultiplayerApi.RpcMode.Authority,

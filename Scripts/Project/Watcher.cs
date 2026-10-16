@@ -8,9 +8,9 @@ namespace Lizzie.Replication.Machinery;
 /// Runs a callback and records every record it reads so
 /// <see cref="RecordService"/> can rerun it when any of them change.
 /// </summary>
-public sealed class Watcher : IRecordReader
+public sealed class Watcher : IWatchReader
 {
-    private readonly Action<IRecordReader> _sync;
+    private readonly Action<IWatchReader> _sync;
     private readonly IRecordReader _source;
 
     // the query values this watcher read
@@ -31,7 +31,7 @@ public sealed class Watcher : IRecordReader
 
     public Watcher(
         Node owner,
-        Action<IRecordReader> sync,
+        Action<IWatchReader> sync,
         IRecordReader source,
         DependencyIndex<Watcher> index
     )
@@ -82,13 +82,6 @@ public sealed class Watcher : IRecordReader
         var byId = AtomId.For(atom.GetType());
         Depend(byId, byId.Of(atom));
         return _source.Version(atom);
-    }
-
-    public T Single<T>()
-        where T : Replicated
-    {
-        Depend(Singleton<T>.All, true);
-        return _source.Single<T>();
     }
 
     public T Get<T, I>(Id<T, I> byId, I id)

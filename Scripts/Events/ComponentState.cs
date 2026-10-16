@@ -12,6 +12,11 @@ public record ComponentState : Replicated
 {
     public static readonly Id<ComponentState, SnowTag> ById = new(r => r.Id);
 
+    /// <summary>
+    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// </summary>
+    public required SnowTag Id { get; init; }
+
     public static readonly All<ComponentState> All = new();
 
     /// <summary>

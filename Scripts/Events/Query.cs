@@ -60,6 +60,11 @@ public abstract class AtomId : Query
 
     private protected abstract Type AtomType { get; }
 
+    /// <summary>
+    /// Orders two atoms of this Id's type by their ids.
+    /// </summary>
+    internal abstract int Compare(Replicated a, Replicated b);
+
     private static readonly Dictionary<Type, AtomId> Declared = new();
 
     /// <summary>
@@ -79,7 +84,8 @@ public abstract class AtomId : Query
         if (ids.Count != 1 || ids[0] == null || ids[0].AtomType != atomType)
             throw new InvalidOperationException(
                 $"{atomType.Name} needs exactly one Id, declared as a public static readonly Id<{atomType.Name}, I> field, "
-                    + "which says what makes two writes the same atom, like `public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);`."
+                    + "which says what makes two writes the same atom, like `public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);`, "
+                    + $"or as `public static readonly Singleton<{atomType.Name}> Only = new();` if it has only one atom."
             );
         return ids[0];
     }
@@ -98,18 +104,19 @@ public abstract class AtomId : Query
 }
 
 /// <summary>
-/// Every atom type <typeparamref name="T"/> must declare exactly one Id, named ById.
+/// Every atom type <typeparamref name="T"/> must declare exactly one Id,
+/// unless it's a <see cref="Singleton{T}"/>.
 ///
 /// <para>
 /// Writes of <typeparamref name="T"/> that produce the same id are considered to be the same atom.
-/// A new write with the same id replaces the old, and deletions target an id.
+/// A new write with the same id replaces the old.
 /// </para>
 /// <code>public static readonly Id&lt;DataRow, SnowTag&gt; ById = new(r => r.Id);</code>
 /// Read an atom with <see cref="IRecordReader.Get{T, I}(Id{T, I}, I)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
 /// <typeparam name="I">The type of the id.</typeparam>
-public sealed class Id<T, I> : AtomId
+public class Id<T, I> : AtomId
     where T : Replicated
 {
     private readonly Func<T, I> _of;
@@ -125,8 +132,33 @@ public sealed class Id<T, I> : AtomId
 
     internal override Type IdType => typeof(I);
 
+    internal override int Compare(Replicated a, Replicated b) =>
+        Comparer<I>.Default.Compare(_of((T)a), _of((T)b));
+
     private protected override Type AtomType => typeof(T);
 }
+
+/// <summary>
+/// Declares a type with only one atom, like the project settings.
+/// An atom with <see cref="Singleton{T}"/> does not need an <see cref="Id{T, I}"/>.
+///
+/// <code>public static readonly Singleton&lt;Seating&gt; Only = new();</code>
+///
+/// Read the atom with <see cref="RecordReaderExtensions.Get{T}(IRecordReader, Singleton{T})"/>,
+/// which gives the default <typeparamref name="T"/> until the first write.
+/// </summary>
+/// <typeparam name="T">The type of the atom.</typeparam>
+public sealed class Singleton<T>() : Id<T, SingletonId>(_ => default)
+    where T : Replicated, new()
+{
+    /// <summary>What reads give before the first write.</summary>
+    internal T Unwritten => field ??= new();
+}
+
+/// <summary>
+/// The id every write of a singleton shares. See <see cref="Singleton{T}"/>.
+/// </summary>
+public readonly record struct SingletonId;
 
 /// <summary>
 /// A way to list atoms of <typeparamref name="T"/> by a key of <typeparamref name="G"/>.
@@ -159,11 +191,6 @@ public class Group<T, G> : Query
     public G Of(T atom) => _of(atom);
 
     internal override object Of(Replicated atom) => _of((T)atom);
-
-    /// <summary>
-    /// Compares group keys.
-    /// </summary>
-    internal IEqualityComparer<G> Comparer => EqualityComparer<G>.Default;
 }
 
 /// <summary>

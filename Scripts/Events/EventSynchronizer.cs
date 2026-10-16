@@ -53,13 +53,13 @@ public partial class EventSynchronizer : Node
     /// Publishes the event to all clients, including this one.
     /// </summary>
     /// <remarks>
-    /// Write records with <see cref="RecordService.Write(IEnumerable{Replicated})"/> and its gesture calls instead.
+    /// Write records with <see cref="RecordService.Write(IEnumerable{IChange})"/> and its gesture calls instead.
     /// This is for events that aren't plain writes, like undos.
     /// </remarks>
     public void Submit(TableEvent e)
     {
         foreach (var record in e.Records)
-            if (record.Id == SnowTag.Empty)
+            if (AtomId.For(record.GetType()).Of(record) is SnowTag id && id == SnowTag.Empty)
                 throw new ArgumentException(
                     $"A {record.GetType().Name} was written without an Id. Give it Snowport.Clock.CreateTag() when it's made."
                 );

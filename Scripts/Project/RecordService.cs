@@ -115,10 +115,10 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     /// <summary>
     /// <para>Writes records to all connected clients, including locally.</para>
     /// <para>
-    /// Records are identified by their <see cref="Replicated.Id"/>.
-    /// If you Write a record with a new Id, it is created on all clients.
-    /// If you Write a record using an existing Id, that record is replaced with the new one.
-    /// Write a <see cref="RecordReaderExtensions.Delete"/> to delete one.
+    /// Records are identified by their type's <see cref="Id{T, I}"/>.
+    /// If you Write a record with a new id, it is created on all clients.
+    /// If you Write a record using an existing id, that record is replaced with the new one.
+    /// Write a <see cref="RecordReaderExtensions.Unset"/> to unset one.
     /// </para>
     /// <para>
     /// The <paramref name="changes"/> passed here are bundled in one event which is undone or redone together.
@@ -266,7 +266,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     /// read changes, until <paramref name="owner"/> leaves the tree. Call from _EnterTree.
     /// The first run is deferred so callers can configure the node after adding it.
     /// </summary>
-    public void Watch(Node owner, Action<IRecordReader> sync)
+    public void Watch(Node owner, Action<IWatchReader> sync)
     {
         var watcher = new Watcher(owner, sync, this, _dependencies);
         _watchers.Add(watcher);
@@ -402,19 +402,6 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     public SnowportId Version(Replicated atom) =>
         StoreOf(atom.GetType()).Find(AtomId.For(atom.GetType()).Of(atom)).LastUpdate;
 
-    public T Single<T>()
-        where T : Replicated
-    {
-        var records = this.Get(Singleton<T>.All);
-        if (records.Count == 1)
-            return records[0];
-        throw new InvalidOperationException(
-            records.Count == 0
-                ? $"There's no {typeof(T).Name}. Table setup (ProjectService.EnsureSingletons) should have created it."
-                : $"There are {records.Count} {typeof(T).Name} records, but it's a singleton."
-        );
-    }
-
     public T Get<T, I>(Id<T, I> byId, I id)
         where T : Replicated => (T)StoreOf(byId).Find(id).Value;
 
@@ -427,31 +414,5 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     public int Count<T, G>(Group<T, G> group, G key)
         where T : Replicated => StoreOf<T>().Count(group, key);
 
-    /// <summary>Always throws, since only a watch has a previous run to compare against.</summary>
-    public GroupDiff<T, V> Diff<T, G, V>(
-        Group<T, G> group,
-        G key,
-        Func<IRecordReader, T, V?> project
-    )
-        where T : Replicated
-        where V : struct
-    {
-        throw new InvalidOperationException(
-            "Diff can only be called on the IRecordReader passed to a Watch's Sync."
-        );
-    }
-
     #endregion
-}
-
-/// <summary>
-/// Every atom of a singleton type, which <see cref="RecordService.Single"/> reads.
-/// </summary>
-/// <remarks>
-/// This is just syntactic sugar.
-/// </remarks>
-internal static class Singleton<T>
-    where T : Replicated
-{
-    public static readonly All<T> All = new();
 }

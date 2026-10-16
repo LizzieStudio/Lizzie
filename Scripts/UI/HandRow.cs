@@ -133,7 +133,7 @@ public partial class HandRow : Control
             InsertIndexAt(at)
         );
 
-    private void Sync(IRecordReader R)
+    private void Sync(IWatchReader R)
     {
         var hand = PlayerHandService.GetHand(R, Seat);
         var ids = hand.Select(s => s.Id).ToHashSet();
