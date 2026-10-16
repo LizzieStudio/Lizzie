@@ -22,7 +22,7 @@ public readonly record struct PrototypeItemRef(int Number, SnowTag FrontRow, Sno
     /// The first item of a prototype with these <paramref name="parameters"/>,
     /// or <see cref="None"/> when it has no items.
     /// </summary>
-    public static PrototypeItemRef First(ComponentParameters parameters, IRecordReader R) =>
+    public static PrototypeItemRef First(ComponentParameters parameters, IAtomReader R) =>
         parameters switch
         {
             PrintedParameters printed => printed.Card(0, R),

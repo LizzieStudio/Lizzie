@@ -22,16 +22,16 @@ public partial class VcBag : VisualComponentGroup
     public override void _EnterTree()
     {
         base._EnterTree();
-        RecordService.Instance.Watch(this, SyncCount);
+        AtomService.Instance.Watch(this, SyncCount);
     }
 
     private void SyncCount(IWatchReader R) =>
         _componentCount.Text = R.Count(ComponentState.ByContainer, Reference).ToString();
 
-    private IEnumerable<ComponentState> Contents(IRecordReader R) =>
+    private IEnumerable<ComponentState> Contents(IAtomReader R) =>
         R.Get(ComponentState.ByContainer, Reference);
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
         var p = (BagParameters)parameters;
@@ -80,7 +80,7 @@ public partial class VcBag : VisualComponentGroup
     /// </summary>
     public override ComponentState[] DragDraw()
     {
-        var contents = Contents(RecordService.Instance).ToList();
+        var contents = Contents(AtomService.Instance).ToList();
         return contents.Count == 0
             ? []
             : [contents[Random.Shared.Next(contents.Count)] with { Position = Vector3.Zero }];

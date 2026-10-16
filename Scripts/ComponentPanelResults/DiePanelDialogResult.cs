@@ -40,10 +40,10 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
-    private void Refresh() => RecordService.Instance.QueueSync(this);
+    private void Refresh() => AtomService.Instance.QueueSync(this);
 
     private int SideCount => _sidesInput.GetSelectedId();
 
@@ -70,7 +70,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
     public override void Activate()
     {
-        _previewScene = Utility.DieScene(Parameters(), RecordService.Instance);
+        _previewScene = Utility.DieScene(Parameters(), AtomService.Instance);
         var die = GD.Load<PackedScene>(_previewScene).Instantiate<VcDie>();
         _preview.SetComponent(die, new Vector3(Mathf.DegToRad(-45), 0, 0));
         UpdatePreview();
@@ -105,7 +105,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var row = p.Faces.Row(_preview.CurrentItem, RecordService.Instance);
+        var row = p.Faces.Row(_preview.CurrentItem, AtomService.Instance);
         _preview.Build(
             p,
             new PrototypeItemRef(_preview.CurrentItem, row, SnowTag.Empty),
@@ -135,7 +135,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
             ret.Add("Name may not be blank");
         if (p.Size <= 0)
             ret.Add("Diameter must be > 0");
-        if (p.Resolve(RecordService.Instance).Error is { } error)
+        if (p.Resolve(AtomService.Instance).Error is { } error)
             ret.Add(error);
 
         return ret;

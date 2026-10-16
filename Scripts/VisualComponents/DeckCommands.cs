@@ -10,7 +10,7 @@ using static VisualComponentBase;
 /// </summary>
 public static class DeckCommands
 {
-    public static readonly Command Shuffle = new RecordCommand<ComponentState>
+    public static readonly Command Shuffle = new AtomCommand<ComponentState>
     {
         Name = new("deck.shuffle"),
         Icon = CommandIcons.Shuffle,
@@ -20,7 +20,7 @@ public static class DeckCommands
         Effects = (R, cs, _) => cs.SelectMany(c => Shuffled(R, c)),
     };
 
-    public static readonly Command Draw = new RecordCommand<ComponentState>
+    public static readonly Command Draw = new AtomCommand<ComponentState>
     {
         Name = new("deck.draw"),
         Icon = CommandIcons.Draw,
@@ -34,7 +34,7 @@ public static class DeckCommands
         Effects = (R, cs, n) => cs.SelectMany(c => Drawn(R, c, n)),
     };
 
-    public static readonly Command Deal = new RecordCommand<ComponentState>
+    public static readonly Command Deal = new AtomCommand<ComponentState>
     {
         Name = new("deck.deal"),
         Icon = CommandIcons.Deal,
@@ -48,15 +48,15 @@ public static class DeckCommands
         Effects = (R, cs, n) => cs.SelectMany(c => Dealt(R, c, n)),
     };
 
-    private static bool IsDeck(IRecordReader R, ComponentState c) =>
+    private static bool IsDeck(IAtomReader R, ComponentState c) =>
         R.Kind(c) == VisualComponentType.Deck;
 
     // There's nothing to shuffle, draw or deal in an empty deck.
-    private static bool HasCards(IRecordReader R, ComponentState c) =>
+    private static bool HasCards(IAtomReader R, ComponentState c) =>
         IsDeck(R, c) && R.TokensOn(c).Count > 0;
 
     /// <summary>The deck's cards with their ZOrders shuffled among them.</summary>
-    private static IEnumerable<ComponentState> Shuffled(IRecordReader R, ComponentState deck)
+    private static IEnumerable<ComponentState> Shuffled(IAtomReader R, ComponentState deck)
     {
         var cards = R.TokensOn(deck);
         var orders = cards.Select(c => c.ZOrder).ToArray();
@@ -68,11 +68,7 @@ public static class DeckCommands
     /// The top <paramref name="count"/> cards drawn into the local player's hand when hands are on,
     /// otherwise splayed beside the deck. <see cref="int.MaxValue"/> draws them all.
     /// </summary>
-    private static IEnumerable<ComponentState> Drawn(
-        IRecordReader R,
-        ComponentState deck,
-        int count
-    )
+    private static IEnumerable<ComponentState> Drawn(IAtomReader R, ComponentState deck, int count)
     {
         var cards = R.TokensOn(deck).Take(count).ToList();
         var stamp = Snowport.Clock.Create();
@@ -106,7 +102,7 @@ public static class DeckCommands
     /// When the deck runs out, the last seats get fewer. With no seats, the local player draws instead.
     /// </summary>
     private static IEnumerable<ComponentState> Dealt(
-        IRecordReader R,
+        IAtomReader R,
         ComponentState deck,
         int countPerPlayer
     )
@@ -133,7 +129,7 @@ public static class DeckCommands
     /// The seats a deal goes to: every seat with a hand. Null when the project has no seats,
     /// so the local player draws instead.
     /// </summary>
-    private static List<int> DealSeats(IRecordReader R)
+    private static List<int> DealSeats(IAtomReader R)
     {
         var players = R.Get(ProjectGameSettings.Only).Players.Length;
         if (players == 0)

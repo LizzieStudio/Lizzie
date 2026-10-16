@@ -91,14 +91,14 @@ public partial class VcToken : VisualComponentBase
         RotationDegrees = new Vector3(RotationDegrees.X, RotationDegrees.Y, newZ);
     }
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
         Apply((PrintedParameters)parameters, R);
     }
 
-    /// <summary>Sizes and textures the token from its parameters and the records they reference.</summary>
-    private void Apply(PrintedParameters p, IRecordReader R)
+    /// <summary>Sizes and textures the token from its parameters and the atoms they reference.</summary>
+    private void Apply(PrintedParameters p, IAtomReader R)
     {
         if (p.Height <= 0)
             return;
@@ -316,12 +316,12 @@ public abstract record PrintedParameters : ComponentParameters
     /// <summary>
     /// How many cards there are. The max of both sides.
     /// </summary>
-    public int CardCount(IRecordReader R) => Math.Max(Front?.Count(R) ?? 0, Back?.Count(R) ?? 0);
+    public int CardCount(IAtomReader R) => Math.Max(Front?.Count(R) ?? 0, Back?.Count(R) ?? 0);
 
     /// <summary>
     /// Card <paramref name="n"/> of this prototype.
     /// </summary>
-    public PrototypeItemRef Card(int n, IRecordReader R) =>
+    public PrototypeItemRef Card(int n, IAtomReader R) =>
         new(n, Front?.Row(n, R) ?? SnowTag.Empty, Back?.Row(n, R) ?? SnowTag.Empty);
 }
 

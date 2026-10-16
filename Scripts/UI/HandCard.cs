@@ -26,7 +26,7 @@ public partial class HandCard : PanelContainer
         set
         {
             _reference = value;
-            RecordService.Instance.QueueSync(this);
+            AtomService.Instance.QueueSync(this);
         }
     }
 
@@ -56,8 +56,8 @@ public partial class HandCard : PanelContainer
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
-        RecordService.Instance.Watch(this, SyncSelection);
+        AtomService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, SyncSelection);
     }
 
     private void Sync(IWatchReader R)
@@ -87,7 +87,7 @@ public partial class HandCard : PanelContainer
     }
 
     /// <summary>
-    /// A held card's record turned <paramref name="angle"/> about Y, along with its offset from what holds it.
+    /// A held card's atom turned <paramref name="angle"/> about Y, along with its offset from what holds it.
     /// </summary>
     public static ComponentState Turned(ComponentState s, float angle) =>
         s with

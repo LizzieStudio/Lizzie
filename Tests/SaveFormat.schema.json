@@ -6,7 +6,7 @@
   "properties": {
     "id": true,
     "command": true,
-    "records": {
+    "writes": {
       "type": [
         "array",
         "null"
@@ -487,7 +487,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -564,7 +564,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -706,7 +706,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -753,7 +753,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -965,7 +965,7 @@
         "null"
       ],
       "items": {
-        "$ref": "#/properties/records/items"
+        "$ref": "#/properties/writes/items"
       }
     },
     "undo": {

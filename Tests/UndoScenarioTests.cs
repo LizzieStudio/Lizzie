@@ -12,9 +12,9 @@ public class UndoScenarioTests
     private const byte Me = 1;
     private const byte Other = 2;
 
-    private static bool Mine(byte author, Replicated _) => author == Me;
+    private static bool Mine(byte author, Atom _) => author == Me;
 
-    private static bool Others(byte author, Replicated _) => author != Me;
+    private static bool Others(byte author, Atom _) => author != Me;
 
     private readonly EventLog _log = new();
     private long _clock;
@@ -22,12 +22,12 @@ public class UndoScenarioTests
     private SnowportId NextId(byte source) => new(++_clock, source);
 
     /// <summary>
-    /// Records an action that writes <paramref name="record"/>, in <paramref name="group"/> if given,
+    /// Records an action that writes <paramref name="atom"/>, in <paramref name="group"/> if given,
     /// and closing it if <paramref name="close"/>.
     /// </summary>
     private SnowportId Act(
         byte source,
-        int record = 1,
+        int atom = 1,
         SnowportId group = default,
         bool close = false
     )
@@ -40,7 +40,7 @@ public class UndoScenarioTests
                 Id = id,
                 Group = group,
                 End = close ? GroupEnd.Closed : GroupEnd.None,
-                Records = [new Prototype { Id = record }],
+                Writes = [new Prototype { Id = atom }],
             }
         );
         return id;
@@ -89,17 +89,17 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records the first action of a group, which names it.</summary>
-    private SnowportId StartGroup(byte source, int record = 1)
+    private SnowportId StartGroup(byte source, int atom = 1)
     {
-        var id = Act(source, record);
+        var id = Act(source, atom);
         _log[id].Group = id;
         return id;
     }
 
-    private UndoFlag Undo(Func<byte, Replicated, bool> scope, byte source = Me) =>
+    private UndoFlag Undo(Func<byte, Atom, bool> scope, byte source = Me) =>
         Reversal(UndoLog.Undo(_log, source, scope), source);
 
-    private UndoFlag Redo(Func<byte, Replicated, bool> scope, byte source = Me) =>
+    private UndoFlag Redo(Func<byte, Atom, bool> scope, byte source = Me) =>
         Reversal(UndoLog.Redo(_log, source, scope), source);
 
     private UndoFlag Reversal(UndoFlag flag, byte source)
@@ -307,9 +307,9 @@ public class UndoScenarioTests
     [Fact]
     public void GroupUndoesTogether()
     {
-        var g = StartGroup(Me, record: 1);
-        var second = Act(Me, record: 2, group: g);
-        var third = Act(Me, record: 3, group: g, close: true);
+        var g = StartGroup(Me, atom: 1);
+        var second = Act(Me, atom: 2, group: g);
+        var third = Act(Me, atom: 3, group: g, close: true);
 
         Assert.Equal(g, Changed(Undo(Mine)));
         Assert.True(IsUndone(g));
@@ -321,10 +321,10 @@ public class UndoScenarioTests
     public void FlagCoversOnlyOlderEvents()
     {
         // A gesture is flagged while it's still going.
-        var g = StartGroup(Other, record: 1);
-        var before = Act(Other, record: 2, group: g);
+        var g = StartGroup(Other, atom: 1);
+        var before = Act(Other, atom: 2, group: g);
         var flag = AddFlag(g, Admin);
-        var after = Act(Other, record: 3, group: g);
+        var after = Act(Other, atom: 3, group: g);
 
         Assert.True(IsUndone(g));
         Assert.True(IsUndone(before));
@@ -392,7 +392,7 @@ public class UndoScenarioTests
     {
         var mine = Act(Me);
         Act(Other);
-        StartGroup(Me, record: 2); // my drag, still going
+        StartGroup(Me, atom: 2); // my drag, still going
 
         // Neither my undo nor another player's lands on the drag.
         Assert.Equal(mine, Changed(UndoLog.Undo(_log, Me, Mine)));
@@ -402,8 +402,8 @@ public class UndoScenarioTests
     [Fact]
     public void ClosingEventFinishesTheGesture()
     {
-        var g = StartGroup(Me, record: 1);
-        Act(Me, record: 2, group: g);
+        var g = StartGroup(Me, atom: 1);
+        Act(Me, atom: 2, group: g);
         Assert.Null(UndoLog.Undo(_log, Me, Mine));
 
         // Closed by someone else, the gesture is still the player's own.
@@ -418,8 +418,8 @@ public class UndoScenarioTests
     [Fact]
     public void GestureClosedByAnotherIsUndoneFromWhereItFinished()
     {
-        var g = StartGroup(Other, record: 1);
-        Act(Other, record: 2);
+        var g = StartGroup(Other, atom: 1);
+        Act(Other, atom: 2);
         CloseGroup(g, Me);
 
         Assert.Equal(g, Changed(Undo(Others)));
@@ -439,7 +439,7 @@ public class UndoScenarioTests
     {
         var a = Act(Me);
         Undo(Mine);
-        StartGroup(Me, record: 2);
+        StartGroup(Me, atom: 2);
 
         Assert.Equal(a, Changed(Redo(Mine)));
     }
@@ -447,11 +447,11 @@ public class UndoScenarioTests
     [Fact]
     public void AbandonedGestureIsCanceled()
     {
-        var open = StartGroup(Other, record: 1);
-        Act(Other, record: 2, group: open);
-        var finished = StartGroup(Other, record: 3);
-        Act(Other, record: 4, group: finished, close: true);
-        StartGroup(Me, record: 5);
+        var open = StartGroup(Other, atom: 1);
+        Act(Other, atom: 2, group: open);
+        var finished = StartGroup(Other, atom: 3);
+        Act(Other, atom: 4, group: finished, close: true);
+        StartGroup(Me, atom: 5);
 
         Assert.Equal([open], UndoLog.OpenGroups(_log, Other));
 
@@ -466,8 +466,8 @@ public class UndoScenarioTests
     [Fact]
     public void CanceledGestureNeverHappened()
     {
-        var g = StartGroup(Me, record: 1);
-        var move = Act(Me, record: 2, group: g);
+        var g = StartGroup(Me, atom: 1);
+        var move = Act(Me, atom: 2, group: g);
         Assert.True(UndoLog.IsOpen(_log, g));
 
         var cancel = CancelGroup(g, Me);
@@ -476,7 +476,7 @@ public class UndoScenarioTests
         Assert.True(IsUndone(g));
         Assert.True(IsUndone(move));
         Assert.True(IsUndone(cancel.Id));
-        // What the gesture wrote goes back, so its records are recomputed.
+        // What the gesture wrote goes back, so its atoms are recomputed.
         Assert.Equal([g, move, cancel.Id], Changes(cancel));
     }
 
@@ -484,7 +484,7 @@ public class UndoScenarioTests
     public void UndoPassesOverACanceledGesture()
     {
         var a = Act(Me);
-        var g = StartGroup(Me, record: 2);
+        var g = StartGroup(Me, atom: 2);
         CancelGroup(g, Me);
 
         Assert.Equal(a, Changed(Undo(Mine)));
@@ -497,7 +497,7 @@ public class UndoScenarioTests
     {
         var a = Act(Me);
         Undo(Mine);
-        var g = StartGroup(Me, record: 2);
+        var g = StartGroup(Me, atom: 2);
         CancelGroup(g, Me);
 
         Assert.Equal(a, Changed(Redo(Mine)));
@@ -510,7 +510,7 @@ public class UndoScenarioTests
     {
         var a = Act(Me);
         Undo(Mine);
-        var g = StartGroup(Me, record: 2);
+        var g = StartGroup(Me, atom: 2);
         CancelGroup(g, Me);
 
         Assert.Null(Undo(Mine));
@@ -520,8 +520,8 @@ public class UndoScenarioTests
     [Fact]
     public void CancelAfterCloseDoesNothing()
     {
-        var g = StartGroup(Me, record: 1);
-        Act(Me, record: 2, group: g, close: true);
+        var g = StartGroup(Me, atom: 1);
+        Act(Me, atom: 2, group: g, close: true);
         CancelGroup(g, Me);
 
         Assert.False(IsUndone(g));
@@ -531,8 +531,8 @@ public class UndoScenarioTests
     [Fact]
     public void CancelKeepsOthersLaterWrites()
     {
-        var g = StartGroup(Me, record: 1);
-        var theirs = Act(Other, record: 1);
+        var g = StartGroup(Me, atom: 1);
+        var theirs = Act(Other, atom: 1);
         CancelGroup(g, Me);
 
         Assert.True(IsUndone(g));
@@ -603,33 +603,33 @@ public class UndoScenarioTests
     [Fact]
     public void LoadedSaveIsNeverUndone()
     {
-        var save = Act(Admin, record: 1);
+        var save = Act(Admin, atom: 1);
 
         Assert.Null(Undo(Mine));
         Assert.Null(Undo(Others));
         Assert.Null(Undo((_, _) => true, source: Other));
 
         // Walking back through my own history stops before it.
-        var mine = Act(Me, record: 2);
+        var mine = Act(Me, atom: 2);
         Assert.Equal(mine, Changed(Undo(Mine)));
         Assert.Null(Undo(Mine));
         Assert.False(IsUndone(save));
     }
 
-    /// <summary>Undo This on a record no one has changed since the save loaded has nothing to undo.</summary>
+    /// <summary>Undo This on an atom no one has changed since the save loaded has nothing to undo.</summary>
     [Fact]
-    public void UntouchedRecordHasNothingToUndo()
+    public void UntouchedAtomHasNothingToUndo()
     {
-        Act(Admin, record: 1);
+        Act(Admin, atom: 1);
 
         Assert.Null(Undo((_, r) => r is Prototype p && p.Id == 1));
     }
 
-    /// <summary>An unset is in scope when what it unsets is, so Undo This brings an unset record back.</summary>
+    /// <summary>An unset is in scope when what it unsets is, so Undo This brings an unset atom back.</summary>
     [Fact]
     public void UnsetIsInTheScopeOfWhatItUnsets()
     {
-        Act(Admin, record: 1);
+        Act(Admin, atom: 1);
         var id = NextId(Me);
         _log.Add(id, new TableEvent { Id = id, Unsets = [new Prototype { Id = 1 }] });
 
@@ -642,7 +642,7 @@ public class UndoScenarioTests
     {
         var a = Act(Me);
         Undo(Mine);
-        Act(Admin, record: 2);
+        Act(Admin, atom: 2);
 
         Assert.NotNull(Redo((_, _) => true));
         Assert.False(IsUndone(a));

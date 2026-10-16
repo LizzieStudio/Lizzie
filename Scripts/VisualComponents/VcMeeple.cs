@@ -13,7 +13,7 @@ public partial class VcMeeple : VisualComponentBase
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
     }
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
         var p = (MeepleParameters)parameters;

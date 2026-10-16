@@ -9,7 +9,7 @@ public partial class TemplateSelector : OptionButton
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     public override void _Ready()
@@ -26,7 +26,7 @@ public partial class TemplateSelector : OptionButton
         set
         {
             _shows = value;
-            RecordService.Instance.QueueSync(this);
+            AtomService.Instance.QueueSync(this);
         }
     }
 

@@ -88,7 +88,7 @@ public partial class TemplateCreator : Window
     // Called when the node enters the scene tree for the first time.
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)
@@ -372,7 +372,7 @@ public partial class TemplateCreator : Window
         if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
-        var switched = RecordService.Instance.Get(
+        var switched = AtomService.Instance.Get(
             Template.ById,
             _templateNameSelector.GetItemId((int)index)
         );
@@ -397,7 +397,7 @@ public partial class TemplateCreator : Window
                     .ToImmutableArray(),
             }
         );
-        RecordService.Instance.Write(_currentTemplate);
+        AtomService.Instance.Write(_currentTemplate);
 
         _hasUnsavedChanges = false;
     }
@@ -1169,7 +1169,7 @@ public partial class TemplateCreator : Window
             Height = inches.Height,
         };
 
-        RecordService.Instance.Write(t);
+        AtomService.Instance.Write(t);
         CurrentTemplate = t;
 
         _newTemplateName.Clear();
@@ -1181,7 +1181,7 @@ public partial class TemplateCreator : Window
 
     #region Template management
 
-    private void LoadTemplateNameSelector(IRecordReader R)
+    private void LoadTemplateNameSelector(IAtomReader R)
     {
         _templateNameSelector.Clear();
 
@@ -1213,7 +1213,7 @@ public partial class TemplateCreator : Window
 
     private void UpdateProject()
     {
-        LoadTemplateNameSelector(RecordService.Instance);
+        LoadTemplateNameSelector(AtomService.Instance);
 
         if (_templateNameSelector.ItemCount == 0)
         {
@@ -1222,7 +1222,7 @@ public partial class TemplateCreator : Window
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = RecordService.Instance.Get(
+        CurrentTemplate = AtomService.Instance.Get(
             Template.ById,
             _templateNameSelector.GetItemId(0)
         );
@@ -1596,24 +1596,24 @@ public partial class TemplateCreator : Window
     #region Datasets
 
     private void ChangePage(object sender, ItemSelectedEventArgs e) =>
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
 
     //Different dataset has been selected by the user
     private void OnDatasetChanged(SnowTag datasetRef)
     {
         EditCurrentTemplate(t => t with { DataSet = datasetRef });
         _pageControl.CurrentItem = 0;
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
     }
 
     private void MapDataset()
     {
         _dataSetSelector.SelectedDataSet = CurrentTemplate.DataSet;
         _pageControl.CurrentItem = 0;
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
     }
 
-    private void SyncDataset(IRecordReader R)
+    private void SyncDataset(IAtomReader R)
     {
         _updateRequired = true;
 

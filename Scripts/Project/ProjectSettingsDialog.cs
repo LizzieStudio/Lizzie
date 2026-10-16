@@ -77,7 +77,7 @@ public partial class ProjectSettingsDialog : Window
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)
@@ -232,16 +232,16 @@ public partial class ProjectSettingsDialog : Window
             return;
         }
 
-        RecordService.Instance.Write(ReadUi());
+        AtomService.Instance.Write(ReadUi());
         OnClosePressed();
     }
 
     /// <summary>
-    /// Reads every widget into a fresh settings record.
+    /// Reads every widget into a fresh settings atom.
     /// </summary>
     private ProjectGameSettings ReadUi()
     {
-        var current = RecordService.Instance.Get(ProjectGameSettings.Only);
+        var current = AtomService.Instance.Get(ProjectGameSettings.Only);
         return current with
         {
             StartIn2D = _2dToggle.ButtonPressed,

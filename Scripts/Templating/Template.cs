@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
 [JsonName("Template")]
-public record Template : Replicated
+public record Template : Atom
 {
     public static readonly Id<Template, SnowTag> ById = new(r => r.Id);
 

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 
 [JsonName("Prototype")]
-public record Prototype : Replicated
+public record Prototype : Atom
 {
     public static readonly Id<Prototype, SnowTag> ById = new(r => r.Id);
 

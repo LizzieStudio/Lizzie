@@ -5,20 +5,20 @@ using Godot;
 using Lizzie.Replication.Machinery;
 
 /// <summary>
-/// <para>The project's records, worked out from the event log.</para>
+/// <para>The project's atoms, worked out from the event log.</para>
 ///
 /// <para>
-/// Read them through its <see cref="IRecordReader"/>, and <see cref="Watch"/> to rerun code when what it read changes.
-/// Each record type gets its store the first time it's read or written, whether the
+/// Read them through its <see cref="IAtomReader"/>, and <see cref="Watch"/> to rerun code when what it read changes.
+/// Each atom type gets its store the first time it's read or written, whether the
 /// write comes from this player, another player, or a loaded save.
 /// </para>
 /// </summary>
-public partial class RecordService : Node, IRecordReader, IRecordServiceMachinery
+public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
 {
-    public static RecordService Instance { get; private set; }
+    public static AtomService Instance { get; private set; }
 
-    // Each record type's store, made on first use.
-    private readonly Dictionary<Type, IReplicatedStore> _stores = new();
+    // Each atom type's store, made on first use.
+    private readonly Dictionary<Type, IAtomStore> _stores = new();
 
     private readonly HashSet<Watcher> _watchers = new();
 
@@ -62,7 +62,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     {
         var sync = EventSynchronizer.Instance;
         var changed = UndoLog.Changes(sync.Log, e).ToList();
-        var types = changed.SelectMany(c => c.Records.Concat(c.Unsets).Select(r => r.GetType()));
+        var types = changed.SelectMany(c => c.Writes.Concat(c.Unsets).Select(r => r.GetType()));
         foreach (var type in types)
             if (!_stores.ContainsKey(type))
                 AddStore(NewStore(type));
@@ -74,37 +74,37 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
             ScheduleForListeners(e);
     }
 
-    /// <summary>A new, empty store for records of <paramref name="type"/>, held by the type's <see cref="AtomId"/>.</summary>
-    private static IReplicatedStore NewStore(Type type)
+    /// <summary>A new, empty store for atoms of <paramref name="type"/>, held by the type's <see cref="IdQuery"/>.</summary>
+    private static IAtomStore NewStore(Type type)
     {
-        var byId = AtomId.For(type);
-        return (IReplicatedStore)
+        var byId = IdQuery.For(type);
+        return (IAtomStore)
             Activator.CreateInstance(typeof(AtomStore<,>).MakeGenericType(type, byId.IdType), byId);
     }
 
-    private IReplicatedStore AddStore(IReplicatedStore store)
+    private IAtomStore AddStore(IAtomStore store)
     {
-        _stores.Add(store.RecordType, store);
-        store.Changed += OnRecordsChanged;
+        _stores.Add(store.AtomType, store);
+        store.Changed += OnAtomsChanged;
         return store;
     }
 
     /// <summary>The store for <typeparamref name="T"/>, made empty if nothing has read or written one yet.</summary>
     private IAtomStore<T> StoreOf<T>()
-        where T : Replicated => (IAtomStore<T>)StoreOf(typeof(T));
+        where T : Atom => (IAtomStore<T>)StoreOf(typeof(T));
 
-    private IReplicatedStore StoreOf(Type type) =>
+    private IAtomStore StoreOf(Type type) =>
         _stores.GetValueOrDefault(type) ?? AddStore(NewStore(type));
 
     /// <inheritdoc/>
-    void IRecordServiceMachinery.Clear()
+    void IAtomServiceMachinery.Clear()
     {
         foreach (var store in _stores.Values)
             store.Clear();
     }
 
     /// <inheritdoc/>
-    void IRecordServiceMachinery.FlushBulkLoad()
+    void IAtomServiceMachinery.FlushBulkLoad()
     {
         foreach (var store in _stores.Values)
             store.FlushBulkLoad();
@@ -113,12 +113,12 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     #region Writing
 
     /// <summary>
-    /// <para>Writes records to all connected clients, including locally.</para>
+    /// <para>Writes atoms to all connected clients, including locally.</para>
     /// <para>
-    /// Records are identified by their type's <see cref="Id{T, I}"/>.
-    /// If you Write a record with a new id, it is created on all clients.
-    /// If you Write a record using an existing id, that record is replaced with the new one.
-    /// Write a <see cref="RecordReaderExtensions.Unset"/> to unset one.
+    /// Atoms are identified by their type's <see cref="Id{T, I}"/>.
+    /// If you Write an atom with a new id, it is created on all clients.
+    /// If you Write an atom using an existing id, that atom is replaced with the new one.
+    /// Write a <see cref="AtomReaderExtensions.Unset"/> to unset one.
     /// </para>
     /// <para>
     /// The <paramref name="changes"/> passed here are bundled in one event which is undone or redone together.
@@ -137,16 +137,16 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
 
     /// <summary>
     /// Calls <paramref name="change"/> with the current version of the atom with <paramref name="id"/>,
-    /// then passes the result to <see cref="Write"/>. Does nothing if the record is missing or unset.
+    /// then passes the result to <see cref="Write"/>. Does nothing if the atom is missing or unset.
     ///
     /// <inheritdoc cref="Write"/>
     /// </summary>
     public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
-        where T : Replicated
+        where T : Atom
         where I : IComparable<I>
     {
-        if (Get(byId, id) is { } record)
-            Write(change(record));
+        if (Get(byId, id) is { } atom)
+            Write(change(atom));
     }
 
     /// <summary>
@@ -257,13 +257,13 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     private static void Submit(TableEvent e) => EventSynchronizer.Instance?.Submit(e);
 
     /// <inheritdoc/>
-    IEnumerable<Replicated> IRecordServiceMachinery.SavedAtoms() =>
+    IEnumerable<Atom> IAtomServiceMachinery.SavedAtoms() =>
         _stores.Values.SelectMany(s => s.SavedAtoms());
 
     #endregion
 
     /// <summary>
-    /// Runs <paramref name="sync"/> at the end of the frame, then again whenever a record it
+    /// Runs <paramref name="sync"/> at the end of the frame, then again whenever an atom it
     /// read changes, until <paramref name="owner"/> leaves the tree. Call from _EnterTree.
     /// The first run is deferred so callers can configure the node after adding it.
     /// </summary>
@@ -325,13 +325,13 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         QueueFlush();
     }
 
-    private void OnRecordsChanged(IReadOnlyList<Touch> touched)
+    private void OnAtomsChanged(IReadOnlyList<Touch> touched)
     {
         foreach (var watcher in _dependencies.Affected(touched))
             MarkDirty(watcher);
     }
 
-    void IRecordServiceMachinery.MarkDirty(Watcher watcher) => MarkDirty(watcher);
+    void IAtomServiceMachinery.MarkDirty(Watcher watcher) => MarkDirty(watcher);
 
     private void MarkDirty(Watcher watcher)
     {
@@ -352,7 +352,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
 
     /// <summary>
     /// Runs the dirty watchers, parents before their descendants, so a parent removes or
-    /// replaces a child before the child can sync a record that no longer fits it.
+    /// replaces a child before the child can sync an atom that no longer fits it.
     /// Watchers at the same depth run in the order they were registered.
     /// Then tells the listeners about the events, in the order they arrived.
     /// </summary>
@@ -392,26 +392,26 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         return depth;
     }
 
-    #region IRecordReader
+    #region IAtomReader
 
-    public Replicated Get(AtomRef atom) => StoreOf(atom.Type).Find(atom.Id).Value;
+    public Atom Get(AtomRef atom) => StoreOf(atom.Type).Find(atom.Id).Value;
 
-    public SnowportId Version(Replicated atom) =>
-        StoreOf(atom.GetType()).Find(AtomId.For(atom.GetType()).Of(atom)).LastUpdate;
+    public SnowportId Version(Atom atom) =>
+        StoreOf(atom.GetType()).Find(IdQuery.For(atom.GetType()).Of(atom)).LastUpdate;
 
     public T Get<T, I>(Id<T, I> byId, I id)
-        where T : Replicated
+        where T : Atom
         where I : IComparable<I> => (T)StoreOf(byId).Find(id).Value;
 
     private AtomStore<T, I> StoreOf<T, I>(Id<T, I> byId)
-        where T : Replicated
+        where T : Atom
         where I : IComparable<I> => (AtomStore<T, I>)StoreOf<T>();
 
     public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
-        where T : Replicated => StoreOf<T>().InGroup(group, key);
+        where T : Atom => StoreOf<T>().InGroup(group, key);
 
     public int Count<T, G>(Group<T, G> group, G key)
-        where T : Replicated => StoreOf<T>().Count(group, key);
+        where T : Atom => StoreOf<T>().Count(group, key);
 
     #endregion
 }

@@ -11,7 +11,7 @@ using Godot;
 /// </summary>
 [NotSaved]
 [JsonName("Selection")]
-public record Selection : Replicated
+public record Selection : Atom
 {
     public static readonly Id<Selection, SnowTag> ById = new(r => r.Id);
 
@@ -59,7 +59,7 @@ public static class LocalSelection
     /// </para>
     /// </summary>
     public static IReadOnlyDictionary<AtomRef, Color> SelectionColors(
-        this IRecordReader R,
+        this IAtomReader R,
         SnowTag within
     )
     {
@@ -81,15 +81,15 @@ public static class LocalSelection
     /// The local player's selection <paramref name="within"/> a dataset, or on the table by default.
     /// Null if they have not yet selected anything there.
     /// </summary>
-    public static Selection GetSelection(this IRecordReader R, SnowTag within = default) =>
+    public static Selection GetSelection(this IAtomReader R, SnowTag within = default) =>
         R.Get(Selection.ByWithin, within).FirstOrDefault(s => s.Player == Snowport.Clock.source);
 
     /// <summary>
     /// The ids of the atoms of <paramref name="byId"/>'s type the local player has selected on the table.
     /// </summary>
     /// <param name="byId">Names the atom type and its id type, which the call infers from it.</param>
-    public static IEnumerable<I> GetSelection<T, I>(this IRecordReader R, Id<T, I> byId)
-        where T : Replicated
+    public static IEnumerable<I> GetSelection<T, I>(this IAtomReader R, Id<T, I> byId)
+        where T : Atom
         where I : IComparable<I> =>
         R.GetSelection()?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
 
@@ -98,20 +98,20 @@ public static class LocalSelection
     /// keeping everything else they have selected there.
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
-    public static void SetSelection<T, I>(this IRecordReader R, Id<T, I> byId, IEnumerable<I> ids)
-        where T : Replicated
-        where I : IComparable<I> => RecordService.Instance.Write(R.NewSelection(byId, ids));
+    public static void SetSelection<T, I>(this IAtomReader R, Id<T, I> byId, IEnumerable<I> ids)
+        where T : Atom
+        where I : IComparable<I> => AtomService.Instance.Write(R.NewSelection(byId, ids));
 
     /// <summary>
-    /// The record that <see cref="SetSelection{T, I}(IRecordReader, Id{T, I}, IEnumerable{I})"/> writes,
+    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Id{T, I}, IEnumerable{I})"/> writes,
     /// or none when the selection wouldn't change.
     /// </summary>
     public static Selection[] NewSelection<T, I>(
-        this IRecordReader R,
+        this IAtomReader R,
         Id<T, I> byId,
         IEnumerable<I> ids
     )
-        where T : Replicated
+        where T : Atom
         where I : IComparable<I>
     {
         var old = R.GetSelection()?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
@@ -123,20 +123,20 @@ public static class LocalSelection
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
     public static void SetSelection(
-        this IRecordReader R,
+        this IAtomReader R,
         IEnumerable<AtomRef> targets,
         SnowTag within = default
     )
     {
-        RecordService.Instance.Write(R.NewSelection(targets, within));
+        AtomService.Instance.Write(R.NewSelection(targets, within));
     }
 
     /// <summary>
-    /// The record that will set the selection to <paramref name="targets"/>,
+    /// The atom that will set the selection to <paramref name="targets"/>,
     /// or none when the selection wouldn't change.
     /// </summary>
     private static Selection[] NewSelection(
-        this IRecordReader R,
+        this IAtomReader R,
         IEnumerable<AtomRef> targets,
         SnowTag within = default
     )
@@ -146,7 +146,7 @@ public static class LocalSelection
         if (next.SetEquals(current?.Targets ?? ImmutableHashSet<AtomRef>.Empty))
             return [];
 
-        var record =
+        var atom =
             current
             ?? new Selection
             {
@@ -154,6 +154,6 @@ public static class LocalSelection
                 Player = Snowport.Clock.source,
                 Within = within,
             };
-        return [record with { Targets = next }];
+        return [atom with { Targets = next }];
     }
 }

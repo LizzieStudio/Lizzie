@@ -19,7 +19,7 @@ public sealed class FaceSet
     private readonly CancellationTokenSource _cancel = new();
     private int _holders;
 
-    // Draws the faces of a set made from records.
+    // Draws the faces of a set made from atoms.
     private FaceDrawing _drawing;
 
     // The image whose frames a set made from an image shows, and the faces cut so far.
@@ -36,7 +36,7 @@ public sealed class FaceSet
     public static FaceSet Acquire(
         string key,
         TextureFactory factory,
-        Func<IRecordReader, Drawing> source
+        Func<IAtomReader, Drawing> source
     ) =>
         Hold(
             key,

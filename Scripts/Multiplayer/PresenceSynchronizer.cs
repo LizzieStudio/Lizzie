@@ -52,7 +52,7 @@ public partial class PresenceSynchronizer : Node
 
     #region Seats
 
-    private static RecordService R => RecordService.Instance;
+    private static AtomService R => AtomService.Instance;
 
     /// <summary>
     /// Asks for a seat for the local player, or <see cref="SeatingReader.NoSeat"/> to observe.

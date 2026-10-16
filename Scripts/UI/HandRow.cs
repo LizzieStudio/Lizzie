@@ -35,7 +35,7 @@ public partial class HandRow : Control
             if (_seat == value)
                 return;
             _seat = value;
-            RecordService.Instance.QueueSync(this);
+            AtomService.Instance.QueueSync(this);
         }
     }
 
@@ -53,7 +53,7 @@ public partial class HandRow : Control
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     /// <summary>
@@ -99,11 +99,11 @@ public partial class HandRow : Control
         bool hovered = Under(GetViewport()) == this;
         // The widths of the cards being dragged, which the row opens a gap for, side by side.
         List<float> held = GetViewport().GuiGetDragData().As<GodotObject>() is HeldDrag drag
-            ? drag.Cards(RecordService.Instance)
+            ? drag.Cards(AtomService.Instance)
                 .Select(s =>
                     CardSize(
                         TableSize(
-                            RecordService.Instance.Get(Prototype.ById, s.PrototypeRef)?.Parameters
+                            AtomService.Instance.Get(Prototype.ById, s.PrototypeRef)?.Parameters
                                 as PrintedParameters
                         ),
                         HandCard.ScreenRotation(s.Rotation.Y)
@@ -124,7 +124,7 @@ public partial class HandRow : Control
 
     // Held cards drop in where they're let go.
     public override bool _CanDropData(Vector2 at, Variant data) =>
-        data.As<GodotObject>() is HeldDrag held && held.Cards(RecordService.Instance).Any();
+        data.As<GodotObject>() is HeldDrag held && held.Cards(AtomService.Instance).Any();
 
     public override void _DropData(Vector2 at, Variant data) =>
         ProjectService.Instance.GameObjects.DropInHand(

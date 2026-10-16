@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using Godot;
 
 /// <summary>
-/// Holds a node for every component record in the current game.
-/// Creates and removes the nodes, who then render their record.
+/// Holds a node for every component atom in the current game.
+/// Creates and removes the nodes, who then render their atom.
 /// </summary>
 public partial class Table : Node3D
 {
@@ -30,7 +30,7 @@ public partial class Table : Node3D
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     public Table()
@@ -47,11 +47,11 @@ public partial class Table : Node3D
         };
     }
 
-    /// <summary>The node for a component record, or null.</summary>
+    /// <summary>The node for a component atom, or null.</summary>
     public VisualComponentBase GetComponent(SnowTag reference) =>
         _components.GetValueOrDefault(reference);
 
-    /// <summary>Called by components after they apply their record.</summary>
+    /// <summary>Called by components after they apply their atom.</summary>
     public void NotifyChanged() => Changed?.Invoke();
 
     // The scene a component's node is made from, and what its node can't change without being remade.

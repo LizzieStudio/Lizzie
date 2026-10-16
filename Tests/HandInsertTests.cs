@@ -20,7 +20,7 @@ public class HandInsertTests
 
     private static ComponentState Card(int id) => new() { Id = new SnowTag(id) };
 
-    // The hand's order once the records are applied.
+    // The hand's order once the atoms are applied.
     private static int[] Order(List<ComponentState> hand, IEnumerable<ComponentState> written)
     {
         var all = hand.ToDictionary(c => c.Id);

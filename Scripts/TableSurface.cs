@@ -14,7 +14,7 @@ public partial class TableSurface : StaticBody3D
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)

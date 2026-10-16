@@ -9,13 +9,9 @@ public class SideParametersTests
     private static QuickSide Quick(params string[] values) =>
         new() { Suits = [.. Array.ConvertAll(values, v => new QuickSuit { Values = v })] };
 
-    private static T RoundTrip<T>(T record)
-        where T : Replicated =>
-        (T)
-            JsonSerializer.Deserialize<Replicated>(
-                JsonSerializer.Serialize<Replicated>(record, Options),
-                Options
-            );
+    private static T RoundTrip<T>(T atom)
+        where T : Atom =>
+        (T)JsonSerializer.Deserialize<Atom>(JsonSerializer.Serialize<Atom>(atom, Options), Options);
 
     /// <summary>
     /// The game's options, with colors as plain numbers, since its color converter calls the engine.

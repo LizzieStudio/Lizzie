@@ -14,12 +14,12 @@ public abstract record SideParameters
     /// <summary>
     /// How many cards this side shows before it repeats.
     /// </summary>
-    public abstract int Count(IRecordReader R);
+    public abstract int Count(IAtomReader R);
 
     /// <summary>
     /// The dataset row card <paramref name="n"/> shows, for a side drawn from a dataset.
     /// </summary>
-    public virtual SnowTag Row(int n, IRecordReader R) => SnowTag.Empty;
+    public virtual SnowTag Row(int n, IAtomReader R) => SnowTag.Empty;
 }
 
 /// <summary>
@@ -51,7 +51,7 @@ public sealed record QuickSide : SideParameters
             })
             .ToList();
 
-    public override int Count(IRecordReader R) => Cards().Count;
+    public override int Count(IAtomReader R) => Cards().Count;
 }
 
 /// <summary>
@@ -96,16 +96,16 @@ public sealed record ImageSide : SideParameters
     /// <summary>
     /// The frame values, fitted to <paramref name="count"/> when there is one.
     /// </summary>
-    public int[] FrameValues(IRecordReader R, int? count = null)
+    public int[] FrameValues(IAtomReader R, int? count = null)
     {
         Layout(R).TryParse(Frames, out var values, count);
         return values;
     }
 
-    public GridLayout Layout(IRecordReader R) =>
+    public GridLayout Layout(IAtomReader R) =>
         R.Get(ImageAsset.ById, Image)?.Layout ?? GridLayout.Single;
 
-    public override int Count(IRecordReader R) => FrameValues(R).Length;
+    public override int Count(IAtomReader R) => FrameValues(R).Length;
 }
 
 /// <summary>
@@ -117,9 +117,9 @@ public sealed record TemplateSide : SideParameters
     public SnowTag Template { get; init; }
     public SnowTag Dataset { get; init; }
 
-    public override int Count(IRecordReader R) => R.GetRows(Dataset).Count;
+    public override int Count(IAtomReader R) => R.GetRows(Dataset).Count;
 
-    public override SnowTag Row(int n, IRecordReader R)
+    public override SnowTag Row(int n, IAtomReader R)
     {
         var rows = R.GetRows(Dataset);
         return rows.Count == 0 ? SnowTag.Empty : rows[n % rows.Count].Id;

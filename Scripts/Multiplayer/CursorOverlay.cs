@@ -11,7 +11,7 @@ public partial class CursorOverlay : Control
     // The cursor's height as a fraction of the screen height.
     private const float CursorHeight = 0.02f;
 
-    private static RecordService R => RecordService.Instance;
+    private static AtomService R => AtomService.Instance;
 
     public override void _Process(double delta) => QueueRedraw();
 

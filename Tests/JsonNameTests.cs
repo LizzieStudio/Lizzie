@@ -6,13 +6,13 @@ using System.Text.Json.Serialization;
 using Xunit;
 
 /// <summary>
-/// Every type that's saved or sent under a polymorphic base, like every <see cref="Replicated"/> record,
+/// Every type that's saved or sent under a polymorphic base, like every <see cref="Atom"/>,
 /// needs a <see cref="JsonNameAttribute"/> of its own.
 /// What the names are, and that they never change, is checked by <see cref="SaveFormatTests"/>.
 /// </summary>
 public class JsonNameTests
 {
-    private static readonly Assembly Game = typeof(Replicated).Assembly;
+    private static readonly Assembly Game = typeof(Atom).Assembly;
 
     private static IEnumerable<Type> Classes =>
         Game.GetTypes().Where(t => t.IsClass && !t.IsAbstract && !t.ContainsGenericParameters);

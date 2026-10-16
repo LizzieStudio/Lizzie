@@ -9,7 +9,7 @@ namespace Lizzie.Replication.Machinery;
 /// and any groups that have been read.
 /// </summary>
 public sealed class AtomStore<T, I> : IAtomStore<T>
-    where T : Replicated
+    where T : Atom
     where I : IComparable<I>
 {
     private static readonly bool Saved = !typeof(T).IsDefined(typeof(NotSavedAttribute), true);
@@ -26,7 +26,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
 
     public AtomStore(Id<T, I> byId) => _byId = byId;
 
-    public Type RecordType => typeof(T);
+    public Type AtomType => typeof(T);
 
     public event Action<IReadOnlyList<Touch>> Changed;
 
@@ -35,7 +35,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
     /// </summary>
     public AtomEntry Find(I id) => _atoms.GetValueOrDefault(id);
 
-    AtomEntry IReplicatedStore.Find(object id) => id is I typed ? Find(typed) : default;
+    AtomEntry IAtomStore.Find(object id) => id is I typed ? Find(typed) : default;
 
     public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) =>
         key is null ? [] : IndexOf(group).Atoms(key);
@@ -57,7 +57,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
     public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
     {
         var ids = changed
-            .SelectMany(c => c.Records.Concat(c.Unsets))
+            .SelectMany(c => c.Writes.Concat(c.Unsets))
             .OfType<T>()
             .Select(_byId.Of)
             .ToHashSet();
@@ -72,8 +72,8 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
             // unsets first, since an unset beats a write in the same event
             foreach (var atom in e.Unsets.OfType<T>())
                 undecided.Remove(_byId.Of(atom));
-            for (int j = e.Records.Length - 1; j >= 0; j--)
-                if (e.Records[j] is T atom && undecided.Remove(_byId.Of(atom)))
+            for (int j = e.Writes.Length - 1; j >= 0; j--)
+                if (e.Writes[j] is T atom && undecided.Remove(_byId.Of(atom)))
                     latest[_byId.Of(atom)] = new AtomEntry(atom, e.Id);
             if (undecided.Count == 0)
                 break;
@@ -154,7 +154,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
             yield return touch;
     }
 
-    public IEnumerable<Replicated> SavedAtoms() => Saved ? _atoms.Values.Select(e => e.Value) : [];
+    public IEnumerable<Atom> SavedAtoms() => Saved ? _atoms.Values.Select(e => e.Value) : [];
 
     private interface IIndex
     {

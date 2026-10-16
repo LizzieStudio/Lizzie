@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
 /// <summary>
-/// <para>The name a type is saved and sent under, beneath its <c>[JsonPolymorphic]</c> base, like <see cref="Replicated"/>.</para>
+/// <para>The name a type is saved and sent under, beneath its <c>[JsonPolymorphic]</c> base, like <see cref="Atom"/>.</para>
 /// <para>
 /// Every class under such a base needs one. <see cref="ThrowIfAnyUnnamed"/> reports any that don't at startup,
 /// and <c>JsonNameTests</c> in the tests.

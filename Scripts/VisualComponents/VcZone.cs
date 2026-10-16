@@ -50,7 +50,7 @@ public partial class VcZone : VisualComponentBase
             _handleCollision.Position = corner;
     }
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
         var p = (ZoneParameters)parameters;

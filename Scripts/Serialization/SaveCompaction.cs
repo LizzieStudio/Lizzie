@@ -23,11 +23,11 @@ public static class SaveCompaction
     /// An atom no query lists, like a deleted <see cref="Prototype"/>, stays only while a kept atom refers to it.
     /// </para>
     /// </summary>
-    public static Replicated[] Collect(IEnumerable<Replicated> atoms)
+    public static Atom[] Collect(IEnumerable<Atom> atoms)
     {
         var waiting = atoms.Select(a => (Atom: a, Keys: Keys(a))).ToList();
         var found = new HashSet<SnowTag>();
-        var kept = new List<Replicated>();
+        var kept = new List<Atom>();
 
         // Each pass keeps what the last one's atoms reached.
         bool grew = true;
@@ -47,17 +47,14 @@ public static class SaveCompaction
         }
 
         return kept.OrderBy(a => a.GetType().Name, StringComparer.Ordinal)
-            .ThenBy(
-                a => a,
-                Comparer<Replicated>.Create((a, b) => AtomId.For(a.GetType()).Compare(a, b))
-            )
+            .ThenBy(a => a, Comparer<Atom>.Create((a, b) => IdQuery.For(a.GetType()).Compare(a, b)))
             .ToArray();
     }
 
     /// <summary>
     /// The SnowTags in each id and group key that could keep <paramref name="atom"/>.
     /// </summary>
-    private static List<HashSet<SnowTag>> Keys(Replicated atom)
+    private static List<HashSet<SnowTag>> Keys(Atom atom)
     {
         var keys = new List<HashSet<SnowTag>>();
         foreach (var query in Query.DeclaredOn(atom.GetType()))

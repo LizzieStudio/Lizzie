@@ -109,13 +109,13 @@ public sealed class NaiveUndo : IUndoApi
         return members.MaxBy(e => e.Id).End != GroupEnd.None;
     }
 
-    /// <summary>Whether any record the unit's events write is in scope, as done by the author.</summary>
+    /// <summary>Whether any atom the unit's events write is in scope, as done by the author.</summary>
     private static bool InScope(
         EventLog log,
         SnowportId unit,
         byte author,
-        Func<byte, Replicated, bool> scope
-    ) => Members(log, unit).Any(m => m.Records.Any(r => scope(author, r)));
+        Func<byte, Atom, bool> scope
+    ) => Members(log, unit).Any(m => m.Writes.Any(r => scope(author, r)));
 
     /// <summary>
     /// Whether Undo or Redo may act on the event: it isn't an admin event, the unit its entry
@@ -125,7 +125,7 @@ public sealed class NaiveUndo : IUndoApi
         EventLog log,
         TableEvent e,
         byte me,
-        Func<byte, Replicated, bool> scope
+        Func<byte, Atom, bool> scope
     )
     {
         if (e.IsAdmin)
@@ -150,7 +150,7 @@ public sealed class NaiveUndo : IUndoApi
     /// older undo reversals included, and the newest entry still in effect is reversed.
     /// A Redo reversal is never history: it cancels out with the Undo reversal it reversed.
     /// </summary>
-    public UndoFlag Undo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
+    public UndoFlag Undo(EventLog log, byte me, Func<byte, Atom, bool> scope)
     {
         bool pastLatestReversals = false;
         foreach (var e in NewestFirst(log))
@@ -199,7 +199,7 @@ public sealed class NaiveUndo : IUndoApi
     /// Redo reverses the player's newest Undo reversal still in effect, among their latest reversals.
     /// Anything else that has happened since leaves nothing to redo.
     /// </summary>
-    public UndoFlag Redo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
+    public UndoFlag Redo(EventLog log, byte me, Func<byte, Atom, bool> scope)
     {
         foreach (var e in NewestFirst(log))
         {

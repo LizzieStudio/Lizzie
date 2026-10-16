@@ -19,13 +19,13 @@ public static class PlayerHandService
     ) =>
         card with
         {
-            ContainerRef = RecordService.Instance.HandOf(seatIndex),
+            ContainerRef = AtomService.Instance.HandOf(seatIndex),
             Rotation = card.Rotation with { Y = 0 },
             ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
         };
 
     /// <summary>
-    /// The records that put <paramref name="cards"/> into a hand at <paramref name="index"/>, in their order.
+    /// The atoms that put <paramref name="cards"/> into a hand at <paramref name="index"/>, in their order.
     ///
     /// <para>
     /// The cards to the right are rewritten with a new ZOrder to make room.
@@ -61,7 +61,7 @@ public static class PlayerHandService
     /// Returns the cards in a given seat's hand, ordered by their ZOrder.
     /// Returns an empty list for observer seats.
     /// </summary>
-    public static IReadOnlyList<ComponentState> GetHand(IRecordReader R, int seatIndex)
+    public static IReadOnlyList<ComponentState> GetHand(IAtomReader R, int seatIndex)
     {
         var container = R.HandOf(seatIndex);
         if (container == SnowTag.Empty)

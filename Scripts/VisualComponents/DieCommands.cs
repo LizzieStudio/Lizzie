@@ -6,7 +6,7 @@ using static VisualComponentBase;
 /// <summary>Commands for dice.</summary>
 public static class DieCommands
 {
-    public static readonly Command Roll = new RecordCommand<ComponentState>
+    public static readonly Command Roll = new AtomCommand<ComponentState>
     {
         Name = new("die.roll"),
         Icon = CommandIcons.Die,
@@ -17,7 +17,7 @@ public static class DieCommands
         Effects = (R, cs, _) => cs.Select(c => Rolled(R, c)),
     };
 
-    public static readonly Command SetFace = new RecordCommand<ComponentState>
+    public static readonly Command SetFace = new AtomCommand<ComponentState>
     {
         Name = new("die.set_face"),
         Icon = CommandIcons.SetFace,
@@ -34,14 +34,14 @@ public static class DieCommands
         Effects = (R, cs, n) => cs.Select(c => Showing(R, c, n)).Where(s => s != null),
     };
 
-    private static DieParameters Parameters(IRecordReader R, ComponentState die) =>
+    private static DieParameters Parameters(IAtomReader R, ComponentState die) =>
         R.Get(Prototype.ById, die.PrototypeRef)?.Parameters as DieParameters;
 
     /// <summary>
     /// The die rolled to a random face. The rolling player picks the face.
     /// <see cref="VcDie"/> animates what Roll writes, even when it lands on the same face.
     /// </summary>
-    private static ComponentState Rolled(IRecordReader R, ComponentState die)
+    private static ComponentState Rolled(IAtomReader R, ComponentState die)
     {
         if (Parameters(R, die) is not { } p)
             return die;
@@ -55,7 +55,7 @@ public static class DieCommands
     }
 
     /// <summary>The die turned to show <paramref name="face"/>, or null if it has no such face.</summary>
-    private static ComponentState Showing(IRecordReader R, ComponentState die, int face) =>
+    private static ComponentState Showing(IAtomReader R, ComponentState die, int face) =>
         Parameters(R, die) is { } p && VcDie.FaceRotation(p, face, R) is { } rotation
             ? die with
             {

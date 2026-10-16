@@ -11,7 +11,7 @@ using Lizzie.Replication.Machinery;
 public readonly record struct CommandName(string Value);
 
 /// <summary>
-/// How many targets a <see cref="RecordCommand{T}"/> can act on.
+/// How many targets a <see cref="AtomCommand{T}"/> can act on.
 /// <list type="bullet">
 /// <item><see cref="One"/>: the Command <b>won't</b> appear when multiple applicable targets are selected.</item>
 /// <item><see cref="Many"/>: the Command <b>will always</b> appear when applicable targets are selected.</item>
@@ -33,17 +33,17 @@ public enum TargetCount
 public enum Context
 {
     /// <summary>
-    /// The records the user targeted. Usually the selection, but can also be the hovered target.
+    /// The atoms the user targeted. Usually the selection, but can also be the hovered target.
     /// </summary>
     Selected = 1,
 
     /// <summary>
-    /// Records that are contained within the selected targets, like a deck's cards or a DataSet's rows.
+    /// Atoms that are contained within the selected targets, like a deck's cards or a DataSet's rows.
     /// </summary>
     Contents = 2,
 
     /// <summary>
-    /// What the selected records are part of, like a card's deck.
+    /// What the selected atoms are part of, like a card's deck.
     /// </summary>
     Containers = 4,
 
@@ -53,7 +53,7 @@ public enum Context
     Referenced = 8,
 
     /// <summary>
-    /// What record the whole view shows, like the dataset editor's currently open dataset.
+    /// What atom the whole view shows, like the dataset editor's currently open dataset.
     /// </summary>
     View = 16,
 }
@@ -64,11 +64,11 @@ public enum Context
 public interface ICommandView
 {
     /// <summary>
-    /// <para>The record that this view is operating on, like a dataset editor's currently open dataset.</para>
+    /// <para>The atom that this view is operating on, like a dataset editor's currently open dataset.</para>
     ///
     /// <see cref="SnowTag.Empty"/> is used for the table.
-    /// Otherwise, use the <see cref="SnowTag"/> of the record.
-    /// Leave it unset in a view without a selection, or while there isn't a record at the moment.
+    /// Otherwise, use the <see cref="SnowTag"/> of the atom.
+    /// Leave it unset in a view without a selection, or while there isn't an atom at the moment.
     /// </summary>
     WatchableValue<SnowTag> SelectionScope { get; }
 
@@ -94,12 +94,12 @@ public interface ICommandView
     SnowportId Gesture => SnowportId.Empty;
 
     /// <summary>
-    /// <para>Whether an undo or redo issued in this view should target an event that writes <paramref name="record"/>.</para>
+    /// <para>Whether an undo or redo issued in this view should target an event that writes <paramref name="atom"/>.</para>
     ///
     /// Returning true will make undo or redo in this view reverse or reapply the write.
     /// Returning false will make them skip it and search further backwards for another candidate.
     /// </summary>
-    bool UndoScope(Replicated record);
+    bool UndoScope(Atom atom);
 }
 
 /// <summary>
@@ -175,17 +175,17 @@ public abstract class Command
 
     /// <summary>
     /// The parts of the context this Command will act on, in terms of the user's selection.
-    /// By default, a Command only acts on directly selected records.
+    /// By default, a Command only acts on directly selected atoms.
     /// <list type="number">
-    /// <item><see cref="Context.Selected"/> acts on the selected records (the most direct)</item>
-    /// <item><see cref="Context.Contents"/> acts on the records inside the selected records, like a selected bag's tokens</item>
-    /// <item><see cref="Context.Containers"/> acts on the records containing the selected records, like a selected card's deck</item>
-    /// <item><see cref="Context.Referenced"/> acts on the records referenced by the selected records, like a selected cube's prototype</item>
-    /// <item><see cref="Context.View"/> acts on the record the whole view shows, like the dataset editor's open dataset</item>
+    /// <item><see cref="Context.Selected"/> acts on the selected atoms (the most direct)</item>
+    /// <item><see cref="Context.Contents"/> acts on the atoms inside the selected atoms, like a selected bag's tokens</item>
+    /// <item><see cref="Context.Containers"/> acts on the atoms containing the selected atoms, like a selected card's deck</item>
+    /// <item><see cref="Context.Referenced"/> acts on the atoms referenced by the selected atoms, like a selected cube's prototype</item>
+    /// <item><see cref="Context.View"/> acts on the atom the whole view shows, like the dataset editor's open dataset</item>
     /// </list>
     /// You can act on multiple Contexts simultaneously with
     /// <code>ActsOn = Context.Selected | Context.Contents | Context.Containers | Context.Referenced</code>
-    /// So a Delete Command with <c>Context.Selected | Context.Contents</c> will delete the selected records and their contents.
+    /// So a Delete Command with <c>Context.Selected | Context.Contents</c> will delete the selected atoms and their contents.
     /// Keyboard shortcuts skip <see cref="Context.Containers"/> and <see cref="Context.Referenced"/>,
     /// so a key never reaches past what's selected. Menus and CommandButtons use all configured parts.
     /// </summary>
@@ -199,9 +199,9 @@ public abstract class Command
 
     /// <summary>
     /// Returns true if this command can act on <paramref name="target"/>:
-    /// a record of the kind it's for, that it has behavior for.
+    /// an atom of the kind it's for, that it has behavior for.
     /// </summary>
-    public abstract bool Applies(IRecordReader R, AtomRef target);
+    public abstract bool Applies(IAtomReader R, AtomRef target);
 
     /// <summary>Whether it can act on <paramref name="count"/> targets that it applies to.</summary>
     public abstract bool Fits(int count);
@@ -210,7 +210,7 @@ public abstract class Command
     /// Whether the Command can run now.
     /// When false, it's disabled in menus and keyboard shortcuts won't trigger it.
     /// </summary>
-    public virtual bool IsAvailable(IRecordReader R) => true;
+    public virtual bool IsAvailable(IAtomReader R) => true;
 
     /// <summary>
     /// When <see cref="AsksForNumber"/> = true, the highest number worth offering for these targets,
@@ -273,33 +273,33 @@ public abstract class Command
             return;
         var gesture = view?.Gesture ?? SnowportId.Empty;
         if (gesture == SnowportId.Empty)
-            RecordService.Instance?.Write(Name, changes);
+            AtomService.Instance?.Write(Name, changes);
         else
-            RecordService.Instance?.Append(gesture, Name, changes);
+            AtomService.Instance?.Append(gesture, Name, changes);
     }
 }
 
 /// <summary>
 /// A command on atoms of type <typeparamref name="T"/>.
-/// It acts on what <see cref="RecordReaderExtensions.Resolve"/> gives for each target,
+/// It acts on what <see cref="AtomReaderExtensions.Resolve"/> gives for each target,
 /// so it also reaches an atom that was never written, like an empty cell.
 /// </summary>
 /// <remarks>
-/// To act on all atom types, set <typeparamref name="T"/> to <see cref="Replicated"/>.
+/// To act on all atom types, set <typeparamref name="T"/> to <see cref="Atom"/>.
 /// </remarks>
-public sealed class RecordCommand<T> : Command
-    where T : Replicated
+public sealed class AtomCommand<T> : Command
+    where T : Atom
 {
     /// <summary>
-    /// Determines whether this command can operate on a given <paramref name="record"/>.
+    /// Determines whether this command can operate on a given <paramref name="atom"/>.
     /// </summary>
-    /// <param name="reader">The record reader to pull data.</param>
-    /// <param name="record">The record that this command may apply to.</param>
-    /// <returns>True if this command has behavior for the given <paramref name="record"/>.</returns>
-    public delegate bool AppliesToDelegate(IRecordReader reader, T record);
+    /// <param name="reader">The atom reader to pull data.</param>
+    /// <param name="atom">The atom that this command may apply to.</param>
+    /// <returns>True if this command has behavior for the given <paramref name="atom"/>.</returns>
+    public delegate bool AppliesToDelegate(IAtomReader reader, T atom);
 
     /// <summary>
-    /// <para>Returns true if this command has behavior for the given record.</para>
+    /// <para>Returns true if this command has behavior for the given atom.</para>
     /// <para>For example, Shuffle only applies to decks.</para>
     /// </summary>
     public AppliesToDelegate AppliesTo { get; init; } = (_, _) => true;
@@ -308,16 +308,16 @@ public sealed class RecordCommand<T> : Command
     public TargetCount Count { get; init; } = TargetCount.Many;
 
     /// <summary>
-    /// Produces the changes this command makes, which will be passed to <see cref="RecordService.Write"/>
+    /// Produces the changes this command makes, which will be passed to <see cref="AtomService.Write"/>
     /// Returning an empty list still fires an event, but returning null will not.
     /// </summary>
-    /// <param name="reader">The record reader to pull data.</param>
-    /// <param name="records">The records that were targeted with this command.</param>
+    /// <param name="reader">The atom reader to pull data.</param>
+    /// <param name="atoms">The atoms that were targeted with this command.</param>
     /// <param name="number">When <see cref="Command.AsksForNumber"/> is true, the number provided by the user.</param>
     /// <returns>The changes, written as one event.</returns>
     public delegate IEnumerable<IChange> EffectsDelegate(
-        IRecordReader reader,
-        IReadOnlyList<T> records,
+        IAtomReader reader,
+        IReadOnlyList<T> atoms,
         int number
     );
 
@@ -331,65 +331,65 @@ public sealed class RecordCommand<T> : Command
     public Action<IReadOnlyList<T>, int> SideEffects { get; init; }
 
     /// <summary>
-    /// When <see cref="Command.AsksForNumber"/> is true, return the highest number worth offering for the records.
+    /// When <see cref="Command.AsksForNumber"/> is true, return the highest number worth offering for the atoms.
     /// </summary>
-    public Func<IRecordReader, IReadOnlyList<T>, int> NumberLimit { get; init; }
+    public Func<IAtomReader, IReadOnlyList<T>, int> NumberLimit { get; init; }
 
-    public override bool Applies(IRecordReader R, AtomRef target) => Record(R, target) != null;
+    public override bool Applies(IAtomReader R, AtomRef target) => Atom(R, target) != null;
 
     public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
 
     public override int? MaxNumber(IReadOnlyList<AtomRef> targets) =>
-        NumberLimit?.Invoke(Reader, Records(Reader, targets));
+        NumberLimit?.Invoke(Reader, Atoms(Reader, targets));
 
     public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view)
     {
-        var records = Records(Reader, targets);
-        SideEffects?.Invoke(records, number);
-        if (Effects != null && records.Count > 0)
-            Submit(Effects(Reader, records, number), view);
+        var atoms = Atoms(Reader, targets);
+        SideEffects?.Invoke(atoms, number);
+        if (Effects != null && atoms.Count > 0)
+            Submit(Effects(Reader, atoms, number), view);
     }
 
-    private static IRecordReader Reader => RecordService.Instance;
+    private static IAtomReader Reader => AtomService.Instance;
 
     // The atom it acts on, or what stands in for one never written, or null if it doesn't apply.
-    private T Record(IRecordReader R, AtomRef target) =>
-        R?.Resolve(target) is T record && AppliesTo(R, record) ? record : null;
+    private T Atom(IAtomReader R, AtomRef target) =>
+        R?.Resolve(target) is T atom && AppliesTo(R, atom) ? atom : null;
 
-    // A record may be gone since the menu opened.
-    private List<T> Records(IRecordReader R, IReadOnlyList<AtomRef> targets) =>
-        targets.Select(t => Record(R, t)).Where(r => r != null).ToList();
+    // An atom may be gone since the menu opened.
+    private List<T> Atoms(IAtomReader R, IReadOnlyList<AtomRef> targets) =>
+        targets.Select(t => Atom(R, t)).Where(r => r != null).ToList();
 }
 
 /// <summary>A command that does not act on selected targets, such as undo.</summary>
 public sealed class GlobalCommand : Command
 {
-    public override bool Applies(IRecordReader R, AtomRef target) => false;
+    public override bool Applies(IAtomReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
     /// <summary>
     /// Whether the command can run right now.
     /// </summary>
-    public Func<IRecordReader, bool> Enabled { get; init; }
+    public Func<IAtomReader, bool> Enabled { get; init; }
 
     /// <summary>
     /// Generates the changes to write, as one event.
     /// Returning an empty list still fires an event
     /// Returning null does not fire an event.
     /// </summary>
-    public Func<IRecordReader, IEnumerable<IChange>> Effects { get; init; }
+    public Func<IAtomReader, IEnumerable<IChange>> Effects { get; init; }
 
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }
 
-    public override bool IsAvailable(IRecordReader R) => Enabled?.Invoke(R) ?? true;
+    public override bool IsAvailable(IAtomReader R) => Enabled?.Invoke(R) ?? true;
 
     public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view)
     {
         SideEffects?.Invoke(view);
         if (Effects != null)
-            Submit(Effects(RecordService.Instance), null);
+            Submit(Effects(AtomService.Instance), null);
     }
 }
 
@@ -405,9 +405,9 @@ public sealed class Submenu : Command
     /// They act like any other command in the menu.
     /// Items without their own <see cref="Command.Name"/> inherit the submenu's.
     /// </summary>
-    public Func<IRecordReader, IEnumerable<Command>> Items { get; init; }
+    public Func<IAtomReader, IEnumerable<Command>> Items { get; init; }
 
-    public IEnumerable<Command> ItemsFor(IRecordReader R) =>
+    public IEnumerable<Command> ItemsFor(IAtomReader R) =>
         Items(R)
             .Select(item =>
             {
@@ -416,7 +416,7 @@ public sealed class Submenu : Command
                 return item;
             });
 
-    public override bool Applies(IRecordReader R, AtomRef target) => false;
+    public override bool Applies(IAtomReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
@@ -427,7 +427,7 @@ public sealed class Submenu : Command
 // This is just a sentinel so that we can put dividers in command lists.
 file sealed class DividerCommand : Command
 {
-    public override bool Applies(IRecordReader R, AtomRef target) => false;
+    public override bool Applies(IAtomReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 

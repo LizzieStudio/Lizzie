@@ -57,9 +57,8 @@ public class GridLayoutTests
     {
         var asset = new ImageAsset { Id = new SnowTag(1), Layout = new GridLayout(8, 7, 56) };
 
-        var json = JsonSerializer.Serialize<Replicated>(asset, LizzieJson.EventOptions);
-        var back = (ImageAsset)
-            JsonSerializer.Deserialize<Replicated>(json, LizzieJson.EventOptions);
+        var json = JsonSerializer.Serialize<Atom>(asset, LizzieJson.EventOptions);
+        var back = (ImageAsset)JsonSerializer.Deserialize<Atom>(json, LizzieJson.EventOptions);
 
         Assert.True(
             back.Layout == asset.Layout,

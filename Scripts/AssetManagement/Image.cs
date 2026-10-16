@@ -4,7 +4,7 @@ namespace Lizzie.AssetManagement
     /// Represents a cloud-stored image in the project
     /// </summary>
     [JsonName("ImageAsset")]
-    public record ImageAsset : Replicated
+    public record ImageAsset : Atom
     {
         public static readonly Id<ImageAsset, SnowTag> ById = new(r => r.Id);
 

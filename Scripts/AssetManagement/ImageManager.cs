@@ -45,14 +45,14 @@ public partial class ImageManager : Window, ICommandView
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     // Nothing is selected here
     public WatchableValue<SnowTag> SelectionScope { get; } = new();
 
     /// <summary>Undo walks the edits to every image.</summary>
-    public bool UndoScope(Replicated record) => record is ImageAsset;
+    public bool UndoScope(Atom atom) => atom is ImageAsset;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -102,7 +102,7 @@ public partial class ImageManager : Window, ICommandView
 
         _countSet = GetNode<CheckBox>("%CountSet");
         _countSet.Toggled += on =>
-            RecordService.Instance.Update(
+            AtomService.Instance.Update(
                 ImageAsset.ById,
                 _open,
                 a =>
@@ -137,7 +137,7 @@ public partial class ImageManager : Window, ICommandView
 
     private void OnRemovePressed()
     {
-        var R = RecordService.Instance;
+        var R = AtomService.Instance;
         if (R.Get(ImageAsset.ById, _open) is { } image)
             R.Write(R.Unset(image));
     }
@@ -151,7 +151,7 @@ public partial class ImageManager : Window, ICommandView
         // Ends the edits to the previous image's layout.
         GuiReleaseFocus();
         _open = image;
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
     }
 
     private void UpdateButtons(bool enable)
@@ -179,7 +179,7 @@ public partial class ImageManager : Window, ICommandView
             CloudPath = _urlInput.Text,
         };
 
-        RecordService.Instance.Write(asset);
+        AtomService.Instance.Write(asset);
         Open(asset.Id);
 
         _nameInput.Text = string.Empty;

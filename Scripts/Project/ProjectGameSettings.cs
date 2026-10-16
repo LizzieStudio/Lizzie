@@ -6,7 +6,7 @@ using Godot;
 /// Persisted settings for a project, edited via the Project Settings dialog.
 /// </summary>
 [JsonName("ProjectGameSettings")]
-public sealed record ProjectGameSettings : Replicated
+public sealed record ProjectGameSettings : Atom
 {
     public static readonly Singleton<ProjectGameSettings> Only = new();
 

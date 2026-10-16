@@ -8,7 +8,7 @@ using Godot;
 /// A component's full replicated state. Every component write carries all of it.
 /// </summary>
 [JsonName("ComponentState")]
-public record ComponentState : Replicated
+public record ComponentState : Atom
 {
     public static readonly Id<ComponentState, SnowTag> ById = new(r => r.Id);
 
@@ -137,7 +137,7 @@ public record ComponentState : Replicated
     /// <remarks>
     /// Any component used as a <see cref="ContainerRef"/> gets its contents here without changes.
     /// </remarks>
-    public override IEnumerable<AtomRef> Contents(IRecordReader R)
+    public override IEnumerable<AtomRef> Contents(IAtomReader R)
     {
         var containedComponents =
             R.Kind(this) == VisualComponentBase.VisualComponentType.Deck
@@ -153,7 +153,7 @@ public record ComponentState : Replicated
     /// <remarks>
     /// Any component referenced by <see cref="ContainerRef"/> becomes a container here without changes.
     /// </remarks>
-    public override IEnumerable<AtomRef> Containers(IRecordReader R)
+    public override IEnumerable<AtomRef> Containers(IAtomReader R)
     {
         // A hand or a cursor isn't a component, so it isn't found.
         if (!IsOnTable)
@@ -175,7 +175,7 @@ public record ComponentState : Replicated
     /// <remarks>
     /// This will need to be extended as new references are invented.
     /// </remarks>
-    public override IEnumerable<AtomRef> Referenced(IRecordReader R) =>
+    public override IEnumerable<AtomRef> Referenced(IAtomReader R) =>
         new[]
         {
             Prototype.ById.Ref(PrototypeRef),

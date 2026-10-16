@@ -201,13 +201,13 @@ public readonly record struct SnowportId : IComparable<SnowportId>, IFormattable
 }
 
 /// <summary>
-/// A compact, timestamp-free unique ID for a <see cref="Replicated"/> record.
+/// A compact, timestamp-free unique ID for an <see cref="Atom"/>.
 /// </summary>
 /// <remarks>
 /// <para>Laid out as <c>[ source:6 | counter:26 ]</c>.</para>
 /// <para>
-/// Records should refer to records with a SnowTag, never its value in an int or string.
-/// The save file uses a form of garbage collection to keep records alive.
+/// Atoms should refer to atoms with a SnowTag, never its value in an int or string.
+/// The save file uses a form of garbage collection to keep atoms alive.
 /// </para>
 /// </remarks>
 public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable

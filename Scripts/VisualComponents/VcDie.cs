@@ -58,7 +58,7 @@ public partial class VcDie : VisualComponentBase
     /// <summary>
     /// The rotation in degrees that shows each face up, face 1 first, read from the die's scene.
     /// </summary>
-    public static Vector3[] FaceRotations(DieParameters p, IRecordReader R)
+    public static Vector3[] FaceRotations(DieParameters p, IAtomReader R)
     {
         var path = Utility.DieScene(p, R);
         if (FacesByScene.TryGetValue(path, out var faces))
@@ -74,7 +74,7 @@ public partial class VcDie : VisualComponentBase
     }
 
     /// <summary>The rotation that shows <paramref name="face"/> up, counting from 1, or null if there's no such face.</summary>
-    public static Vector3? FaceRotation(DieParameters p, int face, IRecordReader R) =>
+    public static Vector3? FaceRotation(DieParameters p, int face, IAtomReader R) =>
         FaceRotations(p, R) is var faces && face >= 1 && face <= faces.Length
             ? faces[face - 1] * (3.14159f / 180f) //convert to radians
             : null;
@@ -97,7 +97,7 @@ public partial class VcDie : VisualComponentBase
         return true;
     }
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
         Apply((DieParameters)parameters, R);
@@ -106,7 +106,7 @@ public partial class VcDie : VisualComponentBase
     /// <summary>
     /// Sizes the die from its parameters and loads its net.
     /// </summary>
-    private void Apply(DieParameters p, IRecordReader R)
+    private void Apply(DieParameters p, IAtomReader R)
     {
         _mainMesh = GetNode<MeshInstance3D>("ObjectMesh");
 
@@ -167,7 +167,7 @@ public sealed record DieParameters : ComponentParameters
     /// <summary>
     /// The number of sides the die has, and the error when there is one.
     /// </summary>
-    public (int Sides, string Error) Resolve(IRecordReader R)
+    public (int Sides, string Error) Resolve(IAtomReader R)
     {
         if (SideCount > 0 && !Scenes.ContainsKey(SideCount))
             return (6, $"A die can't have {SideCount} sides.");

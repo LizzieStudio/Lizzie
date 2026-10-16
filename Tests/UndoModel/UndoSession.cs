@@ -4,16 +4,16 @@ using System.Linq;
 using CsCheck;
 using Lizzie.Replication.Machinery;
 
-/// <summary>A record for sessions to write. Faces are unique, so every write can be told apart.</summary>
-public sealed record TestRecord : Replicated
+/// <summary>An atom for sessions to write. Faces are unique, so every write can be told apart.</summary>
+public sealed record TestAtom : Atom
 {
     public required SnowTag Id { get; init; }
 
     public int Face { get; init; }
 }
 
-/// <summary>A singleton record for sessions to write, like the project settings.</summary>
-public sealed record TestValue : Replicated
+/// <summary>A singleton atom for sessions to write, like the project settings.</summary>
+public sealed record TestValue : Atom
 {
     public string Text { get; init; }
 }
@@ -27,37 +27,37 @@ public enum ScopeKind
 }
 
 /// <summary>
-/// An undo scope, as a view or command would give one: whose changes it takes, and which records,
-/// by the bits of <paramref name="Mask"/>. A mask of 0 takes every record, the singleton included.
+/// An undo scope, as a view or command would give one: whose changes it takes, and which atoms,
+/// by the bits of <paramref name="Mask"/>. A mask of 0 takes every atom, the singleton included.
 /// </summary>
 public sealed record TestScope(ScopeKind Kind, int Mask)
 {
-    public Func<byte, Replicated, bool> For(byte me) =>
-        (author, record) =>
+    public Func<byte, Atom, bool> For(byte me) =>
+        (author, atom) =>
             Kind switch
             {
                 ScopeKind.Mine => author == me,
                 ScopeKind.Others => author != me,
                 _ => true,
-            } && (Mask == 0 || record is TestRecord r && (Mask & (1 << (r.Id - 1))) != 0);
+            } && (Mask == 0 || atom is TestAtom r && (Mask & (1 << (r.Id - 1))) != 0);
 
-    public override string ToString() => Mask == 0 ? $"{Kind}" : $"{Kind} records {Mask}";
+    public override string ToString() => Mask == 0 ? $"{Kind}" : $"{Kind} atoms {Mask}";
 }
 
 /// <summary>Something a player does, played out by <see cref="UndoSession"/>.</summary>
 public abstract record Op
 {
     /// <summary>
-    /// An action writing records <paramref name="First"/> and <paramref name="Second"/> (0 for none)
+    /// An action writing atoms <paramref name="First"/> and <paramref name="Second"/> (0 for none)
     /// and <paramref name="Values"/> writes to the singleton. It joins the player's gesture, if one is going.
     /// </summary>
     public sealed record Act(byte Source, int First, int Second, int Values) : Op;
 
     /// <summary>Starts a gesture, closing one left open first, as the synchronizer does.</summary>
-    public sealed record Start(byte Source, int Record) : Op;
+    public sealed record Start(byte Source, int Atom) : Op;
 
-    /// <summary>Ends the player's gesture with a drop writing <paramref name="Record"/>, or with a close-only event for 0.</summary>
-    public sealed record End(byte Source, int Record) : Op;
+    /// <summary>Ends the player's gesture with a drop writing <paramref name="Atom"/>, or with a close-only event for 0.</summary>
+    public sealed record End(byte Source, int Atom) : Op;
 
     /// <summary>Reversals Undo or Redo. The expected implementation decides the flag.</summary>
     public sealed record Reversal(byte Source, bool Redo, TestScope Scope) : Op;
@@ -67,9 +67,9 @@ public abstract record Op
 
     /// <summary>
     /// A whole gesture that's canceled: its first event, <paramref name="Moves"/> more, and the cancel,
-    /// all but the cancel writing <paramref name="Record"/>. Closes a gesture left open first.
+    /// all but the cancel writing <paramref name="Atom"/>. Closes a gesture left open first.
     /// </summary>
-    public sealed record CanceledGesture(byte Source, int Record, int Moves) : Op;
+    public sealed record CanceledGesture(byte Source, int Atom, int Moves) : Op;
 
     /// <summary>The player leaves, and the host cancels their open gestures.</summary>
     public sealed record Leave(byte Source) : Op;
@@ -82,12 +82,12 @@ public abstract record Op
 
     /// <summary>
     /// A whole gesture: its first event, <paramref name="Moves"/> more, and the drop that closes it,
-    /// all writing <paramref name="Record"/>. Closes a gesture left open first.
+    /// all writing <paramref name="Atom"/>. Closes a gesture left open first.
     /// </summary>
-    public sealed record Gesture(byte Source, int Record, int Moves) : Op;
+    public sealed record Gesture(byte Source, int Atom, int Moves) : Op;
 
     /// <summary>An action that arrives late, with an id <paramref name="Back"/> steps older than the newest.</summary>
-    public sealed record Late(byte Source, int Record, int Back) : Op;
+    public sealed record Late(byte Source, int Atom, int Back) : Op;
 
     /// <summary>
     /// Reversals Undo or Redo before other players' events among the newest <paramref name="Back"/>
@@ -105,7 +105,7 @@ public abstract record Op
 public sealed class UndoSession
 {
     public const byte Host = Snowport.HostSource;
-    public const int RecordCount = 4;
+    public const int AtomCount = 4;
     public static readonly byte[] Sources = [1, 2, 3, 4];
 
     public readonly EventLog Log = new();
@@ -165,9 +165,9 @@ public sealed class UndoSession
             case Op.Gesture g:
                 CloseOpen(g.Source);
                 var head = NextId(g.Source);
-                Record(new TableEvent { Id = head, Group = head }, g.Record);
+                Record(new TableEvent { Id = head, Group = head }, g.Atom);
                 for (int i = 0; i < g.Moves; i++)
-                    Record(new TableEvent { Id = NextId(g.Source), Group = head }, g.Record);
+                    Record(new TableEvent { Id = NextId(g.Source), Group = head }, g.Atom);
                 Record(
                     new TableEvent
                     {
@@ -175,19 +175,16 @@ public sealed class UndoSession
                         Group = head,
                         End = GroupEnd.Closed,
                     },
-                    g.Record
+                    g.Atom
                 );
                 break;
 
             case Op.CanceledGesture c:
                 CloseOpen(c.Source);
                 var canceledHead = NextId(c.Source);
-                Record(new TableEvent { Id = canceledHead, Group = canceledHead }, c.Record);
+                Record(new TableEvent { Id = canceledHead, Group = canceledHead }, c.Atom);
                 for (int i = 0; i < c.Moves; i++)
-                    Record(
-                        new TableEvent { Id = NextId(c.Source), Group = canceledHead },
-                        c.Record
-                    );
+                    Record(new TableEvent { Id = NextId(c.Source), Group = canceledHead }, c.Atom);
                 Record(CancelOnly(canceledHead, c.Source));
                 break;
 
@@ -198,7 +195,7 @@ public sealed class UndoSession
             case Op.Start s:
                 CloseOpen(s.Source);
                 var first = NextId(s.Source);
-                Record(new TableEvent { Id = first, Group = first }, s.Record);
+                Record(new TableEvent { Id = first, Group = first }, s.Atom);
                 _open[s.Source] = first;
                 break;
 
@@ -210,7 +207,7 @@ public sealed class UndoSession
                         Group = group,
                         End = GroupEnd.Closed,
                     },
-                    e.Record
+                    e.Atom
                 );
                 break;
 
@@ -279,7 +276,7 @@ public sealed class UndoSession
                     _open.TryGetValue(l.Source, out var gesture) && gesture.CompareTo(id) < 0;
                 Record(
                     new TableEvent { Id = id, Group = joins ? gesture : SnowportId.Empty },
-                    l.Record
+                    l.Atom
                 );
                 break;
         }
@@ -322,20 +319,18 @@ public sealed class UndoSession
     private static SnowportId Id(long clock, byte source) => new(clock, source);
 
     /// <summary>
-    /// Records the event in id order, with the given records and values written.
+    /// Records the event in id order, with the given atoms and values written.
     /// Every write gets a unique face or value, so the one that wins can be told apart.
     /// </summary>
     private void Record(TableEvent e, int first = 0, int second = 0, int values = 0)
     {
-        var records = new List<Replicated>();
-        foreach (var record in new[] { first, second }.Where(r => r != 0))
-            records.Add(
-                new TestRecord { Id = record, Face = (int)(long)e.Id * 10 + records.Count }
-            );
+        var atoms = new List<Atom>();
+        foreach (var atom in new[] { first, second }.Where(r => r != 0))
+            atoms.Add(new TestAtom { Id = atom, Face = (int)(long)e.Id * 10 + atoms.Count });
         for (int i = 0; i < values; i++)
-            records.Add(new TestValue { Text = $"{e.Id}.{records.Count}" });
-        if (records.Count > 0)
-            e.Records = records.ToArray();
+            atoms.Add(new TestValue { Text = $"{e.Id}.{atoms.Count}" });
+        if (atoms.Count > 0)
+            e.Writes = atoms.ToArray();
 
         int at = Log.Count;
         while (at > 0 && Log.GetAt(at - 1).Key.CompareTo(e.Id) > 0)
@@ -374,12 +369,12 @@ public sealed class UndoSession
                     ? Describe(f)
                     : string.Join(
                         " ",
-                        e.Records.Select(record =>
-                            record switch
+                        e.Writes.Select(atom =>
+                            atom switch
                             {
-                                TestRecord r => $"r{r.Id}={r.Face}",
+                                TestAtom r => $"r{r.Id}={r.Face}",
                                 TestValue v => $"v={v.Text}",
-                                _ => record.GetType().Name,
+                                _ => atom.GetType().Name,
                             }
                         )
                     );
@@ -394,8 +389,8 @@ public sealed class UndoSession
 public static class UndoSessions
 {
     private static readonly Gen<byte> Source = Gen.Byte[1, 4];
-    private static readonly Gen<int> Record = Gen.Int[1, UndoSession.RecordCount];
-    private static readonly Gen<int> MaybeRecord = Gen.Int[0, UndoSession.RecordCount];
+    private static readonly Gen<int> Atom = Gen.Int[1, UndoSession.AtomCount];
+    private static readonly Gen<int> MaybeAtom = Gen.Int[0, UndoSession.AtomCount];
 
     public static readonly Gen<TestScope> Scope = Gen.Select(
         Gen.OneOfConst(ScopeKind.Mine, ScopeKind.Others, ScopeKind.Anyone),
@@ -405,22 +400,22 @@ public static class UndoSessions
 
     private static readonly Gen<Op> Acts = Gen.Select(
         Source,
-        MaybeRecord,
-        MaybeRecord,
+        MaybeAtom,
+        MaybeAtom,
         Gen.Int[0, 2],
         (s, first, second, values) => (Op)new Op.Act(s, first, second, values)
     );
 
     private static readonly Gen<Op> Starts = Gen.Select(
         Source,
-        Record,
-        (s, record) => (Op)new Op.Start(s, record)
+        Atom,
+        (s, atom) => (Op)new Op.Start(s, atom)
     );
 
     private static readonly Gen<Op> Ends = Gen.Select(
         Source,
-        MaybeRecord,
-        (s, record) => (Op)new Op.End(s, record)
+        MaybeAtom,
+        (s, atom) => (Op)new Op.End(s, atom)
     );
 
     private static readonly Gen<Op> Reversals = Gen.Select(
@@ -436,9 +431,9 @@ public static class UndoSessions
 
     private static readonly Gen<Op> CanceledGestures = Gen.Select(
         Source,
-        Record,
+        Atom,
         Gen.Int[0, 2],
-        (s, record, moves) => (Op)new Op.CanceledGesture(s, record, moves)
+        (s, atom, moves) => (Op)new Op.CanceledGesture(s, atom, moves)
     );
 
     private static readonly Gen<Op> RawFlags = Gen.Select(
@@ -450,16 +445,16 @@ public static class UndoSessions
 
     private static readonly Gen<Op> Gestures = Gen.Select(
         Source,
-        Record,
+        Atom,
         Gen.Int[0, 2],
-        (s, record, moves) => (Op)new Op.Gesture(s, record, moves)
+        (s, atom, moves) => (Op)new Op.Gesture(s, atom, moves)
     );
 
     private static readonly Gen<Op> Lates = Gen.Select(
         Source,
-        Record,
+        Atom,
         Gen.Int[1, 5],
-        (s, record, back) => (Op)new Op.Late(s, record, back)
+        (s, atom, back) => (Op)new Op.Late(s, atom, back)
     );
 
     private static readonly Gen<Op> Concurrents = Gen.Select(
@@ -508,7 +503,7 @@ public static class UndoSessions
     );
 
     /// <summary>
-    /// Three players acting and pressing, often at the same time, on few records,
+    /// Three players acting and pressing, often at the same time, on few atoms,
     /// so their reversals often land on the same things.
     /// </summary>
     public static readonly Gen<Op[]> Simultaneous = Gen.Frequency(
@@ -553,17 +548,17 @@ public static class UndoSessions
     /// <summary>The player single-player sessions are about.</summary>
     public const byte Me = 1;
 
-    private static readonly Gen<Op> MyActs = Record.Select(r => (Op)new Op.Act(Me, r, 0, 0));
-    private static readonly Gen<Op> OthersActs = Record.Select(r => (Op)new Op.Act(2, r, 0, 0));
+    private static readonly Gen<Op> MyActs = Atom.Select(r => (Op)new Op.Act(Me, r, 0, 0));
+    private static readonly Gen<Op> OthersActs = Atom.Select(r => (Op)new Op.Act(2, r, 0, 0));
     private static readonly Gen<Op> MyGestures = Gen.Select(
-        Record,
+        Atom,
         Gen.Int[0, 2],
-        (record, moves) => (Op)new Op.Gesture(Me, record, moves)
+        (atom, moves) => (Op)new Op.Gesture(Me, atom, moves)
     );
     private static readonly Gen<Op> MyCanceledGestures = Gen.Select(
-        Record,
+        Atom,
         Gen.Int[0, 2],
-        (record, moves) => (Op)new Op.CanceledGesture(Me, record, moves)
+        (atom, moves) => (Op)new Op.CanceledGesture(Me, atom, moves)
     );
     private static readonly Gen<Op> MyUndos = Gen.Const(
         (Op)new Op.Reversal(Me, false, new TestScope(ScopeKind.Mine, 0))

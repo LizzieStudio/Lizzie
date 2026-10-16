@@ -110,7 +110,7 @@ public partial class ComponentDefinition : Window
                     ? result.ComponentName
                     : $"Unnamed {result.ComponentType}",
             };
-            RecordService.Instance.Write(prototype);
+            AtomService.Instance.Write(prototype);
 
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = prototype.Id, AllRows = true }
@@ -141,7 +141,7 @@ public partial class ComponentDefinition : Window
 
         //update the project prototype
 
-        var prototype = RecordService.Instance.Get(Prototype.ById, _mapPrototype.Id);
+        var prototype = AtomService.Instance.Get(Prototype.ById, _mapPrototype.Id);
         if (prototype == null)
             return;
 
@@ -149,7 +149,7 @@ public partial class ComponentDefinition : Window
         var newParams = editResult?.GetParams();
         prototype = prototype with { Parameters = newParams, Name = newParams?.ComponentName };
 
-        RecordService.Instance.Write(prototype);
+        AtomService.Instance.Write(prototype);
 
         CloseDialog?.Invoke(this, EventArgs.Empty);
     }

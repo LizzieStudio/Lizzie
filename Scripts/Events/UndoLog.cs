@@ -9,7 +9,7 @@ namespace Lizzie.Replication.Machinery;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The EventLog is the source of truth. The current records are effectively just a cache for the EventLog.
+/// The EventLog is the source of truth. The current atoms are effectively just a cache for the EventLog.
 /// When an Undo/Redo is published, it reverses a prior entry in the EventLog and makes as if it never happened.
 /// These can be:
 /// <list type="bullet">
@@ -55,8 +55,8 @@ namespace Lizzie.Replication.Machinery;
 /// <list type="bullet">
 /// <item>The default "Undo Mine" event targets your own events.</item>
 /// <item>The "Undo Others" event targets only the events that you didn't publish.</item>
-/// <item>The "Undo This" event targets the last event that updated a particular record.</item>
-/// <item>Panels and the Table (views) filter by the records pertinent to that view, like the DatasetEditor and DataSets</item>
+/// <item>The "Undo This" event targets the last event that updated a particular atom.</item>
+/// <item>Panels and the Table (views) filter by the atoms pertinent to that view, like the DatasetEditor and DataSets</item>
 /// </list>
 /// An unset is in scope when the atom it unsets is, as the player unsetting it saw it.
 /// </para>
@@ -66,7 +66,7 @@ public static class UndoLog
     /// <summary>
     /// Selects the target that Undo should submit, or null if there's nothing in scope to undo.
     /// </summary>
-    public static UndoFlag Undo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
+    public static UndoFlag Undo(EventLog log, byte me, Func<byte, Atom, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
         var ends = new Ends(log);
@@ -95,7 +95,7 @@ public static class UndoLog
     /// <summary>
     /// Selects the target that Redo should submit, or null if there's nothing in scope to redo.
     /// </summary>
-    public static UndoFlag Redo(EventLog log, byte me, Func<byte, Replicated, bool> scope)
+    public static UndoFlag Redo(EventLog log, byte me, Func<byte, Atom, bool> scope)
     {
         var reversed = new HashSet<SnowportId>();
         var ends = new Ends(log);
@@ -205,12 +205,7 @@ public static class UndoLog
     /// <summary>
     /// What Undo and Redo may target, judged once per entry over a walk from newest to oldest.
     /// </summary>
-    private sealed class Targets(
-        EventLog log,
-        byte me,
-        Func<byte, Replicated, bool> scope,
-        Ends ends
-    )
+    private sealed class Targets(EventLog log, byte me, Func<byte, Atom, bool> scope, Ends ends)
     {
         // the index of each unit's newest event, for units the walk has met
         private readonly Dictionary<SnowportId, int> _newest = new();
@@ -278,8 +273,8 @@ public static class UndoLog
                 return inScope;
 
             foreach (var member in AllMembers(unit, i))
-            foreach (var record in member.Records.Concat(member.Unsets))
-                if (scope(author, record))
+            foreach (var atom in member.Writes.Concat(member.Unsets))
+                if (scope(author, atom))
                     return _inScope[(unit, author)] = true;
 
             return _inScope[(unit, author)] = false;
@@ -441,7 +436,7 @@ public static class UndoLog
 
     /// <summary>
     /// The events whose history entry is in effect, newest first. For an action, that's not being
-    /// undone, so the newest write to a record among these is what the record holds.
+    /// undone, so the newest write to an atom among these is what the atom holds.
     /// </summary>
     public static IEnumerable<TableEvent> InEffect(EventLog log)
     {

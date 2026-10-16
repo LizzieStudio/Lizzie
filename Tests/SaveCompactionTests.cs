@@ -19,13 +19,13 @@ public class SaveCompactionTests
 
     private static Prototype DeletedPrototype(int id) => new() { Id = Tag(id), Deleted = true };
 
-    private static TableEvent Save(params Replicated[] records) =>
-        new() { Id = Id(1_000_000, Snowport.AdminSource), Records = records };
+    private static TableEvent Save(params Atom[] atoms) =>
+        new() { Id = Id(1_000_000, Snowport.AdminSource), Writes = atoms };
 
     private static TableEvent Load(string json) =>
         JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
 
-    private static SnowTag IdOf(Replicated atom) =>
+    private static SnowTag IdOf(Atom atom) =>
         atom switch
         {
             ComponentState s => s.Id,
@@ -40,18 +40,18 @@ public class SaveCompactionTests
         new() { Id = new CellId(Tag(row), Tag(column)), Value = "x" };
 
     [StackTraceHidden]
-    private static void AssertKept(IEnumerable<Replicated> atoms, params int[] expected)
+    private static void AssertKept(IEnumerable<Atom> atoms, params int[] expected)
     {
         var kept = SaveCompaction.Collect(atoms).Select(IdOf).OrderBy(t => t).ToArray();
         var want = expected.Select(n => Tag(n)).OrderBy(t => t).ToArray();
         Assert.True(
             kept.SequenceEqual(want),
-            $"Kept the wrong records.\n\nExpected: {string.Join(", ", want)}\nKept:     {string.Join(", ", kept)}"
+            $"Kept the wrong atoms.\n\nExpected: {string.Join(", ", want)}\nKept:     {string.Join(", ", kept)}"
         );
     }
 
     [Fact]
-    public void ListedRecordsAreKept() => AssertKept([Component(1), Component(2)], 1, 2);
+    public void ListedAtomsAreKept() => AssertKept([Component(1), Component(2)], 1, 2);
 
     [Fact]
     public void AnUnreferencedDeletedPrototypeIsDropped() =>
@@ -79,13 +79,11 @@ public class SaveCompactionTests
     [InlineData(true, false, false)]
     public void ACellIsKeptOnlyWithItsRowAndColumn(bool row, bool column, bool kept)
     {
-        Replicated[] atoms =
+        Atom[] atoms =
         [
             new DataSet { Id = Tag(1) },
-            .. row ? [new DataRow { Id = Tag(2), DataSetId = Tag(1) }] : Array.Empty<Replicated>(),
-            .. column
-                ? [new DataColumn { Id = Tag(3), DataSetId = Tag(1) }]
-                : Array.Empty<Replicated>(),
+            .. row ? [new DataRow { Id = Tag(2), DataSetId = Tag(1) }] : Array.Empty<Atom>(),
+            .. column ? [new DataColumn { Id = Tag(3), DataSetId = Tag(1) }] : Array.Empty<Atom>(),
             Cell(2, 3),
         ];
         var cells = SaveCompaction.Collect(atoms).OfType<DataCell>().Count();
@@ -112,7 +110,7 @@ public class SaveCompactionTests
             )
         );
 
-        var back = Load(json).Records.Cast<ComponentState>().ToArray();
+        var back = Load(json).Writes.Cast<ComponentState>().ToArray();
 
         // in order: 7 < 9 < (source 3, 5)
         Assert.Equal(new SnowTag(2), back[0].Id);
@@ -134,7 +132,7 @@ public class SaveCompactionTests
             )
         );
 
-        var back = Load(json).Records;
+        var back = Load(json).Writes;
         var row = Assert.IsType<DataRow>(back[0]);
         var column = Assert.IsType<DataColumn>(back[1]);
         var cell = Assert.IsType<DataCell>(back[2]);
@@ -152,7 +150,7 @@ public class SaveCompactionTests
         );
 
         var back = Load(json);
-        var components = back.Records.Cast<ComponentState>().ToArray();
+        var components = back.Writes.Cast<ComponentState>().ToArray();
 
         Assert.True(back.IsAdmin, "The save event should stay an admin event.");
         Assert.Equal(Id(1, Snowport.AdminSource), components[1].ZOrder.Stamp);
@@ -165,7 +163,7 @@ public class SaveCompactionTests
     public void UnsetIdsStayUnset()
     {
         var json = SaveCompaction.Serialize(Save(Component(1)));
-        var back = (ComponentState)Load(json).Records[0];
+        var back = (ComponentState)Load(json).Writes[0];
 
         Assert.Equal(SnowTag.Empty, back.PrototypeRef);
         Assert.Equal(SnowportId.Empty, back.ZOrder.Stamp);

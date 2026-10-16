@@ -43,13 +43,13 @@ public static class CommandResolver
                 continue;
             if (command is Submenu submenu)
             {
-                if (all || ForMenu(context, submenu.ItemsFor(RecordService.Instance)).Count > 0)
+                if (all || ForMenu(context, submenu.ItemsFor(AtomService.Instance)).Count > 0)
                     items.Add((command, []));
                 continue;
             }
 
             // A global command applies to no target, so it fits with none and always shows.
-            var targets = TargetsFor(command, context, RecordService.Instance, menu: true);
+            var targets = TargetsFor(command, context, AtomService.Instance, menu: true);
             if (all || command.Fits(targets.Count))
                 items.Add((command, targets));
         }
@@ -66,10 +66,10 @@ public static class CommandResolver
     /// </summary>
     public static bool RunShortcut(InputEvent e, ICommandView view)
     {
-        var context = CommandContext.Of(view, RecordService.Instance, keys: true);
+        var context = CommandContext.Of(view, AtomService.Instance, keys: true);
         var bound = ForKeys(context).Where(k => k.Command.Matches(e, out _)).ToList();
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
-        if (ready.Count == 1 && ready[0].Command.IsAvailable(RecordService.Instance))
+        if (ready.Count == 1 && ready[0].Command.IsAvailable(AtomService.Instance))
         {
             var (command, targets) = ready[0];
             command.Matches(e, out int number);
@@ -97,7 +97,7 @@ public static class CommandResolver
     ) =>
         CommandList
             .All.Concat(context.Local)
-            .Select(c => (c, TargetsFor(c, context, RecordService.Instance, menu: false)));
+            .Select(c => (c, TargetsFor(c, context, AtomService.Instance, menu: false)));
 
     /// <summary>
     /// Whether both commands share a keyboard shortcut.
@@ -121,7 +121,7 @@ public static class CommandResolver
     public static List<AtomRef> TargetsFor(
         Command command,
         CommandContext context,
-        IRecordReader R,
+        IAtomReader R,
         bool menu
     )
     {

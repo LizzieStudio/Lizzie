@@ -38,7 +38,7 @@ public static class CommandMenu
     /// </param>
     public static void Show(Vector2I position, ICommandView view, Action closed = null)
     {
-        var context = CommandContext.Of(view, RecordService.Instance);
+        var context = CommandContext.Of(view, AtomService.Instance);
         Show(position, context, CommandResolver.ForContextMenu(context), view, closed);
     }
 
@@ -56,14 +56,7 @@ public static class CommandMenu
         IEnumerable<Command> commands,
         Action closed = null
     ) =>
-        Show(
-            position,
-            CommandContext.Of(view, RecordService.Instance),
-            commands,
-            view,
-            closed,
-            true
-        );
+        Show(position, CommandContext.Of(view, AtomService.Instance), commands, view, closed, true);
 
     /// <summary>
     /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
@@ -108,7 +101,7 @@ public static class CommandMenu
         bool all
     )
     {
-        IRecordReader R = RecordService.Instance;
+        IAtomReader R = AtomService.Instance;
         foreach (var (command, targets) in CommandResolver.ForMenu(context, commands, all))
         {
             if (command == Command.Divider)

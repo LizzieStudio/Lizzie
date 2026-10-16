@@ -36,11 +36,11 @@ public class AtomRefTests
             ComponentState.ById.Ref(new SnowTag(1)),
             DataColumn.ById.Ref(new SnowTag(1))
         );
-        var json = JsonSerializer.Serialize<Replicated>(
+        var json = JsonSerializer.Serialize<Atom>(
             new Selection { Id = new SnowTag(9), Targets = targets },
             LizzieJson.EventOptions
         );
-        var back = (Selection)JsonSerializer.Deserialize<Replicated>(json, LizzieJson.EventOptions);
+        var back = (Selection)JsonSerializer.Deserialize<Atom>(json, LizzieJson.EventOptions);
         Assert.True(
             back.Targets.SetEquals(targets),
             $"A selection of a component and a column with the same tag came back as {string.Join(", ", back.Targets.Select(t => $"{t.Type.Name} {t.Id}"))}."

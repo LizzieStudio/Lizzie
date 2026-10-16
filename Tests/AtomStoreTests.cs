@@ -28,7 +28,7 @@ public class AtomStoreTests
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
     private TableEvent Write(params ComponentState[] atoms) =>
-        Record(new TableEvent { Id = NextId(), Records = atoms });
+        Record(new TableEvent { Id = NextId(), Writes = atoms });
 
     /// <summary>Records an event unsetting the atom with <paramref name="id"/>, and merges it into the store.</summary>
     private TableEvent Unset(int id) =>
@@ -120,7 +120,7 @@ public class AtomStoreTests
             new TableEvent
             {
                 Id = NextId(),
-                Records = [Component(1, container: 6)],
+                Writes = [Component(1, container: 6)],
                 Unsets = [Component(1)],
             }
         );

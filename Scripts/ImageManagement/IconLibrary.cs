@@ -139,7 +139,7 @@ public class IconLibrary : Dictionary<string, IconEntry>
         return ResourceLoader.Load(BaseFolder + this[key].FileName) as Texture2D;
     }
 
-    public void LoadOptionButton(OptionButton button, IRecordReader R)
+    public void LoadOptionButton(OptionButton button, IAtomReader R)
     {
         int id = 0;
 

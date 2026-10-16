@@ -25,8 +25,8 @@ public static class ZoneService
     /// </summary>
     public static bool LocalSeatIsAdmin()
     {
-        var settings = RecordService.Instance.Get(ProjectGameSettings.Only);
-        int seat = RecordService.Instance.LocalSeat();
+        var settings = AtomService.Instance.Get(ProjectGameSettings.Only);
+        int seat = AtomService.Instance.LocalSeat();
         if (seat < 0 || seat >= settings.Players.Length)
             return false;
 

@@ -11,8 +11,8 @@ using System.Text.Json.Serialization;
 /// </summary>
 /// <remarks>
 /// Make one with <see cref="Id{T, I}.Ref"/> or <see cref="To"/>.
-/// Read it with <see cref="IRecordReader.Get(AtomRef)"/> to get null when the atom does not exist,
-/// or with <see cref="RecordReaderExtensions.Resolve"/> to get a default when the atom does not exist.
+/// Read it with <see cref="IAtomReader.Get(AtomRef)"/> to get null when the atom does not exist,
+/// or with <see cref="AtomReaderExtensions.Resolve"/> to get a default when the atom does not exist.
 /// </remarks>
 [JsonConverter(typeof(Json))]
 public readonly record struct AtomRef(Type Type, object Id)
@@ -20,16 +20,16 @@ public readonly record struct AtomRef(Type Type, object Id)
     /// <summary>
     /// The ref to <paramref name="atom"/>.
     /// </summary>
-    public static AtomRef To(Replicated atom) =>
-        new(atom.GetType(), AtomId.For(atom.GetType()).Of(atom));
+    public static AtomRef To(Atom atom) =>
+        new(atom.GetType(), IdQuery.For(atom.GetType()).Of(atom));
 
     // Saved and sent as { "type": the atom type's JsonName, "id": its id }.
     private sealed class Json : JsonConverter<AtomRef>
     {
-        private static readonly Dictionary<string, Type> Named = typeof(Replicated)
+        private static readonly Dictionary<string, Type> Named = typeof(Atom)
             .Assembly.GetTypes()
             .Where(t =>
-                t.IsSubclassOf(typeof(Replicated)) && t.IsDefined(typeof(JsonNameAttribute), false)
+                t.IsSubclassOf(typeof(Atom)) && t.IsDefined(typeof(JsonNameAttribute), false)
             )
             .ToDictionary(t => t.GetCustomAttribute<JsonNameAttribute>(false).Name);
 
@@ -41,7 +41,7 @@ public readonly record struct AtomRef(Type Type, object Id)
         {
             var json = JsonElement.ParseValue(ref reader);
             var type = Named[json.GetProperty("type").GetString()];
-            return new(type, json.GetProperty("id").Deserialize(AtomId.For(type).IdType, options));
+            return new(type, json.GetProperty("id").Deserialize(IdQuery.For(type).IdType, options));
         }
 
         public override void Write(
@@ -53,7 +53,7 @@ public readonly record struct AtomRef(Type Type, object Id)
             writer.WriteStartObject();
             writer.WriteString("type", atom.Type.GetCustomAttribute<JsonNameAttribute>(false).Name);
             writer.WritePropertyName("id");
-            JsonSerializer.Serialize(writer, atom.Id, AtomId.For(atom.Type).IdType, options);
+            JsonSerializer.Serialize(writer, atom.Id, IdQuery.For(atom.Type).IdType, options);
             writer.WriteEndObject();
         }
     }

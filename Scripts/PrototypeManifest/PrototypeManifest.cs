@@ -36,7 +36,7 @@ public partial class PrototypeManifest : Window, ICommandView
     public WatchableValue<SnowTag> SelectionScope { get; } = new();
 
     /// <summary>Undo walks the edits to every prototype.</summary>
-    public bool UndoScope(Replicated record) => record is Prototype;
+    public bool UndoScope(Atom atom) => atom is Prototype;
 
     public override void _Ready()
     {
@@ -72,7 +72,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     public event EventHandler Closed;
@@ -146,7 +146,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         dialog.Confirmed += () =>
         {
-            RecordService.Instance.Write(_selectedPrototype with { Deleted = true });
+            AtomService.Instance.Write(_selectedPrototype with { Deleted = true });
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;
@@ -160,7 +160,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (_selectedPrototype == null)
             return;
 
-        var existingNames = RecordService
+        var existingNames = AtomService
             .Instance.Get(Prototype.Live)
             .Select(p => p.Name)
             .ToHashSet();
@@ -187,7 +187,7 @@ public partial class PrototypeManifest : Window, ICommandView
             Parameters = _selectedPrototype.Parameters with { ComponentName = newName },
         };
 
-        RecordService.Instance.Write(duplicate);
+        AtomService.Instance.Write(duplicate);
     }
 
     private void Sync(IWatchReader R)
@@ -262,7 +262,7 @@ public partial class PrototypeManifest : Window, ICommandView
             _sortAscending = true;
         }
 
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
     }
 
     private void OnTreeItemSelected()
@@ -276,7 +276,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (prototypeRef == _selectedPrototype?.Id)
             return;
 
-        var prototype = RecordService.Instance.Get(Prototype.ById, prototypeRef);
+        var prototype = AtomService.Instance.Get(Prototype.ById, prototypeRef);
         if (prototype != null)
             SelectedPrototype = prototype;
     }
@@ -286,7 +286,7 @@ public partial class PrototypeManifest : Window, ICommandView
         //update the preview
         _preview.ClearComponent();
 
-        var card = PrototypeItemRef.First(SelectedPrototype.Parameters, RecordService.Instance);
+        var card = PrototypeItemRef.First(SelectedPrototype.Parameters, AtomService.Instance);
 
         _preview.Build(SelectedPrototype, card, TextureFactory);
     }

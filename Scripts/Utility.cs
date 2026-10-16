@@ -36,7 +36,7 @@ public static class Utility
     public static string ComponentTypeToScenePath(
         VisualComponentBase.VisualComponentType componentType,
         ComponentParameters parameters,
-        IRecordReader R,
+        IAtomReader R,
         bool isCard = false,
         bool previewMode = false
     )
@@ -115,6 +115,6 @@ public static class Utility
     /// <summary>
     /// The scene that shows a die.
     /// </summary>
-    public static string DieScene(DieParameters die, IRecordReader R) =>
+    public static string DieScene(DieParameters die, IAtomReader R) =>
         DieParameters.Scenes[die.Resolve(R).Sides];
 }

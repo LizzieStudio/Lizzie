@@ -9,7 +9,7 @@ public static class CsvImport
     /// Replaces the rows of <paramref name="dataset"/> with those in the CSV file at <paramref name="path"/>,
     /// in one event. The first line names the columns: if they differ from the dataset's, they replace them.
     /// </summary>
-    public static void Replace(IRecordReader R, DataSet dataset, string path)
+    public static void Replace(IAtomReader R, DataSet dataset, string path)
     {
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         if (file == null)
@@ -75,6 +75,6 @@ public static class CsvImport
                     );
         }
 
-        RecordService.Instance.Write(changes);
+        AtomService.Instance.Write(changes);
     }
 }

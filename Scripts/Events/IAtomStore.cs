@@ -4,13 +4,13 @@ using System.Collections.Generic;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// Holds the current records of one type, worked out from the event log.
-/// <see cref="RecordService"/> makes one for each type the first time it's read or written.
+/// Holds the current atoms of one type, worked out from the event log.
+/// <see cref="AtomService"/> makes one for each type the first time it's read or written.
 /// </summary>
-public interface IReplicatedStore
+public interface IAtomStore
 {
-    /// <summary>The type of record held, unique across stores.</summary>
-    Type RecordType { get; }
+    /// <summary>The type of atom held, unique across stores.</summary>
+    Type AtomType { get; }
 
     /// <summary>
     /// Invoked with the queries and values whose results a change touched.
@@ -19,7 +19,7 @@ public interface IReplicatedStore
 
     /// <summary>
     /// Merges an event that was just recorded in <paramref name="log"/>.
-    /// <paramref name="changed"/> are the events whose records it puts in or out of effect:
+    /// <paramref name="changed"/> are the events whose atoms it puts in or out of effect:
     /// the event itself, or what an undo or redo reverses.
     /// While <paramref name="bulkLoading"/>, the changes wait for <see cref="FlushBulkLoad"/>.
     /// </summary>
@@ -39,7 +39,7 @@ public interface IReplicatedStore
     /// <summary>
     /// Every atom that's saved with the project.
     /// </summary>
-    IEnumerable<Replicated> SavedAtoms();
+    IEnumerable<Atom> SavedAtoms();
 }
 
 /// <summary>
@@ -47,13 +47,13 @@ public interface IReplicatedStore
 /// </summary>
 /// <param name="Value">The newest value written. Null for an atom the store doesn't hold, like an unset one.</param>
 /// <param name="LastUpdate">The event that last wrote the atom.</param>
-public readonly record struct AtomEntry(Replicated Value, SnowportId LastUpdate);
+public readonly record struct AtomEntry(Atom Value, SnowportId LastUpdate);
 
 /// <summary>
 /// The store of <typeparamref name="T"/>, read without knowing the type of its ids.
 /// </summary>
-public interface IAtomStore<T> : IReplicatedStore
-    where T : Replicated
+public interface IAtomStore<T> : IAtomStore
+    where T : Atom
 {
     /// <summary>
     /// The atoms with <paramref name="key"/> in <paramref name="group"/>, leaving out unset ones.

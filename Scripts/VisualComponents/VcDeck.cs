@@ -33,7 +33,7 @@ public partial class VcDeck : VisualComponentBase
     public override void _EnterTree()
     {
         base._EnterTree();
-        RecordService.Instance.Watch(this, SyncCount);
+        AtomService.Instance.Watch(this, SyncCount);
     }
 
     private void SyncCount(IWatchReader R)
@@ -50,11 +50,11 @@ public partial class VcDeck : VisualComponentBase
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
             return [];
-        var proto = RecordService.Instance.Get(Prototype.ById, PrototypeRef);
+        var proto = AtomService.Instance.Get(Prototype.ById, PrototypeRef);
         if (proto?.Parameters is not PrintedParameters parameters)
             return [];
 
-        var R = RecordService.Instance;
+        var R = AtomService.Instance;
         return Enumerable
             .Range(0, parameters.CardCount(R))
             .Reverse()
@@ -70,7 +70,7 @@ public partial class VcDeck : VisualComponentBase
             .ToList();
     }
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
 

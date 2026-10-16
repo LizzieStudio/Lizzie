@@ -14,10 +14,10 @@ public readonly record struct Drawing(
 );
 
 /// <summary>
-/// Uses a <see cref="RecordService.Watch"/> call to keep the faces of a <see cref="FaceSet"/> up to date.
+/// Uses a <see cref="AtomService.Watch"/> call to keep the faces of a <see cref="FaceSet"/> up to date.
 /// </summary>
 /// <remarks>
-/// Faces are drawn one at a time. The face being drawn finishes even when its records change again,
+/// Faces are drawn one at a time. The face being drawn finishes even when its atoms change again,
 /// and is drawn again afterward.
 /// </remarks>
 public partial class FaceDrawing : Node
@@ -28,9 +28,9 @@ public partial class FaceDrawing : Node
     public TextureFactory Factory { get; init; }
 
     /// <summary>
-    /// Reads what the faces show. It reruns whenever a record it read changes.
+    /// Reads what the faces show. It reruns whenever an atom it read changes.
     /// </summary>
-    public Func<IRecordReader, Drawing> Source { get; init; }
+    public Func<IAtomReader, Drawing> Source { get; init; }
 
     /// <summary>
     /// Stops drawing when canceled.
@@ -54,7 +54,7 @@ public partial class FaceDrawing : Node
     private Dictionary<SnowTag, Wanted> _wanted = new();
     private bool _drawing;
 
-    public override void _EnterTree() => RecordService.Instance.Watch(this, Sync);
+    public override void _EnterTree() => AtomService.Instance.Watch(this, Sync);
 
     /// <summary>
     /// The face that shows <paramref name="row"/>, drawn once a sync reads the row.
@@ -64,7 +64,7 @@ public partial class FaceDrawing : Node
         if (!_cells.TryGetValue(row, out var cell))
         {
             _cells[row] = cell = new Cell(new Face(FaceSet));
-            RecordService.Instance.QueueSync(this);
+            AtomService.Instance.QueueSync(this);
         }
         return cell.Face;
     }

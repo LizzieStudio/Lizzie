@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using Lizzie.Replication.Machinery;
 
 /// <summary>
-/// <para>A local value that a Watch can read like a record.</para>
+/// <para>A local value that a Watch can read like an atom.</para>
 ///
-/// A Watch that reads a <see cref="T"/> through its <see cref="IRecordReader"/> runs again at the end of the frame after the value changes.
+/// A Watch that reads a <see cref="T"/> through its <see cref="IAtomReader"/> runs again at the end of the frame after the value changes.
 /// It isn't synchronized during multiplayer or saved with the project. It starts unset.
 /// </summary>
 public sealed class WatchableValue<T>
@@ -46,7 +46,7 @@ public sealed class WatchableValue<T>
     /// <summary>
     /// Get the value. Returns false when unset.
     ///
-    /// <para>Use <see cref="TryGet(IRecordReader R, out T value)"/> to subscribe to changes.</para>
+    /// <para>Use <see cref="TryGet(IAtomReader R, out T value)"/> to subscribe to changes.</para>
     /// </summary>
     public bool TryGet(out T value)
     {
@@ -58,7 +58,7 @@ public sealed class WatchableValue<T>
     /// Get the value. Returns false when unset.
     /// When <paramref name="R"/> is a Watch's reader, subscribes to changes.
     /// </summary>
-    public bool TryGet(IRecordReader R, out T value)
+    public bool TryGet(IAtomReader R, out T value)
     {
         if (R is Watcher watcher)
             _readers.Add(watcher);
@@ -68,7 +68,7 @@ public sealed class WatchableValue<T>
     private void Changed()
     {
         foreach (var watcher in _readers)
-            RecordService.Instance?.Machinery().MarkDirty(watcher);
+            AtomService.Instance?.Machinery().MarkDirty(watcher);
         // Readers will run again, adding them back if they read the value again.
         _readers.Clear();
     }

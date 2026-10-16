@@ -105,7 +105,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     public override void _EnterTree()
     {
-        var ps = RecordService.Instance;
+        var ps = AtomService.Instance;
         ps.Watch(this, Sync);
 
         // The local player's inserts focus the row they add, or start renaming the column,
@@ -116,7 +116,7 @@ public partial class DatasetEditor : Window, ICommandView
             ps.Listen(
                 this,
                 insert,
-                e => FocusCell(ViewOf(e.Records.OfType<DataRow>().Single().Id), 0)
+                e => FocusCell(ViewOf(e.Writes.OfType<DataRow>().Single().Id), 0)
             );
 
         foreach (
@@ -147,15 +147,15 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>
     /// Undo walks the shown dataset's edits, rows, columns, and cells, and what's selected in it.
     /// </summary>
-    public bool UndoScope(Replicated record) =>
+    public bool UndoScope(Atom atom) =>
         DatasetRef != SnowTag.Empty
         && (
-            record is DataSet ds && ds.Id == DatasetRef
-            || record is DataRow row && row.DataSetId == DatasetRef
-            || record is DataColumn column && column.DataSetId == DatasetRef
-            || record is DataCell cell
-                && RecordService.Instance.Get(DataRow.ById, cell.Id.Row)?.DataSetId == DatasetRef
-            || record is Selection s && s.Within == DatasetRef
+            atom is DataSet ds && ds.Id == DatasetRef
+            || atom is DataRow row && row.DataSetId == DatasetRef
+            || atom is DataColumn column && column.DataSetId == DatasetRef
+            || atom is DataCell cell
+                && AtomService.Instance.Get(DataRow.ById, cell.Id.Row)?.DataSetId == DatasetRef
+            || atom is Selection s && s.Within == DatasetRef
         );
 
     #endregion
@@ -272,7 +272,7 @@ public partial class DatasetEditor : Window, ICommandView
     // The shown dataset's id, or empty.
     private SnowTag DatasetRef => SelectionScope.TryGet(out var id) ? id : SnowTag.Empty;
 
-    private void ShowDataSet(IRecordReader R, DataSet ds)
+    private void ShowDataSet(IAtomReader R, DataSet ds)
     {
         var columns = R.GetColumns(ds.Id);
         var columnIds = columns.Select(c => c.Id).ToList();
@@ -381,7 +381,7 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Select([DataRow.ById.Ref(rowId)]);
         _revealRowOnSync = rowId;
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
     }
 
     private void OnNewDatasetPressed()
@@ -433,7 +433,7 @@ public partial class DatasetEditor : Window, ICommandView
             return;
 
         var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = name };
-        RecordService.Instance.Write(ds);
+        AtomService.Instance.Write(ds);
 
         SetDatasetById(ds.Id);
     }
@@ -580,7 +580,7 @@ public partial class DatasetEditor : Window, ICommandView
         view.Box.QueueFree();
     }
 
-    private void BindRowView(IRecordReader R, RowView view, DataRow row, int index)
+    private void BindRowView(IAtomReader R, RowView view, DataRow row, int index)
     {
         view.Row = row;
         view.Number.Text = (index + 1).ToString();
@@ -597,7 +597,7 @@ public partial class DatasetEditor : Window, ICommandView
         }
     }
 
-    private void ReconcileRows(IRecordReader R, IReadOnlyList<DataRow> rows)
+    private void ReconcileRows(IAtomReader R, IReadOnlyList<DataRow> rows)
     {
         var existing = _views.ToDictionary(v => v.Row.Id);
         var next = new List<RowView>(rows.Count);
@@ -769,12 +769,12 @@ public partial class DatasetEditor : Window, ICommandView
             if (text == view.Values[i])
                 continue;
             changes.AddRange(
-                DataCell.Set(RecordService.Instance, new CellId(view.Row.Id, _columnIds[i]), text)
+                DataCell.Set(AtomService.Instance, new CellId(view.Row.Id, _columnIds[i]), text)
             );
             view.Values[i] = text;
         }
         if (changes.Count > 0)
-            RecordService.Instance.Write(changes);
+            AtomService.Instance.Write(changes);
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
@@ -789,7 +789,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (others.Count == 0)
             return;
 
-        RecordService.Instance.Write(
+        AtomService.Instance.Write(
             row with
             {
                 Rank = SnowRank.At(others, index, Snowport.Clock.Create()),
@@ -879,7 +879,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        var columns = RecordService.Instance.GetColumns(DatasetRef);
+        var columns = AtomService.Instance.GetColumns(DatasetRef);
         int from = columns.FindIndex(c => c.Id == columnId);
         if (from < 0)
             return;
@@ -890,7 +890,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         var column = columns[from];
         columns.RemoveAt(from);
-        RecordService.Instance.Write(
+        AtomService.Instance.Write(
             column with
             {
                 Rank = SnowRank.At(columns, to > from ? to - 1 : to, Snowport.Clock.Create()),
@@ -900,22 +900,22 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void OnColumnRenamed(SnowTag columnId, string name)
     {
-        if (RecordService.Instance.Get(DataColumn.ById, columnId) is { } column)
-            RecordService.Instance.Write(column with { Name = name });
+        if (AtomService.Instance.Get(DataColumn.ById, columnId) is { } column)
+            AtomService.Instance.Write(column with { Name = name });
     }
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
     private ImmutableHashSet<AtomRef> MySelection() =>
         DatasetRef == SnowTag.Empty
             ? ImmutableHashSet<AtomRef>.Empty
-            : RecordService.Instance.GetSelection(DatasetRef)?.Targets
+            : AtomService.Instance.GetSelection(DatasetRef)?.Targets
                 ?? ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
     private void Select(IEnumerable<AtomRef> targets)
     {
         if (DatasetRef != SnowTag.Empty)
-            RecordService.Instance.SetSelection(targets, DatasetRef);
+            AtomService.Instance.SetSelection(targets, DatasetRef);
     }
 
     /// <summary>
@@ -985,7 +985,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>
     /// Highlights the selected rows, columns and cells in the colors <see cref="LocalSelection.SelectionColors"/> gives them.
     /// </summary>
-    private void SyncSelection(IRecordReader R, SnowTag datasetId)
+    private void SyncSelection(IAtomReader R, SnowTag datasetId)
     {
         var colors = R.SelectionColors(datasetId);
         foreach (var header in _headerCells)
@@ -1008,7 +1008,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>Runs <paramref name="command"/> on what the local player has selected, as its shortcut would.</summary>
     private void RunOnSelection(Command command)
     {
-        var targets = MySelection().Where(t => command.Applies(RecordService.Instance, t)).ToList();
+        var targets = MySelection().Where(t => command.Applies(AtomService.Instance, t)).ToList();
         if (command.Fits(targets.Count))
             command.Run(targets, 1, this);
     }
@@ -1022,7 +1022,7 @@ public partial class DatasetEditor : Window, ICommandView
             InsertRowBelow,
             InsertColumnLeft,
             InsertColumnRight,
-            new RecordCommand<DataColumn>
+            new AtomCommand<DataColumn>
             {
                 Name = new("dataset.rename_column"),
                 Icon = CommandIcons.Edit,
@@ -1032,10 +1032,10 @@ public partial class DatasetEditor : Window, ICommandView
             },
         ];
 
-    // The inserts only read records, so every editor shares them. The editor's listeners
+    // The inserts only read atoms, so every editor shares them. The editor's listeners
     // focus the row they add or start renaming the column.
 
-    private static readonly RecordCommand<DataRow> InsertRowAbove = new()
+    private static readonly AtomCommand<DataRow> InsertRowAbove = new()
     {
         Name = new("dataset.insert_row_above"),
         Icon = CommandIcons.InsertRowAbove,
@@ -1045,7 +1045,7 @@ public partial class DatasetEditor : Window, ICommandView
             DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0])),
     };
 
-    private static readonly RecordCommand<DataRow> InsertRowBelow = new()
+    private static readonly AtomCommand<DataRow> InsertRowBelow = new()
     {
         Name = new("dataset.insert_row_below"),
         Icon = CommandIcons.InsertRowBelow,
@@ -1055,7 +1055,7 @@ public partial class DatasetEditor : Window, ICommandView
             DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0]) + 1),
     };
 
-    private static readonly RecordCommand<DataColumn> InsertColumnLeft = new()
+    private static readonly AtomCommand<DataColumn> InsertColumnLeft = new()
     {
         Name = new("dataset.insert_column_left"),
         Icon = CommandIcons.InsertColumnLeft,
@@ -1065,7 +1065,7 @@ public partial class DatasetEditor : Window, ICommandView
             DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0])),
     };
 
-    private static readonly RecordCommand<DataColumn> InsertColumnRight = new()
+    private static readonly AtomCommand<DataColumn> InsertColumnRight = new()
     {
         Name = new("dataset.insert_column_right"),
         Icon = CommandIcons.InsertColumnRight,
@@ -1076,11 +1076,11 @@ public partial class DatasetEditor : Window, ICommandView
     };
 
     // The row's place in its dataset.
-    private static int RowIndex(IRecordReader R, DataRow row) =>
+    private static int RowIndex(IAtomReader R, DataRow row) =>
         R.GetRows(row.DataSetId).FindIndex(r => r.Id == row.Id);
 
     // The column's place in its dataset.
-    private static int ColumnIndex(IRecordReader R, DataColumn column) =>
+    private static int ColumnIndex(IAtomReader R, DataColumn column) =>
         R.GetColumns(column.DataSetId).FindIndex(c => c.Id == column.Id);
 
     private void RenameColumn(DataColumn column)
@@ -1106,7 +1106,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         dialog.FileSelected += path =>
         {
-            CsvImport.Replace(RecordService.Instance, _currentDataSet, path);
+            CsvImport.Replace(AtomService.Instance, _currentDataSet, path);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;

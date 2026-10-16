@@ -42,7 +42,7 @@ public partial class MultiplayerDialog : Window
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     public override void _ExitTree()
@@ -113,7 +113,7 @@ public partial class MultiplayerDialog : Window
             _statusLabel.Text = $"Connected to {_addressInput.Text}:{_clientPortInput.Text}";
         }
 
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
     }
 
     private void Sync(IWatchReader R)

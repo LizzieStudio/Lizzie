@@ -7,7 +7,7 @@ public partial class DataSetSelector : OptionButton
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     public override void _Ready()

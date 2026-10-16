@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 [JsonName("DataSet")]
-public record DataSet : Replicated
+public record DataSet : Atom
 {
     public static readonly Id<DataSet, SnowTag> ById = new(r => r.Id);
 
@@ -21,7 +21,7 @@ public record DataSet : Replicated
 /// A dataset column.
 /// </summary>
 [JsonName("DataColumn")]
-public record DataColumn : Replicated, IRanked
+public record DataColumn : Atom, IRanked
 {
     public static readonly Id<DataColumn, SnowTag> ById = new(c => c.Id);
 
@@ -31,7 +31,7 @@ public record DataColumn : Replicated, IRanked
     public required SnowTag Id { get; init; }
 
     /// <summary>
-    /// The columns of each dataset, in no order. <see cref="RecordReaderExtensions.GetColumns"/> sorts them.
+    /// The columns of each dataset, in no order. <see cref="AtomReaderExtensions.GetColumns"/> sorts them.
     /// </summary>
     public static readonly Group<DataColumn, SnowTag> ByDataSet = new(c => c.DataSetId);
 
@@ -50,21 +50,20 @@ public record DataColumn : Replicated, IRanked
     /// <summary>
     /// A cell for each of the dataset's rows.
     /// </summary>
-    public override IEnumerable<AtomRef> Contents(IRecordReader R) =>
+    public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
         R.Get(DataRow.ByDataSet, DataSetId).Select(r => DataCell.ById.Ref(new CellId(r.Id, Id)));
 
     /// <summary>
     /// A column is inside its dataset.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IRecordReader R) =>
-        [DataSet.ById.Ref(DataSetId)];
+    public override IEnumerable<AtomRef> Containers(IAtomReader R) => [DataSet.ById.Ref(DataSetId)];
 }
 
 /// <summary>
 /// A single dataset row.
 /// </summary>
 [JsonName("DataRow")]
-public record DataRow : Replicated, IRanked
+public record DataRow : Atom, IRanked
 {
     public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);
 
@@ -74,7 +73,7 @@ public record DataRow : Replicated, IRanked
     public required SnowTag Id { get; init; }
 
     /// <summary>
-    /// The rows of each dataset, in no order. <see cref="RecordReaderExtensions.GetRows"/> sorts them.
+    /// The rows of each dataset, in no order. <see cref="AtomReaderExtensions.GetRows"/> sorts them.
     /// </summary>
     public static readonly Group<DataRow, SnowTag> ByDataSet = new(r => r.DataSetId);
 
@@ -91,21 +90,20 @@ public record DataRow : Replicated, IRanked
     /// <summary>
     /// A cell for each of the dataset's columns.
     /// </summary>
-    public override IEnumerable<AtomRef> Contents(IRecordReader R) =>
+    public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
         R.GetColumns(DataSetId).Select(c => DataCell.ById.Ref(new CellId(Id, c.Id)));
 
     /// <summary>
     /// A row is inside its dataset.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IRecordReader R) =>
-        [DataSet.ById.Ref(DataSetId)];
+    public override IEnumerable<AtomRef> Containers(IAtomReader R) => [DataSet.ById.Ref(DataSetId)];
 }
 
 /// <summary>
 /// The value of one cell of a dataset.
 /// </summary>
 [JsonName("DataCell")]
-public record DataCell : Replicated
+public record DataCell : Atom
 {
     /// <remarks>
     /// When you get a cell that doesn't exist, a stand-in is created.
@@ -122,7 +120,7 @@ public record DataCell : Replicated
     /// <summary>
     /// The change that sets a cell to <paramref name="value"/>.
     /// </summary>
-    public static IEnumerable<IChange> Set(IRecordReader R, CellId id, string value) =>
+    public static IEnumerable<IChange> Set(IAtomReader R, CellId id, string value) =>
         value.Length > 0 ? [new DataCell { Id = id, Value = value }]
         : R.Get(ById, id) is { } old ? [R.Unset(old)]
         : [];
@@ -130,7 +128,7 @@ public record DataCell : Replicated
     /// <summary>
     /// A cell is inside its row and its column.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IRecordReader R) =>
+    public override IEnumerable<AtomRef> Containers(IAtomReader R) =>
         [DataRow.ById.Ref(Id.Row), DataColumn.ById.Ref(Id.Column)];
 }
 

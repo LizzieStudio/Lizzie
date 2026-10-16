@@ -39,18 +39,18 @@ public abstract partial class VisualComponentBase : Area3D
         base._EnterTree();
 
         // Normal nodes never change, since the Table replaces the node when they do.
-        // Previews have no record and keep their own.
-        var record = RecordService.Instance.Get(ComponentState.ById, Reference);
-        if (record != null)
+        // Previews have no atom and keep their own.
+        var atom = AtomService.Instance.Get(ComponentState.ById, Reference);
+        if (atom != null)
         {
-            PrototypeRef = record.PrototypeRef;
-            Card = record.Card;
+            PrototypeRef = atom.PrototypeRef;
+            Card = atom.Card;
         }
 
         // Builds first, so the first placement knows the component's height.
-        RecordService.Instance.Watch(this, Sync);
-        RecordService.Instance.Watch(this, SyncState);
-        RecordService.Instance.Watch(this, SyncSelection);
+        AtomService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, SyncState);
+        AtomService.Instance.Watch(this, SyncSelection);
     }
 
     /// <summary>Shows which players have this component selected.</summary>
@@ -76,7 +76,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// An unsaved prototype shown instead of <see cref="PrototypeRef"/>.
-    /// Used for the editor preview, since there is no protoype record yet.
+    /// Used for the editor preview, since there is no protoype atom yet.
     /// </summary>
     public Prototype DraftPrototype
     {
@@ -84,12 +84,12 @@ public abstract partial class VisualComponentBase : Area3D
         set
         {
             field = value;
-            RecordService.Instance.QueueSync(this);
+            AtomService.Instance.QueueSync(this);
         }
     }
 
     /// <summary>The prototype this component shows. Possibly a draft or even deleted.</summary>
-    protected Prototype GetPrototype(IRecordReader R) =>
+    protected Prototype GetPrototype(IAtomReader R) =>
         DraftPrototype ?? R.Get(Prototype.ById, PrototypeRef);
 
     private Tween _yTween;
@@ -111,7 +111,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Builds the component from its prototype's parameters.
     /// </summary>
-    protected virtual void Setup(ComponentParameters parameters, IRecordReader R)
+    protected virtual void Setup(ComponentParameters parameters, IAtomReader R)
     {
         ShapeProfiles.Clear();
 
@@ -137,7 +137,7 @@ public abstract partial class VisualComponentBase : Area3D
     private bool _placed;
 
     /// <summary>
-    /// Applies the component's record, animated by the command that wrote it if the write is recent enough.
+    /// Applies the component's atom, animated by the command that wrote it if the write is recent enough.
     /// </summary>
     private void SyncState(IWatchReader R)
     {
@@ -227,7 +227,7 @@ public abstract partial class VisualComponentBase : Area3D
     private SnowTag _reference = Snowport.Clock.CreateTag();
 
     /// <summary>
-    /// The component record this node shows. Must be set before adding the node to the tree.
+    /// The component atom this node shows. Must be set before adding the node to the tree.
     /// </summary>
     public SnowTag Reference
     {
@@ -241,10 +241,10 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// The component's record, or null for a node without one, such as a spawn preview.
-    /// Also null between its record being unset and the table removing it at the end of the frame.
+    /// The component's atom, or null for a node without one, such as a spawn preview.
+    /// Also null between its atom being unset and the table removing it at the end of the frame.
     /// </summary>
-    public ComponentState State => RecordService.Instance.Get(ComponentState.ById, Reference);
+    public ComponentState State => AtomService.Instance.Get(ComponentState.ById, Reference);
 
     /// <summary>
     /// Which of its prototype's cards this is, or <see cref="PrototypeItemRef.None"/>.
@@ -552,7 +552,7 @@ public abstract partial class VisualComponentBase : Area3D
     public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
-    public bool IsDragging => State is { } s && RecordService.Instance.IsBeingDragged(s);
+    public bool IsDragging => State is { } s && AtomService.Instance.IsBeingDragged(s);
 
     private bool _logicalVisible = true;
 

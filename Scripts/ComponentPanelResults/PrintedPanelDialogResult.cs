@@ -56,7 +56,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)
@@ -135,7 +135,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     /// <summary>
     /// Counts the cards again and redraws the preview, since a side changed.
     /// </summary>
-    private void Refresh() => RecordService.Instance.QueueSync(this);
+    private void Refresh() => AtomService.Instance.QueueSync(this);
 
     private string TypeKey() =>
         _typePicker.Selected switch
@@ -282,7 +282,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     {
         var d = Parameters();
         // More than one card spawns as a deck.
-        return d.CardCount(RecordService.Instance) > 1 ? d : d.CloneAs<TokenParameters>();
+        return d.CardCount(AtomService.Instance) > 1 ? d : d.CloneAs<TokenParameters>();
     }
 
     private DeckParameters Parameters()
@@ -326,7 +326,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         var parameters = (PrintedParameters)GetParams();
         _preview.Build(
             parameters,
-            parameters.Card(_preview.CurrentItem, RecordService.Instance),
+            parameters.Card(_preview.CurrentItem, AtomService.Instance),
             TextureFactory
         );
     }
@@ -383,7 +383,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _sameAsFront.ButtonPressed = p.Back == null;
         if (p.Back != null)
             _back.Side = p.Back;
-        RecordService.Instance.QueueSync(this);
+        AtomService.Instance.QueueSync(this);
 
         UpdateDimensionUI();
         Activate();

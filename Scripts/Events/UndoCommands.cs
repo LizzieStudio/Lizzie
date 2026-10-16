@@ -49,7 +49,7 @@ public static class UndoCommands
     /// Undoes the newest change by anyone to the selected atoms, or to what's in them, like a deck's cards or a row's cells.
     /// The whole event or gesture is undone, even the parts that changed other atoms.
     /// </summary>
-    public static readonly Command UndoChanges = new RecordCommand<Replicated>
+    public static readonly Command UndoChanges = new AtomCommand<Atom>
     {
         Name = new("record.undo_changes"),
         Icon = CommandIcons.UndoComponent,
@@ -58,7 +58,7 @@ public static class UndoCommands
         SideEffects = (atoms, _) =>
         {
             var refs = atoms.Select(AtomRef.To).ToHashSet();
-            Issue(UndoChanges, UndoLog.Undo, (_, record) => refs.Contains(AtomRef.To(record)));
+            Issue(UndoChanges, UndoLog.Undo, (_, atom) => refs.Contains(AtomRef.To(atom)));
         },
     };
 
@@ -67,29 +67,29 @@ public static class UndoCommands
     /// <summary>
     /// A filter for the player's own changes in the view.
     /// </summary>
-    private static Func<byte, Replicated, bool> Mine(ICommandView view) =>
-        view == null ? null : (author, record) => author == Me && view.UndoScope(record);
+    private static Func<byte, Atom, bool> Mine(ICommandView view) =>
+        view == null ? null : (author, atom) => author == Me && view.UndoScope(atom);
 
     /// <summary>
     /// A filter for other players changes in the view.
     /// Selection events, however, are passed over. That's too far.
     /// </summary>
-    private static Func<byte, Replicated, bool> Others(ICommandView view) =>
+    private static Func<byte, Atom, bool> Others(ICommandView view) =>
         view == null
             ? null
-            : (author, record) => author != Me && record is not Selection && view.UndoScope(record);
+            : (author, atom) => author != Me && atom is not Selection && view.UndoScope(atom);
 
     /// <summary>
     /// <see cref="UndoLog.Undo"/> or <see cref="UndoLog.Redo"/>.
     /// This is used to make it easier to set which one.
     /// </summary>
-    private delegate UndoFlag Pick(EventLog log, byte me, Func<byte, Replicated, bool> scope);
+    private delegate UndoFlag Pick(EventLog log, byte me, Func<byte, Atom, bool> scope);
 
     /// <summary>
     /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any,
     /// as an event made by <paramref name="command"/>.
     /// </summary>
-    private static void Issue(Command command, Pick pick, Func<byte, Replicated, bool> scope)
+    private static void Issue(Command command, Pick pick, Func<byte, Atom, bool> scope)
     {
         if (EventSynchronizer.Instance == null || scope == null)
             return;

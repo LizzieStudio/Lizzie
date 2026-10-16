@@ -37,7 +37,7 @@ public partial class GameController : Node
 
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
-        var prototype = RecordService.Instance.Get(Prototype.ById, e.PrototypeRef);
+        var prototype = AtomService.Instance.Get(Prototype.ById, e.PrototypeRef);
         if (prototype == null)
         {
             GD.PrintErr($"SpawnPrototype: prototype {e.PrototypeRef} not found");
@@ -49,7 +49,7 @@ public partial class GameController : Node
         if (
             e.AllRows
             && prototype.Parameters is DieParameters { Faces: TemplateSide side } die
-            && RecordService.Instance.Get(DataSet.ById, side.Dataset) != null
+            && AtomService.Instance.Get(DataSet.ById, side.Dataset) != null
         )
         {
             SpawnRows(prototype, side.Dataset, die.Size / 10f, components);
@@ -59,7 +59,7 @@ public partial class GameController : Node
             var card =
                 e.Card != PrototypeItemRef.None || prototype.Parameters is DeckParameters
                     ? e.Card
-                    : PrototypeItemRef.First(prototype.Parameters, RecordService.Instance);
+                    : PrototypeItemRef.First(prototype.Parameters, AtomService.Instance);
             var component = SingleComponentSpawn(prototype, card);
             if (component != null)
                 components.Add((component, Vector3.Zero));
@@ -76,7 +76,7 @@ public partial class GameController : Node
         List<(VisualComponentBase, Vector3)> components
     )
     {
-        var rows = RecordService.Instance.GetRows(dataset);
+        var rows = AtomService.Instance.GetRows(dataset);
         int cols = (int)Math.Ceiling(Math.Sqrt(rows.Count));
 
         int i = 0;
@@ -109,7 +109,7 @@ public partial class GameController : Node
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            RecordService.Instance,
+            AtomService.Instance,
             card != PrototypeItemRef.None
         );
         if (string.IsNullOrEmpty(scenePath))

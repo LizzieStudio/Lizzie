@@ -10,9 +10,9 @@ public interface IUndoApi
 {
     string Name { get; }
 
-    UndoFlag Undo(EventLog log, byte me, Func<byte, Replicated, bool> scope);
+    UndoFlag Undo(EventLog log, byte me, Func<byte, Atom, bool> scope);
 
-    UndoFlag Redo(EventLog log, byte me, Func<byte, Replicated, bool> scope);
+    UndoFlag Redo(EventLog log, byte me, Func<byte, Atom, bool> scope);
 
     List<SnowportId> OpenGroups(EventLog log, byte source);
 
@@ -29,10 +29,10 @@ public sealed class CurrentUndo : IUndoApi
 {
     public string Name => "current";
 
-    public UndoFlag Undo(EventLog log, byte me, Func<byte, Replicated, bool> scope) =>
+    public UndoFlag Undo(EventLog log, byte me, Func<byte, Atom, bool> scope) =>
         UndoLog.Undo(log, me, scope);
 
-    public UndoFlag Redo(EventLog log, byte me, Func<byte, Replicated, bool> scope) =>
+    public UndoFlag Redo(EventLog log, byte me, Func<byte, Atom, bool> scope) =>
         UndoLog.Redo(log, me, scope);
 
     public List<SnowportId> OpenGroups(EventLog log, byte source) =>

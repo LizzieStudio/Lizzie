@@ -10,7 +10,7 @@ public static class DataSetCommands
     /// <summary>
     /// Adds a row after the last. The dataset editor's add buttons and Enter on its last row run it.
     /// </summary>
-    public static readonly Command AddRow = new RecordCommand<DataSet>
+    public static readonly Command AddRow = new AtomCommand<DataSet>
     {
         Name = new("dataset.add_row"),
         Icon = CommandIcons.Add,
@@ -24,7 +24,7 @@ public static class DataSetCommands
     /// <summary>
     /// Adds a column after the last. The dataset editor's add buttons run it.
     /// </summary>
-    public static readonly Command AddColumn = new RecordCommand<DataSet>
+    public static readonly Command AddColumn = new AtomCommand<DataSet>
     {
         Name = new("dataset.add_column"),
         Icon = CommandIcons.Add,
@@ -35,7 +35,7 @@ public static class DataSetCommands
         Effects = (R, sets, _) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
     };
 
-    public static readonly Command EditRow = new RecordCommand<DataRow>
+    public static readonly Command EditRow = new AtomCommand<DataRow>
     {
         Name = new("dataset.edit_row"),
         Icon = CommandIcons.Edit,
@@ -52,7 +52,7 @@ public static class DataSetCommands
             ),
     };
 
-    public static readonly Command DeleteRow = new RecordCommand<DataRow>
+    public static readonly Command DeleteRow = new AtomCommand<DataRow>
     {
         Name = new("dataset.delete_row"),
         Icon = CommandIcons.Delete,
@@ -63,7 +63,7 @@ public static class DataSetCommands
         Effects = (R, rows, _) => rows.Select(R.Unset),
     };
 
-    public static readonly Command DeleteColumn = new RecordCommand<DataColumn>
+    public static readonly Command DeleteColumn = new AtomCommand<DataColumn>
     {
         Name = new("dataset.delete_column"),
         Icon = CommandIcons.Delete,
@@ -74,7 +74,7 @@ public static class DataSetCommands
         Effects = (R, columns, _) => columns.Select(R.Unset),
     };
 
-    public static readonly Command ClearCells = new RecordCommand<DataCell>
+    public static readonly Command ClearCells = new AtomCommand<DataCell>
     {
         Name = new("dataset.clear_cells"),
         Icon = CommandIcons.Clear,
@@ -85,7 +85,7 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Cleared(R, cells),
     };
 
-    public static readonly Command CutCells = new RecordCommand<DataCell>
+    public static readonly Command CutCells = new AtomCommand<DataCell>
     {
         Name = new("dataset.cut_cells"),
         Icon = CommandIcons.Cut,
@@ -98,7 +98,7 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Cleared(R, cells),
     };
 
-    public static readonly Command CopyCells = new RecordCommand<DataCell>
+    public static readonly Command CopyCells = new AtomCommand<DataCell>
     {
         Name = new("dataset.copy_cells"),
         Icon = CommandIcons.Copy,
@@ -114,7 +114,7 @@ public static class DataSetCommands
     /// Values past the last column are dropped, and rows past the last row become new rows.
     /// A single value fills every selected cell instead.
     /// </summary>
-    public static readonly Command PasteCells = new RecordCommand<DataCell>
+    public static readonly Command PasteCells = new AtomCommand<DataCell>
     {
         Name = new("dataset.paste_cells"),
         Icon = CommandIcons.Paste,
@@ -124,10 +124,10 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Pasted(R, cells, Tsv.Parse(DisplayServer.ClipboardGet())),
     };
 
-    private static IRecordReader Reader => RecordService.Instance;
+    private static IAtomReader Reader => AtomService.Instance;
 
     // A cell can be empty, but its row and column must still be there.
-    private static bool CellExists(IRecordReader R, DataCell cell) =>
+    private static bool CellExists(IAtomReader R, DataCell cell) =>
         R.Get(DataRow.ById, cell.Id.Row) != null && R.Get(DataColumn.ById, cell.Id.Column) != null;
 
     private static (
@@ -135,7 +135,7 @@ public static class DataSetCommands
         List<SnowTag> Columns,
         List<DataRow> AllRows,
         List<SnowTag> AllColumns
-    ) Block(IRecordReader R, IReadOnlyList<DataCell> cells)
+    ) Block(IAtomReader R, IReadOnlyList<DataCell> cells)
     {
         var dataSetId = R.Get(DataRow.ById, cells[0].Id.Row).DataSetId;
         var allRows = R.GetRows(dataSetId);
@@ -150,7 +150,7 @@ public static class DataSetCommands
         );
     }
 
-    private static string Copied(IRecordReader R, IReadOnlyList<DataCell> cells)
+    private static string Copied(IAtomReader R, IReadOnlyList<DataCell> cells)
     {
         var (rows, columns, _, _) = Block(R, cells);
         var selected = cells.ToDictionary(c => c.Id, c => c.Value);
@@ -162,7 +162,7 @@ public static class DataSetCommands
     }
 
     private static IEnumerable<IChange> Pasted(
-        IRecordReader R,
+        IAtomReader R,
         IReadOnlyList<DataCell> cells,
         List<string[]> grid
     )
@@ -197,10 +197,10 @@ public static class DataSetCommands
         return changes;
     }
 
-    private static IEnumerable<IChange> Cleared(IRecordReader R, IReadOnlyList<DataCell> cells) =>
+    private static IEnumerable<IChange> Cleared(IAtomReader R, IReadOnlyList<DataCell> cells) =>
         cells.SelectMany(c => DataCell.Set(R, c.Id, string.Empty));
 
-    public static IEnumerable<Replicated> NewRow(IRecordReader R, SnowTag dataSetId, int index) =>
+    public static IEnumerable<Atom> NewRow(IAtomReader R, SnowTag dataSetId, int index) =>
         [
             new DataRow
             {
@@ -210,7 +210,7 @@ public static class DataSetCommands
             },
         ];
 
-    public static IEnumerable<Replicated> NewColumn(IRecordReader R, SnowTag dataSetId, int index)
+    public static IEnumerable<Atom> NewColumn(IAtomReader R, SnowTag dataSetId, int index)
     {
         var columns = R.GetColumns(dataSetId);
         return

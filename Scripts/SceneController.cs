@@ -47,7 +47,7 @@ public partial class SceneController : Node3D, ICommandView
     public IEnumerable<AtomRef> Hovered() =>
         _gameObjects.CursorMode is CursorMode.DragSelect or CursorMode.Spawn
         || _gameObjects.GetHoveredObject() is not { } hovered
-        || RecordService.Instance.Get(ComponentState.ById, hovered.Reference) == null
+        || AtomService.Instance.Get(ComponentState.ById, hovered.Reference) == null
             ? []
             : [ComponentState.ById.Ref(hovered.Reference)];
 
@@ -63,8 +63,8 @@ public partial class SceneController : Node3D, ICommandView
     /// <summary>
     /// The table undoes its components, and what's selected on it.
     /// </summary>
-    public bool UndoScope(Replicated record) =>
-        record switch
+    public bool UndoScope(Atom atom) =>
+        atom switch
         {
             ComponentState => true,
             Selection s => s.Within == SnowTag.Empty,
@@ -72,9 +72,9 @@ public partial class SceneController : Node3D, ICommandView
         };
 
     #region Table commands
-    // These act on the table rather than on records, so only the table offers them.
+    // These act on the table rather than on atoms, so only the table offers them.
 
-    private static readonly Command DuplicateComponent = new RecordCommand<ComponentState>
+    private static readonly Command DuplicateComponent = new AtomCommand<ComponentState>
     {
         Name = new("table.duplicate"),
         // The prototype manifest's clone icon.
@@ -88,7 +88,7 @@ public partial class SceneController : Node3D, ICommandView
             ),
     };
 
-    private static readonly Command ZoomToComponent = new RecordCommand<ComponentState>
+    private static readonly Command ZoomToComponent = new AtomCommand<ComponentState>
     {
         Name = new("table.zoom"),
         Icon = CommandIcons.Zoom,

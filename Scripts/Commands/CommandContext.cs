@@ -48,7 +48,7 @@ public sealed class CommandContext
     } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
-    /// The record the view shows, from its <see cref="ICommandView.SelectionScope"/>, or empty.
+    /// The atom the view shows, from its <see cref="ICommandView.SelectionScope"/>, or empty.
     /// </summary>
     public IEnumerable<AtomRef> View
     {
@@ -64,11 +64,11 @@ public sealed class CommandContext
     /// <summary>
     /// <para>The full context of what's targeted in <paramref name="view"/>, read through <paramref name="R"/>.</para>
     ///
-    /// The <see cref="CommandContext"/> is derived from the player's selection records.
+    /// The <see cref="CommandContext"/> is derived from the player's selection atoms.
     /// If there is no selection and <paramref name="keys"/> is true, the hovered target from <see cref="ICommandView.Hovered"/> is treated like the selection.
     /// The <see cref="Containers"/>, <see cref="Contents"/>, and <see cref="Referenced"/> are all derived from the selected targets.
     /// </summary>
-    public static CommandContext Of(ICommandView view, IRecordReader R, bool keys = false)
+    public static CommandContext Of(ICommandView view, IAtomReader R, bool keys = false)
     {
         if (view == null)
             return new();

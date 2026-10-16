@@ -53,7 +53,7 @@ public partial class HandManager : Panel
 
     public override void _EnterTree()
     {
-        RecordService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, Sync);
     }
 
     private void OnResizeHandleGuiInput(InputEvent @event)
@@ -131,7 +131,7 @@ public partial class HandManager : Panel
                 _previews.Add((copy, null));
             }
             var s = cards[i];
-            var R = RecordService.Instance;
+            var R = AtomService.Instance;
             var (rect, shown) = _previews[i];
 
             // A card can be flipped, or its prototype edited, while it's held.
@@ -172,7 +172,7 @@ public partial class HandManager : Panel
         rect.Visible = false;
         if (shown == null)
             return;
-        rect.ShowCard(null, false, RecordService.Instance);
+        rect.ShowCard(null, false, AtomService.Instance);
         _previews[i] = (rect, null);
     }
 

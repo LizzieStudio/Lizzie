@@ -5,19 +5,19 @@ using Xunit;
 /// <summary>
 /// Every atom type declares exactly one <see cref="Id{T, I}"/>, which its store holds atoms by.
 /// </summary>
-public class AtomIdTests
+public class IdQueryTests
 {
     [Fact]
     public void EveryAtomTypeDeclaresOneId()
     {
-        var problems = typeof(Replicated)
+        var problems = typeof(Atom)
             .Assembly.GetTypes()
-            .Where(t => t.IsSubclassOf(typeof(Replicated)) && !t.IsAbstract)
+            .Where(t => t.IsSubclassOf(typeof(Atom)) && !t.IsAbstract)
             .Select(t =>
             {
                 try
                 {
-                    AtomId.For(t);
+                    IdQuery.For(t);
                     return null;
                 }
                 catch (InvalidOperationException e)

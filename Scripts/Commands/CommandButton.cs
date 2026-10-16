@@ -89,7 +89,7 @@ public partial class CommandButton : Button
     public override void _EnterTree()
     {
         if (!Engine.IsEditorHint())
-            RecordService.Instance.Watch(this, Sync);
+            AtomService.Instance.Watch(this, Sync);
     }
 
     public override void _Ready()
@@ -144,7 +144,7 @@ public partial class CommandButton : Button
 
     private void Run()
     {
-        IRecordReader R = RecordService.Instance;
+        IAtomReader R = AtomService.Instance;
         var view = CommandViews.Of(this);
         var targets = GetTargets(view, R);
         if (Command != null && Command.Fits(targets.Count) && Command.IsAvailable(R))
@@ -154,7 +154,7 @@ public partial class CommandButton : Button
     /// <summary>
     /// What commands would act on in the view, as its context menu would.
     /// </summary>
-    private List<AtomRef> GetTargets(ICommandView view, IRecordReader R)
+    private List<AtomRef> GetTargets(ICommandView view, IAtomReader R)
     {
         var context = CommandContext.Of(view, R);
         return CommandResolver.TargetsFor(Command, context, R, menu: true);
@@ -184,7 +184,7 @@ public partial class CommandButton : Button
             return false;
         if (!Engine.IsEditorHint())
         {
-            RecordService.Instance.QueueSync(this);
+            AtomService.Instance.QueueSync(this);
             return false;
         }
         Preview();

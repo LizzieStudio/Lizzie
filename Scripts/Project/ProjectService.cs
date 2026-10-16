@@ -57,8 +57,8 @@ public partial class ProjectService : Node
         HasUnsavedChanges = true;
     }
 
-    // What the project's records are read through.
-    private static IRecordReader R => RecordService.Instance;
+    // What the project's atoms are read through.
+    private static IAtomReader R => AtomService.Instance;
 
     private bool _hasUnsavedChanges;
 
@@ -87,7 +87,7 @@ public partial class ProjectService : Node
             if (replaced)
             {
                 FaceSet.Clear();
-                RecordService.Instance.Machinery().Clear();
+                AtomService.Instance.Machinery().Clear();
             }
 
             UpdateWindowTitle();
@@ -206,7 +206,7 @@ public partial class ProjectService : Node
     {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
-        RecordService.Instance.Machinery().FlushBulkLoad();
+        AtomService.Instance.Machinery().FlushBulkLoad();
     }
 
     /// <summary>
@@ -221,7 +221,7 @@ public partial class ProjectService : Node
     {
         EventSynchronizer.Instance?.AbandonGroups(source);
         var seating = R.Get(Seating.Only);
-        RecordService.Instance.WriteAdmin(
+        AtomService.Instance.WriteAdmin(
             R.Get(Selection.ByPlayer, source)
                 .Select(R.Unset)
                 .Append<IChange>(seating with { Seats = seating.Seats.Remove(source) })
@@ -258,7 +258,7 @@ public partial class ProjectService : Node
                 saveFile.StoreLine(
                     SaveCompaction.Serialize(
                         TableEvent.Admin(
-                            SaveCompaction.Collect(RecordService.Instance.Machinery().SavedAtoms())
+                            SaveCompaction.Collect(AtomService.Instance.Machinery().SavedAtoms())
                         )
                     )
                 );
@@ -348,7 +348,7 @@ public partial class ProjectService : Node
         if (!changed)
             return;
 
-        RecordService.Instance.WriteAdmin(settings with { Players = builder.ToImmutable() });
+        AtomService.Instance.WriteAdmin(settings with { Players = builder.ToImmutable() });
     }
 
     public GameObjects GameObjects { get; set; }
@@ -361,7 +361,7 @@ public partial class ProjectService : Node
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            RecordService.Instance
+            AtomService.Instance
         );
 
         VisualComponentBase component = SpawnComponent(scenePath);

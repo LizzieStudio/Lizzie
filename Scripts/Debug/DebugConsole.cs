@@ -158,7 +158,7 @@ public partial class DebugConsole : Node
     /// </summary>
     private void Spam(int count)
     {
-        var states = RecordService.Instance?.Get(ComponentState.All).ToArray();
+        var states = AtomService.Instance?.Get(ComponentState.All).ToArray();
         if (EventSynchronizer.Instance == null || states == null || states.Length == 0)
         {
             Log("Spam needs at least one component on the table.");
@@ -272,7 +272,7 @@ public partial class DebugConsole : Node
     }
 
     /// <summary>
-    /// A label for events. Either the command that made it or the records it writes.
+    /// A label for events. Either the command that made it or the atoms it writes.
     /// </summary>
     private static string Describe(TableEvent e)
     {
@@ -282,12 +282,12 @@ public partial class DebugConsole : Node
         if (e.Undo is { } u)
             return u.ByRedo ? "Redo" : "Undo";
 
-        if (e.Records.Length == 0 && e.Unsets.Length == 0)
+        if (e.Writes.Length == 0 && e.Unsets.Length == 0)
             return e.End != GroupEnd.None ? e.End.ToString() : "(empty)";
 
         return string.Join(
             ", ",
-            e.Records.Select(RecordLabel)
+            e.Writes.Select(AtomLabel)
                 .Concat(e.Unsets.Select(u => $"Unset {u.GetType().Name}"))
                 .GroupBy(label => label)
                 .Select(g => g.Count() > 1 ? $"{g.Key}×{g.Count()}" : g.Key)
@@ -307,10 +307,10 @@ public partial class DebugConsole : Node
             io.AddMouseButtonEvent((int)imguiButton, false);
     }
 
-    private static string RecordLabel(Replicated record) =>
-        record switch
+    private static string AtomLabel(Atom atom) =>
+        atom switch
         {
             ComponentState => "Upsert",
-            _ => record.GetType().Name,
+            _ => atom.GetType().Name,
         };
 }

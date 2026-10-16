@@ -42,7 +42,7 @@ public sealed class FaceLoader(Action shown)
         Prototype prototype,
         PrototypeItemRef item,
         TextureFactory factory,
-        IRecordReader R
+        IAtomReader R
     )
     {
         Face View(SideParameters side, string key, SnowTag row) =>
@@ -99,7 +99,7 @@ public sealed class FaceLoader(Action shown)
         SnowTag row,
         Prototype prototype,
         TextureFactory factory,
-        IRecordReader R
+        IAtomReader R
     )
     {
         int n = Math.Max(item.Number, 0);

@@ -10,7 +10,7 @@ using static VisualComponentBase;
 /// </summary>
 public static class ComponentCommands
 {
-    public static readonly Command Flip = new RecordCommand<ComponentState>
+    public static readonly Command Flip = new AtomCommand<ComponentState>
     {
         Name = new("component.flip"),
         Icon = CommandIcons.Flip,
@@ -21,7 +21,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Flipped(R, cs),
     };
 
-    public static readonly Command RotateCw = new RecordCommand<ComponentState>
+    public static readonly Command RotateCw = new AtomCommand<ComponentState>
     {
         Name = new("component.rotate_cw"),
         Icon = CommandIcons.RotateRight,
@@ -32,7 +32,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => Rotated(c, -RotationStep(R))),
     };
 
-    public static readonly Command RotateCcw = new RecordCommand<ComponentState>
+    public static readonly Command RotateCcw = new AtomCommand<ComponentState>
     {
         Name = new("component.rotate_ccw"),
         Icon = CommandIcons.RotateLeft,
@@ -43,7 +43,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => Rotated(c, RotationStep(R))),
     };
 
-    public static readonly Command MoveToTop = new RecordCommand<ComponentState>
+    public static readonly Command MoveToTop = new AtomCommand<ComponentState>
     {
         Name = new("component.move_to_top"),
         Icon = CommandIcons.SendToTop,
@@ -54,7 +54,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Reordered(cs, ZTarget.Top),
     };
 
-    public static readonly Command MoveToBottom = new RecordCommand<ComponentState>
+    public static readonly Command MoveToBottom = new AtomCommand<ComponentState>
     {
         Name = new("component.move_to_bottom"),
         Icon = CommandIcons.SendToBottom,
@@ -65,7 +65,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Reordered(cs, ZTarget.Bottom),
     };
 
-    public static readonly Command Delete = new RecordCommand<ComponentState>
+    public static readonly Command Delete = new AtomCommand<ComponentState>
     {
         Name = new("component.delete"),
         Icon = CommandIcons.Delete,
@@ -76,18 +76,18 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(R.Unset),
     };
 
-    private static float RotationStep(IRecordReader R) =>
+    private static float RotationStep(IAtomReader R) =>
         R.Get(ProjectGameSettings.Only).RotationStep();
 
     // Deleting or restacking what someone is dragging would fight the drag.
-    private static bool NotHeld(IRecordReader R, ComponentState c) => !R.IsBeingDragged(c);
+    private static bool NotHeld(IAtomReader R, ComponentState c) => !R.IsBeingDragged(c);
 
     // What's inside a bag isn't on the table to turn. A hand shows its cards turned as they'll lie on the table.
-    private static bool Turnable(IRecordReader R, ComponentState c) =>
+    private static bool Turnable(IAtomReader R, ComponentState c) =>
         !R.IsContained(c) || R.IsInHand(c);
 
     // Zones stay underneath everything.
-    private static bool Restackable(IRecordReader R, ComponentState c) =>
+    private static bool Restackable(IAtomReader R, ComponentState c) =>
         c.IsOnTable && R.Kind(c) != VisualComponentType.Zone;
 
     /// <summary>
@@ -96,7 +96,7 @@ public static class ComponentCommands
     /// <see cref="VcToken"/> animates what Flip writes.
     /// </summary>
     private static IEnumerable<ComponentState> Flipped(
-        IRecordReader R,
+        IAtomReader R,
         IEnumerable<ComponentState> tokens
     ) =>
         tokens

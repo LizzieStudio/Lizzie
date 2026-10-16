@@ -287,7 +287,7 @@ internal readonly struct Footprint
     public readonly float YHeight;
 
     /// <summary>
-    /// Where the component's record puts it, offset by <paramref name="origin"/>, if provided.
+    /// Where the component's atom puts it, offset by <paramref name="origin"/>, if provided.
     /// </summary>
     public Footprint(int index, VisualComponentBase c, Vector3 origin = default)
     {

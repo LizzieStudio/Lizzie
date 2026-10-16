@@ -29,14 +29,14 @@ public partial class VcTray : VisualComponentGroup
         }
     }
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
         Apply((TrayParameters)parameters, R);
     }
 
     /// <summary>Sizes the tray and shows the prototype it hands out.</summary>
-    private void Apply(TrayParameters p, IRecordReader R)
+    private void Apply(TrayParameters p, IAtomReader R)
     {
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
 

@@ -5,7 +5,7 @@ using Godot;
 /// Makes grouping inputs to a focusable control easier.
 /// </summary>
 /// <remarks>
-/// Add this as a child of a focusable control, then use <see cref="Update"/> to write to the record.
+/// Add this as a child of a focusable control, then use <see cref="Update"/> to write to the atom.
 /// While the parent control retains focus, the updates will go to the same group.
 /// If the user defocuses the control, all changes will be written as one Undo target.
 /// If the user cancels the edit (Esc), all changes will be reversed without an Undo target.
@@ -25,24 +25,24 @@ public partial class FocusEditGroup : Node
         _focus.GuiInput += OnGuiInput;
     }
 
-    /// <inheritdoc cref="RecordService.Update"/>
+    /// <inheritdoc cref="AtomService.Update"/>
     public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
-        where T : Replicated
+        where T : Atom
         where I : IComparable<I>
     {
-        if (RecordService.Instance.Get(byId, id) is not { } record)
+        if (AtomService.Instance.Get(byId, id) is not { } atom)
             return;
         if (_group == SnowportId.Empty)
-            _group = RecordService.Instance.Open(change(record));
+            _group = AtomService.Instance.Open(change(atom));
         else
-            RecordService.Instance.Append(_group, change(record));
+            AtomService.Instance.Append(_group, change(atom));
     }
 
     private void OnGuiInput(InputEvent e)
     {
         if (e.IsActionPressed("ui_cancel"))
         {
-            RecordService.Instance.CancelIfOpen(_group);
+            AtomService.Instance.CancelIfOpen(_group);
             _group = SnowportId.Empty;
             _focus.ReleaseFocus();
         }
@@ -50,7 +50,7 @@ public partial class FocusEditGroup : Node
 
     private void Close()
     {
-        RecordService.Instance.Close(_group);
+        AtomService.Instance.Close(_group);
         _group = SnowportId.Empty;
     }
 }

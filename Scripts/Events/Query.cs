@@ -8,8 +8,8 @@ using System.Reflection;
 ///
 /// <para>
 /// Currently, there are only two types of <see cref="Query"/>: <see cref="Id{T, I}"/> and <see cref="Group{T, G}"/>.
-/// A <see cref="RecordService.Watch"/> action that reads a <see cref="Query"/> will then update if the results of that <see cref="Query"/> change.
-/// The <see cref="Query"/>s are also used to determine which records survive a save. An atom is kept if it is accessible from a chain of <see cref="Query"/>s.
+/// A <see cref="AtomService.Watch"/> action that reads a <see cref="Query"/> will then update if the results of that <see cref="Query"/> change.
+/// The <see cref="Query"/>s are also used to determine which atoms survive a save. An atom is kept if it is accessible from a chain of <see cref="Query"/>s.
 /// </para>
 /// </summary>
 /// <remarks>
@@ -22,7 +22,7 @@ public abstract class Query
     /// <summary>
     /// The id or group key of <paramref name="atom"/>, boxed. Null for a group it isn't in.
     /// </summary>
-    internal abstract object Of(Replicated atom);
+    internal abstract object Of(Atom atom);
 
     /// <summary>
     /// The queries <paramref name="atomType"/> declares as public static fields: its Id and its Groups.
@@ -49,9 +49,9 @@ public abstract class Query
 /// An atom's id determines which new writes replace an existing atom.
 /// </para>
 /// </summary>
-public abstract class AtomId : Query
+public abstract class IdQuery : Query
 {
-    private protected AtomId() { }
+    private protected IdQuery() { }
 
     /// <summary>
     /// The type of the ids.
@@ -63,29 +63,29 @@ public abstract class AtomId : Query
     /// <summary>
     /// Orders two atoms of this Id's type by their ids.
     /// </summary>
-    internal abstract int Compare(Replicated a, Replicated b);
+    internal abstract int Compare(Atom a, Atom b);
 
     /// <summary>
     /// What stands in for the atom with <paramref name="id"/> before it exists, or null if the type has no stand-in.
     /// </summary>
-    internal abstract Replicated Unwritten(object id);
+    internal abstract Atom Unwritten(object id);
 
-    private static readonly Dictionary<Type, AtomId> Declared = new();
+    private static readonly Dictionary<Type, IdQuery> Declared = new();
 
     /// <summary>
     /// The Id that <paramref name="atomType"/> declares.
     /// Throws if it doesn't declare exactly one.
     /// </summary>
-    public static AtomId For(Type atomType)
+    public static IdQuery For(Type atomType)
     {
         if (!Declared.TryGetValue(atomType, out var id))
             Declared[atomType] = id = Find(atomType);
         return id;
     }
 
-    private static AtomId Find(Type atomType)
+    private static IdQuery Find(Type atomType)
     {
-        var ids = DeclaredOn(atomType).OfType<AtomId>().ToList();
+        var ids = DeclaredOn(atomType).OfType<IdQuery>().ToList();
         if (ids.Count != 1 || ids[0] == null || ids[0].AtomType != atomType)
             throw new InvalidOperationException(
                 $"{atomType.Name} needs exactly one Id, declared as a public static readonly Id<{atomType.Name}, I> field, "
@@ -105,12 +105,12 @@ public abstract class AtomId : Query
 /// A new write with the same id replaces the old.
 /// </para>
 /// <code>public static readonly Id&lt;DataRow, SnowTag&gt; ById = new(r => r.Id);</code>
-/// Read an atom with <see cref="IRecordReader.Get{T, I}(Id{T, I}, I)"/>.
+/// Read an atom with <see cref="IAtomReader.Get{T, I}(Id{T, I}, I)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
 /// <typeparam name="I">The type of the id, which orders atoms in a save.</typeparam>
-public class Id<T, I> : AtomId
-    where T : Replicated
+public class Id<T, I> : IdQuery
+    where T : Atom
     where I : IComparable<I>
 {
     private readonly Func<T, I> _of;
@@ -131,7 +131,7 @@ public class Id<T, I> : AtomId
 
     public I Of(T atom) => _of(atom);
 
-    internal override object Of(Replicated atom) => _of((T)atom);
+    internal override object Of(Atom atom) => _of((T)atom);
 
     /// <summary>
     /// The ref to the atom with <paramref name="id"/>, whether or not it exists.
@@ -143,11 +143,11 @@ public class Id<T, I> : AtomId
     /// </summary>
     internal virtual T Unwritten(I id) => _unwritten?.Invoke(id);
 
-    internal override Replicated Unwritten(object id) => Unwritten((I)id);
+    internal override Atom Unwritten(object id) => Unwritten((I)id);
 
     internal override Type IdType => typeof(I);
 
-    internal override int Compare(Replicated a, Replicated b) =>
+    internal override int Compare(Atom a, Atom b) =>
         Comparer<I>.Default.Compare(_of((T)a), _of((T)b));
 
     private protected override Type AtomType => typeof(T);
@@ -159,12 +159,12 @@ public class Id<T, I> : AtomId
 ///
 /// <code>public static readonly Singleton&lt;Seating&gt; Only = new();</code>
 ///
-/// Read the atom with <see cref="RecordReaderExtensions.Get{T}(IRecordReader, Singleton{T})"/>,
+/// Read the atom with <see cref="AtomReaderExtensions.Get{T}(IAtomReader, Singleton{T})"/>,
 /// which gives the default <typeparamref name="T"/> until the first write.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
 public sealed class Singleton<T>() : Id<T, SingletonId>(_ => default)
-    where T : Replicated, new()
+    where T : Atom, new()
 {
     // What reads give before the first write, made on the first read.
     private T Shared => field ??= new();
@@ -191,12 +191,12 @@ public readonly record struct SingletonId : IComparable<SingletonId>
 ///
 /// You may declare multiple Groups on one atom type.
 /// Returning null for a group key keeps the atom out of any grouping.
-/// Read a group with <see cref="IRecordReader.Get{T, G}(Group{T, G}, G)"/>.
+/// Read a group with <see cref="IAtomReader.Get{T, G}(Group{T, G}, G)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
 /// <typeparam name="G">The type of the group key.</typeparam>
 public class Group<T, G> : Query
-    where T : Replicated
+    where T : Atom
 {
     private readonly Func<T, G> _of;
 
@@ -210,15 +210,15 @@ public class Group<T, G> : Query
     /// </summary>
     public G Of(T atom) => _of(atom);
 
-    internal override object Of(Replicated atom) => _of((T)atom);
+    internal override object Of(Atom atom) => _of((T)atom);
 }
 
 /// <summary>
-/// Lists every atom of <typeparamref name="T"/>, read with <see cref="RecordReaderExtensions.Get{T}(IRecordReader, All{T})"/>.
+/// Lists every atom of <typeparamref name="T"/>, read with <see cref="AtomReaderExtensions.Get{T}(IAtomReader, All{T})"/>.
 /// A type without this cannot be enumerated.
 /// You generally want to avoid adding this to most atom types, however, since save files will always keep an atom an <see cref="All{T}"/> lists.
 /// </summary>
 /// <param name="where">Which atoms it lists, or every one when null.</param>
 public sealed class All<T>(Func<T, bool> where = null)
     : Group<T, bool?>(atom => where == null || where(atom) ? true : null)
-    where T : Replicated;
+    where T : Atom;

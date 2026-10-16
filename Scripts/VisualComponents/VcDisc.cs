@@ -12,7 +12,7 @@ public partial class VcDisc : VisualComponentBase
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
     }
 
-    protected override void Setup(ComponentParameters parameters, IRecordReader R)
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
         base.Setup(parameters, R);
         var p = (DiscParameters)parameters;

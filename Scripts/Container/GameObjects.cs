@@ -60,17 +60,17 @@ public partial class GameObjects : Node3D
     public SnowportId DragGroup => _held?.Group ?? SnowportId.Empty;
 
     /// <summary>
-    /// Starts a drag of the records in <paramref name="pickup"/>,
+    /// Starts a drag of the atoms in <paramref name="pickup"/>,
     /// which are in stacking order and whose positions are their offsets from the pointer.
     /// The pickup also writes <paramref name="alongside"/>, so a cancel takes them back too.
     /// </summary>
-    private void StartDrag(IEnumerable<ComponentState> pickup, IEnumerable<Replicated> alongside)
+    private void StartDrag(IEnumerable<ComponentState> pickup, IEnumerable<Atom> alongside)
     {
-        var R = RecordService.Instance;
+        var R = AtomService.Instance;
         bool overHand = HandRow.Under(GetViewport()) != null;
         var holder = overHand ? R.LocalHandHold() : R.LocalCursor();
         var stamp = Snowport.Clock.Create();
-        var records = pickup
+        var atoms = pickup
             .Select(
                 (s, i) =>
                     s with
@@ -81,13 +81,13 @@ public partial class GameObjects : Node3D
             )
             .ToArray();
         // Players without a seat can't drag.
-        if (records.Length == 0 || holder == SnowTag.Empty)
+        if (atoms.Length == 0 || holder == SnowTag.Empty)
             return;
 
         _held = new HeldDrag
         {
-            Group = R.Open(DragCommands.Pickup, records.Concat(alongside)),
-            Components = records.Select(r => r.Id).ToArray(),
+            Group = R.Open(DragCommands.Pickup, atoms.Concat(alongside)),
+            Components = atoms.Select(r => r.Id).ToArray(),
         };
         CursorMode = CursorMode.Drag;
         _heldOverHand = overHand;
@@ -112,10 +112,10 @@ public partial class GameObjects : Node3D
     }
 
     /// <summary>
-    /// Ends a drag with the records in <paramref name="drop"/>.
+    /// Ends a drag with the atoms in <paramref name="drop"/>.
     /// </summary>
-    private static void EndDrag(HeldDrag held, IEnumerable<Replicated> drop) =>
-        RecordService.Instance.Close(held.Group, DragCommands.Drop, drop);
+    private static void EndDrag(HeldDrag held, IEnumerable<Atom> drop) =>
+        AtomService.Instance.Close(held.Group, DragCommands.Drop, drop);
 
     /// <summary>
     /// Called after the local player's drag ends to perform state cleanup.
@@ -123,7 +123,7 @@ public partial class GameObjects : Node3D
     private void CleanupDrag()
     {
         if (_held != null)
-            RecordService.Instance.CancelIfOpen(_held.Group);
+            AtomService.Instance.CancelIfOpen(_held.Group);
         _held = null;
         CursorMode = CursorMode.Normal;
         _heldOverHand = false;
@@ -192,9 +192,9 @@ public partial class GameObjects : Node3D
 
     public VisualComponentBase GetComponent(SnowTag reference) => _table.GetComponent(reference);
 
-    /// <summary>The nodes for the given records, skipping any that have none yet.</summary>
-    private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentState> records) =>
-        records.Select(s => GetComponent(s.Id)).Where(c => c != null);
+    /// <summary>The nodes for the given atoms, skipping any that have none yet.</summary>
+    private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentState> atoms) =>
+        atoms.Select(s => GetComponent(s.Id)).Where(c => c != null);
 
     public override void _PhysicsProcess(double delta)
     {
@@ -293,7 +293,7 @@ public partial class GameObjects : Node3D
 
     private void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
-        var records = new List<Replicated>();
+        var atoms = new List<Atom>();
         var stamp = Snowport.Clock.Create();
         int suborder = 0;
 
@@ -304,23 +304,23 @@ public partial class GameObjects : Node3D
                 Id = Snowport.Clock.CreateTag(),
                 ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
             };
-            records.Add(self);
+            atoms.Add(self);
 
             // The stack goes above the component, bottom first.
             foreach (var s in component.GetSpawnStack(self))
             {
-                records.Add(s with { ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp) });
+                atoms.Add(s with { ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp) });
             }
         }
 
-        RecordService.Instance.Write(records);
+        AtomService.Instance.Write(atoms);
     }
 
     /// <summary>
     /// The nodes of the cards stacked exactly on the deck, top first.
     /// </summary>
     private List<VisualComponentBase> GetStack(VcDeck deck) =>
-        deck.State is { } s ? Nodes(RecordService.Instance.TokensOn(s)).ToList() : [];
+        deck.State is { } s ? Nodes(AtomService.Instance.TokensOn(s)).ToList() : [];
 
     #endregion
 
@@ -425,13 +425,13 @@ public partial class GameObjects : Node3D
     #endregion
 
     #region Selection
-    /// <summary>The components the local player has selected, read from their selection record.</summary>
+    /// <summary>The components the local player has selected, read from their selection atom.</summary>
     private HashSet<SnowTag> GetSelection() =>
-        RecordService.Instance.GetSelection(ComponentState.ById).ToHashSet();
+        AtomService.Instance.GetSelection(ComponentState.ById).ToHashSet();
 
     /// <summary>Replaces the local player's selected components.</summary>
     public void SetSelection(IEnumerable<SnowTag> components) =>
-        RecordService.Instance.SetSelection(ComponentState.ById, components);
+        AtomService.Instance.SetSelection(ComponentState.ById, components);
 
     /// <summary>
     /// Previews a box selection on the nodes. Nothing is written until <see cref="EndDragSelection"/>.
@@ -578,7 +578,7 @@ public partial class GameObjects : Node3D
             var draw = ((VisualComponentGroup)hit.Component).DragDraw();
             StartDrag(
                 draw,
-                RecordService.Instance.NewSelection(ComponentState.ById, draw.Select(d => d.Id))
+                AtomService.Instance.NewSelection(ComponentState.ById, draw.Select(d => d.Id))
             );
         }
         else if (_dragPlane.Project(at) is { } cursor)
@@ -701,7 +701,7 @@ public partial class GameObjects : Node3D
     {
         ZoneService.Recompute(
             ComponentNodes.OfType<VisualComponentBase>(),
-            RecordService.Instance.LocalSeat(),
+            AtomService.Instance.LocalSeat(),
             ZoneService.LocalSeatIsAdmin()
         );
     }
@@ -758,7 +758,7 @@ public partial class GameObjects : Node3D
 
     private void UpdateDrag(HeldDrag held, Vector2 point)
     {
-        var R = RecordService.Instance;
+        var R = AtomService.Instance;
         var cards = held.Cards(R).ToList();
         // Only cards go into a hand, which opens a gap for them itself.
         var row = cards.Count > 0 ? HandRow.Under(GetViewport()) : null;
@@ -805,7 +805,7 @@ public partial class GameObjects : Node3D
 
         float yaw = nearest.Rotation.Y;
         float step = Mathf.DegToRad(
-            RecordService.Instance.Get(ProjectGameSettings.Only).RotationStep()
+            AtomService.Instance.Get(ProjectGameSettings.Only).RotationStep()
         );
         return Mathf.Snapped(yaw - camera, step) - yaw;
     }
@@ -835,12 +835,12 @@ public partial class GameObjects : Node3D
     /// </summary>
     private IEnumerable<VisualComponentBase> GetDraggingObjects()
     {
-        var R = RecordService.Instance;
+        var R = AtomService.Instance;
         return Nodes(R.Cursors().SelectMany(c => R.Get(ComponentState.ByContainer, c)));
     }
 
     private IEnumerable<VisualComponentBase> GetNotDraggingObjects() =>
-        Nodes(RecordService.Instance.Get(ComponentState.ByContainer, SnowTag.Empty));
+        Nodes(AtomService.Instance.Get(ComponentState.ByContainer, SnowTag.Empty));
 
     /// <summary>
     /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.
@@ -853,7 +853,7 @@ public partial class GameObjects : Node3D
         if (_dragPlane.Project(point) is not { } cursor)
             return;
 
-        var dropped = At(cursor, held.Records(RecordService.Instance));
+        var dropped = At(cursor, held.Atoms(AtomService.Instance));
         if (_currentDragDropTarget is { } bag)
             EndDrag(held, bag.DropObjects(dropped));
         else
@@ -870,7 +870,7 @@ public partial class GameObjects : Node3D
         if (_dragPlane.GetCursorProjection() is not { } cursor)
             return;
 
-        var R = RecordService.Instance;
+        var R = AtomService.Instance;
         var cards = PlayerHandService.Inserted(
             PlayerHandService.GetHand(R, seat),
             held.Cards(R).ToList(),
@@ -878,19 +878,19 @@ public partial class GameObjects : Node3D
             R.HandOf(seat),
             Snowport.Clock.Create()
         );
-        var rest = held.Records(R)
+        var rest = held.Atoms(R)
             .Where(s => R.Kind(s) != VisualComponentBase.VisualComponentType.Token);
         EndDrag(held, cards.Concat(OnTable(At(cursor, rest))));
     }
 
     /// <summary>
-    /// The held <paramref name="records"/> placed where they are on the table, at their offsets from <paramref name="cursor"/>.
+    /// The held <paramref name="atoms"/> placed where they are on the table, at their offsets from <paramref name="cursor"/>.
     /// </summary>
-    private static List<ComponentState> At(Vector3 cursor, IEnumerable<ComponentState> records) =>
-        records.Select(s => s with { Position = cursor + s.PositionAt(0) }).ToList();
+    private static List<ComponentState> At(Vector3 cursor, IEnumerable<ComponentState> atoms) =>
+        atoms.Select(s => s with { Position = cursor + s.PositionAt(0) }).ToList();
 
     /// <summary>
-    /// The records that set <paramref name="dropped"/> down on the table where they are,
+    /// The atoms that set <paramref name="dropped"/> down on the table where they are,
     /// in their stacking order, snapped onto a card or deck they're dropped near.
     /// </summary>
     private static ComponentState[] OnTable(List<ComponentState> dropped)
@@ -920,7 +920,7 @@ public partial class GameObjects : Node3D
     /// </summary>
     private static (int X, int Z) SnapDelta(List<ComponentState> dropped)
     {
-        var R = RecordService.Instance;
+        var R = AtomService.Instance;
         var targets = R.Get(ComponentState.ByContainer, SnowTag.Empty)
             .Where(s =>
                 R.Kind(s)

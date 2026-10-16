@@ -5,7 +5,7 @@ using Godot;
 /// <summary>
 /// <para>The Godot drag-and-drop data of a gesture that holds components: what it holds, and its undo group.</para>
 /// <para>
-/// Where the components are lives in their records, which every player sees.
+/// Where the components are lives in their atoms, which every player sees.
 /// A drop target reads them from there, and accepts the drag by closing <see cref="Group"/> with the drop.
 /// A drag that ends with its group still open wasn't accepted, and is canceled.
 /// </para>
@@ -23,14 +23,14 @@ public sealed partial class HeldDrag : RefCounted
     public IReadOnlyList<SnowTag> Components { get; init; } = [];
 
     /// <summary>
-    /// The records of the components it holds.
+    /// The atoms of the components it holds.
     /// </summary>
-    public IEnumerable<ComponentState> Records(IRecordReader R) =>
+    public IEnumerable<ComponentState> Atoms(IAtomReader R) =>
         Components.Select(id => R.Get(ComponentState.ById, id)).Where(s => s != null);
 
     /// <summary>
-    /// The records of the held VcTokens, which can go into a hand.
+    /// The atoms of the held VcTokens, which can go into a hand.
     /// </summary>
-    public IEnumerable<ComponentState> Cards(IRecordReader R) =>
-        Records(R).Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Token);
+    public IEnumerable<ComponentState> Cards(IAtomReader R) =>
+        Atoms(R).Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Token);
 }

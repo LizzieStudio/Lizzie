@@ -16,7 +16,7 @@ public partial class CardFace : TextureRect
     /// <summary>
     /// Shows card <paramref name="s"/>'s back or face, or nothing for null.
     /// </summary>
-    public void ShowCard(ComponentState s, bool back, IRecordReader R)
+    public void ShowCard(ComponentState s, bool back, IAtomReader R)
     {
         var prototype = s == null ? null : R.Get(Prototype.ById, s.PrototypeRef);
         var p = prototype?.Parameters as PrintedParameters;

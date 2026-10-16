@@ -5,13 +5,13 @@ using Godot;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// Runs a callback and records every record it reads so
-/// <see cref="RecordService"/> can rerun it when any of them change.
+/// Runs a callback and records every atom it reads so
+/// <see cref="AtomService"/> can rerun it when any of them change.
 /// </summary>
 public sealed class Watcher : IWatchReader
 {
     private readonly Action<IWatchReader> _sync;
-    private readonly IRecordReader _source;
+    private readonly IAtomReader _source;
 
     // the query values this watcher read
     private readonly DependencyIndex<Watcher> _index;
@@ -32,7 +32,7 @@ public sealed class Watcher : IWatchReader
     public Watcher(
         Node owner,
         Action<IWatchReader> sync,
-        IRecordReader source,
+        IAtomReader source,
         DependencyIndex<Watcher> index
     )
     {
@@ -65,21 +65,21 @@ public sealed class Watcher : IWatchReader
             _index.Add(this, query, value, count);
     }
 
-    public Replicated Get(AtomRef atom)
+    public Atom Get(AtomRef atom)
     {
-        Depend(AtomId.For(atom.Type), atom.Id);
+        Depend(IdQuery.For(atom.Type), atom.Id);
         return _source.Get(atom);
     }
 
-    public SnowportId Version(Replicated atom)
+    public SnowportId Version(Atom atom)
     {
-        var byId = AtomId.For(atom.GetType());
+        var byId = IdQuery.For(atom.GetType());
         Depend(byId, byId.Of(atom));
         return _source.Version(atom);
     }
 
     public T Get<T, I>(Id<T, I> byId, I id)
-        where T : Replicated
+        where T : Atom
         where I : IComparable<I>
     {
         Depend(byId, id);
@@ -87,25 +87,25 @@ public sealed class Watcher : IWatchReader
     }
 
     public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
-        where T : Replicated
+        where T : Atom
     {
         Depend(group, key);
         return _source.Get(group, key);
     }
 
     public int Count<T, G>(Group<T, G> group, G key)
-        where T : Replicated
+        where T : Atom
     {
         Depend(group, key, count: true);
         return _source.Count(group, key);
     }
 
     public GroupDiff<T, V> Diff<T, G, V>(Group<T, G> group, G key, Basis<T, V> basis)
-        where T : Replicated
+        where T : Atom
         where V : struct
     {
         var slot = (group, (object)key, (object)basis);
-        var byId = AtomId.For(typeof(T));
+        var byId = IdQuery.For(typeof(T));
         var previous = _diffs.TryGetValue(slot, out var p)
             ? (Dictionary<object, (T Atom, V Value)>)p
             : new();

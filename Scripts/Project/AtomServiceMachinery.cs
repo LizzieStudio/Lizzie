@@ -3,14 +3,14 @@ using System.Collections.Generic;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// What only the machinery calls on <see cref="RecordService"/>.
-/// It's implemented explicitly, so it doesn't show on <see cref="RecordService"/>;
-/// reach it with <see cref="RecordServiceMachinery.Machinery"/>.
+/// What only the machinery calls on <see cref="AtomService"/>.
+/// It's implemented explicitly, so it doesn't show on <see cref="AtomService"/>;
+/// reach it with <see cref="AtomServiceMachinery.Machinery"/>.
 /// </summary>
-public interface IRecordServiceMachinery
+public interface IAtomServiceMachinery
 {
     /// <summary>
-    /// Removes every record, e.g. when the project is replaced.
+    /// Removes every atom, e.g. when the project is replaced.
     /// </summary>
     void Clear();
 
@@ -27,13 +27,13 @@ public interface IRecordServiceMachinery
     /// <summary>
     /// Every atom saved with the project.
     /// </summary>
-    IEnumerable<Replicated> SavedAtoms();
+    IEnumerable<Atom> SavedAtoms();
 }
 
-public static class RecordServiceMachinery
+public static class AtomServiceMachinery
 {
     /// <summary>
-    /// The parts of <paramref name="records"/> only the machinery calls.
+    /// The parts of <paramref name="atoms"/> only the machinery calls.
     /// </summary>
-    public static IRecordServiceMachinery Machinery(this RecordService records) => records;
+    public static IAtomServiceMachinery Machinery(this AtomService atoms) => atoms;
 }
