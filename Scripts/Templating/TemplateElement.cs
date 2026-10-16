@@ -255,10 +255,8 @@ public class TemplateElement : ITemplateElement
             text,
             @"\{([^{}]+)\}",
             match =>
-                context.CurrentRow is { } row
-                && context.DataSet?.Columns.FirstOrDefault(c => c.Name == match.Groups[1].Value)
-                    is { } column
-                    ? row.Data.GetValueOrDefault(column.Id, string.Empty)
+                context.Values?.GetValueOrDefault(match.Groups[1].Value) is { } value
+                    ? value
                     : match.Value
         );
 

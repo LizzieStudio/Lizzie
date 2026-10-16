@@ -88,6 +88,7 @@ public sealed class Watcher : IWatchReader
 
     public T Get<T, I>(Id<T, I> byId, I id)
         where T : Replicated
+        where I : IComparable<I>
     {
         Depend(byId, id);
         return _source.Get(byId, id);

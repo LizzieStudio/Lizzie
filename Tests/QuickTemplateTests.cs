@@ -15,11 +15,7 @@ public class QuickTemplateTests
     /// <summary>The objects the Quick template draws for one card, in drawing order.</summary>
     private static List<TextureFactory.TextureObject> Draw(QuickSuit suit, string value)
     {
-        var context = new TextureContext
-        {
-            DataSet = QuickTemplate.DataSet,
-            CurrentRow = QuickTemplate.Row(suit, value),
-        };
+        var context = new TextureContext { Values = QuickTemplate.Values(suit, value) };
         return QuickTemplate
             .Template.Elements.Select(TemplateEngine.BuildTemplateElement)
             .Where(e => e.IsVisible(context))

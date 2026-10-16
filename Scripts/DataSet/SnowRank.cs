@@ -1,21 +1,27 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 /// <summary>
-/// "LexoRank" ordering keys for dataset rows.
-///
-/// If given two strings, it finds the string that is between them in "Ordinal" order:
-/// ABCD + ABEFG = ABD
-///
-/// This ensures that you can always insert a row in-between two other rows if you need to.
+/// Ordered ranks for indexing atoms.
 ///
 /// <para>
-/// Every rank ends with a stamp, a fixed-length encoding of a unique <see cref="SnowportId"/>,
-/// so no two ranks are ever equal, and there is always room for a new rank between any two.
-/// A new rank only has to differ from its two neighbors, so callers never need to look at other rows.
+/// If given two strings, it finds the string that is in-between them in "Ordinal" order:
+/// <code>ABCD + ABEFG = ABD</code>
+/// It then adds a new SpowportId to the end in base64 to guarantee uniqueness.
 /// </para>
+///
+/// This ensures that you never have to update any existing atoms in order to insert one between them.
 /// </summary>
-public static class RowRank
+/// <remarks>
+/// Currently used by <see cref="DataRow"/> and <see cref="DataColumn"/>.
+/// Ranks sort in that order with <see cref="CompareTo"/>. The default rank is empty and sorts first.
+/// Partly based on LexoRanks.
+/// </remarks>
+[JsonConverter(typeof(Json))]
+public readonly record struct SnowRank : IComparable<SnowRank>
 {
     // These are in Ordinal order.
     // We can never end a rank with the lowest character <c>+</c>, since nothing could go before it.
@@ -34,7 +40,33 @@ public static class RowRank
     // Every stamp has the same length, or a short rank plus its stamp could spell a long rank plus a different stamp.
     private const int StampLength = 9;
 
-    public static readonly IComparer<string> Comparer = System.StringComparer.Ordinal;
+    private readonly string _value;
+
+    private SnowRank(string value) => _value = value;
+
+    private string Value => _value ?? string.Empty;
+
+    public int CompareTo(SnowRank other) => string.CompareOrdinal(Value, other.Value);
+
+    public override string ToString() => Value;
+
+    /// <summary>
+    /// A rank right after this one, ending with <paramref name="stamp"/>.
+    /// </summary>
+    public SnowRank After(SnowportId stamp) => New(this, default, stamp);
+
+    /// <summary>
+    /// Gets the rank that would put a new item at <paramref name="index"/> among <paramref name="ranked"/>.
+    /// </summary>
+    /// <param name="ranked">The sorted list of atoms you're inserting into.</param>
+    /// <param name="index">The index at which to insert. If it equals the Count, inserts at the end.</param>
+    /// <param name="stamp">The stamp to use in the rank, created with <see cref="Snowport.Create()"/>.</param>
+    public static SnowRank At(IReadOnlyList<IRanked> ranked, int index, SnowportId stamp) =>
+        New(
+            index > 0 ? ranked[index - 1].Rank : default,
+            index < ranked.Count ? ranked[index].Rank : default,
+            stamp
+        );
 
     private static int Ord(char c) => Alphabet.IndexOf(c);
 
@@ -42,13 +74,13 @@ public static class RowRank
 
     /// <summary>
     /// Returns a rank strictly between <paramref name="prev"/> and <paramref name="next"/>, ending with <paramref name="stamp"/>.
-    /// If <paramref name="prev"/> is null, get a rank below <paramref name="next"/>.
-    /// If <paramref name="next"/> is null, get a rank above <paramref name="prev"/>.
+    /// If <paramref name="prev"/> is the default, get a rank below <paramref name="next"/>.
+    /// If <paramref name="next"/> is the default, get a rank above <paramref name="prev"/>.
     /// </summary>
-    public static string New(string prev, string next, SnowportId stamp) =>
+    public static SnowRank New(SnowRank prev, SnowRank next, SnowportId stamp) =>
         // Added characters never change the order.
         // If ABC < ABD < ABE, then the same is true for any extension of ABD...
-        Between(prev, next) + Stamp(stamp);
+        new(Between(prev.Value, next.Value) + Stamp(stamp));
 
     /// <summary>
     /// The stamp's digits in reverse order.
@@ -65,9 +97,6 @@ public static class RowRank
 
     private static string Between(string prev, string next)
     {
-        prev ??= string.Empty;
-        next ??= string.Empty;
-
         var result = new StringBuilder();
         for (int i = 0; true; i++)
         {
@@ -100,4 +129,28 @@ public static class RowRank
             }
         }
     }
+
+    // Saved as its string, so a save reads the same as when ranks were strings.
+    private sealed class Json : JsonConverter<SnowRank>
+    {
+        public override SnowRank Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options
+        ) => new(reader.GetString());
+
+        public override void Write(
+            Utf8JsonWriter writer,
+            SnowRank rank,
+            JsonSerializerOptions options
+        ) => writer.WriteStringValue(rank.Value);
+    }
+}
+
+/// <summary>
+/// Something kept in order by a <see cref="SnowRank"/>, like a dataset's rows and columns.
+/// </summary>
+public interface IRanked
+{
+    SnowRank Rank { get; }
 }

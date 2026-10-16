@@ -6,7 +6,9 @@ using Godot;
 
 public partial class DatasetEditor : Window, ICommandView
 {
-    /// <summary>One displayed row.</summary>
+    /// <summary>
+    /// One displayed row.
+    /// </summary>
     private sealed class RowView
     {
         public HBoxContainer Box;
@@ -15,7 +17,14 @@ public partial class DatasetEditor : Window, ICommandView
         public readonly List<LineEdit> Cells = new();
         public DataRow Row;
 
-        /// <summary>What clicking its header selects.</summary>
+        /// <summary>
+        /// What the store holds in each cell, in column order.
+        /// </summary>
+        public string[] Values;
+
+        /// <summary>
+        /// What clicking its header selects.
+        /// </summary>
         public RecordTarget Target => new(Row.Id);
     }
 
@@ -135,12 +144,17 @@ public partial class DatasetEditor : Window, ICommandView
 
     public IReadOnlyList<Command> Commands => _commands;
 
-    /// <summary>Undo walks the shown dataset's edits, its rows', and what's selected in it.</summary>
+    /// <summary>
+    /// Undo walks the shown dataset's edits, rows, columns, and cells, and what's selected in it.
+    /// </summary>
     public bool UndoScope(Replicated record) =>
         DatasetRef != SnowTag.Empty
         && (
             record is DataSet ds && ds.Id == DatasetRef
             || record is DataRow row && row.DataSetId == DatasetRef
+            || record is DataColumn column && column.DataSetId == DatasetRef
+            || record is DataCell cell
+                && RecordService.Instance.Get(DataRow.ById, cell.Id.Row)?.DataSetId == DatasetRef
             || record is Selection s && s.Within == DatasetRef
         );
 
@@ -260,7 +274,8 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void ShowDataSet(IRecordReader R, DataSet ds)
     {
-        var columnIds = ds.Columns.Select(c => c.Id).ToList();
+        var columns = R.GetColumns(ds.Id);
+        var columnIds = columns.Select(c => c.Id).ToList();
         if (ds.Id != _shownDataSetId || !columnIds.SequenceEqual(_columnIds))
         {
             _addedColumns = ds.Id == _shownDataSetId ? columnIds.Except(_columnIds).ToList() : [];
@@ -271,9 +286,9 @@ public partial class DatasetEditor : Window, ICommandView
         }
 
         for (int i = 0; i < _headerCells.Count; i++)
-            _headerCells[i].SetHeaderText(ds.Columns[i].Name);
+            _headerCells[i].SetHeaderText(columns[i].Name);
 
-        ReconcileRows(R.GetRows(ds.Id));
+        ReconcileRows(R, R.GetRows(ds.Id));
         SyncSelection(R, ds.Id);
 
         if (_revealRowOnSync != SnowTag.Empty)
@@ -563,22 +578,24 @@ public partial class DatasetEditor : Window, ICommandView
         view.Box.QueueFree();
     }
 
-    private void BindRowView(RowView view, DataRow row, int index)
+    private void BindRowView(IRecordReader R, RowView view, DataRow row, int index)
     {
         view.Row = row;
         view.Number.Text = (index + 1).ToString();
+        view.Values = _columnIds
+            .Select(c => R.Get(DataCell.ById, new CellId(row.Id, c))?.Value ?? string.Empty)
+            .ToArray();
 
         for (int i = 0; i < view.Cells.Count; i++)
         {
             var cell = view.Cells[i];
-            var value = row.Data.GetValueOrDefault(_columnIds[i], string.Empty);
             // Leave the cell being typed in alone; it commits when focus leaves.
-            if (!cell.HasFocus() && cell.Text != value)
-                cell.Text = value;
+            if (!cell.HasFocus() && cell.Text != view.Values[i])
+                cell.Text = view.Values[i];
         }
     }
 
-    private void ReconcileRows(IReadOnlyList<DataRow> rows)
+    private void ReconcileRows(IRecordReader R, IReadOnlyList<DataRow> rows)
     {
         var existing = _views.ToDictionary(v => v.Row.Id);
         var next = new List<RowView>(rows.Count);
@@ -587,7 +604,7 @@ public partial class DatasetEditor : Window, ICommandView
         {
             if (!existing.Remove(rows[i].Id, out var view))
                 view = CreateRowView();
-            BindRowView(view, rows[i], i);
+            BindRowView(R, view, rows[i], i);
             _dataContainer.MoveChild(view.Box, i);
             next.Add(view);
         }
@@ -726,7 +743,7 @@ public partial class DatasetEditor : Window, ICommandView
                 break;
             // Like a spreadsheet, Escape drops the cell's change and stops editing, leaving it selected.
             case Key.Escape:
-                cell.Text = view.Row.Data.GetValueOrDefault(_columnIds[column], string.Empty);
+                cell.Text = view.Values[column];
                 GuiReleaseFocus();
                 break;
             default:
@@ -735,33 +752,27 @@ public partial class DatasetEditor : Window, ICommandView
         cell.AcceptEvent();
     }
 
-    private static bool DataEqual(
-        IReadOnlyDictionary<SnowTag, string> a,
-        IReadOnlyDictionary<SnowTag, string> b
-    )
-    {
-        if (a.Count != b.Count)
-            return false;
-        foreach (var kv in a)
-            if (!b.TryGetValue(kv.Key, out var v) || v != kv.Value)
-                return false;
-        return true;
-    }
-
-    /// <summary>Writes the row's cells, if they changed. Empty cells have no value.</summary>
+    /// <summary>
+    /// Writes the row's cells that changed, in one event. Emptied cells are unset.
+    /// </summary>
     private void CommitRow(RowView view)
     {
         if (view.Row == null)
             return;
 
-        var row = view.Row;
+        var changes = new List<IChange>();
         for (int i = 0; i < view.Cells.Count; i++)
-            row = row.WithCell(_columnIds[i], view.Cells[i].Text);
-        if (DataEqual(row.Data, view.Row.Data))
-            return;
-
-        view.Row = row;
-        RecordService.Instance.Write(row);
+        {
+            var text = view.Cells[i].Text;
+            if (text == view.Values[i])
+                continue;
+            changes.AddRange(
+                DataCell.Set(RecordService.Instance, new CellId(view.Row.Id, _columnIds[i]), text)
+            );
+            view.Values[i] = text;
+        }
+        if (changes.Count > 0)
+            RecordService.Instance.Write(changes);
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
@@ -776,11 +787,12 @@ public partial class DatasetEditor : Window, ICommandView
         if (others.Count == 0)
             return;
 
-        var rank =
-            index > 0
-                ? RecordService.Instance.RankBeside(others[index - 1], after: true)
-                : RecordService.Instance.RankBeside(others[0], after: false);
-        RecordService.Instance.Write(row with { Rank = rank });
+        RecordService.Instance.Write(
+            row with
+            {
+                Rank = SnowRank.At(others, index, Snowport.Clock.Create()),
+            }
+        );
     }
 
     // The rows' or the columns' controls, for a drag along that axis.
@@ -865,42 +877,29 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        if (_currentDataSet == null)
-            return;
-
-        var columns = _currentDataSet.Columns;
-        int from = columns.IndexOf(columns.FirstOrDefault(c => c.Id == columnId));
+        var columns = RecordService.Instance.GetColumns(DatasetRef);
+        int from = columns.FindIndex(c => c.Id == columnId);
         if (from < 0)
             return;
 
         int to = DropIndex(Vector2.Axis.X, at);
-        if (to > from)
-            to--;
-        if (to == from)
+        if (to == from || to == from + 1)
             return;
 
-        _currentDataSet = _currentDataSet with
-        {
-            Columns = columns.RemoveAt(from).Insert(to, columns[from]),
-        };
-        RecordService.Instance.Write(_currentDataSet);
+        var column = columns[from];
+        columns.RemoveAt(from);
+        RecordService.Instance.Write(
+            column with
+            {
+                Rank = SnowRank.At(columns, to > from ? to - 1 : to, Snowport.Clock.Create()),
+            }
+        );
     }
 
     private void OnColumnRenamed(SnowTag columnId, string name)
     {
-        if (_currentDataSet == null)
-            return;
-
-        var columns = _currentDataSet.Columns;
-        int index = columns.IndexOf(columns.FirstOrDefault(c => c.Id == columnId));
-        if (index < 0)
-            return;
-
-        _currentDataSet = _currentDataSet with
-        {
-            Columns = columns.SetItem(index, columns[index] with { Name = name }),
-        };
-        RecordService.Instance.Write(_currentDataSet);
+        if (RecordService.Instance.Get(DataColumn.ById, columnId) is { } column)
+            RecordService.Instance.Write(column with { Name = name });
     }
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
@@ -1042,7 +1041,7 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Row Above",
         Count = TargetCount.One,
         Effects = (R, rows, _) =>
-            DataSetCommands.NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: false)),
+            DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0])),
     };
 
     private static readonly RecordCommand<DataRow> InsertRowBelow = new()
@@ -1052,7 +1051,7 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Row Below",
         Count = TargetCount.One,
         Effects = (R, rows, _) =>
-            DataSetCommands.NewRow(rows[0].DataSetId, R.RankBeside(rows[0], after: true)),
+            DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0]) + 1),
     };
 
     private static readonly TargetCommand<ColumnTarget> InsertColumnLeft = new()
@@ -1063,10 +1062,7 @@ public partial class DatasetEditor : Window, ICommandView
         Count = TargetCount.One,
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
-            DataSetCommands.NewColumn(
-                R.Get(DataSet.ById, columns[0].DataSetId),
-                ColumnIndex(R, columns[0])
-            ),
+            DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0])),
     };
 
     private static readonly TargetCommand<ColumnTarget> InsertColumnRight = new()
@@ -1077,16 +1073,16 @@ public partial class DatasetEditor : Window, ICommandView
         Count = TargetCount.One,
         AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
-            DataSetCommands.NewColumn(
-                R.Get(DataSet.ById, columns[0].DataSetId),
-                ColumnIndex(R, columns[0]) + 1
-            ),
+            DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0]) + 1),
     };
+
+    // The row's place in its dataset.
+    private static int RowIndex(IRecordReader R, DataRow row) =>
+        R.GetRows(row.DataSetId).FindIndex(r => r.Id == row.Id);
 
     // The column's place in its dataset, or -1 if it's gone.
     private static int ColumnIndex(IRecordReader R, ColumnTarget t) =>
-        R.Get(DataSet.ById, t.DataSetId)?.Columns.Select(c => c.Id).ToList().IndexOf(t.ColumnId)
-        ?? -1;
+        R.GetColumns(t.DataSetId).FindIndex(c => c.Id == t.ColumnId);
 
     private void RenameColumn(ColumnTarget column)
     {

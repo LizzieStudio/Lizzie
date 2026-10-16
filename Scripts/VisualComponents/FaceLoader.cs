@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Lizzie.AssetManagement;
 
@@ -152,8 +154,9 @@ public sealed class FaceLoader(Action shown)
                         factory,
                         R => new Drawing(
                             R.Get(Template.ById, templateSide.Template),
-                            R.Get(DataSet.ById, templateSide.Dataset),
-                            R.GetRows(templateSide.Dataset)
+                            R.Get(DataSet.ById, templateSide.Dataset) == null
+                                ? new Dictionary<SnowTag, IReadOnlyDictionary<string, string>>()
+                                : R.GetRows(templateSide.Dataset).ToDictionary(r => r.Id, R.Values)
                         )
                     )
                     .Face(row);

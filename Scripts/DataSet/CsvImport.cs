@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
@@ -34,46 +33,48 @@ public static class CsvImport
             return;
         }
 
-        var records = new List<IChange>();
+        var changes = new List<IChange>();
 
         var header = lines[0];
-        if (!dataset.Columns.Select(c => c.Name).SequenceEqual(header))
+        var columns = R.GetColumns(dataset.Id);
+        if (!columns.Select(c => c.Name).SequenceEqual(header))
         {
             // TODO: we should do column matching based on string
-            dataset = dataset with
-            {
-                Columns = header
-                    .Select(h => new Column { Id = Snowport.Clock.CreateTag(), Name = h })
-                    .ToImmutableArray(),
-            };
-            records.Add(dataset);
-        }
-
-        foreach (var existing in R.GetRows(dataset.Id))
-            records.Add(R.Unset(existing));
-
-        string rank = R.LastRank(dataset.Id);
-        foreach (var line in lines.Skip(1))
-        {
-            var data = ImmutableDictionary<SnowTag, string>.Empty;
-            for (int c = 0; c < dataset.Columns.Length && c < line.Length; c++)
-            {
-                if (!string.IsNullOrEmpty(line[c]))
-                    data = data.SetItem(dataset.Columns[c].Id, line[c]);
-            }
-
-            rank = RowRank.New(rank, null, Snowport.Clock.Create());
-            records.Add(
-                new DataRow
+            changes.AddRange(columns.Select(R.Unset));
+            SnowRank columnRank = default;
+            columns = header
+                .Select(h => new DataColumn
                 {
                     Id = Snowport.Clock.CreateTag(),
                     DataSetId = dataset.Id,
-                    Rank = rank,
-                    Data = data,
-                }
-            );
+                    Rank = columnRank = columnRank.After(Snowport.Clock.Create()),
+                    Name = h,
+                })
+                .ToList();
+            changes.AddRange(columns);
         }
 
-        RecordService.Instance.Write(records);
+        foreach (var existing in R.GetRows(dataset.Id))
+            changes.Add(R.Unset(existing));
+
+        SnowRank rank = default;
+        foreach (var line in lines.Skip(1))
+        {
+            rank = rank.After(Snowport.Clock.Create());
+            var row = new DataRow
+            {
+                Id = Snowport.Clock.CreateTag(),
+                DataSetId = dataset.Id,
+                Rank = rank,
+            };
+            changes.Add(row);
+            for (int c = 0; c < columns.Count && c < line.Length; c++)
+                if (!string.IsNullOrEmpty(line[c]))
+                    changes.Add(
+                        new DataCell { Id = new CellId(row.Id, columns[c].Id), Value = line[c] }
+                    );
+        }
+
+        RecordService.Instance.Write(changes);
     }
 }

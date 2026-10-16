@@ -73,28 +73,56 @@
           {
             "properties": {
               "$type": {
-                "const": "DataRow"
+                "const": "DataCell"
               },
-              "id": true,
-              "dataSetId": true,
-              "rank": {
+              "id": {
+                "type": "object",
+                "properties": {
+                  "row": true,
+                  "column": true
+                },
+                "additionalProperties": false
+              },
+              "value": {
                 "type": [
                   "string",
                   "null"
                 ]
-              },
-              "data": {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "additionalProperties": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
               }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "DataColumn"
+              },
+              "id": true,
+              "dataSetId": true,
+              "rank": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "DataRow"
+              },
+              "id": true,
+              "dataSetId": true,
+              "rank": true
             },
             "required": [
               "id"
@@ -112,25 +140,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "columns": {
-                "type": "array",
-                "items": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "properties": {
-                    "id": true,
-                    "name": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "additionalProperties": false
-                }
               }
             },
             "required": [
@@ -478,7 +487,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -555,7 +564,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -697,7 +706,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -744,7 +753,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/records/items/anyOf/5/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/records/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false

@@ -1621,8 +1621,7 @@ public partial class TemplateCreator : Window
         var dataset = R.Get(DataSet.ById, datasetRef);
         if (dataset == null)
         {
-            _textureContext.DataSet = null;
-            _textureContext.CurrentRow = null;
+            _textureContext.Values = null;
             _pageControl.Hide();
             return;
         }
@@ -1631,8 +1630,7 @@ public partial class TemplateCreator : Window
         _pageControl.SetItemCount(rows.Count);
         _pageControl.Show();
 
-        _textureContext.DataSet = dataset;
-        _textureContext.CurrentRow = rows.Count > 0 ? rows[_pageControl.CurrentItem] : null;
+        _textureContext.Values = rows.Count > 0 ? R.Values(rows[_pageControl.CurrentItem]) : null;
     }
 
     #endregion
@@ -1643,9 +1641,10 @@ public class TextureContext()
     public Vector2 ParentSize { get; set; }
     public float Dpi { get; set; }
 
-    public DataSet DataSet { get; set; }
-
-    public DataRow CurrentRow { get; set; }
+    /// <summary>
+    /// The value of each column by name, for the row being drawn, or null when there's no row.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Values { get; set; }
 
     /// <summary>
     /// Fits text and icons inside a triangle, for the faces of a d8 or d20.

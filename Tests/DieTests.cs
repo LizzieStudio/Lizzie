@@ -99,11 +99,7 @@ public class DieTests
     /// <summary>The objects the die template draws, in drawing order.</summary>
     private static List<TextureFactory.TextureObject> Draw(int sides, QuickSide side)
     {
-        var context = new TextureContext
-        {
-            DataSet = DieTemplate.DataSet(sides),
-            CurrentRow = DieTemplate.Row(Colors.White, side, sides),
-        };
+        var context = new TextureContext { Values = DieTemplate.Values(Colors.White, side, sides) };
         return DieTemplate
             .Template(sides)
             .Elements.Select(TemplateEngine.BuildTemplateElement)

@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Linq;
 using Lizzie.Scripts.Templating;
 using Xunit;
@@ -78,15 +78,9 @@ public class TemplateElementTests
     [Fact]
     public void ImagesCarryABoundQuantity()
     {
-        var pips = new Column { Id = new SnowTag(1), Name = "Pips" };
         var context = new TextureContext
         {
-            DataSet = new DataSet { Id = new SnowTag(10), Columns = [pips] },
-            CurrentRow = new DataRow
-            {
-                Id = new SnowTag(11),
-                Data = ImmutableDictionary<SnowTag, string>.Empty.Add(pips.Id, "3"),
-            },
+            Values = new Dictionary<string, string> { ["Pips"] = "3" },
         };
         var element = new ImageElement();
         element.SetParameterValue("Quantity", "{Pips}");
@@ -142,15 +136,9 @@ public class TemplateElementTests
     [InlineData("", false)]
     public void VisibleFollowsABoundColumn(string cell, bool expected)
     {
-        var pips = new Column { Id = new SnowTag(1), Name = "Pips" };
         var context = new TextureContext
         {
-            DataSet = new DataSet { Id = new SnowTag(10), Columns = [pips] },
-            CurrentRow = new DataRow
-            {
-                Id = new SnowTag(11),
-                Data = ImmutableDictionary<SnowTag, string>.Empty.Add(pips.Id, cell),
-            },
+            Values = new Dictionary<string, string> { ["Pips"] = cell },
         };
         var element = new ImageElement();
         element.SetParameterValue("Visible", "{Pips}");

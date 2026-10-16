@@ -7,7 +7,9 @@ using Godot;
 /// </summary>
 public static class DataSetCommands
 {
-    /// <summary>Adds a row after the last. The dataset editor's add buttons and Enter on its last row run it.</summary>
+    /// <summary>
+    /// Adds a row after the last. The dataset editor's add buttons and Enter on its last row run it.
+    /// </summary>
     public static readonly Command AddRow = new RecordCommand<DataSet>
     {
         Name = new("dataset.add_row"),
@@ -16,11 +18,12 @@ public static class DataSetCommands
         Count = TargetCount.One,
         ActsOn = Context.View,
         ShowInMenu = false,
-        Effects = (R, sets, _) =>
-            NewRow(sets[0].Id, RowRank.New(R.LastRank(sets[0].Id), null, Snowport.Clock.Create())),
+        Effects = (R, sets, _) => NewRow(R, sets[0].Id, R.GetRows(sets[0].Id).Count),
     };
 
-    /// <summary>Adds a column after the last. The dataset editor's add buttons run it.</summary>
+    /// <summary>
+    /// Adds a column after the last. The dataset editor's add buttons run it.
+    /// </summary>
     public static readonly Command AddColumn = new RecordCommand<DataSet>
     {
         Name = new("dataset.add_column"),
@@ -29,7 +32,7 @@ public static class DataSetCommands
         Count = TargetCount.One,
         ActsOn = Context.View,
         ShowInMenu = false,
-        Effects = (R, sets, _) => NewColumn(sets[0], sets[0].Columns.Length),
+        Effects = (R, sets, _) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
     };
 
     public static readonly Command EditRow = new RecordCommand<DataRow>
@@ -60,7 +63,6 @@ public static class DataSetCommands
         Effects = (R, rows, _) => rows.Select(R.Unset),
     };
 
-    /// <summary>Removes the columns from their datasets. The rows keep their values, so undo brings them back.</summary>
     public static readonly Command DeleteColumn = new TargetCommand<ColumnTarget>
     {
         Name = new("dataset.delete_column"),
@@ -69,16 +71,9 @@ public static class DataSetCommands
         Noun = ("Column", "Columns"),
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
-        AppliesTo = (R, t) => HasColumn(R.Get(DataSet.ById, t.DataSetId), t.ColumnId),
+        AppliesTo = (R, t) => R.Get(DataColumn.ById, t.ColumnId) != null,
         Effects = (R, columns, _) =>
-            columns
-                .GroupBy(t => t.DataSetId)
-                .Select(g =>
-                {
-                    var ds = R.Get(DataSet.ById, g.Key);
-                    var ids = g.Select(t => t.ColumnId).ToHashSet();
-                    return ds with { Columns = ds.Columns.RemoveAll(c => ids.Contains(c.Id)) };
-                }),
+            columns.Select(t => R.Unset(R.Get(DataColumn.ById, t.ColumnId))),
     };
 
     public static readonly Command ClearCells = new TargetCommand<CellTarget>
@@ -133,14 +128,11 @@ public static class DataSetCommands
 
     private static IRecordReader Reader => RecordService.Instance;
 
-    private static bool HasColumn(DataSet ds, SnowTag columnId) =>
-        ds?.Columns.Any(c => c.Id == columnId) == true;
-
     private static bool CellExists(IRecordReader R, CellTarget t) =>
-        R.Get(DataRow.ById, t.RowId) is { } row
-        && HasColumn(R.Get(DataSet.ById, row.DataSetId), t.ColumnId);
+        R.Get(DataRow.ById, t.RowId) != null && R.Get(DataColumn.ById, t.ColumnId) != null;
 
-    /// <summary>The rows and columns the cells span, in the grid's order, and the dataset's rows and columns.</summary>
+    private static CellId Id(CellTarget t) => new(t.RowId, t.ColumnId);
+
     private static (
         List<DataRow> Rows,
         List<SnowTag> Columns,
@@ -150,7 +142,7 @@ public static class DataSetCommands
     {
         var dataSetId = R.Get(DataRow.ById, cells[0].RowId).DataSetId;
         var allRows = R.GetRows(dataSetId);
-        var allColumns = R.Get(DataSet.ById, dataSetId).Columns.Select(c => c.Id).ToList();
+        var allColumns = R.GetColumns(dataSetId).Select(c => c.Id).ToList();
         var rowIds = cells.Select(c => c.RowId).ToHashSet();
         var columnIds = cells.Select(c => c.ColumnId).ToHashSet();
         return (
@@ -161,7 +153,6 @@ public static class DataSetCommands
         );
     }
 
-    /// <summary>The cells as clipboard text: the block they span, with the cells not selected left empty.</summary>
     private static string Copied(IRecordReader R, IReadOnlyList<CellTarget> cells)
     {
         var (rows, columns, _, _) = Block(R, cells);
@@ -170,84 +161,74 @@ public static class DataSetCommands
             rows.Select(r =>
                 columns.Select(c =>
                     selected.Contains(new CellTarget(r.Id, c))
-                        ? r.Data.GetValueOrDefault(c, string.Empty)
+                        ? R.Get(DataCell.ById, new CellId(r.Id, c))?.Value ?? string.Empty
                         : string.Empty
                 )
             )
         );
     }
 
-    private static IEnumerable<Replicated> Pasted(
+    private static IEnumerable<IChange> Pasted(
         IRecordReader R,
         IReadOnlyList<CellTarget> cells,
         List<string[]> grid
     )
     {
         if (grid is [[var value]])
-            return Written(R, cells.Select(c => (c, value)));
+            return cells.SelectMany(c => DataCell.Set(R, Id(c), value));
 
         var (rows, columns, allRows, allColumns) = Block(R, cells);
         int top = allRows.IndexOf(rows[0]);
         int left = allColumns.IndexOf(columns[0]);
-        string rank = R.LastRank(rows[0].DataSetId);
+        var rank = allRows[^1].Rank;
 
-        var written = new List<DataRow>();
+        var changes = new List<IChange>();
         for (int r = 0; r < grid.Count; r++)
         {
-            var row =
-                top + r < allRows.Count
-                    ? allRows[top + r]
-                    : new DataRow
-                    {
-                        Id = Snowport.Clock.CreateTag(),
-                        DataSetId = rows[0].DataSetId,
-                        Rank = rank = RowRank.New(rank, null, Snowport.Clock.Create()),
-                    };
+            var row = allRows.ElementAtOrDefault(top + r);
+            if (row == null)
+            {
+                row = new DataRow
+                {
+                    Id = Snowport.Clock.CreateTag(),
+                    DataSetId = rows[0].DataSetId,
+                    Rank = rank = rank.After(Snowport.Clock.Create()),
+                };
+                changes.Add(row);
+            }
             for (int c = 0; c < grid[r].Length && left + c < allColumns.Count; c++)
-                row = row.WithCell(allColumns[left + c], grid[r][c]);
-            written.Add(row);
+                changes.AddRange(
+                    DataCell.Set(R, new CellId(row.Id, allColumns[left + c]), grid[r][c])
+                );
         }
-        return written;
+        return changes;
     }
 
-    private static IEnumerable<Replicated> Cleared(
-        IRecordReader R,
-        IReadOnlyList<CellTarget> cells
-    ) => Written(R, cells.Select(c => (c, string.Empty)));
+    private static IEnumerable<IChange> Cleared(IRecordReader R, IReadOnlyList<CellTarget> cells) =>
+        cells.SelectMany(c => DataCell.Set(R, Id(c), string.Empty));
 
-    /// <summary>The rows with each cell set to its value, one record per row.</summary>
-    private static IEnumerable<Replicated> Written(
-        IRecordReader R,
-        IEnumerable<(CellTarget Cell, string Value)> values
-    ) =>
-        values
-            .GroupBy(v => v.Cell.RowId)
-            .Select(g =>
-                g.Aggregate(
-                    R.Get(DataRow.ById, g.Key),
-                    (row, v) => row.WithCell(v.Cell.ColumnId, v.Value)
-                )
-            );
-
-    /// <summary>Adds an empty row to the dataset at <paramref name="rank"/>.</summary>
-    public static IEnumerable<Replicated> NewRow(SnowTag dataSetId, string rank) =>
+    public static IEnumerable<Replicated> NewRow(IRecordReader R, SnowTag dataSetId, int index) =>
         [
             new DataRow
             {
                 Id = Snowport.Clock.CreateTag(),
                 DataSetId = dataSetId,
-                Rank = rank,
+                Rank = SnowRank.At(R.GetRows(dataSetId), index, Snowport.Clock.Create()),
             },
         ];
 
-    /// <summary>Adds a column to the dataset at <paramref name="index"/>, named by how many there are.</summary>
-    public static IEnumerable<Replicated> NewColumn(DataSet ds, int index)
+    public static IEnumerable<Replicated> NewColumn(IRecordReader R, SnowTag dataSetId, int index)
     {
-        var column = new Column
-        {
-            Id = Snowport.Clock.CreateTag(),
-            Name = $"Column {ds.Columns.Length + 1}",
-        };
-        return [ds with { Columns = ds.Columns.Insert(index, column) }];
+        var columns = R.GetColumns(dataSetId);
+        return
+        [
+            new DataColumn
+            {
+                Id = Snowport.Clock.CreateTag(),
+                DataSetId = dataSetId,
+                Rank = SnowRank.At(columns, index, Snowport.Clock.Create()),
+                Name = $"Column {columns.Count + 1}",
+            },
+        ];
     }
 }

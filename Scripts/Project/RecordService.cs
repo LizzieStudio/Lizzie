@@ -143,6 +143,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     /// </summary>
     public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
         where T : Replicated
+        where I : IComparable<I>
     {
         if (Get(byId, id) is { } record)
             Write(change(record));
@@ -403,10 +404,12 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         StoreOf(atom.GetType()).Find(AtomId.For(atom.GetType()).Of(atom)).LastUpdate;
 
     public T Get<T, I>(Id<T, I> byId, I id)
-        where T : Replicated => (T)StoreOf(byId).Find(id).Value;
+        where T : Replicated
+        where I : IComparable<I> => (T)StoreOf(byId).Find(id).Value;
 
     private AtomStore<T, I> StoreOf<T, I>(Id<T, I> byId)
-        where T : Replicated => (AtomStore<T, I>)StoreOf<T>();
+        where T : Replicated
+        where I : IComparable<I> => (AtomStore<T, I>)StoreOf<T>();
 
     public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
         where T : Replicated => StoreOf<T>().InGroup(group, key);

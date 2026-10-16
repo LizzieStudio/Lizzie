@@ -29,7 +29,8 @@ public interface IRecordReader
     /// Gets the atom with <paramref name="id"/>, or null if it is missing or unset.
     /// </summary>
     T Get<T, I>(Id<T, I> byId, I id)
-        where T : Replicated;
+        where T : Replicated
+        where I : IComparable<I>;
 
     /// <summary>
     /// Gets the atoms with <paramref name="key"/> in <paramref name="group"/> that aren't unset.
@@ -162,35 +163,43 @@ public static class RecordReaderExtensions
             ? writer.Command
             : null;
 
-    /// <summary>The rows of a dataset in order.</summary>
-    public static List<DataRow> GetRows(this IRecordReader R, SnowTag datasetRef)
+    /// <summary>
+    /// The rows of a dataset in order.
+    /// </summary>
+    public static List<DataRow> GetRows(this IRecordReader R, SnowTag datasetRef) =>
+        Ranked(R, DataRow.ByDataSet, datasetRef);
+
+    /// <summary>
+    /// The columns of a dataset in order.
+    /// </summary>
+    public static List<DataColumn> GetColumns(this IRecordReader R, SnowTag datasetRef) =>
+        Ranked(R, DataColumn.ByDataSet, datasetRef);
+
+    private static List<T> Ranked<T>(IRecordReader R, Group<T, SnowTag> group, SnowTag datasetRef)
+        where T : Replicated, IRanked
     {
         if (datasetRef == SnowTag.Empty)
-            return new List<DataRow>();
+            return [];
 
-        var rows = R.Get(DataRow.ByDataSet, datasetRef).ToList();
-        rows.Sort((a, b) => RowRank.Comparer.Compare(a.Rank, b.Rank));
-        return rows;
+        var items = R.Get(group, datasetRef).ToList();
+        items.Sort((a, b) => a.Rank.CompareTo(b.Rank));
+        return items;
     }
 
     /// <summary>
-    /// A rank for a new row right after <paramref name="row"/>, or right before it, made by the local player.
-    /// It goes between <paramref name="row"/> and its neighbor on that side.
+    /// What <paramref name="row"/> holds in each of its dataset's columns, by column name, for a template to show.
+    /// If two columns share a name, the first one is used.
     /// </summary>
-    public static string RankBeside(this IRecordReader R, DataRow row, bool after)
+    public static IReadOnlyDictionary<string, string> Values(this IRecordReader R, DataRow row)
     {
-        var rows = R.GetRows(row.DataSetId);
-        int i = rows.FindIndex(r => r.Id == row.Id);
-        return after
-            ? RowRank.New(row.Rank, rows.ElementAtOrDefault(i + 1)?.Rank, Snowport.Clock.Create())
-            : RowRank.New(rows.ElementAtOrDefault(i - 1)?.Rank, row.Rank, Snowport.Clock.Create());
+        var values = new Dictionary<string, string>();
+        foreach (var column in R.GetColumns(row.DataSetId))
+            values.TryAdd(
+                column.Name,
+                R.Get(DataCell.ById, new CellId(row.Id, column.Id))?.Value ?? string.Empty
+            );
+        return values;
     }
-
-    /// <summary>
-    /// The rank of a dataset's last row, or null if it has none.
-    /// </summary>
-    public static string LastRank(this IRecordReader R, SnowTag datasetRef) =>
-        R.Get(DataRow.ByDataSet, datasetRef).Select(r => r.Rank).Max(RowRank.Comparer);
 
     /// <summary>
     /// True if <paramref name="id"/> is of type <typeparamref name="T"/>.

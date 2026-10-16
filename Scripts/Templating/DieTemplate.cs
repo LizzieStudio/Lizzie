@@ -122,35 +122,16 @@ public static class DieTemplate
     // An icon on a square or kite face keeps a margin; one on a triangle is fitted inside it instead.
     private const float IconScale = 0.8f;
 
-    private static readonly Column Background = new() { Id = new SnowTag(1), Name = "Background" };
+    private const string Background = "Background";
 
-    // Each face has four columns, after the background.
-    private static Column FaceColumn(int face, int offset, string name) =>
-        new() { Id = new SnowTag(2 + 4 * face + offset), Name = $"{name}{face + 1}" };
+    // Each face has four values, after the background.
+    private static string Text(int face) => $"Text{face + 1}";
 
-    private static Column Text(int face) => FaceColumn(face, 0, "Text");
+    private static string Icon(int face) => $"Icon{face + 1}";
 
-    private static Column Icon(int face) => FaceColumn(face, 1, "Icon");
+    private static string Quantity(int face) => $"Quantity{face + 1}";
 
-    private static Column Quantity(int face) => FaceColumn(face, 2, "Quantity");
-
-    private static Column Foreground(int face) => FaceColumn(face, 3, "Foreground");
-
-    public static DataSet DataSet(int sides) =>
-        new()
-        {
-            Id = SnowTag.Empty,
-            Name = "Quick Die",
-            Columns =
-            [
-                Background,
-                .. Enumerable
-                    .Range(0, sides)
-                    .SelectMany(face =>
-                        new[] { Text(face), Icon(face), Quantity(face), Foreground(face) }
-                    ),
-            ],
-        };
+    private static string Foreground(int face) => $"Foreground{face + 1}";
 
     // How many of a net's pixels make an inch of the drawn die template.
     private const float NetPixelsPerInch = 50;
@@ -189,17 +170,17 @@ public static class DieTemplate
             yield return QuickTemplate.Element([
                 ("Type", "Text"),
                 .. Place(1),
-                ("Text", $"{{{Text(n).Name}}}"),
-                ("Foreground", $"{{{Foreground(n).Name}}}"),
+                ("Text", $"{{{Text(n)}}}"),
+                ("Foreground", $"{{{Foreground(n)}}}"),
                 ("Autosize", "True"),
             ]);
             yield return QuickTemplate.Element([
                 ("Type", "Image"),
                 .. Place(triangles ? 1 : IconScale),
-                ("Image", $"{{{Icon(n).Name}}}"),
-                ("Foreground", $"{{{Foreground(n).Name}}}"),
-                ("Quantity", $"{{{Quantity(n).Name}}}"),
-                ("Visible", $"{{{Icon(n).Name}}}"), // an empty image name draws the "not found" icon
+                ("Image", $"{{{Icon(n)}}}"),
+                ("Foreground", $"{{{Foreground(n)}}}"),
+                ("Quantity", $"{{{Quantity(n)}}}"),
+                ("Visible", $"{{{Icon(n)}}}"), // an empty image name draws the "not found" icon
             ]);
         }
 
@@ -212,7 +193,7 @@ public static class DieTemplate
                     ("Width", "100"),
                     ("Height", "100"),
                     ("Stroke Width", "0"),
-                    ("Background Color", $"{{{Background.Name}}}")
+                    ("Background Color", $"{{{Background}}}")
                 ),
                 .. net.Faces.SelectMany(FaceElements),
             ],
@@ -228,28 +209,33 @@ public static class DieTemplate
     /// What a Quick die with <paramref name="sideCount"/> draws.
     /// </summary>
     public static Drawing Drawing(DieParameters die, QuickSide side, int sideCount) =>
-        new(Template(sideCount), DataSet(sideCount), [Row(die.Color, side, sideCount)]);
+        new(
+            Template(sideCount),
+            new Dictionary<SnowTag, IReadOnlyDictionary<string, string>>
+            {
+                [NetRow] = Values(die.Color, side, sideCount),
+            }
+        );
 
     /// <summary>
-    /// The row that draws a die of <paramref name="color"/> with <paramref name="sides"/> sides. Its faces
+    /// What draws a die of <paramref name="color"/> with <paramref name="sides"/> sides. Its faces
     /// show the values of <paramref name="side"/>'s suits as one sequence, fitted to the sides.
     /// </summary>
-    public static DataRow Row(Color color, QuickSide side, int sides)
+    public static IReadOnlyDictionary<string, string> Values(Color color, QuickSide side, int sides)
     {
         SequenceExpressions.TryParseStrings(side.Expressions(), out var faces, sides);
-        var data = ImmutableDictionary.CreateBuilder<SnowTag, string>();
-        data[Background.Id] = color.ToHtml();
+        var data = new Dictionary<string, string> { [Background] = color.ToHtml() };
         for (int n = 0; n < faces.Length; n++)
         {
             var suit = side.Suits[faces[n].Input];
             var value = faces[n].Value;
             bool hasIcon = suit.Icon != "";
             int icons = QuickTemplate.Icons(value);
-            data[Text(n).Id] = hasIcon ? "" : value;
-            data[Icon(n).Id] = hasIcon && icons > 0 ? suit.Icon : "";
-            data[Quantity(n).Id] = icons.ToString(CultureInfo.InvariantCulture);
-            data[Foreground(n).Id] = suit.Foreground.ToHtml();
+            data[Text(n)] = hasIcon ? "" : value;
+            data[Icon(n)] = hasIcon && icons > 0 ? suit.Icon : "";
+            data[Quantity(n)] = icons.ToString(CultureInfo.InvariantCulture);
+            data[Foreground(n)] = suit.Foreground.ToHtml();
         }
-        return new DataRow { Id = NetRow, Data = data.ToImmutable() };
+        return data;
     }
 }

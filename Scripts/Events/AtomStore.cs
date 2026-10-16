@@ -10,6 +10,7 @@ namespace Lizzie.Replication.Machinery;
 /// </summary>
 public sealed class AtomStore<T, I> : IAtomStore<T>
     where T : Replicated
+    where I : IComparable<I>
 {
     private static readonly bool Saved = !typeof(T).IsDefined(typeof(NotSavedAttribute), true);
 

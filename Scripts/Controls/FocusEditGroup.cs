@@ -28,6 +28,7 @@ public partial class FocusEditGroup : Node
     /// <inheritdoc cref="RecordService.Update"/>
     public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
         where T : Replicated
+        where I : IComparable<I>
     {
         if (RecordService.Instance.Get(byId, id) is not { } record)
             return;

@@ -115,9 +115,10 @@ public abstract class AtomId : Query
 /// Read an atom with <see cref="IRecordReader.Get{T, I}(Id{T, I}, I)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
-/// <typeparam name="I">The type of the id.</typeparam>
+/// <typeparam name="I">The type of the id, which orders atoms in a save.</typeparam>
 public class Id<T, I> : AtomId
     where T : Replicated
+    where I : IComparable<I>
 {
     private readonly Func<T, I> _of;
 
@@ -158,7 +159,10 @@ public sealed class Singleton<T>() : Id<T, SingletonId>(_ => default)
 /// <summary>
 /// The id every write of a singleton shares. See <see cref="Singleton{T}"/>.
 /// </summary>
-public readonly record struct SingletonId;
+public readonly record struct SingletonId : IComparable<SingletonId>
+{
+    public int CompareTo(SingletonId other) => 0;
+}
 
 /// <summary>
 /// A way to list atoms of <typeparamref name="T"/> by a key of <typeparamref name="G"/>.

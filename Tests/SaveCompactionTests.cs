@@ -32,8 +32,12 @@ public class SaveCompactionTests
             Prototype p => p.Id,
             DataSet d => d.Id,
             DataRow r => r.Id,
+            DataColumn c => c.Id,
             _ => throw new ArgumentException($"No id for a {atom.GetType().Name}."),
         };
+
+    private static DataCell Cell(int row, int column) =>
+        new() { Id = new CellId(Tag(row), Tag(column)), Value = "x" };
 
     [StackTraceHidden]
     private static void AssertKept(IEnumerable<Replicated> atoms, params int[] expected)
@@ -69,6 +73,29 @@ public class SaveCompactionTests
     public void RowsOfAMissingDataSetAreDropped() =>
         AssertKept([new DataRow { Id = Tag(2), DataSetId = Tag(1) }]);
 
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    public void ACellIsKeptOnlyWithItsRowAndColumn(bool row, bool column, bool kept)
+    {
+        Replicated[] atoms =
+        [
+            new DataSet { Id = Tag(1) },
+            .. row ? [new DataRow { Id = Tag(2), DataSetId = Tag(1) }] : Array.Empty<Replicated>(),
+            .. column
+                ? [new DataColumn { Id = Tag(3), DataSetId = Tag(1) }]
+                : Array.Empty<Replicated>(),
+            Cell(2, 3),
+        ];
+        var cells = SaveCompaction.Collect(atoms).OfType<DataCell>().Count();
+        Assert.True(
+            cells == (kept ? 1 : 0),
+            $"With its row {(row ? "kept" : "gone")} and its column {(column ? "kept" : "gone")}, "
+                + $"the save kept {cells} cells, expected {(kept ? 1 : 0)}."
+        );
+    }
+
     [Fact]
     public void TagsBecomeAdminTagsFromOneInOrder()
     {
@@ -97,27 +124,22 @@ public class SaveCompactionTests
     }
 
     [Fact]
-    public void DictionaryKeysAreRenumbered()
+    public void CellIdsAreRenumbered()
     {
-        var column = Tag(50);
         var json = SaveCompaction.Serialize(
             Save(
-                new DataSet { Id = Tag(40), Columns = [new Column { Id = column, Name = "Name" }] },
-                new DataRow
-                {
-                    Id = Tag(41),
-                    DataSetId = Tag(40),
-                    Data = ImmutableDictionary<SnowTag, string>.Empty.Add(column, "Ace"),
-                }
+                new DataRow { Id = Tag(41), DataSetId = Tag(40) },
+                new DataColumn { Id = Tag(50), DataSetId = Tag(40) },
+                Cell(41, 50)
             )
         );
 
         var back = Load(json).Records;
-        var set = Assert.IsType<DataSet>(back[0]);
-        var row = Assert.IsType<DataRow>(back[1]);
-        Assert.Equal(set.Id, row.DataSetId);
-        Assert.Equal("Ace", row.Data[set.Columns[0].Id]);
-        Assert.Equal(new SnowTag(3), set.Columns[0].Id);
+        var row = Assert.IsType<DataRow>(back[0]);
+        var column = Assert.IsType<DataColumn>(back[1]);
+        var cell = Assert.IsType<DataCell>(back[2]);
+        Assert.Equal(new CellId(row.Id, column.Id), cell.Id);
+        Assert.Equal(new SnowTag(3), column.Id);
     }
 
     [Fact]

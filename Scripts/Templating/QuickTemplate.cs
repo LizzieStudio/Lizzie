@@ -18,21 +18,6 @@ public static class QuickTemplate
 
     private const float CmPerInch = 2.54f;
 
-    private static readonly Column Background = new() { Id = new SnowTag(1), Name = "Background" };
-    private static readonly Column Foreground = new() { Id = new SnowTag(2), Name = "Foreground" };
-    private static readonly Column Text = new() { Id = new SnowTag(3), Name = "Text" };
-    private static readonly Column Corner = new() { Id = new SnowTag(4), Name = "Corner" };
-    private static readonly Column Icon = new() { Id = new SnowTag(5), Name = "Icon" };
-    private static readonly Column Quantity = new() { Id = new SnowTag(6), Name = "Quantity" };
-
-    public static DataSet DataSet { get; } =
-        new()
-        {
-            Id = SnowTag.Empty,
-            Name = "Quick",
-            Columns = [Background, Foreground, Text, Corner, Icon, Quantity],
-        };
-
     public static Template Template { get; } =
         new()
         {
@@ -92,11 +77,10 @@ public static class QuickTemplate
                 Width = p.Width / 10f / CmPerInch,
                 Height = p.Height / 10f / CmPerInch,
             },
-            DataSet,
             side.Cards()
                 .Distinct()
-                .Select((c, i) => Row(c.Suit, c.Value) with { Id = new SnowTag(i + 1) })
-                .ToList()
+                .Select((c, i) => (Row: new SnowTag(i + 1), Values: Values(c.Suit, c.Value)))
+                .ToDictionary(r => r.Row, r => r.Values)
         );
 
     /// <summary>
@@ -111,25 +95,21 @@ public static class QuickTemplate
     }
 
     /// <summary>
-    /// Creates the row for the card showing <paramref name="value"/> in <paramref name="suit"/>.
+    /// What the card showing <paramref name="value"/> in <paramref name="suit"/> draws.
     /// </summary>
-    public static DataRow Row(QuickSuit suit, string value)
+    public static IReadOnlyDictionary<string, string> Values(QuickSuit suit, string value)
     {
         bool hasIcon = suit.Icon != "";
         string text = suit.ShowText ? value : "";
         int icons = Icons(value);
-        return new DataRow
+        return new Dictionary<string, string>
         {
-            Id = SnowTag.Empty,
-            Data = new Dictionary<SnowTag, string>
-            {
-                [Background.Id] = suit.Background.ToHtml(),
-                [Foreground.Id] = suit.Foreground.ToHtml(),
-                [Text.Id] = hasIcon ? "" : text,
-                [Corner.Id] = hasIcon ? text : "",
-                [Icon.Id] = hasIcon && icons > 0 ? suit.Icon : "",
-                [Quantity.Id] = icons.ToString(),
-            }.ToImmutableDictionary(),
+            ["Background"] = suit.Background.ToHtml(),
+            ["Foreground"] = suit.Foreground.ToHtml(),
+            ["Text"] = hasIcon ? "" : text,
+            ["Corner"] = hasIcon ? text : "",
+            ["Icon"] = hasIcon && icons > 0 ? suit.Icon : "",
+            ["Quantity"] = icons.ToString(),
         };
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using Godot;
 
@@ -9,8 +10,7 @@ using Godot;
 /// </summary>
 public readonly record struct Drawing(
     Template Template,
-    DataSet DataSet,
-    IReadOnlyList<DataRow> Rows
+    IReadOnlyDictionary<SnowTag, IReadOnlyDictionary<string, string>> Rows
 );
 
 /// <summary>
@@ -71,28 +71,27 @@ public partial class FaceDrawing : Node
 
     private void Sync(IWatchReader R)
     {
-        var (template, dataSet, rows) = Source(R);
+        var (template, rows) = Source(R);
         var (width, height) = template?.Pixels(PixelsPerInch) ?? default;
         // Compressing pads an image to a multiple of 4 pixels by smearing its edges, so draw at one instead.
         (width, height) = ((width + 3) / 4 * 4, (height + 3) / 4 * 4);
-        bool drawable = dataSet != null && width > 0 && height > 0;
-        var byId = rows.ToDictionary(r => r.Id);
+        bool drawable = width > 0 && height > 0;
         _wanted = _cells.Keys.ToDictionary(
             row => row,
             row =>
-                (drawable ? byId.GetValueOrDefault(row) : null) is { } data
+                (drawable ? rows.GetValueOrDefault(row) : null) is { } values
                     ? new Wanted(
                         $"{width}x{height}:"
                             + R.VersionKey(template)
-                            + R.VersionKey(dataSet)
-                            + R.VersionKey(data),
+                            + JsonSerializer.Serialize(
+                                values.OrderBy(v => v.Key, StringComparer.Ordinal)
+                            ),
                         () =>
                             TemplateEngine.GenerateTextureDefinition(
                                 template,
                                 new TextureContext
                                 {
-                                    CurrentRow = data,
-                                    DataSet = dataSet,
+                                    Values = values,
                                     Dpi = PixelsPerInch,
                                     ParentSize = new Vector2(width, height),
                                     TriangleFaces = template.TriangleFaces,
