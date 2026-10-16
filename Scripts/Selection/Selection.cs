@@ -61,7 +61,7 @@ public static class LocalSelection
         var colors = new Dictionary<Target, Color>();
         var newestFirst = R.Get(Selection.ByWithin, within)
             .OrderByDescending(s => s.Player == local)
-            .ThenByDescending(s => s.LastUpdateId);
+            .ThenByDescending(R.Version);
         foreach (var selection in newestFirst)
         {
             var color = R.SeatColor(selection.Player);

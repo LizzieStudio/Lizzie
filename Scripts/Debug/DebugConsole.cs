@@ -282,12 +282,14 @@ public partial class DebugConsole : Node
         if (e.Undo is { } u)
             return u.ByRedo ? "Redo" : "Undo";
 
-        if (e.Records.Length == 0)
+        if (e.Records.Length == 0 && e.Unsets.Length == 0)
             return e.End != GroupEnd.None ? e.End.ToString() : "(empty)";
 
         return string.Join(
             ", ",
-            e.Records.GroupBy(RecordLabel)
+            e.Records.Select(RecordLabel)
+                .Concat(e.Unsets.Select(u => $"Unset {u.GetType().Name}"))
+                .GroupBy(label => label)
                 .Select(g => g.Count() > 1 ? $"{g.Key}×{g.Count()}" : g.Key)
         );
     }
@@ -308,7 +310,6 @@ public partial class DebugConsole : Node
     private static string RecordLabel(Replicated record) =>
         record switch
         {
-            ComponentState { Deleted: true } => "Delete",
             ComponentState => "Upsert",
             _ => record.GetType().Name,
         };

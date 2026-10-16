@@ -259,21 +259,17 @@ public partial class ComponentPreview : Panel
         _component.TextureFactory = textureFactory;
 
         var json = JsonSerializer.Serialize(parameters, LizzieJson.EventOptions);
+        // A new id for each change keeps the faces from showing an older draft.
         if (json != _draftJson)
         {
             _draftJson = json;
-            _draftVersion = Snowport.Clock.Create();
+            _draftId = Snowport.Clock.CreateTag();
         }
-        _component.DraftPrototype = new Prototype
-        {
-            Id = SnowTag.Empty,
-            LastUpdateId = _draftVersion,
-            Parameters = parameters,
-        };
+        _component.DraftPrototype = new Prototype { Id = _draftId, Parameters = parameters };
     }
 
     private string _draftJson;
-    private SnowportId _draftVersion;
+    private SnowTag _draftId;
 
     public void Build(Prototype prototype, PrototypeItemRef card, TextureFactory textureFactory)
     {

@@ -625,6 +625,17 @@ public class UndoScenarioTests
         Assert.Null(Undo((_, r) => r.Id == 1));
     }
 
+    /// <summary>An unset is in scope when what it unsets is, so Undo This brings an unset record back.</summary>
+    [Fact]
+    public void UnsetIsInTheScopeOfWhatItUnsets()
+    {
+        Act(Admin, record: 1);
+        var id = NextId(Me);
+        _log.Add(id, new TableEvent { Id = id, Unsets = [new Prototype { Id = 1 }] });
+
+        Assert.Equal(id, Changed(Undo((_, r) => r.Id == 1)));
+    }
+
     /// <summary>The host's bookkeeping, like giving a seat its hand, doesn't take away a player's redo.</summary>
     [Fact]
     public void AdminEventDoesNotBlockRedo()

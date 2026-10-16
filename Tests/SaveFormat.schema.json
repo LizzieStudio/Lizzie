@@ -63,10 +63,7 @@
                 "additionalProperties": false
               },
               "containerRef": true,
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -97,10 +94,7 @@
                   ]
                 }
               },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -137,10 +131,7 @@
                   "additionalProperties": false
                 }
               },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -182,10 +173,7 @@
                 },
                 "additionalProperties": false
               },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -283,10 +271,7 @@
                   "null"
                 ]
               },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -303,6 +288,9 @@
                   "string",
                   "null"
                 ]
+              },
+              "deleted": {
+                "type": "boolean"
               },
               "parameters": {
                 "type": [
@@ -871,10 +859,7 @@
                   }
                 ]
               },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -895,10 +880,7 @@
                   "type": "integer"
                 }
               },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -971,10 +953,7 @@
                   ]
                 }
               },
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -1020,10 +999,7 @@
                 }
               },
               "dataSet": true,
-              "id": true,
-              "deleted": {
-                "type": "boolean"
-              }
+              "id": true
             },
             "required": [
               "id"
@@ -1031,6 +1007,15 @@
             "additionalProperties": false
           }
         ]
+      }
+    },
+    "unsets": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/properties/records/items"
       }
     },
     "undo": {

@@ -77,11 +77,11 @@ public sealed class Watcher : IRecordReader
         return _source.Get(id);
     }
 
-    public T GetIncludingDeleted<T>(SnowTag id)
-        where T : Replicated
+    public SnowportId Version(Replicated atom)
     {
-        Depend(AtomId.For(typeof(T)), id);
-        return _source.GetIncludingDeleted<T>(id);
+        var byId = AtomId.For(atom.GetType());
+        Depend(byId, byId.Of(atom));
+        return _source.Version(atom);
     }
 
     public T Single<T>()
@@ -96,13 +96,6 @@ public sealed class Watcher : IRecordReader
     {
         Depend(byId, id);
         return _source.Get(byId, id);
-    }
-
-    public T GetIncludingDeleted<T, I>(Id<T, I> byId, I id)
-        where T : Replicated
-    {
-        Depend(byId, id);
-        return _source.GetIncludingDeleted(byId, id);
     }
 
     public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)

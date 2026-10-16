@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Reflection;
 using System.Text.Json.Serialization.Metadata;
 
 /// <summary>
@@ -9,10 +8,7 @@ using System.Text.Json.Serialization.Metadata;
 /// </summary>
 public static class JsonWalker
 {
-    /// <param name="skipRecordIds">
-    /// Skips the <see cref="Replicated.Id"/> of every record to find only references.
-    /// </param>
-    public static void Visit<T>(object value, Action<T> visit, bool skipRecordIds = false)
+    public static void Visit<T>(object value, Action<T> visit)
     {
         if (value == null)
             return;
@@ -29,18 +25,14 @@ public static class JsonWalker
         {
             case JsonTypeInfoKind.Object:
                 foreach (var prop in info.Properties)
-                    if (
-                        prop.Get != null
-                        && MayHold(prop.PropertyType)
-                        && !(skipRecordIds && IsRecordId(prop))
-                    )
-                        Visit(prop.Get(value), visit, skipRecordIds);
+                    if (prop.Get != null && MayHold(prop.PropertyType))
+                        Visit(prop.Get(value), visit);
                 break;
 
             case JsonTypeInfoKind.Enumerable:
                 if (MayHold(info.ElementType))
                     foreach (var item in (IEnumerable)value)
-                        Visit(item, visit, skipRecordIds);
+                        Visit(item, visit);
                 break;
 
             case JsonTypeInfoKind.Dictionary:
@@ -51,20 +43,15 @@ public static class JsonWalker
                 foreach (DictionaryEntry entry in dict)
                 {
                     if (keys)
-                        Visit(entry.Key, visit, skipRecordIds);
+                        Visit(entry.Key, visit);
                     if (values)
-                        Visit(entry.Value, visit, skipRecordIds);
+                        Visit(entry.Value, visit);
                 }
                 break;
 
             // At this point a converter owns the type, like with SnowportId, Godot vectors, etc.
         }
     }
-
-    private static bool IsRecordId(JsonPropertyInfo prop) =>
-        prop.AttributeProvider is PropertyInfo p
-        && p.DeclaringType == typeof(Replicated)
-        && p.Name == nameof(Replicated.Id);
 
     private static bool MayHold(Type type)
     {

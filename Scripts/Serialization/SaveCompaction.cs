@@ -7,38 +7,70 @@ using Lizzie.Replication.Machinery;
 /// <summary>
 /// Makes a save as small as it can be.
 /// <list type="bullet">
-/// <item><see cref="Collect"/> drops deleted records that nothing refers to, like garbage collection.</item>
+/// <item><see cref="Collect"/> drops the atoms nothing reaches, like garbage collection.</item>
 /// <item><see cref="Serialize"/> renumbers every id from 1 on source number 0 (admin).</item>
 /// </list>
 /// </summary>
 public static class SaveCompaction
 {
     /// <summary>
-    /// The records that need to be kept.
+    /// Gets the atoms that need to be kept, the ones reachable through their queries, in a fixed order.
+    ///
+    /// <para>
+    /// An atom is kept when its id, or one of its group keys, holds no SnowTags but those found in kept atoms.
+    /// An <see cref="All{T}"/> key holds no SnowTags, so it keeps every atom it lists,
+    /// and a kept atom's own id reaches the atoms grouped under it, like a dataset's rows.
+    /// An atom no query lists, like a deleted <see cref="Prototype"/>, stays only while a kept atom refers to it.
+    /// </para>
     /// </summary>
-    public static IReadOnlyList<Replicated> Collect(IEnumerable<Replicated> records)
+    public static Replicated[] Collect(IEnumerable<Replicated> atoms)
     {
-        var all = records.ToList();
-        var byId = all.ToLookup(r => r.Id);
+        var waiting = atoms.Select(a => (Atom: a, Keys: Keys(a))).ToList();
+        var found = new HashSet<SnowTag>();
+        var kept = new List<Replicated>();
 
-        var kept = new HashSet<Replicated>(
-            all.Where(r => !r.Deleted),
-            ReferenceEqualityComparer.Instance
-        );
-        var unvisited = new Queue<Replicated>(kept);
-        while (unvisited.TryDequeue(out var record))
-            JsonWalker.Visit<SnowTag>(
-                record,
-                tag =>
-                {
-                    foreach (var referenced in byId[tag])
-                        if (kept.Add(referenced))
-                            unvisited.Enqueue(referenced);
-                },
-                skipRecordIds: true
-            );
+        // Each pass keeps what the last one's atoms reached.
+        bool grew = true;
+        while (grew)
+        {
+            grew = false;
+            for (int i = waiting.Count - 1; i >= 0; i--)
+            {
+                var (atom, keys) = waiting[i];
+                if (!keys.Exists(k => k.IsSubsetOf(found)))
+                    continue;
+                kept.Add(atom);
+                JsonWalker.Visit<SnowTag>(atom, tag => found.Add(tag));
+                waiting.RemoveAt(i);
+                grew = true;
+            }
+        }
 
-        return all.Where(kept.Contains).ToList();
+        return kept.OrderBy(a => a.Id)
+            .ThenBy(a => a.GetType().Name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// The SnowTags in each id and group key that could keep <paramref name="atom"/>.
+    /// </summary>
+    private static List<HashSet<SnowTag>> Keys(Replicated atom)
+    {
+        var keys = new List<HashSet<SnowTag>>();
+        foreach (var query in Query.DeclaredOn(atom.GetType()))
+        {
+            if (query.Of(atom) is not { } key)
+                continue;
+            var tags = new HashSet<SnowTag>();
+            JsonWalker.Visit<SnowTag>(key, tag => tags.Add(tag));
+            tags.Remove(SnowTag.Empty);
+            keys.Add(tags);
+        }
+
+        // A singleton has no group yet, so it would be lost.
+        if (atom.GetType().IsDefined(typeof(SingletonAttribute), false))
+            keys.Add([]);
+        return keys;
     }
 
     /// <summary>

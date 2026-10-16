@@ -57,7 +57,7 @@ public static class DataSetCommands
         Noun = ("Row", "Rows"),
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
-        Effects = (R, rows, _) => rows.Select(r => r with { Deleted = true }),
+        Effects = (R, rows, _) => rows.Select(R.Unset),
     };
 
     /// <summary>Removes the columns from their datasets. The rows keep their values, so undo brings them back.</summary>

@@ -23,17 +23,18 @@ public class AtomStoreTests
 
     private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
 
-    private static ComponentState Component(int id, int container = 0, bool deleted = false) =>
-        new()
-        {
-            Id = Tag(id),
-            ContainerRef = container == 0 ? SnowTag.Empty : Tag(container),
-            Deleted = deleted,
-        };
+    private static ComponentState Component(int id, int container = 0) =>
+        new() { Id = Tag(id), ContainerRef = container == 0 ? SnowTag.Empty : Tag(container) };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
     private TableEvent Write(params ComponentState[] atoms) =>
         Record(new TableEvent { Id = NextId(), Records = atoms });
+
+    /// <summary>Records an event unsetting the atom with <paramref name="id"/>, and merges it into the store.</summary>
+    private TableEvent Unset(int id) =>
+        Record(new TableEvent { Id = NextId(), Unsets = [Component(id)] });
+
+    private ComponentState Value(int id) => (ComponentState)_store.Find(Tag(id)).Value;
 
     private TableEvent Undo(TableEvent e) =>
         Record(
@@ -53,14 +54,14 @@ public class AtomStoreTests
         return e;
     }
 
-    /// <summary>The touches the next write reports.</summary>
-    private Touch[] TouchesOf(params ComponentState[] atoms)
+    /// <summary>The touches <paramref name="change"/> reports.</summary>
+    private Touch[] TouchesOf(System.Action change)
     {
-        var changes = new List<RecordChange>();
-        _store.Changed += changes.AddRange;
-        Write(atoms);
-        _store.Changed -= changes.AddRange;
-        return _store.Touched(changes).ToArray();
+        var touches = new List<Touch>();
+        _store.Changed += touches.AddRange;
+        change();
+        _store.Changed -= touches.AddRange;
+        return touches.ToArray();
     }
 
     [StackTraceHidden]
@@ -89,7 +90,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Write(Component(1, container: 6));
 
-        Assert.Equal(Tag(6), _store.Find(Tag(1)).ContainerRef);
+        Assert.Equal(Tag(6), Value(1).ContainerRef);
     }
 
     [Fact]
@@ -99,7 +100,59 @@ public class AtomStoreTests
         var newer = Write(Component(1, container: 6));
         Undo(newer);
 
-        Assert.Equal(Tag(5), _store.Find(Tag(1)).ContainerRef);
+        Assert.Equal(Tag(5), Value(1).ContainerRef);
+    }
+
+    [Fact]
+    public void UnsettingAnAtomRemovesIt()
+    {
+        Write(Component(1, container: 5));
+        Unset(1);
+
+        Assert.Null(Value(1));
+    }
+
+    [Fact]
+    public void AnUnsetBeatsAWriteInTheSameEvent()
+    {
+        Write(Component(1, container: 5));
+        Record(
+            new TableEvent
+            {
+                Id = NextId(),
+                Records = [Component(1, container: 6)],
+                Unsets = [Component(1)],
+            }
+        );
+
+        Assert.Null(Value(1));
+    }
+
+    [Fact]
+    public void ANewerWriteBringsAnUnsetAtomBack()
+    {
+        Write(Component(1, container: 5));
+        Unset(1);
+        Write(Component(1, container: 6));
+
+        Assert.Equal(Tag(6), Value(1)?.ContainerRef);
+    }
+
+    [Fact]
+    public void UndoingAnUnsetBringsTheAtomBack()
+    {
+        Write(Component(1, container: 5));
+        Undo(Unset(1));
+
+        Assert.Equal(Tag(5), Value(1)?.ContainerRef);
+    }
+
+    [Fact]
+    public void UnsettingAnAtomNeverWrittenLeavesNothing()
+    {
+        Unset(1);
+
+        Assert.Null(_store.Find(Tag(1)).Value);
     }
 
     [Fact]
@@ -131,12 +184,13 @@ public class AtomStoreTests
     }
 
     [Fact]
-    public void CountsLeaveOutDeletedAtomsButGroupsHoldThem()
+    public void GroupsAndCountsLeaveOutUnsetAtoms()
     {
-        Write(Component(1, container: 5), Component(2, container: 5, deleted: true));
+        Write(Component(1, container: 5), Component(2, container: 5));
+        Unset(2);
 
         Assert.Equal(1, _store.Count(ByContainer, Tag(5)));
-        AssertIds(_store.InGroup(ByContainer, Tag(5)), 1, 2);
+        AssertIds(_store.InGroup(ByContainer, Tag(5)), 1);
     }
 
     [Fact]
@@ -146,7 +200,7 @@ public class AtomStoreTests
         _store.InGroup(ByContainer, Tag(5));
 
         AssertTouched(
-            TouchesOf(Component(1, container: 6)),
+            TouchesOf(() => Write(Component(1, container: 6))),
             new Touch(ComponentState.ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(6), false),
@@ -162,20 +216,20 @@ public class AtomStoreTests
         _store.InGroup(ByContainer, Tag(5));
 
         AssertTouched(
-            TouchesOf(Component(1, container: 5) with { X = 10 }),
+            TouchesOf(() => Write(Component(1, container: 5) with { X = 10 })),
             new Touch(ComponentState.ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false)
         );
     }
 
     [Fact]
-    public void DeletingAnAtomChangesItsGroupKeysCount()
+    public void UnsettingAnAtomChangesItsGroupKeysCount()
     {
         Write(Component(1, container: 5));
         _store.InGroup(ByContainer, Tag(5));
 
         AssertTouched(
-            TouchesOf(Component(1, container: 5, deleted: true)),
+            TouchesOf(() => Unset(1)),
             new Touch(ComponentState.ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(5), true)
@@ -188,7 +242,7 @@ public class AtomStoreTests
         _store.InGroup(ByContainer, Tag(5));
 
         AssertTouched(
-            TouchesOf(Component(1, container: 5)),
+            TouchesOf(() => Write(Component(1, container: 5))),
             new Touch(ComponentState.ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(5), true)
@@ -201,7 +255,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
 
         AssertTouched(
-            TouchesOf(Component(1, container: 6)),
+            TouchesOf(() => Write(Component(1, container: 6))),
             new Touch(ComponentState.ById, Tag(1), false)
         );
     }

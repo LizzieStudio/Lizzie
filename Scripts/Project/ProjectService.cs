@@ -266,8 +266,8 @@ public partial class ProjectService : Node
         var seating = R.Single<Seating>();
         RecordService.Instance.WriteAdmin(
             R.Get(Selection.ByPlayer, source)
-                .Select(s => s with { Deleted = true })
-                .Append<Replicated>(seating with { Seats = seating.Seats.Remove(source) })
+                .Select(R.Unset)
+                .Append<IChange>(seating with { Seats = seating.Seats.Remove(source) })
         );
     }
 
@@ -298,7 +298,13 @@ public partial class ProjectService : Node
 
             try
             {
-                saveFile.StoreLine(SaveCompaction.Serialize(BuildCompactedEvent()));
+                saveFile.StoreLine(
+                    SaveCompaction.Serialize(
+                        TableEvent.Admin(
+                            SaveCompaction.Collect(RecordService.Instance.Machinery().SavedAtoms())
+                        )
+                    )
+                );
             }
             catch (Exception ex)
             {
@@ -335,19 +341,6 @@ public partial class ProjectService : Node
             return false;
         return SaveProject(CurrentProject);
     }
-
-    /// <summary>
-    /// Rebuilds the event log as one event holding the current state.
-    /// </summary>
-    private static TableEvent BuildCompactedEvent() =>
-        TableEvent.Admin(
-            SaveCompaction
-                .Collect(RecordService.Instance.Machinery().SavedRecords())
-                // sorted for determinism
-                .OrderBy(r => r.Id)
-                .ThenBy(r => r.GetType().Name, StringComparer.Ordinal)
-                .ToArray()
-        );
 
     /// <summary>
     /// Advances the tag counter past every SnowTag in the log.

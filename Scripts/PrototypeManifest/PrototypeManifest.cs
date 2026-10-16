@@ -203,7 +203,7 @@ public partial class PrototypeManifest : Window, ICommandView
             .Where(s =>
                 !(
                     s.IsItem
-                    && R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef)?.Type
+                    && R.Get(Prototype.ById, s.PrototypeRef)?.Type
                         == VisualComponentBase.VisualComponentType.Deck
                 )
             )

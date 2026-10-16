@@ -135,8 +135,12 @@ public partial class ImageManager : Window, ICommandView
         Closed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnRemovePressed() =>
-        RecordService.Instance.Update(ImageAsset.ById, _open, a => a with { Deleted = true });
+    private void OnRemovePressed()
+    {
+        var R = RecordService.Instance;
+        if (R.Get(ImageAsset.ById, _open) is { } image)
+            R.Write(R.Unset(image));
+    }
 
     /// <summary>
     /// For when the user clicks an image to see it,

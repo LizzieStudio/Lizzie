@@ -98,7 +98,10 @@ public partial class GameObjects : Node3D
     /// </summary>
     private List<VisualComponentBase> PickedUp(VisualComponentBase pressed)
     {
-        var place = pressed.State.ContainerRef;
+        // Its atom may have been unset this frame, before the table removes it.
+        if (pressed.State is not { } state)
+            return [];
+        var place = state.ContainerRef;
         return GetSelection()
             .Select(GetComponent)
             .Where(o => o?.State?.ContainerRef == place)

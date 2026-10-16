@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Lizzie.Replication.Machinery;
 
@@ -57,6 +58,7 @@ namespace Lizzie.Replication.Machinery;
 /// <item>The "Undo This" event targets the last event that updated a particular record.</item>
 /// <item>Panels and the Table (views) filter by the records pertinent to that view, like the DatasetEditor and DataSets</item>
 /// </list>
+/// An unset is in scope when the atom it unsets is, as the player unsetting it saw it.
 /// </para>
 /// </remarks>
 public static class UndoLog
@@ -276,7 +278,7 @@ public static class UndoLog
                 return inScope;
 
             foreach (var member in AllMembers(unit, i))
-            foreach (var record in member.Records)
+            foreach (var record in member.Records.Concat(member.Unsets))
                 if (scope(author, record))
                     return _inScope[(unit, author)] = true;
 

@@ -37,7 +37,7 @@ public partial class GameController : Node
 
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
-        var prototype = RecordService.Instance.GetIncludingDeleted(Prototype.ById, e.PrototypeRef);
+        var prototype = RecordService.Instance.Get(Prototype.ById, e.PrototypeRef);
         if (prototype == null)
         {
             GD.PrintErr($"SpawnPrototype: prototype {e.PrototypeRef} not found");

@@ -14,8 +14,9 @@ public class SaveCompactionTests
     private static SnowportId Id(long clock, byte source = Snowport.HostSource) =>
         new(clock, source);
 
-    private static ComponentState Component(int id, bool deleted = false) =>
-        new() { Id = Tag(id), Deleted = deleted };
+    private static ComponentState Component(int id) => new() { Id = Tag(id) };
+
+    private static Prototype DeletedPrototype(int id) => new() { Id = Tag(id), Deleted = true };
 
     private static TableEvent Save(params Replicated[] records) =>
         new() { Id = Id(1_000_000, Snowport.AdminSource), Records = records };
@@ -24,9 +25,9 @@ public class SaveCompactionTests
         JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
 
     [StackTraceHidden]
-    private static void AssertKept(IEnumerable<Replicated> records, params int[] expected)
+    private static void AssertKept(IEnumerable<Replicated> atoms, params int[] expected)
     {
-        var kept = SaveCompaction.Collect(records).Select(r => r.Id).OrderBy(t => t).ToArray();
+        var kept = SaveCompaction.Collect(atoms).Select(a => a.Id).OrderBy(t => t).ToArray();
         var want = expected.Select(n => Tag(n)).OrderBy(t => t).ToArray();
         Assert.True(
             kept.SequenceEqual(want),
@@ -35,78 +36,27 @@ public class SaveCompactionTests
     }
 
     [Fact]
-    public void LiveRecordsAreKept() => AssertKept([Component(1), Component(2)], 1, 2);
+    public void ListedRecordsAreKept() => AssertKept([Component(1), Component(2)], 1, 2);
 
     [Fact]
-    public void UnreferencedDeletedRecordIsDropped() =>
-        AssertKept([Component(1), Component(2, deleted: true)], 1);
+    public void AnUnreferencedDeletedPrototypeIsDropped() =>
+        AssertKept([Component(1), DeletedPrototype(2)], 1);
 
     [Fact]
-    public void DeletedChainWithNoLiveReferenceIsDropped() =>
+    public void ADeletedPrototypeAComponentUsesIsKept() =>
+        AssertKept([Component(1) with { PrototypeRef = Tag(2) }, DeletedPrototype(2)], 1, 2);
+
+    [Fact]
+    public void ADataSetKeepsItsRows() =>
         AssertKept(
-            [
-                Component(1),
-                Component(2, deleted: true) with
-                {
-                    ContainerRef = Tag(3),
-                },
-                Component(3, deleted: true) with
-                {
-                    ContainerRef = Tag(4),
-                },
-                Component(4, deleted: true),
-            ],
-            1
-        );
-
-    [Fact]
-    public void DeletedChainReachedFromALiveRecordIsKept() =>
-        AssertKept(
-            [
-                Component(1) with
-                {
-                    ContainerRef = Tag(2),
-                },
-                Component(2, deleted: true) with
-                {
-                    ContainerRef = Tag(3),
-                },
-                Component(3, deleted: true),
-                Component(4, deleted: true),
-            ],
+            [new DataSet { Id = Tag(1) }, new DataRow { Id = Tag(2), DataSetId = Tag(1) }],
             1,
-            2,
-            3
+            2
         );
 
     [Fact]
-    public void DeletedCycleIsDropped() =>
-        AssertKept(
-            [
-                Component(1),
-                Component(2, deleted: true) with
-                {
-                    ContainerRef = Tag(3),
-                },
-                Component(3, deleted: true) with
-                {
-                    ContainerRef = Tag(2),
-                },
-            ],
-            1
-        );
-
-    [Fact]
-    public void ReferenceFromADeletedRecordKeepsNothing() =>
-        AssertKept([
-            new DataSet { Id = Tag(1), Deleted = true },
-            new DataRow
-            {
-                Id = Tag(2),
-                DataSetId = Tag(1),
-                Deleted = true,
-            },
-        ]);
+    public void RowsOfAMissingDataSetAreDropped() =>
+        AssertKept([new DataRow { Id = Tag(2), DataSetId = Tag(1) }]);
 
     [Fact]
     public void TagsBecomeAdminTagsFromOneInOrder()

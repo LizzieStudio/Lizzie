@@ -4,28 +4,30 @@ using System.Linq;
 using Lizzie.Replication.Machinery;
 
 /// <summary>
-/// Reads project records.
-/// Soft-deleted records are only returned by the GetIncludingDeleted reads.
-/// A reader passed to a watched Sync records every read as a dependency.
+/// Reads atoms.
 /// </summary>
 public interface IRecordReader
 {
-    /// <summary>The record, or null if it is missing or deleted.</summary>
+    /// <summary>
+    /// The record, or null if it is missing or unset.
+    /// </summary>
     T Get<T>(SnowTag id)
         where T : Replicated;
 
-    /// <summary>The record, or null if it is missing or deleted.</summary>
+    /// <summary>
+    /// The record, or null if it is missing or unset.
+    /// </summary>
     Replicated Get(SnowTag id);
 
     /// <summary>
-    /// The record even if it is deleted.
-    /// Returns null if the record never existed or if its creation was reversed through an undo action.
+    /// The id of the event that last updated <paramref name="atom"/>,
+    /// or <see cref="SnowportId.Empty"/> if it was never written.
     /// </summary>
-    T GetIncludingDeleted<T>(SnowTag id)
-        where T : Replicated;
+    SnowportId Version(Replicated atom);
 
     /// <summary>
-    /// <para>The one record of a <see cref="SingletonAttribute"/> type, like the project settings.</para>
+    /// The one record of a <see cref="SingletonAttribute"/> type, like the project settings.
+    ///
     /// <para>
     /// Table setup creates it, so it should always exist.
     /// Throws if there's none or several.
@@ -35,26 +37,19 @@ public interface IRecordReader
         where T : Replicated;
 
     /// <summary>
-    /// Gets the atom with <paramref name="id"/>, or null if it is missing or deleted.
+    /// Gets the atom with <paramref name="id"/>, or null if it is missing or unset.
     /// </summary>
     T Get<T, I>(Id<T, I> byId, I id)
         where T : Replicated;
 
     /// <summary>
-    /// Gets the atom with <paramref name="id"/>, even if it is deleted.
-    /// Returns null if it was never written, or if its writes were undone.
-    /// </summary>
-    T GetIncludingDeleted<T, I>(Id<T, I> byId, I id)
-        where T : Replicated;
-
-    /// <summary>
-    /// Gets the atoms with <paramref name="key"/> in <paramref name="group"/> that aren't deleted.
+    /// Gets the atoms with <paramref name="key"/> in <paramref name="group"/> that aren't unset.
     /// </summary>
     IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
         where T : Replicated;
 
     /// <summary>
-    /// How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't deleted.
+    /// How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't unset.
     /// </summary>
     /// <remarks>
     /// A watch that reads only this reruns only when the count changes, not when the atom values change.
@@ -89,11 +84,15 @@ public readonly record struct GroupDiff<T, V>(
 
 public static class RecordReaderExtensions
 {
-    /// <summary>Every atom of <typeparamref name="T"/> that isn't deleted.</summary>
+    /// <summary>
+    /// The atoms <paramref name="all"/> lists.
+    /// </summary>
     public static IReadOnlyList<T> Get<T>(this IRecordReader R, All<T> all)
         where T : Replicated => R.Get(all, true);
 
-    /// <summary>How many atoms of <typeparamref name="T"/> aren't deleted.</summary>
+    /// <summary>
+    /// How many atoms <paramref name="all"/> lists.
+    /// </summary>
     public static int Count<T>(this IRecordReader R, All<T> all)
         where T : Replicated => R.Count(all, true);
 
@@ -118,12 +117,23 @@ public static class RecordReaderExtensions
         where T : Replicated => R.Diff(all, true);
 
     /// <summary>
+    /// The change that unsets <paramref name="atom"/>, to write like a record.
+    /// </summary>
+    public static Unset Unset(this IRecordReader R, Replicated atom) => new(atom);
+
+    /// <summary>
+    /// A cache key for each <paramref name="atom"/> that changes whenever it changes.
+    /// </summary>
+    public static string VersionKey(this IRecordReader R, Replicated atom) =>
+        $"{AtomId.For(atom.GetType()).Of(atom)}@{R.Version(atom)}";
+
+    /// <summary>
     /// The command that last wrote <paramref name="record"/>'s current state, or null when there was no command attached.
     /// If the last command was an undo or a redo, this falls back to the last effective command (before any reversed event).
     /// </summary>
     public static CommandName? WrittenBy(this IRecordReader R, Replicated record) =>
         EventSynchronizer.Instance is { } sync
-        && sync.Log.TryGetValue(record.LastUpdateId, out var writer)
+        && sync.Log.TryGetValue(R.Version(record), out var writer)
             ? writer.Command
             : null;
 
@@ -164,7 +174,7 @@ public static class RecordReaderExtensions
     /// <param name="id">The record to check.</param>
     /// <returns>Whether or not <paramref name="id"/> is of type <typeparamref name="T"/></returns>
     public static bool Is<T>(this IRecordReader R, SnowTag id)
-        where T : Replicated => R.GetIncludingDeleted<T>(id) != null;
+        where T : Replicated => R.Get<T>(id) != null;
 
     /// <summary>
     /// What a component shows as. A deck's cards share the deck's prototype but show as tokens,
@@ -176,7 +186,7 @@ public static class RecordReaderExtensions
     )
     {
         var type =
-            R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef)?.Type
+            R.Get(Prototype.ById, s.PrototypeRef)?.Type
             ?? VisualComponentBase.VisualComponentType.Unset;
         return type == VisualComponentBase.VisualComponentType.Deck && s.IsItem
             ? VisualComponentBase.VisualComponentType.Token

@@ -25,9 +25,9 @@ public interface IRecordServiceMachinery
     void MarkDirty(Watcher watcher);
 
     /// <summary>
-    /// The current value of everything saved with the project.
+    /// Every atom saved with the project.
     /// </summary>
-    IEnumerable<Replicated> SavedRecords();
+    IEnumerable<Replicated> SavedAtoms();
 }
 
 public static class RecordServiceMachinery

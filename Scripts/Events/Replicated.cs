@@ -5,37 +5,21 @@ using System.Text.Json.Serialization;
 /// <summary>
 /// <para>A record, easily replicated in multiplayer through a write-only synchronized log.</para>
 /// <para>
-/// Write records with <see cref="RecordService.Write(IEnumerable{Replicated})"/>,
+/// Write records with <see cref="RecordService.Write(IEnumerable{IChange})"/>,
 /// or return them from a command's <see cref="Command.Effects"/>.
+/// Delete them by writing <see cref="RecordReaderExtensions.Delete"/>.
 /// </para>
 /// </summary>
 /// <remarks>
 /// Every record type needs a <see cref="JsonNameAttribute"/>, the name it's saved and sent under.
 /// </remarks>
 [JsonPolymorphic]
-public abstract record Replicated
+public abstract record Replicated : IChange
 {
     /// <summary>
     /// The record's identity, usually created with <see cref="Snowport.CreateTag"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
-
-    /// <summary>
-    /// Reversible soft-delete flag.
-    /// Will be permanently deleted in save files unless a kept record references it.
-    /// </summary>
-    public bool Deleted { get; init; }
-
-    /// <summary>
-    /// The id of the event that last wrote this record.
-    /// </summary>
-    [JsonIgnore]
-    public SnowportId LastUpdateId { get; init; }
-
-    /// <summary>
-    /// A cache key that changes whenever the record is updated.
-    /// </summary>
-    public string VersionKey() => $"{Id:X8}{LastUpdateId:X16}";
 
     /// <summary>
     /// What's directly inside this record, like a deck's cards or a DataRow's cells.

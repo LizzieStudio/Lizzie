@@ -62,9 +62,10 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     {
         var sync = EventSynchronizer.Instance;
         var changed = UndoLog.Changes(sync.Log, e).ToList();
-        foreach (var record in changed.SelectMany(c => c.Records))
-            if (!_stores.ContainsKey(record.GetType()))
-                AddStore(NewStore(record.GetType()));
+        var types = changed.SelectMany(c => c.Records.Concat(c.Unsets).Select(r => r.GetType()));
+        foreach (var type in types)
+            if (!_stores.ContainsKey(type))
+                AddStore(NewStore(type));
 
         foreach (var store in _stores.Values)
             store.Apply(sync.Log, changed, sync.BulkLoading);
@@ -84,14 +85,16 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     private IReplicatedStore AddStore(IReplicatedStore store)
     {
         _stores.Add(store.RecordType, store);
-        store.Changed += changes => OnRecordsChanged(store, changes);
+        store.Changed += OnRecordsChanged;
         return store;
     }
 
     /// <summary>The store for <typeparamref name="T"/>, made empty if nothing has read or written one yet.</summary>
     private IAtomStore<T> StoreOf<T>()
-        where T : Replicated =>
-        (IAtomStore<T>)(_stores.GetValueOrDefault(typeof(T)) ?? AddStore(NewStore(typeof(T))));
+        where T : Replicated => (IAtomStore<T>)StoreOf(typeof(T));
+
+    private IReplicatedStore StoreOf(Type type) =>
+        _stores.GetValueOrDefault(type) ?? AddStore(NewStore(type));
 
     /// <inheritdoc/>
     void IRecordServiceMachinery.Clear()
@@ -115,25 +118,26 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     /// Records are identified by their <see cref="Replicated.Id"/>.
     /// If you Write a record with a new Id, it is created on all clients.
     /// If you Write a record using an existing Id, that record is replaced with the new one.
+    /// Write a <see cref="RecordReaderExtensions.Delete"/> to delete one.
     /// </para>
     /// <para>
-    /// The <paramref name="records"/> passed here are bundled in one event which is undone or redone together.
+    /// The <paramref name="changes"/> passed here are bundled in one event which is undone or redone together.
     /// To bundle multiple discrete events into one undo group, use Open, Append, and Close.
     /// </para>
     /// <para>
-    /// Commands return their records from <see cref="Command.Effects"/> instead.
+    /// Commands return their changes from <see cref="Command.Effects"/> instead.
     /// </para>
     /// </summary>
-    public void Write(params IEnumerable<Replicated> records)
+    public void Write(params IEnumerable<IChange> changes)
     {
-        var all = records.ToArray();
+        var all = changes.ToArray();
         if (all.Length > 0)
             Submit(TableEvent.Now(all));
     }
 
     /// <summary>
     /// Calls <paramref name="change"/> with the current version of the atom with <paramref name="id"/>,
-    /// then passes the result to <see cref="Write"/>. Does nothing if the record is missing or deleted.
+    /// then passes the result to <see cref="Write"/>. Does nothing if the record is missing or unset.
     ///
     /// <inheritdoc cref="Write"/>
     /// </summary>
@@ -145,19 +149,19 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     }
 
     /// <summary>
-    /// Writes records as one event made by <paramref name="command"/>, even if there are none,
+    /// Writes changes as one event made by <paramref name="command"/>, even if there are none,
     /// so the command's listeners hear it.
     /// </summary>
-    public void Write(CommandName command, params IEnumerable<Replicated> records) =>
-        Submit(TableEvent.Now(records.ToArray(), command));
+    public void Write(CommandName command, params IEnumerable<IChange> changes) =>
+        Submit(TableEvent.Now(changes.ToArray(), command));
 
     /// <summary>
-    /// Writes records as one admin event, which belongs to the table rather than a player,
-    /// so no one can undo it. Only the host or a solo player can write one. Does nothing without records.
+    /// Writes changes as one admin event, which belongs to the table rather than a player,
+    /// so no one can undo it. Only the host or a solo player can write one. Does nothing without changes.
     /// </summary>
-    public void WriteAdmin(params IEnumerable<Replicated> records)
+    public void WriteAdmin(params IEnumerable<IChange> changes)
     {
-        var all = records.ToArray();
+        var all = changes.ToArray();
         if (all.Length > 0)
             Submit(TableEvent.Admin(all));
     }
@@ -168,68 +172,67 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     /// Returns the gesture's undo group to be used in Append and Close.
     /// </para>
     /// <para>
-    /// Write the gesture's other events with <see cref="Append(SnowportId, IEnumerable{Replicated})"/>,
-    /// and its last with <see cref="Close(SnowportId, IEnumerable{Replicated})"/>.
+    /// Write the gesture's other events with <see cref="Append(SnowportId, IEnumerable{IChange})"/>,
+    /// and its last with <see cref="Close(SnowportId, IEnumerable{IChange})"/>.
     /// A not-yet-closed group is skiped by undo and redo events.
     /// A closed group is undone or redone all at once.
     /// </para>
     /// </summary>
-    public SnowportId Open(params IEnumerable<Replicated> records) => Open(null, records);
+    public SnowportId Open(params IEnumerable<IChange> changes) => Open(null, changes);
 
-    /// <inheritdoc cref="Open(IEnumerable{Replicated})"/>
-    public SnowportId Open(CommandName command, params IEnumerable<Replicated> records) =>
-        Open((CommandName?)command, records);
+    /// <inheritdoc cref="Open(IEnumerable{IChange})"/>
+    public SnowportId Open(CommandName command, params IEnumerable<IChange> changes) =>
+        Open((CommandName?)command, changes);
 
-    private SnowportId Open(CommandName? command, IEnumerable<Replicated> records)
+    private SnowportId Open(CommandName? command, IEnumerable<IChange> changes)
     {
-        var e = TableEvent.Now(records.ToArray(), command);
+        var e = TableEvent.Now(changes.ToArray(), command);
         e.Group = e.Id;
         Submit(e);
         return e.Id;
     }
 
     /// <summary>
-    /// Writes records as one event in the open <paramref name="group"/>. Does nothing without records.
+    /// Writes changes as one event in the open <paramref name="group"/>. Does nothing without changes.
     /// </summary>
-    public void Append(SnowportId group, params IEnumerable<Replicated> records) =>
-        Append(group, null, records);
+    public void Append(SnowportId group, params IEnumerable<IChange> changes) =>
+        Append(group, null, changes);
 
-    /// <inheritdoc cref="Append(SnowportId, IEnumerable{Replicated})"/>
+    /// <inheritdoc cref="Append(SnowportId, IEnumerable{IChange})"/>
     public void Append(
         SnowportId group,
         CommandName command,
-        params IEnumerable<Replicated> records
-    ) => Append(group, (CommandName?)command, records);
+        params IEnumerable<IChange> changes
+    ) => Append(group, (CommandName?)command, changes);
 
-    private void Append(SnowportId group, CommandName? command, IEnumerable<Replicated> records)
+    private void Append(SnowportId group, CommandName? command, IEnumerable<IChange> changes)
     {
-        var e = TableEvent.Now(records.ToArray(), command);
-        if (e.Records.Length == 0)
+        var all = changes.ToArray();
+        if (all.Length == 0)
             return;
+        var e = TableEvent.Now(all, command);
         e.Group = group;
         Submit(e);
     }
 
     /// <summary>
     /// Writes the last event of <paramref name="group"/>, which closes it.
-    /// Without records it only closes the group, for a gesture that ended without its usual last event.
+    /// Without changes it only closes the group, for a gesture that ended without its usual last event.
     /// </summary>
-    public void Close(SnowportId group, params IEnumerable<Replicated> records) =>
-        Close(group, null, records);
+    public void Close(SnowportId group, params IEnumerable<IChange> changes) =>
+        Close(group, null, changes);
 
-    /// <inheritdoc cref="Close(SnowportId, IEnumerable{Replicated})"/>
-    public void Close(
-        SnowportId group,
-        CommandName command,
-        params IEnumerable<Replicated> records
-    ) => Close(group, (CommandName?)command, records);
+    /// <inheritdoc cref="Close(SnowportId, IEnumerable{IChange})"/>
+    public void Close(SnowportId group, CommandName command, params IEnumerable<IChange> changes) =>
+        Close(group, (CommandName?)command, changes);
 
-    private void Close(SnowportId group, CommandName? command, IEnumerable<Replicated> records)
+    private void Close(SnowportId group, CommandName? command, IEnumerable<IChange> changes)
     {
-        var e = TableEvent.Now(records.ToArray(), command);
+        var all = changes.ToArray();
+        var e = TableEvent.Now(all, command);
         if (group == SnowportId.Empty)
         {
-            if (e.Records.Length > 0)
+            if (all.Length > 0)
                 Submit(e);
             return;
         }
@@ -253,8 +256,8 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     private static void Submit(TableEvent e) => EventSynchronizer.Instance?.Submit(e);
 
     /// <inheritdoc/>
-    IEnumerable<Replicated> IRecordServiceMachinery.SavedRecords() =>
-        _stores.Values.SelectMany(s => s.SavedRecords());
+    IEnumerable<Replicated> IRecordServiceMachinery.SavedAtoms() =>
+        _stores.Values.SelectMany(s => s.SavedAtoms());
 
     #endregion
 
@@ -321,9 +324,9 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
         QueueFlush();
     }
 
-    private void OnRecordsChanged(IReplicatedStore store, IReadOnlyList<RecordChange> changes)
+    private void OnRecordsChanged(IReadOnlyList<Touch> touched)
     {
-        foreach (var watcher in _dependencies.Affected(store.Touched(changes)))
+        foreach (var watcher in _dependencies.Affected(touched))
             MarkDirty(watcher);
     }
 
@@ -391,16 +394,13 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     #region IRecordReader
 
     public T Get<T>(SnowTag id)
-        where T : Replicated => GetIncludingDeleted<T>(id) is { Deleted: false } r ? r : null;
-
-    public T GetIncludingDeleted<T>(SnowTag id)
-        where T : Replicated => (T)StoreOf<T>().Find(id);
+        where T : Replicated => (T)StoreOf<T>().Find(id).Value;
 
     public Replicated Get(SnowTag id) =>
-        _stores.Values.Select(s => s.Find(id)).FirstOrDefault(r => r != null)
-            is { Deleted: false } r
-            ? r
-            : null;
+        _stores.Values.Select(s => s.Find(id).Value).FirstOrDefault(v => v != null);
+
+    public SnowportId Version(Replicated atom) =>
+        StoreOf(atom.GetType()).Find(AtomId.For(atom.GetType()).Of(atom)).LastUpdate;
 
     public T Single<T>()
         where T : Replicated
@@ -416,13 +416,13 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
     }
 
     public T Get<T, I>(Id<T, I> byId, I id)
-        where T : Replicated => GetIncludingDeleted(byId, id) is { Deleted: false } r ? r : null;
+        where T : Replicated => (T)StoreOf(byId).Find(id).Value;
 
-    public T GetIncludingDeleted<T, I>(Id<T, I> byId, I id)
-        where T : Replicated => ((AtomStore<T, I>)StoreOf<T>()).Find(id);
+    private AtomStore<T, I> StoreOf<T, I>(Id<T, I> byId)
+        where T : Replicated => (AtomStore<T, I>)StoreOf<T>();
 
     public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
-        where T : Replicated => StoreOf<T>().InGroup(group, key).Where(r => !r.Deleted).ToArray();
+        where T : Replicated => StoreOf<T>().InGroup(group, key);
 
     public int Count<T, G>(Group<T, G> group, G key)
         where T : Replicated => StoreOf<T>().Count(group, key);

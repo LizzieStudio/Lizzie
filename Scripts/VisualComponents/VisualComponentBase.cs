@@ -40,7 +40,7 @@ public abstract partial class VisualComponentBase : Area3D
 
         // Normal nodes never change, since the Table replaces the node when they do.
         // Previews have no record and keep their own.
-        var record = RecordService.Instance.GetIncludingDeleted(ComponentState.ById, Reference);
+        var record = RecordService.Instance.Get(ComponentState.ById, Reference);
         if (record != null)
         {
             PrototypeRef = record.PrototypeRef;
@@ -64,7 +64,7 @@ public abstract partial class VisualComponentBase : Area3D
         _nothingSelected = selection?.IsEmpty != false;
         var other = R.Get(Selection.ByWithin, SnowTag.Empty)
             .Where(s => s.Player != local && s.Targets.Contains(target))
-            .MaxBy(s => s.LastUpdateId);
+            .MaxBy(R.Version);
         _othersColor = other == null ? null : R.SeatColor(other.Player);
         UpdateHighlight();
     }
@@ -90,7 +90,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>The prototype this component shows. Possibly a draft or even deleted.</summary>
     protected Prototype GetPrototype(IRecordReader R) =>
-        DraftPrototype ?? R.GetIncludingDeleted(Prototype.ById, PrototypeRef);
+        DraftPrototype ?? R.Get(Prototype.ById, PrototypeRef);
 
     private Tween _yTween;
     private float _targetY;
@@ -153,7 +153,7 @@ public abstract partial class VisualComponentBase : Area3D
             _slide.Kill();
 
         // Only a recent write animates. Anything older jumps into place, to catch up.
-        long age = Snowport.Clock.MsecSince(s.LastUpdateId);
+        long age = Snowport.Clock.MsecSince(R.Version(s));
         var cutoff = ProjectService.Instance.GameObjects.AnimationCutoff;
         var writtenBy = _placed && age <= cutoff ? R.WrittenBy(s) : null;
 
@@ -242,9 +242,9 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// The component's record, or null for a node without one, such as a spawn preview.
+    /// Also null between its record being unset and the table removing it at the end of the frame.
     /// </summary>
-    public ComponentState State =>
-        RecordService.Instance.GetIncludingDeleted(ComponentState.ById, Reference);
+    public ComponentState State => RecordService.Instance.Get(ComponentState.ById, Reference);
 
     /// <summary>
     /// Which of its prototype's cards this is, or <see cref="PrototypeItemRef.None"/>.

@@ -87,8 +87,7 @@ public static class DeckCommands
         }
 
         // Splayed cards land to the right of the deck and on top, in draw order.
-        float width = R.GetIncludingDeleted(Prototype.ById, deck.PrototypeRef)?.Parameters
-            is PrintedParameters p
+        float width = R.Get(Prototype.ById, deck.PrototypeRef)?.Parameters is PrintedParameters p
             ? p.Width / 10f
             : 0;
         var frame = deck.PositionAt(0);

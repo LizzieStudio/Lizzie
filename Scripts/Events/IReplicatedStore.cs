@@ -12,8 +12,10 @@ public interface IReplicatedStore
     /// <summary>The type of record held, unique across stores.</summary>
     Type RecordType { get; }
 
-    /// <summary>Raised with the before and after of every record that changed.</summary>
-    event Action<IReadOnlyList<RecordChange>> Changed;
+    /// <summary>
+    /// Invoked with the queries and values whose results a change touched.
+    /// </summary>
+    event Action<IReadOnlyList<Touch>> Changed;
 
     /// <summary>
     /// Merges an event that was just recorded in <paramref name="log"/>.
@@ -30,17 +32,22 @@ public interface IReplicatedStore
     void FlushBulkLoad();
 
     /// <summary>
-    /// The queries and values whose results <paramref name="changes"/> touched:
-    /// each atom's id, and its group keys before and after in every group read so far.
+    /// The atom with <paramref name="id"/>, or an entry with a null value if this store doesn't hold it.
     /// </summary>
-    IEnumerable<Touch> Touched(IReadOnlyList<RecordChange> changes);
+    AtomEntry Find(object id);
 
-    /// <summary>The record with <paramref name="id"/> even if it is deleted, or null if this store doesn't hold it.</summary>
-    Replicated Find(SnowTag id);
-
-    /// <summary>The current value of every record that's saved with the project.</summary>
-    IEnumerable<Replicated> SavedRecords();
+    /// <summary>
+    /// Every atom that's saved with the project.
+    /// </summary>
+    IEnumerable<Replicated> SavedAtoms();
 }
+
+/// <summary>
+/// What a store holds for an atom.
+/// </summary>
+/// <param name="Value">The newest value written. Null for an atom the store doesn't hold, like an unset one.</param>
+/// <param name="LastUpdate">The event that last wrote the atom.</param>
+public readonly record struct AtomEntry(Replicated Value, SnowportId LastUpdate);
 
 /// <summary>
 /// The store of <typeparamref name="T"/>, read without knowing the type of its ids.
@@ -49,11 +56,11 @@ public interface IAtomStore<T> : IReplicatedStore
     where T : Replicated
 {
     /// <summary>
-    /// The atoms with <paramref name="key"/> in <paramref name="group"/>, deleted ones included.
+    /// The atoms with <paramref name="key"/> in <paramref name="group"/>, leaving out unset ones.
     /// The group is indexed on first read and kept up to date from then on.
     /// </summary>
-    IReadOnlyCollection<T> InGroup<G>(Group<T, G> group, G key);
+    IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key);
 
-    /// <summary>How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't deleted.</summary>
+    /// <summary>How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't unset.</summary>
     int Count<G>(Group<T, G> group, G key);
 }

@@ -63,8 +63,7 @@ public partial class HandCard : PanelContainer
     private void Sync(IRecordReader R)
     {
         var state = R.Get(ComponentState.ById, Reference);
-        var prototype =
-            state == null ? null : R.GetIncludingDeleted(Prototype.ById, state.PrototypeRef);
+        var prototype = state == null ? null : R.Get(Prototype.ById, state.PrototypeRef);
         Yaw = state?.Rotation.Y ?? 0;
         TableSize = HandRow.TableSize(prototype?.Parameters as PrintedParameters);
         _face.ShowCard(state, state != null && (AlwaysShowBack || IsFaceDown(state)), R);

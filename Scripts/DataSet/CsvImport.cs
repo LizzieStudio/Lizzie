@@ -34,7 +34,7 @@ public static class CsvImport
             return;
         }
 
-        var records = new List<Replicated>();
+        var records = new List<IChange>();
 
         var header = lines[0];
         if (!dataset.Columns.Select(c => c.Name).SequenceEqual(header))
@@ -50,7 +50,7 @@ public static class CsvImport
         }
 
         foreach (var existing in R.GetRows(dataset.Id))
-            records.Add(existing with { Deleted = true });
+            records.Add(R.Unset(existing));
 
         string rank = R.LastRank(dataset.Id);
         foreach (var line in lines.Skip(1))

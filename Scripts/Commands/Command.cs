@@ -260,22 +260,22 @@ public abstract class Command
         NumberKeys ? ShortcutActions.Label(ShortcutActions.Number(number)) : null;
 
     /// <summary>
-    /// <para>Writes the records as one event made by this command.</para>
+    /// <para>Writes the changes as one event made by this command.</para>
     ///
     /// <para>
     /// When <paramref name="view"/> has a <see cref="ICommandView.Gesture"/> open, the event joins it.
     /// Pass a null view for a command without targets, which never joins one.
     /// </para>
     /// </summary>
-    protected void Submit(IEnumerable<Replicated> records, ICommandView view)
+    protected void Submit(IEnumerable<IChange> changes, ICommandView view)
     {
-        if (records == null)
+        if (changes == null)
             return;
         var gesture = view?.Gesture ?? SnowportId.Empty;
         if (gesture == SnowportId.Empty)
-            RecordService.Instance?.Write(Name, records);
+            RecordService.Instance?.Write(Name, changes);
         else
-            RecordService.Instance?.Append(gesture, Name, records);
+            RecordService.Instance?.Append(gesture, Name, changes);
     }
 }
 
@@ -303,24 +303,20 @@ public sealed class RecordCommand<T> : Command
     public TargetCount Count { get; init; } = TargetCount.Many;
 
     /// <summary>
-    /// Produces the records this command writes, each with its whole new value.
+    /// Produces the changes this command makes, which will be passed to <see cref="RecordService.Write"/>
+    /// Returning an empty list still fires an event, but returning null will not.
     /// </summary>
     /// <param name="reader">The record reader to pull data.</param>
     /// <param name="records">The records that were targeted with this command.</param>
     /// <param name="number">When <see cref="Command.AsksForNumber"/> is true, the number provided by the user.</param>
-    /// <returns>The records, written as one event.</returns>
-    public delegate IEnumerable<Replicated> EffectsDelegate(
+    /// <returns>The changes, written as one event.</returns>
+    public delegate IEnumerable<IChange> EffectsDelegate(
         IRecordReader reader,
         IReadOnlyList<T> records,
         int number
     );
 
-    /// <summary>
-    /// Generates the records this command writes for the given records, written as one event.
-    /// Returning an empty list still fires an event.
-    /// returning null will not fire an event.
-    /// The third parameter provides a number if <see cref="Command.AsksForNumber"/> is true, like with setting a die face.
-    /// </summary>
+    /// <inheritdoc cref="EffectsDelegate"/>
     public EffectsDelegate Effects { get; init; }
 
     /// <summary>
@@ -375,15 +371,10 @@ public sealed class TargetCommand<T> : Command
     public TargetCount Count { get; init; } = TargetCount.Many;
 
     /// <summary>
-    /// Generates the records this command writes for the given targets, written as one event.
+    /// Generates the changes this command makes for the given targets, written as one event.
     /// returning null will not fire an event.
     /// </summary>
-    public Func<
-        IRecordReader,
-        IReadOnlyList<T>,
-        int,
-        IEnumerable<Replicated>
-    > Effects { get; init; }
+    public Func<IRecordReader, IReadOnlyList<T>, int, IEnumerable<IChange>> Effects { get; init; }
 
     /// <summary>
     /// Run so that this command can perform actions other than change records, such as starting a rename.
@@ -419,11 +410,11 @@ public sealed class GlobalCommand : Command
     public Func<IRecordReader, bool> Enabled { get; init; }
 
     /// <summary>
-    /// Generates the records to write, as one event.
+    /// Generates the changes to write, as one event.
     /// Returning an empty list still fires an event
     /// Returning null does not fire an event.
     /// </summary>
-    public Func<IRecordReader, IEnumerable<Replicated>> Effects { get; init; }
+    public Func<IRecordReader, IEnumerable<IChange>> Effects { get; init; }
 
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }

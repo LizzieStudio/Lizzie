@@ -15,28 +15,28 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
 
     private readonly Id<T, I> _byId;
 
-    private readonly Dictionary<I, T> _atoms = new();
+    private readonly Dictionary<I, AtomEntry> _atoms = new();
 
     // each group read so far, kept up to date from then on
     private readonly Dictionary<Query, IIndex> _indexes = new();
 
     // changes merged while the synchronizer is bulk loading, sent by FlushBulkLoad
-    private Dictionary<I, (T Old, T New)> _pending = new();
+    private Dictionary<I, (AtomEntry Old, AtomEntry New)> _pending = new();
 
     public AtomStore(Id<T, I> byId) => _byId = byId;
 
     public Type RecordType => typeof(T);
 
-    public event Action<IReadOnlyList<RecordChange>> Changed;
+    public event Action<IReadOnlyList<Touch>> Changed;
 
     /// <summary>
-    /// The atom with <paramref name="id"/>, even if it is deleted, or null.
+    /// The atom with <paramref name="id"/>, or an entry with a null value if it was never written.
     /// </summary>
-    public T Find(I id) => _atoms.GetValueOrDefault(id);
+    public AtomEntry Find(I id) => _atoms.GetValueOrDefault(id);
 
-    Replicated IReplicatedStore.Find(SnowTag tag) => tag is I id ? Find(id) : null;
+    AtomEntry IReplicatedStore.Find(object id) => id is I typed ? Find(typed) : default;
 
-    public IReadOnlyCollection<T> InGroup<G>(Group<T, G> group, G key) =>
+    public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) =>
         key is null ? [] : IndexOf(group).Atoms(key);
 
     public int Count<G>(Group<T, G> group, G key) => key is null ? 0 : IndexOf(group).Count(key);
@@ -47,34 +47,43 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
             return (Index<G>)found;
 
         var index = new Index<G>(group);
-        foreach (var (id, atom) in _atoms)
-            index.Add(id, atom);
+        foreach (var (id, entry) in _atoms)
+            index.Add(id, entry);
         _indexes[group] = index;
         return index;
     }
 
     public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
     {
-        var ids = changed.SelectMany(c => c.Records.OfType<T>()).Select(_byId.Of).ToHashSet();
+        var ids = changed
+            .SelectMany(c => c.Records.Concat(c.Unsets))
+            .OfType<T>()
+            .Select(_byId.Of)
+            .ToHashSet();
         if (ids.Count == 0)
             return;
 
-        var latest = ids.ToDictionary(id => id, _ => (T)null);
-        var unfound = new HashSet<I>(ids);
-        foreach (var writer in UndoLog.InEffect(log))
+        // The newest in-effect change of each id decides it: a write is its value, and an unset leaves it out.
+        var latest = new Dictionary<I, AtomEntry>();
+        var undecided = new HashSet<I>(ids);
+        foreach (var e in UndoLog.InEffect(log))
         {
-            for (int j = writer.Records.Length - 1; j >= 0; j--)
-                if (writer.Records[j] is T atom && unfound.Remove(_byId.Of(atom)))
-                    latest[_byId.Of(atom)] = atom with { LastUpdateId = writer.Id };
-            if (unfound.Count == 0)
+            // unsets first, since an unset beats a write in the same event
+            foreach (var atom in e.Unsets.OfType<T>())
+                undecided.Remove(_byId.Of(atom));
+            for (int j = e.Records.Length - 1; j >= 0; j--)
+                if (e.Records[j] is T atom && undecided.Remove(_byId.Of(atom)))
+                    latest[_byId.Of(atom)] = new AtomEntry(atom, e.Id);
+            if (undecided.Count == 0)
                 break;
         }
 
-        var merged = new Dictionary<I, (T Old, T New)>();
-        foreach (var (id, now) in latest)
+        var merged = new Dictionary<I, (AtomEntry Old, AtomEntry New)>();
+        foreach (var id in ids)
         {
+            var now = latest.GetValueOrDefault(id);
             var old = _atoms.GetValueOrDefault(id);
-            if (Equals(old, now))
+            if (old == now)
                 continue;
             Replace(id, old, now);
             merged[id] = (old, now);
@@ -94,24 +103,26 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
         Notify(merged);
     }
 
-    private void Replace(I id, T old, T now)
+    private void Replace(I id, AtomEntry old, AtomEntry now)
     {
-        if (now == null)
+        if (now.Value == null)
             _atoms.Remove(id);
         else
             _atoms[id] = now;
 
         foreach (var index in _indexes.Values)
         {
-            if (old != null)
+            if (old.Value != null)
                 index.Remove(id, old);
-            if (now != null)
+            if (now.Value != null)
                 index.Add(id, now);
         }
     }
 
-    private void Notify(IReadOnlyDictionary<I, (T Old, T New)> changed) =>
-        Changed?.Invoke(changed.Values.Select(c => new RecordChange(c.Old, c.New)).ToArray());
+    private void Notify(IReadOnlyDictionary<I, (AtomEntry Old, AtomEntry New)> changed) =>
+        Changed?.Invoke(
+            changed.SelectMany(c => Touched(c.Key, c.Value.Old, c.Value.New)).ToArray()
+        );
 
     public void FlushBulkLoad()
     {
@@ -125,85 +136,73 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
 
     public void Clear()
     {
-        var removed = _atoms.Values.ToArray();
+        var removed = _atoms.ToDictionary(a => a.Key, a => (a.Value, default(AtomEntry)));
         _atoms.Clear();
         foreach (var index in _indexes.Values)
             index.Clear();
         _pending.Clear();
 
-        Changed?.Invoke(removed.Select(r => new RecordChange(r, null)).ToArray());
+        Notify(removed);
     }
 
-    public IEnumerable<Touch> Touched(IReadOnlyList<RecordChange> changes)
+    private IEnumerable<Touch> Touched(I id, AtomEntry old, AtomEntry now)
     {
-        foreach (var (old, now) in changes)
-        {
-            yield return new Touch(_byId, _byId.Of((T)(old ?? now)), false);
-            foreach (var index in _indexes.Values)
-            foreach (var touch in index.Touched((T)old, (T)now))
-                yield return touch;
-        }
+        yield return new Touch(_byId, id, false);
+        foreach (var index in _indexes.Values)
+        foreach (var touch in index.Touched(old, now))
+            yield return touch;
     }
 
-    public IEnumerable<Replicated> SavedRecords() => Saved ? _atoms.Values : [];
+    public IEnumerable<Replicated> SavedAtoms() => Saved ? _atoms.Values.Select(e => e.Value) : [];
 
     private interface IIndex
     {
-        void Add(I id, T atom);
+        void Add(I id, AtomEntry entry);
 
-        void Remove(I id, T atom);
+        void Remove(I id, AtomEntry entry);
 
         void Clear();
 
-        IEnumerable<Touch> Touched(T old, T now);
+        IEnumerable<Touch> Touched(AtomEntry old, AtomEntry now);
     }
 
     /// <summary>
-    /// The atoms with each key of a group, deleted ones included, and how many of them aren't deleted.
+    /// The atoms with each key of a group, leaving out unset ones.
     /// </summary>
     private sealed class Index<G>(Group<T, G> group) : IIndex
     {
         private readonly Dictionary<G, Dictionary<I, T>> _buckets = new(group.Comparer);
-        private readonly Dictionary<G, int> _live = new(group.Comparer);
 
-        public IReadOnlyCollection<T> Atoms(G key) =>
-            _buckets.TryGetValue(key, out var bucket) ? bucket.Values : [];
+        public IReadOnlyList<T> Atoms(G key) =>
+            _buckets.TryGetValue(key, out var bucket) ? bucket.Values.ToArray() : [];
 
-        public int Count(G key) => _live.GetValueOrDefault(key);
+        public int Count(G key) => _buckets.GetValueOrDefault(key)?.Count ?? 0;
 
-        public void Add(I id, T atom)
+        public void Add(I id, AtomEntry entry)
         {
-            if (!In(atom, out var key))
+            if (!In(entry, out var key))
                 return;
             if (!_buckets.TryGetValue(key, out var bucket))
                 _buckets[key] = bucket = new();
-            bucket[id] = atom;
-            if (!atom.Deleted)
-                _live[key] = _live.GetValueOrDefault(key) + 1;
+            bucket[id] = (T)entry.Value;
         }
 
-        public void Remove(I id, T atom)
+        public void Remove(I id, AtomEntry entry)
         {
-            if (!In(atom, out var key))
+            if (!In(entry, out var key))
                 return;
             var bucket = _buckets[key];
             bucket.Remove(id);
             if (bucket.Count == 0)
                 _buckets.Remove(key);
-            if (!atom.Deleted && --_live[key] == 0)
-                _live.Remove(key);
         }
 
-        public void Clear()
-        {
-            _buckets.Clear();
-            _live.Clear();
-        }
+        public void Clear() => _buckets.Clear();
 
         /// <summary>
-        /// The group keys whose atoms a change touched, and the group keys whose count of atoms that aren't deleted it changed.
+        /// The group keys whose atoms a change touched, and the group keys whose count it changed.
         /// </summary>
-        public IEnumerable<Touch> Touched(T old, T now)
+        public IEnumerable<Touch> Touched(AtomEntry old, AtomEntry now)
         {
             bool inOld = In(old, out var was);
             bool inNew = In(now, out var willBe);
@@ -214,20 +213,18 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
             if (inNew && !same)
                 yield return new Touch(group, willBe, false);
 
-            bool liveOld = inOld && !old.Deleted;
-            bool liveNew = inNew && !now.Deleted;
-            if (liveOld && liveNew && same)
+            if (same)
                 yield break;
-            if (liveOld)
+            if (inOld)
                 yield return new Touch(group, was, true);
-            if (liveNew)
+            if (inNew)
                 yield return new Touch(group, willBe, true);
         }
 
-        private bool In(T atom, out G key)
+        private bool In(AtomEntry entry, out G key)
         {
-            key = atom == null ? default : group.Of(atom);
-            return atom != null && key is not null;
+            key = entry.Value == null ? default : group.Of((T)entry.Value);
+            return entry.Value != null && key is not null;
         }
     }
 }

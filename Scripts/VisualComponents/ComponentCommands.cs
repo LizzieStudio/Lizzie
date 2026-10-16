@@ -73,7 +73,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = NotHeld,
-        Effects = (R, cs, _) => cs.Select(c => c with { Deleted = true }),
+        Effects = (R, cs, _) => cs.Select(R.Unset),
     };
 
     private static float RotationStep(IRecordReader R) =>

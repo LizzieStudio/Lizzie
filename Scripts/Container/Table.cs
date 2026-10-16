@@ -66,7 +66,7 @@ public partial class Table : Node3D
             ComponentState.All,
             (R, s) =>
             {
-                var proto = R.GetIncludingDeleted(Prototype.ById, s.PrototypeRef);
+                var proto = R.Get(Prototype.ById, s.PrototypeRef);
                 if (proto == null)
                     return null;
                 var scene = Utility.ComponentTypeToScenePath(

@@ -18,6 +18,27 @@ using System.Reflection;
 public abstract class Query
 {
     private protected Query() { }
+
+    /// <summary>
+    /// The id or group key of <paramref name="atom"/>, boxed. Null for a group it isn't in.
+    /// </summary>
+    internal abstract object Of(Replicated atom);
+
+    /// <summary>
+    /// The queries <paramref name="atomType"/> declares as public static fields: its Id and its Groups.
+    /// </summary>
+    internal static IReadOnlyList<Query> DeclaredOn(Type atomType)
+    {
+        if (!Declared.TryGetValue(atomType, out var queries))
+            Declared[atomType] = queries = atomType
+                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                .Where(f => typeof(Query).IsAssignableFrom(f.FieldType))
+                .Select(f => (Query)f.GetValue(null))
+                .ToArray();
+        return queries;
+    }
+
+    private static readonly Dictionary<Type, Query[]> Declared = new();
 }
 
 /// <summary>
@@ -39,11 +60,6 @@ public abstract class AtomId : Query
 
     private protected abstract Type AtomType { get; }
 
-    /// <summary>
-    /// The id of <paramref name="atom"/>, boxed.
-    /// </summary>
-    internal abstract object Of(Replicated atom);
-
     private static readonly Dictionary<Type, AtomId> Declared = new();
 
     /// <summary>
@@ -59,11 +75,7 @@ public abstract class AtomId : Query
 
     private static AtomId Find(Type atomType)
     {
-        var ids = atomType
-            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(f => typeof(AtomId).IsAssignableFrom(f.FieldType))
-            .Select(f => (AtomId)f.GetValue(null))
-            .ToList();
+        var ids = DeclaredOn(atomType).OfType<AtomId>().ToList();
         if (ids.Count != 1 || ids[0] == null || ids[0].AtomType != atomType)
             throw new InvalidOperationException(
                 $"{atomType.Name} needs exactly one Id, declared as a public static readonly Id<{atomType.Name}, I> field, "
@@ -146,6 +158,8 @@ public class Group<T, G> : Query
     /// </summary>
     public G Of(T atom) => _of(atom);
 
+    internal override object Of(Replicated atom) => _of((T)atom);
+
     /// <summary>
     /// Compares group keys.
     /// </summary>
@@ -155,7 +169,9 @@ public class Group<T, G> : Query
 /// <summary>
 /// Lists every atom of <typeparamref name="T"/>, read with <see cref="RecordReaderExtensions.Get{T}(IRecordReader, All{T})"/>.
 /// A type without this cannot be enumerated.
-/// You generally want to avoid adding this to most atom types, however, since save files will always keep an atom with an <see cref="All{T}"/>.
+/// You generally want to avoid adding this to most atom types, however, since save files will always keep an atom an <see cref="All{T}"/> lists.
 /// </summary>
-public sealed class All<T>() : Group<T, bool>(_ => true)
+/// <param name="where">Which atoms it lists, or every one when null.</param>
+public sealed class All<T>(Func<T, bool> where = null)
+    : Group<T, bool?>(atom => where == null || where(atom) ? true : null)
     where T : Replicated;
