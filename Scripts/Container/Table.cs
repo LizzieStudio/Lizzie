@@ -54,30 +54,27 @@ public partial class Table : Node3D
     /// <summary>Called by components after they apply their record.</summary>
     public void NotifyChanged() => Changed?.Invoke();
 
+    // The scene a component's node is made from, and what its node can't change without being remade.
+    private static readonly Basis<
+        ComponentState,
+        (string Scene, SnowTag Proto, PrototypeItemRef Card)
+    > NodeBasis = new(
+        (R, s) =>
+        {
+            var proto = R.Get(Prototype.ById, s.PrototypeRef);
+            if (proto == null)
+                return null;
+            var scene = Utility.ComponentTypeToScenePath(proto.Type, proto.Parameters, R, s.IsItem);
+            return (scene, s.PrototypeRef, s.Card);
+        }
+    );
+
     /// <summary>
     /// Keeps one node per live component whose prototype is avialable.
     /// </summary>
     private void Sync(IWatchReader R)
     {
-        var (removed, added) = R.Diff<
-            ComponentState,
-            (string Scene, SnowTag Proto, PrototypeItemRef Card)
-        >(
-            ComponentState.All,
-            (R, s) =>
-            {
-                var proto = R.Get(Prototype.ById, s.PrototypeRef);
-                if (proto == null)
-                    return null;
-                var scene = Utility.ComponentTypeToScenePath(
-                    proto.Type,
-                    proto.Parameters,
-                    R,
-                    s.IsItem
-                );
-                return (scene, s.PrototypeRef, s.Card);
-            }
-        );
+        var (removed, added) = R.Diff(ComponentState.All, NodeBasis);
 
         foreach (var (s, _) in removed)
             RemoveComponent(s.Id);

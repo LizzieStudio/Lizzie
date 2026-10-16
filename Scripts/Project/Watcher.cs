@@ -16,11 +16,11 @@ public sealed class Watcher : IWatchReader
     // the query values this watcher read
     private readonly DependencyIndex<Watcher> _index;
 
-    // per group key, each atom's id and what Diff projected for it on the previous run
-    private readonly Dictionary<(Query, object), object> _diffs = new();
+    // per group key and Basis, each atom's id and the basis Diff found for it when the previous run ended
+    private readonly Dictionary<(Query, object, object), object> _diffs = new();
 
-    // group keys Diff compared during the current run
-    private readonly HashSet<(Query, object)> _diffed = new();
+    // the bases Diff found during the current run, saved into _diffs when it ends
+    private readonly Dictionary<(Query, object, object), object> _pending = new();
 
     public Node Owner { get; }
 
@@ -46,7 +46,6 @@ public sealed class Watcher : IWatchReader
     public void Run()
     {
         _index.Clear(this);
-        _diffed.Clear();
         try
         {
             _sync(this);
@@ -55,6 +54,9 @@ public sealed class Watcher : IWatchReader
         {
             GD.PushError($"Watch on {Owner.Name} failed: {e}");
         }
+        foreach (var (slot, bases) in _pending)
+            _diffs[slot] = bases;
+        _pending.Clear();
     }
 
     private void Depend(Query query, object value, bool count = false)
@@ -105,28 +107,19 @@ public sealed class Watcher : IWatchReader
         return _source.Count(group, key);
     }
 
-    public GroupDiff<T, V> Diff<T, G, V>(
-        Group<T, G> group,
-        G key,
-        Func<IRecordReader, T, V?> project
-    )
+    public GroupDiff<T, V> Diff<T, G, V>(Group<T, G> group, G key, Basis<T, V> basis)
         where T : Replicated
         where V : struct
     {
-        var slot = (group, (object)key);
-        if (!_diffed.Add(slot))
-            throw new InvalidOperationException(
-                $"Diff was already called for {key} of a {typeof(T).Name} group during this Sync."
-            );
-
+        var slot = (group, (object)key, (object)basis);
         var byId = AtomId.For(typeof(T));
         var previous = _diffs.TryGetValue(slot, out var p)
             ? (Dictionary<object, (T Atom, V Value)>)p
             : new();
         var current = new Dictionary<object, (T Atom, V Value)>();
         foreach (var atom in Get(group, key))
-            if (project(this, atom) is V projected)
-                current[byId.Of(atom)] = (atom, projected);
+            if (basis.Of(this, atom) is V value)
+                current[byId.Of(atom)] = (atom, value);
 
         var removed = new List<(T, V)>();
         var added = new List<(T, V)>();
@@ -140,7 +133,7 @@ public sealed class Watcher : IWatchReader
             if (!previous.TryGetValue(id, out var old) || !comparer.Equals(old.Value, now.Value))
                 added.Add(now);
 
-        _diffs[slot] = current;
+        _pending[slot] = current;
         return new GroupDiff<T, V>(removed, added);
     }
 }
