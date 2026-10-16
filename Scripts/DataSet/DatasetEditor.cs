@@ -25,7 +25,7 @@ public partial class DatasetEditor : Window, ICommandView
         /// <summary>
         /// What clicking its header selects.
         /// </summary>
-        public RecordTarget Target => new(Row.Id);
+        public AtomRef Target => DataRow.ById.Ref(Row.Id);
     }
 
     private DataSet _currentDataSet;
@@ -68,7 +68,7 @@ public partial class DatasetEditor : Window, ICommandView
     private bool _editing;
 
     // Where Shift+click selects from: the last row, column or cell selected without Shift.
-    private Target _anchor;
+    private AtomRef? _anchor;
 
     // The row or column being dragged with Godot's drag and drop, or null.
     private ReorderDrag _reorder;
@@ -220,12 +220,12 @@ public partial class DatasetEditor : Window, ICommandView
 
         if (click is { ButtonIndex: MouseButton.Left, Pressed: true })
         {
-            SelectTarget(cell, click);
+            SelectTarget(Cell(cell), click);
             if (click.DoubleClick && !modified)
                 BeginEdit(cell);
         }
         else if (click is { ButtonIndex: MouseButton.Right, Pressed: true })
-            SelectForMenu(cell);
+            SelectForMenu(Cell(cell));
         SetInputAsHandled();
     }
 
@@ -379,7 +379,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// </summary>
     public void RevealRow(SnowTag rowId)
     {
-        Select([new RecordTarget(rowId)]);
+        Select([DataRow.ById.Ref(rowId)]);
         _revealRowOnSync = rowId;
         RecordService.Instance.QueueSync(this);
     }
@@ -451,7 +451,9 @@ public partial class DatasetEditor : Window, ICommandView
     private float ColumnWidth(SnowTag id) =>
         _columnWidths.GetValueOrDefault(id, DefaultColumnWidth);
 
-    private ColumnTarget Column(SnowTag id) => new(DatasetRef, id);
+    private static AtomRef Column(SnowTag id) => DataColumn.ById.Ref(id);
+
+    private static AtomRef Cell(CellId id) => DataCell.ById.Ref(id);
 
     private void BuildGrid()
     {
@@ -618,22 +620,22 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>The cell <paramref name="control"/> shows, or null if it isn't one.</summary>
-    private CellTarget CellOf(Control control)
+    private CellId? CellOf(Control control)
     {
         foreach (var view in _views)
         {
             int column = view.Cells.IndexOf(control as LineEdit);
             if (column >= 0)
-                return new CellTarget(view.Row.Id, _columnIds[column]);
+                return new CellId(view.Row.Id, _columnIds[column]);
         }
         return null;
     }
 
     /// <summary>The text box showing <paramref name="cell"/>, or null if it isn't shown.</summary>
-    private LineEdit CellControl(CellTarget cell)
+    private LineEdit CellControl(CellId cell)
     {
-        int column = _columnIds.IndexOf(cell.ColumnId);
-        return column >= 0 ? ViewOf(cell.RowId)?.Cells[column] : null;
+        int column = _columnIds.IndexOf(cell.Column);
+        return column >= 0 ? ViewOf(cell.Row)?.Cells[column] : null;
     }
 
     // Updates whether a cell is being edited, which makes every cell a text box.
@@ -653,7 +655,7 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Starts editing <paramref name="cell"/>, with the caret after its text.</summary>
-    private void BeginEdit(CellTarget cell)
+    private void BeginEdit(CellId cell)
     {
         if (CellControl(cell) is not { } edit)
             return;
@@ -669,15 +671,15 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>The top-left of the block of selected cells, or null without any.</summary>
-    private CellTarget TopLeftCell()
+    private CellId? TopLeftCell()
     {
-        var cells = MySelection().OfType<CellTarget>().ToList();
-        var row = _views.FirstOrDefault(v => cells.Any(c => c.RowId == v.Row.Id));
-        var column = _columnIds.FirstOrDefault(
-            id => cells.Any(c => c.ColumnId == id),
-            SnowTag.Empty
-        );
-        return row != null && column != SnowTag.Empty ? new CellTarget(row.Row.Id, column) : null;
+        var cells = MySelection()
+            .Where(t => t.Type == typeof(DataCell))
+            .Select(t => (CellId)t.Id)
+            .ToList();
+        var row = _views.FirstOrDefault(v => cells.Any(c => c.Row == v.Row.Id));
+        var column = _columnIds.FirstOrDefault(id => cells.Any(c => c.Column == id), SnowTag.Empty);
+        return row != null && column != SnowTag.Empty ? new CellId(row.Row.Id, column) : null;
     }
 
     private RowView Neighbor(RowView view, int step)
@@ -697,7 +699,7 @@ public partial class DatasetEditor : Window, ICommandView
         SyncEditing();
 
         // The cell being edited is selected, so it shows the highlight too.
-        SelectTarget(new CellTarget(view.Row.Id, _columnIds[column]));
+        SelectTarget(Cell(new CellId(view.Row.Id, _columnIds[column])));
 
         // Keyboard navigation selects the whole cell, like a spreadsheet; a click places the caret.
         if (!Input.IsMouseButtonPressed(MouseButton.Left))
@@ -776,7 +778,7 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
-    private void AddRow() => DataSetCommands.AddRow.Run([new RecordTarget(DatasetRef)], 1, this);
+    private void AddRow() => DataSetCommands.AddRow.Run([DataSet.ById.Ref(DatasetRef)], 1, this);
 
     private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
@@ -903,14 +905,14 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
-    private ImmutableHashSet<Target> MySelection() =>
+    private ImmutableHashSet<AtomRef> MySelection() =>
         DatasetRef == SnowTag.Empty
-            ? ImmutableHashSet<Target>.Empty
+            ? ImmutableHashSet<AtomRef>.Empty
             : RecordService.Instance.GetSelection(DatasetRef)?.Targets
-                ?? ImmutableHashSet<Target>.Empty;
+                ?? ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
-    private void Select(IEnumerable<Target> targets)
+    private void Select(IEnumerable<AtomRef> targets)
     {
         if (DatasetRef != SnowTag.Empty)
             RecordService.Instance.SetSelection(targets, DatasetRef);
@@ -923,12 +925,12 @@ public partial class DatasetEditor : Window, ICommandView
     /// A click takes focus from the cell being edited, so keys like Delete go to the selection.
     /// Focusing a cell selects it without a click.
     /// </summary>
-    private void SelectTarget(Target target, InputEventWithModifiers click = null)
+    private void SelectTarget(AtomRef target, InputEventWithModifiers click = null)
     {
         var mine = MySelection();
-        var kind = mine.Where(t => t.GetType() == target.GetType());
-        if (click?.ShiftPressed == true && _anchor?.GetType() == target.GetType())
-            Select(Range(_anchor, target));
+        var kind = mine.Where(t => t.Type == target.Type);
+        if (click?.ShiftPressed == true && _anchor is { } anchor && anchor.Type == target.Type)
+            Select(Range(anchor, target));
         else
         {
             _anchor = target;
@@ -944,20 +946,19 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Everything from one row, column or cell to another, in the grid's order. Cells make a rectangle.</summary>
-    private IEnumerable<Target> Range(Target from, Target to)
+    private IEnumerable<AtomRef> Range(AtomRef from, AtomRef to)
     {
         var rows = _views.Select(v => v.Row.Id).ToList();
-        return (from, to) switch
+        return (from.Id, to.Id) switch
         {
-            (RecordTarget a, RecordTarget b) => Span(rows, a.Id, b.Id)
-                .Select(id => (Target)new RecordTarget(id)),
-            (ColumnTarget a, ColumnTarget b) => Span(_columnIds, a.ColumnId, b.ColumnId)
-                .Select(id => (Target)Column(id)),
-            (CellTarget a, CellTarget b) => Span(rows, a.RowId, b.RowId)
+            (CellId a, CellId b) => Span(rows, a.Row, b.Row)
                 .SelectMany(r =>
-                    Span(_columnIds, a.ColumnId, b.ColumnId)
-                        .Select(c => (Target)new CellTarget(r, c))
+                    Span(_columnIds, a.Column, b.Column).Select(c => Cell(new CellId(r, c)))
                 ),
+            (SnowTag a, SnowTag b) when from.Type == typeof(DataRow) => Span(rows, a, b)
+                .Select(DataRow.ById.Ref),
+            (SnowTag a, SnowTag b) when from.Type == typeof(DataColumn) => Span(_columnIds, a, b)
+                .Select(Column),
             _ => [to],
         };
     }
@@ -975,7 +976,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// If it was already selected, it does nothing, so as not to clear the selection.
     /// Right clicking on empty space keeps the selection.
     /// </summary>
-    private void SelectForMenu(Target target)
+    private void SelectForMenu(AtomRef target)
     {
         if (!MySelection().Contains(target))
             SelectTarget(target);
@@ -997,7 +998,7 @@ public partial class DatasetEditor : Window, ICommandView
                     view.Cells[i],
                     "normal",
                     colors,
-                    new CellTarget(view.Row.Id, _columnIds[i]),
+                    Cell(new CellId(view.Row.Id, _columnIds[i])),
                     view.Target,
                     Column(_columnIds[i])
                 );
@@ -1021,7 +1022,7 @@ public partial class DatasetEditor : Window, ICommandView
             InsertRowBelow,
             InsertColumnLeft,
             InsertColumnRight,
-            new TargetCommand<ColumnTarget>
+            new RecordCommand<DataColumn>
             {
                 Name = new("dataset.rename_column"),
                 Icon = CommandIcons.Edit,
@@ -1054,24 +1055,22 @@ public partial class DatasetEditor : Window, ICommandView
             DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0]) + 1),
     };
 
-    private static readonly TargetCommand<ColumnTarget> InsertColumnLeft = new()
+    private static readonly RecordCommand<DataColumn> InsertColumnLeft = new()
     {
         Name = new("dataset.insert_column_left"),
         Icon = CommandIcons.InsertColumnLeft,
         Caption = "Insert Column Left",
         Count = TargetCount.One,
-        AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
             DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0])),
     };
 
-    private static readonly TargetCommand<ColumnTarget> InsertColumnRight = new()
+    private static readonly RecordCommand<DataColumn> InsertColumnRight = new()
     {
         Name = new("dataset.insert_column_right"),
         Icon = CommandIcons.InsertColumnRight,
         Caption = "Insert Column Right",
         Count = TargetCount.One,
-        AppliesTo = (R, t) => ColumnIndex(R, t) >= 0,
         Effects = (R, columns, _) =>
             DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0]) + 1),
     };
@@ -1080,14 +1079,14 @@ public partial class DatasetEditor : Window, ICommandView
     private static int RowIndex(IRecordReader R, DataRow row) =>
         R.GetRows(row.DataSetId).FindIndex(r => r.Id == row.Id);
 
-    // The column's place in its dataset, or -1 if it's gone.
-    private static int ColumnIndex(IRecordReader R, ColumnTarget t) =>
-        R.GetColumns(t.DataSetId).FindIndex(c => c.Id == t.ColumnId);
+    // The column's place in its dataset.
+    private static int ColumnIndex(IRecordReader R, DataColumn column) =>
+        R.GetColumns(column.DataSetId).FindIndex(c => c.Id == column.Id);
 
-    private void RenameColumn(ColumnTarget column)
+    private void RenameColumn(DataColumn column)
     {
         // Deferred so the closing menu doesn't take focus back from the name box.
-        if (_headerCells.FirstOrDefault(h => h.ColumnId == column.ColumnId) is { } header)
+        if (_headerCells.FirstOrDefault(h => h.ColumnId == column.Id) is { } header)
             Callable.From(header.BeginRename).CallDeferred();
     }
 

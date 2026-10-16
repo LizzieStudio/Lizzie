@@ -427,11 +427,11 @@ public partial class GameObjects : Node3D
     #region Selection
     /// <summary>The components the local player has selected, read from their selection record.</summary>
     private HashSet<SnowTag> GetSelection() =>
-        RecordService.Instance.GetSelection<ComponentState>().ToHashSet();
+        RecordService.Instance.GetSelection(ComponentState.ById).ToHashSet();
 
     /// <summary>Replaces the local player's selected components.</summary>
     public void SetSelection(IEnumerable<SnowTag> components) =>
-        RecordService.Instance.SetSelection<ComponentState>(components);
+        RecordService.Instance.SetSelection(ComponentState.ById, components);
 
     /// <summary>
     /// Previews a box selection on the nodes. Nothing is written until <see cref="EndDragSelection"/>.
@@ -578,7 +578,7 @@ public partial class GameObjects : Node3D
             var draw = ((VisualComponentGroup)hit.Component).DragDraw();
             StartDrag(
                 draw,
-                RecordService.Instance.NewSelection<ComponentState>(draw.Select(d => d.Id))
+                RecordService.Instance.NewSelection(ComponentState.ById, draw.Select(d => d.Id))
             );
         }
         else if (_dragPlane.Project(at) is { } cursor)

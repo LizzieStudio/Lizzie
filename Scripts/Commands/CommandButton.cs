@@ -154,7 +154,7 @@ public partial class CommandButton : Button
     /// <summary>
     /// What commands would act on in the view, as its context menu would.
     /// </summary>
-    private List<Target> GetTargets(ICommandView view, IRecordReader R)
+    private List<AtomRef> GetTargets(ICommandView view, IRecordReader R)
     {
         var context = CommandContext.Of(view, R);
         return CommandResolver.TargetsFor(Command, context, R, menu: true);

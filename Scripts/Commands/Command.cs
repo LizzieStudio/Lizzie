@@ -76,7 +76,7 @@ public interface ICommandView
     /// The hovered target that keys act on when nothing is selected.
     /// Menus and buttons never use it.
     /// </summary>
-    IEnumerable<Target> Hovered() => [];
+    IEnumerable<AtomRef> Hovered() => [];
 
     /// <summary>
     /// Extra custom commands for this view to add to its context menu.
@@ -201,7 +201,7 @@ public abstract class Command
     /// Returns true if this command can act on <paramref name="target"/>:
     /// a record of the kind it's for, that it has behavior for.
     /// </summary>
-    public abstract bool Applies(IRecordReader R, Target target);
+    public abstract bool Applies(IRecordReader R, AtomRef target);
 
     /// <summary>Whether it can act on <paramref name="count"/> targets that it applies to.</summary>
     public abstract bool Fits(int count);
@@ -216,14 +216,14 @@ public abstract class Command
     /// When <see cref="AsksForNumber"/> = true, the highest number worth offering for these targets,
     /// like a die's face count, or null for the menu's default.
     /// </summary>
-    public virtual int? MaxNumber(IReadOnlyList<Target> targets) => null;
+    public virtual int? MaxNumber(IReadOnlyList<AtomRef> targets) => null;
 
     /// <summary>
     /// Acts on the targets. <paramref name="number"/> is 1 unless the command asks for one,
     /// and <see cref="int.MaxValue"/> is its <see cref="InfiniteOption"/>.
     /// <paramref name="view"/> is where it runs, or null outside any view.
     /// </summary>
-    public abstract void Run(IReadOnlyList<Target> targets, int number, ICommandView view);
+    public abstract void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view);
 
     /// <summary>
     /// Returns true if <paramref name="e"/> runs this command, and the number it gives.
@@ -280,8 +280,13 @@ public abstract class Command
 }
 
 /// <summary>
-/// A command on records of one type.
+/// A command on atoms of type <typeparamref name="T"/>.
+/// It acts on what <see cref="RecordReaderExtensions.Resolve"/> gives for each target,
+/// so it also reaches an atom that was never written, like an empty cell.
 /// </summary>
+/// <remarks>
+/// To act on all atom types, set <typeparamref name="T"/> to <see cref="Replicated"/>.
+/// </remarks>
 public sealed class RecordCommand<T> : Command
     where T : Replicated
 {
@@ -330,15 +335,14 @@ public sealed class RecordCommand<T> : Command
     /// </summary>
     public Func<IRecordReader, IReadOnlyList<T>, int> NumberLimit { get; init; }
 
-    public override bool Applies(IRecordReader R, Target target) =>
-        Record(R, target) is { } r && AppliesTo(R, r);
+    public override bool Applies(IRecordReader R, AtomRef target) => Record(R, target) != null;
 
     public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
 
-    public override int? MaxNumber(IReadOnlyList<Target> targets) =>
+    public override int? MaxNumber(IReadOnlyList<AtomRef> targets) =>
         NumberLimit?.Invoke(Reader, Records(Reader, targets));
 
-    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
+    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view)
     {
         var records = Records(Reader, targets);
         SideEffects?.Invoke(records, number);
@@ -348,59 +352,19 @@ public sealed class RecordCommand<T> : Command
 
     private static IRecordReader Reader => RecordService.Instance;
 
-    private static T Record(IRecordReader R, Target target) =>
-        target is RecordTarget r ? R?.Get<T>(r.Id) : null;
+    // The atom it acts on, or what stands in for one never written, or null if it doesn't apply.
+    private T Record(IRecordReader R, AtomRef target) =>
+        R?.Resolve(target) is T record && AppliesTo(R, record) ? record : null;
 
     // A record may be gone since the menu opened.
-    private static List<T> Records(IRecordReader R, IReadOnlyList<Target> targets) =>
+    private List<T> Records(IRecordReader R, IReadOnlyList<AtomRef> targets) =>
         targets.Select(t => Record(R, t)).Where(r => r != null).ToList();
-}
-
-/// <summary>
-/// A command on targets that are part of a record.
-/// </summary>
-public sealed class TargetCommand<T> : Command
-    where T : Target
-{
-    /// <summary>
-    /// Returns true if this command has behavior for the target.
-    /// A target can outlive what it points at, so this also checks that it's still there.
-    /// </summary>
-    public Func<IRecordReader, T, bool> AppliesTo { get; init; } = (_, _) => true;
-
-    public TargetCount Count { get; init; } = TargetCount.Many;
-
-    /// <summary>
-    /// Generates the changes this command makes for the given targets, written as one event.
-    /// returning null will not fire an event.
-    /// </summary>
-    public Func<IRecordReader, IReadOnlyList<T>, int, IEnumerable<IChange>> Effects { get; init; }
-
-    /// <summary>
-    /// Run so that this command can perform actions other than change records, such as starting a rename.
-    /// </summary>
-    public Action<IReadOnlyList<T>, int> SideEffects { get; init; }
-
-    public override bool Applies(IRecordReader R, Target target) =>
-        target is T t && AppliesTo(R, t);
-
-    public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
-
-    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
-    {
-        var typed = targets.OfType<T>().Where(t => AppliesTo(Reader, t)).ToList();
-        SideEffects?.Invoke(typed, number);
-        if (Effects != null && typed.Count > 0)
-            Submit(Effects(Reader, typed, number), view);
-    }
-
-    private static IRecordReader Reader => RecordService.Instance;
 }
 
 /// <summary>A command that does not act on selected targets, such as undo.</summary>
 public sealed class GlobalCommand : Command
 {
-    public override bool Applies(IRecordReader R, Target target) => false;
+    public override bool Applies(IRecordReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
@@ -421,7 +385,7 @@ public sealed class GlobalCommand : Command
 
     public override bool IsAvailable(IRecordReader R) => Enabled?.Invoke(R) ?? true;
 
-    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view)
+    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view)
     {
         SideEffects?.Invoke(view);
         if (Effects != null)
@@ -452,22 +416,22 @@ public sealed class Submenu : Command
                 return item;
             });
 
-    public override bool Applies(IRecordReader R, Target target) => false;
+    public override bool Applies(IRecordReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
     // Picking it opens its menu.
-    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view) { }
+    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view) { }
 }
 
 // This is just a sentinel so that we can put dividers in command lists.
 file sealed class DividerCommand : Command
 {
-    public override bool Applies(IRecordReader R, Target target) => false;
+    public override bool Applies(IRecordReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
-    public override void Run(IReadOnlyList<Target> targets, int number, ICommandView view) { }
+    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view) { }
 }
 
 /// <summary>

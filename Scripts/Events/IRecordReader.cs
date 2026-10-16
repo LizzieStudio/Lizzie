@@ -9,15 +9,9 @@ using Lizzie.Replication.Machinery;
 public interface IRecordReader
 {
     /// <summary>
-    /// The record, or null if it is missing or unset.
+    /// The atom <paramref name="atomRef"/> points at, or null if it is missing or unset.
     /// </summary>
-    T Get<T>(SnowTag id)
-        where T : Replicated;
-
-    /// <summary>
-    /// The record, or null if it is missing or unset.
-    /// </summary>
-    Replicated Get(SnowTag id);
+    Replicated Get(AtomRef atomRef);
 
     /// <summary>
     /// The id of the event that last updated <paramref name="atom"/>,
@@ -104,7 +98,18 @@ public static class RecordReaderExtensions
     /// The one atom of a singleton type, or a new one with its defaults until the first write.
     /// </summary>
     public static T Get<T>(this IRecordReader R, Singleton<T> only)
-        where T : Replicated, new() => R.Get(only, default) ?? only.Unwritten;
+        where T : Replicated, new() => R.Get(only, default) ?? only.Unwritten(default);
+
+    /// <summary>
+    /// The atom <paramref name="atomRef"/> points at,
+    /// or what stands in for it before it's written.
+    /// Null if it's missing and its type has no stand-in.
+    /// </summary>
+    /// <remarks>
+    /// Commands and relations act on what this gives.
+    /// </remarks>
+    public static Replicated Resolve(this IRecordReader R, AtomRef atomRef) =>
+        R.Get(atomRef) ?? AtomId.For(atomRef.Type).Unwritten(atomRef.Id);
 
     /// <summary>
     /// The atoms <paramref name="all"/> lists.
@@ -200,15 +205,6 @@ public static class RecordReaderExtensions
             );
         return values;
     }
-
-    /// <summary>
-    /// True if <paramref name="id"/> is of type <typeparamref name="T"/>.
-    /// </summary>
-    /// <typeparam name="T">The type to check against.</typeparam>
-    /// <param name="id">The record to check.</param>
-    /// <returns>Whether or not <paramref name="id"/> is of type <typeparamref name="T"/></returns>
-    public static bool Is<T>(this IRecordReader R, SnowTag id)
-        where T : Replicated => R.Get<T>(id) != null;
 
     /// <summary>
     /// What a component shows as. A deck's cards share the deck's prototype but show as tokens,

@@ -29,7 +29,7 @@ public static class CommandList
         ComponentCommands.MoveToTop,
         ComponentCommands.MoveToBottom,
         ComponentCommands.Delete,
-        UndoCommands.UndoComponentChanges,
+        UndoCommands.UndoChanges,
         PrototypeCommands.Edit,
         DataSetCommands.EditRow,
         DataSetCommands.DeleteRow,

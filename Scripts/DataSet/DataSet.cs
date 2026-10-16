@@ -46,21 +46,18 @@ public record DataColumn : Replicated, IRanked
     public SnowRank Rank { get; init; }
 
     public string Name { get; init; } = string.Empty;
-}
 
-/// <summary>
-/// A dataset column.
-/// </summary>
-[JsonName("ColumnTarget")]
-public sealed record ColumnTarget(SnowTag DataSetId, SnowTag ColumnId) : Target
-{
-    public override IEnumerable<Target> Contents(IRecordReader R) =>
-        R.Get(DataColumn.ById, ColumnId) != null
-            ? R.Get(DataRow.ByDataSet, DataSetId).Select(r => new CellTarget(r.Id, ColumnId))
-            : [];
+    /// <summary>
+    /// A cell for each of the dataset's rows.
+    /// </summary>
+    public override IEnumerable<AtomRef> Contents(IRecordReader R) =>
+        R.Get(DataRow.ByDataSet, DataSetId).Select(r => DataCell.ById.Ref(new CellId(r.Id, Id)));
 
-    public override IEnumerable<Target> Containers(IRecordReader R) =>
-        [new RecordTarget(DataSetId)];
+    /// <summary>
+    /// A column is inside its dataset.
+    /// </summary>
+    public override IEnumerable<AtomRef> Containers(IRecordReader R) =>
+        [DataSet.ById.Ref(DataSetId)];
 }
 
 /// <summary>
@@ -94,14 +91,14 @@ public record DataRow : Replicated, IRanked
     /// <summary>
     /// A cell for each of the dataset's columns.
     /// </summary>
-    public override IEnumerable<Target> Contents(IRecordReader R) =>
-        R.GetColumns(DataSetId).Select(c => new CellTarget(Id, c.Id));
+    public override IEnumerable<AtomRef> Contents(IRecordReader R) =>
+        R.GetColumns(DataSetId).Select(c => DataCell.ById.Ref(new CellId(Id, c.Id)));
 
     /// <summary>
     /// A row is inside its dataset.
     /// </summary>
-    public override IEnumerable<Target> Containers(IRecordReader R) =>
-        [new RecordTarget(DataSetId)];
+    public override IEnumerable<AtomRef> Containers(IRecordReader R) =>
+        [DataSet.ById.Ref(DataSetId)];
 }
 
 /// <summary>
@@ -110,7 +107,13 @@ public record DataRow : Replicated, IRanked
 [JsonName("DataCell")]
 public record DataCell : Replicated
 {
-    public static readonly Id<DataCell, CellId> ById = new(c => c.Id);
+    /// <remarks>
+    /// When you get a cell that doesn't exist, a stand-in is created.
+    /// </remarks>
+    public static readonly Id<DataCell, CellId> ById = new(
+        c => c.Id,
+        unwritten: id => new DataCell { Id = id }
+    );
 
     public required CellId Id { get; init; }
 
@@ -123,6 +126,12 @@ public record DataCell : Replicated
         value.Length > 0 ? [new DataCell { Id = id, Value = value }]
         : R.Get(ById, id) is { } old ? [R.Unset(old)]
         : [];
+
+    /// <summary>
+    /// A cell is inside its row and its column.
+    /// </summary>
+    public override IEnumerable<AtomRef> Containers(IRecordReader R) =>
+        [DataRow.ById.Ref(Id.Row), DataColumn.ById.Ref(Id.Column)];
 }
 
 /// <summary>
@@ -132,16 +141,4 @@ public readonly record struct CellId(SnowTag Row, SnowTag Column) : IComparable<
 {
     public int CompareTo(CellId other) =>
         Row != other.Row ? Row.CompareTo(other.Row) : Column.CompareTo(other.Column);
-}
-
-/// <summary>
-/// One cell of a dataset.
-/// </summary>
-[JsonName("CellTarget")]
-public sealed record CellTarget(SnowTag RowId, SnowTag ColumnId) : Target
-{
-    public override IEnumerable<Target> Containers(IRecordReader R) =>
-        R.Get(DataRow.ById, RowId) is { } row
-            ? [new RecordTarget(row.Id), new ColumnTarget(row.DataSetId, ColumnId)]
-            : [];
 }

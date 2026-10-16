@@ -24,13 +24,13 @@ public static class CommandResolver
     /// Keeps all the commands, even when disabled.
     /// This is specifically for the Menu Bar, which shouldn't change.
     /// </param>
-    public static List<(Command Command, IReadOnlyList<Target> Targets)> ForMenu(
+    public static List<(Command Command, IReadOnlyList<AtomRef> Targets)> ForMenu(
         CommandContext context,
         IEnumerable<Command> commands,
         bool all = false
     )
     {
-        var items = new List<(Command Command, IReadOnlyList<Target> Targets)>();
+        var items = new List<(Command Command, IReadOnlyList<AtomRef> Targets)>();
         foreach (var command in commands)
         {
             if (command == Command.Divider)
@@ -92,7 +92,7 @@ public static class CommandResolver
     /// Every command that keyboard shortcuts could run in <paramref name="context"/>,
     /// with the targets those shortcuts act on.
     /// </summary>
-    private static IEnumerable<(Command Command, List<Target> Targets)> ForKeys(
+    private static IEnumerable<(Command Command, List<AtomRef> Targets)> ForKeys(
         CommandContext context
     ) =>
         CommandList
@@ -118,7 +118,7 @@ public static class CommandResolver
     /// and filters it by those that return true when passed to <see cref="Command.Applies"/>.
     /// </summary>
     /// <param name="R">What <see cref="Command.Applies"/> reads through, like a Watch's reader.</param>
-    public static List<Target> TargetsFor(
+    public static List<AtomRef> TargetsFor(
         Command command,
         CommandContext context,
         IRecordReader R,

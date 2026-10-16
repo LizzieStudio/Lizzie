@@ -902,58 +902,7 @@
                 "type": [
                   "array",
                   "null"
-                ],
-                "items": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "required": [
-                    "$type"
-                  ],
-                  "anyOf": [
-                    {
-                      "properties": {
-                        "$type": {
-                          "const": "CellTarget"
-                        },
-                        "rowId": true,
-                        "columnId": true
-                      },
-                      "required": [
-                        "rowId",
-                        "columnId"
-                      ],
-                      "additionalProperties": false
-                    },
-                    {
-                      "properties": {
-                        "$type": {
-                          "const": "ColumnTarget"
-                        },
-                        "dataSetId": true,
-                        "columnId": true
-                      },
-                      "required": [
-                        "dataSetId",
-                        "columnId"
-                      ],
-                      "additionalProperties": false
-                    },
-                    {
-                      "properties": {
-                        "$type": {
-                          "const": "RecordTarget"
-                        },
-                        "id": true
-                      },
-                      "required": [
-                        "id"
-                      ],
-                      "additionalProperties": false
-                    }
-                  ]
-                }
+                ]
               }
             },
             "required": [

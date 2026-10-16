@@ -21,19 +21,19 @@ public abstract record Replicated : IChange
     /// What's directly inside this record, like a deck's cards or a DataRow's cells.
     /// These are followed recursively, so only list direct contents.
     /// </summary>
-    public virtual IEnumerable<Target> Contents(IRecordReader R) => [];
+    public virtual IEnumerable<AtomRef> Contents(IRecordReader R) => [];
 
     /// <summary>
-    /// What this record is directly inside, like a card's deck or a cell's <see cref="DataRow"/> and <see cref="ColumnTarget"/>.
+    /// What this record is directly inside, like a card's deck or a cell's <see cref="DataRow"/> and <see cref="DataColumn"/>.
     /// These are followed recursively, so only list direct containers.
     /// </summary>
-    public virtual IEnumerable<Target> Containers(IRecordReader R) => [];
+    public virtual IEnumerable<AtomRef> Containers(IRecordReader R) => [];
 
     /// <summary>
     /// What this record refers to, like a component's prototype.
     /// Not followed further.
     /// </summary>
-    public virtual IEnumerable<Target> Referenced(IRecordReader R) => [];
+    public virtual IEnumerable<AtomRef> Referenced(IRecordReader R) => [];
 }
 
 /// <summary>

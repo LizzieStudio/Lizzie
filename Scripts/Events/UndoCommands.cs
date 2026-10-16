@@ -46,23 +46,19 @@ public static class UndoCommands
     };
 
     /// <summary>
-    /// Undoes the newest change by anyone to the components, or to what's in them, like a deck's cards.
-    /// The whole event or gesture is undone, even the parts that changed other components.
+    /// Undoes the newest change by anyone to the selected atoms, or to what's in them, like a deck's cards or a row's cells.
+    /// The whole event or gesture is undone, even the parts that changed other atoms.
     /// </summary>
-    public static readonly Command UndoComponentChanges = new RecordCommand<ComponentState>
+    public static readonly Command UndoChanges = new RecordCommand<Replicated>
     {
-        Name = new("component.undo_changes"),
+        Name = new("record.undo_changes"),
         Icon = CommandIcons.UndoComponent,
         Caption = "Undo This",
         ActsOn = Context.Selected | Context.Contents,
-        SideEffects = (cs, _) =>
+        SideEffects = (atoms, _) =>
         {
-            var ids = cs.Select(c => c.Id).ToHashSet();
-            Issue(
-                UndoComponentChanges,
-                UndoLog.Undo,
-                (_, record) => record is ComponentState s && ids.Contains(s.Id)
-            );
+            var refs = atoms.Select(AtomRef.To).ToHashSet();
+            Issue(UndoChanges, UndoLog.Undo, (_, record) => refs.Contains(AtomRef.To(record)));
         },
     };
 

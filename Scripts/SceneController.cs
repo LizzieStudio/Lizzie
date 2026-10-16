@@ -44,12 +44,12 @@ public partial class SceneController : Node3D, ICommandView
     /// The hovered component, which keys act on when nothing is selected.
     /// None while drawing a selection box or placing new components.
     /// </summary>
-    public IEnumerable<Target> Hovered() =>
+    public IEnumerable<AtomRef> Hovered() =>
         _gameObjects.CursorMode is CursorMode.DragSelect or CursorMode.Spawn
         || _gameObjects.GetHoveredObject() is not { } hovered
         || RecordService.Instance.Get(ComponentState.ById, hovered.Reference) == null
             ? []
-            : [new RecordTarget(hovered.Reference)];
+            : [ComponentState.ById.Ref(hovered.Reference)];
 
     public IReadOnlyList<Command> Commands => TableCommands;
 

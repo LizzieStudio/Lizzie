@@ -65,6 +65,11 @@ public abstract class AtomId : Query
     /// </summary>
     internal abstract int Compare(Replicated a, Replicated b);
 
+    /// <summary>
+    /// What stands in for the atom with <paramref name="id"/> before it exists, or null if the type has no stand-in.
+    /// </summary>
+    internal abstract Replicated Unwritten(object id);
+
     private static readonly Dictionary<Type, AtomId> Declared = new();
 
     /// <summary>
@@ -89,18 +94,6 @@ public abstract class AtomId : Query
             );
         return ids[0];
     }
-
-    /// <summary>
-    /// Uses reflection to get every atom type's Id whose ids are <see cref="SnowTag"/>s,
-    /// for reading an atom whose type isn't known.
-    /// </summary>
-    internal static IReadOnlyList<AtomId> BySnowTag =>
-        field ??= typeof(Replicated)
-            .Assembly.GetTypes()
-            .Where(t => t.IsSubclassOf(typeof(Replicated)) && !t.IsAbstract)
-            .Select(For)
-            .Where(id => id.IdType == typeof(SnowTag))
-            .ToList();
 }
 
 /// <summary>
@@ -121,15 +114,36 @@ public class Id<T, I> : AtomId
     where I : IComparable<I>
 {
     private readonly Func<T, I> _of;
+    private readonly Func<I, T> _unwritten;
 
     /// <param name="of">
     /// The id of an atom.
     /// </param>
-    public Id(Func<T, I> of) => _of = of;
+    /// <param name="unwritten">
+    /// What a command or a relation acts on for an atom that doesn't exist.
+    /// Reads still give null for it.
+    /// </param>
+    public Id(Func<T, I> of, Func<I, T> unwritten = null)
+    {
+        _of = of;
+        _unwritten = unwritten;
+    }
 
     public I Of(T atom) => _of(atom);
 
     internal override object Of(Replicated atom) => _of((T)atom);
+
+    /// <summary>
+    /// The ref to the atom with <paramref name="id"/>, whether or not it exists.
+    /// </summary>
+    public AtomRef Ref(I id) => new(typeof(T), id);
+
+    /// <summary>
+    /// What stands in for the atom with <paramref name="id"/> before it exists.
+    /// </summary>
+    internal virtual T Unwritten(I id) => _unwritten?.Invoke(id);
+
+    internal override Replicated Unwritten(object id) => Unwritten((I)id);
 
     internal override Type IdType => typeof(I);
 
@@ -152,8 +166,10 @@ public class Id<T, I> : AtomId
 public sealed class Singleton<T>() : Id<T, SingletonId>(_ => default)
     where T : Replicated, new()
 {
-    /// <summary>What reads give before the first write.</summary>
-    internal T Unwritten => field ??= new();
+    // What reads give before the first write, made on the first read.
+    private T Shared => field ??= new();
+
+    internal override T Unwritten(SingletonId id) => Shared;
 }
 
 /// <summary>

@@ -65,18 +65,10 @@ public sealed class Watcher : IWatchReader
             _index.Add(this, query, value, count);
     }
 
-    public T Get<T>(SnowTag id)
-        where T : Replicated
+    public Replicated Get(AtomRef atom)
     {
-        Depend(AtomId.For(typeof(T)), id);
-        return _source.Get<T>(id);
-    }
-
-    public Replicated Get(SnowTag id)
-    {
-        foreach (var byId in AtomId.BySnowTag)
-            Depend(byId, id);
-        return _source.Get(id);
+        Depend(AtomId.For(atom.Type), atom.Id);
+        return _source.Get(atom);
     }
 
     public SnowportId Version(Replicated atom)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -39,7 +40,7 @@ public record Selection : Replicated
     public SnowTag Within { get; init; }
 
     /// <summary>The selected things.</summary>
-    public ImmutableHashSet<Target> Targets { get; init; } = ImmutableHashSet<Target>.Empty;
+    public ImmutableHashSet<AtomRef> Targets { get; init; } = ImmutableHashSet<AtomRef>.Empty;
 }
 
 /// <summary>
@@ -57,13 +58,13 @@ public static class LocalSelection
     /// with the local player taking priority.
     /// </para>
     /// </summary>
-    public static IReadOnlyDictionary<Target, Color> SelectionColors(
+    public static IReadOnlyDictionary<AtomRef, Color> SelectionColors(
         this IRecordReader R,
         SnowTag within
     )
     {
         var local = Snowport.Clock.source;
-        var colors = new Dictionary<Target, Color>();
+        var colors = new Dictionary<AtomRef, Color>();
         var newestFirst = R.Get(Selection.ByWithin, within)
             .OrderByDescending(s => s.Player == local)
             .ThenByDescending(R.Version);
@@ -83,32 +84,38 @@ public static class LocalSelection
     public static Selection GetSelection(this IRecordReader R, SnowTag within = default) =>
         R.Get(Selection.ByWithin, within).FirstOrDefault(s => s.Player == Snowport.Clock.source);
 
-    /// <summary>The ids of the records of type <typeparamref name="T"/> the local player has selected on the table.</summary>
-    public static IEnumerable<SnowTag> GetSelection<T>(this IRecordReader R)
-        where T : Replicated =>
-        R.GetSelection()?.Targets.OfType<RecordTarget>().Select(t => t.Id).Where(id => R.Is<T>(id))
-        ?? [];
+    /// <summary>
+    /// The ids of the atoms of <paramref name="byId"/>'s type the local player has selected on the table.
+    /// </summary>
+    /// <param name="byId">Names the atom type and its id type, which the call infers from it.</param>
+    public static IEnumerable<I> GetSelection<T, I>(this IRecordReader R, Id<T, I> byId)
+        where T : Replicated
+        where I : IComparable<I> =>
+        R.GetSelection()?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
 
     /// <summary>
-    /// Replaces the local player's selected records of type <typeparamref name="T"/> on the table,
+    /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type on the table,
     /// keeping everything else they have selected there.
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
-    public static void SetSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
-        where T : Replicated => RecordService.Instance.Write(R.NewSelection<T>(ids));
+    public static void SetSelection<T, I>(this IRecordReader R, Id<T, I> byId, IEnumerable<I> ids)
+        where T : Replicated
+        where I : IComparable<I> => RecordService.Instance.Write(R.NewSelection(byId, ids));
 
     /// <summary>
-    /// The record that <see cref="SetSelection{T}(IRecordReader, IEnumerable{SnowTag})"/> writes,
+    /// The record that <see cref="SetSelection{T, I}(IRecordReader, Id{T, I}, IEnumerable{I})"/> writes,
     /// or none when the selection wouldn't change.
     /// </summary>
-    public static Selection[] NewSelection<T>(this IRecordReader R, IEnumerable<SnowTag> ids)
+    public static Selection[] NewSelection<T, I>(
+        this IRecordReader R,
+        Id<T, I> byId,
+        IEnumerable<I> ids
+    )
         where T : Replicated
+        where I : IComparable<I>
     {
-        var old = R.GetSelection()?.Targets ?? ImmutableHashSet<Target>.Empty;
-        return R.NewSelection(
-            old.Where(t => t is not RecordTarget r || !R.Is<T>(r.Id))
-                .Concat(ids.Select(id => new RecordTarget(id)))
-        );
+        var old = R.GetSelection()?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
+        return R.NewSelection(old.Where(t => t.Type != typeof(T)).Concat(ids.Select(byId.Ref)));
     }
 
     /// <summary>
@@ -117,7 +124,7 @@ public static class LocalSelection
     /// </summary>
     public static void SetSelection(
         this IRecordReader R,
-        IEnumerable<Target> targets,
+        IEnumerable<AtomRef> targets,
         SnowTag within = default
     )
     {
@@ -130,13 +137,13 @@ public static class LocalSelection
     /// </summary>
     private static Selection[] NewSelection(
         this IRecordReader R,
-        IEnumerable<Target> targets,
+        IEnumerable<AtomRef> targets,
         SnowTag within = default
     )
     {
         var current = R.GetSelection(within);
         var next = targets.ToImmutableHashSet();
-        if (next.SetEquals(current?.Targets ?? ImmutableHashSet<Target>.Empty))
+        if (next.SetEquals(current?.Targets ?? ImmutableHashSet<AtomRef>.Empty))
             return [];
 
         var record =

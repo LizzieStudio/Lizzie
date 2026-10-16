@@ -56,7 +56,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>Shows which players have this component selected.</summary>
     private void SyncSelection(IWatchReader R)
     {
-        var target = new RecordTarget(Reference);
+        var target = ComponentState.ById.Ref(Reference);
         var local = Snowport.Clock.source;
         var selection = R.GetSelection()?.Targets;
         _isMine = selection?.Contains(target) == true;

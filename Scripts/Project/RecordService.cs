@@ -394,11 +394,7 @@ public partial class RecordService : Node, IRecordReader, IRecordServiceMachiner
 
     #region IRecordReader
 
-    public T Get<T>(SnowTag id)
-        where T : Replicated => (T)StoreOf<T>().Find(id).Value;
-
-    public Replicated Get(SnowTag id) =>
-        _stores.Values.Select(s => s.Find(id).Value).FirstOrDefault(v => v != null);
+    public Replicated Get(AtomRef atom) => StoreOf(atom.Type).Find(atom.Id).Value;
 
     public SnowportId Version(Replicated atom) =>
         StoreOf(atom.GetType()).Find(AtomId.For(atom.GetType()).Of(atom)).LastUpdate;

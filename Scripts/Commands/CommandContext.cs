@@ -13,48 +13,48 @@ public sealed class CommandContext
     /// <summary>
     /// What the user is targeting. Usually the selection, but for keys it can be the hovered target.
     /// </summary>
-    public IEnumerable<Target> Selected
+    public IEnumerable<AtomRef> Selected
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<Target>.Empty;
+    } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
     /// Targets that are contained within the selection, like a selected deck's cards.
     /// Matching commands act on these when their <see cref="Command.ActsOn"/> includes them.
     /// </summary>
-    public IEnumerable<Target> Contents
+    public IEnumerable<AtomRef> Contents
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<Target>.Empty;
+    } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
     /// Targets that contain the selection, like a selected card's current deck.
     /// </summary>
-    public IEnumerable<Target> Containers
+    public IEnumerable<AtomRef> Containers
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<Target>.Empty;
+    } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
     /// What the selected targets refer to, like a component's prototype or data row.
     /// </summary>
-    public IEnumerable<Target> Referenced
+    public IEnumerable<AtomRef> Referenced
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<Target>.Empty;
+    } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
     /// The record the view shows, from its <see cref="ICommandView.SelectionScope"/>, or empty.
     /// </summary>
-    public IEnumerable<Target> View
+    public IEnumerable<AtomRef> View
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<Target>.Empty;
+    } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
     /// Custom commands for this view to add to the context menu, like the table's Zoom to Component.
@@ -75,19 +75,19 @@ public sealed class CommandContext
 
         bool scoped = view.SelectionScope.TryGet(R, out var scope);
         var selected = scoped
-            ? R.GetSelection(scope)?.Targets ?? ImmutableHashSet<Target>.Empty
-            : ImmutableHashSet<Target>.Empty;
+            ? R.GetSelection(scope)?.Targets ?? ImmutableHashSet<AtomRef>.Empty
+            : ImmutableHashSet<AtomRef>.Empty;
         var chosen = selected.IsEmpty && keys ? view.Hovered().ToImmutableHashSet() : selected;
 
-        IEnumerable<Target> Related(
-            IEnumerable<Target> targets,
-            Func<Target, IEnumerable<Target>> relation
+        IEnumerable<AtomRef> Related(
+            IEnumerable<AtomRef> targets,
+            Func<AtomRef, IEnumerable<AtomRef>> relation
         ) => targets.SelectMany(relation).Where(t => !chosen.Contains(t));
 
         // Each target is visited once, so if a relation ever does loop back it doesn't hang.
-        HashSet<Target> Followed(Func<Target, IEnumerable<Target>> relation)
+        HashSet<AtomRef> Followed(Func<AtomRef, IEnumerable<AtomRef>> relation)
         {
-            var found = new HashSet<Target>();
+            var found = new HashSet<AtomRef>();
             for (
                 var next = Related(chosen, relation).ToList();
                 next.Count > 0;
@@ -100,10 +100,10 @@ public sealed class CommandContext
         return new()
         {
             Selected = chosen,
-            Contents = Followed(t => t.Contents(R)),
-            Containers = Followed(t => t.Containers(R)),
-            Referenced = Related(chosen, t => t.Referenced(R)),
-            View = scoped && scope != SnowTag.Empty ? [new RecordTarget(scope)] : [],
+            Contents = Followed(t => R.Resolve(t)?.Contents(R) ?? []),
+            Containers = Followed(t => R.Resolve(t)?.Containers(R) ?? []),
+            Referenced = Related(chosen, t => R.Resolve(t)?.Referenced(R) ?? []),
+            View = scoped && scope != SnowTag.Empty ? [DataSet.ById.Ref(scope)] : [],
             Local = view.Commands,
         };
     }

@@ -63,7 +63,7 @@ public static class DataSetCommands
         Effects = (R, rows, _) => rows.Select(R.Unset),
     };
 
-    public static readonly Command DeleteColumn = new TargetCommand<ColumnTarget>
+    public static readonly Command DeleteColumn = new RecordCommand<DataColumn>
     {
         Name = new("dataset.delete_column"),
         Icon = CommandIcons.Delete,
@@ -71,12 +71,10 @@ public static class DataSetCommands
         Noun = ("Column", "Columns"),
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
-        AppliesTo = (R, t) => R.Get(DataColumn.ById, t.ColumnId) != null,
-        Effects = (R, columns, _) =>
-            columns.Select(t => R.Unset(R.Get(DataColumn.ById, t.ColumnId))),
+        Effects = (R, columns, _) => columns.Select(R.Unset),
     };
 
-    public static readonly Command ClearCells = new TargetCommand<CellTarget>
+    public static readonly Command ClearCells = new RecordCommand<DataCell>
     {
         Name = new("dataset.clear_cells"),
         Icon = CommandIcons.Clear,
@@ -87,7 +85,7 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Cleared(R, cells),
     };
 
-    public static readonly Command CutCells = new TargetCommand<CellTarget>
+    public static readonly Command CutCells = new RecordCommand<DataCell>
     {
         Name = new("dataset.cut_cells"),
         Icon = CommandIcons.Cut,
@@ -100,7 +98,7 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Cleared(R, cells),
     };
 
-    public static readonly Command CopyCells = new TargetCommand<CellTarget>
+    public static readonly Command CopyCells = new RecordCommand<DataCell>
     {
         Name = new("dataset.copy_cells"),
         Icon = CommandIcons.Copy,
@@ -116,7 +114,7 @@ public static class DataSetCommands
     /// Values past the last column are dropped, and rows past the last row become new rows.
     /// A single value fills every selected cell instead.
     /// </summary>
-    public static readonly Command PasteCells = new TargetCommand<CellTarget>
+    public static readonly Command PasteCells = new RecordCommand<DataCell>
     {
         Name = new("dataset.paste_cells"),
         Icon = CommandIcons.Paste,
@@ -128,23 +126,22 @@ public static class DataSetCommands
 
     private static IRecordReader Reader => RecordService.Instance;
 
-    private static bool CellExists(IRecordReader R, CellTarget t) =>
-        R.Get(DataRow.ById, t.RowId) != null && R.Get(DataColumn.ById, t.ColumnId) != null;
-
-    private static CellId Id(CellTarget t) => new(t.RowId, t.ColumnId);
+    // A cell can be empty, but its row and column must still be there.
+    private static bool CellExists(IRecordReader R, DataCell cell) =>
+        R.Get(DataRow.ById, cell.Id.Row) != null && R.Get(DataColumn.ById, cell.Id.Column) != null;
 
     private static (
         List<DataRow> Rows,
         List<SnowTag> Columns,
         List<DataRow> AllRows,
         List<SnowTag> AllColumns
-    ) Block(IRecordReader R, IReadOnlyList<CellTarget> cells)
+    ) Block(IRecordReader R, IReadOnlyList<DataCell> cells)
     {
-        var dataSetId = R.Get(DataRow.ById, cells[0].RowId).DataSetId;
+        var dataSetId = R.Get(DataRow.ById, cells[0].Id.Row).DataSetId;
         var allRows = R.GetRows(dataSetId);
         var allColumns = R.GetColumns(dataSetId).Select(c => c.Id).ToList();
-        var rowIds = cells.Select(c => c.RowId).ToHashSet();
-        var columnIds = cells.Select(c => c.ColumnId).ToHashSet();
+        var rowIds = cells.Select(c => c.Id.Row).ToHashSet();
+        var columnIds = cells.Select(c => c.Id.Column).ToHashSet();
         return (
             allRows.Where(r => rowIds.Contains(r.Id)).ToList(),
             allColumns.Where(columnIds.Contains).ToList(),
@@ -153,29 +150,25 @@ public static class DataSetCommands
         );
     }
 
-    private static string Copied(IRecordReader R, IReadOnlyList<CellTarget> cells)
+    private static string Copied(IRecordReader R, IReadOnlyList<DataCell> cells)
     {
         var (rows, columns, _, _) = Block(R, cells);
-        var selected = cells.ToHashSet();
+        var selected = cells.ToDictionary(c => c.Id, c => c.Value);
         return Tsv.Format(
             rows.Select(r =>
-                columns.Select(c =>
-                    selected.Contains(new CellTarget(r.Id, c))
-                        ? R.Get(DataCell.ById, new CellId(r.Id, c))?.Value ?? string.Empty
-                        : string.Empty
-                )
+                columns.Select(c => selected.GetValueOrDefault(new CellId(r.Id, c), string.Empty))
             )
         );
     }
 
     private static IEnumerable<IChange> Pasted(
         IRecordReader R,
-        IReadOnlyList<CellTarget> cells,
+        IReadOnlyList<DataCell> cells,
         List<string[]> grid
     )
     {
         if (grid is [[var value]])
-            return cells.SelectMany(c => DataCell.Set(R, Id(c), value));
+            return cells.SelectMany(c => DataCell.Set(R, c.Id, value));
 
         var (rows, columns, allRows, allColumns) = Block(R, cells);
         int top = allRows.IndexOf(rows[0]);
@@ -204,8 +197,8 @@ public static class DataSetCommands
         return changes;
     }
 
-    private static IEnumerable<IChange> Cleared(IRecordReader R, IReadOnlyList<CellTarget> cells) =>
-        cells.SelectMany(c => DataCell.Set(R, Id(c), string.Empty));
+    private static IEnumerable<IChange> Cleared(IRecordReader R, IReadOnlyList<DataCell> cells) =>
+        cells.SelectMany(c => DataCell.Set(R, c.Id, string.Empty));
 
     public static IEnumerable<Replicated> NewRow(IRecordReader R, SnowTag dataSetId, int index) =>
         [

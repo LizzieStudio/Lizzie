@@ -137,14 +137,14 @@ public record ComponentState : Replicated
     /// <remarks>
     /// Any component used as a <see cref="ContainerRef"/> gets its contents here without changes.
     /// </remarks>
-    public override IEnumerable<Target> Contents(IRecordReader R)
+    public override IEnumerable<AtomRef> Contents(IRecordReader R)
     {
         var containedComponents =
             R.Kind(this) == VisualComponentBase.VisualComponentType.Deck
                 ? R.TokensOn(this)
                 : R.Get(ByContainer, Id);
 
-        return containedComponents.Select(c => new RecordTarget(c.Id));
+        return containedComponents.Select(c => ById.Ref(c.Id));
     }
 
     /// <summary>
@@ -153,13 +153,11 @@ public record ComponentState : Replicated
     /// <remarks>
     /// Any component referenced by <see cref="ContainerRef"/> becomes a container here without changes.
     /// </remarks>
-    public override IEnumerable<Target> Containers(IRecordReader R)
+    public override IEnumerable<AtomRef> Containers(IRecordReader R)
     {
         // A hand or a cursor isn't a component, so it isn't found.
         if (!IsOnTable)
-            return R.Get(ById, ContainerRef) is { } container
-                ? [new RecordTarget(container.Id)]
-                : [];
+            return R.Get(ById, ContainerRef) is { } container ? [ById.Ref(container.Id)] : [];
 
         if (R.Kind(this) != VisualComponentBase.VisualComponentType.Token)
             return [];
@@ -168,7 +166,7 @@ public record ComponentState : Replicated
             .Where(d =>
                 d.ZOrder < ZOrder && R.Kind(d) == VisualComponentBase.VisualComponentType.Deck
             )
-            .Select(d => new RecordTarget(d.Id));
+            .Select(d => ById.Ref(d.Id));
     }
 
     /// <summary>
@@ -177,8 +175,11 @@ public record ComponentState : Replicated
     /// <remarks>
     /// This will need to be extended as new references are invented.
     /// </remarks>
-    public override IEnumerable<Target> Referenced(IRecordReader R) =>
-        new[] { PrototypeRef, Card.FrontRow, Card.BackRow }
-            .Where(id => id != SnowTag.Empty)
-            .Select(id => new RecordTarget(id));
+    public override IEnumerable<AtomRef> Referenced(IRecordReader R) =>
+        new[]
+        {
+            Prototype.ById.Ref(PrototypeRef),
+            DataRow.ById.Ref(Card.FrontRow),
+            DataRow.ById.Ref(Card.BackRow),
+        }.Where(r => (SnowTag)r.Id != SnowTag.Empty);
 }
