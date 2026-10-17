@@ -24,6 +24,7 @@ mesh = SubResource("BoxMesh_ggpqp")
 [node name="DragPatch" type="Sprite3D" parent="Frame" unique_id=65843443]
 transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -0.64799356, 0.46919668, 0)
 axis = 1
+transparent = false
 texture = ExtResource("5_lsa78")
 
 [node name="ComponentCount" type="Label3D" parent="Frame" unique_id=787024414]

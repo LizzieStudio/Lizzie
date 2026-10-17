@@ -29,6 +29,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.397, -0.303)
 [node name="DragPatch" type="Sprite3D" parent="." unique_id=512471132]
 transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -1.0656493, 1.004, 0)
 axis = 1
+transparent = false
 texture = ExtResource("4_bojv1")
 
 [node name="ComponentCount" type="Label3D" parent="." unique_id=1262537943]

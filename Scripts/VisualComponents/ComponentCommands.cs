@@ -76,6 +76,21 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => c with { Removed = true }),
     };
 
+    /// <summary>
+    /// Resets a component so that it goes back to where the parent blueprints have it.
+    /// If the component was created in this stage, it's deleted.
+    /// </summary>
+    public static readonly Command Reset = new AtomCommand<ComponentState>
+    {
+        Name = new("component.reset"),
+        Icon = CommandIcons.Reset,
+        Caption = "Reset {0}",
+        ActsOn = Context.Selected | Context.Contents,
+        AppliesTo = (R, c) =>
+            NotHeld(R, c) && R.Get(ComponentState.WrittenIn, c.Stage).Any(w => w.Id == c.Id),
+        Effects = (R, cs, _) => cs.Select(R.Unset),
+    };
+
     private static float RotationStep(IAtomReader R) =>
         R.Get(ProjectGameSettings.Only).RotationStep();
 

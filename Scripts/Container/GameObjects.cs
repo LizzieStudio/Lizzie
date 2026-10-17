@@ -12,9 +12,6 @@ public partial class GameObjects : Node3D
     [Export]
     private DragSelectRectangle _selectionRectangle;
 
-    [Export]
-    private int _stackingUpdateFrames = 3; //Test hack to avoid issue with stacking not seeing colliders
-
     /// <summary>
     /// How fast a dropped component slides into place, in cm per second.
     /// </summary>
@@ -34,9 +31,7 @@ public partial class GameObjects : Node3D
     [Export(PropertyHint.Range, "0,2000,10,suffix:ms")]
     public int AnimationCutoff { get; set; } = 500;
 
-    private int _stackingUpdateRequired;
-
-    // set when a component changes, and handled once at the start of the next frame
+    // set when a component changes, and handled once the frame's updates are in, before it's drawn
     private bool _tableChanged;
 
     private GameController _gameController;
@@ -203,7 +198,7 @@ public partial class GameObjects : Node3D
             TextureFactory = TextureFactory,
             StageRef = ShownStage(AtomService.Instance),
         };
-        table.Changed += () => _tableChanged = true;
+        table.Changed += QueueTableUpdate;
         table.ComponentRemoved += OnComponentRemoved;
         AddChild(table);
         return table;
@@ -231,32 +226,9 @@ public partial class GameObjects : Node3D
     private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentState> atoms) =>
         atoms.Select(s => GetComponent(s.Id)).Where(c => c != null);
 
-    public override void _PhysicsProcess(double delta)
-    {
-        base._PhysicsProcess(delta);
-        if (_stackingUpdateRequired > 0)
-        {
-            _stackingUpdateRequired--;
-
-            if (_stackingUpdateRequired <= 0)
-            {
-                UpdateStackingHeights();
-                _stackingUpdateRequired = 0;
-            }
-        }
-    }
-
     public override void _Process(double delta)
     {
         base._Process(delta);
-
-        // Components sync at the end of a frame, so their changes are handled in the next.
-        if (_tableChanged)
-        {
-            _tableChanged = false;
-            UpdateDragFloors();
-            QueueStackingUpdate();
-        }
 
         ProcessActiveDrags();
         RecomputeZones();
@@ -296,7 +268,7 @@ public partial class GameObjects : Node3D
             else if (@event.IsActionPressed("exit_mode"))
             {
                 ExitSpawnMode();
-                QueueStackingUpdate();
+                QueueTableUpdate();
                 GetViewport().SetInputAsHandled();
             }
         }
@@ -323,7 +295,7 @@ public partial class GameObjects : Node3D
 
         _table.AddChild(component);
 
-        QueueStackingUpdate();
+        QueueTableUpdate();
     }
 
     private void CreateComponents(IEnumerable<VisualComponentBase> components)
@@ -567,12 +539,23 @@ public partial class GameObjects : Node3D
         return lift;
     }
 
-    private void QueueStackingUpdate()
+    /// <summary>
+    /// Restacks the table once the changes made this frame are in, before the frame is drawn.
+    /// Components sync at the end of a frame, so a call made while they sync still lands in that frame.
+    /// </summary>
+    private void QueueTableUpdate()
     {
-        if (_stackingUpdateRequired == 0)
-        {
-            _stackingUpdateRequired = _stackingUpdateFrames;
-        }
+        if (_tableChanged)
+            return;
+        _tableChanged = true;
+        Callable.From(UpdateTable).CallDeferred();
+    }
+
+    private void UpdateTable()
+    {
+        _tableChanged = false;
+        UpdateDragFloors();
+        UpdateStackingHeights();
     }
     #endregion
 
@@ -1105,13 +1088,11 @@ public partial class GameObjects : Node3D
         RemoveChild(old);
         old.QueueFree();
         _table = CreateTable();
-        _tableChanged = false;
 
         // The gesture went with the table, so there's nothing to cancel.
         _held = null;
         AbandonMode();
         _hover = default;
-        _stackingUpdateRequired = 0;
     }
 
     /// <summary>

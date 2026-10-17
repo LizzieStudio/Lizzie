@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 
 public partial class UI : CanvasLayer
@@ -35,12 +36,70 @@ public partial class UI : CanvasLayer
 
     private OptionButton _rotationStep;
 
+    // the toggle buttons that pick the stage the table shows, one for each in the game's chain
+    private HBoxContainer _stages;
+    private readonly ButtonGroup _stageGroup = new();
+
+    // The style for the stage buttons.
+    private readonly (string State, StyleBox Box)[] _blueprintStyles = StageStyles(0.73f);
+    private readonly (string State, StyleBox Box)[] _gameStyles = StageStyles(0.40f);
+
+    private static (string State, StyleBox Box)[] StageStyles(float hue)
+    {
+        // The default button box, so only the color differs.
+        StyleBox Box(string state, float lightness)
+        {
+            var box = (StyleBoxFlat)
+                ThemeDB.GetDefaultTheme().GetStylebox(state, "Button").Duplicate();
+            box.BgColor = Color.FromOkHsl(hue, 0.6f, lightness);
+            return box;
+        }
+        var pressed = Box("pressed", 0.42f);
+        return
+        [
+            ("normal", Box("normal", 0.25f)),
+            ("hover", Box("hover", 0.32f)),
+            ("pressed", pressed),
+            ("hover_pressed", pressed),
+        ];
+    }
+
     private Node _modalDialogs;
 
     public override void _EnterTree()
     {
         _instance = this;
         AtomService.Instance.Watch(this, Sync);
+        AtomService.Instance.Watch(this, SyncStages);
+    }
+
+    private void SyncStages(IWatchReader R)
+    {
+        foreach (var old in _stages.GetChildren())
+        {
+            _stages.RemoveChild(old);
+            old.QueueFree();
+        }
+
+        var game = R.Get(CurrentGame.Only).StageRef;
+        var shown = ProjectService.Instance.GameObjects.ShownStage(R);
+        // The blueprints in the order they build up, then the game.
+        foreach (var stage in Stage.Chain(R, game).Reverse())
+        {
+            // Picking the game follows the game, even when a new one starts.
+            var pick = stage.Id == game ? SnowTag.Empty : stage.Id;
+            var button = new Button
+            {
+                Text = stage.Name,
+                ToggleMode = true,
+                ButtonGroup = _stageGroup,
+                ButtonPressed = stage.Id == shown,
+            };
+            foreach (var (state, box) in stage.Id == game ? _gameStyles : _blueprintStyles)
+                button.AddThemeStyleboxOverride(state, box);
+            button.Pressed += () => ProjectService.Instance.GameObjects.PickedStage.Value = pick;
+            _stages.AddChild(button);
+        }
     }
 
     private void Sync(IWatchReader R)
@@ -63,6 +122,8 @@ public partial class UI : CanvasLayer
 
         _rotationStep = GetNode<OptionButton>("%RotationStep");
         _rotationStep.ItemSelected += RotationStepSelected;
+
+        _stages = GetNode<HBoxContainer>("%Stages");
 
         _componentName = GetNode<Label>("%ComponentName");
 

@@ -29,6 +29,7 @@ public static class CommandList
         ComponentCommands.MoveToTop,
         ComponentCommands.MoveToBottom,
         ComponentCommands.Delete,
+        ComponentCommands.Reset,
         UndoCommands.UndoChanges,
         PrototypeCommands.Edit,
         DataSetCommands.EditRow,
@@ -70,6 +71,8 @@ public static class CommandList
         UI.EditProjectSettings,
         UI.InsertExistingComponent,
         UI.InsertNewComponent,
+        StageCommands.NewBlueprint,
+        StageCommands.ResetGame,
         DataSetCommands.AddRow,
         DataSetCommands.AddColumn,
     ]);

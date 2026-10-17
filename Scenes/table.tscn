@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bqsarkxj7oemw" path="res://Scripts/TableSurface.cs" id="1_4ppvu"]
 [ext_resource type="Texture2D" uid="uid://cw6pgclsp7ody" path="res://Textures/TableSurface/Fabric034_1K-PNG_Color.png" id="1_dil0j"]
+[ext_resource type="FontFile" uid="uid://b414tab6csogt" path="res://Fonts/Blueprint/BlueprintCustom.woff2" id="3_r4jc3"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b00ve"]
 
@@ -27,3 +28,14 @@ skeleton = NodePath("../..")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=576496294]
 shape = SubResource("WorldBoundaryShape3D_at6bq")
+
+[node name="BlueprintNumber" type="Label3D" parent="." unique_id=806683306]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0.05, 0)
+visible = false
+pixel_size = 0.25
+render_priority = -1
+modulate = Color(0.65, 0.82, 1, 0.6)
+font = ExtResource("3_r4jc3")
+font_size = 256
+outline_size = 0

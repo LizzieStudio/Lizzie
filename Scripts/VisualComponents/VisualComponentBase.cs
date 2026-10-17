@@ -95,8 +95,19 @@ public abstract partial class VisualComponentBase : Area3D
     private Tween _yTween;
     private float _targetY;
 
+    // This is to make it where the first y position is instant.
+    // Otherwise the components start out squished onto the table.
+    private bool _stackedAtLeastOnce;
+
     public void MoveToTargetY(float y)
     {
+        if (!_stackedAtLeastOnce)
+        {
+            _stackedAtLeastOnce = true;
+            Position = Position with { Y = y };
+            return;
+        }
+
         bool tweening = IsInstanceValid(_yTween) && _yTween.IsRunning();
         if (Mathf.IsEqualApprox(tweening ? _targetY : Position.Y, y))
             return;
@@ -174,7 +185,7 @@ public abstract partial class VisualComponentBase : Area3D
         // A held node is placed by its holder's cursor.
         if (!held)
         {
-            var target = s.PositionAt(_placed ? Position.Y : YHeight / 2f);
+            var target = s.PositionAt(_placed || _stackedAtLeastOnce ? Position.Y : YHeight / 2f);
             if (writtenBy != DragCommands.Drop || !Slide(target, age))
                 Position = target;
         }
