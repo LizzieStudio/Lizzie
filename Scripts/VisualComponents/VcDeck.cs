@@ -49,8 +49,8 @@ public partial class VcDeck : VisualComponentBase
 
     private void SyncCount(IWatchReader R)
     {
-        if (R.Get(ComponentState.ById, Reference) is { } deck && !R.IsBeingDragged(deck))
-            _componentCount.Text = R.Count(ComponentState.ByContainer, Reference).ToString();
+        if (R.Get(ComponentState.ById, Key) is { } deck && !R.IsBeingDragged(deck))
+            _componentCount.Text = R.Count(ComponentState.ByContainer, Key).ToString();
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public partial class VcDeck : VisualComponentBase
     /// </summary>
     private void SyncLayout(IWatchReader R)
     {
-        var cards = R.Get(ComponentState.ByContainer, Reference).OrderBy(c => c.ZOrder).ToList();
+        var cards = R.Get(ComponentState.ByContainer, Key).OrderBy(c => c.ZOrder).ToList();
         var heights = cards.Select(c => CardHeight(R, c)).ToList();
         float total = FrameHeight + heights.Sum();
 
@@ -101,6 +101,7 @@ public partial class VcDeck : VisualComponentBase
             .Select(n => new ComponentState
             {
                 Id = Snowport.Clock.CreateTag(),
+                Stage = self.Stage,
                 PrototypeRef = PrototypeRef,
                 Card = parameters.Card(n, R),
                 ContainerRef = self.Id,

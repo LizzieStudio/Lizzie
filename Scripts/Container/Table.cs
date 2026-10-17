@@ -4,12 +4,17 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// Holds a node for every component atom in the current game.
+/// Holds a node for every component atom one stage shows.
 /// Creates and removes the nodes, who then render their atom.
 /// </summary>
 public partial class Table : Node3D
 {
     public TextureFactory TextureFactory { get; set; }
+
+    /// <summary>
+    /// The stage whose components it shows.
+    /// </summary>
+    public SnowTag StageRef { get; init; }
 
     private readonly Dictionary<SnowTag, VisualComponentBase> _components = new();
 
@@ -62,14 +67,14 @@ public partial class Table : Node3D
     /// </summary>
     private void Sync(IWatchReader R)
     {
-        var (removed, added) = R.Diff(ComponentState.All, NodeBasis);
+        var (removed, added) = R.Diff(ComponentState.ByStage, StageRef, NodeBasis);
 
         foreach (var (s, _) in removed)
             RemoveComponent(s.Id);
         foreach (var (s, key) in added)
             AddComponent(s.Id, key.Scene);
 
-        foreach (var s in R.Get(ComponentState.All))
+        foreach (var s in R.Get(ComponentState.ByStage, StageRef))
         {
             if (!_components.TryGetValue(s.Id, out var node))
                 continue;

@@ -42,7 +42,7 @@ public partial class HandRow : Control
     [Export]
     public bool AlwaysShowBacks { get; set; }
 
-    private readonly Dictionary<SnowTag, HandCard> _cards = new();
+    private readonly Dictionary<StageKey, HandCard> _cards = new();
 
     private readonly List<HandCard> _order = new();
 
@@ -65,7 +65,9 @@ public partial class HandRow : Control
     /// The card under the mouse, or null.
     /// </summary>
     public SnowTag? HoveredCard() =>
-        Under(GetViewport()) == this ? CardAt(GetLocalMousePosition().X)?.Reference : null;
+        Under(GetViewport()) == this
+            ? CardAt(GetLocalMousePosition().X)?.Reference.Component
+            : null;
 
     // The card at x, found without the spread or the gap, which would move the cards out from under the pointer.
     private HandCard CardAt(float x) =>
@@ -76,7 +78,7 @@ public partial class HandRow : Control
         CardAt(at.X) is { } card
             ? ProjectService.Instance.GameObjects.GrabFromHand(
                 this,
-                card.Reference,
+                card.Reference.Component,
                 GetGlobalTransformWithCanvas() * at
             )
             : default;
@@ -85,7 +87,9 @@ public partial class HandRow : Control
     {
         if (e is InputEventMouseButton button && GameObjects.IsSelectingPress(button))
         {
-            ProjectService.Instance.GameObjects.Press(CardAt(button.Position.X)?.Reference);
+            ProjectService.Instance.GameObjects.Press(
+                CardAt(button.Position.X)?.Reference.Component
+            );
             AcceptEvent();
         }
     }
@@ -135,24 +139,28 @@ public partial class HandRow : Control
 
     private void Sync(IWatchReader R)
     {
-        var hand = PlayerHandService.GetHand(R, Seat);
-        var ids = hand.Select(s => s.Id).ToHashSet();
+        var hand = PlayerHandService.GetHand(
+            R,
+            ProjectService.Instance.GameObjects.ShownStage(R),
+            Seat
+        );
+        var ids = hand.Select(ComponentState.ById.Of).ToList();
 
-        foreach (var id in _cards.Keys.Where(id => !ids.Contains(id)).ToList())
+        foreach (var id in _cards.Keys.Except(ids).ToList())
             RemoveCard(id);
 
         _order.Clear();
         for (int i = 0; i < hand.Count; i++)
         {
-            if (!_cards.TryGetValue(hand[i].Id, out var card))
-                card = AddCard(hand[i].Id);
+            if (!_cards.TryGetValue(ids[i], out var card))
+                card = AddCard(ids[i]);
             // Later cards draw over earlier ones.
             MoveChild(card, i);
             _order.Add(card);
         }
     }
 
-    private HandCard AddCard(SnowTag id)
+    private HandCard AddCard(StageKey id)
     {
         var card = _cardScene.Instantiate<HandCard>();
         AddChild(card);
@@ -162,7 +170,7 @@ public partial class HandRow : Control
         return card;
     }
 
-    private void RemoveCard(SnowTag id)
+    private void RemoveCard(StageKey id)
     {
         if (!_cards.Remove(id, out var card))
             return;
@@ -229,7 +237,7 @@ public partial class HandRow : Control
     /// <summary>
     /// The middle of the card showing <paramref name="id"/> as a point on the viewport.
     /// </summary>
-    public Vector2 MiddleOf(SnowTag id)
+    public Vector2 MiddleOf(StageKey id)
     {
         var card = _cards[id];
         return card.GetGlobalTransformWithCanvas() * (card.Size / 2);

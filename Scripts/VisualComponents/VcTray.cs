@@ -124,6 +124,7 @@ public partial class VcTray : VisualComponentGroup
                 new ComponentState
                 {
                     Id = Snowport.Clock.CreateTag(),
+                    Stage = Key.Stage,
                     PrototypeRef = _prototype.Id,
                 },
             ];

@@ -34,9 +34,15 @@ public record Selection : Atom
     public byte Player { get; init; }
 
     /// <summary>
-    /// Where it was made: empty for the table, or the dataset whose rows and columns it holds.
+    /// What view this selection lives in.
+    ///
+    /// <para>
     /// A player has one selection in each place, so each view undoes only its own.
+    /// </para>
     /// </summary>
+    /// <remarks>
+    /// Currently, the stage the table showed, or the dataset whose rows and columns it holds.
+    /// </remarks>
     public SnowTag Within { get; init; }
 
     /// <summary>The selected things.</summary>
@@ -50,8 +56,7 @@ public static class LocalSelection
 {
     /// <summary>
     /// The selection color to show each target in.
-    /// If <paramref name="within"/> is a SnowTag, gets the selection in that dataset
-    /// If <paramref name="within"/> is <see cref="SnowTag.Empty"/>, gets the selection for the table.
+    /// <paramref name="within"/> is the stage the table shows, or a dataset.
     ///
     /// <para>
     /// A target shows in the seat color of the player who selected it most recently,
@@ -78,54 +83,67 @@ public static class LocalSelection
     }
 
     /// <summary>
-    /// The local player's selection <paramref name="within"/> a dataset, or on the table by default.
+    /// The local player's selection <paramref name="within"/> a stage or a dataset.
     /// Null if they have not yet selected anything there.
     /// </summary>
-    public static Selection GetSelection(this IAtomReader R, SnowTag within = default) =>
+    public static Selection GetSelection(this IAtomReader R, SnowTag within) =>
         R.Get(Selection.ByWithin, within).FirstOrDefault(s => s.Player == Snowport.Clock.source);
 
     /// <summary>
-    /// The ids of the atoms of <paramref name="byId"/>'s type the local player has selected on the table.
+    /// The ids of the atoms of <paramref name="byId"/>'s type the local player has selected <paramref name="within"/> a place.
     /// </summary>
     /// <param name="byId">Names the atom type and its id type, which the call infers from it.</param>
-    public static IEnumerable<I> GetSelection<T, I>(this IAtomReader R, Id<T, I> byId)
+    public static IEnumerable<I> GetSelection<T, I>(
+        this IAtomReader R,
+        Id<T, I> byId,
+        SnowTag within
+    )
         where T : Atom
         where I : IComparable<I> =>
-        R.GetSelection()?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
+        R.GetSelection(within)?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
 
     /// <summary>
-    /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type on the table,
+    /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type <paramref name="within"/> a place,
     /// keeping everything else they have selected there.
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
-    public static void SetSelection<T, I>(this IAtomReader R, Id<T, I> byId, IEnumerable<I> ids)
+    public static void SetSelection<T, I>(
+        this IAtomReader R,
+        Id<T, I> byId,
+        IEnumerable<I> ids,
+        SnowTag within
+    )
         where T : Atom
-        where I : IComparable<I> => AtomService.Instance.Write(R.NewSelection(byId, ids));
+        where I : IComparable<I> => AtomService.Instance.Write(R.NewSelection(byId, ids, within));
 
     /// <summary>
-    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Id{T, I}, IEnumerable{I})"/> writes,
+    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Id{T, I}, IEnumerable{I}, SnowTag)"/> writes,
     /// or none when the selection wouldn't change.
     /// </summary>
     public static Selection[] NewSelection<T, I>(
         this IAtomReader R,
         Id<T, I> byId,
-        IEnumerable<I> ids
+        IEnumerable<I> ids,
+        SnowTag within
     )
         where T : Atom
         where I : IComparable<I>
     {
-        var old = R.GetSelection()?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
-        return R.NewSelection(old.Where(t => t.Type != typeof(T)).Concat(ids.Select(byId.Ref)));
+        var old = R.GetSelection(within)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
+        return R.NewSelection(
+            old.Where(t => t.Type != typeof(T)).Concat(ids.Select(byId.Ref)),
+            within
+        );
     }
 
     /// <summary>
-    /// Replaces the local player's whole selection <paramref name="within"/> a dataset, or on the table by default.
+    /// Replaces the local player's whole selection <paramref name="within"/> a stage or a dataset.
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
     public static void SetSelection(
         this IAtomReader R,
         IEnumerable<AtomRef> targets,
-        SnowTag within = default
+        SnowTag within
     )
     {
         AtomService.Instance.Write(R.NewSelection(targets, within));
@@ -138,7 +156,7 @@ public static class LocalSelection
     private static Selection[] NewSelection(
         this IAtomReader R,
         IEnumerable<AtomRef> targets,
-        SnowTag within = default
+        SnowTag within
     )
     {
         var current = R.GetSelection(within);

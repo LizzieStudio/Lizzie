@@ -36,9 +36,10 @@ public partial class SceneController : Node3D, ICommandView
 
     #region ICommandView
 
-    // The table's selection is always SnowTag.Empty.
-    // We should maybe change this, but it works for now.
-    public WatchableValue<SnowTag> SelectionScope { get; } = new(SnowTag.Empty);
+    /// <summary>
+    /// The table's selection is in the stage it shows.
+    /// </summary>
+    public SnowTag SelectionScope(IAtomReader R) => _gameObjects.ShownStage(R);
 
     /// <summary>
     /// The hovered component, which keys act on when nothing is selected.
@@ -47,9 +48,9 @@ public partial class SceneController : Node3D, ICommandView
     public IEnumerable<AtomRef> Hovered() =>
         _gameObjects.CursorMode is CursorMode.DragSelect or CursorMode.Spawn
         || _gameObjects.GetHoveredObject() is not { } hovered
-        || AtomService.Instance.Get(ComponentState.ById, hovered.Reference) == null
+        || hovered.State == null
             ? []
-            : [ComponentState.ById.Ref(hovered.Reference)];
+            : [ComponentState.ById.Ref(hovered.Key)];
 
     public IReadOnlyList<Command> Commands => TableCommands;
 
@@ -61,15 +62,18 @@ public partial class SceneController : Node3D, ICommandView
     #endregion
 
     /// <summary>
-    /// The table undoes its components, and what's selected on it.
+    /// The table undoes the components of the stage it shows, and what's selected there.
     /// </summary>
-    public bool UndoScope(Atom atom) =>
-        atom switch
+    public bool UndoScope(Atom atom)
+    {
+        var shown = _gameObjects.ShownStage(AtomService.Instance);
+        return atom switch
         {
-            ComponentState => true,
-            Selection s => s.Within == SnowTag.Empty,
+            ComponentState s => s.Stage == shown,
+            Selection s => s.Within == shown,
             _ => false,
         };
+    }
 
     #region Table commands
     // These act on the table rather than on atoms, so only the table offers them.

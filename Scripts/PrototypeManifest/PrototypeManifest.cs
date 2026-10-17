@@ -32,9 +32,6 @@ public partial class PrototypeManifest : Window, ICommandView
     private int _sortColumn = 0;
     private bool _sortAscending = true;
 
-    // Nothing is selected here (yet)
-    public WatchableValue<SnowTag> SelectionScope { get; } = new();
-
     /// <summary>Undo walks the edits to every prototype.</summary>
     public bool UndoScope(Atom atom) => atom is Prototype;
 
@@ -197,9 +194,12 @@ public partial class PrototypeManifest : Window, ICommandView
 
         var prototypes = R.Get(Prototype.Live).ToList();
 
-        // The Qty column.
+        // The Qty column, counted on the stage the table shows.
         // We filter a deck's cards so that they aren't counted.
-        var counts = R.Get(ComponentState.All)
+        var counts = R.Get(
+                ComponentState.ByStage,
+                ProjectService.Instance.GameObjects.ShownStage(R)
+            )
             .Where(s =>
                 !(
                     s.IsItem

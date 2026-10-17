@@ -86,9 +86,9 @@ public class DeckContainmentTests
     [Fact]
     public void ACardIsContainedByItsDeck()
     {
-        Assert.Equal([ComponentState.ById.Ref(Deck)], Top.Containers(R));
+        Assert.Equal([AtomRef.To(TheDeck)], Top.Containers(R));
         Assert.Equal(
-            new[] { Bottom, Middle, Top }.Select(c => ComponentState.ById.Ref(c.Id)).ToHashSet(),
+            new[] { Bottom, Middle, Top }.Select(AtomRef.To).ToHashSet(),
             TheDeck.Contents(R).ToHashSet()
         );
         Assert.Empty(Loose.Containers(R));

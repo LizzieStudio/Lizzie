@@ -139,24 +139,29 @@ public partial class DatasetEditor : Window, ICommandView
 
     #region ICommandView
 
-    /// <summary>The shown dataset.</summary>
-    public WatchableValue<SnowTag> SelectionScope { get; } = new();
+    /// <summary>The shown dataset. Setting it to empty opens the first one.</summary>
+    public WatchableValue<SnowTag> ShownDataSet { get; } = new();
+
+    public SnowTag SelectionScope(IAtomReader R) => ShownDataSet.Get(R);
 
     public IReadOnlyList<Command> Commands => _commands;
 
     /// <summary>
     /// Undo walks the shown dataset's edits, rows, columns, and cells, and what's selected in it.
     /// </summary>
-    public bool UndoScope(Atom atom) =>
-        DatasetRef != SnowTag.Empty
-        && (
-            atom is DataSet ds && ds.Id == DatasetRef
-            || atom is DataRow row && row.DataSetId == DatasetRef
-            || atom is DataColumn column && column.DataSetId == DatasetRef
-            || atom is DataCell cell
-                && AtomService.Instance.Get(DataRow.ById, cell.Id.Row)?.DataSetId == DatasetRef
-            || atom is Selection s && s.Within == DatasetRef
-        );
+    public bool UndoScope(Atom atom)
+    {
+        var shown = ShownDataSet.Value;
+        return shown != SnowTag.Empty
+            && (
+                atom is DataSet ds && ds.Id == shown
+                || atom is DataRow row && row.DataSetId == shown
+                || atom is DataColumn column && column.DataSetId == shown
+                || atom is DataCell cell
+                    && AtomService.Instance.Get(DataRow.ById, cell.Id.Row)?.DataSetId == shown
+                || atom is Selection s && s.Within == shown
+            );
+    }
 
     #endregion
 
@@ -254,13 +259,13 @@ public partial class DatasetEditor : Window, ICommandView
     {
         // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
         // so the editor stays on it, where redo brings it back.
-        var ds = SelectionScope.TryGet(R, out var id)
-            ? R.Get(DataSet.ById, id)
-            : R.Get(DataSet.All).FirstOrDefault();
+        var id = ShownDataSet.Get(R);
+        var ds =
+            id != SnowTag.Empty ? R.Get(DataSet.ById, id) : R.Get(DataSet.All).FirstOrDefault();
         if (ds != null)
-            SelectionScope.Set(ds.Id);
+            ShownDataSet.Value = ds.Id;
 
-        _datasetList.SelectedDataSet = DatasetRef;
+        _datasetList.SelectedDataSet = ShownDataSet.Value;
         _currentDataSet = ds;
 
         if (ds == null)
@@ -268,9 +273,6 @@ public partial class DatasetEditor : Window, ICommandView
         else
             ShowDataSet(R, ds);
     }
-
-    // The shown dataset's id, or empty.
-    private SnowTag DatasetRef => SelectionScope.TryGet(out var id) ? id : SnowTag.Empty;
 
     private void ShowDataSet(IAtomReader R, DataSet ds)
     {
@@ -360,18 +362,9 @@ public partial class DatasetEditor : Window, ICommandView
         _newButton.Pressed += OnNewDatasetPressed;
 
         _datasetList = GetNode<DataSetSelector>("%DatasetList");
-        _datasetList.DataSetSelected += SetDatasetById;
+        _datasetList.DataSetSelected += id => ShownDataSet.Value = id;
 
         InitializeNewDatasetDialog();
-    }
-
-    /// <summary>Opens the editor on a specific dataset. Empty opens the first one.</summary>
-    public void SetDatasetById(SnowTag id)
-    {
-        if (id == SnowTag.Empty)
-            SelectionScope.Unset();
-        else
-            SelectionScope.Set(id);
     }
 
     /// <summary>
@@ -435,7 +428,7 @@ public partial class DatasetEditor : Window, ICommandView
         var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = name };
         AtomService.Instance.Write(ds);
 
-        SetDatasetById(ds.Id);
+        ShownDataSet.Value = ds.Id;
     }
 
     public event EventHandler Closed;
@@ -778,7 +771,8 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
-    private void AddRow() => DataSetCommands.AddRow.Run([DataSet.ById.Ref(DatasetRef)], 1, this);
+    private void AddRow() =>
+        DataSetCommands.AddRow.Run([DataSet.ById.Ref(ShownDataSet.Value)], 1, this);
 
     private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
@@ -879,7 +873,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        var columns = AtomService.Instance.GetColumns(DatasetRef);
+        var columns = AtomService.Instance.GetColumns(ShownDataSet.Value);
         int from = columns.FindIndex(c => c.Id == columnId);
         if (from < 0)
             return;
@@ -906,16 +900,16 @@ public partial class DatasetEditor : Window, ICommandView
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
     private ImmutableHashSet<AtomRef> MySelection() =>
-        DatasetRef == SnowTag.Empty
+        ShownDataSet.Value == SnowTag.Empty
             ? ImmutableHashSet<AtomRef>.Empty
-            : AtomService.Instance.GetSelection(DatasetRef)?.Targets
+            : AtomService.Instance.GetSelection(ShownDataSet.Value)?.Targets
                 ?? ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
     private void Select(IEnumerable<AtomRef> targets)
     {
-        if (DatasetRef != SnowTag.Empty)
-            AtomService.Instance.SetSelection(targets, DatasetRef);
+        if (ShownDataSet.Value != SnowTag.Empty)
+            AtomService.Instance.SetSelection(targets, ShownDataSet.Value);
     }
 
     /// <summary>

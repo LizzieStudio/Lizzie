@@ -22,6 +22,11 @@ public sealed record ProjectGameSettings : Atom
     public Color TableColor { get; init; } = new Color(0.28f, 0.60f, 0.41f, 1f);
 
     /// <summary>
+    /// The blueprint <see cref="Stage"/> a game starts from.
+    /// </summary>
+    public SnowTag BlueprintRef { get; init; } = SnowTag.Empty;
+
+    /// <summary>
     /// The rotation steps to choose from, in degrees, in the order the rotation-step dropdowns list them.
     /// </summary>
     public static readonly ImmutableArray<float> RotationSteps = [15, 30, 45, 60, 90, 180];

@@ -42,11 +42,32 @@ public partial class GameObjects : Node3D
     private GameController _gameController;
 
     /// <summary>
-    /// Holds the nodes for the current game's components, and any spawn previews.
+    /// The stage the local player picked to show, or <see cref="SnowTag.Empty"/> for the game.
+    /// </summary>
+    public WatchableValue<SnowTag> PickedStage { get; } = new();
+
+    /// <summary>
+    /// The stage that's showing locally. A Watch that reads it through <paramref name="R"/> runs again when either changes.
+    /// </summary>
+    /// <remarks>
+    /// Usually shows the one the user picked,
+    /// but if the picked stage isn't either the game or a blueprint of the game, it falls back to the game.
+    /// </remarks>
+    public SnowTag ShownStage(IAtomReader R)
+    {
+        var game = R.Get(CurrentGame.Only).StageRef;
+        var picked = PickedStage.Get(R);
+        return Stage.Chain(R, game).Any(s => s.Id == picked) ? picked : game;
+    }
+
+    /// <summary>
+    /// Holds the nodes for the shown stage's components, and any spawn previews.
     /// </summary>
     private Table _table;
 
-    /// <summary>The current game's components.</summary>
+    /// <summary>
+    /// The shown stage's components.
+    /// </summary>
     private IReadOnlyList<VisualComponentBase> ComponentNodes => _table.Nodes;
 
     public CursorMode CursorMode { get; private set; }
@@ -87,7 +108,7 @@ public partial class GameObjects : Node3D
         _held = new HeldDrag
         {
             Group = R.Open(DragCommands.Pickup, atoms.Concat(alongside)),
-            Components = atoms.Select(r => r.Id).ToArray(),
+            Components = atoms.Select(ComponentState.ById.Of).ToArray(),
         };
         CursorMode = CursorMode.Drag;
         _heldOverHand = overHand;
@@ -148,6 +169,17 @@ public partial class GameObjects : Node3D
             )
         );
         _tableMouseControl.GuiInput += OnTableInput;
+
+        AtomService.Instance.Watch(this, SyncShownStage);
+    }
+
+    /// <summary>
+    /// Replaces the table when the shown stage changes.
+    /// </summary>
+    private void SyncShownStage(IWatchReader R)
+    {
+        if (ShownStage(R) != _table.StageRef)
+            ResetTable();
     }
 
     public override void _Notification(int notification)
@@ -165,7 +197,12 @@ public partial class GameObjects : Node3D
 
     private Table CreateTable()
     {
-        var table = new Table { Name = "Table", TextureFactory = TextureFactory };
+        var table = new Table
+        {
+            Name = "Table",
+            TextureFactory = TextureFactory,
+            StageRef = ShownStage(AtomService.Instance),
+        };
         table.Changed += () => _tableChanged = true;
         table.ComponentRemoved += OnComponentRemoved;
         AddChild(table);
@@ -419,11 +456,18 @@ public partial class GameObjects : Node3D
     #region Selection
     /// <summary>The components the local player has selected, read from their selection atom.</summary>
     private HashSet<SnowTag> GetSelection() =>
-        AtomService.Instance.GetSelection(ComponentState.ById).ToHashSet();
+        AtomService
+            .Instance.GetSelection(ComponentState.ById, _table.StageRef)
+            .Select(k => k.Component)
+            .ToHashSet();
 
     /// <summary>Replaces the local player's selected components.</summary>
     public void SetSelection(IEnumerable<SnowTag> components) =>
-        AtomService.Instance.SetSelection(ComponentState.ById, components);
+        AtomService.Instance.SetSelection(
+            ComponentState.ById,
+            components.Select(ShownKey),
+            _table.StageRef
+        );
 
     /// <summary>
     /// Previews a box selection on the nodes. Nothing is written until <see cref="EndDragSelection"/>.
@@ -456,7 +500,10 @@ public partial class GameObjects : Node3D
     /// </summary>
     private void UpdateStackingHeights()
     {
-        var table = GetNotDraggingObjects().ToArray();
+        var table = Nodes(
+                AtomService.Instance.Get(ComponentState.ByContainer, ShownKey(SnowTag.Empty))
+            )
+            .ToArray();
         var floors = Stacking.Floors(table, out _tableTops);
 
         for (int i = 0; i < table.Length; i++)
@@ -570,7 +617,11 @@ public partial class GameObjects : Node3D
             var draw = ((VisualComponentGroup)hit.Component).DragDraw();
             StartDrag(
                 draw,
-                AtomService.Instance.NewSelection(ComponentState.ById, draw.Select(d => d.Id))
+                AtomService.Instance.NewSelection(
+                    ComponentState.ById,
+                    draw.Select(ComponentState.ById.Of),
+                    _table.StageRef
+                )
             );
         }
         else if (_dragPlane.Project(at) is { } cursor)
@@ -742,7 +793,7 @@ public partial class GameObjects : Node3D
                 .Select(c =>
                 {
                     // In the hand's frame, right on screen is +X and down is +Z.
-                    var offset = (row.MiddleOf(c.Reference) - press) / row.PixelsPerCm;
+                    var offset = (row.MiddleOf(c.Key) - press) / row.PixelsPerCm;
                     return ComponentState.Of(c) with
                     {
                         Position = new Vector3(offset.X, 0, offset.Y),
@@ -839,11 +890,13 @@ public partial class GameObjects : Node3D
     private IEnumerable<VisualComponentBase> GetDraggingObjects()
     {
         var R = AtomService.Instance;
-        return Nodes(R.Cursors().SelectMany(c => R.Get(ComponentState.ByContainer, c)));
+        return Nodes(R.Cursors().SelectMany(c => R.Get(ComponentState.ByContainer, ShownKey(c))));
     }
 
-    private IEnumerable<VisualComponentBase> GetNotDraggingObjects() =>
-        Nodes(AtomService.Instance.Get(ComponentState.ByContainer, SnowTag.Empty));
+    /// <summary>
+    /// The key of <paramref name="id"/> in the shown stage.
+    /// </summary>
+    private StageKey ShownKey(SnowTag id) => new(_table.StageRef, id);
 
     /// <summary>
     /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.
@@ -875,7 +928,7 @@ public partial class GameObjects : Node3D
 
         var R = AtomService.Instance;
         var cards = PlayerHandService.Inserted(
-            PlayerHandService.GetHand(R, seat),
+            PlayerHandService.GetHand(R, _table.StageRef, seat),
             held.Cards(R).ToList(),
             index,
             R.HandOf(seat),
@@ -897,12 +950,12 @@ public partial class GameObjects : Node3D
     /// in their stacking order, snapped onto a card or deck they're dropped near.
     /// A token that lands exactly on a deck goes into it.
     /// </summary>
-    private static ComponentState[] OnTable(List<ComponentState> dropped)
+    private ComponentState[] OnTable(List<ComponentState> dropped)
     {
         var R = AtomService.Instance;
         var ordered = dropped.OrderBy(s => s.ZOrder).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
-        var decks = R.Get(ComponentState.ByContainer, SnowTag.Empty)
+        var decks = R.Get(ComponentState.ByContainer, ShownKey(SnowTag.Empty))
             .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
             .ToList();
 
@@ -946,10 +999,10 @@ public partial class GameObjects : Node3D
     /// If a candidate VcToken or deck is found, this offset will snap to a stacked position.
     /// If no candidate is found, returns (0, 0).
     /// </summary>
-    private static (int X, int Z) SnapDelta(List<ComponentState> dropped)
+    private (int X, int Z) SnapDelta(List<ComponentState> dropped)
     {
         var R = AtomService.Instance;
-        var targets = R.Get(ComponentState.ByContainer, SnowTag.Empty)
+        var targets = R.Get(ComponentState.ByContainer, ShownKey(SnowTag.Empty))
             .Where(s =>
                 R.Kind(s)
                     is VisualComponentBase.VisualComponentType.Token

@@ -2,74 +2,46 @@ using System.Collections.Generic;
 using Lizzie.Replication.Machinery;
 
 /// <summary>
-/// <para>A local value that a Watch can read like an atom.</para>
+/// A local value that a Watch can read and react to like an atom.
 ///
-/// A Watch that reads a <see cref="T"/> through its <see cref="IAtomReader"/> runs again at the end of the frame after the value changes.
-/// It isn't synchronized during multiplayer or saved with the project. It starts unset.
+/// <para>
+/// A Watch that reads it with <see cref="Get"/> runs again at the end of the frame after the value changes.
+/// It isn't synchronized during multiplayer or saved with the project. It starts as <c>default</c>.
+/// </para>
 /// </summary>
 public sealed class WatchableValue<T>
 {
     private T _value;
-    private bool _set;
 
     // The watchers that read it since it last changed.
     private readonly HashSet<Watcher> _readers = [];
 
-    public WatchableValue() { }
-
-    public WatchableValue(T value)
+    /// <summary>
+    /// The value, without subscribing to changes.
+    /// Setting it runs the Watches that read it again.
+    /// </summary>
+    public T Value
     {
-        _value = value;
-        _set = true;
-    }
-
-    public void Set(T value)
-    {
-        if (!_set || !EqualityComparer<T>.Default.Equals(_value, value))
+        get => _value;
+        set
         {
+            if (EqualityComparer<T>.Default.Equals(_value, value))
+                return;
             _value = value;
-            _set = true;
-            Changed();
-        }
-    }
-
-    public void Unset()
-    {
-        if (_set)
-        {
-            _value = default;
-            _set = false;
-            Changed();
+            foreach (var watcher in _readers)
+                AtomService.Instance?.Machinery().MarkDirty(watcher);
+            // Readers will run again, adding them back if they read the value again.
+            _readers.Clear();
         }
     }
 
     /// <summary>
-    /// Get the value. Returns false when unset.
-    ///
-    /// <para>Use <see cref="TryGet(IAtomReader R, out T value)"/> to subscribe to changes.</para>
+    /// The value. When <paramref name="R"/> is a Watch's reader, subscribes to changes.
     /// </summary>
-    public bool TryGet(out T value)
-    {
-        value = _value;
-        return _set;
-    }
-
-    /// <summary>
-    /// Get the value. Returns false when unset.
-    /// When <paramref name="R"/> is a Watch's reader, subscribes to changes.
-    /// </summary>
-    public bool TryGet(IAtomReader R, out T value)
+    public T Get(IAtomReader R)
     {
         if (R is Watcher watcher)
             _readers.Add(watcher);
-        return TryGet(out value);
-    }
-
-    private void Changed()
-    {
-        foreach (var watcher in _readers)
-            AtomService.Instance?.Machinery().MarkDirty(watcher);
-        // Readers will run again, adding them back if they read the value again.
-        _readers.Clear();
+        return _value;
     }
 }

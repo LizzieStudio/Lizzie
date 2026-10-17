@@ -63,7 +63,11 @@
                 },
                 "additionalProperties": false
               },
-              "containerRef": true
+              "containerRef": true,
+              "stage": true,
+              "removed": {
+                "type": "boolean"
+              }
             },
             "required": [
               "id"
@@ -219,6 +223,7 @@
                 "type": "integer"
               },
               "tableColor": true,
+              "blueprintRef": true,
               "rotationStepIndex": {
                 "type": "integer"
               },

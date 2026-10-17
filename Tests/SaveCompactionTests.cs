@@ -29,6 +29,7 @@ public class SaveCompactionTests
         atom switch
         {
             ComponentState s => s.Id,
+            Stage s => s.Id,
             Prototype p => p.Id,
             DataSet d => d.Id,
             DataRow r => r.Id,
@@ -60,6 +61,55 @@ public class SaveCompactionTests
     [Fact]
     public void ADeletedPrototypeAComponentUsesIsKept() =>
         AssertKept([Component(1) with { PrototypeRef = Tag(2) }, DeletedPrototype(2)], 1, 2);
+
+    [Fact]
+    public void ABlueprintKeepsItsComponents() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag(1) },
+                Component(2) with
+                {
+                    Stage = Tag(1),
+                },
+                Component(3) with
+                {
+                    Stage = Tag(1),
+                    Removed = true,
+                },
+            ],
+            1,
+            2,
+            3
+        );
+
+    [Fact]
+    public void AGameIsDroppedWithItsComponents() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag(1) },
+                new Stage
+                {
+                    Id = Tag(2),
+                    ParentRef = Tag(1),
+                    IsGame = true,
+                },
+                Component(3) with
+                {
+                    Stage = Tag(1),
+                },
+                Component(3) with
+                {
+                    Stage = Tag(2),
+                    X = 5,
+                },
+                Component(4) with
+                {
+                    Stage = Tag(2),
+                },
+            ],
+            1,
+            3
+        );
 
     [Fact]
     public void ADataSetKeepsItsRows() =>

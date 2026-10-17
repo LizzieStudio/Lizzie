@@ -224,7 +224,9 @@ public static class AtomReaderExtensions
     /// The cards in a deck, top first.
     /// </summary>
     public static List<ComponentState> TokensOn(this IAtomReader R, ComponentState deck) =>
-        R.Get(ComponentState.ByContainer, deck.Id).OrderByDescending(s => s.ZOrder).ToList();
+        R.Get(ComponentState.ByContainer, deck.In(deck.Id))
+            .OrderByDescending(s => s.ZOrder)
+            .ToList();
 
     /// <summary>
     /// The containers each seat drags with.
@@ -272,7 +274,7 @@ public static class AtomReaderExtensions
     /// </summary>
     public static bool IsInDeck(this IAtomReader R, ComponentState c) =>
         !c.IsOnTable
-        && R.Get(ComponentState.ById, c.ContainerRef) is { } container
+        && R.Get(ComponentState.ById, c.In(c.ContainerRef)) is { } container
         && R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
 
     /// <summary>

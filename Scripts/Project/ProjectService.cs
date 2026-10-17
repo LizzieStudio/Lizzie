@@ -116,6 +116,7 @@ public partial class ProjectService : Node
         CurrentProject = new Project { Filename = filename };
         HasUnsavedChanges = false;
         EnsureSeatContainers();
+        EnsureGame();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
     }
 
@@ -194,6 +195,7 @@ public partial class ProjectService : Node
         SeedTagsFromLog();
         EndBulkLoad();
         EnsureSeatContainers();
+        EnsureGame();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
 
         HasUnsavedChanges = false;
@@ -349,6 +351,40 @@ public partial class ProjectService : Node
             return;
 
         AtomService.Instance.WriteAdmin(settings with { Players = builder.ToImmutable() });
+    }
+
+    /// <summary>
+    /// Starts a game on the project's blueprint, unless one is being played.
+    /// A project without a blueprint gets an empty one.
+    /// The host or a solo player runs it after a new game or a load.
+    /// </summary>
+    private void EnsureGame()
+    {
+        if (CurrentProject == null)
+            return;
+        if (MultiplayerManager.Instance?.HasAuthority() == false)
+            return;
+        if (R.Get(Stage.ById, R.Get(CurrentGame.Only).StageRef) is { IsGame: true })
+            return;
+
+        var changes = new List<IChange>();
+        var settings = R.Get(ProjectGameSettings.Only);
+        if (R.Get(Stage.ById, settings.BlueprintRef) == null)
+        {
+            var setup = new Stage { Id = Snowport.Clock.CreateTag(), Name = "Setup" };
+            settings = settings with { BlueprintRef = setup.Id };
+            changes.AddRange([setup, settings]);
+        }
+
+        var game = new Stage
+        {
+            Id = Snowport.Clock.CreateTag(),
+            Name = "Game",
+            ParentRef = settings.BlueprintRef,
+            IsGame = true,
+        };
+        changes.AddRange([game, R.Get(CurrentGame.Only) with { StageRef = game.Id }]);
+        AtomService.Instance.WriteAdmin(changes);
     }
 
     public GameObjects GameObjects { get; set; }

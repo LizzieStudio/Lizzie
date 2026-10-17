@@ -64,13 +64,13 @@ public enum Context
 public interface ICommandView
 {
     /// <summary>
-    /// <para>The atom that this view is operating on, like a dataset editor's currently open dataset.</para>
+    /// <para>The atom that this view is operating on, like a dataset editor's currently open dataset, or the stage the table shows.</para>
     ///
-    /// <see cref="SnowTag.Empty"/> is used for the table.
-    /// Otherwise, use the <see cref="SnowTag"/> of the atom.
-    /// Leave it unset in a view without a selection, or while there isn't an atom at the moment.
+    /// Selections in the view are made within it.
+    /// A view without a selection, or without an atom at the moment, gives <see cref="SnowTag.Empty"/>.
+    /// A Watch that reads it through <paramref name="R"/> runs again when it changes.
     /// </summary>
-    WatchableValue<SnowTag> SelectionScope { get; }
+    SnowTag SelectionScope(IAtomReader R) => SnowTag.Empty;
 
     /// <summary>
     /// The hovered target that keys act on when nothing is selected.

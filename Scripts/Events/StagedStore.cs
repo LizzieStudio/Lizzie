@@ -206,5 +206,15 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     /// <summary>
     /// The atoms as written, so a save never holds what a stage only inherits.
     /// </summary>
-    public IEnumerable<Atom> SavedAtoms() => _raw.SavedAtoms();
+    /// <remarks>.
+    /// A Removed atom is left out when its parent stage shows nothing beneath it,
+    /// since keeping a removal isn't necessary when it's not overriding anything.
+    /// </remarks>
+    public IEnumerable<Atom> SavedAtoms() =>
+        _raw.SavedAtoms()
+            .Where(a =>
+                a is not T { Removed: true } removed
+                || _parents.TryGetValue(removed.Stage, out var parent)
+                    && _resolved.Find(_byId.Of(removed) with { Stage = parent }).Value != null
+            );
 }

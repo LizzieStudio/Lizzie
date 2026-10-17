@@ -20,13 +20,13 @@ public sealed partial class HeldDrag : RefCounted
     /// <summary>
     /// Every component the gesture picked up.
     /// </summary>
-    public IReadOnlyList<SnowTag> Components { get; init; } = [];
+    public IReadOnlyList<StageKey> Components { get; init; } = [];
 
     /// <summary>
     /// The atoms of the components it holds.
     /// </summary>
     public IEnumerable<ComponentState> Atoms(IAtomReader R) =>
-        Components.Select(id => R.Get(ComponentState.ById, id)).Where(s => s != null);
+        Components.Select(key => R.Get(ComponentState.ById, key)).Where(s => s != null);
 
     /// <summary>
     /// The atoms of the held VcTokens, which can go into a hand.

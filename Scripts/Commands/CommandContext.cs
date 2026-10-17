@@ -73,10 +73,8 @@ public sealed class CommandContext
         if (view == null)
             return new();
 
-        bool scoped = view.SelectionScope.TryGet(R, out var scope);
-        var selected = scoped
-            ? R.GetSelection(scope)?.Targets ?? ImmutableHashSet<AtomRef>.Empty
-            : ImmutableHashSet<AtomRef>.Empty;
+        var scope = view.SelectionScope(R);
+        var selected = R.GetSelection(scope)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
         var chosen = selected.IsEmpty && keys ? view.Hovered().ToImmutableHashSet() : selected;
 
         IEnumerable<AtomRef> Related(
@@ -103,7 +101,7 @@ public sealed class CommandContext
             Contents = Followed(t => R.Resolve(t)?.Contents(R) ?? []),
             Containers = Followed(t => R.Resolve(t)?.Containers(R) ?? []),
             Referenced = Related(chosen, t => R.Resolve(t)?.Referenced(R) ?? []),
-            View = scoped && scope != SnowTag.Empty ? [DataSet.ById.Ref(scope)] : [],
+            View = scope != SnowTag.Empty ? [DataSet.ById.Ref(scope)] : [],
             Local = view.Commands,
         };
     }

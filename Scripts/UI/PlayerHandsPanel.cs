@@ -40,6 +40,7 @@ public partial class PlayerHandsPanel : Panel
     private void Sync(IWatchReader R)
     {
         var players = R.Get(ProjectGameSettings.Only).Players;
+        var stage = ProjectService.Instance.GameObjects.ShownStage(R);
         int localSeat = R.LocalSeat();
 
         // the local player is shown in HandManager, not here
@@ -60,7 +61,7 @@ public partial class PlayerHandsPanel : Panel
             _playerHandsContainer.MoveChild(row.Row, i);
 
             var player = players[seat];
-            row.Label.Text = $"{player.Name}  ({PlayerHandService.GetHand(R, seat).Count})";
+            row.Label.Text = $"{player.Name}  ({PlayerHandService.GetHand(R, stage, seat).Count})";
             row.Label.AddThemeColorOverride("font_color", player.Color);
         }
     }

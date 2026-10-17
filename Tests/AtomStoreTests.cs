@@ -10,6 +10,9 @@ using Xunit;
 /// </summary>
 public class AtomStoreTests
 {
+    // components by their tag alone, as if they had no stage
+    private static readonly Id<ComponentState, SnowTag> ById = new(s => s.Id);
+
     private static readonly Group<ComponentState, SnowTag> ByContainer = new(s => s.ContainerRef);
 
     // a group only components in a container are in
@@ -18,7 +21,7 @@ public class AtomStoreTests
     );
 
     private readonly EventLog _log = new();
-    private readonly AtomStore<ComponentState, SnowTag> _store = new(ComponentState.ById);
+    private readonly AtomStore<ComponentState, SnowTag> _store = new(ById);
     private long _clock;
 
     private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
@@ -201,7 +204,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 6))),
-            new Touch(ComponentState.ById, Tag(1), false),
+            new Touch(ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(6), false),
             new Touch(ByContainer, Tag(5), true),
@@ -217,7 +220,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 5) with { X = 10 })),
-            new Touch(ComponentState.ById, Tag(1), false),
+            new Touch(ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false)
         );
     }
@@ -230,7 +233,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Unset(1)),
-            new Touch(ComponentState.ById, Tag(1), false),
+            new Touch(ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(5), true)
         );
@@ -243,7 +246,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 5))),
-            new Touch(ComponentState.ById, Tag(1), false),
+            new Touch(ById, Tag(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(5), true)
         );
@@ -256,7 +259,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 6))),
-            new Touch(ComponentState.ById, Tag(1), false)
+            new Touch(ById, Tag(1), false)
         );
     }
 }

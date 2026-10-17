@@ -5,24 +5,43 @@ using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
-/// A component's full replicated state. Every component write carries all of it.
+/// A component's full replicated state in one <see cref="Stage"/>.
 /// </summary>
 [JsonName("ComponentState")]
-public record ComponentState : Atom
+public record ComponentState : StagedAtom
 {
-    public static readonly Id<ComponentState, SnowTag> ById = new(r => r.Id);
+    public static readonly StagedId<ComponentState> ById = new(r => r.Id);
 
     /// <summary>
     /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
-    public static readonly All<ComponentState> All = new();
+    /// <summary>
+    /// The components each stage shows.
+    /// </summary>
+    public static readonly Group<ComponentState, SnowTag> ByStage = new(s => s.Stage);
 
     /// <summary>
-    /// The components in each container, by <see cref="ContainerRef"/>. <see cref="SnowTag.Empty"/> holds the ones on the table.
+    /// The components in each container of a stage, by <see cref="ContainerRef"/>.
+    /// <see cref="SnowTag.Empty"/> holds the ones on the table.
     /// </summary>
-    public static readonly Group<ComponentState, SnowTag> ByContainer = new(s => s.ContainerRef);
+    public static readonly Group<ComponentState, StageKey> ByContainer = new(s =>
+        s.In(s.ContainerRef)
+    );
+
+    /// <summary>
+    /// The components each stage wrote itself, rather than inherited.
+    /// </summary>
+    public static readonly Written<ComponentState> WrittenIn = new();
+
+    /// <summary>
+    /// The key of the component <paramref name="id"/> in this component's stage.
+    /// </summary>
+    /// <remarks>
+    /// This is useful when dealing with containers, since you can get the contents in the container's stage.
+    /// </remarks>
+    public StageKey In(SnowTag id) => new(Stage, id);
 
     /// <summary>
     /// The state last written for a component.
@@ -38,6 +57,7 @@ public record ComponentState : Atom
         new()
         {
             Id = c.Reference,
+            Stage = c.Key.Stage,
             PrototypeRef = c.PrototypeRef,
             Position = c.Position,
             Rotation = c.Rotation,
@@ -131,7 +151,7 @@ public record ComponentState : Atom
     /// Any component used as a <see cref="ContainerRef"/> gets its contents here without changes.
     /// </remarks>
     public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
-        R.Get(ByContainer, Id).Select(c => ById.Ref(c.Id));
+        R.Get(ByContainer, In(Id)).Select(AtomRef.To);
 
     /// <summary>
     /// The deck it's on or the bag it's in.
@@ -141,8 +161,8 @@ public record ComponentState : Atom
     /// </remarks>
     public override IEnumerable<AtomRef> Containers(IAtomReader R) =>
         // A hand or a cursor isn't a component, so it isn't found.
-        !IsOnTable && R.Get(ById, ContainerRef) is { } container
-            ? [ById.Ref(container.Id)]
+        !IsOnTable && R.Get(ById, In(ContainerRef)) is { } container
+            ? [AtomRef.To(container)]
             : [];
 
     /// <summary>

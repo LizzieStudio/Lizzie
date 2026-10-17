@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 /// <summary>
 /// A blueprint or a game being played.
 /// </summary>
@@ -29,6 +31,15 @@ public sealed record Stage : Atom
     public bool IsGame { get; init; }
 
     public bool Deleted { get; init; }
+
+    /// <summary>
+    /// The stage <paramref name="id"/> and the stages it builds on, nearest first.
+    /// </summary>
+    public static IEnumerable<Stage> Chain(IAtomReader R, SnowTag id)
+    {
+        for (var stage = R.Get(ById, id); stage != null; stage = R.Get(ById, stage.ParentRef))
+            yield return stage;
+    }
 }
 
 /// <summary>

@@ -18,9 +18,12 @@ public partial class HandCard : PanelContainer
         return theme;
     }
 
-    private SnowTag _reference;
+    private StageKey _reference;
 
-    public SnowTag Reference
+    /// <summary>
+    /// The card's component atom.
+    /// </summary>
+    public StageKey Reference
     {
         get => _reference;
         set
@@ -72,7 +75,7 @@ public partial class HandCard : PanelContainer
     private void SyncSelection(IWatchReader R)
     {
         var target = ComponentState.ById.Ref(Reference);
-        var colors = R.SelectionColors(SnowTag.Empty);
+        var colors = R.SelectionColors(Reference.Stage);
         SelectionHighlight.Outline(this, "panel", colors, target);
     }
 

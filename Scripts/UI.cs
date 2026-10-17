@@ -234,7 +234,7 @@ public partial class UI : CanvasLayer
         _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
         _datasetEditor.Closed += DatasetEditorOnClosed;
         _modalDialogs.AddChild(_datasetEditor);
-        _datasetEditor.SetDatasetById(e.DatasetRef);
+        _datasetEditor.ShownDataSet.Value = e.DatasetRef;
         if (e.SelectedRowRef != SnowTag.Empty)
             _datasetEditor.RevealRow(e.SelectedRowRef);
     }

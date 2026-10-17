@@ -309,6 +309,25 @@ public class StagedStoreTests
     }
 
     [Fact]
+    public void ATombstoneOverItsParentsAtomIsSaved()
+    {
+        Write(StageOf(1), StageOf(2, parent: 1));
+        var tombstone = PieceOf(2, 10, removed: true);
+        Write(PieceOf(1, 10, x: 5), tombstone);
+
+        Assert.Contains(tombstone, _store.SavedAtoms());
+    }
+
+    [Fact]
+    public void ATombstoneOverNothingIsNotSaved()
+    {
+        Write(StageOf(1), StageOf(2, parent: 1));
+        Write(PieceOf(1, 10, removed: true), PieceOf(2, 11, removed: true));
+
+        Assert.Empty(_store.SavedAtoms());
+    }
+
+    [Fact]
     public void ACycleOfParentsEndsTheChain()
     {
         Write(StageOf(1, parent: 2), StageOf(2, parent: 1));

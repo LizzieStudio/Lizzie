@@ -48,9 +48,6 @@ public partial class ImageManager : Window, ICommandView
         AtomService.Instance.Watch(this, Sync);
     }
 
-    // Nothing is selected here
-    public WatchableValue<SnowTag> SelectionScope { get; } = new();
-
     /// <summary>Undo walks the edits to every image.</summary>
     public bool UndoScope(Atom atom) => atom is ImageAsset;
 

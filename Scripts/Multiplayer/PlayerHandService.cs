@@ -58,15 +58,17 @@ public static class PlayerHandService
     }
 
     /// <summary>
-    /// Returns the cards in a given seat's hand, ordered by their ZOrder.
+    /// Returns the cards in a given seat's hand in a stage, ordered by their ZOrder.
     /// Returns an empty list for observer seats.
     /// </summary>
-    public static IReadOnlyList<ComponentState> GetHand(IAtomReader R, int seatIndex)
+    public static IReadOnlyList<ComponentState> GetHand(IAtomReader R, SnowTag stage, int seatIndex)
     {
         var container = R.HandOf(seatIndex);
         if (container == SnowTag.Empty)
             return [];
 
-        return R.Get(ComponentState.ByContainer, container).OrderBy(s => s.ZOrder).ToList();
+        return R.Get(ComponentState.ByContainer, new StageKey(stage, container))
+            .OrderBy(s => s.ZOrder)
+            .ToList();
     }
 }

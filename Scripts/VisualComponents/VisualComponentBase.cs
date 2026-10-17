@@ -40,8 +40,7 @@ public abstract partial class VisualComponentBase : Area3D
 
         // Normal nodes never change, since the Table replaces the node when they do.
         // Previews have no atom and keep their own.
-        var atom = AtomService.Instance.Get(ComponentState.ById, Reference);
-        if (atom != null)
+        if (State is { } atom)
         {
             PrototypeRef = atom.PrototypeRef;
             Card = atom.Card;
@@ -56,13 +55,14 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>Shows which players have this component selected.</summary>
     private void SyncSelection(IWatchReader R)
     {
-        var target = ComponentState.ById.Ref(Reference);
+        var key = Key;
+        var target = ComponentState.ById.Ref(key);
         var local = Snowport.Clock.source;
-        var selection = R.GetSelection()?.Targets;
+        var selection = R.GetSelection(key.Stage)?.Targets;
         _isMine = selection?.Contains(target) == true;
         _localColor = R.SeatColor(local);
         _nothingSelected = selection?.IsEmpty != false;
-        var other = R.Get(Selection.ByWithin, SnowTag.Empty)
+        var other = R.Get(Selection.ByWithin, key.Stage)
             .Where(s => s.Player != local && s.Targets.Contains(target))
             .MaxBy(R.Version);
         _othersColor = other == null ? null : R.SeatColor(other.Player);
@@ -155,7 +155,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     private void SyncState(IWatchReader R)
     {
-        var s = R.Get(ComponentState.ById, Reference);
+        var s = R.Get(ComponentState.ById, Key);
         if (s == null)
             return;
 
@@ -258,7 +258,12 @@ public abstract partial class VisualComponentBase : Area3D
     /// The component's atom, or null for a node without one, such as a spawn preview.
     /// Also null between its atom being unset and the table removing it at the end of the frame.
     /// </summary>
-    public ComponentState State => AtomService.Instance.Get(ComponentState.ById, Reference);
+    public ComponentState State => AtomService.Instance.Get(ComponentState.ById, Key);
+
+    /// <summary>
+    /// The id of the component atom this node shows, in the stage its table shows.
+    /// </summary>
+    public StageKey Key => new(OwningTable?.StageRef ?? SnowTag.Empty, Reference);
 
     /// <summary>
     /// Which of its prototype's cards this is, or <see cref="PrototypeItemRef.None"/>.
