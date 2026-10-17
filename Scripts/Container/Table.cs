@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 /// <summary>
@@ -16,7 +17,7 @@ public partial class Table : Node3D
     private readonly List<VisualComponentBase> _nodes = new();
 
     /// <summary>
-    /// Every component node on the table, in child order.
+    /// Every component node on the table, including those inside decks and bags.
     /// </summary>
     public IReadOnlyList<VisualComponentBase> Nodes => _nodes;
 
@@ -31,20 +32,6 @@ public partial class Table : Node3D
     public override void _EnterTree()
     {
         AtomService.Instance.Watch(this, Sync);
-    }
-
-    public Table()
-    {
-        ChildEnteredTree += child =>
-        {
-            if (child is VisualComponentBase c)
-                _nodes.Add(c);
-        };
-        ChildExitingTree += child =>
-        {
-            if (child is VisualComponentBase c)
-                _nodes.Remove(c);
-        };
     }
 
     /// <summary>The node for a component atom, or null.</summary>
@@ -70,7 +57,8 @@ public partial class Table : Node3D
     );
 
     /// <summary>
-    /// Keeps one node per live component whose prototype is avialable.
+    /// Keeps one node per live component,
+    /// either on the table or in its container.
     /// </summary>
     private void Sync(IWatchReader R)
     {
@@ -81,7 +69,29 @@ public partial class Table : Node3D
         foreach (var (s, key) in added)
             AddComponent(s.Id, key.Scene);
 
+        foreach (var s in R.Get(ComponentState.All))
+        {
+            if (!_components.TryGetValue(s.Id, out var node))
+                continue;
+            var parent = _components.GetValueOrDefault(s.ContainerRef) ?? (Node)this;
+            if (node.GetParent() != parent)
+                node.Reparent(parent);
+        }
+
         Changed?.Invoke();
+    }
+
+    private void RemoveComponent(SnowTag id)
+    {
+        if (!_components.Remove(id, out var component))
+            return;
+
+        foreach (var contained in component.GetChildren().OfType<VisualComponentBase>())
+            contained.Reparent(this);
+        component.GetParent().RemoveChild(component);
+        component.QueueFree();
+        _nodes.Remove(component);
+        ComponentRemoved?.Invoke(component);
     }
 
     private void AddComponent(SnowTag id, string scenePath)
@@ -98,14 +108,6 @@ public partial class Table : Node3D
         component.TextureFactory = TextureFactory;
         AddChild(component);
         _components[id] = component;
-    }
-
-    private void RemoveComponent(SnowTag id)
-    {
-        if (!_components.Remove(id, out var component))
-            return;
-        RemoveChild(component);
-        component.QueueFree();
-        ComponentRemoved?.Invoke(component);
+        _nodes.Add(component);
     }
 }

@@ -130,7 +130,21 @@ public abstract partial class VisualComponentBase : Area3D
         Built?.Invoke();
 
         // A rebuild can change the component's size, so the table restacks.
-        GetParentOrNull<Table>()?.NotifyChanged();
+        OwningTable?.NotifyChanged();
+    }
+
+    /// <summary>
+    /// The table Node of this component, or null for a preview.
+    /// </summary>
+    protected Table OwningTable
+    {
+        get
+        {
+            for (var n = GetParent(); n != null; n = n.GetParent())
+                if (n is Table table)
+                    return table;
+            return null;
+        }
     }
 
     // whether SyncState has placed the node yet
@@ -146,7 +160,7 @@ public abstract partial class VisualComponentBase : Area3D
             return;
 
         var held = R.IsBeingDragged(s);
-        LogicalVisible = s.IsOnTable || held && !R.IsHeldOverHand(s);
+        LogicalVisible = s.IsOnTable || R.IsInDeck(s) || held && !R.IsHeldOverHand(s);
 
         // A new state ends any slide toward the old one.
         if (IsInstanceValid(_slide))
@@ -168,7 +182,7 @@ public abstract partial class VisualComponentBase : Area3D
             Rotation = s.Rotation;
         _placed = true;
 
-        GetParentOrNull<Table>()?.NotifyChanged();
+        OwningTable?.NotifyChanged();
     }
 
     private Tween _slide;
@@ -182,7 +196,7 @@ public abstract partial class VisualComponentBase : Area3D
     {
         var from = new Vector2(Position.X, Position.Z);
         var to = new Vector2(target.X, target.Z);
-        var speed = GetParentOrNull<Table>()?.GetParentOrNull<GameObjects>()?.DropSpeed ?? 0;
+        var speed = OwningTable?.GetParentOrNull<GameObjects>()?.DropSpeed ?? 0;
         if (speed <= 0)
             return false;
         float remaining = from.DistanceTo(to) / speed - msecSinceStart / 1000f;
@@ -197,7 +211,7 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// The components to spawn as a stack on top of this one, bottom first.
+    /// The components to spawn along with this one, such as a deck's cards, bottom first.
     /// <strong>Their ZOrders do not come assigned.</strong>
     /// </summary>
     /// <param name="self">The state this component spawns with.</param>
@@ -479,6 +493,8 @@ public abstract partial class VisualComponentBase : Area3D
     {
         foreach (var child in node.GetChildren())
         {
+            if (child is VisualComponentBase { State: not null })
+                continue;
             if (
                 child is MeshInstance3D { Mesh: not null } mesh
                 && (mesh.Layers & SelectionOutline.MaskLayer) == 0

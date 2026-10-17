@@ -105,8 +105,6 @@ public partial class GameObjects : Node3D
         return GetSelection()
             .Select(GetComponent)
             .Where(o => o?.State?.ContainerRef == place)
-            .SelectMany(o => o is VcDeck deck ? GetStack(deck).Append(deck) : [o])
-            .Distinct()
             .OrderBy(o => o.State.ZOrder)
             .ToList();
     }
@@ -316,12 +314,6 @@ public partial class GameObjects : Node3D
         AtomService.Instance.Write(atoms);
     }
 
-    /// <summary>
-    /// The nodes of the cards stacked exactly on the deck, top first.
-    /// </summary>
-    private List<VisualComponentBase> GetStack(VcDeck deck) =>
-        deck.State is { } s ? Nodes(AtomService.Instance.TokensOn(s)).ToList() : [];
-
     #endregion
 
     #region Hover
@@ -445,7 +437,7 @@ public partial class GameObjects : Node3D
             c.PreviewSelected =
                 c is not VcZone
                 && c.Visible
-                && PointInRect(camera.UnprojectPosition(c.Position), area);
+                && PointInRect(camera.UnprojectPosition(c.GlobalPosition), area);
         }
     }
     #endregion
@@ -717,7 +709,18 @@ public partial class GameObjects : Node3D
 
         StartDrag(
             PickedUp(component)
-                .Select(o => ComponentState.Of(o) with { Position = o.Position - startCursor }),
+                .Select(o =>
+                {
+                    var s = ComponentState.Of(o);
+                    return s with
+                    {
+                        Position = o.GlobalPosition - startCursor,
+                        Rotation = s.Rotation with
+                        {
+                            Y = s.Rotation.Y + o.GetParent<Node3D>().GlobalRotation.Y,
+                        },
+                    };
+                }),
             []
         );
     }
@@ -892,23 +895,48 @@ public partial class GameObjects : Node3D
     /// <summary>
     /// The atoms that set <paramref name="dropped"/> down on the table where they are,
     /// in their stacking order, snapped onto a card or deck they're dropped near.
+    /// A token that lands exactly on a deck goes into it.
     /// </summary>
     private static ComponentState[] OnTable(List<ComponentState> dropped)
     {
+        var R = AtomService.Instance;
         var ordered = dropped.OrderBy(s => s.ZOrder).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
+        var decks = R.Get(ComponentState.ByContainer, SnowTag.Empty)
+            .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
+            .ToList();
 
         var stamp = Snowport.Clock.Create();
         return ordered
             .Select(
                 (s, i) =>
-                    s with
+                {
+                    var placed = s with
                     {
                         ContainerRef = SnowTag.Empty,
                         X = s.X + snapX,
                         Z = s.Z + snapZ,
                         ZOrder = new ZOrder(ZTarget.Top, i, stamp),
-                    }
+                    };
+                    var deck =
+                        R.Kind(s) == VisualComponentBase.VisualComponentType.Token
+                            ? decks
+                                .Where(d => d.X == placed.X && d.Z == placed.Z)
+                                .MaxBy(d => d.ZOrder)
+                            : null;
+                    return deck == null
+                        ? placed
+                        : placed with
+                        {
+                            ContainerRef = deck.Id,
+                            X = 0,
+                            Z = 0,
+                            Rotation = placed.Rotation with
+                            {
+                                Y = placed.Rotation.Y - deck.Rotation.Y,
+                            },
+                        };
+                }
             )
             .ToArray();
     }

@@ -12,30 +12,32 @@ size = Vector3(0.25, 0.25, 0.25)
 [node name="Deck" type="Area3D" unique_id=449063618]
 script = ExtResource("1_7r5pi")
 
+[node name="Frame" type="Node3D" parent="." unique_id=1681153063]
+
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1991276807]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6439891, 0.5023112, 0)
 shape = SubResource("BoxShape3D_bjoi2")
 
-[node name="OutlineShape" type="MeshInstance3D" parent="." unique_id=1404325339]
+[node name="OutlineShape" type="MeshInstance3D" parent="Frame" unique_id=1404325339]
 mesh = SubResource("BoxMesh_ggpqp")
 
-[node name="DragPatch" type="Sprite3D" parent="." unique_id=65843443]
+[node name="DragPatch" type="Sprite3D" parent="Frame" unique_id=65843443]
 transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -0.64799356, 0.46919668, 0)
 axis = 1
 texture = ExtResource("5_lsa78")
 
-[node name="ComponentCount" type="Label3D" parent="." unique_id=787024414]
+[node name="ComponentCount" type="Label3D" parent="Frame" unique_id=787024414]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.64434433, 0.47519672, 0)
 modulate = Color(1, 0, 0, 1)
 text = "0"
 font_size = 24
 
-[node name="Outline" type="Sprite3D" parent="." unique_id=509082668]
+[node name="Outline" type="Sprite3D" parent="Frame" unique_id=509082668]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, -0.4392587, 0)
 axis = 1
 texture = ExtResource("6_3uk5r")
 
-[node name="BlankLabel" type="Label3D" parent="Outline" unique_id=304577863]
+[node name="BlankLabel" type="Label3D" parent="Frame/Outline" unique_id=304577863]
 unique_name_in_owner = true
 transform = Transform3D(2, 0, 0, 0, -8.742278e-08, 2, 0, -2, -8.742278e-08, 0, 0, 0)
 text = "Draw"

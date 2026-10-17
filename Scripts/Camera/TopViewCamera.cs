@@ -27,7 +27,7 @@ public partial class TopViewCamera : BaseCamera
     {
         if (component == null)
             return;
-        Position = new Vector3(component.Position.X, Position.Y, component.Position.Z);
+        Position = new Vector3(component.GlobalPosition.X, Position.Y, component.GlobalPosition.Z);
         ActualCamera.Size = Mathf.Clamp(component.MaxAxisSize * 1.2f, MinSize, MaxSize);
     }
 

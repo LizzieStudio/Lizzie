@@ -25,13 +25,6 @@ public record ComponentState : Atom
     public static readonly Group<ComponentState, SnowTag> ByContainer = new(s => s.ContainerRef);
 
     /// <summary>
-    /// The components on the table at each exact spot, such as a deck and the cards stacked on it.
-    /// </summary>
-    public static readonly Group<ComponentState, (int X, int Z)?> OnTableAt = new(s =>
-        s.IsOnTable ? (s.X, s.Z) : null
-    );
-
-    /// <summary>
     /// The state last written for a component.
     /// </summary>
     public static ComponentState Of(VisualComponentBase c) =>
@@ -54,12 +47,12 @@ public record ComponentState : Atom
     public SnowTag PrototypeRef { get; init; }
 
     /// <summary>
-    /// X relative to either the table or player cursor, in tenths of a millimeter.
+    /// X in its container's frame, in tenths of a millimeter.
     /// </summary>
     public int X { get; init; }
 
     /// <summary>
-    /// Z relative to either the table or player cursor, in tenths of a millimeter.
+    /// Z in its container's frame, in tenths of a millimeter.
     /// </summary>
     public int Z { get; init; }
 
@@ -106,7 +99,7 @@ public record ComponentState : Atom
     /// What holds this component:
     /// <list type="bullet">
     /// <item><see cref="SnowTag.Empty"/> when it's on the table</item>
-    /// <item>a component Id, for bags</item>
+    /// <item>a component Id, for decks and bags</item>
     /// <item>a seat's hand Id, for a player hand</item>
     /// <item>a seat's cursor Id, when being dragged by a player</item>
     /// </list>
@@ -132,20 +125,13 @@ public record ComponentState : Atom
     public bool IsItem => Card != PrototypeItemRef.None;
 
     /// <summary>
-    /// A deck's cards, or the components whose <see cref="ContainerRef"/> is this one, like a bag's or a tray's.
+    /// The components whose <see cref="ContainerRef"/> is this one.
     /// </summary>
     /// <remarks>
     /// Any component used as a <see cref="ContainerRef"/> gets its contents here without changes.
     /// </remarks>
-    public override IEnumerable<AtomRef> Contents(IAtomReader R)
-    {
-        var containedComponents =
-            R.Kind(this) == VisualComponentBase.VisualComponentType.Deck
-                ? R.TokensOn(this)
-                : R.Get(ByContainer, Id);
-
-        return containedComponents.Select(c => ById.Ref(c.Id));
-    }
+    public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
+        R.Get(ByContainer, Id).Select(c => ById.Ref(c.Id));
 
     /// <summary>
     /// The deck it's on or the bag it's in.
@@ -153,21 +139,11 @@ public record ComponentState : Atom
     /// <remarks>
     /// Any component referenced by <see cref="ContainerRef"/> becomes a container here without changes.
     /// </remarks>
-    public override IEnumerable<AtomRef> Containers(IAtomReader R)
-    {
+    public override IEnumerable<AtomRef> Containers(IAtomReader R) =>
         // A hand or a cursor isn't a component, so it isn't found.
-        if (!IsOnTable)
-            return R.Get(ById, ContainerRef) is { } container ? [ById.Ref(container.Id)] : [];
-
-        if (R.Kind(this) != VisualComponentBase.VisualComponentType.Token)
-            return [];
-
-        return R.Get(OnTableAt, (X, Z))
-            .Where(d =>
-                d.ZOrder < ZOrder && R.Kind(d) == VisualComponentBase.VisualComponentType.Deck
-            )
-            .Select(d => ById.Ref(d.Id));
-    }
+        !IsOnTable && R.Get(ById, ContainerRef) is { } container
+            ? [ById.Ref(container.Id)]
+            : [];
 
     /// <summary>
     /// Its prototype and, for a card made from a dataset, its rows.

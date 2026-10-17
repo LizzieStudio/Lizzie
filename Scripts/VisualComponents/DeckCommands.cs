@@ -6,7 +6,6 @@ using static VisualComponentBase;
 
 /// <summary>
 /// Commands for decks.
-/// A deck is a frame, and its cards are the tokens stacked exactly on it.
 /// </summary>
 public static class DeckCommands
 {
@@ -91,7 +90,9 @@ public static class DeckCommands
             (c, i) =>
                 c with
                 {
+                    ContainerRef = SnowTag.Empty,
                     Position = frame + new Vector3(width * (1.5f + i), 0, 0),
+                    Rotation = c.Rotation with { Y = deck.Rotation.Y + c.Rotation.Y },
                     ZOrder = new ZOrder(ZTarget.Top, i, stamp),
                 }
         );

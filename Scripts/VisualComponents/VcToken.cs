@@ -106,13 +106,15 @@ public partial class VcToken : VisualComponentBase
 
         _width = p.Width / 10;
 
-        _thickness = Math.Max(p.Thickness / 10f, 0.03f);
+        _thickness = ThicknessOf(p);
 
         Shape = (TokenShape)p.Shape;
 
         BuildToken();
         _faces.Load(GetPrototype(R), Card, TextureFactory, R);
     }
+
+    public static float ThicknessOf(PrintedParameters p) => Math.Max(p.Thickness / 10f, 0.03f);
 
     private void BuildToken()
     {

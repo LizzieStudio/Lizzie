@@ -17,7 +17,7 @@ public static class ComponentCommands
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && Turnable(R, c),
+        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !R.IsHidden(c),
         Effects = (R, cs, _) => Flipped(R, cs),
     };
 
@@ -83,15 +83,14 @@ public static class ComponentCommands
     private static bool NotHeld(IAtomReader R, ComponentState c) => !R.IsBeingDragged(c);
 
     // What's inside a bag isn't on the table to turn. A hand shows its cards turned as they'll lie on the table.
-    private static bool Turnable(IAtomReader R, ComponentState c) =>
-        !R.IsContained(c) || R.IsInHand(c);
+    private static bool Turnable(IAtomReader R, ComponentState c) => !R.IsHidden(c);
 
     // Zones stay underneath everything.
     private static bool Restackable(IAtomReader R, ComponentState c) =>
-        c.IsOnTable && R.Kind(c) != VisualComponentType.Zone;
+        (c.IsOnTable || R.IsInDeck(c)) && R.Kind(c) != VisualComponentType.Zone;
 
     /// <summary>
-    /// The tokens turned over. Tokens stacked in the same place turn over together like a pile,
+    /// The tokens turned over. Tokens stacked in the same place, or in the same deck, turn over together like a pile,
     /// reversing their order by swapping their ZOrders. Cards in a hand aren't stacked, so each turns over in place.
     /// <see cref="VcToken"/> animates what Flip writes.
     /// </summary>

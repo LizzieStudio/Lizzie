@@ -220,14 +220,11 @@ public static class AtomReaderExtensions
             : type;
     }
 
-    /// <summary>The VcTokens stacked exactly on a deck, top first.</summary>
+    /// <summary>
+    /// The cards in a deck, top first.
+    /// </summary>
     public static List<ComponentState> TokensOn(this IAtomReader R, ComponentState deck) =>
-        R.Get(ComponentState.OnTableAt, (deck.X, deck.Z))
-            .Where(s =>
-                s.ZOrder > deck.ZOrder && R.Kind(s) == VisualComponentBase.VisualComponentType.Token
-            )
-            .OrderByDescending(s => s.ZOrder)
-            .ToList();
+        R.Get(ComponentState.ByContainer, deck.Id).OrderByDescending(s => s.ZOrder).ToList();
 
     /// <summary>
     /// The containers each seat drags with.
@@ -269,4 +266,21 @@ public static class AtomReaderExtensions
     public static bool IsInHand(this IAtomReader R, ComponentState c) =>
         !c.IsOnTable
         && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandRef == c.ContainerRef);
+
+    /// <summary>
+    /// Whether <paramref name="c"/> is a token in a deck.
+    /// </summary>
+    public static bool IsInDeck(this IAtomReader R, ComponentState c) =>
+        !c.IsOnTable
+        && R.Get(ComponentState.ById, c.ContainerRef) is { } container
+        && R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
+
+    /// <summary>
+    /// Whether <paramref name="c"/> is out of sight in a container.
+    /// </summary>
+    /// <remarks>
+    /// As of writing this, only bags do this.
+    /// </remarks>
+    public static bool IsHidden(this IAtomReader R, ComponentState c) =>
+        R.IsContained(c) && !R.IsInDeck(c) && !R.IsInHand(c);
 }

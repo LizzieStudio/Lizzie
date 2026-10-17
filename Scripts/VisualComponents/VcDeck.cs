@@ -6,6 +6,13 @@ using Godot;
 
 public partial class VcDeck : VisualComponentBase
 {
+    // Holds the frame's parts, scaled to the deck's size. The cards are children of the deck itself, so they don't inherit it.
+    private Node3D _frame;
+
+    // The collider for pressing the frame. A collider only works as a direct child of the deck,
+    // so it isn't in the frame, and is placed as if it were.
+    private CollisionShape3D _patch;
+    private Transform3D _patchInFrame;
     private Sprite3D _outline;
     private MeshInstance3D _outlineShape;
     private Label3D _componentCount;
@@ -16,10 +23,13 @@ public partial class VcDeck : VisualComponentBase
         base._Ready();
         ComponentType = VisualComponentType.Deck;
 
-        _outlineShape = GetNode<MeshInstance3D>("OutlineShape");
+        _frame = GetNode<Node3D>("Frame");
+        _patch = GetNode<CollisionShape3D>("CollisionShape3D");
+        _patchInFrame = _patch.Transform;
+        _outlineShape = GetNode<MeshInstance3D>("Frame/OutlineShape");
         _outlineShape.Layers = 0;
-        _outline = GetNode<Sprite3D>("Outline");
-        _componentCount = GetNode<Label3D>("ComponentCount");
+        _outline = GetNode<Sprite3D>("Frame/Outline");
+        _componentCount = GetNode<Label3D>("Frame/ComponentCount");
         _blankLabel = GetNode<Label3D>("%BlankLabel");
     }
 
@@ -34,13 +44,43 @@ public partial class VcDeck : VisualComponentBase
     {
         base._EnterTree();
         AtomService.Instance.Watch(this, SyncCount);
+        AtomService.Instance.Watch(this, SyncLayout);
     }
 
     private void SyncCount(IWatchReader R)
     {
         if (R.Get(ComponentState.ById, Reference) is { } deck && !R.IsBeingDragged(deck))
-            _componentCount.Text = R.TokensOn(deck).Count.ToString();
+            _componentCount.Text = R.Count(ComponentState.ByContainer, Reference).ToString();
     }
+
+    /// <summary>
+    /// Works out the internal layout and external size.
+    /// </summary>
+    private void SyncLayout(IWatchReader R)
+    {
+        var cards = R.Get(ComponentState.ByContainer, Reference).OrderBy(c => c.ZOrder).ToList();
+        var heights = cards.Select(c => CardHeight(R, c)).ToList();
+        float total = FrameHeight + heights.Sum();
+
+        var nodes = GetChildren().OfType<VisualComponentBase>().ToDictionary(n => n.Reference);
+        float top = FrameHeight;
+        for (int i = 0; i < cards.Count; i++)
+        {
+            if (nodes.TryGetValue(cards[i].Id, out var node))
+                node.MoveToTargetY(top + heights[i] / 2f - total / 2f);
+            top += heights[i];
+        }
+
+        _frame.Position = new Vector3(0, (FrameHeight - total) / 2f, 0);
+        _patch.Transform = _frame.Transform * _patchInFrame;
+        YHeight = total;
+        OwningTable?.NotifyChanged();
+    }
+
+    private static float CardHeight(IAtomReader R, ComponentState card) =>
+        R.Get(Prototype.ById, card.PrototypeRef)?.Parameters is PrintedParameters p
+            ? VcToken.ThicknessOf(p)
+            : 0;
 
     /// <summary>
     /// The deck's cards, face-down on the frame, with the first token on top.
@@ -63,9 +103,8 @@ public partial class VcDeck : VisualComponentBase
                 Id = Snowport.Clock.CreateTag(),
                 PrototypeRef = PrototypeRef,
                 Card = parameters.Card(n, R),
-                X = self.X,
-                Z = self.Z,
-                Rotation = new Vector3(0, self.Rotation.Y, Mathf.Pi),
+                ContainerRef = self.Id,
+                Rotation = new Vector3(0, 0, Mathf.Pi),
             })
             .ToList();
     }
@@ -84,8 +123,8 @@ public partial class VcDeck : VisualComponentBase
         _width = p.Width / 10f;
         _blankLabel.Text = ComponentName;
 
-        YHeight = Thickness + 0.03f;
-        Scale = new Vector3(_width, Thickness, _height);
+        _frame.Scale = new Vector3(_width, Thickness, _height);
+        _patch.Transform = _frame.Transform * _patchInFrame;
 
         ShapeProfiles.Add(VcToken.ShapeProfile((TokenShape)p.Shape, _width, _height));
     }
@@ -94,6 +133,8 @@ public partial class VcDeck : VisualComponentBase
     private float _width;
 
     private const float Thickness = 0.15f;
+
+    private const float FrameHeight = Thickness + 0.03f;
 }
 
 [JsonName("DeckParameters")]
