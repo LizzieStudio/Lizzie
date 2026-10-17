@@ -34,7 +34,6 @@ ImGuiRoot="*uid://dugmpnsxaagba"
 [display]
 
 window/size/extend_to_title=true
-window/vsync/vsync_mode=0
 
 [dotnet]
 
