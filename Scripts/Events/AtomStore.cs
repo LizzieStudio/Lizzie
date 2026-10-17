@@ -8,7 +8,7 @@ namespace Lizzie.Replication.Machinery;
 /// Holds the atoms of <typeparamref name="T"/> by their <see cref="Id{T, I}"/>,
 /// and any groups that have been read.
 /// </summary>
-public sealed class AtomStore<T, I> : IAtomStore<T>
+public sealed class AtomStore<T, I> : IAtomStore<T, I>
     where T : Atom
     where I : IComparable<I>
 {
@@ -16,15 +16,16 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
 
     private readonly Id<T, I> _byId;
 
-    private readonly Dictionary<I, AtomEntry> _atoms = new();
-
-    // each group read so far, kept up to date from then on
-    private readonly Dictionary<Query, IIndex> _indexes = new();
+    private readonly IndexedAtoms<T, I> _atoms;
 
     // changes merged while the synchronizer is bulk loading, sent by FlushBulkLoad
     private Dictionary<I, (AtomEntry Old, AtomEntry New)> _pending = new();
 
-    public AtomStore(Id<T, I> byId) => _byId = byId;
+    public AtomStore(Id<T, I> byId)
+    {
+        _byId = byId;
+        _atoms = new(byId);
+    }
 
     public Type AtomType => typeof(T);
 
@@ -33,26 +34,18 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
     /// <summary>
     /// The atom with <paramref name="id"/>, or an entry with a null value if it was never written.
     /// </summary>
-    public AtomEntry Find(I id) => _atoms.GetValueOrDefault(id);
+    public AtomEntry Find(I id) => _atoms.Find(id);
 
     AtomEntry IAtomStore.Find(object id) => id is I typed ? Find(typed) : default;
 
-    public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) =>
-        key is null ? [] : IndexOf(group).Atoms(key);
+    /// <summary>
+    /// The ids of the atoms held.
+    /// </summary>
+    internal IEnumerable<I> Ids => _atoms.Entries.Keys;
 
-    public int Count<G>(Group<T, G> group, G key) => key is null ? 0 : IndexOf(group).Count(key);
+    public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) => _atoms.InGroup(group, key);
 
-    private Index<G> IndexOf<G>(Group<T, G> group)
-    {
-        if (_indexes.TryGetValue(group, out var found))
-            return (Index<G>)found;
-
-        var index = new Index<G>(group);
-        foreach (var (id, entry) in _atoms)
-            index.Add(id, entry);
-        _indexes[group] = index;
-        return index;
-    }
+    public int Count<G>(Group<T, G> group, G key) => _atoms.Count(group, key);
 
     public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
     {
@@ -83,10 +76,10 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
         foreach (var id in ids)
         {
             var now = latest.GetValueOrDefault(id);
-            var old = _atoms.GetValueOrDefault(id);
+            var old = _atoms.Find(id);
             if (old == now)
                 continue;
-            Replace(id, old, now);
+            _atoms.Replace(id, now);
             merged[id] = (old, now);
         }
 
@@ -104,25 +97,9 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
         Notify(merged);
     }
 
-    private void Replace(I id, AtomEntry old, AtomEntry now)
-    {
-        if (now.Value == null)
-            _atoms.Remove(id);
-        else
-            _atoms[id] = now;
-
-        foreach (var index in _indexes.Values)
-        {
-            if (old.Value != null)
-                index.Remove(id, old);
-            if (now.Value != null)
-                index.Add(id, now);
-        }
-    }
-
     private void Notify(IReadOnlyDictionary<I, (AtomEntry Old, AtomEntry New)> changed) =>
         Changed?.Invoke(
-            changed.SelectMany(c => Touched(c.Key, c.Value.Old, c.Value.New)).ToArray()
+            changed.SelectMany(c => _atoms.Touched(c.Key, c.Value.Old, c.Value.New)).ToArray()
         );
 
     public void FlushBulkLoad()
@@ -137,97 +114,15 @@ public sealed class AtomStore<T, I> : IAtomStore<T>
 
     public void Clear()
     {
-        var removed = _atoms.ToDictionary(a => a.Key, a => (a.Value, default(AtomEntry)));
+        var removed = _atoms.Entries.ToDictionary(a => a.Key, a => (a.Value, default(AtomEntry)));
         _atoms.Clear();
-        foreach (var index in _indexes.Values)
-            index.Clear();
         _pending.Clear();
 
         Notify(removed);
     }
 
-    private IEnumerable<Touch> Touched(I id, AtomEntry old, AtomEntry now)
-    {
-        yield return new Touch(_byId, id, false);
-        foreach (var index in _indexes.Values)
-        foreach (var touch in index.Touched(old, now))
-            yield return touch;
-    }
-
-    public IEnumerable<Atom> SavedAtoms() => Saved ? _atoms.Values.Select(e => e.Value) : [];
-
-    private interface IIndex
-    {
-        void Add(I id, AtomEntry entry);
-
-        void Remove(I id, AtomEntry entry);
-
-        void Clear();
-
-        IEnumerable<Touch> Touched(AtomEntry old, AtomEntry now);
-    }
-
-    /// <summary>
-    /// The atoms with each key of a group, leaving out unset ones.
-    /// </summary>
-    private sealed class Index<G>(Group<T, G> group) : IIndex
-    {
-        private readonly Dictionary<G, Dictionary<I, T>> _buckets = new();
-
-        public IReadOnlyList<T> Atoms(G key) =>
-            _buckets.TryGetValue(key, out var bucket) ? bucket.Values.ToArray() : [];
-
-        public int Count(G key) => _buckets.GetValueOrDefault(key)?.Count ?? 0;
-
-        public void Add(I id, AtomEntry entry)
-        {
-            if (!In(entry, out var key))
-                return;
-            if (!_buckets.TryGetValue(key, out var bucket))
-                _buckets[key] = bucket = new();
-            bucket[id] = (T)entry.Value;
-        }
-
-        public void Remove(I id, AtomEntry entry)
-        {
-            if (!In(entry, out var key))
-                return;
-            var bucket = _buckets[key];
-            bucket.Remove(id);
-            if (bucket.Count == 0)
-                _buckets.Remove(key);
-        }
-
-        public void Clear() => _buckets.Clear();
-
-        /// <summary>
-        /// The group keys whose atoms a change touched, and the group keys whose count it changed.
-        /// </summary>
-        public IEnumerable<Touch> Touched(AtomEntry old, AtomEntry now)
-        {
-            bool inOld = In(old, out var was);
-            bool inNew = In(now, out var willBe);
-            bool same = inOld && inNew && EqualityComparer<G>.Default.Equals(was, willBe);
-
-            if (inOld)
-                yield return new Touch(group, was, false);
-            if (inNew && !same)
-                yield return new Touch(group, willBe, false);
-
-            if (same)
-                yield break;
-            if (inOld)
-                yield return new Touch(group, was, true);
-            if (inNew)
-                yield return new Touch(group, willBe, true);
-        }
-
-        private bool In(AtomEntry entry, out G key)
-        {
-            key = entry.Value == null ? default : group.Of((T)entry.Value);
-            return entry.Value != null && key is not null;
-        }
-    }
+    public IEnumerable<Atom> SavedAtoms() =>
+        Saved ? _atoms.Entries.Values.Select(e => e.Value) : [];
 }
 
 /// <summary>

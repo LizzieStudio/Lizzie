@@ -92,6 +92,11 @@ public abstract class IdQuery : Query
                     + "which says what makes two writes the same atom, like `public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);`, "
                     + $"or as `public static readonly Singleton<{atomType.Name}> Only = new();` if it has only one atom."
             );
+        if (typeof(StagedAtom).IsAssignableFrom(atomType) != ids[0] is IStagedId)
+            throw new InvalidOperationException(
+                $"{atomType.Name} must declare a StagedId when it's a StagedAtom, "
+                    + $"like `public static readonly StagedId<{atomType.Name}> ById = new(c => c.Id);`."
+            );
         return ids[0];
     }
 }
@@ -212,6 +217,33 @@ public class Group<T, G> : Query
 
     internal override object Of(Atom atom) => _of((T)atom);
 }
+
+/// <summary>
+/// The Id of a <see cref="StagedAtom"/> type.
+///
+/// <code>public static readonly StagedId&lt;ComponentState&gt; ById = new(c => c.Id);</code>
+/// </summary>
+public sealed class StagedId<T>(Func<T, SnowTag> of)
+    : Id<T, StageKey>(atom => new(atom.Stage, of(atom))),
+        IStagedId
+    where T : StagedAtom;
+
+/// <summary>
+/// Marks a <see cref="StagedId{T}"/> for code that doesn't know <c>T</c>.
+/// </summary>
+internal interface IStagedId;
+
+/// <summary>
+/// For a staged atom type, lists its updates in each stage.
+///
+/// <code>public static readonly Written&lt;ComponentState&gt; WrittenIn = new();</code>
+/// </summary>
+/// <remarks>
+/// This is used internally to differentiate between a component that was inherited from a blueprint
+/// and a component that was actually updated in a stage.
+/// </remarks>
+public sealed class Written<T>() : Group<T, SnowTag>(atom => atom.Stage)
+    where T : StagedAtom;
 
 /// <summary>
 /// Lists every atom of <typeparamref name="T"/>, read with <see cref="AtomReaderExtensions.Get{T}(IAtomReader, All{T})"/>.

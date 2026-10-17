@@ -1,0 +1,210 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Lizzie.Replication.Machinery;
+
+/// <summary>
+/// Holds all <see cref="StagedAtom"/> of type <typeparamref name="T"/> as each <see cref="Stage"/> shows them.
+///
+/// <para>
+/// A stage shows its own write of an atom if it has one, and otherwise what its parent shows.
+/// A write with <see cref="StagedAtom.Removed"/> hides the parent atom.
+/// When you read a staged atom from a stage, its <see cref="StagedAtom.Stage"/> is set to the stage of the read.
+/// </para>
+///
+/// <para>
+/// <see cref="Apply"/> only merges the writes.
+/// <see cref="Settle"/> works out what each stage shows once the <see cref="Stage"/> atoms have merged the same event.
+/// </para>
+/// </summary>
+public sealed class StagedStore<T> : IAtomStore<T, StageKey>
+    where T : StagedAtom
+{
+    private readonly StagedId<T> _byId;
+
+    private readonly AtomStore<Stage, SnowTag> _stages;
+
+    /// <summary>
+    /// The atoms as written, by the stage they were written in.
+    /// </summary>
+    private readonly AtomStore<T, StageKey> _raw;
+
+    /// <summary>
+    /// The atoms as each stage shows them.
+    /// </summary>
+    private readonly IndexedAtoms<T, StageKey> _resolved;
+
+    // each stage's parent, for every stage written as a Stage atom
+    private readonly Dictionary<SnowTag, SnowTag> _parents = new();
+
+    // what changed since the last Settle
+    private readonly HashSet<StageKey> _dirty = new();
+    private readonly HashSet<SnowTag> _changedStages = new();
+
+    // touches to report in the next Settle
+    private List<Touch> _touches = new();
+
+    /// <param name="byId">The type's Id.</param>
+    /// <param name="stages">The store of <see cref="Stage"/> atoms, which says each stage's parent.</param>
+    public StagedStore(StagedId<T> byId, AtomStore<Stage, SnowTag> stages)
+    {
+        _byId = byId;
+        _stages = stages;
+        _raw = new(byId);
+        _resolved = new(byId);
+        _raw.Changed += OnRawChanged;
+        stages.Changed += OnStagesChanged;
+        _changedStages.UnionWith(stages.Ids);
+    }
+
+    public Type AtomType => typeof(T);
+
+    public event Action<IReadOnlyList<Touch>> Changed;
+
+    /// <summary>
+    /// What the stage in <paramref name="id"/> shows for its atom, or an entry with a null value if nothing.
+    /// </summary>
+    public AtomEntry Find(StageKey id) => _resolved.Find(id);
+
+    AtomEntry IAtomStore.Find(object id) => id is StageKey typed ? Find(typed) : default;
+
+    /// <summary>
+    /// The atoms with <paramref name="key"/> in <paramref name="group"/> as written for a <see cref="Written{T}"/>,
+    /// and as each stage shows them otherwise.
+    /// </summary>
+    public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) =>
+        group is Written<T> ? _raw.InGroup(group, key) : _resolved.InGroup(group, key);
+
+    public int Count<G>(Group<T, G> group, G key) =>
+        group is Written<T> ? _raw.Count(group, key) : _resolved.Count(group, key);
+
+    public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading) =>
+        _raw.Apply(log, changed, bulkLoading);
+
+    public void FlushBulkLoad() => _raw.FlushBulkLoad();
+
+    // The written atoms' id touches say what to resolve again; the rest are Written group touches to pass on.
+    private void OnRawChanged(IReadOnlyList<Touch> touches)
+    {
+        foreach (var touch in touches)
+            if (touch.Query == _byId)
+                _dirty.Add((StageKey)touch.Key);
+            else
+                _touches.Add(touch);
+    }
+
+    private void OnStagesChanged(IReadOnlyList<Touch> touches)
+    {
+        foreach (var touch in touches)
+            if (touch.Query == Stage.ById)
+                _changedStages.Add((SnowTag)touch.Key);
+    }
+
+    public void Settle()
+    {
+        // Only a stage appearing, going away or changing parent changes what's inherited.
+        bool restructured = false;
+        foreach (var id in _changedStages)
+        {
+            bool had = _parents.TryGetValue(id, out var oldParent);
+            if (_stages.Find(id).Value is Stage stage)
+            {
+                restructured |= !had || oldParent != stage.ParentRef;
+                _parents[id] = stage.ParentRef;
+            }
+            else
+                restructured |= _parents.Remove(id);
+        }
+
+        var keys = restructured
+            ? Everything()
+            : _dirty.SelectMany(k => Below(k.Stage).Select(s => k with { Stage = s }));
+
+        foreach (var key in keys.ToHashSet())
+        {
+            var old = _resolved.Find(key);
+            var now = Resolve(key);
+            if (old == now)
+                continue;
+            _resolved.Replace(key, now);
+            _touches.AddRange(_resolved.Touched(key, old, now));
+        }
+        _dirty.Clear();
+        _changedStages.Clear();
+        Report();
+    }
+
+    /// <summary>
+    /// Every stage, and every stage something is resolved in, with every atom written or resolved.
+    /// </summary>
+    private IEnumerable<StageKey> Everything()
+    {
+        var resolved = _resolved.Entries.Keys;
+        var stages = _parents.Keys.Concat(resolved.Select(k => k.Stage)).ToHashSet();
+        var atoms = _raw.Ids.Concat(resolved).Select(k => k.Component).ToHashSet();
+        return stages.SelectMany(s => atoms.Select(c => new StageKey(s, c)));
+    }
+
+    /// <summary>
+    /// <paramref name="root"/> and every stage whose chain of parents reaches it.
+    /// </summary>
+    private HashSet<SnowTag> Below(SnowTag root)
+    {
+        var found = new HashSet<SnowTag> { root };
+        var queue = new Queue<SnowTag>(found);
+        while (queue.TryDequeue(out var stage))
+            foreach (var (child, parent) in _parents)
+                if (parent == stage && found.Add(child))
+                    queue.Enqueue(child);
+        return found;
+    }
+
+    /// <summary>
+    /// What the stage in <paramref name="key"/> shows for its atom.
+    /// </summary>
+    private AtomEntry Resolve(StageKey key)
+    {
+        // a chain longer than the number of stages has a cycle
+        int steps = 0;
+        for (
+            var stage = key.Stage;
+            _parents.TryGetValue(stage, out var parent) && steps++ < _parents.Count;
+            stage = parent
+        )
+        {
+            var written = _raw.Find(key with { Stage = stage });
+            if (written.Value is StagedAtom atom)
+                return atom.Removed
+                    ? default
+                    : new AtomEntry(atom with { Stage = key.Stage }, written.LastUpdate);
+        }
+        return default;
+    }
+
+    public void Clear()
+    {
+        _raw.Clear();
+        foreach (var (key, entry) in _resolved.Entries)
+            _touches.AddRange(_resolved.Touched(key, entry, default));
+        _resolved.Clear();
+        _parents.Clear();
+        _dirty.Clear();
+        _changedStages.Clear();
+        Report();
+    }
+
+    private void Report()
+    {
+        if (_touches.Count == 0)
+            return;
+        var touches = _touches;
+        _touches = new();
+        Changed?.Invoke(touches);
+    }
+
+    /// <summary>
+    /// The atoms as written, so a save never holds what a stage only inherits.
+    /// </summary>
+    public IEnumerable<Atom> SavedAtoms() => _raw.SavedAtoms();
+}

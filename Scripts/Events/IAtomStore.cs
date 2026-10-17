@@ -25,6 +25,11 @@ public interface IAtomStore
     /// </summary>
     void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading);
 
+    /// <summary>
+    /// Works out what changed since the last Settle call.
+    /// </summary>
+    void Settle() { }
+
     /// <summary>Removes everything, e.g. when the project is replaced, reporting each removal.</summary>
     void Clear();
 
@@ -63,4 +68,17 @@ public interface IAtomStore<T> : IAtomStore
 
     /// <summary>How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't unset.</summary>
     int Count<G>(Group<T, G> group, G key);
+}
+
+/// <summary>
+/// The store of <typeparamref name="T"/>, whose ids are <typeparamref name="I"/>.
+/// </summary>
+public interface IAtomStore<T, I> : IAtomStore<T>
+    where T : Atom
+    where I : IComparable<I>
+{
+    /// <summary>
+    /// The atom with <paramref name="id"/>, or an entry with a null value if this store doesn't hold it.
+    /// </summary>
+    AtomEntry Find(I id);
 }

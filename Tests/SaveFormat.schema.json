@@ -73,6 +73,15 @@
           {
             "properties": {
               "$type": {
+                "const": "CurrentGame"
+              },
+              "stageRef": true
+            },
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
                 "const": "DataCell"
               },
               "id": {
@@ -487,7 +496,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/8/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -564,7 +573,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/8/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -706,7 +715,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/8/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -753,7 +762,7 @@
                                 "const": "QuickSide"
                               },
                               "suits": {
-                                "$ref": "#/properties/writes/items/anyOf/7/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
+                                "$ref": "#/properties/writes/items/anyOf/8/properties/parameters/anyOf/2/properties/front/anyOf/1/properties/suits"
                               }
                             },
                             "additionalProperties": false
@@ -903,6 +912,31 @@
                   "array",
                   "null"
                 ]
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Stage"
+              },
+              "id": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentRef": true,
+              "isGame": {
+                "type": "boolean"
+              },
+              "deleted": {
+                "type": "boolean"
               }
             },
             "required": [

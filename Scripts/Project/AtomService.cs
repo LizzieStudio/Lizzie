@@ -69,17 +69,38 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
 
         foreach (var store in _stores.Values)
             store.Apply(sync.Log, changed, sync.BulkLoading);
+        Settle();
 
         if (!sync.BulkLoading)
             ScheduleForListeners(e);
     }
 
-    /// <summary>A new, empty store for atoms of <paramref name="type"/>, held by the type's <see cref="IdQuery"/>.</summary>
-    private static IAtomStore NewStore(Type type)
+    /// <summary>
+    /// Creates a new, empty store for atoms of <paramref name="type"/>, held by the type's <see cref="IdQuery"/>.
+    /// If the type has a <see cref="StagedId{T}"/>, returns a <see cref="StagedStore{T}"/>.
+    /// </summary>
+    private IAtomStore NewStore(Type type)
     {
         var byId = IdQuery.For(type);
-        return (IAtomStore)
-            Activator.CreateInstance(typeof(AtomStore<,>).MakeGenericType(type, byId.IdType), byId);
+        return (IAtomStore)(
+            byId is IStagedId
+                ? Activator.CreateInstance(
+                    typeof(StagedStore<>).MakeGenericType(type),
+                    byId,
+                    StoreOf<Stage>()
+                )
+                : Activator.CreateInstance(
+                    typeof(AtomStore<,>).MakeGenericType(type, byId.IdType),
+                    byId
+                )
+        );
+    }
+
+    /// <inheritdoc cref="IAtomStore.Settle"/>
+    private void Settle()
+    {
+        foreach (var store in _stores.Values)
+            store.Settle();
     }
 
     private IAtomStore AddStore(IAtomStore store)
@@ -89,7 +110,6 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
         return store;
     }
 
-    /// <summary>The store for <typeparamref name="T"/>, made empty if nothing has read or written one yet.</summary>
     private IAtomStore<T> StoreOf<T>()
         where T : Atom => (IAtomStore<T>)StoreOf(typeof(T));
 
@@ -108,6 +128,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     {
         foreach (var store in _stores.Values)
             store.FlushBulkLoad();
+        Settle();
     }
 
     #region Writing
@@ -401,11 +422,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
 
     public T Get<T, I>(Id<T, I> byId, I id)
         where T : Atom
-        where I : IComparable<I> => (T)StoreOf(byId).Find(id).Value;
-
-    private AtomStore<T, I> StoreOf<T, I>(Id<T, I> byId)
-        where T : Atom
-        where I : IComparable<I> => (AtomStore<T, I>)StoreOf<T>();
+        where I : IComparable<I> => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
 
     public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
         where T : Atom => StoreOf<T>().InGroup(group, key);
