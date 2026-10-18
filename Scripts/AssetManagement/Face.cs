@@ -71,17 +71,14 @@ public sealed class Face
     }
 
     /// <summary>
-    /// Shows <paramref name="image"/>, compressing it, or the checkerboard for null.
+    /// Shows <paramref name="image"/>, generating its mipmaps off the main thread, or the checkerboard for null.
     /// </summary>
-    public void Show(Image image)
+    public async Task Show(Image image)
     {
         if (image == null)
             image = MissingTexture.GetImage();
         else
-        {
-            image.GenerateMipmaps();
-            image.Compress(Image.CompressMode.S3Tc, Image.CompressSource.Srgb);
-        }
+            await Task.Run(() => image.GenerateMipmaps());
         ((ImageTexture)Texture).SetImage(image);
         _shown.TrySetResult();
     }

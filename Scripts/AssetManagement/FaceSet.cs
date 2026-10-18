@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
@@ -98,7 +99,7 @@ public sealed class FaceSet
             return;
         if (image == null)
         {
-            face.Show(null);
+            await face.Show(null);
             // Faces made after this try again, say once a failed download can succeed.
             if (Sets.GetValueOrDefault(_key) == this)
                 Sets.Remove(_key);
@@ -107,14 +108,15 @@ public sealed class FaceSet
 
         var layout = _asset.Layout;
         var size = new Vector2I(image.GetWidth() / layout.Columns, image.GetHeight() / layout.Rows);
-        var cell = image.GetRegion(
-            new Rect2I(new Vector2I(frame % layout.Columns, frame / layout.Columns) * size, size)
+        var cell = await Task.Run(() =>
+            image.GetRegion(
+                new Rect2I(
+                    new Vector2I(frame % layout.Columns, frame / layout.Columns) * size,
+                    size
+                )
+            )
         );
-        // Compressing pads an image to a multiple of 4 pixels by smearing its edges, so stretch it to one instead.
-        var fit = (size + Vector2I.One * 3) / 4 * 4;
-        if (fit != size)
-            cell.Resize(fit.X, fit.Y);
-        face.Show(cell);
+        await face.Show(cell);
     }
 
     /// <summary>

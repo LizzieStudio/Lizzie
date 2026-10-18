@@ -73,8 +73,6 @@ public partial class FaceDrawing : Node
     {
         var (template, rows) = Source(R);
         var (width, height) = template?.Pixels(PixelsPerInch) ?? default;
-        // Compressing pads an image to a multiple of 4 pixels by smearing its edges, so draw at one instead.
-        (width, height) = ((width + 3) / 4 * 4, (height + 3) / 4 * 4);
         bool drawable = width > 0 && height > 0;
         _wanted = _cells.Keys.ToDictionary(
             row => row,
@@ -121,7 +119,7 @@ public partial class FaceDrawing : Node
                 }
             if (Token.IsCancellationRequested)
                 return;
-            cell.Face.Show(image);
+            await cell.Face.Show(image);
             cell.Drawn = wanted.Version;
         }
         _drawing = false;
