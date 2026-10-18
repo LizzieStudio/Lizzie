@@ -228,7 +228,7 @@ public class EditPrototypeEvent : IEvent
 public class SpawnPrototypeEvent : IEvent
 {
     public SnowTag PrototypeRef { get; set; }
-    public PrototypeItemRef Card { get; set; } = PrototypeItemRef.None;
+    public PrototypeItemRef Item { get; set; } = PrototypeItemRef.None;
 
     /// <summary>
     /// Spawns one component per row of the prototype's dataset, where it has one per row,

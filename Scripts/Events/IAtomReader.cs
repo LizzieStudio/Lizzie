@@ -207,7 +207,8 @@ public static class AtomReaderExtensions
     }
 
     /// <summary>
-    /// What a component shows as. A deck's cards share the deck's prototype but show as tokens,
+    /// What a component shows as. A printed prototype's decks share its prototype with its cards,
+    /// but aren't one of its items, so they show as decks,
     /// as the table does when it picks a component's scene.
     /// </summary>
     public static VisualComponentBase.VisualComponentType Kind(this IAtomReader R, ComponentState s)
@@ -215,8 +216,8 @@ public static class AtomReaderExtensions
         var type =
             R.Get(Prototype.ById, s.PrototypeRef)?.Type
             ?? VisualComponentBase.VisualComponentType.Unset;
-        return type == VisualComponentBase.VisualComponentType.Deck && s.IsItem
-            ? VisualComponentBase.VisualComponentType.Token
+        return type == VisualComponentBase.VisualComponentType.Printed && !s.IsItem
+            ? VisualComponentBase.VisualComponentType.Deck
             : type;
     }
 
@@ -270,7 +271,7 @@ public static class AtomReaderExtensions
         && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandRef == c.ContainerRef);
 
     /// <summary>
-    /// Whether <paramref name="c"/> is a token in a deck.
+    /// Whether <paramref name="c"/> is a card in a deck.
     /// </summary>
     public static bool IsInDeck(this IAtomReader R, ComponentState c) =>
         !c.IsOnTable

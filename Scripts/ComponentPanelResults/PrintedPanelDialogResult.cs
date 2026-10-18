@@ -27,6 +27,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private SideEditor _front;
     private SideEditor _back;
     private CheckBox _sameAsFront;
+    private CheckBox _spawnDeck;
 
     private record ShapePreset(string Label, int Shape, float W = 0f, float H = 0f, float T = 0f);
 
@@ -61,7 +62,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IWatchReader R)
     {
-        int count = Parameters().CardCount(R);
+        int count = GetParams().CardCount(R);
         _preview.ItemCount = count;
         _preview.MultiItemMode = count > 1;
         UpdatePreview();
@@ -95,6 +96,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _shapePicker = GetNode<OptionButton>("%ShapePicker");
         _shapePicker.ItemSelected += OnShapeChanged;
+
+        _spawnDeck = GetNode<CheckBox>("%SpawnDeck");
 
         _orientationLabel = GetNode<Label>("%OrientationLabel");
         _orientationRow = GetNode<HBoxContainer>("%OrientationRow");
@@ -166,6 +169,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _shapePicker.Clear();
         foreach (var cut in ShapesByType[TypeKey()])
             _shapePicker.AddItem(cut.Label);
+        _spawnDeck.ButtonPressed = TypeKey() == "Card";
         OnShapeChanged(0);
     }
 
@@ -251,26 +255,12 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override void Activate()
     {
-        var comp = GetPreviewComponent();
-        _preview.SetComponent(comp, new Vector3(Mathf.DegToRad(90), 0, 0));
+        var scene = GD.Load<PackedScene>(Utility.PrintedScene((TokenShape)GetEffectiveShape()));
+        _preview.SetComponent(
+            scene.Instantiate<VcPrinted>(),
+            new Vector3(Mathf.DegToRad(90), 0, 0)
+        );
         UpdatePreview();
-    }
-
-    private VcToken GetPreviewComponent()
-    {
-        int shape = GetEffectiveShape();
-
-        string sceneName = shape switch
-        {
-            1 => "VcTokenCircle.tscn",
-            2 => "VcTokenHexPoint.tscn",
-            3 => "VcTokenHexFlat.tscn",
-            _ => "VcToken.tscn",
-        };
-
-        var scene = GD.Load<PackedScene>($"res://Scenes/VisualComponents/{sceneName}");
-        var vc = scene.Instantiate<VcToken>();
-        return vc;
     }
 
     public override void Deactivate()
@@ -278,21 +268,14 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-    public override ComponentParameters GetParams()
-    {
-        var d = Parameters();
-        // More than one card spawns as a deck.
-        return d.CardCount(AtomService.Instance) > 1 ? d : d.CloneAs<TokenParameters>();
-    }
-
-    private DeckParameters Parameters()
+    public override PrintedParameters GetParams()
     {
         int shape = GetEffectiveShape();
 
         float height = ParamToFloat(_heightInput.Text);
         float width = shape == 0 ? ParamToFloat(_widthInput.Text) : height;
 
-        return new DeckParameters
+        return new PrintedParameters
         {
             ComponentName = _nameInput.Text,
             Height = height,
@@ -301,12 +284,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
             Shape = shape,
             Type = _typePicker.Selected switch
             {
-                0 => VcToken.TokenType.Card,
-                2 => VcToken.TokenType.Board,
-                _ => VcToken.TokenType.Token,
+                0 => VcPrinted.TokenType.Card,
+                2 => VcPrinted.TokenType.Board,
+                _ => VcPrinted.TokenType.Token,
             },
             Front = _front.Side,
             Back = _sameAsFront.ButtonPressed ? null : _back.Side,
+            SpawnDeck = _spawnDeck.ButtonPressed,
         };
     }
 
@@ -323,10 +307,10 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var parameters = (PrintedParameters)GetParams();
+        var parameters = GetParams();
         _preview.Build(
             parameters,
-            parameters.Card(_preview.CurrentItem, AtomService.Instance),
+            parameters.Item(_preview.CurrentItem, AtomService.Instance),
             TextureFactory
         );
     }
@@ -342,13 +326,13 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         int storedShape = p.Shape;
 
-        if (storedType == VcToken.TokenType.Card)
+        if (storedType == VcPrinted.TokenType.Card)
         {
             _typePicker.Select(0);
             OnTypeChanged(0);
             _shapePicker.Select(0);
         }
-        else if (storedType == VcToken.TokenType.Board)
+        else if (storedType == VcPrinted.TokenType.Board)
         {
             _typePicker.Select(2);
             OnTypeChanged(2);
@@ -374,6 +358,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _suppressShapeReset = false;
 
+        _spawnDeck.ButtonPressed = p.SpawnDeck;
         _nameInput.Text = prototype.Name;
         _heightInput.Text = p.Height > 0 ? p.Height.ToString() : "";
         _widthInput.Text = p.Width > 0 ? p.Width.ToString() : "";

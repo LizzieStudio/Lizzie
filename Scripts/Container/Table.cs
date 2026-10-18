@@ -49,7 +49,7 @@ public partial class Table : Node3D
     // The scene a component's node is made from, and what its node can't change without being remade.
     private static readonly Basis<
         ComponentState,
-        (string Scene, SnowTag Proto, PrototypeItemRef Card)
+        (string Scene, SnowTag Proto, PrototypeItemRef Item)
     > NodeBasis = new(
         (R, s) =>
         {
@@ -57,7 +57,7 @@ public partial class Table : Node3D
             if (proto == null)
                 return null;
             var scene = Utility.ComponentTypeToScenePath(proto.Type, proto.Parameters, R, s.IsItem);
-            return (scene, s.PrototypeRef, s.Card);
+            return (scene, s.PrototypeRef, s.Item);
         }
     );
 

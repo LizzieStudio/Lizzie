@@ -1,6 +1,6 @@
-[gd_scene load_steps=5 format=3 uid="uid://5ccswp8lv6rf"]
+[gd_scene format=3 uid="uid://5ccswp8lv6rf"]
 
-[ext_resource type="Script" path="res://Scripts/VisualComponents/VcToken.cs" id="1_mjoqy"]
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcPrinted.cs" id="1_mjoqy"]
 [ext_resource type="Texture2D" uid="uid://vv54s2nf8a7x" path="res://Textures/Shapes/circletest2.png" id="2_wn0j6"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_feocx"]

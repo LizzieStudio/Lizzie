@@ -1,6 +1,6 @@
-[gd_scene load_steps=5 format=3 uid="uid://83aktb88kga8"]
+[gd_scene format=3 uid="uid://83aktb88kga8"]
 
-[ext_resource type="Script" path="res://Scripts/VisualComponents/VcToken.cs" id="1_d1652"]
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcPrinted.cs" id="1_d1652"]
 [ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="2_0rbao"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]

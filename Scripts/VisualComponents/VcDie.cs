@@ -119,7 +119,7 @@ public partial class VcDie : VisualComponentBase
 
         Scale = new Vector3(size, size, size);
 
-        _faces.Load(GetPrototype(R), Card, TextureFactory, R);
+        _faces.Load(GetPrototype(R), Item, TextureFactory, R);
     }
 
     private void ShowNet() => _mainMesh.MaterialOverride = _faces.Front.Material;

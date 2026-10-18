@@ -24,7 +24,7 @@ public partial class ComponentPreviewPopup : Window
         if (prototype == null)
             return;
 
-        _preview.Build(prototype, component.Card, textureFactory);
+        _preview.Build(prototype, component.Item, textureFactory);
         _preview.SpinStop();
         Show();
     }

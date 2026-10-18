@@ -54,13 +54,21 @@ public partial class GameController : Node
         {
             SpawnRows(prototype, side.Dataset, die.Size / 10f, components);
         }
+        else if (
+            e.Item == PrototypeItemRef.None
+            && prototype.Parameters is PrintedParameters { SpawnDeck: false } printed
+        )
+        {
+            SpawnStack(prototype, printed, components);
+        }
         else
         {
-            var card =
-                e.Card != PrototypeItemRef.None || prototype.Parameters is DeckParameters
-                    ? e.Card
+            // A printed prototype spawns its deck as no item, and the deck brings its cards.
+            var item =
+                e.Item != PrototypeItemRef.None || prototype.Parameters is PrintedParameters
+                    ? e.Item
                     : PrototypeItemRef.First(prototype.Parameters, AtomService.Instance);
-            var component = SingleComponentSpawn(prototype, card);
+            var component = SingleComponentSpawn(prototype, item);
             if (component != null)
                 components.Add((component, Vector3.Zero));
         }
@@ -104,13 +112,36 @@ public partial class GameController : Node
         }
     }
 
-    private VisualComponentBase SingleComponentSpawn(Prototype prototype, PrototypeItemRef card)
+    /// <summary>
+    /// Every card of <paramref name="printed"/> face-up in one stack, the first on top.
+    /// A prototype with no cards spawns one blank card.
+    /// </summary>
+    private void SpawnStack(
+        Prototype prototype,
+        PrintedParameters printed,
+        List<(VisualComponentBase, Vector3)> components
+    )
+    {
+        var R = AtomService.Instance;
+        int count = Math.Max(printed.CardCount(R), 1);
+        float thickness = VcPrinted.ThicknessOf(printed);
+
+        // Components are written bottom first, so the last card goes first.
+        for (int n = count - 1; n >= 0; n--)
+        {
+            var card = SingleComponentSpawn(prototype, printed.Item(n, R));
+            if (card != null)
+                components.Add((card, new Vector3(0, thickness * (count - 1 - n), 0)));
+        }
+    }
+
+    private VisualComponentBase SingleComponentSpawn(Prototype prototype, PrototypeItemRef item)
     {
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
             AtomService.Instance,
-            card != PrototypeItemRef.None
+            item != PrototypeItemRef.None
         );
         if (string.IsNullOrEmpty(scenePath))
         {
@@ -127,7 +158,7 @@ public partial class GameController : Node
         }
 
         component.PrototypeRef = prototype.Id;
-        component.Card = card;
+        component.Item = item;
 
         component.TextureFactory = _textureFactory;
         return component;

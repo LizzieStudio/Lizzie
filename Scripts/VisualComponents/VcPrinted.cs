@@ -7,11 +7,11 @@ using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using Vector2 = Godot.Vector2;
 
 /// <summary>
-/// VcToken represents any object that is flat on two opposite sides, a geometric prism.
+/// VcPrinted represents any object that is flat on two opposite sides, a geometric prism.
 /// This includes cards, tiles, and most wood pieces like meeples.
-/// VcToken may have a graphic on either of its flat faces, but otherwise has a simple color.
+/// VcPrinted may have a graphic on either of its flat faces, but otherwise has a simple color.
 /// </summary>
-public partial class VcToken : VisualComponentBase
+public partial class VcPrinted : VisualComponentBase
 {
     private MeshInstance3D _mainMesh;
 
@@ -34,12 +34,12 @@ public partial class VcToken : VisualComponentBase
 
     private readonly FaceLoader _faces;
 
-    public VcToken() => _faces = new FaceLoader(ShowFaces);
+    public VcPrinted() => _faces = new FaceLoader(ShowFaces);
 
     public override void _Ready()
     {
         base._Ready();
-        ComponentType = VisualComponentType.Token;
+        ComponentType = VisualComponentType.Printed;
     }
 
     public override void _Process(double delta)
@@ -111,7 +111,7 @@ public partial class VcToken : VisualComponentBase
         Shape = (TokenShape)p.Shape;
 
         BuildToken();
-        _faces.Load(GetPrototype(R), Card, TextureFactory, R);
+        _faces.Load(GetPrototype(R), Item, TextureFactory, R);
     }
 
     public static float ThicknessOf(PrintedParameters p) => Math.Max(p.Thickness / 10f, 0.03f);
@@ -299,8 +299,13 @@ public partial class VcToken : VisualComponentBase
     }
 }
 
-public abstract record PrintedParameters : ComponentParameters
+[JsonName("PrintedParameters")]
+public sealed record PrintedParameters : ComponentParameters
 {
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Printed;
+
     public float Height { get; init; }
     public float Width { get; init; }
     public float Thickness { get; init; }
@@ -313,7 +318,12 @@ public abstract record PrintedParameters : ComponentParameters
     /// </summary>
     public SideParameters Back { get; init; }
 
-    public VcToken.TokenType Type { get; init; }
+    public VcPrinted.TokenType Type { get; init; }
+
+    /// <summary>
+    /// Whether spawning makes a deck holding the cards, rather than a loose stack of them.
+    /// </summary>
+    public bool SpawnDeck { get; init; }
 
     /// <summary>
     /// How many cards there are. The max of both sides.
@@ -321,16 +331,8 @@ public abstract record PrintedParameters : ComponentParameters
     public int CardCount(IAtomReader R) => Math.Max(Front?.Count(R) ?? 0, Back?.Count(R) ?? 0);
 
     /// <summary>
-    /// Card <paramref name="n"/> of this prototype.
+    /// Item <paramref name="n"/> of this prototype.
     /// </summary>
-    public PrototypeItemRef Card(int n, IAtomReader R) =>
+    public PrototypeItemRef Item(int n, IAtomReader R) =>
         new(n, Front?.Row(n, R) ?? SnowTag.Empty, Back?.Row(n, R) ?? SnowTag.Empty);
-}
-
-[JsonName("TokenParameters")]
-public sealed record TokenParameters : PrintedParameters
-{
-    [JsonIgnore]
-    public override VisualComponentBase.VisualComponentType ComponentType =>
-        VisualComponentBase.VisualComponentType.Token;
 }

@@ -431,13 +431,15 @@ public partial class ProjectService : Node
 
     public VisualComponentBase SpawnDisconnectedVisualComponent(
         Prototype prototype,
+        PrototypeItemRef item,
         TextureFactory textureFactory
     )
     {
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            AtomService.Instance
+            AtomService.Instance,
+            item != PrototypeItemRef.None
         );
 
         VisualComponentBase component = SpawnComponent(scenePath);
@@ -450,6 +452,7 @@ public partial class ProjectService : Node
 
         component.NeverHighlight = true;
         component.PrototypeRef = prototype.Id;
+        component.Item = item;
         component.TextureFactory = textureFactory;
 
         return component;

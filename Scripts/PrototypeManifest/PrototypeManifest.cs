@@ -195,7 +195,7 @@ public partial class PrototypeManifest : Window, ICommandView
         var prototypes = R.Get(Prototype.Live).ToList();
 
         // The Qty column, counted on the stage the table shows.
-        // We filter a deck's cards so that they aren't counted.
+        // A prototype that spawns decks counts its decks, not their cards.
         var counts = R.Get(
                 ComponentState.ByStage,
                 ProjectService.Instance.GameObjects.ShownStage(R)
@@ -203,8 +203,8 @@ public partial class PrototypeManifest : Window, ICommandView
             .Where(s =>
                 !(
                     s.IsItem
-                    && R.Get(Prototype.ById, s.PrototypeRef)?.Type
-                        == VisualComponentBase.VisualComponentType.Deck
+                    && R.Get(Prototype.ById, s.PrototypeRef)?.Parameters
+                        is PrintedParameters { SpawnDeck: true }
                 )
             )
             .GroupBy(s => s.PrototypeRef)
@@ -286,9 +286,9 @@ public partial class PrototypeManifest : Window, ICommandView
         //update the preview
         _preview.ClearComponent();
 
-        var card = PrototypeItemRef.First(SelectedPrototype.Parameters, AtomService.Instance);
+        var item = PrototypeItemRef.First(SelectedPrototype.Parameters, AtomService.Instance);
 
-        _preview.Build(SelectedPrototype, card, TextureFactory);
+        _preview.Build(SelectedPrototype, item, TextureFactory);
     }
 
     public TextureFactory TextureFactory { get; set; }

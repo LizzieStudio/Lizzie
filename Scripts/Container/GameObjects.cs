@@ -918,7 +918,7 @@ public partial class GameObjects : Node3D
             Snowport.Clock.Create()
         );
         var rest = held.Atoms(R)
-            .Where(s => R.Kind(s) != VisualComponentBase.VisualComponentType.Token);
+            .Where(s => R.Kind(s) != VisualComponentBase.VisualComponentType.Printed);
         EndDrag(held, cards.Concat(OnTable(At(cursor, rest))));
     }
 
@@ -955,7 +955,7 @@ public partial class GameObjects : Node3D
                         ZOrder = new ZOrder(ZTarget.Top, i, stamp),
                     };
                     var deck =
-                        R.Kind(s) == VisualComponentBase.VisualComponentType.Token
+                        R.Kind(s) == VisualComponentBase.VisualComponentType.Printed
                             ? decks
                                 .Where(d => d.X == placed.X && d.Z == placed.Z)
                                 .MaxBy(d => d.ZOrder)
@@ -979,7 +979,7 @@ public partial class GameObjects : Node3D
 
     /// <summary>
     /// The offset that snapping should apply to the components.
-    /// If a candidate VcToken or deck is found, this offset will snap to a stacked position.
+    /// If a candidate VcPrinted or deck is found, this offset will snap to a stacked position.
     /// If no candidate is found, returns (0, 0).
     /// </summary>
     private (int X, int Z) SnapDelta(List<ComponentState> dropped)
@@ -988,7 +988,7 @@ public partial class GameObjects : Node3D
         var targets = R.Get(ComponentState.ByContainer, ShownKey(SnowTag.Empty))
             .Where(s =>
                 R.Kind(s)
-                    is VisualComponentBase.VisualComponentType.Token
+                    is VisualComponentBase.VisualComponentType.Printed
                         or VisualComponentBase.VisualComponentType.Deck
             )
             .Select(s => (s.X, s.Z))
@@ -996,7 +996,7 @@ public partial class GameObjects : Node3D
 
         foreach (
             var card in dropped.Where(s =>
-                R.Kind(s) == VisualComponentBase.VisualComponentType.Token
+                R.Kind(s) == VisualComponentBase.VisualComponentType.Printed
             )
         )
         {

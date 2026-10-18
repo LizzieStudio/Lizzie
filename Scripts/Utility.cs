@@ -49,14 +49,11 @@ public static class Utility
             case VisualComponentBase.VisualComponentType.Disc:
                 return "res://Scenes/VisualComponents/VcDisc.tscn";
 
-            case VisualComponentBase.VisualComponentType.Token:
-                return TokenScene(parameters);
-
-            case VisualComponentBase.VisualComponentType.Deck:
+            case VisualComponentBase.VisualComponentType.Printed:
             {
                 if (!isCard && !previewMode)
                     return "res://Scenes/VisualComponents/VcDeck.tscn";
-                return TokenScene(parameters);
+                return PrintedScene((TokenShape)((PrintedParameters)parameters).Shape);
             }
 
             case VisualComponentBase.VisualComponentType.Die:
@@ -84,33 +81,17 @@ public static class Utility
         return string.Empty;
     }
 
-    private static string TokenScene(ComponentParameters parameters)
-    {
-        var shape = string.Empty;
-
-        var si = parameters is PrintedParameters printed ? printed.Shape : 0;
-
-        switch (si)
+    /// <summary>
+    /// The scene for a printed component of <paramref name="shape"/>.
+    /// </summary>
+    public static string PrintedScene(TokenShape shape) =>
+        shape switch
         {
-            case 1:
-                shape = "VcTokenCircle.tscn";
-                break;
-
-            case 2:
-                shape = "VcTokenHexPoint.tscn";
-                break;
-
-            case 3:
-                shape = "VcTokenHexFlat.tscn";
-                break;
-
-            default:
-                shape = "VcToken.tscn";
-                break;
-        }
-
-        return $"res://Scenes/VisualComponents/{shape}";
-    }
+            TokenShape.Circle => "res://Scenes/VisualComponents/VcPrintedCircle.tscn",
+            TokenShape.HexPoint => "res://Scenes/VisualComponents/VcPrintedHexPoint.tscn",
+            TokenShape.HexFlat => "res://Scenes/VisualComponents/VcPrintedHexFlat.tscn",
+            _ => "res://Scenes/VisualComponents/VcPrinted.tscn",
+        };
 
     /// <summary>
     /// The scene that shows a die.

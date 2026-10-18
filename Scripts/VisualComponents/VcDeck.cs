@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Serialization;
 using Godot;
 
 public partial class VcDeck : VisualComponentBase
@@ -79,11 +78,11 @@ public partial class VcDeck : VisualComponentBase
 
     private static float CardHeight(IAtomReader R, ComponentState card) =>
         R.Get(Prototype.ById, card.PrototypeRef)?.Parameters is PrintedParameters p
-            ? VcToken.ThicknessOf(p)
+            ? VcPrinted.ThicknessOf(p)
             : 0;
 
     /// <summary>
-    /// The deck's cards, face-down on the frame, with the first token on top.
+    /// The deck's cards, face-down on the frame, with the first card on top.
     /// </summary>
     public override IEnumerable<ComponentState> GetSpawnStack(ComponentState self)
     {
@@ -103,7 +102,7 @@ public partial class VcDeck : VisualComponentBase
                 Id = Snowport.Clock.CreateTag(),
                 Stage = self.Stage,
                 PrototypeRef = PrototypeRef,
-                Card = parameters.Card(n, R),
+                Item = parameters.Item(n, R),
                 ContainerRef = self.Id,
                 Rotation = new Vector3(0, 0, Mathf.Pi),
             })
@@ -127,7 +126,7 @@ public partial class VcDeck : VisualComponentBase
         _frame.Scale = new Vector3(_width, Thickness, _height);
         _patch.Transform = _frame.Transform * _patchInFrame;
 
-        ShapeProfiles.Add(VcToken.ShapeProfile((TokenShape)p.Shape, _width, _height));
+        ShapeProfiles.Add(VcPrinted.ShapeProfile((TokenShape)p.Shape, _width, _height));
     }
 
     private float _height;
@@ -136,12 +135,4 @@ public partial class VcDeck : VisualComponentBase
     private const float Thickness = 0.15f;
 
     private const float FrameHeight = Thickness + 0.03f;
-}
-
-[JsonName("DeckParameters")]
-public sealed record DeckParameters : PrintedParameters
-{
-    [JsonIgnore]
-    public override VisualComponentBase.VisualComponentType ComponentType =>
-        VisualComponentBase.VisualComponentType.Deck;
 }

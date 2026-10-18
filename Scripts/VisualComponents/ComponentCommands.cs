@@ -17,7 +17,7 @@ public static class ComponentCommands
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Token && !R.IsHidden(c),
+        AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Printed && !R.IsHidden(c),
         Effects = (R, cs, _) => Flipped(R, cs),
     };
 
@@ -107,7 +107,7 @@ public static class ComponentCommands
     /// <summary>
     /// The tokens turned over. Tokens stacked in the same place, or in the same deck, turn over together like a pile,
     /// reversing their order by swapping their ZOrders. Cards in a hand aren't stacked, so each turns over in place.
-    /// <see cref="VcToken"/> animates what Flip writes.
+    /// <see cref="VcPrinted"/> animates what Flip writes.
     /// </summary>
     private static IEnumerable<ComponentState> Flipped(
         IAtomReader R,

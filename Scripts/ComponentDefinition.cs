@@ -242,13 +242,6 @@ public partial class ComponentDefinition : Window
     public event EventHandler<EventArgs> CancelDialog;
     public event EventHandler<EventArgs> CloseDialog;
 
-    private string TypeToName(VisualComponentBase.VisualComponentType componentType)
-    {
-        if (componentType == VisualComponentBase.VisualComponentType.Deck)
-            return "Printed";
-        return _components.First(x => x.ComponentType == componentType.ToString()).ComponentName;
-    }
-
     private Prototype _mapPrototype;
 
     public void DisplayPrototype(Prototype prototype)
@@ -257,7 +250,9 @@ public partial class ComponentDefinition : Window
             return;
 
         _mapPrototype = prototype;
-        CurName = TypeToName(prototype.Type);
+        CurName = _components
+            .First(x => x.ComponentType == prototype.Type.ToString())
+            .ComponentName;
         MapPrototypeToPanel(prototype);
     }
 

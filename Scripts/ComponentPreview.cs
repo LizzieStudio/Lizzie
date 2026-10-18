@@ -248,14 +248,14 @@ public partial class ComponentPreview : Panel
 
     public void Build(
         ComponentParameters parameters,
-        PrototypeItemRef card,
+        PrototypeItemRef item,
         TextureFactory textureFactory
     )
     {
         if (_component == null)
             return;
 
-        _component.Card = card;
+        _component.Item = item;
         _component.TextureFactory = textureFactory;
 
         var json = JsonSerializer.Serialize(parameters, LizzieJson.EventOptions);
@@ -271,26 +271,26 @@ public partial class ComponentPreview : Panel
     private string _draftJson;
     private SnowTag _draftId;
 
-    public void Build(Prototype prototype, PrototypeItemRef card, TextureFactory textureFactory)
+    public void Build(Prototype prototype, PrototypeItemRef item, TextureFactory textureFactory)
     {
-        var c = SpawnComponent(prototype, card);
+        var c = SpawnComponent(prototype, item);
         c.TextureFactory = textureFactory;
         SetComponent(c, GetRotationVector(prototype.Type));
     }
 
-    private VisualComponentBase SpawnComponent(Prototype prototype, PrototypeItemRef card)
+    private VisualComponentBase SpawnComponent(Prototype prototype, PrototypeItemRef item)
     {
         var s = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
             AtomService.Instance,
-            card != PrototypeItemRef.None,
+            item != PrototypeItemRef.None,
             true
         );
         var scene = GD.Load<PackedScene>(s);
         var c = scene.Instantiate<VisualComponentBase>();
         c.PrototypeRef = prototype.Id;
-        c.Card = card;
+        c.Item = item;
         return c;
     }
 
@@ -300,8 +300,11 @@ public partial class ComponentPreview : Panel
         {
             VisualComponentBase.VisualComponentType.Cube => new Vector3(Mathf.DegToRad(-10), 0, 0),
             VisualComponentBase.VisualComponentType.Disc => new Vector3(Mathf.DegToRad(-10), 0, 0),
-            VisualComponentBase.VisualComponentType.Token => new Vector3(Mathf.DegToRad(90), 0, 0),
-            VisualComponentBase.VisualComponentType.Deck => new Vector3(Mathf.DegToRad(90), 0, 0),
+            VisualComponentBase.VisualComponentType.Printed => new Vector3(
+                Mathf.DegToRad(90),
+                0,
+                0
+            ),
             VisualComponentBase.VisualComponentType.Die => new Vector3(Mathf.DegToRad(-45), 0, 0),
             VisualComponentBase.VisualComponentType.Tray => new Vector3(Mathf.DegToRad(30), 0, 0),
             VisualComponentBase.VisualComponentType.Mesh => new Vector3(Mathf.DegToRad(-10), 0, 0),

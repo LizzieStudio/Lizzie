@@ -61,7 +61,7 @@ public record ComponentState : StagedAtom
             PrototypeRef = c.PrototypeRef,
             Position = c.Position,
             Rotation = c.Rotation,
-            Card = c.Card,
+            Item = c.Item,
         };
 
     public SnowTag PrototypeRef { get; init; }
@@ -113,7 +113,7 @@ public record ComponentState : StagedAtom
     public ZOrder ZOrder { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public PrototypeItemRef Card { get; init; } = PrototypeItemRef.None;
+    public PrototypeItemRef Item { get; init; } = PrototypeItemRef.None;
 
     /// <summary>
     /// What holds this component:
@@ -136,13 +136,12 @@ public record ComponentState : StagedAtom
     /// Whether it's one of its prototype's printed items.
     ///
     /// <list type="bullet">
-    /// <item>a deck's card</item>
-    /// <item>a single printed component</item>
+    /// <item>a printed card, in a deck or not, but not the deck itself</item>
     /// <item>a die spawned for a dataset row</item>
     /// </list>
     /// </summary>
     [JsonIgnore]
-    public bool IsItem => Card != PrototypeItemRef.None;
+    public bool IsItem => Item != PrototypeItemRef.None;
 
     /// <summary>
     /// The components whose <see cref="ContainerRef"/> is this one.
@@ -175,7 +174,7 @@ public record ComponentState : StagedAtom
         new[]
         {
             Prototype.ById.Ref(PrototypeRef),
-            DataRow.ById.Ref(Card.FrontRow),
-            DataRow.ById.Ref(Card.BackRow),
+            DataRow.ById.Ref(Item.FrontRow),
+            DataRow.ById.Ref(Item.BackRow),
         }.Where(r => (SnowTag)r.Id != SnowTag.Empty);
 }

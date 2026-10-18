@@ -25,7 +25,7 @@ public readonly record struct PrototypeItemRef(int Number, SnowTag FrontRow, Sno
     public static PrototypeItemRef First(ComponentParameters parameters, IAtomReader R) =>
         parameters switch
         {
-            PrintedParameters printed => printed.Card(0, R),
+            PrintedParameters printed => printed.Item(0, R),
             DieParameters { Faces: TemplateSide side } => new(
                 0,
                 R.GetRows(side.Dataset).FirstOrDefault()?.Id ?? SnowTag.Empty,

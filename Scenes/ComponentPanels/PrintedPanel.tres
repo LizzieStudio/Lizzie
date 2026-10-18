@@ -8,4 +8,4 @@ script = ExtResource("2_prntd")
 ComponentName = "Printed"
 Icon = ExtResource("1_prntd")
 DefinitionDialogName = "res://Scenes/ComponentPanels/printed_panel.tscn"
-ComponentType = "Token"
+ComponentType = "Printed"

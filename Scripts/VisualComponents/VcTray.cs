@@ -5,6 +5,9 @@ using Godot;
 public partial class VcTray : VisualComponentGroup
 {
     private Prototype _prototype;
+
+    // What the tray shows and hands out: its prototype's first item, such as a printed prototype's first card.
+    private PrototypeItemRef _item;
     private Node3D _prototypeSpawnPoint;
 
     public override void _Ready()
@@ -70,6 +73,10 @@ public partial class VcTray : VisualComponentGroup
         ShapeProfiles.Add(new OffsetShape2D(r));
 
         _prototype = R.Get(Prototype.ById, p.Prototype);
+        _item =
+            _prototype == null
+                ? PrototypeItemRef.None
+                : PrototypeItemRef.First(_prototype.Parameters, R);
 
         UpdateNameLabel();
         CreateTrayPrototype();
@@ -110,6 +117,7 @@ public partial class VcTray : VisualComponentGroup
 
         var c = ProjectService.Instance.SpawnDisconnectedVisualComponent(
             _prototype,
+            _item,
             TextureFactory
         );
         c.Built += () => c.Position = new Vector3(0, c.YHeight, 0);
@@ -126,6 +134,7 @@ public partial class VcTray : VisualComponentGroup
                     Id = Snowport.Clock.CreateTag(),
                     Stage = Key.Stage,
                     PrototypeRef = _prototype.Id,
+                    Item = _item,
                 },
             ];
 }

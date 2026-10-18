@@ -64,7 +64,7 @@ public class SideParametersTests
     [Fact]
     public void TheLongerSideSetsTheCardCount()
     {
-        var parameters = new DeckParameters { Front = Quick("1-3"), Back = Quick("Back") };
+        var parameters = new PrintedParameters { Front = Quick("1-3"), Back = Quick("Back") };
 
         Assert.True(
             parameters.CardCount(null) == 3,
@@ -78,12 +78,12 @@ public class SideParametersTests
         var card = new ComponentState
         {
             Id = new SnowTag(1),
-            Card = new PrototypeItemRef(0, SnowTag.Empty, SnowTag.Empty),
+            Item = new PrototypeItemRef(0, SnowTag.Empty, SnowTag.Empty),
         };
 
         var back = RoundTrip(card);
 
-        Assert.True(back.IsItem, $"Card {card.Card} loaded as {back.Card}, which isn't a card.");
+        Assert.True(back.IsItem, $"Card {card.Item} loaded as {back.Item}, which isn't a card.");
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class SideParametersTests
         var prototype = new Prototype
         {
             Id = new SnowTag(1),
-            Parameters = new TokenParameters
+            Parameters = new PrintedParameters
             {
                 Front = new QuickSide { Suits = [new QuickSuit { ShowText = false }] },
             },

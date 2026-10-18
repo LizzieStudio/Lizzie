@@ -100,7 +100,7 @@ public class QuickTemplateTests
     public void RepeatedCardsAreDrawnOnce()
     {
         var side = new QuickSide { Suits = [Suit with { Values = "A, A, 2" }] };
-        var p = new DeckParameters { Width = 63.5f, Height = 88.9f };
+        var p = new PrintedParameters { Width = 63.5f, Height = 88.9f };
 
         var drawing = QuickTemplate.Drawing(p, side);
         var rows = Enumerable

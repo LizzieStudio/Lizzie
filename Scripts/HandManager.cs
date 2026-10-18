@@ -29,7 +29,7 @@ public partial class HandManager : Panel
     // A preview for each card held over a hand, with what it shows, or null when it's hidden.
     private readonly List<(
         CardFace Rect,
-        (Prototype Prototype, PrototypeItemRef Card, bool Back)? Shown
+        (Prototype Prototype, PrototypeItemRef Item, bool Back)? Shown
     )> _previews = new();
 
     // Called when the node enters the scene tree for the first time.
@@ -136,7 +136,7 @@ public partial class HandManager : Panel
 
             // A card can be flipped, or its prototype edited, while it's held.
             var prototype = R.Get(Prototype.ById, s.PrototypeRef);
-            var shows = (prototype, s.Card, HandCard.IsFaceDown(s));
+            var shows = (prototype, s.Item, HandCard.IsFaceDown(s));
             if (shows != shown)
             {
                 rect.ShowCard(s, shows.Item3, R);

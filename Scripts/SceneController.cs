@@ -88,7 +88,7 @@ public partial class SceneController : Node3D, ICommandView
         // Picks up a copy to place, as if spawning its prototype.
         SideEffects = (cs, _) =>
             EventBus.Instance.Publish(
-                new SpawnPrototypeEvent { PrototypeRef = cs[0].PrototypeRef, Card = cs[0].Card }
+                new SpawnPrototypeEvent { PrototypeRef = cs[0].PrototypeRef, Item = cs[0].Item }
             ),
     };
 

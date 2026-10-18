@@ -49,7 +49,7 @@ public class DeckContainmentTests
             ContainerRef = container,
             ZOrder = new ZOrder(ZTarget.Top, order, new SnowportId(((long)order << 8) | 1)),
             Rotation = new Vector3(0, yaw, 0),
-            Card = item
+            Item = item
                 ? new PrototypeItemRef(order, SnowTag.Empty, SnowTag.Empty)
                 : PrototypeItemRef.None,
         };
@@ -65,7 +65,7 @@ public class DeckContainmentTests
     private static readonly ComponentState InHand = State(new(8), DeckProto, Hand, item: true);
 
     private static readonly Reader R = new(
-        new Prototype { Id = DeckProto, Parameters = new DeckParameters() },
+        new Prototype { Id = DeckProto, Parameters = new PrintedParameters() },
         new Prototype { Id = BagProto, Parameters = new BagParameters() },
         TheDeck,
         Bottom,

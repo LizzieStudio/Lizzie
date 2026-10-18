@@ -10,7 +10,7 @@ public abstract partial class VisualComponentBase : Area3D
         Unset = 0,
         Cube = 1,
         Disc = 2,
-        Token = 3,
+        Printed = 3,
         Deck = 6,
         Die = 7,
         Mesh = 8,
@@ -43,7 +43,7 @@ public abstract partial class VisualComponentBase : Area3D
         if (State is { } atom)
         {
             PrototypeRef = atom.PrototypeRef;
-            Card = atom.Card;
+            Item = atom.Item;
         }
 
         // Builds first, so the first placement knows the component's height.
@@ -279,7 +279,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// Which of its prototype's cards this is, or <see cref="PrototypeItemRef.None"/>.
     /// </summary>
-    public PrototypeItemRef Card { get; set; } = PrototypeItemRef.None;
+    public PrototypeItemRef Item { get; set; } = PrototypeItemRef.None;
 
     protected float _yHeight;
 
