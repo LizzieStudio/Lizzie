@@ -66,7 +66,7 @@ public partial class CommandButton : Button
         set
         {
             field = value;
-            if (!value && Edited())
+            if (Edited() && !value)
                 Text = "";
         }
     } = true;
@@ -81,26 +81,25 @@ public partial class CommandButton : Button
         set
         {
             field = value;
-            if (!value && Edited())
+            if (Edited() && !value)
                 Icon = null;
         }
     } = true;
 
     public override void _EnterTree()
     {
-        if (!Engine.IsEditorHint())
+        // The editor puts a deleted button back on undo without readying it again.
+        if (Engine.IsEditorHint())
+            Preview();
+        else
             AtomService.Instance.Watch(this, Sync);
     }
 
     public override void _Ready()
     {
         AddThemeConstantOverride("icon_max_width", IconSize);
-        if (Engine.IsEditorHint())
-        {
-            Preview();
-            return;
-        }
-        Pressed += Run;
+        if (!Engine.IsEditorHint())
+            Pressed += Run;
     }
 
     private void Sync(IWatchReader R)
@@ -176,8 +175,10 @@ public partial class CommandButton : Button
 
     #region Editor
 
-    // After a change in the Inspector, shows the button as it will look and updates the Inspector.
-    // False while the scene loads, or in the game, where it updates automatically.
+    /// <summary>
+    /// After a change in the Inspector, shows the button as it will look and updates the Inspector.
+    /// </summary>
+    /// <returns>False while the scene loads, or in the game, where it updates automatically.</returns>
     private bool Edited()
     {
         if (!IsInsideTree())
