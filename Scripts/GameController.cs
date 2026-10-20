@@ -55,7 +55,7 @@ public partial class GameController : Node
             SpawnRows(prototype, side.Dataset, die.Size / 10f, components);
         }
         else if (
-            e.Item == PrototypeItemRef.None
+            e.Item == null
             && prototype.Parameters is PrintedParameters { SpawnDeck: false } printed
         )
         {
@@ -65,7 +65,7 @@ public partial class GameController : Node
         {
             // A printed prototype spawns its deck as no item, and the deck brings its cards.
             var item =
-                e.Item != PrototypeItemRef.None || prototype.Parameters is PrintedParameters
+                e.Item != null || prototype.Parameters is PrintedParameters
                     ? e.Item
                     : PrototypeItemRef.First(prototype.Parameters, AtomService.Instance);
             var component = SingleComponentSpawn(prototype, item);
@@ -94,10 +94,7 @@ public partial class GameController : Node
 
         for (int n = 0; n < rows.Count; n++)
         {
-            var mc = SingleComponentSpawn(
-                prototype,
-                new PrototypeItemRef(n, rows[n].Id, SnowTag.Empty)
-            );
+            var mc = SingleComponentSpawn(prototype, new DieItemRef(rows[n].Id));
 
             if (mc != null)
             {
@@ -141,7 +138,7 @@ public partial class GameController : Node
             prototype.Type,
             prototype.Parameters,
             AtomService.Instance,
-            item != PrototypeItemRef.None
+            item != null
         );
         if (string.IsNullOrEmpty(scenePath))
         {

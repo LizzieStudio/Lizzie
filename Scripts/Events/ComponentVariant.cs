@@ -17,8 +17,10 @@ public record ComponentVariant : Atom
 
     public SnowTag PrototypeRef { get; init; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public PrototypeItemRef Item { get; init; } = PrototypeItemRef.None;
+    /// <summary>
+    /// Which of its prototype's items it is, or null if it isn't one.
+    /// </summary>
+    public PrototypeItemRef Item { get; init; }
 
     /// <summary>
     /// Whether it's one of its prototype's printed items.
@@ -29,7 +31,7 @@ public record ComponentVariant : Atom
     /// </list>
     /// </summary>
     [JsonIgnore]
-    public bool IsItem => Item != PrototypeItemRef.None;
+    public bool IsItem => Item != null;
 
     /// <summary>
     /// A new variant for a node that hasn't been written yet, such as a spawn preview.
@@ -49,10 +51,7 @@ public record ComponentVariant : Atom
     /// This will need to be extended as new references are invented.
     /// </remarks>
     public override IEnumerable<AtomRef> Referenced(IAtomReader R) =>
-        new[]
-        {
-            Prototype.ById.Ref(PrototypeRef),
-            DataRow.ById.Ref(Item.FrontRow),
-            DataRow.ById.Ref(Item.BackRow),
-        }.Where(r => (SnowTag)r.Id != SnowTag.Empty);
+        new[] { Prototype.ById.Ref(PrototypeRef) }
+            .Concat((Item?.Rows() ?? []).Select(DataRow.ById.Ref))
+            .Where(r => (SnowTag)r.Id != SnowTag.Empty);
 }

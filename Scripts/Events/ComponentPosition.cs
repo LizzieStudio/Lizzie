@@ -155,5 +155,6 @@ public record ComponentPosition : StagedAtom
     /// <summary>
     /// What its <see cref="ComponentVariant"/> refers to.
     /// </summary>
-    public override IEnumerable<AtomRef> Referenced(IAtomReader R) => R.GetVariant(this).Referenced(R);
+    public override IEnumerable<AtomRef> Referenced(IAtomReader R) =>
+        R.GetVariant(this).Referenced(R);
 }

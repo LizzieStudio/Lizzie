@@ -396,7 +396,7 @@ public partial class ProjectService : Node
             prototype.Type,
             prototype.Parameters,
             AtomService.Instance,
-            item != PrototypeItemRef.None
+            item != null
         );
 
         VisualComponentBase component = SpawnComponent(scenePath);

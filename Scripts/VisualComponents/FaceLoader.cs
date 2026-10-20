@@ -45,20 +45,23 @@ public sealed class FaceLoader(Action shown)
         IAtomReader R
     )
     {
+        var card = item as PrintedItemRef;
         Face View(SideParameters side, string key, SnowTag row) =>
-            SideView(side, key, item, row, prototype, factory, R);
+            SideView(side, key, card?.Number ?? 0, row, prototype, factory, R);
         switch (prototype.Parameters)
         {
             case PrintedParameters p:
                 // Each view holds its set once, so a back that shows the front gets its own view.
-                var front = View(p.Front, "f", item.FrontRow);
+                var frontRow = card?.FrontRow ?? SnowTag.Empty;
+                var front = View(p.Front, "f", frontRow);
                 var back =
-                    (p.Back == null ? null : View(p.Back, "b", item.BackRow))
-                    ?? View(p.Front, "f", item.FrontRow);
+                    (p.Back == null ? null : View(p.Back, "b", card?.BackRow ?? SnowTag.Empty))
+                    ?? View(p.Front, "f", frontRow);
                 Queue(front ?? Face.Blank, back ?? Face.Blank);
                 break;
             case DieParameters p:
-                Queue(View(p.Faces, "f", item.FrontRow) ?? Face.Blank, Face.Blank);
+                var row = (item as DieItemRef)?.Row ?? SnowTag.Empty;
+                Queue(View(p.Faces, "f", row) ?? Face.Blank, Face.Blank);
                 break;
         }
     }
@@ -88,21 +91,20 @@ public sealed class FaceLoader(Action shown)
     }
 
     /// <summary>
-    /// What <paramref name="side"/> shows on <paramref name="item"/>, or null when it shows nothing.
+    /// What <paramref name="side"/> shows on card <paramref name="n"/>, or null when it shows nothing.
     /// </summary>
     /// <param name="key">The key to use for the texture cache.</param>
     /// <param name="row">The dataset row this side shows, for a template.</param>
     private static Face SideView(
         SideParameters side,
         string key,
-        PrototypeItemRef item,
+        int n,
         SnowTag row,
         Prototype prototype,
         TextureFactory factory,
         IAtomReader R
     )
     {
-        int n = Math.Max(item.Number, 0);
         switch (side)
         {
             case QuickSide quick when prototype.Parameters is PrintedParameters p:

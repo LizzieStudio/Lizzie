@@ -280,9 +280,9 @@ public abstract partial class VisualComponentBase : Area3D
     public StageKey Key => new(OwningTable?.StageRef ?? SnowTag.Empty, Reference);
 
     /// <summary>
-    /// Which of its prototype's cards this is, or <see cref="PrototypeItemRef.None"/>.
+    /// Which of its prototype's items this is, or null.
     /// </summary>
-    public PrototypeItemRef Item { get; set; } = PrototypeItemRef.None;
+    public PrototypeItemRef Item { get; set; }
 
     protected float _yHeight;
 

@@ -244,7 +244,7 @@ public partial class ComponentPreview : Panel
     }
 
     public void Build(ComponentParameters parameters, TextureFactory textureFactory) =>
-        Build(parameters, PrototypeItemRef.None, textureFactory);
+        Build(parameters, null, textureFactory);
 
     public void Build(
         ComponentParameters parameters,
@@ -284,7 +284,7 @@ public partial class ComponentPreview : Panel
             prototype.Type,
             prototype.Parameters,
             AtomService.Instance,
-            item != PrototypeItemRef.None,
+            item != null,
             true
         );
         var scene = GD.Load<PackedScene>(s);

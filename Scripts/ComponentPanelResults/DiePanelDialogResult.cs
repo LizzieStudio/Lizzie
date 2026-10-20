@@ -106,11 +106,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         _preview.SetComponentVisibility(true);
 
         var row = p.Faces.Row(_preview.CurrentItem, AtomService.Instance);
-        _preview.Build(
-            p,
-            new PrototypeItemRef(_preview.CurrentItem, row, SnowTag.Empty),
-            TextureFactory
-        );
+        _preview.Build(p, new DieItemRef(row), TextureFactory);
     }
 
     public override void DisplayPrototype(Prototype prototype)

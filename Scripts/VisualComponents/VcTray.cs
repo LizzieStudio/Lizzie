@@ -73,10 +73,7 @@ public partial class VcTray : VisualComponentGroup
         ShapeProfiles.Add(new OffsetShape2D(r));
 
         _prototype = R.Get(Prototype.ById, p.Prototype);
-        _item =
-            _prototype == null
-                ? PrototypeItemRef.None
-                : PrototypeItemRef.First(_prototype.Parameters, R);
+        _item = _prototype == null ? null : PrototypeItemRef.First(_prototype.Parameters, R);
 
         UpdateNameLabel();
         CreateTrayPrototype();

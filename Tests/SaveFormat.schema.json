@@ -71,15 +71,45 @@
               "id": true,
               "prototypeRef": true,
               "item": {
-                "type": "object",
-                "properties": {
-                  "number": {
-                    "type": "integer"
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "$type"
+                ],
+                "anyOf": [
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "DieItem"
+                      },
+                      "row": true
+                    },
+                    "required": [
+                      "row"
+                    ],
+                    "additionalProperties": false
                   },
-                  "frontRow": true,
-                  "backRow": true
-                },
-                "additionalProperties": false
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "PrintedItem"
+                      },
+                      "number": {
+                        "type": "integer"
+                      },
+                      "frontRow": true,
+                      "backRow": true
+                    },
+                    "required": [
+                      "number",
+                      "frontRow",
+                      "backRow"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
               }
             },
             "required": [

@@ -72,19 +72,28 @@ public class SideParametersTests
         );
     }
 
-    [Fact]
-    public void TheFirstCardSurvivesSaving()
+    [Theory]
+    [MemberData(nameof(Items))]
+    public void ItemsSurviveSaving(PrototypeItemRef item)
     {
-        var card = new ComponentVariant
-        {
-            Id = new SnowTag(1),
-            Item = new PrototypeItemRef(0, SnowTag.Empty, SnowTag.Empty),
-        };
+        var variant = new ComponentVariant { Id = new SnowTag(1), Item = item };
 
-        var back = RoundTrip(card);
+        var back = RoundTrip(variant).Item;
 
-        Assert.True(back.IsItem, $"Card {card.Item} loaded as {back.Item}, which isn't a card.");
+        Assert.True(
+            Equals(back, item),
+            $"The item changed in saving.\n\nSaved:  {item?.ToString() ?? "none"}\nLoaded: {back?.ToString() ?? "none"}"
+        );
     }
+
+    public static TheoryData<PrototypeItemRef> Items =>
+        [
+            new PrintedItemRef(0, SnowTag.Empty, SnowTag.Empty),
+            new PrintedItemRef(2, new SnowTag(3), new SnowTag(4)),
+            new DieItemRef(SnowTag.Empty),
+            new DieItemRef(new SnowTag(5)),
+            null,
+        ];
 
     [Fact]
     public void HiddenTextSurvivesSaving()

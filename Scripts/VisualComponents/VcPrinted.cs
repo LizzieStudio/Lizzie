@@ -333,6 +333,6 @@ public sealed record PrintedParameters : ComponentParameters
     /// <summary>
     /// Item <paramref name="n"/> of this prototype.
     /// </summary>
-    public PrototypeItemRef Item(int n, IAtomReader R) =>
+    public PrintedItemRef Item(int n, IAtomReader R) =>
         new(n, Front?.Row(n, R) ?? SnowTag.Empty, Back?.Row(n, R) ?? SnowTag.Empty);
 }

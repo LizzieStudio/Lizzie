@@ -25,7 +25,7 @@ public class DeckContainmentTests
     {
         Id = new(41),
         PrototypeRef = DeckProto,
-        Item = new PrototypeItemRef(0, SnowTag.Empty, SnowTag.Empty),
+        Item = new PrintedItemRef(0, SnowTag.Empty, SnowTag.Empty),
     };
 
     private static readonly ComponentVariant BagVariant = new()
