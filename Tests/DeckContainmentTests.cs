@@ -15,25 +15,6 @@ public class DeckContainmentTests
     private static readonly SnowTag Bag = new(21);
     private static readonly SnowTag Hand = new(30);
 
-    /// <summary>Reads from a fixed list of atoms.</summary>
-    private sealed class Reader(params Atom[] atoms) : IAtomReader
-    {
-        public Atom Get(AtomRef atomRef) => throw new NotSupportedException();
-
-        public SnowportId Version(Atom atom) => SnowportId.Empty;
-
-        public T Get<T, I>(Id<T, I> byId, I id)
-            where T : Atom
-            where I : IComparable<I> =>
-            atoms.OfType<T>().FirstOrDefault(a => byId.Of(a).Equals(id));
-
-        public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
-            where T : Atom => atoms.OfType<T>().Where(a => Equals(group.Of(a), key)).ToList();
-
-        public int Count<T, G>(Group<T, G> group, G key)
-            where T : Atom => Get(group, key).Count;
-    }
-
     private static ComponentState State(
         SnowTag id,
         SnowTag proto,
@@ -64,7 +45,7 @@ public class DeckContainmentTests
     private static readonly ComponentState Loose = State(new(7), DeckProto, item: true);
     private static readonly ComponentState InHand = State(new(8), DeckProto, Hand, item: true);
 
-    private static readonly Reader R = new(
+    private static readonly ListReader R = new(
         new Prototype { Id = DeckProto, Parameters = new PrintedParameters() },
         new Prototype { Id = BagProto, Parameters = new BagParameters() },
         TheDeck,

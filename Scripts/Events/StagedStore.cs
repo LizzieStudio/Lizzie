@@ -35,8 +35,11 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     /// </summary>
     private readonly IndexedAtoms<T, StageKey> _resolved;
 
-    // each stage's parent, for every stage written as a Stage atom
-    private readonly Dictionary<SnowTag, SnowTag> _parents = new();
+    // each stage's written parent, unless it's deleted
+    private readonly Dictionary<SnowTag, SnowTag> _written = new();
+
+    // the parent of each stage that's Stage.Reachable
+    private Dictionary<SnowTag, SnowTag> _parents = new();
 
     // what changed since the last Settle
     private readonly HashSet<StageKey> _dirty = new();
@@ -103,18 +106,25 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
 
     public void Settle()
     {
-        // Only a stage appearing, going away or changing parent changes what's inherited.
+        // Check for a stage showing up, going, away, or reparenting.
         bool restructured = false;
-        foreach (var id in _changedStages)
+        if (_changedStages.Count > 0)
         {
-            bool had = _parents.TryGetValue(id, out var oldParent);
-            if (_stages.Find(id).Value is Stage stage)
-            {
-                restructured |= !had || oldParent != stage.ParentRef;
-                _parents[id] = stage.ParentRef;
-            }
-            else
-                restructured |= _parents.Remove(id);
+            foreach (var id in _changedStages)
+                if (_stages.Find(id).Value is Stage { Deleted: false } stage)
+                    _written[id] = stage.ParentRef;
+                else
+                    _written.Remove(id);
+
+            var parents = _written
+                .Where(w =>
+                    Stage.Reachable(w.Key, s => _written.TryGetValue(s, out var p) ? p : null)
+                )
+                .ToDictionary();
+            restructured =
+                parents.Count != _parents.Count
+                || parents.Any(p => !_parents.TryGetValue(p.Key, out var old) || old != p.Value);
+            _parents = parents;
         }
 
         var keys = restructured
@@ -165,13 +175,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     /// </summary>
     private AtomEntry Resolve(StageKey key)
     {
-        // a chain longer than the number of stages has a cycle
-        int steps = 0;
-        for (
-            var stage = key.Stage;
-            _parents.TryGetValue(stage, out var parent) && steps++ < _parents.Count;
-            stage = parent
-        )
+        for (var stage = key.Stage; _parents.TryGetValue(stage, out var parent); stage = parent)
         {
             var written = _raw.Find(key with { Stage = stage });
             if (written.Value is StagedAtom atom)
@@ -188,6 +192,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
         foreach (var (key, entry) in _resolved.Entries)
             _touches.AddRange(_resolved.Touched(key, entry, default));
         _resolved.Clear();
+        _written.Clear();
         _parents.Clear();
         _dirty.Clear();
         _changedStages.Clear();

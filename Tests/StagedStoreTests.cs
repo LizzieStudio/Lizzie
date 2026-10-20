@@ -247,6 +247,28 @@ public class StagedStoreTests
     }
 
     [Fact]
+    public void UndoingAStagesRemovalBringsBackItsAtoms()
+    {
+        Write(StageOf(1), StageOf(2, parent: 1));
+        Write(PieceOf(1, 10, x: 5), PieceOf(2, 11, x: 7));
+        var newGame = Record(
+            new TableEvent
+            {
+                Id = NextId(),
+                Writes = [StageOf(3, parent: 1)],
+                Unsets = [StageOf(2, parent: 1)],
+            }
+        );
+        AssertShows(2, 11, null);
+
+        Undo(newGame);
+
+        AssertShows(2, 10, 5);
+        AssertShows(2, 11, 7);
+        AssertIds(_store.InGroup(Piece.ByStage, Tag(2)), 10, 11);
+    }
+
+    [Fact]
     public void AParentsWriteTouchesEveryStageThatShowsIt()
     {
         Write(StageOf(1), StageOf(2, parent: 1));
@@ -328,15 +350,42 @@ public class StagedStoreTests
     }
 
     [Fact]
-    public void ACycleOfParentsEndsTheChain()
+    public void ALoopOfParentsAndWhatsUnderItShowNothing()
     {
-        Write(StageOf(1, parent: 2), StageOf(2, parent: 1));
-        Write(PieceOf(1, 10, x: 5));
-        Write(StageOf(3, parent: 2));
+        Write(StageOf(1, parent: 2));
+        Write(StageOf(2, parent: 1));
+        Write(PieceOf(1, 10, x: 5), PieceOf(2, 11, x: 7));
+        Write(StageOf(3, parent: 1));
+
+        AssertShows(1, 10, null);
+        AssertShows(2, 11, null);
+        AssertShows(3, 10, null);
+    }
+
+    [Fact]
+    public void BreakingALoopShowsItsStagesAgain()
+    {
+        Write(StageOf(1, parent: 2));
+        Write(StageOf(2, parent: 1));
+        Write(PieceOf(1, 10, x: 5), PieceOf(2, 11, x: 7));
+
+        Write(StageOf(1));
 
         AssertShows(1, 10, 5);
         AssertShows(2, 10, 5);
-        AssertShows(3, 10, 5);
+        AssertShows(2, 11, 7);
+    }
+
+    [Fact]
+    public void AStageUnderADeletedOneShowsNothing()
+    {
+        Write(StageOf(1), StageOf(2, parent: 1));
+        Write(PieceOf(1, 10, x: 5), PieceOf(2, 11, x: 7));
+
+        Write(StageOf(1) with { Deleted = true });
+
+        AssertShows(1, 10, null);
+        AssertShows(2, 11, null);
     }
 
     [Fact]

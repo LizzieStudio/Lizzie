@@ -48,7 +48,7 @@ public sealed class CommandContext
     } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
-    /// The atom the view shows, from its <see cref="ICommandView.SelectionScope"/>, or empty.
+    /// The atom the view shows, from its <see cref="ICommandView.Shown"/>, or empty.
     /// </summary>
     public IEnumerable<AtomRef> View
     {
@@ -73,8 +73,9 @@ public sealed class CommandContext
         if (view == null)
             return new();
 
-        var scope = view.SelectionScope(R);
-        var selected = R.GetSelection(scope)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
+        var selected =
+            (view.SelectionScope(R) is { } place ? R.GetSelection(place)?.Targets : null)
+            ?? ImmutableHashSet<AtomRef>.Empty;
         var chosen = selected.IsEmpty && keys ? view.Hovered().ToImmutableHashSet() : selected;
 
         IEnumerable<AtomRef> Related(
@@ -101,7 +102,7 @@ public sealed class CommandContext
             Contents = Followed(t => R.Resolve(t)?.Contents(R) ?? []),
             Containers = Followed(t => R.Resolve(t)?.Containers(R) ?? []),
             Referenced = Related(chosen, t => R.Resolve(t)?.Referenced(R) ?? []),
-            View = scope != SnowTag.Empty ? [DataSet.ById.Ref(scope)] : [],
+            View = view.Shown(R) is { } shown ? [shown] : [],
             Local = view.Commands,
         };
     }

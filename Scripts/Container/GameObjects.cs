@@ -42,17 +42,23 @@ public partial class GameObjects : Node3D
     public WatchableValue<SnowTag> PickedStage { get; } = new();
 
     /// <summary>
-    /// The stage that's showing locally. A Watch that reads it through <paramref name="R"/> runs again when either changes.
+    /// Gets the stage to show locally.
     /// </summary>
-    /// <remarks>
-    /// Usually shows the one the user picked,
-    /// but if the picked stage isn't either the game or a blueprint of the game, it falls back to the game.
-    /// </remarks>
-    public SnowTag ShownStage(IAtomReader R)
+    public SnowTag ShownStage(IAtomReader R) =>
+        PickedStage.Get(R) is var picked && Stage.Reachable(R, picked)
+            ? picked
+            : R.Get(CurrentGame.Only).StageRef;
+
+    /// <summary>
+    /// Gets the list of stages shown at the top of the app.
+    /// </summary>
+    public List<Stage> PickableStages(IAtomReader R)
     {
-        var game = R.Get(CurrentGame.Only).StageRef;
-        var picked = PickedStage.Get(R);
-        return Stage.Chain(R, game).Any(s => s.Id == picked) ? picked : game;
+        var stages = Stage.Chain(R, R.Get(CurrentGame.Only).StageRef).Reverse().ToList();
+        var shown = ShownStage(R);
+        return stages.Any(s => s.Id == shown)
+            ? stages
+            : [.. Stage.Chain(R, shown).Reverse(), .. stages.TakeLast(1)];
     }
 
     /// <summary>
@@ -429,7 +435,10 @@ public partial class GameObjects : Node3D
     /// <summary>The components the local player has selected, read from their selection atom.</summary>
     private HashSet<SnowTag> GetSelection() =>
         AtomService
-            .Instance.GetSelection(ComponentState.ById, _table.StageRef)
+            .Instance.GetSelection(
+                ComponentState.ById,
+                new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
+            )
             .Select(k => k.Component)
             .ToHashSet();
 
@@ -438,7 +447,7 @@ public partial class GameObjects : Node3D
         AtomService.Instance.SetSelection(
             ComponentState.ById,
             components.Select(ShownKey),
-            _table.StageRef
+            new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
         );
 
     /// <summary>
@@ -603,7 +612,7 @@ public partial class GameObjects : Node3D
                 AtomService.Instance.NewSelection(
                     ComponentState.ById,
                     draw.Select(ComponentState.ById.Of),
-                    _table.StageRef
+                    new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
                 )
             );
         }

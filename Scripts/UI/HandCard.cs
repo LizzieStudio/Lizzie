@@ -75,7 +75,7 @@ public partial class HandCard : PanelContainer
     private void SyncSelection(IWatchReader R)
     {
         var target = ComponentState.ById.Ref(Reference);
-        var colors = R.SelectionColors(Reference.Stage);
+        var colors = R.SelectionColors(new SelectionPlace(SelectionPlaces.Table, Reference.Stage));
         SelectionHighlight.Outline(this, "panel", colors, target);
     }
 

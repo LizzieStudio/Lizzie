@@ -785,7 +785,16 @@
               "player": {
                 "type": "integer"
               },
-              "within": true,
+              "place": {
+                "type": "object",
+                "properties": {
+                  "view": {
+                    "type": "integer"
+                  },
+                  "within": true
+                },
+                "additionalProperties": false
+              },
               "targets": {
                 "type": [
                   "array",
@@ -811,6 +820,7 @@
                 ]
               },
               "parentRef": true,
+              "rank": true,
               "isGame": {
                 "type": "boolean"
               },

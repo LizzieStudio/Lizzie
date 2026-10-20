@@ -83,6 +83,56 @@ public class SaveCompactionTests
         );
 
     [Fact]
+    public void ADeletedBlueprintIsDroppedWithItsComponents() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag(1) },
+                new Stage
+                {
+                    Id = Tag(2),
+                    ParentRef = Tag(1),
+                    Deleted = true,
+                },
+                Component(3) with
+                {
+                    Stage = Tag(2),
+                },
+            ],
+            1
+        );
+
+    [Fact]
+    public void ABlueprintUnderADeletedOneIsDroppedWithItsComponents() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag(1) },
+                new Stage
+                {
+                    Id = Tag(2),
+                    ParentRef = Tag(1),
+                    Deleted = true,
+                },
+                new Stage { Id = Tag(3), ParentRef = Tag(2) },
+                Component(4) with
+                {
+                    Stage = Tag(3),
+                },
+            ],
+            1
+        );
+
+    [Fact]
+    public void ALoopOfBlueprintsIsDroppedWithItsComponents() =>
+        AssertKept([
+            new Stage { Id = Tag(1), ParentRef = Tag(2) },
+            new Stage { Id = Tag(2), ParentRef = Tag(1) },
+            Component(3) with
+            {
+                Stage = Tag(1),
+            },
+        ]);
+
+    [Fact]
     public void AGameIsDroppedWithItsComponents() =>
         AssertKept(
             [

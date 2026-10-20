@@ -144,9 +144,9 @@ script = ExtResource("cmd_menu")
 script = ExtResource("cmd_item")
 CommandName = "game.reset"
 
-[node name="GameNewBlueprint" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Game" unique_id=459407097]
+[node name="GameBlueprints" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Game" unique_id=459407097]
 script = ExtResource("cmd_item")
-CommandName = "game.new_blueprint"
+CommandName = "editor.blueprints"
 
 [node name="Panel" type="Panel" parent="UI/MarginContainer/Panel/HBoxContainer" unique_id=1797442022]
 layout_mode = 2

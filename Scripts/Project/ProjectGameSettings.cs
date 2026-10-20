@@ -24,6 +24,10 @@ public sealed record ProjectGameSettings : Atom
     /// <summary>
     /// The blueprint <see cref="Stage"/> a game starts from.
     /// </summary>
+    /// <remarks>
+    /// I'd like to add a window when you start a new game that lets you pick which blueprint to load from.
+    /// When we do that, we should get rid of this. It might keep removed blueprints alive.
+    /// </remarks>
     public SnowTag BlueprintRef { get; init; } = SnowTag.Empty;
 
     /// <summary>

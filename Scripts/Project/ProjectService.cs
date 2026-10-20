@@ -354,7 +354,8 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Starts a game unless one is being played.
+    /// Starts a game on the project's blueprint unless one is being played, which can't be undone.
+    /// A project without a blueprint gets an empty one.
     /// The host or a solo player runs it after a new game or a load.
     /// </summary>
     private void EnsureGame()
@@ -363,68 +364,24 @@ public partial class ProjectService : Node
             return;
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
-        if (R.Get(Stage.ById, R.Get(CurrentGame.Only).StageRef) == null)
-            StartGame();
-    }
+        if (R.Get(Stage.ById, R.Get(CurrentGame.Only).StageRef) != null)
+            return;
 
-    /// <summary>
-    /// Starts a new game on the project's blueprint in place of the one being played, which can't be undone.
-    /// A project without a blueprint gets an empty one.
-    /// Only the host or a solo player may start one.
-    /// </summary>
-    public void StartGame()
-    {
         var changes = new List<IChange>();
-        var current = R.Get(CurrentGame.Only);
-        if (R.Get(Stage.ById, current.StageRef) is { } old)
-            changes.Add(R.Unset(old));
-
-        var settings = R.Get(ProjectGameSettings.Only);
-        if (R.Get(Stage.ById, settings.BlueprintRef) == null)
+        var blueprint = R.Get(ProjectGameSettings.Only).BlueprintRef;
+        if (!Stage.Reachable(R, blueprint))
         {
-            var setup = new Stage { Id = Snowport.Clock.CreateTag(), Name = "Setup" };
-            settings = settings with { BlueprintRef = setup.Id };
-            changes.AddRange([setup, settings]);
+            var setup = new Stage
+            {
+                Id = Snowport.Clock.CreateTag(),
+                Name = "Setup",
+                Rank = default(SnowRank).After(Snowport.Clock.Create()),
+            };
+            blueprint = setup.Id;
+            changes.Add(setup);
         }
-
-        var game = new Stage
-        {
-            Id = Snowport.Clock.CreateTag(),
-            Name = "Game",
-            ParentRef = settings.BlueprintRef,
-            IsGame = true,
-        };
-        changes.AddRange([game, current with { StageRef = game.Id }]);
+        changes.AddRange(Stage.NewGame(R, blueprint));
         AtomService.Instance.WriteAdmin(changes);
-    }
-
-    /// <summary>
-    /// Puts a new, empty blueprint between the game and the blueprint it builds on, and starts later games on it.
-    /// It can't be undone, and only the host or a solo player may add one.
-    /// </summary>
-    /// <remarks>
-    /// This is a testing stopgap. We need to replace this with a blueprint manager window.
-    /// </remarks>
-    public void NewBlueprint()
-    {
-        var game = R.Get(Stage.ById, R.Get(CurrentGame.Only).StageRef);
-        var blueprint = new Stage
-        {
-            Id = Snowport.Clock.CreateTag(),
-            Name = $"Blueprint {R.Get(Stage.Live).Count + 1}",
-            ParentRef = game.ParentRef,
-        };
-        AtomService.Instance.WriteAdmin(
-            blueprint,
-            game with
-            {
-                ParentRef = blueprint.Id,
-            },
-            R.Get(ProjectGameSettings.Only) with
-            {
-                BlueprintRef = blueprint.Id,
-            }
-        );
     }
 
     public GameObjects GameObjects { get; set; }

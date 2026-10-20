@@ -1,4 +1,3 @@
-using System.Linq;
 using Godot;
 
 public partial class TableSurface : StaticBody3D
@@ -55,7 +54,9 @@ public partial class TableSurface : StaticBody3D
         _blueprintNumber.Visible = !isGame;
         // Numbered like the stage buttons, the root blueprint first.
         _blueprintNumber.Text = (
-            Stage.Chain(R, game).Reverse().TakeWhile(stage => stage.Id != shown).Count() + 1
+            ProjectService
+                .Instance.GameObjects.PickableStages(R)
+                .FindIndex(stage => stage.Id == shown) + 1
         ).ToString();
     }
 }

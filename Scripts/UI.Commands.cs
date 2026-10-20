@@ -94,6 +94,14 @@ public partial class UI
         SideEffects = _ => _instance?.ShowImageManager(),
     };
 
+    public static readonly GlobalCommand EditBlueprints = new()
+    {
+        Name = new("editor.blueprints"),
+        Icon = CommandIcons.Blueprints,
+        Caption = "Blueprints",
+        SideEffects = _ => _instance?.ShowBlueprintManager(),
+    };
+
     public static readonly GlobalCommand EditProjectSettings = new()
     {
         Name = new("editor.project_settings"),

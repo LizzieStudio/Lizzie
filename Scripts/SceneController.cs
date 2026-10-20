@@ -39,7 +39,8 @@ public partial class SceneController : Node3D, ICommandView
     /// <summary>
     /// The table's selection is in the stage it shows.
     /// </summary>
-    public SnowTag SelectionScope(IAtomReader R) => _gameObjects.ShownStage(R);
+    public SelectionPlace? SelectionScope(IAtomReader R) =>
+        new SelectionPlace(SelectionPlaces.Table, _gameObjects.ShownStage(R));
 
     /// <summary>
     /// The hovered component, which keys act on when nothing is selected.
@@ -70,7 +71,7 @@ public partial class SceneController : Node3D, ICommandView
         return atom switch
         {
             ComponentState s => s.Stage == shown,
-            Selection s => s.Within == shown,
+            Selection s => s.Place == new SelectionPlace(SelectionPlaces.Table, shown),
             _ => false,
         };
     }

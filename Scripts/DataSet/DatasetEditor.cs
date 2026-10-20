@@ -142,7 +142,11 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>The shown dataset. Setting it to empty opens the first one.</summary>
     public WatchableValue<SnowTag> ShownDataSet { get; } = new();
 
-    public SnowTag SelectionScope(IAtomReader R) => ShownDataSet.Get(R);
+    public SelectionPlace? SelectionScope(IAtomReader R) =>
+        new SelectionPlace(SelectionPlaces.DataSet, ShownDataSet.Get(R));
+
+    public AtomRef? Shown(IAtomReader R) =>
+        ShownDataSet.Get(R) is var shown && shown != SnowTag.Empty ? DataSet.ById.Ref(shown) : null;
 
     public IReadOnlyList<Command> Commands => _commands;
 
@@ -159,7 +163,8 @@ public partial class DatasetEditor : Window, ICommandView
                 || atom is DataColumn column && column.DataSetId == shown
                 || atom is DataCell cell
                     && AtomService.Instance.Get(DataRow.ById, cell.Id.Row)?.DataSetId == shown
-                || atom is Selection s && s.Within == shown
+                || atom is Selection s
+                    && s.Place == new SelectionPlace(SelectionPlaces.DataSet, shown)
             );
     }
 
@@ -902,14 +907,21 @@ public partial class DatasetEditor : Window, ICommandView
     private ImmutableHashSet<AtomRef> MySelection() =>
         ShownDataSet.Value == SnowTag.Empty
             ? ImmutableHashSet<AtomRef>.Empty
-            : AtomService.Instance.GetSelection(ShownDataSet.Value)?.Targets
+            : AtomService
+                .Instance.GetSelection(
+                    new SelectionPlace(SelectionPlaces.DataSet, ShownDataSet.Value)
+                )
+                ?.Targets
                 ?? ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
     private void Select(IEnumerable<AtomRef> targets)
     {
         if (ShownDataSet.Value != SnowTag.Empty)
-            AtomService.Instance.SetSelection(targets, ShownDataSet.Value);
+            AtomService.Instance.SetSelection(
+                targets,
+                new SelectionPlace(SelectionPlaces.DataSet, ShownDataSet.Value)
+            );
     }
 
     /// <summary>
@@ -981,7 +993,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// </summary>
     private void SyncSelection(IAtomReader R, SnowTag datasetId)
     {
-        var colors = R.SelectionColors(datasetId);
+        var colors = R.SelectionColors(new SelectionPlace(SelectionPlaces.DataSet, datasetId));
         foreach (var header in _headerCells)
             SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnId));
         foreach (var view in _views)

@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://703bdkg5hww5"]
+
+[ext_resource type="Script" uid="uid://pdfq0xcglbmd" path="res://Scripts/Project/BlueprintManager.cs" id="1_bpmgr"]
+[ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="2_cmdbtn"]
+
+[node name="BlueprintManager" type="Window" unique_id=1177581211]
+oversampling_override = 1.0
+title = "Blueprints"
+initial_position = 2
+size = Vector2i(420, 400)
+script = ExtResource("1_bpmgr")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1481863233]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=2029326779]
+layout_mode = 2
+
+[node name="Toolbar" type="HFlowContainer" parent="MarginContainer/VBoxContainer" unique_id=2052110633]
+layout_mode = 2
+
+[node name="AddBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1056864154]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("2_cmdbtn")
+CommandName = "blueprint.add"
+ShowCaption = false
+
+[node name="EditBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=758586164]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("2_cmdbtn")
+CommandName = "blueprint.edit"
+ShowCaption = false
+
+[node name="DeleteBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=995875275]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("2_cmdbtn")
+CommandName = "blueprint.delete"
+ShowCaption = false
+
+[node name="CommandButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1152807118]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("2_cmdbtn")
+CommandName = "blueprint.new_game"
+ShowCaption = false
+metadata/_custom_type_script = "uid://0trm78fpi5a"
+
+[node name="Tree" type="Tree" parent="MarginContainer/VBoxContainer" unique_id=1195983423]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+allow_rmb_select = true
+hide_root = true

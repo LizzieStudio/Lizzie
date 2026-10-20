@@ -44,7 +44,7 @@ public static class CommandIcons
     public const string ResetGame = Folder + "reset_game.svg";
 
     public const string NewGame = Folder + "play_circle.svg";
-    public const string NewBlueprint = Folder + "library_add.svg";
+    public const string Blueprints = Folder + "library_add.svg";
 
     public const string ProjectManager = Folder + "bookmark_manager.svg";
     public const string Open = Folder + "folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";

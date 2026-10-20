@@ -12,22 +12,27 @@ public readonly record struct CommandName(string Value);
 
 /// <summary>
 /// How many targets a <see cref="AtomCommand{T}"/> can act on.
-/// <list type="bullet">
-/// <item><see cref="One"/>: the Command <b>won't</b> appear when multiple applicable targets are selected.</item>
-/// <item><see cref="Many"/>: the Command <b>will always</b> appear when applicable targets are selected.</item>
-/// </list>
 /// </summary>
 public enum TargetCount
 {
-    /// <summary>Should not appear unless only one relevant target is in the context.</summary>
+    /// <summary>
+    /// Should only appear if exactly one relevant target is in the context.
+    /// </summary>
     One = 1,
 
-    /// <summary>Should appear even when multiple relevant targets are in the context.</summary>
+    /// <summary>
+    /// Should appear if any relevant targets are in the context.
+    /// </summary>
     Many = 2,
+
+    /// <summary>
+    /// Should appear if 0 or 1 relevant targets are in the context.
+    /// </summary>
+    Optional = 3,
 }
 
 /// <summary>
-/// The parts of a <see cref="Lizzie.Replication.Machinery.CommandContext"/> a Command can target, set with <see cref="Command.ActsOn"/>.
+/// The parts of a <see cref="CommandContext"/> a Command can target, set with <see cref="Command.ActsOn"/>.
 /// </summary>
 [Flags]
 public enum Context
@@ -64,13 +69,20 @@ public enum Context
 public interface ICommandView
 {
     /// <summary>
-    /// <para>The atom that this view is operating on, like a dataset editor's currently open dataset, or the stage the table shows.</para>
+    /// Where selections in this view live, like the table showing a stage.
     ///
-    /// Selections in the view are made within it.
-    /// A view without a selection, or without an atom at the moment, gives <see cref="SnowTag.Empty"/>.
+    /// <para>
+    /// A view without a selection gives null.
     /// A Watch that reads it through <paramref name="R"/> runs again when it changes.
+    /// </para>
     /// </summary>
-    SnowTag SelectionScope(IAtomReader R) => SnowTag.Empty;
+    SelectionPlace? SelectionScope(IAtomReader R) => null;
+
+    /// <summary>
+    /// The atom the whole view shows, like the dataset editor's open dataset, or null for none.
+    /// Commands that act on <see cref="Context.View"/> act on it.
+    /// </summary>
+    AtomRef? Shown(IAtomReader R) => null;
 
     /// <summary>
     /// The hovered target that keys act on when nothing is selected.
@@ -337,7 +349,13 @@ public sealed class AtomCommand<T> : Command
 
     public override bool Applies(IAtomReader R, AtomRef target) => Atom(R, target) != null;
 
-    public override bool Fits(int count) => Count == TargetCount.One ? count == 1 : count > 0;
+    public override bool Fits(int count) =>
+        Count switch
+        {
+            TargetCount.One => count == 1,
+            TargetCount.Optional => count <= 1,
+            _ => count > 0,
+        };
 
     public override int? MaxNumber(IReadOnlyList<AtomRef> targets) =>
         NumberLimit?.Invoke(Reader, Atoms(Reader, targets));
@@ -346,7 +364,7 @@ public sealed class AtomCommand<T> : Command
     {
         var atoms = Atoms(Reader, targets);
         SideEffects?.Invoke(atoms, number);
-        if (Effects != null && atoms.Count > 0)
+        if (Effects != null && (atoms.Count > 0 || targets.Count == 0 && Fits(0)))
             Submit(Effects(Reader, atoms, number), view);
     }
 

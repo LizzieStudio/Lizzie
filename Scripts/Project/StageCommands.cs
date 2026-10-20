@@ -3,24 +3,90 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// The commands that start games and blueprints, and reset the game.
+/// Commands for blueprints and starting games on them.
 /// </summary>
 public static class StageCommands
 {
-    // Starting games and adding blueprints are admin events.
-    private static bool HasAuthority(IAtomReader R) =>
-        MultiplayerManager.Instance?.HasAuthority() != false;
+    /// <summary>
+    /// Gets whether or not <paramref name="stage"/> is a blueprint that's <see cref="Stage.Reachable"/>.
+    /// </summary>
+    public static bool IsBlueprint(IAtomReader R, Stage stage) =>
+        !stage.IsGame && Stage.Reachable(R, stage.Id);
 
     /// <summary>
-    /// Puts a new, empty blueprint under the game.
+    /// Adds an empty blueprint last under the selected one, or at the root when none are selected.
+    /// A root is named "Blueprint N", and one under a "Parent" is named "Parent-N".
     /// </summary>
-    public static readonly GlobalCommand NewBlueprint = new()
+    /// <remarks>
+    /// This is added as a local command in the blueprint manager to avoid it showing up everywhere.
+    /// A <see cref="TargetCount.Optional"/> command would do that by default.
+    /// </remarks>
+    public static readonly Command AddBlueprint = new AtomCommand<Stage>
     {
-        Name = new("game.new_blueprint"),
-        Icon = CommandIcons.NewBlueprint,
-        Caption = "New Blueprint",
-        Enabled = HasAuthority,
-        SideEffects = _ => ProjectService.Instance.NewBlueprint(),
+        Name = new("blueprint.add"),
+        Icon = CommandIcons.Add,
+        Caption = "Add Blueprint",
+        Count = TargetCount.Optional,
+        AppliesTo = IsBlueprint,
+        Effects = (R, parents, _) =>
+        {
+            var parent = parents.FirstOrDefault();
+            var siblings = R.Get(Stage.Children, parent?.Id ?? SnowTag.Empty);
+            var last = siblings.Select(s => s.Rank).DefaultIfEmpty().Max();
+            int n = siblings.Count + 1;
+            var blueprint = new Stage
+            {
+                Id = Snowport.Clock.CreateTag(),
+                Name = parent == null ? $"Blueprint {n}" : $"{parent.Name}-{n}",
+                ParentRef = parent?.Id ?? SnowTag.Empty,
+                Rank = last.After(Snowport.Clock.Create()),
+            };
+            return [blueprint];
+        },
+    };
+
+    /// <summary>
+    /// Shows the selected blueprint on the table.
+    /// </summary>
+    public static readonly Command EditBlueprint = new AtomCommand<Stage>
+    {
+        Name = new("blueprint.edit"),
+        Icon = CommandIcons.Edit,
+        Caption = "Edit Blueprint",
+        Count = TargetCount.One,
+        AppliesTo = IsBlueprint,
+        SideEffects = (blueprints, _) =>
+            ProjectService.Instance.GameObjects.PickedStage.Value = blueprints[0].Id,
+    };
+
+    /// <summary>
+    /// Starts a new game on the selected blueprint in place of the one being played.
+    /// </summary>
+    public static readonly Command NewGame = new AtomCommand<Stage>
+    {
+        Name = new("blueprint.new_game"),
+        Icon = CommandIcons.NewGame,
+        Caption = "Start Game Here",
+        Count = TargetCount.One,
+        AppliesTo = IsBlueprint,
+        Effects = (R, blueprints, _) => Stage.NewGame(R, blueprints[0].Id),
+    };
+
+    /// <summary>
+    /// Deletes the selected blueprint, if nothing builds on it and new games don't start from it.
+    /// </summary>
+    public static readonly Command DeleteBlueprint = new AtomCommand<Stage>
+    {
+        Name = new("blueprint.delete"),
+        Icon = CommandIcons.Delete,
+        Caption = "Delete Blueprint",
+        Keys = [Shortcuts.Key(Key.Delete)],
+        Count = TargetCount.One,
+        AppliesTo = (R, s) =>
+            IsBlueprint(R, s)
+            && Stage.IsLeaf(R, s)
+            && R.Get(ProjectGameSettings.Only).BlueprintRef != s.Id,
+        Effects = (R, blueprints, _) => [blueprints[0] with { Deleted = true }],
     };
 
     /// <summary>

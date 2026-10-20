@@ -64,6 +64,8 @@ public partial class UI : CanvasLayer
         ];
     }
 
+    private BlueprintManager _blueprintManager;
+
     private Node _modalDialogs;
 
     public override void _EnterTree()
@@ -83,8 +85,7 @@ public partial class UI : CanvasLayer
 
         var game = R.Get(CurrentGame.Only).StageRef;
         var shown = ProjectService.Instance.GameObjects.ShownStage(R);
-        // The blueprints in the order they build up, then the game.
-        foreach (var stage in Stage.Chain(R, game).Reverse())
+        foreach (var stage in ProjectService.Instance.GameObjects.PickableStages(R))
         {
             // Picking the game follows the game, even when a new one starts.
             var pick = stage.Id == game ? SnowTag.Empty : stage.Id;
@@ -318,6 +319,19 @@ public partial class UI : CanvasLayer
         _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettingsDialog>();
         _projectSettings.Closed += ProjectSettingsOnClosed;
         _modalDialogs.AddChild(_projectSettings);
+    }
+
+    // Brings the open blueprint manager forward rather than opening a second one.
+    private void ShowBlueprintManager()
+    {
+        if (IsInstanceValid(_blueprintManager) && !_blueprintManager.IsQueuedForDeletion())
+        {
+            _blueprintManager.GrabFocus();
+            return;
+        }
+        var s = "res://Scenes/Project/BlueprintManager.tscn";
+        _blueprintManager = GD.Load<PackedScene>(s).Instantiate<BlueprintManager>();
+        _modalDialogs.AddChild(_blueprintManager);
     }
 
     private void ProjectSettingsOnClosed(object sender, EventArgs e)

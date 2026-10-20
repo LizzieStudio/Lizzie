@@ -30,6 +30,9 @@ public static class CommandList
         ComponentCommands.MoveToBottom,
         ComponentCommands.Delete,
         ComponentCommands.Reset,
+        StageCommands.EditBlueprint,
+        StageCommands.NewGame,
+        StageCommands.DeleteBlueprint,
         UndoCommands.UndoChanges,
         PrototypeCommands.Edit,
         DataSetCommands.EditRow,
@@ -71,7 +74,8 @@ public static class CommandList
         UI.EditProjectSettings,
         UI.InsertExistingComponent,
         UI.InsertNewComponent,
-        StageCommands.NewBlueprint,
+        UI.EditBlueprints,
+        StageCommands.AddBlueprint,
         StageCommands.ResetGame,
         DataSetCommands.AddRow,
         DataSetCommands.AddColumn,
@@ -136,7 +140,12 @@ public static class CommandList
                 ShortcutActions.AddAction(ShortcutActions.Number(n), ShortcutActions.NumberKeys(n));
         }
 
-        foreach (var command in commands.Where(c => c.Keys.Count > 0 && !Registered.Contains(c)))
+        // A view that's opened again builds its own commands again, under the same names.
+        foreach (
+            var command in commands.Where(c =>
+                c.Keys.Count > 0 && !Registered.Any(r => r.Name == c.Name)
+            )
+        )
         {
             ReportClashes(command);
             ShortcutActions.AddAction(command.Action, command.Keys);

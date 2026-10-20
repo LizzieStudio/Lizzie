@@ -58,11 +58,12 @@ public abstract partial class VisualComponentBase : Area3D
         var key = Key;
         var target = ComponentState.ById.Ref(key);
         var local = Snowport.Clock.source;
-        var selection = R.GetSelection(key.Stage)?.Targets;
+        var place = new SelectionPlace(SelectionPlaces.Table, key.Stage);
+        var selection = R.GetSelection(place)?.Targets;
         _isMine = selection?.Contains(target) == true;
         _localColor = R.SeatColor(local);
         _nothingSelected = selection?.IsEmpty != false;
-        var other = R.Get(Selection.ByWithin, key.Stage)
+        var other = R.Get(Selection.ByPlace, place)
             .Where(s => s.Player != local && s.Targets.Contains(target))
             .MaxBy(R.Version);
         _othersColor = other == null ? null : R.SeatColor(other.Player);
