@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="4_bojv1"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_7dijs"]
+size = Vector3(0.35, 0.1, 0.35)
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_4nge1"]
 radius = 0.85791016
@@ -17,7 +18,7 @@ mesh = ExtResource("2_7onit")
 skeleton = NodePath("")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=644837911]
-transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, -1.0666493, 0.952, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.067, 1, 0)
 shape = SubResource("BoxShape3D_7dijs")
 
 [node name="DrawCollider" type="CollisionShape3D" parent="." unique_id=2080289539]

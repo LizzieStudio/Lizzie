@@ -6,6 +6,7 @@
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_mvaa4"]
 resource_local_to_scene = true
+size = Vector3(0.35, 0.1, 0.35)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_o8ta0"]
 resource_local_to_scene = true
@@ -18,7 +19,7 @@ mesh = ExtResource("2_vtnvu")
 skeleton = NodePath("")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=644837911]
-transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, -0.73430705, 0, -0.71571696)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1549977, 0.962523, 0.07161254)
 shape = SubResource("BoxShape3D_mvaa4")
 
 [node name="DrawCollider" type="CollisionShape3D" parent="." unique_id=2080289539]
@@ -32,7 +33,7 @@ transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, -
 text = "TEXT HERE"
 
 [node name="DragPatch" type="Sprite3D" parent="." unique_id=512471132]
-transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -0.733, -0.5, -0.722)
+transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -1.1536906, 0.953238, 0.06532949)
 axis = 1
 transparent = false
 texture = ExtResource("4_o8ta0")

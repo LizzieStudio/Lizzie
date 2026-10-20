@@ -4,21 +4,19 @@
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="5_lsa78"]
 [ext_resource type="Texture2D" uid="uid://b0udl2xpqnc7l" path="res://Scenes/VisualComponents/deck-dash-outline.png" id="6_3uk5r"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
-size = Vector3(0.25, 0.25, 0.25)
-
 [sub_resource type="BoxMesh" id="BoxMesh_ggpqp"]
+size = Vector3(1.3, 0.1, 1.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
+size = Vector3(0.35, 0.1, 0.35)
 
 [node name="Deck" type="Area3D" unique_id=449063618]
 script = ExtResource("1_7r5pi")
 
 [node name="Frame" type="Node3D" parent="." unique_id=1681153063]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1991276807]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6439891, 0.5023112, 0)
-shape = SubResource("BoxShape3D_bjoi2")
-
 [node name="OutlineShape" type="MeshInstance3D" parent="Frame" unique_id=1404325339]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.42853373, 0)
 mesh = SubResource("BoxMesh_ggpqp")
 
 [node name="DragPatch" type="Sprite3D" parent="Frame" unique_id=65843443]
@@ -42,3 +40,7 @@ texture = ExtResource("6_3uk5r")
 unique_name_in_owner = true
 transform = Transform3D(2, 0, 0, 0, -8.742278e-08, 2, 0, -2, -8.742278e-08, 0, 0, 0)
 text = "Draw"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1991276807]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6439891, 0.5023112, 0)
+shape = SubResource("BoxShape3D_bjoi2")
