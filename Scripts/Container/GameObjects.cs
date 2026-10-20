@@ -45,7 +45,7 @@ public partial class GameObjects : Node3D
     /// Gets the stage to show locally.
     /// </summary>
     public SnowTag ShownStage(IAtomReader R) =>
-        PickedStage.Get(R) is var picked && Stage.Reachable(R, picked)
+        R.Get(PickedStage) is var picked && Stage.Reachable(R, picked)
             ? picked
             : R.Get(CurrentGame.Only).StageRef;
 

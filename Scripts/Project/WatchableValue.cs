@@ -5,7 +5,7 @@ using Lizzie.Replication.Machinery;
 /// A local value that a Watch can read and react to like an atom.
 ///
 /// <para>
-/// A Watch that reads it with <see cref="Get"/> runs again at the end of the frame after the value changes.
+/// A Watch that reads it with <c>R.Get(value)</c> runs again at the end of the frame after the value changes.
 /// It isn't synchronized during multiplayer or saved with the project. It starts as <c>default</c>.
 /// </para>
 /// </summary>
@@ -35,10 +35,7 @@ public sealed class WatchableValue<T>
         }
     }
 
-    /// <summary>
-    /// The value. When <paramref name="R"/> is a Watch's reader, subscribes to changes.
-    /// </summary>
-    public T Get(IAtomReader R)
+    internal T Read(IAtomReader R)
     {
         if (R is Watcher watcher)
             _readers.Add(watcher);

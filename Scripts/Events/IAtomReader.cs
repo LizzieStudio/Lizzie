@@ -101,6 +101,11 @@ public static class AtomReaderExtensions
         where T : Atom, new() => R.Get(only, default) ?? only.Unwritten(default);
 
     /// <summary>
+    /// Gets the <paramref name="value"/> and subscribes to changes when <paramref name="R"/> is a Watch reader.
+    /// </summary>
+    public static T Get<T>(this IAtomReader R, WatchableValue<T> value) => value.Read(R);
+
+    /// <summary>
     /// The atom <paramref name="atomRef"/> points at,
     /// or what stands in for it before it's written.
     /// Null if it's missing and its type has no stand-in.

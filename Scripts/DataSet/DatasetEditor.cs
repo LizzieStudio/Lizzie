@@ -143,10 +143,10 @@ public partial class DatasetEditor : Window, ICommandView
     public WatchableValue<SnowTag> ShownDataSet { get; } = new();
 
     public SelectionPlace? SelectionScope(IAtomReader R) =>
-        new SelectionPlace(SelectionPlaces.DataSet, ShownDataSet.Get(R));
+        new SelectionPlace(SelectionPlaces.DataSet, R.Get(ShownDataSet));
 
     public AtomRef? Shown(IAtomReader R) =>
-        ShownDataSet.Get(R) is var shown && shown != SnowTag.Empty ? DataSet.ById.Ref(shown) : null;
+        R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty ? DataSet.ById.Ref(shown) : null;
 
     public IReadOnlyList<Command> Commands => _commands;
 
@@ -264,7 +264,7 @@ public partial class DatasetEditor : Window, ICommandView
     {
         // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
         // so the editor stays on it, where redo brings it back.
-        var id = ShownDataSet.Get(R);
+        var id = R.Get(ShownDataSet);
         var ds =
             id != SnowTag.Empty ? R.Get(DataSet.ById, id) : R.Get(DataSet.All).FirstOrDefault();
         if (ds != null)
