@@ -9,7 +9,7 @@ using static VisualComponentBase;
 /// </summary>
 public static class DeckCommands
 {
-    public static readonly Command Shuffle = new AtomCommand<ComponentState>
+    public static readonly Command Shuffle = new AtomCommand<ComponentPosition>
     {
         Name = new("deck.shuffle"),
         Icon = CommandIcons.Shuffle,
@@ -19,7 +19,7 @@ public static class DeckCommands
         Effects = (R, cs, _) => cs.SelectMany(c => Shuffled(R, c)),
     };
 
-    public static readonly Command Draw = new AtomCommand<ComponentState>
+    public static readonly Command Draw = new AtomCommand<ComponentPosition>
     {
         Name = new("deck.draw"),
         Icon = CommandIcons.Draw,
@@ -33,7 +33,7 @@ public static class DeckCommands
         Effects = (R, cs, n) => cs.SelectMany(c => Drawn(R, c, n)),
     };
 
-    public static readonly Command Deal = new AtomCommand<ComponentState>
+    public static readonly Command Deal = new AtomCommand<ComponentPosition>
     {
         Name = new("deck.deal"),
         Icon = CommandIcons.Deal,
@@ -47,15 +47,15 @@ public static class DeckCommands
         Effects = (R, cs, n) => cs.SelectMany(c => Dealt(R, c, n)),
     };
 
-    private static bool IsDeck(IAtomReader R, ComponentState c) =>
+    private static bool IsDeck(IAtomReader R, ComponentPosition c) =>
         R.Kind(c) == VisualComponentType.Deck;
 
     // There's nothing to shuffle, draw or deal in an empty deck.
-    private static bool HasCards(IAtomReader R, ComponentState c) =>
+    private static bool HasCards(IAtomReader R, ComponentPosition c) =>
         IsDeck(R, c) && R.TokensOn(c).Count > 0;
 
     /// <summary>The deck's cards with their ZOrders shuffled among them.</summary>
-    private static IEnumerable<ComponentState> Shuffled(IAtomReader R, ComponentState deck)
+    private static IEnumerable<ComponentPosition> Shuffled(IAtomReader R, ComponentPosition deck)
     {
         var cards = R.TokensOn(deck);
         var orders = cards.Select(c => c.ZOrder).ToArray();
@@ -67,7 +67,11 @@ public static class DeckCommands
     /// The top <paramref name="count"/> cards drawn into the local player's hand when hands are on,
     /// otherwise splayed beside the deck. <see cref="int.MaxValue"/> draws them all.
     /// </summary>
-    private static IEnumerable<ComponentState> Drawn(IAtomReader R, ComponentState deck, int count)
+    private static IEnumerable<ComponentPosition> Drawn(
+        IAtomReader R,
+        ComponentPosition deck,
+        int count
+    )
     {
         var cards = R.TokensOn(deck).Take(count).ToList();
         var stamp = Snowport.Clock.Create();
@@ -82,9 +86,7 @@ public static class DeckCommands
         }
 
         // Splayed cards land to the right of the deck and on top, in draw order.
-        float width = R.Get(Prototype.ById, deck.PrototypeRef)?.Parameters is PrintedParameters p
-            ? p.Width / 10f
-            : 0;
+        float width = R.GetPrototype(deck)?.Parameters is PrintedParameters p ? p.Width / 10f : 0;
         var frame = deck.PositionAt(0);
         return cards.Select(
             (c, i) =>
@@ -102,9 +104,9 @@ public static class DeckCommands
     /// Deals <paramref name="countPerPlayer"/> cards to every seat with a hand in turn, like a real deal.
     /// When the deck runs out, the last seats get fewer. With no seats, the local player draws instead.
     /// </summary>
-    private static IEnumerable<ComponentState> Dealt(
+    private static IEnumerable<ComponentPosition> Dealt(
         IAtomReader R,
-        ComponentState deck,
+        ComponentPosition deck,
         int countPerPlayer
     )
     {
@@ -117,7 +119,7 @@ public static class DeckCommands
         int total = (int)Math.Min((long)countPerPlayer * seats.Count, cards.Count);
         var suborder = new int[seats.Max() + 1];
         var stamp = Snowport.Clock.Create();
-        var dealt = new List<ComponentState>(total);
+        var dealt = new List<ComponentPosition>(total);
         for (int i = 0; i < total; i++)
         {
             int seat = seats[i % seats.Count];

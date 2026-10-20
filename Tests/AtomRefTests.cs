@@ -32,15 +32,15 @@ public class AtomRefTests
     [Fact]
     public void ARefToAStagedAtomKeepsItsStage() =>
         AssertRoundTrips(
-            ComponentState.ById.Ref(new StageKey(new SnowTag(5), new SnowTag(6))),
-            """{"type":"ComponentState","id":{"stage":5,"component":6}}"""
+            ComponentPosition.ById.Ref(new StageKey(new SnowTag(5), new SnowTag(6))),
+            """{"type":"ComponentPosition","id":{"stage":5,"component":6}}"""
         );
 
     [Fact]
     public void ASelectionKeepsItsRefs()
     {
         var targets = ImmutableHashSet.Create(
-            ComponentState.ById.Ref(new StageKey(new SnowTag(2), new SnowTag(1))),
+            ComponentPosition.ById.Ref(new StageKey(new SnowTag(2), new SnowTag(1))),
             DataColumn.ById.Ref(new SnowTag(1))
         );
         var json = JsonSerializer.Serialize<Atom>(

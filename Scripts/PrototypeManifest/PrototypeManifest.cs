@@ -197,17 +197,18 @@ public partial class PrototypeManifest : Window, ICommandView
         // The Qty column, counted on the stage the table shows.
         // A prototype that spawns decks counts its decks, not their cards.
         var counts = R.Get(
-                ComponentState.ByStage,
+                ComponentPosition.ByStage,
                 ProjectService.Instance.GameObjects.ShownStage(R)
             )
-            .Where(s =>
+            .Select(R.GetVariant)
+            .Where(v =>
                 !(
-                    s.IsItem
-                    && R.Get(Prototype.ById, s.PrototypeRef)?.Parameters
+                    v.IsItem
+                    && R.Get(Prototype.ById, v.PrototypeRef)?.Parameters
                         is PrintedParameters { SpawnDeck: true }
                 )
             )
-            .GroupBy(s => s.PrototypeRef)
+            .GroupBy(v => v.PrototypeRef)
             .ToDictionary(g => g.Key, g => g.Count());
 
         var selectedRef = _selectedPrototype?.Id ?? SnowTag.Empty;

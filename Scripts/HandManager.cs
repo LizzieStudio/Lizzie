@@ -119,7 +119,7 @@ public partial class HandManager : Panel
     /// </summary>
     /// <param name="row">The hand under the mouse, which gives the cards their scale.</param>
     /// <param name="point">The mouse point.</param>
-    public void ShowDragPreview(IReadOnlyList<ComponentState> cards, HandRow row, Vector2 point)
+    public void ShowDragPreview(IReadOnlyList<ComponentPosition> cards, HandRow row, Vector2 point)
     {
         var pointer = GetGlobalTransformWithCanvas().AffineInverse() * point;
         for (int i = 0; i < cards.Count; i++)
@@ -135,8 +135,8 @@ public partial class HandManager : Panel
             var (rect, shown) = _previews[i];
 
             // A card can be flipped, or its prototype edited, while it's held.
-            var prototype = R.Get(Prototype.ById, s.PrototypeRef);
-            var shows = (prototype, s.Item, HandCard.IsFaceDown(s));
+            var prototype = R.GetPrototype(s);
+            var shows = (prototype, R.GetVariant(s).Item, HandCard.IsFaceDown(s));
             if (shows != shown)
             {
                 rect.ShowCard(s, shows.Item3, R);

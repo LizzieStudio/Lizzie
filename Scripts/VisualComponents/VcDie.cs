@@ -83,7 +83,7 @@ public partial class VcDie : VisualComponentBase
     public override GeometryInstance3D DragMesh => _mainMesh;
 
     public override bool PlayTransition(
-        ComponentState s,
+        ComponentPosition s,
         CommandName? writtenBy,
         long MsecSinceStart
     )

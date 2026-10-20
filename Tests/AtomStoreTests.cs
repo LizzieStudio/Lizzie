@@ -11,33 +11,35 @@ using Xunit;
 public class AtomStoreTests
 {
     // components by their tag alone, as if they had no stage
-    private static readonly Id<ComponentState, SnowTag> ById = new(s => s.Id);
+    private static readonly Id<ComponentPosition, SnowTag> ById = new(s => s.Id);
 
-    private static readonly Group<ComponentState, SnowTag> ByContainer = new(s => s.ContainerRef);
+    private static readonly Group<ComponentPosition, SnowTag> ByContainer = new(s =>
+        s.ContainerRef
+    );
 
     // a group only components in a container are in
-    private static readonly Group<ComponentState, SnowTag?> InContainer = new(s =>
+    private static readonly Group<ComponentPosition, SnowTag?> InContainer = new(s =>
         s.IsOnTable ? null : s.ContainerRef
     );
 
     private readonly EventLog _log = new();
-    private readonly AtomStore<ComponentState, SnowTag> _store = new(ById);
+    private readonly AtomStore<ComponentPosition, SnowTag> _store = new(ById);
     private long _clock;
 
     private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
 
-    private static ComponentState Component(int id, int container = 0) =>
+    private static ComponentPosition Component(int id, int container = 0) =>
         new() { Id = Tag(id), ContainerRef = container == 0 ? SnowTag.Empty : Tag(container) };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
-    private TableEvent Write(params ComponentState[] atoms) =>
+    private TableEvent Write(params ComponentPosition[] atoms) =>
         Record(new TableEvent { Id = NextId(), Writes = atoms });
 
     /// <summary>Records an event unsetting the atom with <paramref name="id"/>, and merges it into the store.</summary>
     private TableEvent Unset(int id) =>
         Record(new TableEvent { Id = NextId(), Unsets = [Component(id)] });
 
-    private ComponentState Value(int id) => (ComponentState)_store.Find(Tag(id)).Value;
+    private ComponentPosition Value(int id) => (ComponentPosition)_store.Find(Tag(id)).Value;
 
     private TableEvent Undo(TableEvent e) =>
         Record(
@@ -77,7 +79,7 @@ public class AtomStoreTests
     }
 
     [StackTraceHidden]
-    private static void AssertIds(IEnumerable<ComponentState> atoms, params int[] expected)
+    private static void AssertIds(IEnumerable<ComponentPosition> atoms, params int[] expected)
     {
         var ids = atoms.Select(r => r.Id).Order().ToArray();
         var want = expected.Select(Tag).Order().ToArray();

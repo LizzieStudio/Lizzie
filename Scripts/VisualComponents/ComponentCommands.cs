@@ -10,7 +10,7 @@ using static VisualComponentBase;
 /// </summary>
 public static class ComponentCommands
 {
-    public static readonly Command Flip = new AtomCommand<ComponentState>
+    public static readonly Command Flip = new AtomCommand<ComponentPosition>
     {
         Name = new("component.flip"),
         Icon = CommandIcons.Flip,
@@ -21,7 +21,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Flipped(R, cs),
     };
 
-    public static readonly Command RotateCw = new AtomCommand<ComponentState>
+    public static readonly Command RotateCw = new AtomCommand<ComponentPosition>
     {
         Name = new("component.rotate_cw"),
         Icon = CommandIcons.RotateRight,
@@ -32,7 +32,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => Rotated(c, -RotationStep(R))),
     };
 
-    public static readonly Command RotateCcw = new AtomCommand<ComponentState>
+    public static readonly Command RotateCcw = new AtomCommand<ComponentPosition>
     {
         Name = new("component.rotate_ccw"),
         Icon = CommandIcons.RotateLeft,
@@ -43,7 +43,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => Rotated(c, RotationStep(R))),
     };
 
-    public static readonly Command MoveToTop = new AtomCommand<ComponentState>
+    public static readonly Command MoveToTop = new AtomCommand<ComponentPosition>
     {
         Name = new("component.move_to_top"),
         Icon = CommandIcons.SendToTop,
@@ -54,7 +54,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Reordered(cs, ZTarget.Top),
     };
 
-    public static readonly Command MoveToBottom = new AtomCommand<ComponentState>
+    public static readonly Command MoveToBottom = new AtomCommand<ComponentPosition>
     {
         Name = new("component.move_to_bottom"),
         Icon = CommandIcons.SendToBottom,
@@ -65,7 +65,7 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Reordered(cs, ZTarget.Bottom),
     };
 
-    public static readonly Command Delete = new AtomCommand<ComponentState>
+    public static readonly Command Delete = new AtomCommand<ComponentPosition>
     {
         Name = new("component.delete"),
         Icon = CommandIcons.Delete,
@@ -80,14 +80,14 @@ public static class ComponentCommands
     /// Resets a component so that it goes back to where the parent blueprints have it.
     /// If the component was created in this stage, it's deleted.
     /// </summary>
-    public static readonly Command Reset = new AtomCommand<ComponentState>
+    public static readonly Command Reset = new AtomCommand<ComponentPosition>
     {
         Name = new("component.reset"),
         Icon = CommandIcons.Reset,
         Caption = "Reset {0}",
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) =>
-            NotHeld(R, c) && R.Get(ComponentState.WrittenIn, c.Stage).Any(w => w.Id == c.Id),
+            NotHeld(R, c) && R.Get(ComponentPosition.WrittenIn, c.Stage).Any(w => w.Id == c.Id),
         Effects = (R, cs, _) => cs.Select(R.Unset),
     };
 
@@ -95,13 +95,13 @@ public static class ComponentCommands
         R.Get(ProjectGameSettings.Only).RotationStep();
 
     // Deleting or restacking what someone is dragging would fight the drag.
-    private static bool NotHeld(IAtomReader R, ComponentState c) => !R.IsBeingDragged(c);
+    private static bool NotHeld(IAtomReader R, ComponentPosition c) => !R.IsBeingDragged(c);
 
     // What's inside a bag isn't on the table to turn. A hand shows its cards turned as they'll lie on the table.
-    private static bool Turnable(IAtomReader R, ComponentState c) => !R.IsHidden(c);
+    private static bool Turnable(IAtomReader R, ComponentPosition c) => !R.IsHidden(c);
 
     // Zones stay underneath everything.
-    private static bool Restackable(IAtomReader R, ComponentState c) =>
+    private static bool Restackable(IAtomReader R, ComponentPosition c) =>
         (c.IsOnTable || R.IsInDeck(c)) && R.Kind(c) != VisualComponentType.Zone;
 
     /// <summary>
@@ -109,9 +109,9 @@ public static class ComponentCommands
     /// reversing their order by swapping their ZOrders. Cards in a hand aren't stacked, so each turns over in place.
     /// <see cref="VcPrinted"/> animates what Flip writes.
     /// </summary>
-    private static IEnumerable<ComponentState> Flipped(
+    private static IEnumerable<ComponentPosition> Flipped(
         IAtomReader R,
-        IEnumerable<ComponentState> tokens
+        IEnumerable<ComponentPosition> tokens
     ) =>
         tokens
             .GroupBy(c =>
@@ -127,7 +127,7 @@ public static class ComponentCommands
                 );
             });
 
-    private static ComponentState TurnedOver(ComponentState s)
+    private static ComponentPosition TurnedOver(ComponentPosition s)
     {
         bool faceUp = Mathf.RadToDeg(s.Rotation.Z) >= 90;
         return s with
@@ -137,15 +137,15 @@ public static class ComponentCommands
     }
 
     /// <summary>The component turned about Y by <paramref name="degrees"/>.</summary>
-    private static ComponentState Rotated(ComponentState s, float degrees) =>
+    private static ComponentPosition Rotated(ComponentPosition s, float degrees) =>
         s with
         {
             Rotation = s.Rotation + new Vector3(0, Mathf.DegToRad(degrees), 0),
         };
 
     /// <summary>The components sent to the top or bottom of the ZOrder, keeping their order.</summary>
-    private static IEnumerable<ComponentState> Reordered(
-        IEnumerable<ComponentState> components,
+    private static IEnumerable<ComponentPosition> Reordered(
+        IEnumerable<ComponentPosition> components,
         ZTarget target
     )
     {

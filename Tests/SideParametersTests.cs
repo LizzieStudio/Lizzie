@@ -75,7 +75,7 @@ public class SideParametersTests
     [Fact]
     public void TheFirstCardSurvivesSaving()
     {
-        var card = new ComponentState
+        var card = new ComponentVariant
         {
             Id = new SnowTag(1),
             Item = new PrototypeItemRef(0, SnowTag.Empty, SnowTag.Empty),

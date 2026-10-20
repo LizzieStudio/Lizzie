@@ -221,7 +221,7 @@ public class Group<T, G> : Query
 /// <summary>
 /// The Id of a <see cref="StagedAtom"/> type.
 ///
-/// <code>public static readonly StagedId&lt;ComponentState&gt; ById = new(c => c.Id);</code>
+/// <code>public static readonly StagedId&lt;ComponentPosition&gt; ById = new(c => c.Id);</code>
 /// </summary>
 public sealed class StagedId<T>(Func<T, SnowTag> of)
     : Id<T, StageKey>(atom => new(atom.Stage, of(atom))),
@@ -236,7 +236,7 @@ internal interface IStagedId;
 /// <summary>
 /// For a staged atom type, lists its updates in each stage.
 ///
-/// <code>public static readonly Written&lt;ComponentState&gt; WrittenIn = new();</code>
+/// <code>public static readonly Written&lt;ComponentPosition&gt; WrittenIn = new();</code>
 /// </summary>
 /// <remarks>
 /// This is used internally to differentiate between a component that was inherited from a blueprint

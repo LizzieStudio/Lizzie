@@ -15,7 +15,9 @@ public class SaveCompactionTests
     private static SnowportId Id(long clock, byte source = Snowport.HostSource) =>
         new(clock, source);
 
-    private static ComponentState Component(int id) => new() { Id = Tag(id) };
+    private static ComponentPosition Component(int id) => new() { Id = Tag(id) };
+
+    private static ComponentVariant Variant(int id) => new() { Id = Tag(id) };
 
     private static Prototype DeletedPrototype(int id) => new() { Id = Tag(id), Deleted = true };
 
@@ -28,7 +30,8 @@ public class SaveCompactionTests
     private static SnowTag IdOf(Atom atom) =>
         atom switch
         {
-            ComponentState s => s.Id,
+            ComponentPosition s => s.Id,
+            ComponentVariant v => v.Id,
             Stage s => s.Id,
             Prototype p => p.Id,
             DataSet d => d.Id,
@@ -59,8 +62,30 @@ public class SaveCompactionTests
         AssertKept([Component(1), DeletedPrototype(2)], 1);
 
     [Fact]
+    public void AComponentKeepsItsVariant() =>
+        AssertKept([Component(1) with { VariantRef = Tag(2) }, Variant(2)], 1, 2);
+
+    [Fact]
+    public void AnUnreferencedVariantIsDropped() => AssertKept([Component(1), Variant(2)], 1);
+
+    [Fact]
     public void ADeletedPrototypeAComponentUsesIsKept() =>
-        AssertKept([Component(1) with { PrototypeRef = Tag(2) }, DeletedPrototype(2)], 1, 2);
+        AssertKept(
+            [
+                Component(1) with
+                {
+                    VariantRef = Tag(3),
+                },
+                Variant(3) with
+                {
+                    PrototypeRef = Tag(2),
+                },
+                DeletedPrototype(2),
+            ],
+            1,
+            2,
+            3
+        );
 
     [Fact]
     public void ABlueprintKeepsItsComponents() =>
@@ -205,18 +230,18 @@ public class SaveCompactionTests
                 },
                 Component(7) with
                 {
-                    PrototypeRef = Tag(9),
+                    VariantRef = Tag(9),
                 }
             )
         );
 
-        var back = Load(json).Writes.Cast<ComponentState>().ToArray();
+        var back = Load(json).Writes.Cast<ComponentPosition>().ToArray();
 
         // in order: 7 < 9 < (source 3, 5)
         Assert.Equal(new SnowTag(2), back[0].Id);
         Assert.Equal(new SnowTag(3), back[0].ContainerRef);
         Assert.Equal(new SnowTag(1), back[1].Id);
-        Assert.Equal(new SnowTag(2), back[1].PrototypeRef);
+        Assert.Equal(new SnowTag(2), back[1].VariantRef);
         Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.source));
         Assert.Equal(SnowTag.Empty, back[1].ContainerRef);
     }
@@ -250,7 +275,7 @@ public class SaveCompactionTests
         );
 
         var back = Load(json);
-        var components = back.Writes.Cast<ComponentState>().ToArray();
+        var components = back.Writes.Cast<ComponentPosition>().ToArray();
 
         Assert.True(back.IsAdmin, "The save event should stay an admin event.");
         Assert.Equal(Id(1, Snowport.AdminSource), components[1].ZOrder.Stamp);
@@ -263,9 +288,9 @@ public class SaveCompactionTests
     public void UnsetIdsStayUnset()
     {
         var json = SaveCompaction.Serialize(Save(Component(1)));
-        var back = (ComponentState)Load(json).Writes[0];
+        var back = (ComponentPosition)Load(json).Writes[0];
 
-        Assert.Equal(SnowTag.Empty, back.PrototypeRef);
+        Assert.Equal(SnowTag.Empty, back.VariantRef);
         Assert.Equal(SnowportId.Empty, back.ZOrder.Stamp);
     }
 
@@ -276,9 +301,10 @@ public class SaveCompactionTests
             Save(
                 Component(8) with
                 {
-                    PrototypeRef = Tag(3, source: 2),
+                    VariantRef = Tag(4, source: 2),
                     ZOrder = new ZOrder(ZTarget.Bottom, 1, Id(77)),
                 },
+                new ComponentVariant { Id = Tag(4, source: 2), PrototypeRef = Tag(3, source: 2) },
                 new Prototype { Id = Tag(3, source: 2), Name = "Card" }
             )
         );

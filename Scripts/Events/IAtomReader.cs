@@ -82,7 +82,7 @@ public readonly record struct GroupDiff<T, V>(
 /// Any atom whose <see cref="Basis{T, V}"/> changes will appear in Removed and Added so that it will be recreated.
 /// </para>
 ///
-/// <code>static readonly Basis&lt;ComponentState, (string Scene, SnowTag Proto)&gt; NodeBasis = new((R, s) => ...);</code>
+/// <code>static readonly Basis&lt;ComponentPosition, (string Scene, SnowTag Proto)&gt; NodeBasis = new((R, s) => ...);</code>
 /// </summary>
 /// <param name="of">An atom's basis, or null for no child. It may read anything through R.</param>
 public sealed class Basis<T, V>(Func<IAtomReader, T, V?> of)
@@ -212,16 +212,29 @@ public static class AtomReaderExtensions
     }
 
     /// <summary>
+    /// Gets the <see cref="ComponentVariant"/> for <paramref name="s"/>.
+    /// </summary>
+    public static ComponentVariant GetVariant(this IAtomReader R, ComponentPosition s) =>
+        R.Get(ComponentVariant.ById, s.VariantRef);
+
+    /// <summary>
+    /// Gets the <see cref="Prototype"/> for <paramref name="s"/>, or null.
+    /// </summary>
+    public static Prototype GetPrototype(this IAtomReader R, ComponentPosition s) =>
+        R.Get(Prototype.ById, R.GetVariant(s).PrototypeRef);
+
+    /// <summary>
     /// What a component shows as. A printed prototype's decks share its prototype with its cards,
     /// but aren't one of its items, so they show as decks,
     /// as the table does when it picks a component's scene.
     /// </summary>
-    public static VisualComponentBase.VisualComponentType Kind(this IAtomReader R, ComponentState s)
+    public static VisualComponentBase.VisualComponentType Kind(
+        this IAtomReader R,
+        ComponentPosition s
+    )
     {
-        var type =
-            R.Get(Prototype.ById, s.PrototypeRef)?.Type
-            ?? VisualComponentBase.VisualComponentType.Unset;
-        return type == VisualComponentBase.VisualComponentType.Printed && !s.IsItem
+        var type = R.GetPrototype(s)?.Type ?? VisualComponentBase.VisualComponentType.Unset;
+        return type == VisualComponentBase.VisualComponentType.Printed && !R.GetVariant(s).IsItem
             ? VisualComponentBase.VisualComponentType.Deck
             : type;
     }
@@ -229,8 +242,8 @@ public static class AtomReaderExtensions
     /// <summary>
     /// The cards in a deck, top first.
     /// </summary>
-    public static List<ComponentState> TokensOn(this IAtomReader R, ComponentState deck) =>
-        R.Get(ComponentState.ByContainer, deck.In(deck.Id))
+    public static List<ComponentPosition> TokensOn(this IAtomReader R, ComponentPosition deck) =>
+        R.Get(ComponentPosition.ByContainer, deck.In(deck.Id))
             .OrderByDescending(s => s.ZOrder)
             .ToList();
 
@@ -250,7 +263,7 @@ public static class AtomReaderExtensions
     /// <summary>
     /// Whether a player is dragging <paramref name="c"/>.
     /// </summary>
-    public static bool IsBeingDragged(this IAtomReader R, ComponentState c) =>
+    public static bool IsBeingDragged(this IAtomReader R, ComponentPosition c) =>
         !c.IsOnTable
         && R.Get(ProjectGameSettings.Only)
             .Players.Any(p => p.CursorRef == c.ContainerRef || p.HandHoldRef == c.ContainerRef);
@@ -258,29 +271,29 @@ public static class AtomReaderExtensions
     /// <summary>
     /// Whether a player is dragging <paramref name="c"/> over their hand, where no one else sees it.
     /// </summary>
-    public static bool IsHeldOverHand(this IAtomReader R, ComponentState c) =>
+    public static bool IsHeldOverHand(this IAtomReader R, ComponentPosition c) =>
         !c.IsOnTable
         && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandHoldRef == c.ContainerRef);
 
     /// <summary>
     /// True if it's inside a container, such as a bag or a player's hand, rather than on the table.
     /// </summary>
-    public static bool IsContained(this IAtomReader R, ComponentState c) =>
+    public static bool IsContained(this IAtomReader R, ComponentPosition c) =>
         !c.IsOnTable && !R.IsBeingDragged(c);
 
     /// <summary>
     /// Whether <paramref name="c"/> is in a player's hand.
     /// </summary>
-    public static bool IsInHand(this IAtomReader R, ComponentState c) =>
+    public static bool IsInHand(this IAtomReader R, ComponentPosition c) =>
         !c.IsOnTable
         && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandRef == c.ContainerRef);
 
     /// <summary>
     /// Whether <paramref name="c"/> is a card in a deck.
     /// </summary>
-    public static bool IsInDeck(this IAtomReader R, ComponentState c) =>
+    public static bool IsInDeck(this IAtomReader R, ComponentPosition c) =>
         !c.IsOnTable
-        && R.Get(ComponentState.ById, c.In(c.ContainerRef)) is { } container
+        && R.Get(ComponentPosition.ById, c.In(c.ContainerRef)) is { } container
         && R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
 
     /// <summary>
@@ -289,6 +302,6 @@ public static class AtomReaderExtensions
     /// <remarks>
     /// As of writing this, only bags do this.
     /// </remarks>
-    public static bool IsHidden(this IAtomReader R, ComponentState c) =>
+    public static bool IsHidden(this IAtomReader R, ComponentPosition c) =>
         R.IsContained(c) && !R.IsInDeck(c) && !R.IsInHand(c);
 }

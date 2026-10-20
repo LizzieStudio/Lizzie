@@ -64,7 +64,7 @@ public partial class VcPrinted : VisualComponentBase
     private bool _flipInProcess;
 
     public override bool PlayTransition(
-        ComponentState s,
+        ComponentPosition s,
         CommandName? writtenBy,
         long MsecSinceStart
     )

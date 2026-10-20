@@ -160,7 +160,7 @@ public partial class DebugConsole : Node
     {
         var R = AtomService.Instance;
         var states = R
-            ?.Get(ComponentState.ByStage, ProjectService.Instance.GameObjects.ShownStage(R))
+            ?.Get(ComponentPosition.ByStage, ProjectService.Instance.GameObjects.ShownStage(R))
             .ToArray();
         if (EventSynchronizer.Instance == null || states == null || states.Length == 0)
         {
@@ -313,7 +313,7 @@ public partial class DebugConsole : Node
     private static string AtomLabel(Atom atom) =>
         atom switch
         {
-            ComponentState => "Upsert",
+            ComponentPosition => "Upsert",
             _ => atom.GetType().Name,
         };
 }

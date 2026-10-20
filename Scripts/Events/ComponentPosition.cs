@@ -5,12 +5,12 @@ using System.Text.Json.Serialization;
 using Godot;
 
 /// <summary>
-/// A component's full replicated state in one <see cref="Stage"/>.
+/// Where a component is in one <see cref="Stage"/>.
 /// </summary>
-[JsonName("ComponentState")]
-public record ComponentState : StagedAtom
+[JsonName("ComponentPosition")]
+public record ComponentPosition : StagedAtom
 {
-    public static readonly StagedId<ComponentState> ById = new(r => r.Id);
+    public static readonly StagedId<ComponentPosition> ById = new(r => r.Id);
 
     /// <summary>
     /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
@@ -20,20 +20,20 @@ public record ComponentState : StagedAtom
     /// <summary>
     /// The components each stage shows.
     /// </summary>
-    public static readonly Group<ComponentState, SnowTag> ByStage = new(s => s.Stage);
+    public static readonly Group<ComponentPosition, SnowTag> ByStage = new(s => s.Stage);
 
     /// <summary>
     /// The components in each container of a stage, by <see cref="ContainerRef"/>.
     /// <see cref="SnowTag.Empty"/> holds the ones on the table.
     /// </summary>
-    public static readonly Group<ComponentState, StageKey> ByContainer = new(s =>
+    public static readonly Group<ComponentPosition, StageKey> ByContainer = new(s =>
         s.In(s.ContainerRef)
     );
 
     /// <summary>
     /// The components each stage wrote itself, rather than inherited.
     /// </summary>
-    public static readonly Written<ComponentState> WrittenIn = new();
+    public static readonly Written<ComponentPosition> WrittenIn = new();
 
     /// <summary>
     /// The key of the component <paramref name="id"/> in this component's stage.
@@ -46,25 +46,27 @@ public record ComponentState : StagedAtom
     /// <summary>
     /// The state last written for a component.
     /// </summary>
-    public static ComponentState Of(VisualComponentBase c) =>
+    public static ComponentPosition Of(VisualComponentBase c) =>
         c.State
         ?? throw new InvalidOperationException($"Component {c.Reference} has no written state.");
 
     /// <summary>
-    /// Captures a node that hasn't been written yet, such as a spawn preview.
+    /// Captures a node that hasn't been written yet, such as a spawn preview, as <paramref name="variant"/>.
     /// </summary>
-    public static ComponentState Capture(VisualComponentBase c) =>
+    public static ComponentPosition Capture(VisualComponentBase c, ComponentVariant variant) =>
         new()
         {
             Id = c.Reference,
             Stage = c.Key.Stage,
-            PrototypeRef = c.PrototypeRef,
+            VariantRef = variant.Id,
             Position = c.Position,
             Rotation = c.Rotation,
-            Item = c.Item,
         };
 
-    public SnowTag PrototypeRef { get; init; }
+    /// <summary>
+    /// What this component is.
+    /// </summary>
+    public SnowTag VariantRef { get; init; }
 
     /// <summary>
     /// X in its container's frame, in tenths of a millimeter.
@@ -112,9 +114,6 @@ public record ComponentState : StagedAtom
 
     public ZOrder ZOrder { get; init; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public PrototypeItemRef Item { get; init; } = PrototypeItemRef.None;
-
     /// <summary>
     /// What holds this component:
     /// <list type="bullet">
@@ -127,21 +126,10 @@ public record ComponentState : StagedAtom
     public SnowTag ContainerRef { get; init; } = SnowTag.Empty;
 
     /// <summary>
-    /// True if it's sitting on the table, outside a component, and not being dragged.
+    /// True if it's sitting on the table, outside a container, and not being dragged.
     /// </summary>
     [JsonIgnore]
     public bool IsOnTable => ContainerRef == SnowTag.Empty;
-
-    /// <summary>
-    /// Whether it's one of its prototype's printed items.
-    ///
-    /// <list type="bullet">
-    /// <item>a printed card, in a deck or not, but not the deck itself</item>
-    /// <item>a die spawned for a dataset row</item>
-    /// </list>
-    /// </summary>
-    [JsonIgnore]
-    public bool IsItem => Item != PrototypeItemRef.None;
 
     /// <summary>
     /// The components whose <see cref="ContainerRef"/> is this one.
@@ -153,7 +141,7 @@ public record ComponentState : StagedAtom
         R.Get(ByContainer, In(Id)).Select(AtomRef.To);
 
     /// <summary>
-    /// The deck it's on or the bag it's in.
+    /// The deck or bag it's in.
     /// </summary>
     /// <remarks>
     /// Any component referenced by <see cref="ContainerRef"/> becomes a container here without changes.
@@ -165,16 +153,7 @@ public record ComponentState : StagedAtom
             : [];
 
     /// <summary>
-    /// Its prototype and, for a card made from a dataset, its rows.
+    /// What its <see cref="ComponentVariant"/> refers to.
     /// </summary>
-    /// <remarks>
-    /// This will need to be extended as new references are invented.
-    /// </remarks>
-    public override IEnumerable<AtomRef> Referenced(IAtomReader R) =>
-        new[]
-        {
-            Prototype.ById.Ref(PrototypeRef),
-            DataRow.ById.Ref(Item.FrontRow),
-            DataRow.ById.Ref(Item.BackRow),
-        }.Where(r => (SnowTag)r.Id != SnowTag.Empty);
+    public override IEnumerable<AtomRef> Referenced(IAtomReader R) => R.GetVariant(this).Referenced(R);
 }

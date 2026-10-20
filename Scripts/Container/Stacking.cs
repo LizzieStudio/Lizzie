@@ -291,12 +291,12 @@ internal readonly struct Footprint
     /// </summary>
     public Footprint(int index, VisualComponentBase c, Vector3 origin = default)
     {
-        var s = ComponentState.Of(c);
+        var s = ComponentPosition.Of(c);
         var position = origin + s.PositionAt(0);
 
         Index = index;
         Component = c;
-        Key = ComponentState.TableKey(position);
+        Key = ComponentPosition.TableKey(position);
         // Zones always sit below everything else.
         ZOrder = c is VcZone ? ZOrder.Floor : s.ZOrder;
         YHeight = c.YHeight;

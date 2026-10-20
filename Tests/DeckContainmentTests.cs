@@ -15,39 +15,57 @@ public class DeckContainmentTests
     private static readonly SnowTag Bag = new(21);
     private static readonly SnowTag Hand = new(30);
 
-    private static ComponentState State(
+    private static readonly ComponentVariant DeckVariant = new()
+    {
+        Id = new(40),
+        PrototypeRef = DeckProto,
+    };
+
+    private static readonly ComponentVariant CardVariant = new()
+    {
+        Id = new(41),
+        PrototypeRef = DeckProto,
+        Item = new PrototypeItemRef(0, SnowTag.Empty, SnowTag.Empty),
+    };
+
+    private static readonly ComponentVariant BagVariant = new()
+    {
+        Id = new(42),
+        PrototypeRef = BagProto,
+    };
+
+    private static ComponentPosition State(
         SnowTag id,
-        SnowTag proto,
+        ComponentVariant variant,
         SnowTag container = default,
         int order = 0,
-        float yaw = 0,
-        bool item = false
+        float yaw = 0
     ) =>
         new()
         {
             Id = id,
-            PrototypeRef = proto,
+            VariantRef = variant.Id,
             ContainerRef = container,
             ZOrder = new ZOrder(ZTarget.Top, order, new SnowportId(((long)order << 8) | 1)),
             Rotation = new Vector3(0, yaw, 0),
-            Item = item
-                ? new PrototypeItemRef(order, SnowTag.Empty, SnowTag.Empty)
-                : PrototypeItemRef.None,
         };
 
     // A deck of three cards, a bag with a token in it, a loose token, and a token in a hand.
-    private static readonly ComponentState TheDeck = State(Deck, DeckProto);
-    private static readonly ComponentState Bottom = State(new(2), DeckProto, Deck, 1, item: true);
-    private static readonly ComponentState Middle = State(new(3), DeckProto, Deck, 2, item: true);
-    private static readonly ComponentState Top = State(new(4), DeckProto, Deck, 3, item: true);
-    private static readonly ComponentState TheBag = State(Bag, BagProto);
-    private static readonly ComponentState InBag = State(new(6), DeckProto, Bag, item: true);
-    private static readonly ComponentState Loose = State(new(7), DeckProto, item: true);
-    private static readonly ComponentState InHand = State(new(8), DeckProto, Hand, item: true);
+    private static readonly ComponentPosition TheDeck = State(Deck, DeckVariant);
+    private static readonly ComponentPosition Bottom = State(new(2), CardVariant, Deck, 1);
+    private static readonly ComponentPosition Middle = State(new(3), CardVariant, Deck, 2);
+    private static readonly ComponentPosition Top = State(new(4), CardVariant, Deck, 3);
+    private static readonly ComponentPosition TheBag = State(Bag, BagVariant);
+    private static readonly ComponentPosition InBag = State(new(6), CardVariant, Bag);
+    private static readonly ComponentPosition Loose = State(new(7), CardVariant);
+    private static readonly ComponentPosition InHand = State(new(8), CardVariant, Hand);
 
     private static readonly ListReader R = new(
         new Prototype { Id = DeckProto, Parameters = new PrintedParameters() },
         new Prototype { Id = BagProto, Parameters = new BagParameters() },
+        DeckVariant,
+        CardVariant,
+        BagVariant,
         TheDeck,
         Bottom,
         Middle,

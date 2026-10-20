@@ -25,12 +25,12 @@ public sealed partial class HeldDrag : RefCounted
     /// <summary>
     /// The atoms of the components it holds.
     /// </summary>
-    public IEnumerable<ComponentState> Atoms(IAtomReader R) =>
-        Components.Select(key => R.Get(ComponentState.ById, key)).Where(s => s != null);
+    public IEnumerable<ComponentPosition> Atoms(IAtomReader R) =>
+        Components.Select(key => R.Get(ComponentPosition.ById, key)).Where(s => s != null);
 
     /// <summary>
     /// The atoms of the held VcPrinteds, which can go into a hand.
     /// </summary>
-    public IEnumerable<ComponentState> Cards(IAtomReader R) =>
+    public IEnumerable<ComponentPosition> Cards(IAtomReader R) =>
         Atoms(R).Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Printed);
 }

@@ -48,8 +48,8 @@ public partial class VcDeck : VisualComponentBase
 
     private void SyncCount(IWatchReader R)
     {
-        if (R.Get(ComponentState.ById, Key) is { } deck && !R.IsBeingDragged(deck))
-            _componentCount.Text = R.Count(ComponentState.ByContainer, Key).ToString();
+        if (R.Get(ComponentPosition.ById, Key) is { } deck && !R.IsBeingDragged(deck))
+            _componentCount.Text = R.Count(ComponentPosition.ByContainer, Key).ToString();
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public partial class VcDeck : VisualComponentBase
     /// </summary>
     private void SyncLayout(IWatchReader R)
     {
-        var cards = R.Get(ComponentState.ByContainer, Key).OrderBy(c => c.ZOrder).ToList();
+        var cards = R.Get(ComponentPosition.ByContainer, Key).OrderBy(c => c.ZOrder).ToList();
         var heights = cards.Select(c => CardHeight(R, c)).ToList();
         float total = FrameHeight + heights.Sum();
 
@@ -76,15 +76,13 @@ public partial class VcDeck : VisualComponentBase
         OwningTable?.NotifyChanged();
     }
 
-    private static float CardHeight(IAtomReader R, ComponentState card) =>
-        R.Get(Prototype.ById, card.PrototypeRef)?.Parameters is PrintedParameters p
-            ? VcPrinted.ThicknessOf(p)
-            : 0;
+    private static float CardHeight(IAtomReader R, ComponentPosition card) =>
+        R.GetPrototype(card)?.Parameters is PrintedParameters p ? VcPrinted.ThicknessOf(p) : 0;
 
     /// <summary>
     /// The deck's cards, face-down on the frame, with the first card on top.
     /// </summary>
-    public override IEnumerable<ComponentState> GetSpawnStack(ComponentState self)
+    public override IEnumerable<Atom> GetSpawnStack(ComponentPosition self)
     {
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
@@ -97,14 +95,26 @@ public partial class VcDeck : VisualComponentBase
         return Enumerable
             .Range(0, parameters.CardCount(R))
             .Reverse()
-            .Select(n => new ComponentState
+            .SelectMany(n =>
             {
-                Id = Snowport.Clock.CreateTag(),
-                Stage = self.Stage,
-                PrototypeRef = PrototypeRef,
-                Item = parameters.Item(n, R),
-                ContainerRef = self.Id,
-                Rotation = new Vector3(0, 0, Mathf.Pi),
+                var variant = new ComponentVariant
+                {
+                    Id = Snowport.Clock.CreateTag(),
+                    PrototypeRef = PrototypeRef,
+                    Item = parameters.Item(n, R),
+                };
+                return new Atom[]
+                {
+                    variant,
+                    new ComponentPosition
+                    {
+                        Id = Snowport.Clock.CreateTag(),
+                        Stage = self.Stage,
+                        VariantRef = variant.Id,
+                        ContainerRef = self.Id,
+                        Rotation = new Vector3(0, 0, Mathf.Pi),
+                    },
+                };
             })
             .ToList();
     }

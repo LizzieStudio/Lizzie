@@ -86,7 +86,7 @@ public partial class GameObjects : Node3D
     /// which are in stacking order and whose positions are their offsets from the pointer.
     /// The pickup also writes <paramref name="alongside"/>, so a cancel takes them back too.
     /// </summary>
-    private void StartDrag(IEnumerable<ComponentState> pickup, IEnumerable<Atom> alongside)
+    private void StartDrag(IEnumerable<ComponentPosition> pickup, IEnumerable<Atom> alongside)
     {
         var R = AtomService.Instance;
         bool overHand = HandRow.Under(GetViewport()) != null;
@@ -109,7 +109,7 @@ public partial class GameObjects : Node3D
         _held = new HeldDrag
         {
             Group = R.Open(DragCommands.Pickup, atoms.Concat(alongside)),
-            Components = atoms.Select(ComponentState.ById.Of).ToArray(),
+            Components = atoms.Select(ComponentPosition.ById.Of).ToArray(),
         };
         CursorMode = CursorMode.Drag;
         _heldOverHand = overHand;
@@ -229,7 +229,7 @@ public partial class GameObjects : Node3D
     public VisualComponentBase GetComponent(SnowTag reference) => _table.GetComponent(reference);
 
     /// <summary>The nodes for the given atoms, skipping any that have none yet.</summary>
-    private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentState> atoms) =>
+    private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentPosition> atoms) =>
         atoms.Select(s => GetComponent(s.Id)).Where(c => c != null);
 
     public override void _Process(double delta)
@@ -312,17 +312,26 @@ public partial class GameObjects : Node3D
 
         foreach (var component in components)
         {
-            var self = ComponentState.Capture(component) with
+            var variant = ComponentVariant.Capture(component);
+            var self = ComponentPosition.Capture(component, variant) with
             {
                 Id = Snowport.Clock.CreateTag(),
                 ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
             };
+            atoms.Add(variant);
             atoms.Add(self);
 
             // The stack goes above the component, bottom first.
-            foreach (var s in component.GetSpawnStack(self))
+            foreach (var a in component.GetSpawnStack(self))
             {
-                atoms.Add(s with { ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp) });
+                atoms.Add(
+                    a is ComponentPosition s
+                        ? s with
+                        {
+                            ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
+                        }
+                        : a
+                );
             }
         }
 
@@ -436,7 +445,7 @@ public partial class GameObjects : Node3D
     private HashSet<SnowTag> GetSelection() =>
         AtomService
             .Instance.GetSelection(
-                ComponentState.ById,
+                ComponentPosition.ById,
                 new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
             )
             .Select(k => k.Component)
@@ -445,7 +454,7 @@ public partial class GameObjects : Node3D
     /// <summary>Replaces the local player's selected components.</summary>
     public void SetSelection(IEnumerable<SnowTag> components) =>
         AtomService.Instance.SetSelection(
-            ComponentState.ById,
+            ComponentPosition.ById,
             components.Select(ShownKey),
             new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
         );
@@ -482,7 +491,7 @@ public partial class GameObjects : Node3D
     private void UpdateStackingHeights()
     {
         var table = Nodes(
-                AtomService.Instance.Get(ComponentState.ByContainer, ShownKey(SnowTag.Empty))
+                AtomService.Instance.Get(ComponentPosition.ByContainer, ShownKey(SnowTag.Empty))
             )
             .ToArray();
         var floors = Stacking.Floors(table, out _tableTops);
@@ -606,13 +615,15 @@ public partial class GameObjects : Node3D
         }
         else if (hit.DrawArea)
         {
-            var draw = ((VisualComponentGroup)hit.Component).DragDraw();
+            var (pickup, alongside) = ((VisualComponentGroup)hit.Component).DragDraw();
             StartDrag(
-                draw,
-                AtomService.Instance.NewSelection(
-                    ComponentState.ById,
-                    draw.Select(ComponentState.ById.Of),
-                    new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
+                pickup,
+                alongside.Concat(
+                    AtomService.Instance.NewSelection(
+                        ComponentPosition.ById,
+                        pickup.Select(ComponentPosition.ById.Of),
+                        new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
+                    )
                 )
             );
         }
@@ -754,7 +765,7 @@ public partial class GameObjects : Node3D
             PickedUp(component)
                 .Select(o =>
                 {
-                    var s = ComponentState.Of(o);
+                    var s = ComponentPosition.Of(o);
                     return s with
                     {
                         Position = o.GlobalPosition - startCursor,
@@ -786,7 +797,7 @@ public partial class GameObjects : Node3D
                 {
                     // In the hand's frame, right on screen is +X and down is +Z.
                     var offset = (row.MiddleOf(c.Key) - press) / row.PixelsPerCm;
-                    return ComponentState.Of(c) with
+                    return ComponentPosition.Of(c) with
                     {
                         Position = new Vector3(offset.X, 0, offset.Y),
                     };
@@ -843,7 +854,7 @@ public partial class GameObjects : Node3D
     /// <summary>
     /// The rotation held cards should have when entering or leaving a hand based on the camera rotation and rotation step.
     /// </summary>
-    private float HandTurn(ComponentState nearest, bool intoHand)
+    private float HandTurn(ComponentPosition nearest, bool intoHand)
     {
         float camera = HandCard.CameraYaw(GetViewport().GetCamera3D());
         if (!intoHand)
@@ -882,7 +893,9 @@ public partial class GameObjects : Node3D
     private IEnumerable<VisualComponentBase> GetDraggingObjects()
     {
         var R = AtomService.Instance;
-        return Nodes(R.Cursors().SelectMany(c => R.Get(ComponentState.ByContainer, ShownKey(c))));
+        return Nodes(
+            R.Cursors().SelectMany(c => R.Get(ComponentPosition.ByContainer, ShownKey(c)))
+        );
     }
 
     /// <summary>
@@ -934,20 +947,22 @@ public partial class GameObjects : Node3D
     /// <summary>
     /// The held <paramref name="atoms"/> placed where they are on the table, at their offsets from <paramref name="cursor"/>.
     /// </summary>
-    private static List<ComponentState> At(Vector3 cursor, IEnumerable<ComponentState> atoms) =>
-        atoms.Select(s => s with { Position = cursor + s.PositionAt(0) }).ToList();
+    private static List<ComponentPosition> At(
+        Vector3 cursor,
+        IEnumerable<ComponentPosition> atoms
+    ) => atoms.Select(s => s with { Position = cursor + s.PositionAt(0) }).ToList();
 
     /// <summary>
     /// The atoms that set <paramref name="dropped"/> down on the table where they are,
     /// in their stacking order, snapped onto a card or deck they're dropped near.
     /// A token that lands exactly on a deck goes into it.
     /// </summary>
-    private ComponentState[] OnTable(List<ComponentState> dropped)
+    private ComponentPosition[] OnTable(List<ComponentPosition> dropped)
     {
         var R = AtomService.Instance;
         var ordered = dropped.OrderBy(s => s.ZOrder).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
-        var decks = R.Get(ComponentState.ByContainer, ShownKey(SnowTag.Empty))
+        var decks = R.Get(ComponentPosition.ByContainer, ShownKey(SnowTag.Empty))
             .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
             .ToList();
 
@@ -991,10 +1006,10 @@ public partial class GameObjects : Node3D
     /// If a candidate VcPrinted or deck is found, this offset will snap to a stacked position.
     /// If no candidate is found, returns (0, 0).
     /// </summary>
-    private (int X, int Z) SnapDelta(List<ComponentState> dropped)
+    private (int X, int Z) SnapDelta(List<ComponentPosition> dropped)
     {
         var R = AtomService.Instance;
-        var targets = R.Get(ComponentState.ByContainer, ShownKey(SnowTag.Empty))
+        var targets = R.Get(ComponentPosition.ByContainer, ShownKey(SnowTag.Empty))
             .Where(s =>
                 R.Kind(s)
                     is VisualComponentBase.VisualComponentType.Printed

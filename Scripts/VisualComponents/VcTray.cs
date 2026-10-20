@@ -124,19 +124,28 @@ public partial class VcTray : VisualComponentGroup
         _prototypeSpawnPoint.AddChild(c);
     }
 
-    public override ComponentState[] DragDraw() =>
-        _prototype == null
-            ? []
-            :
+    public override (ComponentPosition[], Atom[]) DragDraw()
+    {
+        if (_prototype == null)
+            return ([], []);
+        var variant = new ComponentVariant
+        {
+            Id = Snowport.Clock.CreateTag(),
+            PrototypeRef = _prototype.Id,
+            Item = _item,
+        };
+        return (
             [
-                new ComponentState
+                new ComponentPosition
                 {
                     Id = Snowport.Clock.CreateTag(),
                     Stage = Key.Stage,
-                    PrototypeRef = _prototype.Id,
-                    Item = _item,
+                    VariantRef = variant.Id,
                 },
-            ];
+            ],
+            [variant]
+        );
+    }
 }
 
 [JsonName("TrayParameters")]

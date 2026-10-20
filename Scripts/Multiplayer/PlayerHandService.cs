@@ -11,8 +11,8 @@ public static class PlayerHandService
     /// The card moved into a seat's hand at the top of its order, upright.
     /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
-    public static ComponentState MovedToHand(
-        ComponentState card,
+    public static ComponentPosition MovedToHand(
+        ComponentPosition card,
         int seatIndex,
         int suborder,
         SnowportId stamp
@@ -34,9 +34,9 @@ public static class PlayerHandService
     /// </summary>
     /// <param name="hand">The hand's cards, in order, which can include members of <paramref name="cards"/>.</param>
     /// <param name="handRef">The hand's container.</param>
-    public static IEnumerable<ComponentState> Inserted(
-        IReadOnlyList<ComponentState> hand,
-        IReadOnlyList<ComponentState> cards,
+    public static IEnumerable<ComponentPosition> Inserted(
+        IReadOnlyList<ComponentPosition> hand,
+        IReadOnlyList<ComponentPosition> cards,
         int index,
         SnowTag handRef,
         SnowportId stamp
@@ -61,13 +61,17 @@ public static class PlayerHandService
     /// Returns the cards in a given seat's hand in a stage, ordered by their ZOrder.
     /// Returns an empty list for observer seats.
     /// </summary>
-    public static IReadOnlyList<ComponentState> GetHand(IAtomReader R, SnowTag stage, int seatIndex)
+    public static IReadOnlyList<ComponentPosition> GetHand(
+        IAtomReader R,
+        SnowTag stage,
+        int seatIndex
+    )
     {
         var container = R.HandOf(seatIndex);
         if (container == SnowTag.Empty)
             return [];
 
-        return R.Get(ComponentState.ByContainer, new StageKey(stage, container))
+        return R.Get(ComponentPosition.ByContainer, new StageKey(stage, container))
             .OrderBy(s => s.ZOrder)
             .ToList();
     }

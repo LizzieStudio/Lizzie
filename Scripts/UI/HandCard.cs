@@ -65,8 +65,8 @@ public partial class HandCard : PanelContainer
 
     private void Sync(IWatchReader R)
     {
-        var state = R.Get(ComponentState.ById, Reference);
-        var prototype = state == null ? null : R.Get(Prototype.ById, state.PrototypeRef);
+        var state = R.Get(ComponentPosition.ById, Reference);
+        var prototype = state == null ? null : R.GetPrototype(state);
         Yaw = state?.Rotation.Y ?? 0;
         TableSize = HandRow.TableSize(prototype?.Parameters as PrintedParameters);
         _face.ShowCard(state, state != null && (AlwaysShowBack || IsFaceDown(state)), R);
@@ -74,12 +74,12 @@ public partial class HandCard : PanelContainer
 
     private void SyncSelection(IWatchReader R)
     {
-        var target = ComponentState.ById.Ref(Reference);
+        var target = ComponentPosition.ById.Ref(Reference);
         var colors = R.SelectionColors(new SelectionPlace(SelectionPlaces.Table, Reference.Stage));
         SelectionHighlight.Outline(this, "panel", colors, target);
     }
 
-    public static bool IsFaceDown(ComponentState s) => Mathf.Cos(s.Rotation.Z) < 0;
+    public static bool IsFaceDown(ComponentPosition s) => Mathf.Cos(s.Rotation.Z) < 0;
 
     public static float ScreenRotation(float yaw) => -yaw;
 
@@ -92,7 +92,7 @@ public partial class HandCard : PanelContainer
     /// <summary>
     /// A held card's atom turned <paramref name="angle"/> about Y, along with its offset from what holds it.
     /// </summary>
-    public static ComponentState Turned(ComponentState s, float angle) =>
+    public static ComponentPosition Turned(ComponentPosition s, float angle) =>
         s with
         {
             Rotation = s.Rotation with { Y = s.Rotation.Y + angle },

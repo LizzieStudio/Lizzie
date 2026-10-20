@@ -9,7 +9,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <summary>
     /// The atoms that move <paramref name="dropped"/> into this container.
     /// </summary>
-    public IEnumerable<Atom> DropObjects(IEnumerable<ComponentState> dropped)
+    public IEnumerable<Atom> DropObjects(IEnumerable<ComponentPosition> dropped)
     {
         var stamp = Snowport.Clock.Create();
         return dropped.Select(
@@ -25,6 +25,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <summary>
     /// The atoms a drag on the container picks up, with positions as their offsets from the pointer,
     /// or none when there's nothing to draw. Nothing is written until the drag starts.
+    /// Any additional atoms that should be written for a drag are included in the second value.
     /// </summary>
-    public virtual ComponentState[] DragDraw() => [];
+    public virtual (ComponentPosition[], Atom[]) DragDraw() => ([], []);
 }

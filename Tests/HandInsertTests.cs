@@ -7,10 +7,10 @@ public class HandInsertTests
     private static readonly SnowTag Hand = new(100);
 
     // Cards 1 to n already in the hand, in order, stacked by older stamps.
-    private static List<ComponentState> HandOf(int n) =>
+    private static List<ComponentPosition> HandOf(int n) =>
         Enumerable
             .Range(1, n)
-            .Select(i => new ComponentState
+            .Select(i => new ComponentPosition
             {
                 Id = new SnowTag(i),
                 ContainerRef = Hand,
@@ -18,10 +18,10 @@ public class HandInsertTests
             })
             .ToList();
 
-    private static ComponentState Card(int id) => new() { Id = new SnowTag(id) };
+    private static ComponentPosition Card(int id) => new() { Id = new SnowTag(id) };
 
     // The hand's order once the atoms are applied.
-    private static int[] Order(List<ComponentState> hand, IEnumerable<ComponentState> written)
+    private static int[] Order(List<ComponentPosition> hand, IEnumerable<ComponentPosition> written)
     {
         var all = hand.ToDictionary(c => c.Id);
         foreach (var c in written)

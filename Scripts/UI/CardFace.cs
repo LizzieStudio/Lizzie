@@ -16,9 +16,9 @@ public partial class CardFace : TextureRect
     /// <summary>
     /// Shows card <paramref name="s"/>'s back or face, or nothing for null.
     /// </summary>
-    public void ShowCard(ComponentState s, bool back, IAtomReader R)
+    public void ShowCard(ComponentPosition s, bool back, IAtomReader R)
     {
-        var prototype = s == null ? null : R.Get(Prototype.ById, s.PrototypeRef);
+        var prototype = s == null ? null : R.GetPrototype(s);
         var p = prototype?.Parameters as PrintedParameters;
         Texture = p == null ? null : ((TokenShape)p.Shape).Mask();
         ClipChildren = Texture == null ? ClipChildrenMode.Disabled : ClipChildrenMode.Only;
@@ -28,7 +28,12 @@ public partial class CardFace : TextureRect
         if (p == null)
             _faces.Clear();
         else
-            _faces.Load(prototype, s.Item, ProjectService.Instance.GameObjects.TextureFactory, R);
+            _faces.Load(
+                prototype,
+                R.GetVariant(s).Item,
+                ProjectService.Instance.GameObjects.TextureFactory,
+                R
+            );
     }
 
     private void ShowFace() => _card.Texture = (_back ? _faces.Back : _faces.Front).Texture;

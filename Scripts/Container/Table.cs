@@ -47,19 +47,23 @@ public partial class Table : Node3D
     public void NotifyChanged() => Changed?.Invoke();
 
     // The scene a component's node is made from, and what its node can't change without being remade.
-    private static readonly Basis<
-        ComponentState,
-        (string Scene, SnowTag Proto, PrototypeItemRef Item)
-    > NodeBasis = new(
-        (R, s) =>
-        {
-            var proto = R.Get(Prototype.ById, s.PrototypeRef);
-            if (proto == null)
-                return null;
-            var scene = Utility.ComponentTypeToScenePath(proto.Type, proto.Parameters, R, s.IsItem);
-            return (scene, s.PrototypeRef, s.Item);
-        }
-    );
+    private static readonly Basis<ComponentPosition, (string Scene, SnowTag Variant)> NodeBasis =
+        new(
+            (R, s) =>
+            {
+                var variant = R.GetVariant(s);
+                var proto = R.Get(Prototype.ById, variant.PrototypeRef);
+                if (proto == null)
+                    return null;
+                var scene = Utility.ComponentTypeToScenePath(
+                    proto.Type,
+                    proto.Parameters,
+                    R,
+                    variant.IsItem
+                );
+                return (scene, s.VariantRef);
+            }
+        );
 
     /// <summary>
     /// Keeps one node per live component,
@@ -67,14 +71,14 @@ public partial class Table : Node3D
     /// </summary>
     private void Sync(IWatchReader R)
     {
-        var (removed, added) = R.Diff(ComponentState.ByStage, StageRef, NodeBasis);
+        var (removed, added) = R.Diff(ComponentPosition.ByStage, StageRef, NodeBasis);
 
         foreach (var (s, _) in removed)
             RemoveComponent(s.Id);
         foreach (var (s, key) in added)
             AddComponent(s.Id, key.Scene);
 
-        foreach (var s in R.Get(ComponentState.ByStage, StageRef))
+        foreach (var s in R.Get(ComponentPosition.ByStage, StageRef))
         {
             if (!_components.TryGetValue(s.Id, out var node))
                 continue;

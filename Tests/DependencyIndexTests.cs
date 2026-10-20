@@ -8,7 +8,9 @@ using Xunit;
 /// </summary>
 public class DependencyIndexTests
 {
-    private static readonly Group<ComponentState, SnowTag> ByContainer = new(s => s.ContainerRef);
+    private static readonly Group<ComponentPosition, SnowTag> ByContainer = new(s =>
+        s.ContainerRef
+    );
 
     private readonly DependencyIndex<string> _index = new();
 
@@ -27,13 +29,16 @@ public class DependencyIndexTests
     [Fact]
     public void AChangeAffectsOnlyTheWatchersOfTheValuesItTouched()
     {
-        _index.Add("reads 1", ComponentState.ById, Tag(1));
-        _index.Add("reads 2", ComponentState.ById, Tag(2));
+        _index.Add("reads 1", ComponentPosition.ById, Tag(1));
+        _index.Add("reads 2", ComponentPosition.ById, Tag(2));
         _index.Add("reads container 5", ByContainer, Tag(5));
         _index.Add("reads container 6", ByContainer, Tag(6));
 
         AssertAffected(
-            [new Touch(ComponentState.ById, Tag(1), false), new Touch(ByContainer, Tag(5), false)],
+            [
+                new Touch(ComponentPosition.ById, Tag(1), false),
+                new Touch(ByContainer, Tag(5), false),
+            ],
             "reads 1",
             "reads container 5"
         );
@@ -51,9 +56,9 @@ public class DependencyIndexTests
     [Fact]
     public void AClearedWatcherIsNoLongerAffected()
     {
-        _index.Add("reads 1", ComponentState.ById, Tag(1));
+        _index.Add("reads 1", ComponentPosition.ById, Tag(1));
         _index.Clear("reads 1");
 
-        AssertAffected([new Touch(ComponentState.ById, Tag(1), false)]);
+        AssertAffected([new Touch(ComponentPosition.ById, Tag(1), false)]);
     }
 }

@@ -107,8 +107,7 @@ public partial class HandRow : Control
                 .Select(s =>
                     CardSize(
                         TableSize(
-                            AtomService.Instance.Get(Prototype.ById, s.PrototypeRef)?.Parameters
-                                as PrintedParameters
+                            AtomService.Instance.GetPrototype(s)?.Parameters as PrintedParameters
                         ),
                         HandCard.ScreenRotation(s.Rotation.Y)
                     ).Width
@@ -144,7 +143,7 @@ public partial class HandRow : Control
             ProjectService.Instance.GameObjects.ShownStage(R),
             Seat
         );
-        var ids = hand.Select(ComponentState.ById.Of).ToList();
+        var ids = hand.Select(ComponentPosition.ById.Of).ToList();
 
         foreach (var id in _cards.Keys.Except(ids).ToList())
             RemoveCard(id);

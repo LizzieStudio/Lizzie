@@ -26,10 +26,10 @@ public partial class VcBag : VisualComponentGroup
     }
 
     private void SyncCount(IWatchReader R) =>
-        _componentCount.Text = R.Count(ComponentState.ByContainer, Key).ToString();
+        _componentCount.Text = R.Count(ComponentPosition.ByContainer, Key).ToString();
 
-    private IEnumerable<ComponentState> Contents(IAtomReader R) =>
-        R.Get(ComponentState.ByContainer, Key);
+    private IEnumerable<ComponentPosition> Contents(IAtomReader R) =>
+        R.Get(ComponentPosition.ByContainer, Key);
 
     protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
@@ -75,15 +75,12 @@ public partial class VcBag : VisualComponentGroup
     private float Diameter;
     private Color BagColor;
 
-    /// <summary>
-    /// One of the bag's components, at random.
-    /// </summary>
-    public override ComponentState[] DragDraw()
+    public override (ComponentPosition[], Atom[]) DragDraw()
     {
         var contents = Contents(AtomService.Instance).ToList();
         return contents.Count == 0
-            ? []
-            : [contents[Random.Shared.Next(contents.Count)] with { Position = Vector3.Zero }];
+            ? ([], [])
+            : ([contents[Random.Shared.Next(contents.Count)] with { Position = Vector3.Zero }], []);
     }
 }
 

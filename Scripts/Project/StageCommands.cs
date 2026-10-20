@@ -103,7 +103,7 @@ public static class StageCommands
     };
 
     // What the game wrote itself, except what someone is dragging.
-    private static IEnumerable<ComponentState> Resettable(IAtomReader R) =>
-        R.Get(ComponentState.WrittenIn, R.Get(CurrentGame.Only).StageRef)
+    private static IEnumerable<ComponentPosition> Resettable(IAtomReader R) =>
+        R.Get(ComponentPosition.WrittenIn, R.Get(CurrentGame.Only).StageRef)
             .Where(c => !R.IsBeingDragged(c));
 }

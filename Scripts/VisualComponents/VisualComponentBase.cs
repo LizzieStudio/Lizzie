@@ -42,8 +42,9 @@ public abstract partial class VisualComponentBase : Area3D
         // Previews have no atom and keep their own.
         if (State is { } atom)
         {
-            PrototypeRef = atom.PrototypeRef;
-            Item = atom.Item;
+            var variant = AtomService.Instance.GetVariant(atom);
+            PrototypeRef = variant.PrototypeRef;
+            Item = variant.Item;
         }
 
         // Builds first, so the first placement knows the component's height.
@@ -56,7 +57,7 @@ public abstract partial class VisualComponentBase : Area3D
     private void SyncSelection(IWatchReader R)
     {
         var key = Key;
-        var target = ComponentState.ById.Ref(key);
+        var target = ComponentPosition.ById.Ref(key);
         var local = Snowport.Clock.source;
         var place = new SelectionPlace(SelectionPlaces.Table, key.Stage);
         var selection = R.GetSelection(place)?.Targets;
@@ -167,7 +168,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     private void SyncState(IWatchReader R)
     {
-        var s = R.Get(ComponentState.ById, Key);
+        var s = R.Get(ComponentPosition.ById, Key);
         if (s == null)
             return;
 
@@ -223,11 +224,12 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>
-    /// The components to spawn along with this one, such as a deck's cards, bottom first.
-    /// <strong>Their ZOrders do not come assigned.</strong>
+    /// The components to spawn along with this one, such as a deck's cards, bottom first,
+    /// as their positions and the variants they need.
+    /// <strong>The positions' ZOrders do not come assigned.</strong>
     /// </summary>
-    /// <param name="self">The state this component spawns with.</param>
-    public virtual IEnumerable<ComponentState> GetSpawnStack(ComponentState self)
+    /// <param name="self">The position this component spawns with.</param>
+    public virtual IEnumerable<Atom> GetSpawnStack(ComponentPosition self)
     {
         yield break;
     }
@@ -239,7 +241,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// Returns false when there's nothing to animate, so the state is applied immediately.
     /// </summary>
     public virtual bool PlayTransition(
-        ComponentState state,
+        ComponentPosition state,
         CommandName? writtenBy,
         long MsecSinceStart
     ) => false;
@@ -270,7 +272,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// The component's atom, or null for a node without one, such as a spawn preview.
     /// Also null between its atom being unset and the table removing it at the end of the frame.
     /// </summary>
-    public ComponentState State => AtomService.Instance.Get(ComponentState.ById, Key);
+    public ComponentPosition State => AtomService.Instance.Get(ComponentPosition.ById, Key);
 
     /// <summary>
     /// The id of the component atom this node shows, in the stage its table shows.

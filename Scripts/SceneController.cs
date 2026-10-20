@@ -51,7 +51,7 @@ public partial class SceneController : Node3D, ICommandView
         || _gameObjects.GetHoveredObject() is not { } hovered
         || hovered.State == null
             ? []
-            : [ComponentState.ById.Ref(hovered.Key)];
+            : [ComponentPosition.ById.Ref(hovered.Key)];
 
     public IReadOnlyList<Command> Commands => TableCommands;
 
@@ -70,7 +70,7 @@ public partial class SceneController : Node3D, ICommandView
         var shown = _gameObjects.ShownStage(AtomService.Instance);
         return atom switch
         {
-            ComponentState s => s.Stage == shown,
+            ComponentPosition s => s.Stage == shown,
             Selection s => s.Place == new SelectionPlace(SelectionPlaces.Table, shown),
             _ => false,
         };
@@ -79,7 +79,7 @@ public partial class SceneController : Node3D, ICommandView
     #region Table commands
     // These act on the table rather than on atoms, so only the table offers them.
 
-    private static readonly Command DuplicateComponent = new AtomCommand<ComponentState>
+    private static readonly Command DuplicateComponent = new AtomCommand<ComponentPosition>
     {
         Name = new("table.duplicate"),
         // The prototype manifest's clone icon.
@@ -88,12 +88,15 @@ public partial class SceneController : Node3D, ICommandView
         Count = TargetCount.One,
         // Picks up a copy to place, as if spawning its prototype.
         SideEffects = (cs, _) =>
+        {
+            var variant = AtomService.Instance.GetVariant(cs[0]);
             EventBus.Instance.Publish(
-                new SpawnPrototypeEvent { PrototypeRef = cs[0].PrototypeRef, Item = cs[0].Item }
-            ),
+                new SpawnPrototypeEvent { PrototypeRef = variant.PrototypeRef, Item = variant.Item }
+            );
+        },
     };
 
-    private static readonly Command ZoomToComponent = new AtomCommand<ComponentState>
+    private static readonly Command ZoomToComponent = new AtomCommand<ComponentPosition>
     {
         Name = new("table.zoom"),
         Icon = CommandIcons.Zoom,
