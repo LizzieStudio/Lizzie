@@ -107,7 +107,8 @@ public partial class CommandButton : Button
         if (Command == null)
             return;
 
-        var targets = GetTargets(CommandViews.Of(this), R);
+        var context = CommandContext.Of(CommandViews.Of(this), R);
+        var targets = GetTargets(context, R);
         Disabled = !Command.Fits(targets.Count) || !Command.IsAvailable(R);
         if (ShowIcon)
             Icon = IconOf(Command);
@@ -120,11 +121,23 @@ public partial class CommandButton : Button
 
         // The key shows even while it's disabled, so it doesn't come and go with the selection.
         // The caption is only needed when the button doesn't show it.
+        // The command's own tooltip, and why it's disabled, go below on their own lines.
         var key = Command.ShortcutLabel()?.GetAsText();
-        TooltipText =
-            ShowCaption ? key ?? ""
+        var heading =
+            ShowCaption ? key
             : key == null ? label
             : $"{label} - {key}";
+        var reason = Disabled
+            ? Command.DisabledReason(
+                R,
+                targets.Count,
+                CommandResolver.BlockedFor(Command, context, R, menu: true)
+            )
+            : null;
+        TooltipText = string.Join(
+            "\n",
+            new[] { heading, Command.TooltipWith(reason) }.Where(s => s != null)
+        );
     }
 
     /// <summary>
@@ -145,19 +158,16 @@ public partial class CommandButton : Button
     {
         IAtomReader R = AtomService.Instance;
         var view = CommandViews.Of(this);
-        var targets = GetTargets(view, R);
+        var targets = GetTargets(CommandContext.Of(view, R), R);
         if (Command != null && Command.Fits(targets.Count) && Command.IsAvailable(R))
             Command.Run(targets, 1, view);
     }
 
     /// <summary>
-    /// What commands would act on in the view, as its context menu would.
+    /// What commands would act on in the context, as its context menu would.
     /// </summary>
-    private List<AtomRef> GetTargets(ICommandView view, IAtomReader R)
-    {
-        var context = CommandContext.Of(view, R);
-        return CommandResolver.TargetsFor(Command, context, R, menu: true);
-    }
+    private List<AtomRef> GetTargets(CommandContext context, IAtomReader R) =>
+        CommandResolver.TargetsFor(Command, context, R, menu: true);
 
     // A view's own commands are only known once the button is in it.
     private Command Named(string name) =>

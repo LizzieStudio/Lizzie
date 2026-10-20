@@ -53,20 +53,20 @@ public static class StageCommands
         Name = new("blueprint.edit"),
         Icon = CommandIcons.Edit,
         Caption = "Edit Blueprint",
+        Noun = ("Blueprint", "Blueprints"),
         Count = TargetCount.One,
         AppliesTo = IsBlueprint,
         SideEffects = (blueprints, _) =>
             ProjectService.Instance.GameObjects.PickedStage.Value = blueprints[0].Id,
     };
 
-    /// <summary>
-    /// Starts a new game on the selected blueprint in place of the one being played.
-    /// </summary>
     public static readonly Command NewGame = new AtomCommand<Stage>
     {
         Name = new("blueprint.new_game"),
         Icon = CommandIcons.NewGame,
         Caption = "Start Game Here",
+        Noun = ("Blueprint", "Blueprints"),
+        Tooltip = "Ends the current game and starts a new one from this blueprint",
         Count = TargetCount.One,
         AppliesTo = IsBlueprint,
         Effects = (R, blueprints, _) => Stage.NewGame(R, blueprints[0].Id),
@@ -80,25 +80,29 @@ public static class StageCommands
         Name = new("blueprint.delete"),
         Icon = CommandIcons.Delete,
         Caption = "Delete Blueprint",
+        Noun = ("Blueprint", "Blueprints"),
         Keys = [Shortcuts.Key(Key.Delete)],
         Count = TargetCount.One,
-        AppliesTo = (R, s) =>
-            IsBlueprint(R, s)
-            && Stage.IsLeaf(R, s)
-            && R.Get(ProjectGameSettings.Only).BlueprintRef != s.Id,
+        AppliesTo = IsBlueprint,
+        Requires =
+        [
+            (
+                "Can't delete the blueprint that games start on.",
+                (R, s) => R.Get(ProjectGameSettings.Only).BlueprintRef != s.Id
+            ),
+            ("Can't delete blueprints with children.", Stage.IsLeaf),
+        ],
         Effects = (R, blueprints, _) => [blueprints[0] with { Deleted = true }],
     };
 
-    /// <summary>
-    /// Resets the game back to setup.
-    /// </summary>
     public static readonly GlobalCommand ResetGame = new()
     {
         Name = new("game.reset"),
         Keys = [Shortcuts.Ctrl(Key.R)],
         Icon = CommandIcons.ResetGame,
         Caption = "Reset Game",
-        Enabled = R => Resettable(R).Any(),
+        Tooltip = "Resets the game back to its blueprint.",
+        Requires = [("There are no changes to reset.", (R) => Resettable(R).Any())],
         Effects = R => Resettable(R).Select(R.Unset),
     };
 

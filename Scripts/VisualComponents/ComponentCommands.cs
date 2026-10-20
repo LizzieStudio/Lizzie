@@ -72,7 +72,7 @@ public static class ComponentCommands
         Caption = "Delete {0}",
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = NotHeld,
+        AppliesTo = (R, c) => !R.IsBeingDragged(c),
         Effects = (R, cs, _) => cs.Select(c => c with { Removed = true }),
     };
 
@@ -85,17 +85,21 @@ public static class ComponentCommands
         Name = new("component.reset"),
         Icon = CommandIcons.Reset,
         Caption = "Reset {0}",
+        Tooltip = "Moves a component back to where it is in the parent blueprint.",
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = (R, c) =>
-            NotHeld(R, c) && R.Get(ComponentPosition.WrittenIn, c.Stage).Any(w => w.Id == c.Id),
+        AppliesTo = (R, c) => !R.IsBeingDragged(c),
+        Requires =
+        [
+            (
+                "These components are already at their starting positions.",
+                (R, c) => R.Get(ComponentPosition.WrittenIn, c.Stage).Any(w => w.Id == c.Id)
+            ),
+        ],
         Effects = (R, cs, _) => cs.Select(R.Unset),
     };
 
     private static float RotationStep(IAtomReader R) =>
         R.Get(ProjectGameSettings.Only).RotationStep();
-
-    // Deleting or restacking what someone is dragging would fight the drag.
-    private static bool NotHeld(IAtomReader R, ComponentPosition c) => !R.IsBeingDragged(c);
 
     // What's inside a bag isn't on the table to turn. A hand shows its cards turned as they'll lie on the table.
     private static bool Turnable(IAtomReader R, ComponentPosition c) => !R.IsHidden(c);

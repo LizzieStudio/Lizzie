@@ -19,24 +19,30 @@ public static class CommandResolver
     /// The items a menu of <paramref name="commands"/> shows, with what each acts on.
     /// Commands have properties which decide when they can act on a certain target.
     /// The commands inside of a Submenu are checked and that status is inherited by the submenu.
+    /// A command shows when a relevant atom is selected.
     /// </summary>
     /// <param name="all">
     /// Keeps all the commands, even when disabled.
     /// This is specifically for the Menu Bar, which shouldn't change.
     /// </param>
-    public static List<(Command Command, IReadOnlyList<AtomRef> Targets)> ForMenu(
-        CommandContext context,
-        IEnumerable<Command> commands,
-        bool all = false
-    )
+    public static List<(
+        Command Command,
+        IReadOnlyList<AtomRef> Targets,
+        IReadOnlyList<string> Blocked
+    )> ForMenu(CommandContext context, IEnumerable<Command> commands, bool all = false)
     {
-        var items = new List<(Command Command, IReadOnlyList<AtomRef> Targets)>();
+        var items =
+            new List<(
+                Command Command,
+                IReadOnlyList<AtomRef> Targets,
+                IReadOnlyList<string> Blocked
+            )>();
         foreach (var command in commands)
         {
             if (command == Command.Divider)
             {
                 if (items.Count > 0 && items[^1].Command != Command.Divider)
-                    items.Add((command, []));
+                    items.Add((command, [], []));
                 continue;
             }
             if (!command.ShowInMenu)
@@ -44,14 +50,15 @@ public static class CommandResolver
             if (command is Submenu submenu)
             {
                 if (all || ForMenu(context, submenu.ItemsFor(AtomService.Instance)).Count > 0)
-                    items.Add((command, []));
+                    items.Add((command, [], []));
                 continue;
             }
 
             // A global command applies to no target, so it fits with none and always shows.
             var targets = TargetsFor(command, context, AtomService.Instance, menu: true);
-            if (all || command.Fits(targets.Count))
-                items.Add((command, targets));
+            var blocked = BlockedFor(command, context, AtomService.Instance, menu: true);
+            if (all || command.Fits(targets.Count) || targets.Count > 0 || blocked.Count > 0)
+                items.Add((command, targets, blocked));
         }
         if (items.Count > 0 && items[^1].Command == Command.Divider)
             items.RemoveAt(items.Count - 1);
@@ -123,6 +130,27 @@ public static class CommandResolver
         CommandContext context,
         IAtomReader R,
         bool menu
+    ) => Candidates(command, context, menu).Where(t => command.Applies(R, t)).ToList();
+
+    /// <summary>
+    /// Lists the reasons why <see cref="TargetsFor"/> rejected atoms, if any.
+    /// </summary>
+    public static List<string> BlockedFor(
+        Command command,
+        CommandContext context,
+        IAtomReader R,
+        bool menu
+    ) =>
+        Candidates(command, context, menu)
+            .Select(t => command.Blocked(R, t))
+            .OfType<string>()
+            .Distinct()
+            .ToList();
+
+    private static IEnumerable<AtomRef> Candidates(
+        Command command,
+        CommandContext context,
+        bool menu
     )
     {
         var acts = command.ActsOn;
@@ -135,7 +163,7 @@ public static class CommandResolver
             targets = targets.Union(context.Referenced);
         if (acts.HasFlag(Context.View))
             targets = targets.Union(context.View);
-        return targets.Where(t => command.Applies(R, t)).ToList();
+        return targets;
     }
 
     /// <summary>

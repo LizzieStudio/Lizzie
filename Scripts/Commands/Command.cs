@@ -210,13 +210,35 @@ public abstract class Command
     public string Icon { get; init; }
 
     /// <summary>
+    /// The tooltip that shows when the user hovers over the command.
+    /// </summary>
+    public string Tooltip { get; init; }
+
+    /// <summary>
+    /// Its <see cref="Tooltip"/> with <paramref name="reason"/> below.
+    /// </summary>
+    public string TooltipWith(string reason) =>
+        string.Join('\n', new[] { Tooltip, reason }.Where(s => s != null));
+
+    /// <summary>
     /// Returns true if this command can act on <paramref name="target"/>:
     /// an atom of the kind it's for, that it has behavior for.
     /// </summary>
     public abstract bool Applies(IAtomReader R, AtomRef target);
 
+    /// <summary>
+    /// Why it can't act on <paramref name="target"/>, or null when it can.
+    /// </summary>
+    public virtual string Blocked(IAtomReader R, AtomRef target) => null;
+
     /// <summary>Whether it can act on <paramref name="count"/> targets that it applies to.</summary>
     public abstract bool Fits(int count);
+
+    /// <summary>
+    /// Why it's disabled with <paramref name="count"/> targets, or null for no reason.
+    /// </summary>
+    public virtual string DisabledReason(IAtomReader R, int count, IReadOnlyList<string> blocked) =>
+        null;
 
     /// <summary>
     /// Whether the Command can run now.
@@ -316,6 +338,12 @@ public sealed class AtomCommand<T> : Command
     /// </summary>
     public AppliesToDelegate AppliesTo { get; init; } = (_, _) => true;
 
+    /// <summary>
+    /// Define rules a relevant atom must also meet.
+    /// Broken rules are displayed in the tooltip when the command is disabled.
+    /// </summary>
+    public IReadOnlyList<(string Reason, AppliesToDelegate Holds)> Requires { get; init; } = [];
+
     /// <inheritdoc cref="TargetCount" />
     public TargetCount Count { get; init; } = TargetCount.Many;
 
@@ -349,6 +377,11 @@ public sealed class AtomCommand<T> : Command
 
     public override bool Applies(IAtomReader R, AtomRef target) => Atom(R, target) != null;
 
+    public override string Blocked(IAtomReader R, AtomRef target) =>
+        R?.Resolve(target) is T atom && AppliesTo(R, atom)
+            ? Requires.FirstOrDefault(rule => !rule.Holds(R, atom)).Reason
+            : null;
+
     public override bool Fits(int count) =>
         Count switch
         {
@@ -356,6 +389,22 @@ public sealed class AtomCommand<T> : Command
             TargetCount.Optional => count <= 1,
             _ => count > 0,
         };
+
+    public override string DisabledReason(IAtomReader R, int count, IReadOnlyList<string> blocked)
+    {
+        if (Fits(count))
+            return null;
+        if (count == 0 && blocked.Count > 0)
+            return string.Join("\n", blocked);
+
+        var one = Noun?.One.ToLowerInvariant() ?? "item";
+        return Count switch
+        {
+            TargetCount.One => $"Select one {one}.",
+            TargetCount.Optional => $"Select one {one} at most.",
+            _ => $"Select at least one {one}.",
+        };
+    }
 
     public override int? MaxNumber(IReadOnlyList<AtomRef> targets) =>
         NumberLimit?.Invoke(Reader, Atoms(Reader, targets));
@@ -372,7 +421,11 @@ public sealed class AtomCommand<T> : Command
 
     // The atom it acts on, or what stands in for one never written, or null if it doesn't apply.
     private T Atom(IAtomReader R, AtomRef target) =>
-        R?.Resolve(target) is T atom && AppliesTo(R, atom) ? atom : null;
+        R?.Resolve(target) is T atom
+        && AppliesTo(R, atom)
+        && Requires.All(rule => rule.Holds(R, atom))
+            ? atom
+            : null;
 
     // An atom may be gone since the menu opened.
     private List<T> Atoms(IAtomReader R, IReadOnlyList<AtomRef> targets) =>
@@ -392,6 +445,13 @@ public sealed class GlobalCommand : Command
     public Func<IAtomReader, bool> Enabled { get; init; }
 
     /// <summary>
+    /// Define rules that must be met,
+    /// Broken rules are displayed in the tooltip when the command is disabled.
+    /// </summary>
+    public IReadOnlyList<(string Reason, Func<IAtomReader, bool> Holds)> Requires { get; init; } =
+    [];
+
+    /// <summary>
     /// Generates the changes to write, as one event.
     /// Returning an empty list still fires an event
     /// Returning null does not fire an event.
@@ -401,7 +461,14 @@ public sealed class GlobalCommand : Command
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }
 
-    public override bool IsAvailable(IAtomReader R) => Enabled?.Invoke(R) ?? true;
+    public override bool IsAvailable(IAtomReader R) =>
+        (Enabled?.Invoke(R) ?? true) && Requires.All(rule => rule.Holds(R));
+
+    public override string DisabledReason(
+        IAtomReader R,
+        int count,
+        IReadOnlyList<string> blocked
+    ) => Requires.FirstOrDefault(rule => !rule.Holds(R)).Reason;
 
     public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view)
     {

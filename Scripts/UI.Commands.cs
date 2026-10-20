@@ -110,12 +110,11 @@ public partial class UI
         SideEffects = _ => _instance?.ShowProjectSettings(),
     };
 
-    /// <summary>Opens the prototype manifest, to place a component from a prototype.</summary>
     public static readonly GlobalCommand InsertExistingComponent = new()
     {
         Name = new("component.insert_existing"),
         Icon = CommandIcons.ExistingComponent,
-        Caption = "Existing Component",
+        Caption = "Edit existing components",
         SideEffects = _ => _instance?.ShowPrototypeManifest(),
     };
 
@@ -123,7 +122,7 @@ public partial class UI
     {
         Name = new("component.insert_new"),
         Icon = CommandIcons.NewComponent,
-        Caption = "New Component",
+        Caption = "Create a new component",
         SideEffects = _ => _instance?.ShowComponentDefinition(),
     };
 }

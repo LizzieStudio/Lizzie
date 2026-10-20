@@ -102,7 +102,7 @@ public static class CommandMenu
     )
     {
         IAtomReader R = AtomService.Instance;
-        foreach (var (command, targets) in CommandResolver.ForMenu(context, commands, all))
+        foreach (var (command, targets, blocked) in CommandResolver.ForMenu(context, commands, all))
         {
             if (command == Command.Divider)
             {
@@ -132,6 +132,10 @@ public static class CommandMenu
                 menu.SetItemIcon(index, GD.Load<Texture2D>(command.Icon));
                 menu.SetItemIconMaxWidth(index, IconSize);
             }
+
+            var reason = disabled ? command.DisabledReason(R, targets.Count, blocked) : null;
+            if (command.TooltipWith(reason) is { } tooltip)
+                menu.SetItemTooltip(index, tooltip);
 
             if (disabled)
                 continue;

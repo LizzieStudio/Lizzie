@@ -1,10 +1,8 @@
-/// <summary>Commands for prototypes.</summary>
 public static class PrototypeCommands
 {
     public static readonly Command Edit = new AtomCommand<Prototype>
     {
         Name = new("prototype.edit"),
-        // The prototype manifest's edit icon.
         Icon = CommandIcons.Edit,
         Caption = "Edit Prototype",
         Count = TargetCount.One,

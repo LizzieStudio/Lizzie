@@ -14,6 +14,7 @@ public static class UndoCommands
         Name = new("app.undo"),
         Icon = CommandIcons.Undo,
         Caption = "Undo Mine",
+        Tooltip = "Undoes the last change that you made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z)],
         SideEffects = v => Issue(Undo, UndoLog.Undo, Mine(v)),
     };
@@ -23,6 +24,7 @@ public static class UndoCommands
         Name = new("app.redo"),
         Icon = CommandIcons.Redo,
         Caption = "Redo Mine",
+        Tooltip = "Redoes an undo that you just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
         SideEffects = v => Issue(Redo, UndoLog.Redo, Mine(v)),
     };
@@ -32,6 +34,7 @@ public static class UndoCommands
         Name = new("app.undo_others"),
         Icon = CommandIcons.UndoOthers,
         Caption = "Undo Others",
+        Tooltip = "Undoes the last change that any other player made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
         SideEffects = v => Issue(UndoOthers, UndoLog.Undo, Others(v)),
     };
@@ -41,6 +44,7 @@ public static class UndoCommands
         Name = new("app.redo_others"),
         Icon = CommandIcons.RedoOthers,
         Caption = "Redo Others",
+        Tooltip = "Redoes an undo that any other player just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
         SideEffects = v => Issue(RedoOthers, UndoLog.Redo, Others(v)),
     };
@@ -54,6 +58,7 @@ public static class UndoCommands
         Name = new("record.undo_changes"),
         Icon = CommandIcons.UndoComponent,
         Caption = "Undo This",
+        Tooltip = "Undoes the last change that affected this component, regardless of who did it.",
         ActsOn = Context.Selected | Context.Contents,
         SideEffects = (atoms, _) =>
         {
