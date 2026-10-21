@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -41,7 +40,8 @@ public partial class ComponentDefinition : Window
         _createButton.Pressed += CreateClicked;
 
         _cancelButton = GetNode<Button>("%CancelButton");
-        _cancelButton.Pressed += CancelClicked;
+        _cancelButton.Pressed += QueueFree;
+        CloseRequested += QueueFree;
 
         _updateButton = GetNode<Button>("%UpdateButton");
         _updateButton.Pressed += UpdateClicked;
@@ -117,7 +117,7 @@ public partial class ComponentDefinition : Window
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = prototype.Id, AllRows = true }
             );
-            CloseDialog?.Invoke(this, EventArgs.Empty);
+            QueueFree();
         }
         else
         {
@@ -153,12 +153,7 @@ public partial class ComponentDefinition : Window
 
         AtomService.Instance.Write(prototype);
 
-        CloseDialog?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void CancelClicked()
-    {
-        CancelDialog?.Invoke(this, EventArgs.Empty);
+        QueueFree();
     }
 
     private string CurName
@@ -241,9 +236,6 @@ public partial class ComponentDefinition : Window
         return null;
     }
 
-    public event EventHandler<EventArgs> CancelDialog;
-    public event EventHandler<EventArgs> CloseDialog;
-
     private Prototype _mapPrototype;
 
     public void DisplayPrototype(Prototype prototype)
@@ -275,6 +267,7 @@ public partial class ComponentDefinition : Window
     public void SetEditMode()
     {
         _editMode = true;
+        Title = "Edit Component";
         _updateButton.Visible = true;
         _createButton.Visible = false;
         buttonPanel.Visible = false;

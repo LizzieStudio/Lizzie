@@ -6,7 +6,7 @@ public static class PrototypeCommands
     {
         Name = new("prototype.edit"),
         Icon = CommandIcons.Edit,
-        Caption = "Edit Prototype",
+        Caption = "Edit Component",
         Count = TargetCount.One,
         ActsOn = Context.Selected | Context.Referenced,
         SideEffects = (ps, _) =>

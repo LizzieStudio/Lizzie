@@ -54,15 +54,6 @@ visible = false
 layout_mode = 2
 text = "Remove"
 
-[node name="Panel" type="Panel" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=481204357]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=842620960]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Close"
-
 [node name="Library" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=831685732]
 unique_name_in_owner = true
 layout_mode = 2

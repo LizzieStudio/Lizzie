@@ -37,7 +37,6 @@ public partial class TemplateCreator : Window
     private Button _showOverlayButton;
 
     private Button _textButton;
-    private Button _closeButton;
     private Button _imageButton;
 
     private MenuButton _otherElementButton;
@@ -148,9 +147,6 @@ public partial class TemplateCreator : Window
         _saveButton = GetNode<Button>("%SaveButton");
         _saveButton.Pressed += SaveTemplate;
 
-        _closeButton = GetNode<Button>("%CloseButton");
-        _closeButton.Pressed += RequestClose;
-
         _heightInput = GetNode<LineEdit>("%Height");
         _heightInput.TextChanged += OnSizeTyped;
         _heightInput.TextChanged += _ => SetHasUnsavedChanges();
@@ -183,7 +179,7 @@ public partial class TemplateCreator : Window
     {
         if (!_hasUnsavedChanges)
         {
-            Closed?.Invoke(this, EventArgs.Empty);
+            QueueFree();
             return;
         }
 
@@ -221,7 +217,7 @@ public partial class TemplateCreator : Window
     private void OnSaveAndClose()
     {
         SaveTemplate();
-        Closed?.Invoke(this, EventArgs.Empty);
+        QueueFree();
     }
 
     private void OnCancelClose()
@@ -234,11 +230,9 @@ public partial class TemplateCreator : Window
         if (action == "dont_save")
         {
             // Close without saving
-            Closed?.Invoke(this, EventArgs.Empty);
+            QueueFree();
         }
     }
-
-    public event EventHandler Closed;
 
     private Template _currentTemplate;
 

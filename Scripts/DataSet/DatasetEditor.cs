@@ -439,14 +439,11 @@ public partial class DatasetEditor : Window, ICommandView
         ShownDataSet.Value = ds.Id;
     }
 
-    public event EventHandler Closed;
-
     private void CloseDialog()
     {
         // Writes the cell being edited.
         GuiReleaseFocus();
-        Closed?.Invoke(this, EventArgs.Empty);
-        Hide();
+        QueueFree();
     }
 
     private float ColumnWidth(SnowTag id) =>

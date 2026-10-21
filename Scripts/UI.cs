@@ -15,15 +15,12 @@ public partial class UI : CanvasLayer
 
     private Label _componentName;
 
-    private ProjectManager _projectManager;
-
     private TextureFactory _textureFactory;
 
     private DatasetEditor _datasetEditor;
     private PrototypeManifest _prototypeManifest;
     private MultiplayerDialog _multiplayerDialog;
     private ImageManager _imageManager;
-    private ComponentPreviewPopup _componentPreviewPopup;
     private PlayerPositionDialog _playerPositionDialog;
 
     private HandManager _handManager;
@@ -216,18 +213,10 @@ public partial class UI : CanvasLayer
     private void ShowComponentPreviewDialog(ShowComponentPreviewDialogEvent obj)
     {
         string s = "res://Scenes/Controls/ComponentPreviewPopup.tscn";
-        _componentPreviewPopup = GD.Load<PackedScene>(s).Instantiate<ComponentPreviewPopup>();
-        _componentPreviewPopup.CloseDialog += ComponentPreviewPopupOnClosed;
-        _modalDialogs.AddChild(_componentPreviewPopup);
+        var popup = GD.Load<PackedScene>(s).Instantiate<ComponentPreviewPopup>();
+        _modalDialogs.AddChild(popup);
 
-        _componentPreviewPopup.ShowComponent(obj.Component, _textureFactory);
-    }
-
-    private void ComponentPreviewPopupOnClosed(object sender, EventArgs e)
-    {
-        _componentPreviewPopup.CloseDialog -= ComponentPreviewPopupOnClosed;
-        _componentPreviewPopup.Hide();
-        _componentPreviewPopup.QueueFree();
+        popup.ShowComponent(obj.Component, _textureFactory);
     }
 
     private void RotationStepSelected(long index)
@@ -236,12 +225,22 @@ public partial class UI : CanvasLayer
         AtomService.Instance.Write(settings with { RotationStepIndex = (int)index });
     }
 
+    // Brings the window forward if it's open, so its command never opens a second one.
+    // False when it isn't open.
+    private static bool BroughtForward(Window window)
+    {
+        if (!IsInstanceValid(window) || window.IsQueuedForDeletion())
+            return false;
+        window.GrabFocus();
+        return true;
+    }
+
     private void ShowComponentDefinition()
     {
+        if (BroughtForward(_componentDefinition))
+            return;
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
         _componentDefinition = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _componentDefinition.CloseDialog += CloseComponentDefinition;
-        _componentDefinition.CancelDialog += CloseComponentDefinition;
         _modalDialogs.AddChild(_componentDefinition);
 
         _componentDefinition.SetTextureFactory(_textureFactory);
@@ -250,19 +249,13 @@ public partial class UI : CanvasLayer
 
     private void ShowPrototypeManifest()
     {
+        if (BroughtForward(_prototypeManifest))
+            return;
         var s = "res://Scenes/Prototypes/PrototypeManifest.tscn";
         _prototypeManifest = GD.Load<PackedScene>(s).Instantiate<PrototypeManifest>();
         _prototypeManifest.TextureFactory = _textureFactory;
-        _prototypeManifest.Closed += PrototypeManifestOnClosed;
 
         _modalDialogs.AddChild(_prototypeManifest);
-    }
-
-    private void PrototypeManifestOnClosed(object sender, EventArgs e)
-    {
-        _prototypeManifest.Closed -= PrototypeManifestOnClosed;
-        _prototypeManifest.Hide();
-        _prototypeManifest.QueueFree();
     }
 
     private void ShowTemplateEditor()
@@ -272,19 +265,14 @@ public partial class UI : CanvasLayer
 
     private void ShowTemplateEditorFromEvent(ShowTemplateEditor e)
     {
-        string s = "res://Scenes/Templating/TemplateCreator.tscn";
-        _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
-        _templateCreator.TextureFactory = _textureFactory;
-        _templateCreator.Closed += TemplateCreatorOnClosed;
-        _modalDialogs.AddChild(_templateCreator);
+        if (!BroughtForward(_templateCreator))
+        {
+            string s = "res://Scenes/Templating/TemplateCreator.tscn";
+            _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
+            _templateCreator.TextureFactory = _textureFactory;
+            _modalDialogs.AddChild(_templateCreator);
+        }
         _templateCreator.SetTemplateById(e.TemplateRef);
-    }
-
-    private void TemplateCreatorOnClosed(object sender, EventArgs e)
-    {
-        _templateCreator.Closed -= TemplateCreatorOnClosed;
-        _templateCreator.Hide();
-        _templateCreator.QueueFree();
     }
 
     private void ShowDatasetEditor()
@@ -294,20 +282,16 @@ public partial class UI : CanvasLayer
 
     private void ShowDatasetEditorFromEvent(ShowDatasetEditor e)
     {
-        string s = "res://Scenes/DataSet/DatasetEditor.tscn";
-        _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
-        _datasetEditor.Closed += DatasetEditorOnClosed;
-        _modalDialogs.AddChild(_datasetEditor);
-        _datasetEditor.ShownDataSet.Value = e.DatasetRef;
+        if (!BroughtForward(_datasetEditor))
+        {
+            string s = "res://Scenes/DataSet/DatasetEditor.tscn";
+            _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
+            _modalDialogs.AddChild(_datasetEditor);
+        }
+        if (e.DatasetRef != SnowTag.Empty)
+            _datasetEditor.ShownDataSet.Value = e.DatasetRef;
         if (e.SelectedRowRef != SnowTag.Empty)
             _datasetEditor.RevealRow(e.SelectedRowRef);
-    }
-
-    private void DatasetEditorOnClosed(object sender, EventArgs e)
-    {
-        _datasetEditor.Closed -= DatasetEditorOnClosed;
-        _datasetEditor.Hide();
-        _datasetEditor.QueueFree();
     }
 
     private void ShowImageManager()
@@ -317,45 +301,29 @@ public partial class UI : CanvasLayer
 
     private void ShowProjectSettings()
     {
+        if (BroughtForward(_projectSettings))
+            return;
         string s = "res://Scenes/Project/ProjectSettings.tscn";
         _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettingsDialog>();
-        _projectSettings.Closed += ProjectSettingsOnClosed;
         _modalDialogs.AddChild(_projectSettings);
     }
 
-    // Brings the open blueprint manager forward rather than opening a second one.
     private void ShowBlueprintManager()
     {
-        if (IsInstanceValid(_blueprintManager) && !_blueprintManager.IsQueuedForDeletion())
-        {
-            _blueprintManager.GrabFocus();
+        if (BroughtForward(_blueprintManager))
             return;
-        }
         var s = "res://Scenes/Project/BlueprintManager.tscn";
         _blueprintManager = GD.Load<PackedScene>(s).Instantiate<BlueprintManager>();
         _modalDialogs.AddChild(_blueprintManager);
     }
 
-    private void ProjectSettingsOnClosed(object sender, EventArgs e)
-    {
-        _projectSettings.Closed -= ProjectSettingsOnClosed;
-        _projectSettings.Hide();
-        _projectSettings.QueueFree();
-    }
-
     private void ShowImageManagerFromEvent(ShowImageManagerEvent e)
     {
+        if (BroughtForward(_imageManager))
+            return;
         string s = "res://Scenes/Controls/ImageManager.tscn";
         _imageManager = GD.Load<PackedScene>(s).Instantiate<ImageManager>();
-        _imageManager.Closed += ImageManagerOnClosed;
         _modalDialogs.AddChild(_imageManager);
-    }
-
-    private void ImageManagerOnClosed(object sender, EventArgs e)
-    {
-        _imageManager.Closed -= ImageManagerOnClosed;
-        _imageManager.Hide();
-        _imageManager.QueueFree();
     }
 
     private void OpenSampleProject()
@@ -469,44 +437,19 @@ public partial class UI : CanvasLayer
     private void ShowProjectManager()
     {
         var s = "res://Scenes/Project/project_manager.tscn";
-        _projectManager = GD.Load<PackedScene>(s).Instantiate<ProjectManager>();
-        _projectManager.Closed += ProjectManagerClosed;
-        _modalDialogs.AddChild(_projectManager);
-    }
-
-    private void ProjectManagerClosed(object sender, EventArgs e)
-    {
-        _projectManager.Closed -= ProjectManagerClosed;
-        _projectManager.QueueFree();
+        _modalDialogs.AddChild(GD.Load<PackedScene>(s).Instantiate<ProjectManager>());
     }
 
     private void ShowMultiplayerDialog()
     {
-        if (_multiplayerDialog != null && _multiplayerDialog.Visible)
-        {
-            // Dialog already open, just bring it to front
-            _multiplayerDialog.MoveToForeground();
+        if (BroughtForward(_multiplayerDialog))
             return;
-        }
 
         var d = GD.Load<PackedScene>("res://Scenes/Controls/multiplayer_connect.tscn");
         _multiplayerDialog = d.Instantiate<MultiplayerDialog>();
-        _multiplayerDialog.CloseRequested += MultiplayerDialogClosed;
         _modalDialogs.AddChild(_multiplayerDialog);
         _multiplayerDialog.PopupCentered();
     }
-
-    private void MultiplayerDialogClosed()
-    {
-        if (_multiplayerDialog != null)
-        {
-            _multiplayerDialog.CloseRequested -= MultiplayerDialogClosed;
-            _multiplayerDialog.QueueFree();
-            _multiplayerDialog = null;
-        }
-    }
-
-    private ComponentDefinition _editPanel;
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
@@ -517,27 +460,13 @@ public partial class UI : CanvasLayer
         }
 
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
-        _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _editPanel.CancelDialog += CloseComponentEditDialog;
-        _editPanel.CloseDialog += CloseComponentEditDialog;
-        _modalDialogs.AddChild(_editPanel);
+        var editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
+        _modalDialogs.AddChild(editPanel);
 
-        _editPanel.SetEditMode();
-        _editPanel.SetTextureFactory(_textureFactory);
-        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
-        _editPanel.DisplayPrototype(p);
-    }
-
-    private void CloseComponentEditDialog(object sender, EventArgs e)
-    {
-        _editPanel.Hide();
-        _editPanel.QueueFree();
-    }
-
-    private void CloseComponentDefinition(object sender, EventArgs e)
-    {
-        _componentDefinition.Visible = false;
-        _componentDefinition.QueueFree();
+        editPanel.SetEditMode();
+        editPanel.SetTextureFactory(_textureFactory);
+        editPanel.Initialize(ProjectService.Instance.CurrentProject);
+        editPanel.DisplayPrototype(p);
     }
 
     private ProjectSettingsDialog _projectSettings;

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Godot;
 using Lizzie.AssetManagement;
@@ -10,7 +9,6 @@ public partial class ImageManager : Window, ICommandView
     private Button _backButton;
     private Button _addNewButton;
     private Button _removeButton;
-    private Button _closeButton;
 
     private PanelContainer _addPanel;
     private Button _addImageButton;
@@ -60,10 +58,9 @@ public partial class ImageManager : Window, ICommandView
         _backButton.Pressed += () => Open(SnowTag.Empty);
         _addNewButton = GetNode<Button>("%AddNewButton");
         _removeButton = GetNode<Button>("%RemoveButton");
-        _closeButton = GetNode<Button>("%CloseButton");
         _addNewButton.Pressed += OnAddNewPressed;
         _removeButton.Pressed += OnRemovePressed;
-        _closeButton.Pressed += OnClosePressed;
+        CloseRequested += QueueFree;
 
         _addPanel = GetNode<PanelContainer>("%AddImagePanel");
         _addImageButton = GetNode<Button>("%AddImageButton");
@@ -126,13 +123,6 @@ public partial class ImageManager : Window, ICommandView
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta) { }
-
-    public event EventHandler Closed;
-
-    private void OnClosePressed()
-    {
-        Closed?.Invoke(this, EventArgs.Empty);
-    }
 
     private void OnRemovePressed()
     {

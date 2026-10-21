@@ -148,9 +148,9 @@ text = "mm"
 [node name="SpawnDeck" type="CheckBox" parent="HBoxContainer/ScrollContainer/VBoxContainer" unique_id=561166966]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Creates a spawn location for new cards"
+tooltip_text = "If unchecked, they're added as a stacked pile."
 button_pressed = true
-text = "Spawn Deck"
+text = "Add as a Deck"
 
 [node name="FrontLabel" type="Label" parent="HBoxContainer/ScrollContainer/VBoxContainer" unique_id=1348285208]
 layout_mode = 2

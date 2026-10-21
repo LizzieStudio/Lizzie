@@ -25,7 +25,7 @@ ComponentType = "Zone"
 
 [node name="ComponentDefintion" type="Window" unique_id=1114688310]
 oversampling_override = 1.0
-title = "Component Creation"
+title = "New Component"
 initial_position = 1
 size = Vector2i(1050, 550)
 script = ExtResource("1_07jbk")

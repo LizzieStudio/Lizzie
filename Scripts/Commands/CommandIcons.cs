@@ -56,11 +56,9 @@ public static class CommandIcons
     public const string ChangeSeat = Folder + "seating.svg";
     public const string Templates = Folder + "design_services.svg";
     public const string Datasets = Folder + "table.svg";
-    public const string Prototypes = Folder + "category.svg";
+    public const string Components = Folder + "category.svg";
     public const string Images = Folder + "image.svg";
     public const string Settings = Folder + "settings.svg";
 
     public const string NewComponent = Folder + "add_box.svg";
-    public const string ExistingComponent =
-        Folder + "inventory_2_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
 }

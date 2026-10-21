@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -38,7 +37,6 @@ public partial class ProjectSettingsDialog : Window
 
     // Buttons
     private Button _saveButton;
-    private Button _cancelButton;
 
     private string _playerDefinitionScene = "res://Scenes/Project/PlayerDefinition.tscn";
 
@@ -70,11 +68,9 @@ public partial class ProjectSettingsDialog : Window
 
         // Buttons
         _saveButton = GetNode<Button>("%SaveButton");
-        _cancelButton = GetNode<Button>("%CancelButton");
 
         _saveButton.Pressed += OnSavePressed;
-        _cancelButton.Pressed += OnClosePressed;
-        CloseRequested += OnClosePressed;
+        CloseRequested += QueueFree;
     }
 
     public override void _EnterTree()
@@ -175,13 +171,6 @@ public partial class ProjectSettingsDialog : Window
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta) { }
 
-    public event EventHandler Closed;
-
-    private void OnClosePressed()
-    {
-        Closed?.Invoke(this, EventArgs.Empty);
-    }
-
     private void Load(ProjectGameSettings s)
     {
         _2dToggle.ButtonPressed = s.StartIn2D;
@@ -227,15 +216,9 @@ public partial class ProjectSettingsDialog : Window
 
     private void OnSavePressed()
     {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null)
-        {
-            OnClosePressed();
-            return;
-        }
-
-        AtomService.Instance.Write(ReadUi());
-        OnClosePressed();
+        if (ProjectService.Instance.CurrentProject != null)
+            AtomService.Instance.Write(ReadUi());
+        QueueFree();
     }
 
     /// <summary>

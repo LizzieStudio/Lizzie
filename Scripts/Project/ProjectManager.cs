@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 namespace Lizzie;
@@ -26,20 +25,12 @@ public partial class ProjectManager : Panel
         _createButton.Pressed += () => _createPanel.Show();
 
         _closeButton = GetNode<Button>("%CloseButton");
-        _closeButton.Pressed += OnClose;
+        _closeButton.Pressed += QueueFree;
     }
 
     private void CreateExecuteOnPressed()
     {
         //TODO create project
         return;
-    }
-
-    public event EventHandler Closed;
-
-    private void OnClose()
-    {
-        Closed?.Invoke(this, EventArgs.Empty);
-        Hide();
     }
 }

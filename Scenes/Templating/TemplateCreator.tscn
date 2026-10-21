@@ -80,15 +80,6 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Duplicate"
 
-[node name="Panel" type="Panel" parent="Panel/MarginContainer/VBoxContainer/Toolbar" unique_id=72002178]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="CloseButton" type="Button" parent="Panel/MarginContainer/VBoxContainer/Toolbar" unique_id=385841374]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Close"
-
 [node name="InfoBar" type="HBoxContainer" parent="Panel/MarginContainer/VBoxContainer" unique_id=116647639]
 layout_mode = 2
 

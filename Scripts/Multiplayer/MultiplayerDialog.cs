@@ -40,6 +40,8 @@ public partial class MultiplayerDialog : Window
         }
 
         UpdateUI();
+
+        CloseRequested += QueueFree;
     }
 
     public override void _EnterTree()

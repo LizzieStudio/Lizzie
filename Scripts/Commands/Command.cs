@@ -134,7 +134,7 @@ public abstract class Command
     public CommandName Name { get; set; }
 
     /// <summary>
-    /// The menu label, e.g. "Edit Prototype".
+    /// The menu label, e.g. "Edit Component".
     /// For a command with targets, "{0}" is their number: "Delete {0}" shows "Delete 5".
     /// With a <see cref="Noun"/>, it's followed by what they are: "Delete 5 Components".
     /// </summary>

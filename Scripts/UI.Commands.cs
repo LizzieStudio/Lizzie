@@ -80,11 +80,11 @@ public partial class UI
         SideEffects = _ => _instance?.ShowDatasetEditor(),
     };
 
-    public static readonly GlobalCommand EditPrototypes = new()
+    public static readonly GlobalCommand EditComponents = new()
     {
-        Name = new("editor.prototypes"),
-        Icon = CommandIcons.Prototypes,
-        Caption = "Prototypes",
+        Name = new("editor.components"),
+        Icon = CommandIcons.Components,
+        Caption = "Components",
         SideEffects = _ => _instance?.ShowPrototypeManifest(),
     };
 
@@ -112,19 +112,11 @@ public partial class UI
         SideEffects = _ => _instance?.ShowProjectSettings(),
     };
 
-    public static readonly GlobalCommand InsertExistingComponent = new()
+    public static readonly GlobalCommand CreateComponent = new()
     {
-        Name = new("component.insert_existing"),
-        Icon = CommandIcons.ExistingComponent,
-        Caption = "Edit existing components",
-        SideEffects = _ => _instance?.ShowPrototypeManifest(),
-    };
-
-    public static readonly GlobalCommand InsertNewComponent = new()
-    {
-        Name = new("component.insert_new"),
+        Name = new("editor.create_component"),
         Icon = CommandIcons.NewComponent,
-        Caption = "Create a new component",
+        Caption = "Create New Component",
         SideEffects = _ => _instance?.ShowComponentDefinition(),
     };
 }

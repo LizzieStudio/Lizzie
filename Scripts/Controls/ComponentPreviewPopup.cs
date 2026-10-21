@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 namespace Lizzie;
@@ -13,8 +12,8 @@ public partial class ComponentPreviewPopup : Window
     {
         _preview = GetNode<ComponentPreview>("%ComponentPreview");
         _closeButton = GetNode<Button>("%CloseButton");
-        _closeButton.Pressed += OnCloseClick;
-        CloseRequested += OnCloseClick;
+        _closeButton.Pressed += QueueFree;
+        CloseRequested += QueueFree;
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -29,12 +28,5 @@ public partial class ComponentPreviewPopup : Window
         _preview.Build(prototype, component.Item, textureFactory);
         _preview.SpinStop();
         Show();
-    }
-
-    public event EventHandler<EventArgs> CloseDialog;
-
-    private void OnCloseClick()
-    {
-        CloseDialog?.Invoke(this, EventArgs.Empty);
     }
 }

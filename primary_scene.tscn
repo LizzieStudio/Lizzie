@@ -97,6 +97,17 @@ CommandName = "app.redo_others"
 [node name="Divider1" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1857930977]
 script = ExtResource("cmd_divider")
 
+[node name="EditorComponents" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=828649500]
+script = ExtResource("cmd_item")
+CommandName = "editor.components"
+
+[node name="EditorCreateComponent" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1015408809]
+script = ExtResource("cmd_item")
+CommandName = "editor.create_component"
+
+[node name="Divider3" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1637769404]
+script = ExtResource("cmd_divider")
+
 [node name="EditorTemplates" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=2050032945]
 script = ExtResource("cmd_item")
 CommandName = "editor.templates"
@@ -104,10 +115,6 @@ CommandName = "editor.templates"
 [node name="EditorDatasets" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=568658192]
 script = ExtResource("cmd_item")
 CommandName = "editor.datasets"
-
-[node name="EditorPrototypes" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=828649500]
-script = ExtResource("cmd_item")
-CommandName = "editor.prototypes"
 
 [node name="EditorImages" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=559821132]
 script = ExtResource("cmd_item")
@@ -119,20 +126,6 @@ script = ExtResource("cmd_divider")
 [node name="EditorProjectSettings" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1107351943]
 script = ExtResource("cmd_item")
 CommandName = "editor.project_settings"
-
-[node name="Insert" type="Button" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=451952767]
-layout_mode = 2
-theme_type_variation = &"MenuBar"
-text = "Insert"
-script = ExtResource("cmd_menu")
-
-[node name="ComponentInsertExisting" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Insert" unique_id=267965828]
-script = ExtResource("cmd_item")
-CommandName = "component.insert_existing"
-
-[node name="ComponentInsertNew" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Insert" unique_id=2113522721]
-script = ExtResource("cmd_item")
-CommandName = "component.insert_new"
 
 [node name="Game" type="Button" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar" unique_id=970917548]
 layout_mode = 2

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -10,8 +9,6 @@ public partial class PrototypeManifest : Window, ICommandView
     private SplitContainer _mainContainer;
     private Tree _prototypeTree;
     private TreeItem _root;
-
-    private Button _close;
 
     private ComponentPreview _preview;
 
@@ -43,8 +40,7 @@ public partial class PrototypeManifest : Window, ICommandView
         _preview = GetNode<ComponentPreview>("%ComponentPreview");
         _preview.SetComponentX(-200);
 
-        _close = GetNode<Button>("%Close");
-        _close.Pressed += OnClose;
+        CloseRequested += QueueFree;
 
         _editProto = GetNode<Button>("%EditProto");
         _editProto.Pressed += () =>
@@ -66,20 +62,17 @@ public partial class PrototypeManifest : Window, ICommandView
         _deleteProto = GetNode<Button>("%DeleteProto");
         _deleteProto.Pressed += DeletePrototype;
 
+        EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawn);
+
         InitializePrototypeGrid();
     }
+
+    // Gets out of the way of placing a component, whether it's added from here or just created.
+    private void OnSpawn(SpawnPrototypeEvent _) => QueueFree();
 
     public override void _EnterTree()
     {
         AtomService.Instance.Watch(this, Sync);
-    }
-
-    public event EventHandler Closed;
-
-    private void OnClose()
-    {
-        Hide();
-        Closed?.Invoke(this, EventArgs.Empty);
     }
 
     private void InitializePrototypeGrid()
@@ -124,7 +117,6 @@ public partial class PrototypeManifest : Window, ICommandView
     {
         if (_selectedPrototype != null)
         {
-            OnClose();
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = _selectedPrototype.Id }
             );
@@ -138,7 +130,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         var dialog = new ConfirmationDialog
         {
-            Title = "Delete Prototype",
+            Title = "Delete Component",
             DialogText = $"Delete \"{_selectedPrototype.Name}\"?",
             OkButtonText = "Delete",
         };
