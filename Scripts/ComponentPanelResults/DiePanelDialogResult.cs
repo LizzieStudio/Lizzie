@@ -60,7 +60,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         var p = Parameters();
         _sidesInput.SetItemText(0, $"Auto (d{(p with { SideCount = 0 }).Resolve(R).Sides})");
 
-        int count = p.Faces is TemplateSide side ? R.GetRows(side.Dataset).Count : 1;
+        int count = p.Faces is TemplateSide side ? side.Count(R) : 1;
         _preview.ItemCount = count;
         _preview.MultiItemMode = count > 1;
 

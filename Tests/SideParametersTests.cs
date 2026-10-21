@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Godot;
@@ -71,6 +72,50 @@ public class SideParametersTests
         Assert.True(
             parameters.CardCount(null) == 3,
             $"A 3-card front and a 1-card back make {parameters.CardCount(null)} cards, expected 3."
+        );
+    }
+
+    [Fact]
+    public void EachRowMakesAsManyCardsAsItsQuantity()
+    {
+        SnowTag dataset = new(1),
+            quantity = new(2),
+            a = new(3),
+            b = new(4),
+            c = new(5),
+            d = new(6);
+        var rank = default(SnowRank);
+        DataRow Row(SnowTag id)
+        {
+            rank = rank.After(new SnowportId(id, Snowport.HostSource));
+            return new DataRow
+            {
+                Id = id,
+                DataSetId = dataset,
+                Rank = rank,
+            };
+        }
+        var R = new ListReader(
+            new DataColumn { Id = quantity, DataSetId = dataset },
+            Row(a),
+            Row(b),
+            Row(c),
+            Row(d),
+            new DataCell { Id = new CellId(a, quantity), Value = "2" },
+            new DataCell { Id = new CellId(b, quantity), Value = "0" },
+            new DataCell { Id = new CellId(c, quantity), Value = "many" }
+        );
+        var side = new TemplateSide { Dataset = dataset, Quantity = quantity };
+
+        var rows = string.Join(
+            ", ",
+            Enumerable.Range(0, side.Count(R)).Select(n => side.Row(n, R))
+        );
+
+        var want = string.Join(", ", a, a, c, d);
+        Assert.True(
+            rows == want,
+            $"The cards show rows {rows}, expected {want}: two of a, none of b, and one each of c and d, whose quantities aren't numbers."
         );
     }
 

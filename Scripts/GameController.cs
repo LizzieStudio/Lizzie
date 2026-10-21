@@ -54,7 +54,7 @@ public partial class GameController : Node
             && AtomService.Instance.Get(DataSet.ById, side.Dataset) != null
         )
         {
-            SpawnRows(prototype, side.Dataset, die.Size / 10f, components);
+            SpawnRows(prototype, side, die.Size / 10f, components);
         }
         else if (
             e.Item == null
@@ -81,22 +81,23 @@ public partial class GameController : Node
 
     private void SpawnRows(
         Prototype prototype,
-        SnowTag dataset,
+        TemplateSide side,
         float size,
         List<(VisualComponentBase, Vector3)> components
     )
     {
-        var rows = AtomService.Instance.GetRows(dataset);
-        int cols = (int)Math.Ceiling(Math.Sqrt(rows.Count));
+        var R = AtomService.Instance;
+        int count = side.Count(R);
+        int cols = (int)Math.Ceiling(Math.Sqrt(count));
 
         int i = 0;
         int j = 0;
 
         float spacing = size * 1.5f;
 
-        for (int n = 0; n < rows.Count; n++)
+        for (int n = 0; n < count; n++)
         {
-            var mc = SingleComponentSpawn(prototype, new DieItemRef(rows[n].Id));
+            var mc = SingleComponentSpawn(prototype, new DieItemRef(side.Row(n, R)));
 
             if (mc != null)
             {

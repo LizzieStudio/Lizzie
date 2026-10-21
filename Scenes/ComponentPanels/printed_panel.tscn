@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://dgxle1a8aquwd"]
 
 [ext_resource type="Script" uid="uid://3whugn303phg" path="res://Scripts/ComponentPanelResults/PrintedPanelDialogResult.cs" id="1_ykbf8"]
-[ext_resource type="PackedScene" uid="uid://bye0ocp5vwokd" path="res://Scenes/ComponentPanels/side_editor.tscn" id="7_side"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="3_aum2n"]
+[ext_resource type="PackedScene" uid="uid://bye0ocp5vwokd" path="res://Scenes/ComponentPanels/side_editor.tscn" id="7_side"]
 
 [sub_resource type="Theme" id="Theme_vm378"]
 

@@ -34,7 +34,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private VBoxContainer _mainContainer;
     private Button _newButton;
-    private DataSetSelector _datasetList;
+    private AtomSelector _datasetList;
     private Button _linkButton;
 
     private ScrollContainer _headerScroll;
@@ -272,7 +272,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (ds != null)
             ShownDataSet.Value = ds.Id;
 
-        _datasetList.SelectedDataSet = ShownDataSet.Value;
+        _datasetList.SelectedAtom = ShownDataSet.Value;
         _currentDataSet = ds;
 
         if (ds == null)
@@ -368,8 +368,9 @@ public partial class DatasetEditor : Window, ICommandView
         _newButton = GetNode<Button>("%New");
         _newButton.Pressed += OnNewDatasetPressed;
 
-        _datasetList = GetNode<DataSetSelector>("%DatasetList");
-        _datasetList.DataSetSelected += id => ShownDataSet.Value = id;
+        _datasetList = GetNode<AtomSelector>("%DatasetList");
+        _datasetList.Items = R => R.Get(DataSet.All).Select(d => (d.Name, d.Id));
+        _datasetList.AtomSelected += id => ShownDataSet.Value = id;
 
         InitializeNewDatasetDialog();
     }

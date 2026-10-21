@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -111,7 +112,7 @@ public sealed record ImageSide : SideParameters
 }
 
 /// <summary>
-/// A template drawn once per row of a dataset.
+/// A template drawn once per row of a dataset, or as many times as the row's quantity.
 /// </summary>
 [JsonName("TemplateSide")]
 public sealed record TemplateSide : SideParameters
@@ -119,11 +120,35 @@ public sealed record TemplateSide : SideParameters
     public SnowTag Template { get; init; }
     public SnowTag Dataset { get; init; }
 
-    public override int Count(IAtomReader R) => R.GetRows(Dataset).Count;
+    /// <summary>
+    /// The column holding how many cards each row makes, or empty for one card per row.
+    /// A row whose cell isn't a whole number makes one card.
+    /// </summary>
+    public SnowTag Quantity { get; init; }
+
+    public override int Count(IAtomReader R) => Rows(R).Count;
 
     public override SnowTag Row(int n, IAtomReader R)
     {
-        var rows = R.GetRows(Dataset);
-        return rows.Count == 0 ? SnowTag.Empty : rows[n % rows.Count].Id;
+        var rows = Rows(R);
+        return rows.Count == 0 ? SnowTag.Empty : rows[n % rows.Count];
     }
+
+    /// <summary>
+    /// Each card's row, in order.
+    /// </summary>
+    private List<SnowTag> Rows(IAtomReader R) =>
+        R.GetRows(Dataset)
+            .SelectMany(row =>
+                Enumerable.Repeat(
+                    row.Id,
+                    int.TryParse(
+                        R.Get(DataCell.ById, new CellId(row.Id, Quantity))?.Value,
+                        out var n
+                    )
+                        ? Math.Max(n, 0)
+                        : 1
+                )
+            )
+            .ToList();
 }

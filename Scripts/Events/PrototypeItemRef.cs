@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace Lizzie;
@@ -22,9 +21,7 @@ public abstract record PrototypeItemRef
         parameters switch
         {
             PrintedParameters printed => printed.Item(0, R),
-            DieParameters { Faces: TemplateSide side } => new DieItemRef(
-                R.GetRows(side.Dataset).FirstOrDefault()?.Id ?? SnowTag.Empty
-            ),
+            DieParameters { Faces: TemplateSide side } => new DieItemRef(side.Row(0, R)),
             _ => null,
         };
 }

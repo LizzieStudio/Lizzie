@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://dwilf0o810jwb"]
+
+[ext_resource type="Script" uid="uid://b3xuqep6gdr3a" path="res://Scripts/Controls/AtomSelector.cs" id="1_atomsel"]
+
+[node name="AtomSelector" type="OptionButton"]
+custom_minimum_size = Vector2(150, 0)
+disabled = true
+script = ExtResource("1_atomsel")

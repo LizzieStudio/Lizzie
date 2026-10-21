@@ -503,7 +503,8 @@
                                 "const": "TemplateSide"
                               },
                               "template": true,
-                              "dataset": true
+                              "dataset": true,
+                              "quantity": true
                             },
                             "additionalProperties": false
                           }
@@ -645,7 +646,8 @@
                                 "const": "TemplateSide"
                               },
                               "template": true,
-                              "dataset": true
+                              "dataset": true,
+                              "quantity": true
                             },
                             "additionalProperties": false
                           }
@@ -692,7 +694,8 @@
                                 "const": "TemplateSide"
                               },
                               "template": true,
-                              "dataset": true
+                              "dataset": true,
+                              "quantity": true
                             },
                             "additionalProperties": false
                           }

@@ -77,7 +77,7 @@ public partial class TemplateCreator : Window
     private Button _newButton;
     private Button _saveButton;
     private Panel _previewWindow;
-    private DataSetSelector _dataSetSelector;
+    private AtomSelector _dataSetSelector;
 
     private PageControl _pageControl;
 
@@ -169,9 +169,10 @@ public partial class TemplateCreator : Window
         _cardSizes.ItemSelected += _ => SetHasUnsavedChanges();
         InitializeStandardSizes();
 
-        _dataSetSelector = GetNode<DataSetSelector>("%Dataset");
-        _dataSetSelector.DataSetSelected += OnDatasetChanged;
-        _dataSetSelector.DataSetSelected += _ => SetHasUnsavedChanges();
+        _dataSetSelector = GetNode<AtomSelector>("%Dataset");
+        _dataSetSelector.Items = R => R.Get(DataSet.All).Select(d => (d.Name, d.Id));
+        _dataSetSelector.AtomSelected += OnDatasetChanged;
+        _dataSetSelector.AtomSelected += _ => SetHasUnsavedChanges();
 
         _pageControl = GetNode<PageControl>("%PageControl");
         _pageControl.Hide();
@@ -1610,7 +1611,7 @@ public partial class TemplateCreator : Window
 
     private void MapDataset()
     {
-        _dataSetSelector.SelectedDataSet = CurrentTemplate.DataSet;
+        _dataSetSelector.SelectedAtom = CurrentTemplate.DataSet;
         _pageControl.CurrentItem = 0;
         AtomService.Instance.QueueSync(this);
     }
