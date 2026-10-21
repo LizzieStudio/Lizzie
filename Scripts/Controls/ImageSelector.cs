@@ -2,6 +2,8 @@ using System;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 public partial class ImageSelector : Control
 {
     private OptionButton _optionDropdown;

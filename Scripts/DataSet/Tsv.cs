@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+namespace Lizzie;
+
 /// <summary>
 /// Tab-separated text, as spreadsheets put cells on the clipboard:
 /// tabs between cells, newlines between rows, and quotes around cells that contain either,

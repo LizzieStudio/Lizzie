@@ -1,5 +1,7 @@
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class TemplateTests
 {
     [Theory]

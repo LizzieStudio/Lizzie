@@ -61,7 +61,7 @@ public partial class EventSynchronizer : Node
         foreach (var atom in e.Writes)
             if (IdQuery.For(atom.GetType()).Of(atom) is SnowTag id && id == SnowTag.Empty)
                 throw new ArgumentException(
-                    $"A {atom.GetType().Name} was written without an Id. Give it Snowport.Clock.CreateTag() when it's made."
+                    $"A {atom.GetType().Name} was written without an Id. Give it SnowTag.Create() when it's made."
                 );
 
         // The table is about to be replaced by the host's, so a change now would be lost.

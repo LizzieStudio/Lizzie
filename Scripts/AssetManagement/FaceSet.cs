@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 /// <summary>
 /// The faces drawn from one template and dataset, or cut from one image, held together.
 /// </summary>

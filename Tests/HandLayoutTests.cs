@@ -1,6 +1,8 @@
 using System.Linq;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class HandLayoutTests
 {
     private const float Separation = 6;

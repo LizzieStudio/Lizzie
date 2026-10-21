@@ -1,3 +1,5 @@
+namespace Lizzie;
+
 /// <summary>
 /// What's on the table under a 2D, screen-space point in the viewport.
 /// </summary>

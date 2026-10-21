@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Godot;
 
+namespace Lizzie;
+
 public partial class ComponentPreview : Panel
 {
     private Node3D _parentNode;
@@ -263,7 +265,7 @@ public partial class ComponentPreview : Panel
         if (json != _draftJson)
         {
             _draftJson = json;
-            _draftId = Snowport.Clock.CreateTag();
+            _draftId = SnowTag.Create();
         }
         _component.DraftPrototype = new Prototype { Id = _draftId, Parameters = parameters };
     }

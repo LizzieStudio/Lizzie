@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// A hybrid timestamp and logic clock with a source ID to make it unique to the table.
 /// </summary>
@@ -66,14 +68,12 @@ public class Snowport
     public long MsecSince(SnowportId id) => GameTimeMsec - (id.logicClock >> 8);
 
     /// <summary>
-    /// Create a new SnowportId.
+    /// Create a new SnowportId. Elsewhere, use <see cref="SnowportId.Create"/>, which calls this on <see cref="Clock"/>.
     /// </summary>
-    /// <returns></returns>
     public SnowportId Create() => Mint(source);
 
     /// <summary>
-    /// Create a new SnowportId for an admin event.
-    /// Only the host or a solo player can make them.
+    /// The clock behind <see cref="SnowportId.CreateAdmin"/>.
     /// </summary>
     public SnowportId CreateAdmin()
     {
@@ -90,7 +90,7 @@ public class Snowport
     }
 
     /// <summary>
-    /// Create a new <see cref="SnowTag"/>.
+    /// Create a new <see cref="SnowTag"/>. Elsewhere, use <see cref="SnowTag.Create"/>, which calls this on <see cref="Clock"/>.
     /// </summary>
     public SnowTag CreateTag() => new(source, _tagCounter++);
 
@@ -133,6 +133,17 @@ public readonly record struct SnowportId : IComparable<SnowportId>, IFormattable
     private readonly long ID;
 
     public static readonly SnowportId Empty = new(0);
+
+    /// <summary>
+    /// Create a new SnowportId from the local player's clock.
+    /// </summary>
+    public static SnowportId Create() => Snowport.Clock.Create();
+
+    /// <summary>
+    /// Create a new SnowportId for an admin event.
+    /// Only the host or a solo player can make them.
+    /// </summary>
+    public static SnowportId CreateAdmin() => Snowport.Clock.CreateAdmin();
 
     public SnowportId(long id)
     {
@@ -215,6 +226,11 @@ public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
     private readonly int ID;
 
     public static readonly SnowTag Empty = new(0);
+
+    /// <summary>
+    /// Create a new <see cref="SnowTag"/> from the local player's clock.
+    /// </summary>
+    public static SnowTag Create() => Snowport.Clock.CreateTag();
 
     /// <summary>
     /// The maximum counter on any one source.

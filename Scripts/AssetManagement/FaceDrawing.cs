@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Threading;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// What a drawn <see cref="FaceSet"/> shows.
 /// </summary>

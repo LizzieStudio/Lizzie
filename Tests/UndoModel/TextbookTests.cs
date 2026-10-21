@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Linq;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// One player's actions, gestures and reversals, among another player's actions they can't undo.
 /// <see cref="UndoTestBase.Actual"/> decides what each reversal writes, and after every step the player's

@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Draws the player cursors in a 2D overlay.
 /// </summary>

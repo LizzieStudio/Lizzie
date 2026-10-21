@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class ProjectSettingsDialog : Window
 {
     /// <summary>
@@ -283,18 +285,11 @@ public partial class ProjectSettingsDialog : Window
                         Name = name,
                         Color = color,
                         IsAdmin = isAdmin,
-                        HandRef =
-                            seat < current.Length
-                                ? current[seat].HandRef
-                                : Snowport.Clock.CreateTag(),
+                        HandRef = seat < current.Length ? current[seat].HandRef : SnowTag.Create(),
                         CursorRef =
-                            seat < current.Length
-                                ? current[seat].CursorRef
-                                : Snowport.Clock.CreateTag(),
+                            seat < current.Length ? current[seat].CursorRef : SnowTag.Create(),
                         HandHoldRef =
-                            seat < current.Length
-                                ? current[seat].HandHoldRef
-                                : Snowport.Clock.CreateTag(),
+                            seat < current.Length ? current[seat].HandHoldRef : SnowTag.Create(),
                     }
                 );
             }

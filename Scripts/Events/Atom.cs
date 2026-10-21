@@ -2,17 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>An atom, easily replicated in multiplayer through a write-only synchronized log.</para>
 /// <para>
 /// Write atoms with <see cref="AtomService.Write(IEnumerable{IChange})"/>,
-/// or return them from a command's <see cref="Command.Effects"/>.
+/// or return them from a command's <see cref="AtomCommand{T}.Effects"/>.
 /// Unset them by writing <see cref="AtomReaderExtensions.Unset"/>.
 /// </para>
 /// </summary>
 /// <remarks>
 /// Every atom type needs a <see cref="JsonNameAttribute"/>, the name it's saved and sent under,
-/// and an <see cref="Id{T, I}"/> named ById, or a <see cref="Singleton{T}"/> named Only.
+/// and an <see cref="Identity{T, I}"/> named ById, or a <see cref="Singleton{T}"/> named Only.
 /// </remarks>
 [JsonPolymorphic]
 public abstract record Atom : IChange

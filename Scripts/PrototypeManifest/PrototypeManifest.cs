@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class PrototypeManifest : Window, ICommandView
 {
     private SplitContainer _mainContainer;
@@ -179,7 +181,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         var duplicate = new Prototype
         {
-            Id = Snowport.Clock.CreateTag(),
+            Id = SnowTag.Create(),
             Name = newName,
             Parameters = _selectedPrototype.Parameters with { ComponentName = newName },
         };

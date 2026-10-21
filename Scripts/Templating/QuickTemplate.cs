@@ -3,6 +3,8 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 
+namespace Lizzie;
+
 /// <summary>
 /// Utilities to create an in-memory template and dataset for quick cards.
 /// </summary>

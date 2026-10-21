@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// A field for a <see cref="SequenceExpressions"/> input. It tints its text when the input doesn't parse.
 /// </summary>

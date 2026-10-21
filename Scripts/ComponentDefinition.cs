@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class ComponentDefinition : Window
 {
     // Called when the node enters the scene tree for the first time.
@@ -104,7 +106,7 @@ public partial class ComponentDefinition : Window
 
             var prototype = new Prototype
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 Parameters = result,
                 Name = !string.IsNullOrEmpty(result.ComponentName)
                     ? result.ComponentName

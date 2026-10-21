@@ -2,6 +2,8 @@ using System;
 using Godot;
 using Lizzie.Scripts.Templating;
 
+namespace Lizzie;
+
 public partial class ImageParamControl : HBoxContainer, IParamControl
 {
     private Label _label;

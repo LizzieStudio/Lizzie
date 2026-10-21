@@ -3,12 +3,14 @@ using System.Linq;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// A change finds the watchers that read what it touched, and only those.
 /// </summary>
 public class DependencyIndexTests
 {
-    private static readonly Group<ComponentPosition, SnowTag> ByContainer = new(s =>
+    private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(s =>
         s.ContainerRef
     );
 

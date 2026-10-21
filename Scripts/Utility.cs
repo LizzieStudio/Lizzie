@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 
+namespace Lizzie;
+
 public static class Utility
 {
     /// <summary>

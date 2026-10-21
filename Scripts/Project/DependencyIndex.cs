@@ -11,7 +11,7 @@ public sealed class DependencyIndex<W>
     // per query, per value read, the watchers that read it
     private readonly Dictionary<Query, Dictionary<object, HashSet<W>>> _reads = new();
 
-    // the same, for watchers that read only how many atoms a group key has
+    // the same, for watchers that read only how many atoms a lookup key has
     private readonly Dictionary<Query, Dictionary<object, HashSet<W>>> _counts = new();
 
     // each watcher's entries, so they can be removed

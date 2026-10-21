@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// The undo rules written as plainly as possible, as the model the real implementations are checked against.
 /// Every answer comes from scanning the whole log, so it's slow, but each rule reads as its definition.

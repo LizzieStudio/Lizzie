@@ -3,6 +3,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// Keys for a <see cref="Command"/>'s <see cref="Command.Keys"/>, and checking a key press.
 /// </summary>

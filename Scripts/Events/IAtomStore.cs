@@ -61,13 +61,13 @@ public interface IAtomStore<T> : IAtomStore
     where T : Atom
 {
     /// <summary>
-    /// The atoms with <paramref name="key"/> in <paramref name="group"/>, leaving out unset ones.
-    /// The group is indexed on first read and kept up to date from then on.
+    /// The atoms with <paramref name="key"/> in <paramref name="lookup"/>, leaving out unset ones.
+    /// The lookup is indexed on first read and kept up to date from then on.
     /// </summary>
-    IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key);
+    IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key);
 
-    /// <summary>How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't unset.</summary>
-    int Count<G>(Group<T, G> group, G key);
+    /// <summary>How many atoms with <paramref name="key"/> in <paramref name="lookup"/> aren't unset.</summary>
+    int Count<K>(Lookup<T, K> lookup, K key);
 }
 
 /// <summary>
@@ -75,7 +75,6 @@ public interface IAtomStore<T> : IAtomStore
 /// </summary>
 public interface IAtomStore<T, I> : IAtomStore<T>
     where T : Atom
-    where I : IComparable<I>
 {
     /// <summary>
     /// The atom with <paramref name="id"/>, or an entry with a null value if this store doesn't hold it.

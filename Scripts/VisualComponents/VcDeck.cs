@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class VcDeck : VisualComponentBase
 {
     // Holds the frame's parts, scaled to the deck's size. The cards are children of the deck itself, so they don't inherit it.
@@ -99,7 +101,7 @@ public partial class VcDeck : VisualComponentBase
             {
                 var variant = new ComponentVariant
                 {
-                    Id = Snowport.Clock.CreateTag(),
+                    Id = SnowTag.Create(),
                     PrototypeRef = PrototypeRef,
                     Item = parameters.Item(n, R),
                 };
@@ -108,7 +110,7 @@ public partial class VcDeck : VisualComponentBase
                     variant,
                     new ComponentPosition
                     {
-                        Id = Snowport.Clock.CreateTag(),
+                        Id = SnowTag.Create(),
                         Stage = self.Stage,
                         VariantRef = variant.Id,
                         ContainerRef = self.Id,

@@ -2,13 +2,15 @@ using System;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 [JsonName("Template")]
 public record Template : Atom
 {
-    public static readonly Id<Template, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Template, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 

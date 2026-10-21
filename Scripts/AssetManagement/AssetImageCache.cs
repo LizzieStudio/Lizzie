@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 /// <summary>
 /// Downloads each asset's image once and keeps it, keyed by the image's cloud path.
 /// </summary>

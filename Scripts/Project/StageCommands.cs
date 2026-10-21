@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Commands for blueprints and starting games on them.
 /// </summary>
@@ -36,10 +38,10 @@ public static class StageCommands
             int n = siblings.Count + 1;
             var blueprint = new Stage
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 Name = parent == null ? $"Blueprint {n}" : $"{parent.Name}-{n}",
                 ParentRef = parent?.Id ?? SnowTag.Empty,
-                Rank = last.After(Snowport.Clock.Create()),
+                Rank = last.After(SnowportId.Create()),
             };
             return [blueprint];
         },

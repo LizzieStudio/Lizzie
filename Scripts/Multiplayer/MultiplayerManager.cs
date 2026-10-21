@@ -4,6 +4,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// Manages multiplayer connections, hosting, and player state
 /// </summary>

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Stacks components on the table by ZOrder. Each component rests on the highest top among the
 /// components below it that it overlaps.

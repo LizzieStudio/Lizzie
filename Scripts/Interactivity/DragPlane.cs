@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// The flat plane the cursor moves on, at this node's height.
 /// </summary>

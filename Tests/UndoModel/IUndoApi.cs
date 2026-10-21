@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// The undo API, so the same properties can check any implementation against another.
 /// </summary>

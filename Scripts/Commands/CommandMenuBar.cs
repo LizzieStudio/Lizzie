@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>The menus along the top of the main window.</para>
 ///

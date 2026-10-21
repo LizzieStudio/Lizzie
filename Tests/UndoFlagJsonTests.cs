@@ -2,6 +2,8 @@ using System.Text.Json;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>Reversals as they're saved and sent, with the game's JSON options.</summary>
 public class UndoFlagJsonTests
 {

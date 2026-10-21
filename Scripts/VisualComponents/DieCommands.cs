@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using Godot;
-using static VisualComponentBase;
+using static Lizzie.VisualComponentBase;
+
+namespace Lizzie;
 
 /// <summary>Commands for dice.</summary>
 public static class DieCommands

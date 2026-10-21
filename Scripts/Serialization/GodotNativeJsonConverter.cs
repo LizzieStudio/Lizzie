@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 public sealed class GodotNativeJsonConverter<[MustBeVariant] T> : JsonConverter<T>
 {
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)

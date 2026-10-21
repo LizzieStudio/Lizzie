@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Shows one card in a hand.
 /// </summary>

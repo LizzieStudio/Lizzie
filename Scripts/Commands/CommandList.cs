@@ -4,6 +4,8 @@ using System.Reflection;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// Every command, each defined once in a class for what it acts on, like <see cref="DeckCommands"/>.
 /// Menus and keyboard shortcuts both run them from here, through <see cref="Lizzie.Replication.Machinery.CommandResolver"/>.

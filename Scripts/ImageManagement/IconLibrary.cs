@@ -3,6 +3,8 @@ using System.Linq;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 public class IconLibrary : Dictionary<string, IconEntry>
 {
     private const string BaseFolder = "res://Textures/Shapes/";

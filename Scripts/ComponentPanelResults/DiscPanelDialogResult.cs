@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 public partial class DiscPanelDialogResult : ComponentPanelDialogResult
 {
     private LineEdit _nameInput;

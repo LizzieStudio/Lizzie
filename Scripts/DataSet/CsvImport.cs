@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>Replaces a dataset's rows with a CSV file's.</summary>
 public static class CsvImport
 {
@@ -45,9 +47,9 @@ public static class CsvImport
             columns = header
                 .Select(h => new DataColumn
                 {
-                    Id = Snowport.Clock.CreateTag(),
+                    Id = SnowTag.Create(),
                     DataSetId = dataset.Id,
-                    Rank = columnRank = columnRank.After(Snowport.Clock.Create()),
+                    Rank = columnRank = columnRank.After(SnowportId.Create()),
                     Name = h,
                 })
                 .ToList();
@@ -60,10 +62,10 @@ public static class CsvImport
         SnowRank rank = default;
         foreach (var line in lines.Skip(1))
         {
-            rank = rank.After(Snowport.Clock.Create());
+            rank = rank.After(SnowportId.Create());
             var row = new DataRow
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 DataSetId = dataset.Id,
                 Rank = rank,
             };

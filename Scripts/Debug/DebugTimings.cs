@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// The most recent durations of instrumented operations, shown in the debug console.
 /// Time an operation with <c>using var _ = DebugTimings.Measure("Label");</c>.

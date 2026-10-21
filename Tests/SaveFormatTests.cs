@@ -9,6 +9,8 @@ using System.Text.Json.Schema;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// <para>
 /// Pins the format of saves and multiplayer messages, as a JSON schema of <see cref="TableEvent"/>

@@ -4,6 +4,8 @@ using System.Linq;
 using Godot;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class QuickTemplateTests
 {
     private static readonly Color Cream = Color.Color8(255, 242, 204);

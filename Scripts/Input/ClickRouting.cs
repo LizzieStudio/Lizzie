@@ -1,6 +1,8 @@
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>Makes clicks for right-click context menus behave as expected.</para>
 ///

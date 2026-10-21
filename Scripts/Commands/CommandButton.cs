@@ -3,6 +3,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>A button that runs a <see cref="Command"/> the way the context menu would.</para>
 ///

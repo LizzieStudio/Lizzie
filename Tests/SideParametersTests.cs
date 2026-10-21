@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using Godot;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class SideParametersTests
 {
     private static QuickSide Quick(params string[] values) =>

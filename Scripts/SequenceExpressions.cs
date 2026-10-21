@@ -7,6 +7,8 @@ using Superpower.Model;
 using Superpower.Parsers;
 using Superpower.Tokenizers;
 
+namespace Lizzie;
+
 /// <summary>
 /// Parses Sequence Expressions, a microlanguage for lists of values like <c>1-3, J*2, (Q, K)/2, "Draw, then discard"</c>.
 /// SequenceExpressions.md describes the language.

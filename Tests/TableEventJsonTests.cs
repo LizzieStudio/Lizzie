@@ -2,6 +2,8 @@ using System.Text.Json;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class TableEventJsonTests
 {
     private static SnowportId Id(long clock, byte source) => new(clock, source);

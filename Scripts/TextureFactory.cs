@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 public partial class TextureFactory : SubViewport
 {
     private IconLibrary _iconLibrary = new();

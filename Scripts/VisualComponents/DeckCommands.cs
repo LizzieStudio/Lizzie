@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using static VisualComponentBase;
+using static Lizzie.VisualComponentBase;
+
+namespace Lizzie;
 
 /// <summary>
 /// Commands for decks.
@@ -74,7 +76,7 @@ public static class DeckCommands
     )
     {
         var cards = R.TokensOn(deck).Take(count).ToList();
-        var stamp = Snowport.Clock.Create();
+        var stamp = SnowportId.Create();
 
         if (R.Get(ProjectGameSettings.Only).EnablePlayerHands)
         {
@@ -118,7 +120,7 @@ public static class DeckCommands
         var cards = R.TokensOn(deck);
         int total = (int)Math.Min((long)countPerPlayer * seats.Count, cards.Count);
         var suborder = new int[seats.Max() + 1];
-        var stamp = Snowport.Clock.Create();
+        var stamp = SnowportId.Create();
         var dealt = new List<ComponentPosition>(total);
         for (int i = 0; i < total; i++)
         {

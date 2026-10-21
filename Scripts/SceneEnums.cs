@@ -1,3 +1,5 @@
+namespace Lizzie;
+
 public enum SceneMode
 {
     TwoD,

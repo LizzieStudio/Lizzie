@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 public partial class BoundsRect : MarginContainer
 {
     private Button _topLeft;

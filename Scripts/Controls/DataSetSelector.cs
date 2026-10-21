@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 public partial class DataSetSelector : OptionButton
 {
     private SnowTag _selected = SnowTag.Empty;

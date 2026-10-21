@@ -7,6 +7,8 @@ using System.Text.Json;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class SaveCompactionTests
 {
     private static SnowTag Tag(int counter, byte source = Snowport.HostSource) =>

@@ -6,10 +6,10 @@ namespace Lizzie.AssetManagement
     [JsonName("ImageAsset")]
     public record ImageAsset : Atom
     {
-        public static readonly Id<ImageAsset, SnowTag> ById = new(r => r.Id);
+        public static readonly Identity<ImageAsset, SnowTag> ById = new(r => r.Id);
 
         /// <summary>
-        /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+        /// This atom's identity, created with <see cref="SnowTag.Create"/>.
         /// </summary>
         public required SnowTag Id { get; init; }
 
@@ -18,7 +18,7 @@ namespace Lizzie.AssetManagement
         /// <summary>
         /// The images with each name, ignoring case. Read it with <see cref="NameKey"/> of the name.
         /// </summary>
-        public static readonly Group<ImageAsset, string> ByName = new(a => NameKey(a.Name));
+        public static readonly Lookup<ImageAsset, string> ByName = new(a => NameKey(a.Name));
 
         /// <summary>
         /// The key of <paramref name="name"/> in <see cref="ByName"/>.

@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Edits an <see cref="ImageSide"/>.
 /// </summary>

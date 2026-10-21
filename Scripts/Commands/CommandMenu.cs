@@ -4,6 +4,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// Utilities to create context menus and the menu bar in the top left.
 /// </summary>

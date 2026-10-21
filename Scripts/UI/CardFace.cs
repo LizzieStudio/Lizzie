@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// A card's face or back as the hand draws it, cut to the token's shape.
 /// </summary>

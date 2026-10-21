@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Where a component is in one <see cref="Stage"/>.
 /// </summary>
@@ -13,20 +15,20 @@ public record ComponentPosition : StagedAtom
     public static readonly StagedId<ComponentPosition> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
     /// <summary>
     /// The components each stage shows.
     /// </summary>
-    public static readonly Group<ComponentPosition, SnowTag> ByStage = new(s => s.Stage);
+    public static readonly Lookup<ComponentPosition, SnowTag> ByStage = new(s => s.Stage);
 
     /// <summary>
     /// The components in each container of a stage, by <see cref="ContainerRef"/>.
     /// <see cref="SnowTag.Empty"/> holds the ones on the table.
     /// </summary>
-    public static readonly Group<ComponentPosition, StageKey> ByContainer = new(s =>
+    public static readonly Lookup<ComponentPosition, StageKey> ByContainer = new(s =>
         s.In(s.ContainerRef)
     );
 

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// A zone is a draggable rectangular component on the table that governs which players may
 /// <b>see</b> and/or <b>move</b> the components geometrically inside it.

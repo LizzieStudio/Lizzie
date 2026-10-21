@@ -3,6 +3,8 @@ using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 public partial class VcMeeple : VisualComponentBase
 {
     public override void _Ready()

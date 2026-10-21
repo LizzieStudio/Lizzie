@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Godot;
 using Lizzie.Scripts.Templating;
 
+namespace Lizzie;
+
 public static class TemplateEngine
 {
     public static TextureFactory.TextureDefinition GenerateTextureDefinition(

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Godot;
 using Lizzie.Scripts.Templating;
 
+namespace Lizzie;
+
 public class TrackElement : TemplateElement
 {
     public enum TrackTypeEnum

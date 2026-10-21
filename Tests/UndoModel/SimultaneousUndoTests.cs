@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Linq;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// Players pressing Undo or Redo at the same time, walked through by hand. A reversal that reverses a reversal
 /// retires the other reversals on the same entry, so what they all reversed comes back in one step.

@@ -5,23 +5,22 @@ using System.Linq;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// Holds the atoms of <typeparamref name="T"/> by their <see cref="Id{T, I}"/>,
-/// and any groups that have been read.
+/// Holds the atoms of <typeparamref name="T"/> by their <see cref="Identity{T, I}"/>,
+/// and any lookups that have been read.
 /// </summary>
 public sealed class AtomStore<T, I> : IAtomStore<T, I>
     where T : Atom
-    where I : IComparable<I>
 {
     private static readonly bool Saved = !typeof(T).IsDefined(typeof(NotSavedAttribute), true);
 
-    private readonly Id<T, I> _byId;
+    private readonly Identity<T, I> _byId;
 
     private readonly IndexedAtoms<T, I> _atoms;
 
     // changes merged while the synchronizer is bulk loading, sent by FlushBulkLoad
     private Dictionary<I, (AtomEntry Old, AtomEntry New)> _pending = new();
 
-    public AtomStore(Id<T, I> byId)
+    public AtomStore(Identity<T, I> byId)
     {
         _byId = byId;
         _atoms = new(byId);
@@ -43,9 +42,9 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
     /// </summary>
     internal IEnumerable<I> Ids => _atoms.Entries.Keys;
 
-    public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) => _atoms.InGroup(group, key);
+    public IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key) => _atoms.Get(lookup, key);
 
-    public int Count<G>(Group<T, G> group, G key) => _atoms.Count(group, key);
+    public int Count<K>(Lookup<T, K> lookup, K key) => _atoms.Count(lookup, key);
 
     public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
     {
@@ -126,7 +125,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
 }
 
 /// <summary>
-/// A query and a key of it (an id, or a group key) whose result a change touched.
-/// When <paramref name="Count"/> is true, it changed how many atoms the group key has rather than what they hold.
+/// A query and a key of it (an id, or a lookup key) whose result a change touched.
+/// When <paramref name="Count"/> is true, it changed how many atoms the key has rather than what they hold.
 /// </summary>
 public readonly record struct Touch(Query Query, object Key, bool Count);

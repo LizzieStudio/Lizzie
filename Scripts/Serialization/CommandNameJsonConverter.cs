@@ -2,6 +2,8 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 /// <summary>
 /// Writes a <see cref="CommandName"/> as its plain name, like "component.flip".
 /// </summary>

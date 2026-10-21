@@ -1,6 +1,8 @@
 using System;
 using CsCheck;
 
+namespace Lizzie.Tests;
+
 /// <summary>What every family of undo tests shares: the implementation under test.</summary>
 public abstract class UndoTestBase
 {

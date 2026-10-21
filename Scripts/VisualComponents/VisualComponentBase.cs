@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public abstract partial class VisualComponentBase : Area3D
 {
     public enum VisualComponentType
@@ -252,7 +254,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual SnowTag PrototypeRef { get; set; }
 
-    private SnowTag _reference = Snowport.Clock.CreateTag();
+    private SnowTag _reference = SnowTag.Create();
 
     /// <summary>
     /// The component atom this node shows. Must be set before adding the node to the tree.

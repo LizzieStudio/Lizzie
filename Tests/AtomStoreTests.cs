@@ -4,21 +4,23 @@ using System.Linq;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
-/// A store holds each atom by its id, keeps the groups it has been read through,
+/// A store holds each atom by its id, keeps the lookups it has been read through,
 /// and reports which query values each change touched.
 /// </summary>
 public class AtomStoreTests
 {
     // components by their tag alone, as if they had no stage
-    private static readonly Id<ComponentPosition, SnowTag> ById = new(s => s.Id);
+    private static readonly Identity<ComponentPosition, SnowTag> ById = new(s => s.Id);
 
-    private static readonly Group<ComponentPosition, SnowTag> ByContainer = new(s =>
+    private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(s =>
         s.ContainerRef
     );
 
-    // a group only components in a container are in
-    private static readonly Group<ComponentPosition, SnowTag?> InContainer = new(s =>
+    // a lookup only components in a container are in
+    private static readonly Lookup<ComponentPosition, SnowTag?> InContainer = new(s =>
         s.IsOnTable ? null : s.ContainerRef
     );
 
@@ -161,48 +163,48 @@ public class AtomStoreTests
     }
 
     [Fact]
-    public void AGroupReadLaterHoldsTheAtomsWrittenBefore()
+    public void ALookupReadLaterHoldsTheAtomsWrittenBefore()
     {
         Write(Component(1, container: 5), Component(2, container: 5), Component(3, container: 6));
 
-        AssertIds(_store.InGroup(ByContainer, Tag(5)), 1, 2);
+        AssertIds(_store.Get(ByContainer, Tag(5)), 1, 2);
     }
 
     [Fact]
-    public void AnAtomMovesBetweenGroupKeys()
+    public void AnAtomMovesBetweenLookupKeys()
     {
         Write(Component(1, container: 5));
-        _store.InGroup(ByContainer, Tag(5));
+        _store.Get(ByContainer, Tag(5));
         Write(Component(1, container: 6));
 
-        AssertIds(_store.InGroup(ByContainer, Tag(5)));
-        AssertIds(_store.InGroup(ByContainer, Tag(6)), 1);
+        AssertIds(_store.Get(ByContainer, Tag(5)));
+        AssertIds(_store.Get(ByContainer, Tag(6)), 1);
     }
 
     [Fact]
-    public void ANullGroupKeyPutsTheAtomInNoGroup()
+    public void ANullLookupKeyLeavesTheAtomOutOfTheLookup()
     {
         Write(Component(1), Component(2, container: 5));
 
-        AssertIds(_store.InGroup(InContainer, Tag(5)), 2);
-        AssertIds(_store.InGroup(InContainer, null));
+        AssertIds(_store.Get(InContainer, Tag(5)), 2);
+        AssertIds(_store.Get(InContainer, null));
     }
 
     [Fact]
-    public void GroupsAndCountsLeaveOutUnsetAtoms()
+    public void LookupsAndCountsLeaveOutUnsetAtoms()
     {
         Write(Component(1, container: 5), Component(2, container: 5));
         Unset(2);
 
         Assert.Equal(1, _store.Count(ByContainer, Tag(5)));
-        AssertIds(_store.InGroup(ByContainer, Tag(5)), 1);
+        AssertIds(_store.Get(ByContainer, Tag(5)), 1);
     }
 
     [Fact]
-    public void MovingAnAtomTouchesItsIdAndBothGroupKeysAndTheirCounts()
+    public void MovingAnAtomTouchesItsIdAndBothLookupKeysAndTheirCounts()
     {
         Write(Component(1, container: 5));
-        _store.InGroup(ByContainer, Tag(5));
+        _store.Get(ByContainer, Tag(5));
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 6))),
@@ -215,10 +217,10 @@ public class AtomStoreTests
     }
 
     [Fact]
-    public void ChangingAnAtomWithinItsGroupKeyLeavesTheCountAlone()
+    public void ChangingAnAtomWithinItsLookupKeyLeavesTheCountAlone()
     {
         Write(Component(1, container: 5));
-        _store.InGroup(ByContainer, Tag(5));
+        _store.Get(ByContainer, Tag(5));
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 5) with { X = 10 })),
@@ -228,10 +230,10 @@ public class AtomStoreTests
     }
 
     [Fact]
-    public void UnsettingAnAtomChangesItsGroupKeysCount()
+    public void UnsettingAnAtomChangesItsLookupKeysCount()
     {
         Write(Component(1, container: 5));
-        _store.InGroup(ByContainer, Tag(5));
+        _store.Get(ByContainer, Tag(5));
 
         AssertTouched(
             TouchesOf(() => Unset(1)),
@@ -242,9 +244,9 @@ public class AtomStoreTests
     }
 
     [Fact]
-    public void AFirstWriteTouchesOnlyItsNewGroupKey()
+    public void AFirstWriteTouchesOnlyItsNewLookupKey()
     {
-        _store.InGroup(ByContainer, Tag(5));
+        _store.Get(ByContainer, Tag(5));
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 5))),
@@ -255,7 +257,7 @@ public class AtomStoreTests
     }
 
     [Fact]
-    public void GroupsNotReadYetAreNotTouched()
+    public void LookupsNotReadYetAreNotTouched()
     {
         Write(Component(1, container: 5));
 

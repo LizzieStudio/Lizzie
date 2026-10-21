@@ -4,6 +4,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>The project's atoms, worked out from the event log.</para>
 ///
@@ -134,9 +136,10 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     #region Writing
 
     /// <summary>
-    /// <para>Writes atoms to all connected clients, including locally.</para>
+    /// Writes atoms to all connected clients, including locally.
+    ///
     /// <para>
-    /// Atoms are identified by their type's <see cref="Id{T, I}"/>.
+    /// Atoms are identified by their type's <see cref="Identity{T, I}"/>.
     /// If you Write an atom with a new id, it is created on all clients.
     /// If you Write an atom using an existing id, that atom is replaced with the new one.
     /// Write a <see cref="AtomReaderExtensions.Unset"/> to unset one.
@@ -146,7 +149,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     /// To bundle multiple discrete events into one undo group, use Open, Append, and Close.
     /// </para>
     /// <para>
-    /// Commands return their changes from <see cref="Command.Effects"/> instead.
+    /// Commands return their changes from <see cref="AtomCommand{T}.Effects"/> instead.
     /// </para>
     /// </summary>
     public void Write(params IEnumerable<IChange> changes)
@@ -162,9 +165,8 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     ///
     /// <inheritdoc cref="Write"/>
     /// </summary>
-    public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
+    public void Update<T, I>(Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
-        where I : IComparable<I>
     {
         if (Get(byId, id) is { } atom)
             Write(change(atom));
@@ -420,15 +422,14 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     public SnowportId Version(Atom atom) =>
         StoreOf(atom.GetType()).Find(IdQuery.For(atom.GetType()).Of(atom)).LastUpdate;
 
-    public T Get<T, I>(Id<T, I> byId, I id)
-        where T : Atom
-        where I : IComparable<I> => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
+    public T Get<T, I>(Identity<T, I> byId, I id)
+        where T : Atom => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
 
-    public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
-        where T : Atom => StoreOf<T>().InGroup(group, key);
+    public IReadOnlyList<T> Get<T, K>(Lookup<T, K> lookup, K key)
+        where T : Atom => StoreOf<T>().Get(lookup, key);
 
-    public int Count<T, G>(Group<T, G> group, G key)
-        where T : Atom => StoreOf<T>().Count(group, key);
+    public int Count<T, K>(Lookup<T, K> lookup, K key)
+        where T : Atom => StoreOf<T>().Count(lookup, key);
 
     #endregion
 }

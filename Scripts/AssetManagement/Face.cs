@@ -1,6 +1,8 @@
 using System.Threading.Tasks;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// One card's picture, shared by every token and hand card that shows it.
 /// </summary>

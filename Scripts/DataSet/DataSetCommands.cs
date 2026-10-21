@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Commands for a dataset's rows, columns, and cells.
 /// </summary>
@@ -183,9 +185,9 @@ public static class DataSetCommands
             {
                 row = new DataRow
                 {
-                    Id = Snowport.Clock.CreateTag(),
+                    Id = SnowTag.Create(),
                     DataSetId = rows[0].DataSetId,
-                    Rank = rank = rank.After(Snowport.Clock.Create()),
+                    Rank = rank = rank.After(SnowportId.Create()),
                 };
                 changes.Add(row);
             }
@@ -204,9 +206,9 @@ public static class DataSetCommands
         [
             new DataRow
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 DataSetId = dataSetId,
-                Rank = SnowRank.At(R.GetRows(dataSetId), index, Snowport.Clock.Create()),
+                Rank = SnowRank.At(R.GetRows(dataSetId), index, SnowportId.Create()),
             },
         ];
 
@@ -217,9 +219,9 @@ public static class DataSetCommands
         [
             new DataColumn
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 DataSetId = dataSetId,
-                Rank = SnowRank.At(columns, index, Snowport.Clock.Create()),
+                Rank = SnowRank.At(columns, index, SnowportId.Create()),
                 Name = $"Column {columns.Count + 1}",
             },
         ];

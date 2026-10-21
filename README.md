@@ -22,6 +22,30 @@ dotnet tool restore
 dotnet csharpier format .
 ```
 
+## Testing
+
+To run the tests, use the command
+
+```bash
+dotnet test
+```
+
+## Build the docs
+
+To build the docs, run
+
+```bash
+dotnet tool restore
+rm -rf docs/api docs/_site && dotnet docfx docs/docfx.json
+```
+
+To see the docs on localhost, run
+
+```bash
+dotnet tool restore
+rm -rf docs/api docs/_site && dotnet docfx docs/docfx.json --serve
+```
+
 ### Pre-commit Hook
 
 A pre-commit hook is provided to catch formatting issues before committing.

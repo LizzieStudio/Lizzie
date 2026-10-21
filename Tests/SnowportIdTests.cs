@@ -1,6 +1,8 @@
 using System;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class SnowportIdTests
 {
     [Fact]

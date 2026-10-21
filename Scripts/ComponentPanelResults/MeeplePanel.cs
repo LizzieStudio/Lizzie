@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class MeeplePanel : ComponentPanelDialogResult
 {
     private int _gridSize = 8;

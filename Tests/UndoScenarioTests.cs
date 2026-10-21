@@ -3,6 +3,8 @@ using System.Linq;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// Undo and redo walked through by hand, one reversal at a time.
 /// </summary>

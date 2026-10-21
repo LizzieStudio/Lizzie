@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Tracks the players at the table.
 /// <list type="bullet">

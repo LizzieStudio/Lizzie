@@ -2,8 +2,10 @@ using System;
 using System.Linq;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
-/// Every atom type declares exactly one <see cref="Id{T, I}"/>, which its store holds atoms by.
+/// Every atom type declares exactly one <see cref="Identity{T, I}"/>, which its store holds atoms by.
 /// </summary>
 public class IdQueryTests
 {

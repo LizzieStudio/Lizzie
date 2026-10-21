@@ -6,6 +6,8 @@ using System.Text.Json;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 public partial class ProjectService : Node
 {
     public const string SampleProjectName = "Test Project";
@@ -332,17 +334,17 @@ public partial class ProjectService : Node
         {
             if (builder[i].HandRef == SnowTag.Empty)
             {
-                builder[i] = builder[i] with { HandRef = Snowport.Clock.CreateTag() };
+                builder[i] = builder[i] with { HandRef = SnowTag.Create() };
                 changed = true;
             }
             if (builder[i].CursorRef == SnowTag.Empty)
             {
-                builder[i] = builder[i] with { CursorRef = Snowport.Clock.CreateTag() };
+                builder[i] = builder[i] with { CursorRef = SnowTag.Create() };
                 changed = true;
             }
             if (builder[i].HandHoldRef == SnowTag.Empty)
             {
-                builder[i] = builder[i] with { HandHoldRef = Snowport.Clock.CreateTag() };
+                builder[i] = builder[i] with { HandHoldRef = SnowTag.Create() };
                 changed = true;
             }
         }
@@ -373,9 +375,9 @@ public partial class ProjectService : Node
         {
             var setup = new Stage
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 Name = "Setup",
-                Rank = default(SnowRank).After(Snowport.Clock.Create()),
+                Rank = default(SnowRank).After(SnowportId.Create()),
             };
             blueprint = setup.Id;
             changes.Add(setup);

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text.Json;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class SnowRankTests
 {
     private static int Compare(SnowRank a, SnowRank b) => a.CompareTo(b);

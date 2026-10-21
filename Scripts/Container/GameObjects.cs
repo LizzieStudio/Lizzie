@@ -4,6 +4,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 public partial class GameObjects : Node3D
 {
     [Export]
@@ -91,7 +93,7 @@ public partial class GameObjects : Node3D
         var R = AtomService.Instance;
         bool overHand = HandRow.Under(GetViewport()) != null;
         var holder = overHand ? R.LocalHandHold() : R.LocalCursor();
-        var stamp = Snowport.Clock.Create();
+        var stamp = SnowportId.Create();
         var atoms = pickup
             .Select(
                 (s, i) =>
@@ -307,7 +309,7 @@ public partial class GameObjects : Node3D
     private void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
         var atoms = new List<Atom>();
-        var stamp = Snowport.Clock.Create();
+        var stamp = SnowportId.Create();
         int suborder = 0;
 
         foreach (var component in components)
@@ -315,7 +317,7 @@ public partial class GameObjects : Node3D
             var variant = ComponentVariant.Capture(component);
             var self = ComponentPosition.Capture(component, variant) with
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
             };
             atoms.Add(variant);
@@ -937,7 +939,7 @@ public partial class GameObjects : Node3D
             held.Cards(R).ToList(),
             index,
             R.HandOf(seat),
-            Snowport.Clock.Create()
+            SnowportId.Create()
         );
         var rest = held.Atoms(R)
             .Where(s => R.Kind(s) != VisualComponentBase.VisualComponentType.Printed);
@@ -966,7 +968,7 @@ public partial class GameObjects : Node3D
             .Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
             .ToList();
 
-        var stamp = Snowport.Clock.Create();
+        var stamp = SnowportId.Create();
         return ordered
             .Select(
                 (s, i) =>

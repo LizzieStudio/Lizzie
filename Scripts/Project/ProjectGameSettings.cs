@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Persisted settings for a project, edited via the Project Settings dialog.
 /// </summary>

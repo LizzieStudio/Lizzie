@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 /// <summary>
 /// Loads the front and back faces of a printed component, for the table and the hand alike.
 /// </summary>

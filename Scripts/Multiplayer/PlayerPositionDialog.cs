@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Modal dialog that lets the local player pick a player position (or observer).
 /// Instantiate, add to the scene tree, then call Show().

@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 /// <param name="renumber">
 /// Replaces each tag as it's written.
 /// </param>

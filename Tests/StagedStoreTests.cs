@@ -4,6 +4,8 @@ using System.Linq;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// A staged store shows each stage's own writes, and its parent's where it has none,
 /// and reports which query values each change to what a stage shows touched.
@@ -13,7 +15,7 @@ public class StagedStoreTests
     public sealed record Piece : StagedAtom
     {
         public static readonly StagedId<Piece> ById = new(p => p.Id);
-        public static readonly Group<Piece, SnowTag> ByStage = new(p => p.Stage);
+        public static readonly Lookup<Piece, SnowTag> ByStage = new(p => p.Stage);
         public static readonly Written<Piece> WrittenIn = new();
 
         public required SnowTag Id { get; init; }
@@ -231,7 +233,7 @@ public class StagedStoreTests
     {
         Write(StageOf(1), StageOf(2, parent: 1));
         Write(PieceOf(1, 10, x: 5), PieceOf(2, 11));
-        AssertIds(_store.InGroup(Piece.ByStage, Tag(2)), 10, 11);
+        AssertIds(_store.Get(Piece.ByStage, Tag(2)), 10, 11);
 
         AssertTouched(
             TouchesOf(() => Unset(StageOf(2))),
@@ -242,7 +244,7 @@ public class StagedStoreTests
         );
         AssertShows(2, 10, null);
         AssertShows(2, 11, null);
-        AssertIds(_store.InGroup(Piece.ByStage, Tag(2)));
+        AssertIds(_store.Get(Piece.ByStage, Tag(2)));
         AssertShows(1, 10, 5);
     }
 
@@ -265,7 +267,7 @@ public class StagedStoreTests
 
         AssertShows(2, 10, 5);
         AssertShows(2, 11, 7);
-        AssertIds(_store.InGroup(Piece.ByStage, Tag(2)), 10, 11);
+        AssertIds(_store.Get(Piece.ByStage, Tag(2)), 10, 11);
     }
 
     [Fact]
@@ -294,22 +296,22 @@ public class StagedStoreTests
     }
 
     [Fact]
-    public void AGroupListsWhatEachStageShowsAndWrittenListsOnlyItsWrites()
+    public void ALookupListsWhatEachStageShowsAndWrittenListsOnlyItsWrites()
     {
         Write(StageOf(1), StageOf(2, parent: 1));
         Write(PieceOf(1, 10), PieceOf(2, 11));
 
-        AssertIds(_store.InGroup(Piece.ByStage, Tag(2)), 10, 11);
-        AssertIds(_store.InGroup(Piece.WrittenIn, Tag(2)), 11);
+        AssertIds(_store.Get(Piece.ByStage, Tag(2)), 10, 11);
+        AssertIds(_store.Get(Piece.WrittenIn, Tag(2)), 11);
         Assert.Equal(1, _store.Count(Piece.WrittenIn, Tag(2)));
     }
 
     [Fact]
-    public void AWriteTouchesTheWrittenGroupOfItsStageOnly()
+    public void AWriteTouchesTheWrittenLookupOfItsStageOnly()
     {
         Write(StageOf(1), StageOf(2, parent: 1));
-        _store.InGroup(Piece.WrittenIn, Tag(1));
-        _store.InGroup(Piece.WrittenIn, Tag(2));
+        _store.Get(Piece.WrittenIn, Tag(1));
+        _store.Get(Piece.WrittenIn, Tag(2));
 
         AssertTouched(
             TouchesOf(() => Write(PieceOf(1, 10))),

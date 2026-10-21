@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Edits one side of a printed component, or the faces of a die, with a tab for each kind of side.
 /// </summary>

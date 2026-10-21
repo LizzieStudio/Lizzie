@@ -18,3 +18,7 @@ addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll~*.TMP
 
 # VS Code specific files
 .vscode/
+
+# Generated DocFX output
+/docs/_site/
+/docs/api/

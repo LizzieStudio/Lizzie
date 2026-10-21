@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// What one player has selected in one place, which every player sees.
 /// Each player writes only their own, so selections never overwrite each other.
@@ -13,22 +15,22 @@ using Godot;
 [JsonName("Selection")]
 public record Selection : Atom
 {
-    public static readonly Id<Selection, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Selection, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
     /// <summary>
     /// Every player's selection in each place, by <see cref="Place"/>.
     /// </summary>
-    public static readonly Group<Selection, SelectionPlace> ByPlace = new(s => s.Place);
+    public static readonly Lookup<Selection, SelectionPlace> ByPlace = new(s => s.Place);
 
     /// <summary>
     /// Each player's selections, by <see cref="Player"/>.
     /// </summary>
-    public static readonly Group<Selection, byte> ByPlayer = new(s => s.Player);
+    public static readonly Lookup<Selection, byte> ByPlayer = new(s => s.Player);
 
     /// <summary>The source of the player who owns this selection.</summary>
     public byte Player { get; init; }
@@ -111,11 +113,10 @@ public static class LocalSelection
     /// <param name="byId">Names the atom type and its id type, which the call infers from it.</param>
     public static IEnumerable<I> GetSelection<T, I>(
         this IAtomReader R,
-        Id<T, I> byId,
+        Identity<T, I> byId,
         SelectionPlace place
     )
-        where T : Atom
-        where I : IComparable<I> =>
+        where T : Atom =>
         R.GetSelection(place)?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
 
     /// <summary>
@@ -125,25 +126,23 @@ public static class LocalSelection
     /// </summary>
     public static void SetSelection<T, I>(
         this IAtomReader R,
-        Id<T, I> byId,
+        Identity<T, I> byId,
         IEnumerable<I> ids,
         SelectionPlace place
     )
-        where T : Atom
-        where I : IComparable<I> => AtomService.Instance.Write(R.NewSelection(byId, ids, place));
+        where T : Atom => AtomService.Instance.Write(R.NewSelection(byId, ids, place));
 
     /// <summary>
-    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Id{T, I}, IEnumerable{I}, SelectionPlace)"/> writes,
+    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, SelectionPlace)"/> writes,
     /// or none when the selection wouldn't change.
     /// </summary>
     public static Selection[] NewSelection<T, I>(
         this IAtomReader R,
-        Id<T, I> byId,
+        Identity<T, I> byId,
         IEnumerable<I> ids,
         SelectionPlace place
     )
         where T : Atom
-        where I : IComparable<I>
     {
         var old = R.GetSelection(place)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
         return R.NewSelection(
@@ -184,7 +183,7 @@ public static class LocalSelection
             current
             ?? new Selection
             {
-                Id = Snowport.Clock.CreateTag(),
+                Id = SnowTag.Create(),
                 Player = Snowport.Clock.source,
                 Place = place,
             };

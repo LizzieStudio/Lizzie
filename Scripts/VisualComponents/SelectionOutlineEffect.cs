@@ -2,6 +2,8 @@ using System;
 using Godot;
 using Godot.Collections;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>
 /// Draws <see cref="SelectionOutline"/>'s outlines in one compute pass over the table's view,

@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using Godot;
 using Lizzie.Scripts.Templating;
 
+namespace Lizzie;
+
 public class FrameElement : TemplateElement
 {
     // Called when the node enters the scene tree for the first time.

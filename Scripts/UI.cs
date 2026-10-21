@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class UI : CanvasLayer
 {
     private HBoxContainer modeButtons;

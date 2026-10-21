@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 public partial class DragSelectRectangle : Control
 {
     // Called every frame. 'delta' is the elapsed time since the previous frame.

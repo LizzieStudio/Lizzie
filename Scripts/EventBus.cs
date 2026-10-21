@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Global event bus for decoupled communication between components
 /// Add this as an AutoLoad singleton in Godot project settings

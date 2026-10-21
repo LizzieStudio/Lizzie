@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 public partial class Config : Node
 {
     const string DEFAULT_SECTION = "AppState";

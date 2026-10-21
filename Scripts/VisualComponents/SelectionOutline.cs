@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>Draws screen-space outlines around components.</para>
 ///

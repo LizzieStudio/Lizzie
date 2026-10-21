@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Holds a node for every component atom one stage shows.
 /// Creates and removes the nodes, who then render their atom.

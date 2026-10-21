@@ -16,7 +16,7 @@ public sealed class Watcher : IWatchReader
     // the query values this watcher read
     private readonly DependencyIndex<Watcher> _index;
 
-    // per group key and Basis, each atom's id and the basis Diff found for it when the previous run ended
+    // per lookup key and Basis, each atom's id and the basis Diff found for it when the previous run ended
     private readonly Dictionary<(Query, object, object), object> _diffs = new();
 
     // the bases Diff found during the current run, saved into _diffs when it ends
@@ -78,39 +78,42 @@ public sealed class Watcher : IWatchReader
         return _source.Version(atom);
     }
 
-    public T Get<T, I>(Id<T, I> byId, I id)
+    public T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom
-        where I : IComparable<I>
     {
         Depend(byId, id);
         return _source.Get(byId, id);
     }
 
-    public IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
+    public IReadOnlyList<T> Get<T, K>(Lookup<T, K> lookup, K key)
         where T : Atom
     {
-        Depend(group, key);
-        return _source.Get(group, key);
+        Depend(lookup, key);
+        return _source.Get(lookup, key);
     }
 
-    public int Count<T, G>(Group<T, G> group, G key)
+    public int Count<T, K>(Lookup<T, K> lookup, K key)
         where T : Atom
     {
-        Depend(group, key, count: true);
-        return _source.Count(group, key);
+        Depend(lookup, key, count: true);
+        return _source.Count(lookup, key);
     }
 
-    public GroupDiff<T, V> Diff<T, G, V>(Group<T, G> group, G key, Basis<T, V> basis)
+    public LookupDiff<(T Atom, V Value)> Diff<T, K, V>(
+        Lookup<T, K> lookup,
+        K key,
+        Basis<T, V> basis
+    )
         where T : Atom
         where V : struct
     {
-        var slot = (group, (object)key, (object)basis);
+        var slot = (lookup, (object)key, (object)basis);
         var byId = IdQuery.For(typeof(T));
         var previous = _diffs.TryGetValue(slot, out var p)
             ? (Dictionary<object, (T Atom, V Value)>)p
             : new();
         var current = new Dictionary<object, (T Atom, V Value)>();
-        foreach (var atom in Get(group, key))
+        foreach (var atom in Get(lookup, key))
             if (basis.Of(this, atom) is V value)
                 current[byId.Of(atom)] = (atom, value);
 
@@ -127,6 +130,6 @@ public sealed class Watcher : IWatchReader
                 added.Add(now);
 
         _pending[slot] = current;
-        return new GroupDiff<T, V>(removed, added);
+        return new LookupDiff<(T Atom, V Value)>(removed, added);
     }
 }

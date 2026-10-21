@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// A local value that a Watch can read and react to like an atom.
 ///

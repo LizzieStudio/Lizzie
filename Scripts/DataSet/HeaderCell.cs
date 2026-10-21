@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// A dataset column header. Click the name to select the column, drag it to reorder,
 /// double-click it to rename, drag the right edge to resize.

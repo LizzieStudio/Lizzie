@@ -5,16 +5,15 @@ using System.Linq;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// A store's atoms of <typeparamref name="T"/> by id, with an index for each group read so far,
+/// A store's atoms of <typeparamref name="T"/> by id, with an index for each lookup read so far,
 /// and the query values a change of one of them touches.
 /// </summary>
-internal sealed class IndexedAtoms<T, I>(Id<T, I> byId)
+internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
     where T : Atom
-    where I : IComparable<I>
 {
     private readonly Dictionary<I, AtomEntry> _atoms = new();
 
-    // each group read so far, kept up to date from then on
+    // each lookup read so far, kept up to date from then on
     private readonly Dictionary<Query, IIndex> _indexes = new();
 
     public IReadOnlyDictionary<I, AtomEntry> Entries => _atoms;
@@ -24,20 +23,20 @@ internal sealed class IndexedAtoms<T, I>(Id<T, I> byId)
     /// </summary>
     public AtomEntry Find(I id) => _atoms.GetValueOrDefault(id);
 
-    public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) =>
-        key is null ? [] : IndexOf(group).Atoms(key);
+    public IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key) =>
+        key is null ? [] : IndexOf(lookup).Atoms(key);
 
-    public int Count<G>(Group<T, G> group, G key) => key is null ? 0 : IndexOf(group).Count(key);
+    public int Count<K>(Lookup<T, K> lookup, K key) => key is null ? 0 : IndexOf(lookup).Count(key);
 
-    private Index<G> IndexOf<G>(Group<T, G> group)
+    private Index<K> IndexOf<K>(Lookup<T, K> lookup)
     {
-        if (_indexes.TryGetValue(group, out var found))
-            return (Index<G>)found;
+        if (_indexes.TryGetValue(lookup, out var found))
+            return (Index<K>)found;
 
-        var index = new Index<G>(group);
+        var index = new Index<K>(lookup);
         foreach (var (id, entry) in _atoms)
             index.Add(id, entry);
-        _indexes[group] = index;
+        _indexes[lookup] = index;
         return index;
     }
 
@@ -70,7 +69,7 @@ internal sealed class IndexedAtoms<T, I>(Id<T, I> byId)
     }
 
     /// <summary>
-    /// The id and the group keys a change of the atom with <paramref name="id"/> touched.
+    /// The id and the lookup keys a change of the atom with <paramref name="id"/> touched.
     /// </summary>
     public IEnumerable<Touch> Touched(I id, AtomEntry old, AtomEntry now)
     {
@@ -92,16 +91,16 @@ internal sealed class IndexedAtoms<T, I>(Id<T, I> byId)
     }
 
     /// <summary>
-    /// The atoms with each key of a group, leaving out unset ones.
+    /// The atoms with each key of a lookup, leaving out unset ones.
     /// </summary>
-    private sealed class Index<G>(Group<T, G> group) : IIndex
+    private sealed class Index<K>(Lookup<T, K> lookup) : IIndex
     {
-        private readonly Dictionary<G, Dictionary<I, T>> _buckets = new();
+        private readonly Dictionary<K, Dictionary<I, T>> _buckets = new();
 
-        public IReadOnlyList<T> Atoms(G key) =>
+        public IReadOnlyList<T> Atoms(K key) =>
             _buckets.TryGetValue(key, out var bucket) ? bucket.Values.ToArray() : [];
 
-        public int Count(G key) => _buckets.GetValueOrDefault(key)?.Count ?? 0;
+        public int Count(K key) => _buckets.GetValueOrDefault(key)?.Count ?? 0;
 
         public void Add(I id, AtomEntry entry)
         {
@@ -125,30 +124,30 @@ internal sealed class IndexedAtoms<T, I>(Id<T, I> byId)
         public void Clear() => _buckets.Clear();
 
         /// <summary>
-        /// The group keys whose atoms a change touched, and the group keys whose count it changed.
+        /// The lookup keys whose atoms a change touched, and the lookup keys whose count it changed.
         /// </summary>
         public IEnumerable<Touch> Touched(AtomEntry old, AtomEntry now)
         {
             bool inOld = In(old, out var was);
             bool inNew = In(now, out var willBe);
-            bool same = inOld && inNew && EqualityComparer<G>.Default.Equals(was, willBe);
+            bool same = inOld && inNew && EqualityComparer<K>.Default.Equals(was, willBe);
 
             if (inOld)
-                yield return new Touch(group, was, false);
+                yield return new Touch(lookup, was, false);
             if (inNew && !same)
-                yield return new Touch(group, willBe, false);
+                yield return new Touch(lookup, willBe, false);
 
             if (same)
                 yield break;
             if (inOld)
-                yield return new Touch(group, was, true);
+                yield return new Touch(lookup, was, true);
             if (inNew)
-                yield return new Touch(group, willBe, true);
+                yield return new Touch(lookup, willBe, true);
         }
 
-        private bool In(AtomEntry entry, out G key)
+        private bool In(AtomEntry entry, out K key)
         {
-            key = entry.Value == null ? default : group.Of((T)entry.Value);
+            key = entry.Value == null ? default : lookup.Of((T)entry.Value);
             return entry.Value != null && key is not null;
         }
     }

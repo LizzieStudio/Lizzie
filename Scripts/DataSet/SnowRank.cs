@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 /// <summary>
 /// Ordered ranks for indexing atoms.
 ///
@@ -60,7 +62,7 @@ public readonly record struct SnowRank : IComparable<SnowRank>
     /// </summary>
     /// <param name="ranked">The sorted list of atoms you're inserting into.</param>
     /// <param name="index">The index at which to insert. If it equals the Count, inserts at the end.</param>
-    /// <param name="stamp">The stamp to use in the rank, created with <see cref="Snowport.Create()"/>.</param>
+    /// <param name="stamp">The stamp to use in the rank, created with <see cref="SnowportId.Create()"/>.</param>
     public static SnowRank At(IReadOnlyList<IRanked> ranked, int index, SnowportId stamp) =>
         New(
             index > 0 ? ranked[index - 1].Rank : default,

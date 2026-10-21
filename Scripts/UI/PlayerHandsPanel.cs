@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class PlayerHandsPanel : Panel
 {
     private Button _showHideButton;

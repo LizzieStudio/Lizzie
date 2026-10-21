@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 public partial class CubePanelDialogResult : ComponentPanelDialogResult
 {
     private LineEdit _nameInput;

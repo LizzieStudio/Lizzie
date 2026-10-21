@@ -4,6 +4,8 @@ using System.Linq;
 using CsCheck;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie.Tests;
+
 /// <summary>An atom for sessions to write. Faces are unique, so every write can be told apart.</summary>
 public sealed record TestAtom : Atom
 {

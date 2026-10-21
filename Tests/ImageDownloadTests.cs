@@ -1,6 +1,8 @@
 using Lizzie.AssetManagement;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class ImageDownloadTests
 {
     [Theory]

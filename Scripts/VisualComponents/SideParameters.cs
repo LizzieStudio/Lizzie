@@ -5,6 +5,8 @@ using System.Text.Json.Serialization;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 /// <summary>
 /// What one side of a printed component shows.
 /// </summary>

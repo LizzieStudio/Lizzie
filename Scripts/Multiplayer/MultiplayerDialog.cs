@@ -1,6 +1,8 @@
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// UI dialog for hosting or joining multiplayer sessions
 /// </summary>

@@ -1,8 +1,10 @@
 using System;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
-/// An atom that each <see cref="global::Stage"/> holds its own version of, like a component's state.
+/// An atom that each <see cref="global::Lizzie.Stage"/> holds its own version of, like a component's state.
 ///
 /// <para>
 /// The state of a <see cref="StagedAtom"/> is temporal.
@@ -17,7 +19,7 @@ using Lizzie.Replication.Machinery;
 /// </summary>
 /// <remarks>
 /// A staged atom type declares its Id as a <see cref="StagedId{T}"/>, and gets a <see cref="StagedStore{T}"/>.
-/// Any <see cref="Group{T, G}"/> lists what each stage shows, and any <see cref="Written{T}"/> lists what each stage wrote.
+/// Any <see cref="Lookup{T, K}"/> lists what each stage shows, and any <see cref="Written{T}"/> lists what each stage wrote.
 /// </remarks>
 public abstract record StagedAtom : Atom
 {
@@ -39,8 +41,4 @@ public abstract record StagedAtom : Atom
 /// <summary>
 /// The id of a <see cref="StagedAtom"/>.
 /// </summary>
-public readonly record struct StageKey(SnowTag Stage, SnowTag Component) : IComparable<StageKey>
-{
-    public int CompareTo(StageKey other) =>
-        Stage != other.Stage ? Stage.CompareTo(other.Stage) : Component.CompareTo(other.Component);
-}
+public readonly record struct StageKey(SnowTag Stage, SnowTag Component);

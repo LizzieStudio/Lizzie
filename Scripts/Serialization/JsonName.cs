@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>The name a type is saved and sent under, beneath its <c>[JsonPolymorphic]</c> base, like <see cref="Atom"/>.</para>
 /// <para>

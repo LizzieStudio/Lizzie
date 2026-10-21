@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// A dataset editor row or column being dragged to a new place, as Godot drag-and-drop data.
 /// </summary>

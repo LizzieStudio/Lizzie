@@ -2,6 +2,8 @@ using System;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 public partial class ImageTile : MarginContainer
 {
     private Label _imageName;

@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Text.Json.Serialization.Metadata;
 
+namespace Lizzie;
+
 /// <summary>
 /// Uses reflection to find every <typeparamref name="T"/> reachable from a serialized value,
 /// like every <see cref="SnowTag"/> in an event.

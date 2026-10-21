@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Lizzie;
+
 /// <summary>
 /// Cards that fit sit side by side, centered.
 /// When there are too many to fit, each card covers part of the one before it.

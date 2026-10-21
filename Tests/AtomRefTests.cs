@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text.Json;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class AtomRefTests
 {
     [StackTraceHidden]

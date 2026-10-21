@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Lizzie;
+
 /// <summary>
 /// Reads and fills the player hands.
 /// </summary>

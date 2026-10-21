@@ -3,6 +3,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// Undo and redo. Those without targets walk the changes in their view's
 /// <see cref="ICommandView.UndoScope"/>, and do nothing outside any view.

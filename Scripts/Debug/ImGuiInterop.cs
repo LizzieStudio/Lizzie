@@ -1,6 +1,8 @@
 using System;
 using ImGuiNET;
 
+namespace Lizzie;
+
 /// <summary>
 /// Helpers for cooperating with the Dear ImGui debug overlay.
 /// </summary>

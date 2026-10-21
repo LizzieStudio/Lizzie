@@ -5,6 +5,8 @@ using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// The stable name of a <see cref="Command"/>, like "component.flip".
 /// </summary>
@@ -527,7 +529,7 @@ public static class CommandViews
     private static readonly Dictionary<Node, ICommandView> Attached = new();
 
     /// <summary>
-    /// Makes <paramref name="view"/> take the <see cref="Command">s
+    /// Makes <paramref name="view"/> take the <see cref="Command"/>s
     /// for everything under <paramref name="node"/> until either leaves the tree.
     /// </summary>
     public static void Attach(Node node, ICommandView view)

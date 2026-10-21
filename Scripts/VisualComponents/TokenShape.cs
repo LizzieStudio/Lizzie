@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// The outline of a token's faces.
 /// Saves store it as a number, so the numbers must stay the same.

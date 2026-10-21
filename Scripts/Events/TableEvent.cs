@@ -63,13 +63,13 @@ public class TableEvent
 
     /// <summary>Creates an event with a new SnowportId.</summary>
     public static TableEvent Now(IChange[] changes, CommandName? command = null) =>
-        Of(Snowport.Clock.Create(), changes, command);
+        Of(SnowportId.Create(), changes, command);
 
     /// <summary>
     /// Creates an admin event, which don't belong to any player.
     /// </summary>
     public static TableEvent Admin(IChange[] changes) =>
-        Of(Snowport.Clock.CreateAdmin(), changes, null);
+        Of(SnowportId.CreateAdmin(), changes, null);
 
     private static TableEvent Of(SnowportId id, IChange[] changes, CommandName? command) =>
         new()
@@ -91,7 +91,7 @@ public class TableEvent
     ) =>
         new()
         {
-            Id = admin ? Snowport.Clock.CreateAdmin() : Snowport.Clock.Create(),
+            Id = admin ? SnowportId.CreateAdmin() : SnowportId.Create(),
             Command = command,
             Undo = flag,
         };
@@ -104,7 +104,7 @@ public class TableEvent
     public static TableEvent Closing(SnowportId group) =>
         new()
         {
-            Id = Snowport.Clock.Create(),
+            Id = SnowportId.Create(),
             Group = group,
             End = GroupEnd.Closed,
         };
@@ -115,7 +115,7 @@ public class TableEvent
     public static TableEvent Canceling(SnowportId group) =>
         new()
         {
-            Id = Snowport.Clock.Create(),
+            Id = SnowportId.Create(),
             Group = group,
             End = GroupEnd.Canceled,
         };

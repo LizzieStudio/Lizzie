@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Definition dialog for a <see cref="VcZone"/>. Edits footprint size and the per-player
 /// see/move rules that are stored on the zone's prototype parameters.

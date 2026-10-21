@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 public partial class CameraManager : Node3D
 {
     private ICamera _perspectiveViewCamera;

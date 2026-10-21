@@ -1,3 +1,5 @@
+namespace Lizzie;
+
 /// <summary>
 /// Names for the events a drag and drop writes, so they can be told apart from other events.
 /// No <see cref="Command"/> has them and they're never in <see cref="CommandList"/>,

@@ -2,6 +2,8 @@ using System;
 using Godot;
 using Lizzie.Scripts.Templating;
 
+namespace Lizzie;
+
 public partial class BooleanParamControl : HBoxContainer, IParamControl
 {
     // Called when the node enters the scene tree for the first time.

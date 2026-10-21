@@ -2,16 +2,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 /// <summary>
 /// What a component is. Its prototype and which item from that prototype.
 /// </summary>
 [JsonName("ComponentVariant")]
 public record ComponentVariant : Atom
 {
-    public static readonly Id<ComponentVariant, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<ComponentVariant, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
@@ -39,7 +41,7 @@ public record ComponentVariant : Atom
     public static ComponentVariant Capture(VisualComponentBase c) =>
         new()
         {
-            Id = Snowport.Clock.CreateTag(),
+            Id = SnowTag.Create(),
             PrototypeRef = c.PrototypeRef,
             Item = c.Item,
         };

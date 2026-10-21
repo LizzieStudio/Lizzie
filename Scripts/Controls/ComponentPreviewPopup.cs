@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 public partial class ComponentPreviewPopup : Window
 {
     private ComponentPreview _preview;

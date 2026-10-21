@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Lizzie;
+
 /// <summary>
 /// The permission tier a zone grants a given player over a component inside it.
 /// Ordered from least to most restrictive so that "most restrictive wins" is simply the max.

@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Utilities to create an in-memory template and dataset for quick dice.
 /// </summary>

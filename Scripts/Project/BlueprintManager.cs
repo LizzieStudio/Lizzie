@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// The window for blueprints.
 /// </summary>
@@ -102,18 +104,14 @@ public partial class BlueprintManager : Window, ICommandView
 
         AddChildren(_tree.GetRoot(), SnowTag.Empty);
 
-        // The shown rows have all moved out from under the dead ones,
-        // and freeing a row frees the rows under it, so only the topmost dead rows are freed.
+        // Freeing a row frees the rows under it, so every dead row comes off the tree before any is freed.
         var dead = _rows.Where(r => !shown.Contains(r.Key)).ToList();
-        foreach (var (id, _) in dead)
+        foreach (var (id, item) in dead)
+        {
             _rows.Remove(id);
-        var topmost = dead.Select(r => r.Value)
-            .Where(item =>
-                item.GetParent() is var parent
-                && (parent == _tree.GetRoot() || shown.Contains(IdOf(parent)))
-            )
-            .ToList();
-        foreach (var item in topmost)
+            item.GetParent().RemoveChild(item);
+        }
+        foreach (var (_, item) in dead)
             item.Free();
 
         void AddChildren(TreeItem parent, SnowTag parentRef)
@@ -239,7 +237,7 @@ public partial class BlueprintManager : Window, ICommandView
                 moved with
                 {
                     ParentRef = parent,
-                    Rank = SnowRank.At(siblings, index, Snowport.Clock.Create()),
+                    Rank = SnowRank.At(siblings, index, SnowportId.Create()),
                 }
             );
     }

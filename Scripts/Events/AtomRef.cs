@@ -5,12 +5,14 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 /// <summary>
 /// Points at one atom by its type and id, for selection and commands.
 /// The atom may be unset, or never written.
 /// </summary>
 /// <remarks>
-/// Make one with <see cref="Id{T, I}.Ref"/> or <see cref="To"/>.
+/// Make one with <see cref="Identity{T, I}.Ref"/> or <see cref="To"/>.
 /// Read it with <see cref="IAtomReader.Get(AtomRef)"/> to get null when the atom does not exist,
 /// or with <see cref="AtomReaderExtensions.Resolve"/> to get a default when the atom does not exist.
 /// </remarks>

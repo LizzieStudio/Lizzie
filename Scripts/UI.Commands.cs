@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// The commands of the menu bar, whose menus are in the main scene. Most open one of the UI's dialogs.
 /// </summary>

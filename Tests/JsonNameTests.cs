@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// Every type that's saved or sent under a polymorphic base, like every <see cref="Atom"/>,
 /// needs a <see cref="JsonNameAttribute"/> of its own.

@@ -7,6 +7,8 @@ using Lizzie.Replication.Machinery;
 using SysVec2 = System.Numerics.Vector2;
 using SysVec4 = System.Numerics.Vector4;
 
+namespace Lizzie;
+
 /// <summary>
 /// In-game Dear ImGui debug console.
 /// Toggle with the backtick (`) key.

@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 [JsonPolymorphic]
 public abstract record ComponentParameters
 {

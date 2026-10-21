@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public abstract partial class VisualComponentGroup : VisualComponentBase
 {
     public CollisionShape3D DragDropCollider { get; set; }
@@ -11,7 +13,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// </summary>
     public IEnumerable<Atom> DropObjects(IEnumerable<ComponentPosition> dropped)
     {
-        var stamp = Snowport.Clock.Create();
+        var stamp = SnowportId.Create();
         return dropped.Select(
             Atom (s, i) =>
                 s with

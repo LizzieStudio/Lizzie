@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using Lizzie.Replication.Machinery;
+
+namespace Lizzie;
 
 /// <summary>
 /// Makes a save as small as it can be.
@@ -17,7 +20,7 @@ public static class SaveCompaction
     /// Gets the atoms that need to be kept, the ones reachable through their queries, in a fixed order.
     ///
     /// <para>
-    /// An atom is kept when its id, or one of its group keys, holds no SnowTags but those found in kept atoms.
+    /// An atom is kept when its id, or one of its lookup keys, holds no SnowTags but those found in kept atoms.
     /// An <see cref="All{T}"/> key holds no SnowTags, so it keeps every atom it lists,
     /// and a kept atom's own id reaches the atoms grouped under it, like a dataset's rows.
     /// An atom no query lists, like a deleted <see cref="Prototype"/>, stays only while a kept atom refers to it.
@@ -47,12 +50,24 @@ public static class SaveCompaction
         }
 
         return kept.OrderBy(a => a.GetType().Name, StringComparer.Ordinal)
-            .ThenBy(a => a, Comparer<Atom>.Create((a, b) => IdQuery.For(a.GetType()).Compare(a, b)))
+            .ThenBy(
+                a =>
+                    JsonSerializer.Serialize(
+                        IdQuery.For(a.GetType()).Of(a),
+                        LizzieJson.EventOptions
+                    ),
+                NumericOrder
+            )
             .ToArray();
     }
 
+    private static readonly StringComparer NumericOrder = StringComparer.Create(
+        CultureInfo.InvariantCulture,
+        CompareOptions.NumericOrdering
+    );
+
     /// <summary>
-    /// The SnowTags in each id and group key that could keep <paramref name="atom"/>.
+    /// The SnowTags in each id and lookup key that could keep <paramref name="atom"/>.
     /// </summary>
     private static List<HashSet<SnowTag>> Keys(Atom atom)
     {

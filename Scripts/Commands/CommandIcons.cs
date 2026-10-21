@@ -1,3 +1,5 @@
+namespace Lizzie;
+
 /// <summary>
 /// The icons commands show in menus and on buttons, as <see cref="Command.Icon"/> paths,
 /// so commands that share an icon name it once.

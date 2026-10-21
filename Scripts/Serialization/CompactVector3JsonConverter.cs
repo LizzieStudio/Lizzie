@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Serializes a <see cref="Vector3"/> as a compact <c>[x, y, z]</c> array instead of
 /// Godot's self-describing <c>{"type":"Vector3","args":[…]}</c> form, to shrink the

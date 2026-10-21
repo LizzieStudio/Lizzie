@@ -1,12 +1,14 @@
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 [JsonName("Prototype")]
 public record Prototype : Atom
 {
-    public static readonly Id<Prototype, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Prototype, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 

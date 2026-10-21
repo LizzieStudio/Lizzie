@@ -3,6 +3,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Edits a <see cref="QuickSide"/>, with a row for each suit.
 /// </summary>

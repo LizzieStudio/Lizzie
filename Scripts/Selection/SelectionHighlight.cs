@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Outlines controls in the colors given by <see cref="LocalSelection.SelectionColors"/>,
 /// so that 2D controls can implement Lizzie selection highlighting in the player's color.

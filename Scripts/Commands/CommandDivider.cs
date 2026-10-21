@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// A dividing line in a <see cref="CommandMenu"/>.
 /// Command menus merge adjacent dividers and trim dividers left at either end.

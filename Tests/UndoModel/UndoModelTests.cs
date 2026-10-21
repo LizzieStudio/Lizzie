@@ -6,6 +6,8 @@ using CsCheck;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// Model-based properties. Random sessions of actions, gestures, reversals, departures and odd flags
 /// are played out, with <see cref="Expected"/> deciding what each reversal writes,

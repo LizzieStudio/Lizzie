@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class DatasetEditor : Window, ICommandView
 {
     /// <summary>
@@ -430,7 +432,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (string.IsNullOrWhiteSpace(name))
             return;
 
-        var ds = new DataSet { Id = Snowport.Clock.CreateTag(), Name = name };
+        var ds = new DataSet { Id = SnowTag.Create(), Name = name };
         AtomService.Instance.Write(ds);
 
         ShownDataSet.Value = ds.Id;
@@ -791,7 +793,7 @@ public partial class DatasetEditor : Window, ICommandView
         AtomService.Instance.Write(
             row with
             {
-                Rank = SnowRank.At(others, index, Snowport.Clock.Create()),
+                Rank = SnowRank.At(others, index, SnowportId.Create()),
             }
         );
     }
@@ -892,7 +894,7 @@ public partial class DatasetEditor : Window, ICommandView
         AtomService.Instance.Write(
             column with
             {
-                Rank = SnowRank.At(columns, to > from ? to - 1 : to, Snowport.Clock.Create()),
+                Rank = SnowRank.At(columns, to > from ? to - 1 : to, SnowportId.Create()),
             }
         );
     }

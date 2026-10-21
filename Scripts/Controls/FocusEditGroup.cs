@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Makes grouping inputs to a focusable control easier.
 /// </summary>
@@ -26,9 +28,8 @@ public partial class FocusEditGroup : Node
     }
 
     /// <inheritdoc cref="AtomService.Update"/>
-    public void Update<T, I>(Id<T, I> byId, I id, Func<T, T> change)
+    public void Update<T, I>(Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
-        where I : IComparable<I>
     {
         if (AtomService.Instance.Get(byId, id) is not { } atom)
             return;

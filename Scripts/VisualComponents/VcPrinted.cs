@@ -6,6 +6,8 @@ using Godot;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using Vector2 = Godot.Vector2;
 
+namespace Lizzie;
+
 /// <summary>
 /// VcPrinted represents any object that is flat on two opposite sides, a geometric prism.
 /// This includes cards, tiles, and most wood pieces like meeples.

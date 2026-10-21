@@ -5,6 +5,8 @@ using CsCheck;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// Laws any undo implementation must obey, whatever its rules, checked on multiplayer sessions where
 /// no model says what should happen. <see cref="UndoTestBase.Actual"/> decides what every reversal writes.

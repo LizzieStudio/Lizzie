@@ -1,3 +1,5 @@
+namespace Lizzie;
+
 public static class PrototypeCommands
 {
     public static readonly Command Edit = new AtomCommand<Prototype>

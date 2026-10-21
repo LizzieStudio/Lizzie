@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Linq;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class SequenceExpressionsTests
 {
     [Theory]

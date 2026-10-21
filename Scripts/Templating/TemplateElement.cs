@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Godot;
-using static TextureFactory.TextureObject;
+using static Lizzie.TextureFactory.TextureObject;
 
 namespace Lizzie.Scripts.Templating;
 

@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>Which seat each player is sitting in, by their Snowport source.</para>
 /// <para>

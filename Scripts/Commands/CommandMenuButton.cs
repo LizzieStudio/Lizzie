@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>A button that opens a menu of the <see cref="CommandItem"/>s and <see cref="CommandDivider"/>s under it.</para>
 ///

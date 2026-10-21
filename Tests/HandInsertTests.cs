@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class HandInsertTests
 {
     private static readonly SnowTag Hand = new(100);

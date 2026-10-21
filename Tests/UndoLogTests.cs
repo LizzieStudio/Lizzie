@@ -5,6 +5,8 @@ using CsCheck;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class UndoLogTests
 {
     private readonly ITestOutputHelper _output;

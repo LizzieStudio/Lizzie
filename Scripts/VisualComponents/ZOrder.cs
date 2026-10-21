@@ -1,6 +1,8 @@
 using System;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 /// <summary>
 /// Where a reorder places a component in the stack.
 /// </summary>

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 public abstract partial class BaseCamera : Node3D, ICamera
 {
     [Export]

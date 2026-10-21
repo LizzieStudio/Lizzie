@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Lizzie;
+
 [JsonName("DataSet")]
 public record DataSet : Atom
 {
-    public static readonly Id<DataSet, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<DataSet, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
@@ -23,17 +25,17 @@ public record DataSet : Atom
 [JsonName("DataColumn")]
 public record DataColumn : Atom, IRanked
 {
-    public static readonly Id<DataColumn, SnowTag> ById = new(c => c.Id);
+    public static readonly Identity<DataColumn, SnowTag> ById = new(c => c.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
     /// <summary>
     /// The columns of each dataset, in no order. <see cref="AtomReaderExtensions.GetColumns"/> sorts them.
     /// </summary>
-    public static readonly Group<DataColumn, SnowTag> ByDataSet = new(c => c.DataSetId);
+    public static readonly Lookup<DataColumn, SnowTag> ByDataSet = new(c => c.DataSetId);
 
     /// <summary>
     /// The dataset this column belongs to.
@@ -65,17 +67,17 @@ public record DataColumn : Atom, IRanked
 [JsonName("DataRow")]
 public record DataRow : Atom, IRanked
 {
-    public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<DataRow, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
     /// <summary>
     /// The rows of each dataset, in no order. <see cref="AtomReaderExtensions.GetRows"/> sorts them.
     /// </summary>
-    public static readonly Group<DataRow, SnowTag> ByDataSet = new(r => r.DataSetId);
+    public static readonly Lookup<DataRow, SnowTag> ByDataSet = new(r => r.DataSetId);
 
     /// <summary>
     /// The dataset this row belongs to.
@@ -108,7 +110,7 @@ public record DataCell : Atom
     /// <remarks>
     /// When you get a cell that doesn't exist, a stand-in is created.
     /// </remarks>
-    public static readonly Id<DataCell, CellId> ById = new(
+    public static readonly Identity<DataCell, CellId> ById = new(
         c => c.Id,
         unwritten: id => new DataCell { Id = id }
     );
@@ -135,8 +137,4 @@ public record DataCell : Atom
 /// <summary>
 /// The Id of a <see cref="DataCell"/>.
 /// </summary>
-public readonly record struct CellId(SnowTag Row, SnowTag Column) : IComparable<CellId>
-{
-    public int CompareTo(CellId other) =>
-        Row != other.Row ? Row.CompareTo(other.Row) : Column.CompareTo(other.Column);
-}
+public readonly record struct CellId(SnowTag Row, SnowTag Column);

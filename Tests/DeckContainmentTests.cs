@@ -4,6 +4,8 @@ using System.Linq;
 using Godot;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// A card in a deck is contained by the deck, the way a token in a bag is.
 /// </summary>

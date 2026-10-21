@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 public partial class ComponentTemplate : Resource
 {
     [Export]

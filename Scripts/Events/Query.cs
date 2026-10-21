@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+namespace Lizzie;
+
 /// <summary>
 /// A way to get atoms, declared as a static field on the atom's type.
 ///
 /// <para>
-/// Currently, there are only two types of <see cref="Query"/>: <see cref="Id{T, I}"/> and <see cref="Group{T, G}"/>.
+/// Currently, there are only two types of <see cref="Query"/>: <see cref="Identity{T, I}"/> and <see cref="Lookup{T, K}"/>.
 /// A <see cref="AtomService.Watch"/> action that reads a <see cref="Query"/> will then update if the results of that <see cref="Query"/> change.
 /// The <see cref="Query"/>s are also used to determine which atoms survive a save. An atom is kept if it is accessible from a chain of <see cref="Query"/>s.
 /// </para>
@@ -20,12 +22,12 @@ public abstract class Query
     private protected Query() { }
 
     /// <summary>
-    /// The id or group key of <paramref name="atom"/>, boxed. Null for a group it isn't in.
+    /// The id or lookup key of <paramref name="atom"/>, boxed. Null for a lookup it isn't in.
     /// </summary>
     internal abstract object Of(Atom atom);
 
     /// <summary>
-    /// The queries <paramref name="atomType"/> declares as public static fields: its Id and its Groups.
+    /// The queries <paramref name="atomType"/> declares as public static fields: its Id and its Lookups.
     /// </summary>
     internal static IReadOnlyList<Query> DeclaredOn(Type atomType)
     {
@@ -61,11 +63,6 @@ public abstract class IdQuery : Query
     private protected abstract Type AtomType { get; }
 
     /// <summary>
-    /// Orders two atoms of this Id's type by their ids.
-    /// </summary>
-    internal abstract int Compare(Atom a, Atom b);
-
-    /// <summary>
     /// What stands in for the atom with <paramref name="id"/> before it exists, or null if the type has no stand-in.
     /// </summary>
     internal abstract Atom Unwritten(object id);
@@ -88,7 +85,7 @@ public abstract class IdQuery : Query
         var ids = DeclaredOn(atomType).OfType<IdQuery>().ToList();
         if (ids.Count != 1 || ids[0] == null || ids[0].AtomType != atomType)
             throw new InvalidOperationException(
-                $"{atomType.Name} needs exactly one Id, declared as a public static readonly Id<{atomType.Name}, I> field, "
+                $"{atomType.Name} needs exactly one Id, declared as a public static readonly Identity<{atomType.Name}, I> field, "
                     + "which says what makes two writes the same atom, like `public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);`, "
                     + $"or as `public static readonly Singleton<{atomType.Name}> Only = new();` if it has only one atom."
             );
@@ -109,14 +106,13 @@ public abstract class IdQuery : Query
 /// Writes of <typeparamref name="T"/> that produce the same id are considered to be the same atom.
 /// A new write with the same id replaces the old.
 /// </para>
-/// <code>public static readonly Id&lt;DataRow, SnowTag&gt; ById = new(r => r.Id);</code>
-/// Read an atom with <see cref="IAtomReader.Get{T, I}(Id{T, I}, I)"/>.
+/// <code>public static readonly Identity&lt;DataRow, SnowTag&gt; ById = new(r => r.Id);</code>
+/// Read an atom with <see cref="IAtomReader.Get{T, I}(Identity{T, I}, I)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
-/// <typeparam name="I">The type of the id, which orders atoms in a save.</typeparam>
-public class Id<T, I> : IdQuery
+/// <typeparam name="I">The type of the id.</typeparam>
+public class Identity<T, I> : IdQuery
     where T : Atom
-    where I : IComparable<I>
 {
     private readonly Func<T, I> _of;
     private readonly Func<I, T> _unwritten;
@@ -128,7 +124,7 @@ public class Id<T, I> : IdQuery
     /// What a command or a relation acts on for an atom that doesn't exist.
     /// Reads still give null for it.
     /// </param>
-    public Id(Func<T, I> of, Func<I, T> unwritten = null)
+    public Identity(Func<T, I> of, Func<I, T> unwritten = null)
     {
         _of = of;
         _unwritten = unwritten;
@@ -152,15 +148,12 @@ public class Id<T, I> : IdQuery
 
     internal override Type IdType => typeof(I);
 
-    internal override int Compare(Atom a, Atom b) =>
-        Comparer<I>.Default.Compare(_of((T)a), _of((T)b));
-
     private protected override Type AtomType => typeof(T);
 }
 
 /// <summary>
 /// Declares a type with only one atom, like the project settings.
-/// An atom with <see cref="Singleton{T}"/> does not need an <see cref="Id{T, I}"/>.
+/// An atom with <see cref="Singleton{T}"/> does not need an <see cref="Identity{T, I}"/>.
 ///
 /// <code>public static readonly Singleton&lt;Seating&gt; Only = new();</code>
 ///
@@ -168,7 +161,7 @@ public class Id<T, I> : IdQuery
 /// which gives the default <typeparamref name="T"/> until the first write.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
-public sealed class Singleton<T>() : Id<T, SingletonId>(_ => default)
+public sealed class Singleton<T>() : Identity<T, SingletonId>(_ => default)
     where T : Atom, new()
 {
     // What reads give before the first write, made on the first read.
@@ -180,40 +173,37 @@ public sealed class Singleton<T>() : Id<T, SingletonId>(_ => default)
 /// <summary>
 /// The id every write of a singleton shares. See <see cref="Singleton{T}"/>.
 /// </summary>
-public readonly record struct SingletonId : IComparable<SingletonId>
-{
-    public int CompareTo(SingletonId other) => 0;
-}
+public readonly record struct SingletonId;
 
 /// <summary>
-/// A way to list atoms of <typeparamref name="T"/> by a key of <typeparamref name="G"/>.
+/// A way to list atoms of <typeparamref name="T"/> by a key of <typeparamref name="K"/>.
 ///
-/// <code>public static readonly Group&lt;DataRow, SnowTag&gt; ByDataSet = new(r => r.DataSetId);</code>
+/// <code>public static readonly Lookup&lt;DataRow, SnowTag&gt; ByDataSet = new(r => r.DataSetId);</code>
 ///
 /// You could read from one of the keys of <c>ByDataSet</c> with
 ///
 /// <code>R.Get(DataRow.ByDataSet, dataSetId)</code>
 ///
-/// You may declare multiple Groups on one atom type.
-/// Returning null for a group key keeps the atom out of any grouping.
-/// Read a group with <see cref="IAtomReader.Get{T, G}(Group{T, G}, G)"/>.
+/// You may declare multiple Lookups on one atom type.
+/// Returning null for a key keeps the atom out of the lookup.
+/// Read a lookup with <see cref="IAtomReader.Get{T, K}(Lookup{T, K}, K)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
-/// <typeparam name="G">The type of the group key.</typeparam>
-public class Group<T, G> : Query
+/// <typeparam name="K">The type of the key.</typeparam>
+public class Lookup<T, K> : Query
     where T : Atom
 {
-    private readonly Func<T, G> _of;
+    private readonly Func<T, K> _of;
 
     /// <param name="of">
-    /// The grouping an atom is in, or null for none. It may only read the atom.
+    /// The key an atom is under, or null for none. It may only read the atom.
     /// </param>
-    public Group(Func<T, G> of) => _of = of;
+    public Lookup(Func<T, K> of) => _of = of;
 
     /// <summary>
-    /// The grouping <paramref name="atom"/> is in, or null for none.
+    /// The key <paramref name="atom"/> is under, or null for none.
     /// </summary>
-    public G Of(T atom) => _of(atom);
+    public K Of(T atom) => _of(atom);
 
     internal override object Of(Atom atom) => _of((T)atom);
 }
@@ -224,7 +214,7 @@ public class Group<T, G> : Query
 /// <code>public static readonly StagedId&lt;ComponentPosition&gt; ById = new(c => c.Id);</code>
 /// </summary>
 public sealed class StagedId<T>(Func<T, SnowTag> of)
-    : Id<T, StageKey>(atom => new(atom.Stage, of(atom))),
+    : Identity<T, StageKey>(atom => new(atom.Stage, of(atom))),
         IStagedId
     where T : StagedAtom;
 
@@ -242,7 +232,7 @@ internal interface IStagedId;
 /// This is used internally to differentiate between a component that was inherited from a blueprint
 /// and a component that was actually updated in a stage.
 /// </remarks>
-public sealed class Written<T>() : Group<T, SnowTag>(atom => atom.Stage)
+public sealed class Written<T>() : Lookup<T, SnowTag>(atom => atom.Stage)
     where T : StagedAtom;
 
 /// <summary>
@@ -252,5 +242,5 @@ public sealed class Written<T>() : Group<T, SnowTag>(atom => atom.Stage)
 /// </summary>
 /// <param name="where">Which atoms it lists, or every one when null.</param>
 public sealed class All<T>(Func<T, bool> where = null)
-    : Group<T, bool?>(atom => where == null || where(atom) ? true : null)
+    : Lookup<T, bool?>(atom => where == null || where(atom) ? true : null)
     where T : Atom;

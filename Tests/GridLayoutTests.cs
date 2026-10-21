@@ -4,6 +4,8 @@ using Lizzie.AssetManagement;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class GridLayoutTests
 {
     [Theory]

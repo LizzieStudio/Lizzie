@@ -7,6 +7,8 @@ using System.Threading;
 using Godot;
 using Lizzie.Scripts.Templating;
 
+namespace Lizzie;
+
 public partial class TemplateCreator : Window
 {
     [Export]
@@ -321,7 +323,7 @@ public partial class TemplateCreator : Window
 
             var ni = _elementTree.CreateItem(_rootItem);
 
-            te.Id = Snowport.Clock.CreateTag();
+            te.Id = SnowTag.Create();
             ni.SetMetadata(0, te.Id);
             ni.SetText(0, te.ElementName);
 
@@ -622,7 +624,7 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
-        var id = Snowport.Clock.CreateTag();
+        var id = SnowTag.Create();
 
         var t = TemplateEngine.BuildTemplateElement(
             TemplateEngine.MapTemplateElementToProjectFormat(_selectedElement)
@@ -675,7 +677,7 @@ public partial class TemplateCreator : Window
 
     private void AddTextureElement(ITemplateElement.TemplateElementType type)
     {
-        var id = Snowport.Clock.CreateTag();
+        var id = SnowTag.Create();
 
         TemplateElement t;
 
@@ -1162,7 +1164,7 @@ public partial class TemplateCreator : Window
 
         var t = new Template
         {
-            Id = Snowport.Clock.CreateTag(),
+            Id = SnowTag.Create(),
             Name = _newTemplateName.Text,
             SizeTemplate = size,
             Width = inches.Width,

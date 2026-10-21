@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using static VisualComponentBase;
+using static Lizzie.VisualComponentBase;
+
+namespace Lizzie;
 
 /// <summary>
 /// Commands for any table component.
@@ -154,7 +156,7 @@ public static class ComponentCommands
     )
     {
         var ordered = components.OrderBy(s => s.ZOrder).ToList();
-        var stamp = Snowport.Clock.Create();
+        var stamp = SnowportId.Create();
         return ordered.Select((s, i) => s with { ZOrder = new ZOrder(target, i, stamp) });
     }
 }

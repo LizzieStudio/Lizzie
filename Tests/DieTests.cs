@@ -4,6 +4,8 @@ using System.Linq;
 using Godot;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 public class DieTests
 {
     /// <summary>A die with a suit for each of the <c>|</c>-separated <paramref name="values"/>.</summary>

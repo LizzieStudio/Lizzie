@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 public partial class TableSurface : StaticBody3D
 {
     private MeshInstance3D _tableMesh;

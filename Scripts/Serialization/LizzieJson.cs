@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Godot;
 
+namespace Lizzie;
+
 public static class LizzieJson
 {
     public static readonly JsonSerializerOptions EventOptions = new()

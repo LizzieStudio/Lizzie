@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 public partial class DiePanelDialogResult : ComponentPanelDialogResult
 {
     private LineEdit _nameInput;

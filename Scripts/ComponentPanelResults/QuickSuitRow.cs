@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// Edits one <see cref="QuickSuit"/>.
 /// </summary>

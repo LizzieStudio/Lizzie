@@ -73,21 +73,21 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     AtomEntry IAtomStore.Find(object id) => id is StageKey typed ? Find(typed) : default;
 
     /// <summary>
-    /// The atoms with <paramref name="key"/> in <paramref name="group"/> as written for a <see cref="Written{T}"/>,
+    /// The atoms with <paramref name="key"/> in <paramref name="lookup"/> as written for a <see cref="Written{T}"/>,
     /// and as each stage shows them otherwise.
     /// </summary>
-    public IReadOnlyList<T> InGroup<G>(Group<T, G> group, G key) =>
-        group is Written<T> ? _raw.InGroup(group, key) : _resolved.InGroup(group, key);
+    public IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key) =>
+        lookup is Written<T> ? _raw.Get(lookup, key) : _resolved.Get(lookup, key);
 
-    public int Count<G>(Group<T, G> group, G key) =>
-        group is Written<T> ? _raw.Count(group, key) : _resolved.Count(group, key);
+    public int Count<K>(Lookup<T, K> lookup, K key) =>
+        lookup is Written<T> ? _raw.Count(lookup, key) : _resolved.Count(lookup, key);
 
     public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading) =>
         _raw.Apply(log, changed, bulkLoading);
 
     public void FlushBulkLoad() => _raw.FlushBulkLoad();
 
-    // The written atoms' id touches say what to resolve again; the rest are Written group touches to pass on.
+    // The written atoms' id touches say what to resolve again; the rest are Written lookup touches to pass on.
     private void OnRawChanged(IReadOnlyList<Touch> touches)
     {
         foreach (var touch in touches)

@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 
+namespace Lizzie;
+
 /// <summary>
 /// Which of its prototype's items a component is.
 /// </summary>

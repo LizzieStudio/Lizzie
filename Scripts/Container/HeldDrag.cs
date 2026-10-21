@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>The Godot drag-and-drop data of a gesture that holds components: what it holds, and its undo group.</para>
 /// <para>

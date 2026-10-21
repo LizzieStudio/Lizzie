@@ -1,23 +1,25 @@
 using System;
 using System.Collections.Generic;
 
+namespace Lizzie;
+
 /// <summary>
 /// A blueprint or a game being played.
 /// </summary>
 [JsonName("Stage")]
 public sealed record Stage : Atom, IRanked
 {
-    public static readonly Id<Stage, SnowTag> ById = new(s => s.Id);
+    public static readonly Identity<Stage, SnowTag> ById = new(s => s.Id);
 
     /// <summary>
     /// Blueprints that are not deleted, by the stage they build on, with <see cref="SnowTag.Empty"/> for the roots.
     /// </summary>
-    public static readonly Group<Stage, SnowTag?> Children = new(s =>
+    public static readonly Lookup<Stage, SnowTag?> Children = new(s =>
         s.Deleted || s.IsGame ? null : s.ParentRef
     );
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Snowport.CreateTag"/>.
+    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
@@ -52,7 +54,7 @@ public sealed record Stage : Atom, IRanked
         var current = R.Get(CurrentGame.Only);
         var game = new Stage
         {
-            Id = Snowport.Clock.CreateTag(),
+            Id = SnowTag.Create(),
             Name = "Game",
             ParentRef = blueprint,
             IsGame = true,

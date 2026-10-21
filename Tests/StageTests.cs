@@ -1,6 +1,8 @@
 using System.Linq;
 using Xunit;
 
+namespace Lizzie.Tests;
+
 /// <summary>
 /// Blueprints can be deleted only when nothing builds on them,
 /// and a stage exists only while its parents lead up to a root blueprint.

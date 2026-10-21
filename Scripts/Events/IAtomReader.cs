@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Lizzie.Replication.Machinery;
 
+namespace Lizzie;
+
 /// <summary>
 /// Reads atoms.
 /// </summary>
@@ -22,23 +24,22 @@ public interface IAtomReader
     /// <summary>
     /// Gets the atom with <paramref name="id"/>, or null if it is missing or unset.
     /// </summary>
-    T Get<T, I>(Id<T, I> byId, I id)
-        where T : Atom
-        where I : IComparable<I>;
-
-    /// <summary>
-    /// Gets the atoms with <paramref name="key"/> in <paramref name="group"/> that aren't unset.
-    /// </summary>
-    IReadOnlyList<T> Get<T, G>(Group<T, G> group, G key)
+    T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom;
 
     /// <summary>
-    /// How many atoms with <paramref name="key"/> in <paramref name="group"/> aren't unset.
+    /// Gets the atoms with <paramref name="key"/> in <paramref name="lookup"/> that aren't unset.
+    /// </summary>
+    IReadOnlyList<T> Get<T, K>(Lookup<T, K> lookup, K key)
+        where T : Atom;
+
+    /// <summary>
+    /// How many atoms with <paramref name="key"/> in <paramref name="lookup"/> aren't unset.
     /// </summary>
     /// <remarks>
     /// A watch that reads only this reruns only when the count changes, not when the atom values change.
     /// </remarks>
-    int Count<T, G>(Group<T, G> group, G key)
+    int Count<T, K>(Lookup<T, K> lookup, K key)
         where T : Atom;
 }
 
@@ -51,7 +52,7 @@ public interface IAtomReader
 public interface IWatchReader : IAtomReader
 {
     /// <summary>
-    /// Finds the <paramref name="basis"/> of every atom with <paramref name="key"/> in <paramref name="group"/>,
+    /// Finds the <paramref name="basis"/> of every atom with <paramref name="key"/> in <paramref name="lookup"/>,
     /// and compares each atom's basis with the one from the previous Sync.
     /// <list type="bullet">
     /// <item>If the bases differ and the previous one wasn't null, the atom appears in removed, with its previous value and basis.</item>
@@ -60,25 +61,23 @@ public interface IWatchReader : IAtomReader
     /// <para>The expectation is that you will remove the nodes in removed and add the nodes in added.</para>
     /// A null basis means "no child".
     /// </summary>
-    GroupDiff<T, V> Diff<T, G, V>(Group<T, G> group, G key, Basis<T, V> basis)
+    LookupDiff<(T Atom, V Value)> Diff<T, K, V>(Lookup<T, K> lookup, K key, Basis<T, V> basis)
         where T : Atom
         where V : struct;
 }
 
 /// <summary>
-/// The children a parent should remove, with their previous bases, and the children it should add,
-/// from <see cref="IWatchReader.Diff{T, G, V}"/>.
+/// The children a parent should remove and the children it should add, from a Diff.
+/// With a basis, each entry pairs an atom with its basis: the previous one in Removed, the new one in Added.
+/// Without one, each entry is just the atom.
 /// </summary>
-public readonly record struct GroupDiff<T, V>(
-    IReadOnlyList<(T Atom, V Value)> Removed,
-    IReadOnlyList<(T Atom, V Value)> Added
-);
+public readonly record struct LookupDiff<E>(IReadOnlyList<E> Removed, IReadOnlyList<E> Added);
 
 /// <summary>
 /// Helps determine when a Node needs to be rebuilt. If the Basis changes, the Node needs to be replaced.
 ///
 /// <para>
-/// In a parent Node, declare a static <see cref="Basis{T, V}"/> and run <see cref="IWatchReader.Diff{T, G, V}"/>.
+/// In a parent Node, declare a static <see cref="Basis{T, V}"/> and run <see cref="IWatchReader.Diff{T, K, V}"/>.
 /// Any atom whose <see cref="Basis{T, V}"/> changes will appear in Removed and Added so that it will be recreated.
 /// </para>
 ///
@@ -128,23 +127,32 @@ public static class AtomReaderExtensions
     public static int Count<T>(this IAtomReader R, All<T> all)
         where T : Atom => R.Count(all, true);
 
-    /// <inheritdoc cref="IWatchReader.Diff{T, G, V}"/>
-    public static GroupDiff<T, V> Diff<T, V>(this IWatchReader R, All<T> all, Basis<T, V> basis)
+    /// <inheritdoc cref="IWatchReader.Diff{T, K, V}"/>
+    public static LookupDiff<(T Atom, V Value)> Diff<T, V>(
+        this IWatchReader R,
+        All<T> all,
+        Basis<T, V> basis
+    )
         where T : Atom
         where V : struct => R.Diff(all, true, basis);
 
     /// <summary>
-    /// The atoms that left or joined <paramref name="key"/> of <paramref name="group"/> since the previous Sync.
+    /// The atoms that left or joined <paramref name="key"/> of <paramref name="lookup"/> since the previous Sync.
     /// </summary>
-    public static GroupDiff<T, bool> Diff<T, G>(this IWatchReader R, Group<T, G> group, G key)
-        where T : Atom => R.Diff(group, key, Member<T>.Basis);
+    public static LookupDiff<T> Diff<T, K>(this IWatchReader R, Lookup<T, K> lookup, K key)
+        where T : Atom
+    {
+        var (removed, added) = R.Diff(lookup, key, Member<T>.Basis);
+        return new(removed.Select(e => e.Atom).ToList(), added.Select(e => e.Atom).ToList());
+    }
 
-    /// <inheritdoc cref="Diff{T, G}(IWatchReader, Group{T, G}, G)"/>
-    public static GroupDiff<T, bool> Diff<T>(this IWatchReader R, All<T> all)
+    /// <inheritdoc cref="Diff{T, K}(IWatchReader, Lookup{T, K}, K)"/>
+    public static LookupDiff<T> Diff<T>(this IWatchReader R, All<T> all)
         where T : Atom => R.Diff(all, true);
 
     /// <remarks>
-    /// Ignore this. It's just here to provide an "Identity Function" to <see cref="Diff{T, G}"/>.
+    /// The basis for <see cref="Diff{T, K}"/>. Every atom has the same basis,
+    /// so only atoms that leave or join appear in the diff.
     /// </remarks>
     private static class Member<T>
         where T : Atom
@@ -185,13 +193,13 @@ public static class AtomReaderExtensions
     public static List<DataColumn> GetColumns(this IAtomReader R, SnowTag datasetRef) =>
         Ranked(R, DataColumn.ByDataSet, datasetRef);
 
-    private static List<T> Ranked<T>(IAtomReader R, Group<T, SnowTag> group, SnowTag datasetRef)
+    private static List<T> Ranked<T>(IAtomReader R, Lookup<T, SnowTag> lookup, SnowTag datasetRef)
         where T : Atom, IRanked
     {
         if (datasetRef == SnowTag.Empty)
             return [];
 
-        var items = R.Get(group, datasetRef).ToList();
+        var items = R.Get(lookup, datasetRef).ToList();
         items.Sort((a, b) => a.Rank.CompareTo(b.Rank));
         return items;
     }

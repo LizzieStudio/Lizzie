@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Godot;
 using Lizzie.AssetManagement;
 
+namespace Lizzie;
+
 public partial class ImageManager : Window, ICommandView
 {
     private Button _backButton;
@@ -171,7 +173,7 @@ public partial class ImageManager : Window, ICommandView
         //create the new asset
         var asset = new ImageAsset
         {
-            Id = Snowport.Clock.CreateTag(),
+            Id = SnowTag.Create(),
             Name = _nameInput.Text,
             CloudPath = _urlInput.Text,
         };
@@ -193,9 +195,9 @@ public partial class ImageManager : Window, ICommandView
     {
         var (removed, added) = R.Diff(ImageAsset.All);
 
-        foreach (var (a, _) in removed)
-            RemoveImageTile(a.Id);
-        foreach (var (a, _) in added)
+        foreach (var r in removed)
+            RemoveImageTile(r.Id);
+        foreach (var a in added)
             AddImageTile(a.Id);
 
         var open = R.Get(ImageAsset.ById, _open);

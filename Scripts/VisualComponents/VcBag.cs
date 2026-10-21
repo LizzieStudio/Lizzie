@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 public partial class VcBag : VisualComponentGroup
 {
     private Label3D _componentCount;

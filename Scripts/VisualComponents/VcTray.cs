@@ -2,6 +2,8 @@ using System;
 using System.Text.Json.Serialization;
 using Godot;
 
+namespace Lizzie;
+
 public partial class VcTray : VisualComponentGroup
 {
     private Prototype _prototype;
@@ -127,7 +129,7 @@ public partial class VcTray : VisualComponentGroup
             return ([], []);
         var variant = new ComponentVariant
         {
-            Id = Snowport.Clock.CreateTag(),
+            Id = SnowTag.Create(),
             PrototypeRef = _prototype.Id,
             Item = _item,
         };
@@ -135,7 +137,7 @@ public partial class VcTray : VisualComponentGroup
             [
                 new ComponentPosition
                 {
-                    Id = Snowport.Clock.CreateTag(),
+                    Id = SnowTag.Create(),
                     Stage = Key.Stage,
                     VariantRef = variant.Id,
                 },

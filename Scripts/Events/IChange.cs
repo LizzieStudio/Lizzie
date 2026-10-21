@@ -1,3 +1,5 @@
+namespace Lizzie;
+
 /// <summary>
 /// Something an event does to one atom.
 ///

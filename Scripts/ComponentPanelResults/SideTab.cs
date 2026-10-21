@@ -1,6 +1,8 @@
 using System;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// One tab of a <see cref="SideEditor"/>.
 /// </summary>

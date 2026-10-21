@@ -2,6 +2,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
 /// <para>An item in the menu of a <see cref="CommandMenuButton"/>.</para>
 ///
