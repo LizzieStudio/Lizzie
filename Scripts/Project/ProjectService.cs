@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Godot;
 using Lizzie.Replication.Machinery;
+using SaveUpgrades;
 
 namespace Lizzie;
 
 public partial class ProjectService : Node
 {
-    public const string SampleProjectName = "Test Project";
-
     private static ProjectService _instance;
 
     public static ProjectService Instance
@@ -113,9 +114,9 @@ public partial class ProjectService : Node
     /// <summary>
     /// Starts a fresh, unnamed game.
     /// </summary>
-    public void NewGame(string filename = null)
+    public void NewGame()
     {
-        CurrentProject = new Project { Filename = filename };
+        CurrentProject = new Project();
         HasUnsavedChanges = false;
         EnsureSeatContainers();
         EnsureGame();
@@ -131,11 +132,91 @@ public partial class ProjectService : Node
         NewGame();
     }
 
-    public Project LoadProject(string name)
+    /// <summary>
+    /// Gets the save file name with version number.
+    /// </summary>
+    private static string SaveFile(string name, int format) => $"{name}.v{format}.proj";
+
+    /// <summary>
+    /// Loads the highest version save that this version of Lizzie can read.
+    /// Returns null when the project has no save.
+    /// </summary>
+    /// <param name="name">The name of the file to attempt to load</param>
+    /// <param name="warning">A warning to give the player when the load succeeds with an important issue.</param>
+    /// <exception cref="ProjectLoadException" />
+    public Project LoadProject(string name, out string warning)
     {
-        if (!FileAccess.FileExists($"user://{name}.proj"))
+        var formats = DirAccess
+            .GetFilesAt("user://")
+            .SelectMany<string, int?>(file =>
+            {
+                if (Regex.Match(file, @"^(.+)\.v(\d+)\.proj$") is { Success: true } match)
+                {
+                    var filename = match.Groups[1].Value;
+                    var success = int.TryParse(match.Groups[2].Value, out var version);
+                    return filename == name && success ? [version] : [];
+                }
+                else if (Regex.Match(file, @"^(.+)\.proj$") is { Success: true } original)
+                {
+                    var filename = original.Groups[1].Value;
+                    return filename == name ? [0] : [];
+                }
+                return [];
+            })
+            .ToList();
+        int? newer = formats.Where(f => f > SaveUpgrade.Current).Max();
+        int? readable = formats.Where(f => f <= SaveUpgrade.Current).Max();
+        var file = readable is int format and > 0 ? SaveFile(name, format) : $"{name}.proj";
+        var path = $"user://{file}";
+        var newerFile = newer is int n ? SaveFile(name, n) : null;
+        var currentFile = SaveFile(name, SaveUpgrade.Current);
+
+        warning = null;
+        if (!FileAccess.FileExists(path))
         {
-            return null; // Error! We don't have a save to load.
+            if (newerFile != null)
+                throw new ProjectLoadException(
+                    $"\"{newerFile}\" was saved by a newer version of Lizzie. Update Lizzie to open it."
+                );
+            return null;
+        }
+
+        var warnings = new List<string>();
+        if (newerFile != null)
+            warnings.Add(
+                $"\"{newerFile}\" was saved by a newer version of Lizzie, so \"{file}\" was opened instead. "
+                    + $"Upgrade Lizzie to open \"{newerFile}\"."
+            );
+
+        TableEvent[] events;
+        try
+        {
+            // the file has a header and a list of events using JSON-lines
+            var lines = new List<JsonObject>();
+            using (var loadFile = FileAccess.Open(path, FileAccess.ModeFlags.Read))
+                while (!loadFile.EofReached())
+                {
+                    var line = loadFile.GetLine();
+                    if (!string.IsNullOrWhiteSpace(line))
+                        lines.Add(JsonNode.Parse(line).AsObject());
+                }
+
+            if (SaveUpgrade.Run(lines) < SaveUpgrade.Current)
+                warnings.Add(
+                    $"\"{file}\" was saved by an older version of Lizzie, so it was migrated. "
+                        + "Some features may have changed. "
+                        + $"Saving will not overwrite \"{file}\". "
+                        + $"The new file will be \"{currentFile}\" instead."
+                );
+            events = lines
+                .Select(l => l.Deserialize<TableEvent>(LizzieJson.EventOptions))
+                .ToArray();
+        }
+        catch (Exception ex)
+        {
+            throw new ProjectLoadException(
+                $"\"{file}\" couldn't be read. It may be damaged.\n\n{ex.Message}"
+            );
         }
 
         GameObjects?.ResetForLoad();
@@ -145,32 +226,11 @@ public partial class ProjectService : Node
 
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = true;
-
-        // the file is a list of events using JSON-lines
-        using var loadFile = FileAccess.Open($"user://{name}.proj", FileAccess.ModeFlags.Read);
-        while (!loadFile.EofReached())
-        {
-            var line = loadFile.GetLine();
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
-
-            TableEvent e;
-            try
-            {
-                e = JsonSerializer.Deserialize<TableEvent>(line, LizzieJson.EventOptions);
-            }
-            catch (Exception ex)
-            {
-                // a broken line is skipped
-                GD.PrintErr($"Skipping unreadable project line: {ex.Message}");
-                continue;
-            }
-
+        foreach (var e in events)
             EventSynchronizer.Instance?.Ingest(e);
-        }
-        loadFile.Close();
 
         SettleAfterIngest();
+        warning = warnings.Count > 0 ? string.Join("\n\n", warnings) : null;
         return project;
     }
 
@@ -243,7 +303,7 @@ public partial class ProjectService : Node
         if (sync == null)
             return false;
 
-        var finalVirtual = $"user://{project.Filename}.proj";
+        var finalVirtual = $"user://{SaveFile(project.Filename, SaveUpgrade.Current)}";
         var tempVirtual = $"user://{project.Filename}.{OS.GetProcessId()}.proj.tmp";
 
         var tempReal = ProjectSettings.GlobalizePath(tempVirtual);
@@ -259,6 +319,7 @@ public partial class ProjectService : Node
 
             try
             {
+                saveFile.StoreLine(SaveUpgrade.Header);
                 saveFile.StoreLine(
                     SaveCompaction.Serialize(
                         TableEvent.Admin(

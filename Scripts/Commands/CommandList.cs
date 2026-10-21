@@ -65,7 +65,6 @@ public static class CommandList
     public static readonly IReadOnlyList<Command> All = Checked([
         .. ContextMenu,
         UI.OpenProjectManager,
-        UI.OpenProject,
         UI.SaveProject,
         UI.OpenMultiplayer,
         UI.ChangeSeat,

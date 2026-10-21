@@ -53,10 +53,6 @@ script = ExtResource("cmd_menu")
 script = ExtResource("cmd_item")
 CommandName = "project.manager"
 
-[node name="ProjectOpen" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=859406123]
-script = ExtResource("cmd_item")
-CommandName = "project.open"
-
 [node name="ProjectSave" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=68874116]
 script = ExtResource("cmd_item")
 CommandName = "project.save"

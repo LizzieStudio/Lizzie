@@ -326,10 +326,23 @@ public partial class UI : CanvasLayer
         _modalDialogs.AddChild(_imageManager);
     }
 
-    private void OpenSampleProject()
+    /// <summary>
+    /// Tells the player about a problem opening a project.
+    /// </summary>
+    public void ShowLoadMessage(string title, string message)
     {
-        if (ProjectService.Instance.LoadProject(ProjectService.SampleProjectName) != null)
-            ShowPlayerPositionDialog();
+        var dialog = new AcceptDialog
+        {
+            Title = title,
+            DialogText = message,
+            DialogAutowrap = true,
+            Exclusive = false,
+        };
+        dialog.GetLabel().CustomMinimumSize = new Vector2(480, 0);
+        dialog.Confirmed += dialog.QueueFree;
+        dialog.Canceled += dialog.QueueFree;
+        _modalDialogs.AddChild(dialog);
+        dialog.PopupCentered();
     }
 
     private void Save()

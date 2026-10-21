@@ -961,5 +961,6 @@
       "type": "integer"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "title": "Lizzie save format 1"
 }

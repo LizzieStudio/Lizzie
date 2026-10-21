@@ -28,8 +28,30 @@ public partial class GameController : Node
 
         ProjectService.Instance.GameObjects = _mainScene.GameObjects;
 
-        if (ProjectService.Instance.LoadProject(ProjectService.SampleProjectName) == null)
-            ProjectService.Instance.NewGame(ProjectService.SampleProjectName);
+        var args = OS.GetCmdlineUserArgs();
+        // a launch argument used to skip having to open a project manually
+        int at = Array.IndexOf(args, "--project") + 1;
+        string name = at > 0 && at < args.Length ? args[at] : null;
+        Project project = null;
+        try
+        {
+            if (name != null)
+            {
+                project =
+                    ProjectService.Instance.LoadProject(name, out var warning)
+                    ?? throw new ProjectLoadException(
+                        $"There's no saved project called \"{name}\"."
+                    );
+                if (warning != null)
+                    _uiController.ShowLoadMessage("Older Save Opened", warning);
+            }
+        }
+        catch (ProjectLoadException error)
+        {
+            _uiController.ShowLoadMessage("Can't Open Project", error.Message);
+        }
+        if (project == null)
+            ProjectService.Instance.NewGame();
     }
 
     private void MainSceneOnHoveredNameChange(object sender, HoveredComponentChangeEventArgs e)

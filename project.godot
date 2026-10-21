@@ -41,6 +41,7 @@ project/assembly_name="Lizzie"
 
 [editor]
 
+run/main_run_args="-- --project \"Test Project\""
 version_control/plugin_name="GitPlugin"
 version_control/autoload_on_startup=true
 

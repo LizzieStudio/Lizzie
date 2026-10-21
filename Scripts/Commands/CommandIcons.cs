@@ -49,7 +49,6 @@ public static class CommandIcons
     public const string Blueprints = Folder + "library_add.svg";
 
     public const string ProjectManager = Folder + "bookmark_manager.svg";
-    public const string Open = Folder + "folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
     public const string Save = Folder + "save.svg";
 
     public const string Multiplayer = Folder + "group.svg";

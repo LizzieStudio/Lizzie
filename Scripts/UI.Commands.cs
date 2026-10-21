@@ -24,14 +24,6 @@ public partial class UI
         SideEffects = _ => _instance?.ShowProjectManager(),
     };
 
-    public static readonly GlobalCommand OpenProject = new()
-    {
-        Name = new("project.open"),
-        Icon = CommandIcons.Open,
-        Caption = "Open Project",
-        SideEffects = _ => _instance?.OpenSampleProject(),
-    };
-
     /// <summary>Saves the project, asking for a name if it has none.</summary>
     public static readonly GlobalCommand SaveProject = new()
     {

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using Lizzie.Replication.Machinery;
+using SaveUpgrades;
 using Xunit;
 
 namespace Lizzie.Tests;
@@ -14,13 +15,13 @@ namespace Lizzie.Tests;
 /// <summary>
 /// <para>
 /// Pins the format of saves and multiplayer messages, as a JSON schema of <see cref="TableEvent"/>
-/// in <c>SaveFormat.schema.json</c> next to this file.
+/// in <c>SaveFormat.schema.json</c> next to this file, titled with <see cref="SaveUpgrade.Current"/>.
 /// </para>
 ///
 /// <para>
-/// Any change to a type's or property's name, or to a property's type, fails here until that file is updated.
-/// Review the change first: a renamed or removed name stops old saves loading whatever used it.
-/// If it's a breaking change, put BREAKING CHANGE in the footer of the commit message, as per https://www.conventionalcommits.org/en/v1.0.0/.
+/// Any change to a type's or property's name, or to a property's type, fails here until
+/// a step is added to <c>SaveUpgrade.Steps</c> and that file is updated.
+/// A change that only adds something can use an <see cref="Addition"/>.
 /// </para>
 /// </summary>
 public class SaveFormatTests
@@ -41,25 +42,29 @@ public class SaveFormatTests
     };
 
     /// <summary>
-    /// The schema of everything that's saved or sent.
+    /// The schema of everything that's saved or sent, titled with its format number.
     /// Objects allow no other properties: System.Text.Json ignores unknown ones when reading,
     /// so without this a renamed property would look like an added one and the old name would pass.
     /// </summary>
-    private static string Schema() =>
-        LizzieJson
-            .EventOptions.GetJsonSchemaAsNode(
-                typeof(TableEvent),
-                new JsonSchemaExporterOptions
+    private static string Schema()
+    {
+        var schema = LizzieJson.EventOptions.GetJsonSchemaAsNode(
+            typeof(TableEvent),
+            new JsonSchemaExporterOptions
+            {
+                TransformSchemaNode = (_, node) =>
                 {
-                    TransformSchemaNode = (_, node) =>
-                    {
-                        if (node is JsonObject obj && obj.ContainsKey("properties"))
-                            obj["additionalProperties"] = false;
-                        return node;
-                    },
-                }
-            )
-            .ToJsonString(Indented) + "\n";
+                    if (node is JsonObject obj && obj.ContainsKey("properties"))
+                        obj["additionalProperties"] = false;
+                    return node;
+                },
+            }
+        );
+        schema["title"] = Title(SaveUpgrade.Current);
+        return schema.ToJsonString(Indented) + "\n";
+    }
+
+    private static string Title(int format) => $"Lizzie save format {format}";
 
     [Fact]
     public void SaveFormatIsUnchanged()
@@ -73,17 +78,23 @@ public class SaveFormatTests
         }
 
         File.WriteAllText(Received, schema);
-        var compare =
-            $"Compare them with:\n    code --diff Tests/{Path.GetFileName(Pinned)} Tests/{Path.GetFileName(Received)}\n"
-            + $"If the change is intended, replace {Path.GetFileName(Pinned)} with {Path.GetFileName(Received)}.\n"
-            + "A renamed or removed name stops old saves loading; if so, put BREAKING CHANGE in the commit message footer.";
-        Assert.Fail(
-            pinned == null
-                ? $"There's no {Path.GetFileName(Pinned)} yet, so the save format isn't pinned.\n"
+        if (pinned == null)
+            Assert.Fail(
+                $"There's no {Path.GetFileName(Pinned)} yet, so the save format isn't pinned.\n"
                     + $"The current schema is in {Path.GetFileName(Received)}; rename it to {Path.GetFileName(Pinned)}."
-                : $"The save format changed: {Path.GetFileName(Received)} doesn't match {Path.GetFileName(Pinned)}.\n"
-                    + Changes(pinned, schema)
-                    + compare
+            );
+
+        var changes =
+            $"The save format changed: {Path.GetFileName(Received)} doesn't match {Path.GetFileName(Pinned)}.\n"
+            + Changes(pinned, schema)
+            + $"Compare them with:\n    code --diff Tests/{Path.GetFileName(Pinned)} Tests/{Path.GetFileName(Received)}\n";
+        Assert.Fail(
+            (string)JsonNode.Parse(pinned)["title"] == Title(SaveUpgrade.Current)
+                ? changes
+                    + "If the change is intended, add a step to SaveUpgrade.Steps.\n"
+                    + "Then run this test again."
+                : changes
+                    + $"If the change is intended, replace {Path.GetFileName(Pinned)} with {Path.GetFileName(Received)}."
         );
     }
 
