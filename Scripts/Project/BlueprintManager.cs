@@ -14,8 +14,15 @@ public partial class BlueprintManager : Window, ICommandView
 
     private readonly Dictionary<SnowTag, TreeItem> _rows = new();
 
-    // used to mark the blueprint the game is on
+    public static readonly SelectionPlace Place = new(SelectionPlaces.Blueprints, SnowTag.Empty);
+
     private static readonly Texture2D GameIcon = GD.Load<Texture2D>(CommandIcons.NewGame);
+
+    /// <summary>
+    /// The font used to mark the stage that is currently on the table.
+    /// </summary>
+    [Export]
+    private Font _shownFont;
 
     public override void _EnterTree()
     {
@@ -26,6 +33,7 @@ public partial class BlueprintManager : Window, ICommandView
     {
         _tree = GetNode<Tree>("%Tree");
         _tree.CreateItem();
+        _tree.SetColumnExpand(1, false);
         foreach (var style in new[] { "selected", "selected_focus" })
             _tree.AddThemeStyleboxOverride(style, new StyleBoxEmpty());
         foreach (var style in new[] { "hovered_selected", "hovered_selected_focus" })
@@ -51,11 +59,11 @@ public partial class BlueprintManager : Window, ICommandView
             new AtomCommand<Stage>
             {
                 Name = new("blueprint.rename"),
-                Caption = "Rename Blueprint",
+                Icon = CommandIcons.Rename,
+                Caption = "Rename",
                 Keys = [Shortcuts.Key(Key.F2)],
                 Count = TargetCount.One,
-                AppliesTo = StageCommands.IsBlueprint,
-                SideEffects = (blueprints, _) => Rename(blueprints[0].Id),
+                SideEffects = (stages, _) => Rename(stages[0].Id),
             },
         ];
         CommandList.Register(_commands);
@@ -65,8 +73,9 @@ public partial class BlueprintManager : Window, ICommandView
 
     #region ICommandView
 
-    public SelectionPlace? SelectionScope(IAtomReader R) =>
-        new SelectionPlace(SelectionPlaces.Blueprints, SnowTag.Empty);
+    public SelectionPlace? SelectionScope(IAtomReader R) => Place;
+
+    public bool Shows(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
 
     public IReadOnlyList<Command> Commands => _commands;
 
@@ -74,10 +83,7 @@ public partial class BlueprintManager : Window, ICommandView
     {
         if (atom is Stage)
             return true;
-        if (
-            atom is Selection s
-            && s.Place == new SelectionPlace(SelectionPlaces.Blueprints, SnowTag.Empty)
-        )
+        if (atom is Selection s && s.Place == Place)
             return true;
 
         return false;
@@ -91,21 +97,15 @@ public partial class BlueprintManager : Window, ICommandView
     /// </summary>
     private void Sync(IWatchReader R)
     {
-        var selected = R.GetSelection(
-                Stage.ById,
-                new SelectionPlace(SelectionPlaces.Blueprints, SnowTag.Empty)
-            )
-            .ToHashSet();
-        var colors = R.SelectionColors(
-            new SelectionPlace(SelectionPlaces.Blueprints, SnowTag.Empty)
-        );
-        var parentOfGame = R.Get(Stage.ById, R.Get(CurrentGame.Only).StageRef)?.ParentRef;
-        var shown = new HashSet<SnowTag>();
+        var selected = R.GetSelection(Stage.ById, this).ToHashSet();
+        var colors = R.SelectionColors(Place);
+        var onTable = ProjectService.Instance.GameObjects.ShownStage(R);
+        var listed = new HashSet<SnowTag>();
 
         AddChildren(_tree.GetRoot(), SnowTag.Empty);
 
         // Freeing a row frees the rows under it, so every dead row comes off the tree before any is freed.
-        var dead = _rows.Where(r => !shown.Contains(r.Key)).ToList();
+        var dead = _rows.Where(r => !listed.Contains(r.Key)).ToList();
         foreach (var (id, item) in dead)
         {
             _rows.Remove(id);
@@ -116,15 +116,18 @@ public partial class BlueprintManager : Window, ICommandView
 
         void AddChildren(TreeItem parent, SnowTag parentRef)
         {
-            var children = R.Get(Stage.Children, parentRef).OrderBy(s => s.Rank).ThenBy(s => s.Id);
-            foreach (var (stage, index) in children.Select((s, i) => (s, i)))
+            foreach (var (stage, index) in Stage.GetChildren(R, parentRef).Select((s, i) => (s, i)))
             {
-                shown.Add(stage.Id);
+                listed.Add(stage.Id);
                 // The rows before it are in place already, so the one at its index is the first one after it.
                 if (!_rows.TryGetValue(stage.Id, out var item))
                 {
                     item = _tree.CreateItem(parent, index);
                     item.SetMetadata(0, stage.Id);
+                    item.SetSelectable(1, false);
+                    item.SetTextAlignment(1, HorizontalAlignment.Right);
+                    // Only untrimmed text widens its column.
+                    item.SetTextOverrunBehavior(1, TextServer.OverrunBehavior.NoTrimming);
                     _rows[stage.Id] = item;
                 }
                 else if (index < parent.GetChildCount())
@@ -138,7 +141,14 @@ public partial class BlueprintManager : Window, ICommandView
                     parent.AddChild(item);
                 }
                 item.SetText(0, stage.Name);
-                item.SetIcon(0, stage.Id == parentOfGame ? GameIcon : null);
+                item.SetIcon(0, stage.IsGame ? GameIcon : null);
+                item.SetCustomFont(0, stage.Id == onTable ? _shownFont : null);
+                int changes = R.Count(ComponentPosition.WrittenIn, stage.Id);
+                item.SetText(1, changes.ToString());
+                item.SetTooltipText(
+                    1,
+                    $"{changes} {(changes == 1 ? "change" : "changes")} to parent"
+                );
                 if (colors.TryGetValue(Stage.ById.Ref(stage.Id), out var color))
                     item.SetCustomBgColor(0, color, justOutline: true);
                 else
@@ -214,7 +224,12 @@ public partial class BlueprintManager : Window, ICommandView
             : section is 0 or 2 ? item
             : item.GetParent();
         var parent = under == _tree.GetRoot() ? SnowTag.Empty : IdOf(under);
-        if (Stage.Chain(R, parent).Any(s => s.Id == moved.Id))
+        // Nothing builds on a game, a game needs a blueprint, and a stage can't build on itself.
+        if (
+            R.Get(Stage.ById, parent) is { IsGame: true }
+            || moved.IsGame && parent == SnowTag.Empty
+            || Stage.Chain(R, parent).Any(s => s.Id == moved.Id)
+        )
             return null;
 
         var others = under.GetChildren().Where(c => c != row).ToList();
@@ -232,34 +247,34 @@ public partial class BlueprintManager : Window, ICommandView
 
     private void Drop(Vector2 at, Variant data)
     {
-        if (Placement(at, data) is (var moved, var parent, var siblings, var index))
-            AtomService.Instance.Write(
-                moved with
-                {
-                    ParentRef = parent,
-                    Rank = SnowRank.At(siblings, index, SnowportId.Create()),
-                }
-            );
+        if (Placement(at, data) is not (var moved, var parent, var siblings, var index))
+            return;
+        IAtomReader R = AtomService.Instance;
+        var placed = moved with
+        {
+            ParentRef = parent,
+            Rank = SnowRank.At(siblings, index, SnowportId.Create()),
+        };
+        IChange[] changes = moved.IsGame
+            ? [placed, R.Get(ProjectGameSettings.Only) with { BlueprintRef = parent }]
+            : [placed];
+        AtomService.Instance.Write(changes);
     }
 
     #endregion
 
-    private static void Select(IEnumerable<SnowTag> blueprints) =>
-        AtomService.Instance.SetSelection(
-            Stage.ById,
-            blueprints,
-            new SelectionPlace(SelectionPlaces.Blueprints, SnowTag.Empty)
-        );
+    private void Select(IEnumerable<SnowTag> blueprints) =>
+        AtomService.Instance.SetSelection(Stage.ById, blueprints, this);
 
     /// <summary>
-    /// Starts editing the name of <paramref name="blueprint"/>.
+    /// Starts editing the name of <paramref name="stage"/>.
     /// </summary>
-    private void Rename(SnowTag blueprint) =>
+    private void Rename(SnowTag stage) =>
         Callable
             .From(() =>
             {
-                // The blueprint may be gone or unselected since.
-                if (_tree.GetSelected() is { } item && IdOf(item) == blueprint)
+                // The stage may be gone or unselected since.
+                if (_tree.GetSelected() is { } item && IdOf(item) == stage)
                     _tree.EditSelected(true);
             })
             .CallDeferred();

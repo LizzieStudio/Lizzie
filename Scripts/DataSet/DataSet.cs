@@ -115,6 +115,12 @@ public record DataCell : Atom
         unwritten: id => new DataCell { Id = id }
     );
 
+    /// <summary>
+    /// Whether a cell's row and column are both in this DataSet.
+    /// </summary>
+    public static bool InGrid(IAtomReader R, CellId id) =>
+        R.Get(DataRow.ById, id.Row) != null && R.Get(DataColumn.ById, id.Column) != null;
+
     public required CellId Id { get; init; }
 
     public string Value { get; init; } = string.Empty;

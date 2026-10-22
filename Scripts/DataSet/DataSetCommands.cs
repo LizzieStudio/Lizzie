@@ -83,7 +83,6 @@ public static class DataSetCommands
         Caption = "Clear {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Key(Key.Delete)],
-        AppliesTo = CellExists,
         Effects = (R, cells, _) => Cleared(R, cells),
     };
 
@@ -94,7 +93,6 @@ public static class DataSetCommands
         Caption = "Cut {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.X)],
-        AppliesTo = CellExists,
         // Copied first, since side effects run before the effects are made.
         SideEffects = (cells, _) => DisplayServer.ClipboardSet(Copied(Reader, cells)),
         Effects = (R, cells, _) => Cleared(R, cells),
@@ -107,7 +105,6 @@ public static class DataSetCommands
         Caption = "Copy {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.C)],
-        AppliesTo = CellExists,
         SideEffects = (cells, _) => DisplayServer.ClipboardSet(Copied(Reader, cells)),
     };
 
@@ -122,15 +119,10 @@ public static class DataSetCommands
         Icon = CommandIcons.Paste,
         Caption = "Paste",
         Keys = [Shortcuts.Ctrl(Key.V)],
-        AppliesTo = CellExists,
         Effects = (R, cells, _) => Pasted(R, cells, Tsv.Parse(DisplayServer.ClipboardGet())),
     };
 
     private static IAtomReader Reader => AtomService.Instance;
-
-    // A cell can be empty, but its row and column must still be there.
-    private static bool CellExists(IAtomReader R, DataCell cell) =>
-        R.Get(DataRow.ById, cell.Id.Row) != null && R.Get(DataColumn.ById, cell.Id.Column) != null;
 
     private static (
         List<DataRow> Rows,

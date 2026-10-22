@@ -32,4 +32,15 @@ public class IdQueryTests
         if (problems.Count > 0)
             Assert.Fail(string.Join("\n\n", problems));
     }
+
+    private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
+
+    [Fact]
+    public void AnEmptyCellIsInTheGridWhileItsRowAndColumnAre()
+    {
+        var R = new ListReader(new DataRow { Id = Tag(1) }, new DataColumn { Id = Tag(2) });
+        Assert.True(DataCell.InGrid(R, new CellId(Tag(1), Tag(2))));
+        Assert.False(DataCell.InGrid(R, new CellId(Tag(3), Tag(2))));
+        Assert.False(DataCell.InGrid(R, new CellId(Tag(1), Tag(3))));
+    }
 }

@@ -145,10 +145,6 @@ size_flags_horizontal = 3
 layout_mode = 2
 size_flags_horizontal = 8
 
-[node name="StageLabel" type="Label" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=1828108456]
-layout_mode = 2
-text = "Stage"
-
 [node name="Stages" type="HBoxContainer" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=1536737745]
 unique_name_in_owner = true
 layout_mode = 2

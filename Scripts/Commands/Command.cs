@@ -81,6 +81,14 @@ public interface ICommandView
     SelectionPlace? SelectionScope(IAtomReader R) => null;
 
     /// <summary>
+    /// Checks whether this view still shows <paramref name="target"/>, so a selection of it is still valid.
+    /// </summary>
+    /// <remarks>
+    /// Deleted atoms can keep their selection, so this call is used to check what's still on-screen.
+    /// </remarks>
+    bool Shows(IAtomReader R, AtomRef target) => R.Get(target) != null;
+
+    /// <summary>
     /// The atom the whole view shows, like the dataset editor's open dataset, or null for none.
     /// Commands that act on <see cref="Context.View"/> act on it.
     /// </summary>

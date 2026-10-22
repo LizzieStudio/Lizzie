@@ -145,7 +145,12 @@ public partial class DatasetEditor : Window, ICommandView
     public WatchableValue<SnowTag> ShownDataSet { get; } = new();
 
     public SelectionPlace? SelectionScope(IAtomReader R) =>
-        new SelectionPlace(SelectionPlaces.DataSet, R.Get(ShownDataSet));
+        R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty
+            ? new SelectionPlace(SelectionPlaces.DataSet, shown)
+            : null;
+
+    public bool Shows(IAtomReader R, AtomRef target) =>
+        target.Id is CellId cell ? DataCell.InGrid(R, cell) : R.Get(target) != null;
 
     public AtomRef? Shown(IAtomReader R) =>
         R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty ? DataSet.ById.Ref(shown) : null;
@@ -905,24 +910,11 @@ public partial class DatasetEditor : Window, ICommandView
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
     private ImmutableHashSet<AtomRef> MySelection() =>
-        ShownDataSet.Value == SnowTag.Empty
-            ? ImmutableHashSet<AtomRef>.Empty
-            : AtomService
-                .Instance.GetSelection(
-                    new SelectionPlace(SelectionPlaces.DataSet, ShownDataSet.Value)
-                )
-                ?.Targets
-                ?? ImmutableHashSet<AtomRef>.Empty;
+        AtomService.Instance.GetSelection(this)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
-    private void Select(IEnumerable<AtomRef> targets)
-    {
-        if (ShownDataSet.Value != SnowTag.Empty)
-            AtomService.Instance.SetSelection(
-                targets,
-                new SelectionPlace(SelectionPlaces.DataSet, ShownDataSet.Value)
-            );
-    }
+    private void Select(IEnumerable<AtomRef> targets) =>
+        AtomService.Instance.SetSelection(targets, this);
 
     /// <summary>
     /// Selects a row, column or cell, as a click on it does. With Shift, it selects everything from the

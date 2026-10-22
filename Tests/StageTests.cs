@@ -4,8 +4,8 @@ using Xunit;
 namespace Lizzie.Tests;
 
 /// <summary>
-/// Blueprints can be deleted only when nothing builds on them,
-/// and a stage exists only while its parents lead up to a root blueprint.
+/// A stage exists only while its parents lead up to a root blueprint,
+/// and merging stages takes the lower stage's writes.
 /// </summary>
 public class StageTests
 {
@@ -38,32 +38,56 @@ public class StageTests
             .. more,
         ]);
 
+    private static ComponentPosition Position(int id, int stage, int x) =>
+        new()
+        {
+            Id = Tag(id),
+            Stage = Tag(stage),
+            X = x,
+        };
+
     [Fact]
-    public void ABlueprintNothingBuildsOnIsALeaf()
+    public void TheGamesChainHoldsItsBlueprintsButNotTheirSiblings()
     {
         var R = Project();
-        Assert.True(Stage.IsLeaf(R, R.Get(Stage.ById, Tag(3))));
+        Assert.True(Stage.IsGameOrAncestor(R, Tag(1)));
+        Assert.True(Stage.IsGameOrAncestor(R, Tag(2)));
+        Assert.False(Stage.IsGameOrAncestor(R, Tag(3)));
     }
 
     [Fact]
-    public void ABlueprintWithABlueprintOnItIsNotALeaf()
+    public void AUnionIntoTheParentTakesTheChildsWrites()
     {
-        var R = Project();
-        Assert.False(Stage.IsLeaf(R, R.Get(Stage.ById, Tag(1))));
+        var R = Project(
+            Position(10, stage: 1, x: 1),
+            Position(10, stage: 2, x: 2),
+            Position(11, stage: 1, x: 3)
+        );
+        Assert.Equal(
+            [Position(10, stage: 1, x: 2)],
+            Stage.Union(R, Tag(1), Tag(1), Tag(2)).ToArray()
+        );
     }
 
     [Fact]
-    public void ABlueprintWithOnlyDeletedBlueprintsOnItIsALeaf()
+    public void AUnionIntoAChildKeepsItsOwnWrites()
     {
-        var R = Project(Blueprint(4, parent: 3, deleted: true));
-        Assert.True(Stage.IsLeaf(R, R.Get(Stage.ById, Tag(3))));
+        var R = Project(
+            Position(10, stage: 1, x: 1),
+            Position(10, stage: 2, x: 2),
+            Position(11, stage: 1, x: 3)
+        );
+        Assert.Equal(
+            [Position(11, stage: 2, x: 3)],
+            Stage.Union(R, Tag(2), Tag(1), Tag(2)).ToArray()
+        );
     }
 
     [Fact]
-    public void TheGamesBlueprintIsNotALeaf()
+    public void AUnionOfOneCopiesItsWrites()
     {
-        var R = Project();
-        Assert.False(Stage.IsLeaf(R, R.Get(Stage.ById, Tag(2))));
+        var R = Project(Position(10, stage: 2, x: 2), Position(11, stage: 3, x: 3));
+        Assert.Equal([Position(10, stage: 4, x: 2)], Stage.Union(R, Tag(4), Tag(2)).ToArray());
     }
 
     [Fact]

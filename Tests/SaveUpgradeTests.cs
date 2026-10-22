@@ -32,9 +32,6 @@ public class SaveUpgradeTests
     [Fact]
     public void RefusesStepsOutOfOrder() =>
         Assert.Throws<InvalidOperationException>(() =>
-            SaveUpgrade.InOrder(
-                new Addition { Format = 1 },
-                new Addition { Format = 3 }
-            )
+            SaveUpgrade.InOrder(new Addition { Format = 1 }, new Addition { Format = 3 })
         );
 }

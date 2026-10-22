@@ -80,7 +80,8 @@ public static class CommandMenu
         bool all = false
     )
     {
-        var menu = Menu();
+        var root = ((SceneTree)Engine.GetMainLoop()).Root;
+        var menu = Menu(CommandViews.FocusedWindow(root));
         menu.Hide();
         Done();
 
@@ -176,15 +177,18 @@ public static class CommandMenu
         menu.Popup();
     }
 
-    // Made on first use, in the main window.
-    private static PopupMenu Menu()
+    private static PopupMenu Menu(Window window)
     {
-        if (GodotObject.IsInstanceValid(_menu))
-            return _menu;
-
-        _menu = NewMenu("CommandMenu");
-        _menu.PopupHide += Done;
-        ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_menu);
+        if (!GodotObject.IsInstanceValid(_menu))
+        {
+            _menu = NewMenu("CommandMenu");
+            _menu.PopupHide += Done;
+        }
+        if (_menu.GetParent() != window)
+        {
+            _menu.GetParent()?.RemoveChild(_menu);
+            window.AddChild(_menu);
+        }
         return _menu;
     }
 

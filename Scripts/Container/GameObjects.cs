@@ -6,7 +6,7 @@ using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
-public partial class GameObjects : Node3D
+public partial class GameObjects : Node3D, ICommandView
 {
     [Export]
     private DragPlane _dragPlane;
@@ -79,9 +79,9 @@ public partial class GameObjects : Node3D
     private HeldDrag _held;
 
     /// <summary>
-    /// The group Id for attaching to the player's drag, or <see cref="SnowportId.Empty"/>.
+    /// The undo group of the local player's drag, which commands on the table join, or <see cref="SnowportId.Empty"/>.
     /// </summary>
-    public SnowportId DragGroup => _held?.Group ?? SnowportId.Empty;
+    public SnowportId Gesture => _held?.Group ?? SnowportId.Empty;
 
     /// <summary>
     /// Starts a drag of the atoms in <paramref name="pickup"/>,
@@ -290,6 +290,63 @@ public partial class GameObjects : Node3D
         }
     }
 
+    #region ICommandView
+
+    public SelectionPlace? SelectionScope(IAtomReader R) =>
+        new SelectionPlace(SelectionPlaces.Table, ShownStage(R));
+
+    public IEnumerable<AtomRef> Hovered() =>
+        CursorMode is CursorMode.DragSelect or CursorMode.Spawn
+        || GetHoveredObject() is not { } hovered
+        || hovered.State == null
+            ? []
+            : [ComponentPosition.ById.Ref(hovered.Key)];
+
+    public IReadOnlyList<Command> Commands => [DuplicateComponent, ZoomToComponent];
+
+    public bool UndoScope(Atom atom)
+    {
+        var shown = ShownStage(AtomService.Instance);
+        return atom switch
+        {
+            ComponentPosition s => s.Stage == shown,
+            Selection s => s.Place == new SelectionPlace(SelectionPlaces.Table, shown),
+            _ => false,
+        };
+    }
+
+    private static readonly Command DuplicateComponent = new AtomCommand<ComponentPosition>
+    {
+        Name = new("table.duplicate"),
+        Icon = CommandIcons.Duplicate,
+        Caption = "Duplicate Component",
+        Keys = [Shortcuts.Ctrl(Key.D)],
+        Count = TargetCount.One,
+        SideEffects = (cs, _) =>
+        {
+            var variant = AtomService.Instance.GetVariant(cs[0]);
+            EventBus.Instance.Publish(
+                new SpawnPrototypeEvent { PrototypeRef = variant.PrototypeRef, Item = variant.Item }
+            );
+        },
+    };
+
+    private static readonly Command ZoomToComponent = new AtomCommand<ComponentPosition>
+    {
+        Name = new("table.zoom"),
+        Icon = CommandIcons.Zoom,
+        Caption = "Zoom to Component",
+        Keys = [Shortcuts.Key(Key.Z)],
+        Count = TargetCount.One,
+        AppliesTo = (R, c) => !R.IsContained(c) || R.IsInDeck(c),
+        SideEffects = (cs, _) =>
+        {
+            if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)
+                CameraManager.Instance?.ZoomTo(node);
+        },
+    };
+    #endregion
+
     #region Components
 
 
@@ -446,10 +503,7 @@ public partial class GameObjects : Node3D
     /// <summary>The components the local player has selected, read from their selection atom.</summary>
     private HashSet<SnowTag> GetSelection() =>
         AtomService
-            .Instance.GetSelection(
-                ComponentPosition.ById,
-                new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
-            )
+            .Instance.GetSelection(ComponentPosition.ById, this)
             .Select(k => k.Component)
             .ToHashSet();
 
@@ -458,7 +512,7 @@ public partial class GameObjects : Node3D
         AtomService.Instance.SetSelection(
             ComponentPosition.ById,
             components.Select(ShownKey),
-            new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
+            this
         );
 
     /// <summary>
@@ -624,7 +678,7 @@ public partial class GameObjects : Node3D
                     AtomService.Instance.NewSelection(
                         ComponentPosition.ById,
                         pickup.Select(ComponentPosition.ById.Of),
-                        new SelectionPlace(SelectionPlaces.Table, _table.StageRef)
+                        this
                     )
                 )
             );

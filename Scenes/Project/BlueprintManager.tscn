@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://pdfq0xcglbmd" path="res://Scripts/Project/BlueprintManager.cs" id="1_bpmgr"]
 [ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="2_cmdbtn"]
+[ext_resource type="FontFile" uid="uid://ddqa2ny0nkyj5" path="res://Fonts/NotoSans/NotoSans-Bold.ttf" id="3_bold"]
 
 [node name="BlueprintManager" type="Window" unique_id=1177581211]
 oversampling_override = 1.0
@@ -9,6 +10,7 @@ title = "Blueprints"
 initial_position = 2
 size = Vector2i(420, 400)
 script = ExtResource("1_bpmgr")
+_shownFont = ExtResource("3_bold")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1481863233]
 anchors_preset = 15
@@ -37,6 +39,13 @@ script = ExtResource("2_cmdbtn")
 CommandName = "blueprint.edit"
 ShowCaption = false
 
+[node name="DuplicateBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1972478497]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("2_cmdbtn")
+CommandName = "blueprint.duplicate"
+ShowCaption = false
+
 [node name="DeleteBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=995875275]
 layout_mode = 2
 theme_override_constants/icon_max_width = 20
@@ -56,5 +65,6 @@ metadata/_custom_type_script = "uid://0trm78fpi5a"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+columns = 2
 allow_rmb_select = true
 hide_root = true

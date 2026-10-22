@@ -47,6 +47,10 @@ public static class CommandIcons
 
     public const string NewGame = Folder + "play_circle.svg";
     public const string Blueprints = Folder + "library_add.svg";
+    public const string Rename = Folder + "drive_file_rename.svg";
+    public const string MergeIntoParent = Folder + "call_merge.svg";
+    public const string MergeIntoChildren = Folder + "call_split.svg";
+    public const string Dissolve = Folder + "transition_fade.svg";
 
     public const string ProjectManager = Folder + "bookmark_manager.svg";
     public const string Save = Folder + "save.svg";

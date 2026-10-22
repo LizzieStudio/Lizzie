@@ -55,18 +55,20 @@ public abstract partial class VisualComponentBase : Area3D
         AtomService.Instance.Watch(this, SyncSelection);
     }
 
-    /// <summary>Shows which players have this component selected.</summary>
     private void SyncSelection(IWatchReader R)
     {
         var key = Key;
         var target = ComponentPosition.ById.Ref(key);
         var local = Snowport.Clock.source;
         var place = new SelectionPlace(SelectionPlaces.Table, key.Stage);
-        var selection = R.GetSelection(place)?.Targets;
-        _isMine = selection?.Contains(target) == true;
+        var selections = R.Get(Selection.ByPlace, place);
+        var mine = selections.FirstOrDefault(s => s.Player == local)?.Targets;
+        _isMine = mine?.Contains(target) == true;
         _localColor = R.SeatColor(local);
-        _nothingSelected = selection?.IsEmpty != false;
-        var other = R.Get(Selection.ByPlace, place)
+        // We're avoiding using GetSelection here, which would watch every selected component.
+        ICommandView table = ProjectService.Instance.GameObjects;
+        _nothingSelected = !_isMine && mine?.Any(t => table.Shows(R, t)) != true;
+        var other = selections
             .Where(s => s.Player != local && s.Targets.Contains(target))
             .MaxBy(R.Version);
         _othersColor = other == null ? null : R.SeatColor(other.Player);

@@ -101,26 +101,37 @@ public static class LocalSelection
     }
 
     /// <summary>
-    /// The local player's selection in <paramref name="place"/>.
-    /// Null if they have not yet selected anything there.
+    /// The local player's selection in <paramref name="view"/>, holding only the targets it <see cref="ICommandView.Shows"/>.
+    /// Null if the view has no selection, or they have not yet selected anything there.
     /// </summary>
-    public static Selection GetSelection(this IAtomReader R, SelectionPlace place) =>
-        R.Get(Selection.ByPlace, place).FirstOrDefault(s => s.Player == Snowport.Clock.source);
+    /// <remarks>
+    /// A target the view no longer shows stays in the written selection, so undoing its delete selects it again,
+    /// but it's left out here, so changing the selection around it never writes an event that shows nothing.
+    /// </remarks>
+    public static Selection GetSelection(this IAtomReader R, ICommandView view) =>
+        view.SelectionScope(R) is { } place
+        && R.Get(Selection.ByPlace, place).FirstOrDefault(s => s.Player == Snowport.Clock.source)
+            is { } selection
+            ? selection with
+            {
+                Targets = selection.Targets.Where(t => view.Shows(R, t)).ToImmutableHashSet(),
+            }
+            : null;
 
     /// <summary>
-    /// The ids of the atoms of <paramref name="byId"/>'s type the local player has selected in <paramref name="place"/>.
+    /// The ids of the atoms of <paramref name="byId"/>'s type the local player has selected in <paramref name="view"/>.
     /// </summary>
     /// <param name="byId">Names the atom type and its id type, which the call infers from it.</param>
     public static IEnumerable<I> GetSelection<T, I>(
         this IAtomReader R,
         Identity<T, I> byId,
-        SelectionPlace place
+        ICommandView view
     )
         where T : Atom =>
-        R.GetSelection(place)?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
+        R.GetSelection(view)?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
 
     /// <summary>
-    /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type in <paramref name="place"/>,
+    /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type in <paramref name="view"/>,
     /// keeping everything else they have selected there.
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
@@ -128,53 +139,55 @@ public static class LocalSelection
         this IAtomReader R,
         Identity<T, I> byId,
         IEnumerable<I> ids,
-        SelectionPlace place
+        ICommandView view
     )
-        where T : Atom => AtomService.Instance.Write(R.NewSelection(byId, ids, place));
+        where T : Atom => AtomService.Instance.Write(R.NewSelection(byId, ids, view));
 
     /// <summary>
-    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, SelectionPlace)"/> writes,
+    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, ICommandView)"/> writes,
     /// or none when the selection wouldn't change.
     /// </summary>
     public static Selection[] NewSelection<T, I>(
         this IAtomReader R,
         Identity<T, I> byId,
         IEnumerable<I> ids,
-        SelectionPlace place
+        ICommandView view
     )
         where T : Atom
     {
-        var old = R.GetSelection(place)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
+        var old = R.GetSelection(view)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
         return R.NewSelection(
             old.Where(t => t.Type != typeof(T)).Concat(ids.Select(byId.Ref)),
-            place
+            view
         );
     }
 
     /// <summary>
-    /// Replaces the local player's whole selection in <paramref name="place"/>.
+    /// Replaces the local player's whole selection in <paramref name="view"/>.
     /// Submits an event only when it changes, which undo can reverse like any other.
     /// </summary>
     public static void SetSelection(
         this IAtomReader R,
         IEnumerable<AtomRef> targets,
-        SelectionPlace place
+        ICommandView view
     )
     {
-        AtomService.Instance.Write(R.NewSelection(targets, place));
+        AtomService.Instance.Write(R.NewSelection(targets, view));
     }
 
     /// <summary>
     /// The atom that will set the selection to <paramref name="targets"/>,
-    /// or none when the selection wouldn't change.
+    /// or none when the selection wouldn't change or the view has no selection.
     /// </summary>
     private static Selection[] NewSelection(
         this IAtomReader R,
         IEnumerable<AtomRef> targets,
-        SelectionPlace place
+        ICommandView view
     )
     {
-        var current = R.GetSelection(place);
+        if (view.SelectionScope(R) is not { } place)
+            return [];
+        var current = R.GetSelection(view);
         var next = targets.ToImmutableHashSet();
         if (next.SetEquals(current?.Targets ?? ImmutableHashSet<AtomRef>.Empty))
             return [];

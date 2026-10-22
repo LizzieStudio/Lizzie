@@ -73,9 +73,7 @@ public sealed class CommandContext
         if (view == null)
             return new();
 
-        var selected =
-            (view.SelectionScope(R) is { } place ? R.GetSelection(place)?.Targets : null)
-            ?? ImmutableHashSet<AtomRef>.Empty;
+        var selected = R.GetSelection(view)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
         var chosen = selected.IsEmpty && keys ? view.Hovered().ToImmutableHashSet() : selected;
 
         IEnumerable<AtomRef> Related(

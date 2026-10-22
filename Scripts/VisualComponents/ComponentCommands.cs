@@ -90,15 +90,37 @@ public static class ComponentCommands
         Tooltip = "Moves a component back to where it is in the parent blueprint.",
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => !R.IsBeingDragged(c),
-        Requires =
-        [
-            (
-                "These components are already at their starting positions.",
-                (R, c) => R.Get(ComponentPosition.WrittenIn, c.Stage).Any(w => w.Id == c.Id)
-            ),
-        ],
+        Requires = [("These components are already at their starting positions.", WrittenHere)],
         Effects = (R, cs, _) => cs.Select(R.Unset),
     };
+
+    public static readonly Command MergeIntoBlueprint = new AtomCommand<ComponentPosition>
+    {
+        Name = new("component.merge_into_blueprint"),
+        Icon = CommandIcons.MergeIntoParent,
+        Caption = "Merge {0} into Blueprint",
+        Tooltip = "Moves this component, in its current position, into the parent blueprint.",
+        ActsOn = Context.Selected | Context.Contents,
+        AppliesTo = (R, c) =>
+            !R.IsBeingDragged(c)
+            && R.Get(Stage.ById, c.Stage)?.ParentRef is { } p
+            && p != SnowTag.Empty,
+        Requires = [("These components have no changes to merge.", WrittenHere)],
+        Effects = (R, cs, _) =>
+            cs.SelectMany(c =>
+                new IChange[]
+                {
+                    c with
+                    {
+                        Stage = R.Get(Stage.ById, c.Stage).ParentRef,
+                    },
+                    R.Unset(c),
+                }
+            ),
+    };
+
+    private static bool WrittenHere(IAtomReader R, ComponentPosition c) =>
+        R.Get(ComponentPosition.WrittenIn, c.Stage).Any(w => w.Id == c.Id);
 
     private static float RotationStep(IAtomReader R) =>
         R.Get(ProjectGameSettings.Only).RotationStep();
