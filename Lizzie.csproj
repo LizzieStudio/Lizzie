@@ -19,4 +19,24 @@
   <ItemGroup>
     <None Include="Scripts\SequenceExpressions.md" />
   </ItemGroup>
+  <!-- The GdUnit4 engine tests in GodotTests/ are only included in Debug builds so they aren't exported with Lizzie.exe. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <!-- gdUnit4.api depends on an older GodotSharp than the Godot SDK's. -->
+    <NoWarn>$(NoWarn);NU1605</NoWarn>
+    <VSTestTestAdapterPath>none</VSTestTestAdapterPath>
+    <TestFramework>GdUnit4</TestFramework>
+    <!-- The Godot binary comes from the GODOT_BIN environment variable. -->
+    <RunSettingsFilePath>$(MSBuildProjectDirectory)/GodotTests/GdUnit4.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+  <!-- Private, so they don't flow into Tests/ through its reference to this project. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" PrivateAssets="all" />
+    <PackageReference Include="gdUnit4.api" Version="5.1.0-rc5" PrivateAssets="all" />
+    <PackageReference Include="gdUnit4.test.adapter" Version="3.1.1" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Compile Remove="GodotTests/**" />
+    <!-- The runner script the test adapter installs into the project. -->
+    <Compile Remove="gdunit4_testadapter_v5/**" />
+  </ItemGroup>
 </Project>

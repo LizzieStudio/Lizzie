@@ -24,7 +24,8 @@ dotnet csharpier format .
 
 ## Testing
 
-To run the tests, use the command
+To run the tests, set the `GODOT_BIN` env var to the path of your Godot executable,
+then use the command
 
 ```bash
 dotnet test

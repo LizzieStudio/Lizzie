@@ -2,20 +2,21 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
-    <!-- xUnit v3 tests build as their own executable, run by Microsoft.Testing.Platform (see global.json). -->
+    <!-- xUnit v3 tests build as their own executable. -->
     <OutputType>Exe</OutputType>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CsCheck" Version="4.9.1" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
-    <!-- For IDE test panels that still run tests through VSTest. -->
+    <!-- dotnet test runs through VSTest, which the GdUnit4 engine tests (GodotTests/) require. -->
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
   <ItemGroup>
     <!-- Tests may use the game's types, but must never call into the engine:
-         engine calls (Time, GD, Node, Snowport.Clock) crash the test host. -->
+         engine calls (Time, GD, Node, Snowport.Clock) crash the test host.
+         Tests that need the engine go in GodotTests/. -->
     <ProjectReference Include="../Lizzie.csproj" />
   </ItemGroup>
 </Project>
