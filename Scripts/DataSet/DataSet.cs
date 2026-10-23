@@ -75,9 +75,11 @@ public record DataRow : Atom, IRanked
     public required SnowTag Id { get; init; }
 
     /// <summary>
-    /// The rows of each dataset, in no order. <see cref="AtomReaderExtensions.GetRows"/> sorts them.
+    /// The rows of each dataset that aren't deleted, in no order. <see cref="AtomReaderExtensions.GetRows"/> sorts them.
     /// </summary>
-    public static readonly Lookup<DataRow, SnowTag> ByDataSet = new(r => r.DataSetId);
+    public static readonly Lookup<DataRow, SnowTag?> ByDataSet = new(r =>
+        r.Deleted ? null : r.DataSetId
+    );
 
     /// <summary>
     /// The dataset this row belongs to.
@@ -88,6 +90,11 @@ public record DataRow : Atom, IRanked
     /// The position of this row in its dataset.
     /// </summary>
     public SnowRank Rank { get; init; }
+
+    /// <summary>
+    /// Set when the player deletes the row.
+    /// </summary>
+    public bool Deleted { get; init; }
 
     /// <summary>
     /// A cell for each of the dataset's columns.
@@ -119,7 +126,8 @@ public record DataCell : Atom
     /// Whether a cell's row and column are both in this DataSet.
     /// </summary>
     public static bool InGrid(IAtomReader R, CellId id) =>
-        R.Get(DataRow.ById, id.Row) != null && R.Get(DataColumn.ById, id.Column) != null;
+        R.Get(DataRow.ById, id.Row) is { Deleted: false }
+        && R.Get(DataColumn.ById, id.Column) != null;
 
     public required CellId Id { get; init; }
 

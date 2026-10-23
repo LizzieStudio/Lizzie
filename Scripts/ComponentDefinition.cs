@@ -70,6 +70,7 @@ public partial class ComponentDefinition : Window
             {
                 cpdr.TextureFactory = _textureFactory;
                 cpdr.CurrentProject = CurrentProject;
+                cpdr.SubmittableChanged += ShowSubmittable;
             }
 
             _componentPanel.AddChild(ci);
@@ -151,7 +152,13 @@ public partial class ComponentDefinition : Window
         var newParams = editResult?.GetParams();
         prototype = prototype with { Parameters = newParams, Name = newParams?.ComponentName };
 
-        AtomService.Instance.Write(prototype);
+        var R = AtomService.Instance;
+        R.Write([
+            prototype,
+            .. newParams is PrintedParameters printed
+                ? DeckReconciliation.Changes(R, prototype.Id, printed)
+                : [],
+        ]);
 
         QueueFree();
     }
@@ -164,6 +171,18 @@ public partial class ComponentDefinition : Window
             _curItem = value;
             UpdatePanelVisibility(_curItem);
         }
+    }
+
+    /// <summary>
+    /// Enables Create and Update when the shown panel's parameters can be submitted.
+    /// </summary>
+    private void ShowSubmittable()
+    {
+        bool submittable =
+            _panelDictionary.GetValueOrDefault(CurName) is not ComponentPanelDialogResult panel
+            || panel.Submittable;
+        _createButton.Disabled = !submittable;
+        _updateButton.Disabled = !submittable;
     }
 
     private void UpdatePanelVisibility(string name)
@@ -185,6 +204,7 @@ public partial class ComponentDefinition : Window
                 }
             }
         }
+        ShowSubmittable();
     }
 
     public void SetTextureFactory(TextureFactory tf)

@@ -150,7 +150,9 @@ public partial class DatasetEditor : Window, ICommandView
             : null;
 
     public bool Shows(IAtomReader R, AtomRef target) =>
-        target.Id is CellId cell ? DataCell.InGrid(R, cell) : R.Get(target) != null;
+        target.Id is CellId cell
+            ? DataCell.InGrid(R, cell)
+            : R.Get(target) is { } atom && atom is not DataRow { Deleted: true };
 
     public AtomRef? Shown(IAtomReader R) =>
         R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty ? DataSet.ById.Ref(shown) : null;

@@ -76,6 +76,80 @@ public class SideParametersTests
     }
 
     [Fact]
+    public void ARepeatedValueIsOneFace()
+    {
+        var side = new QuickSide
+        {
+            Suits = [new QuickSuit { Id = new SnowTag(1), Values = "A*3" }],
+        };
+
+        var faces = side.Faces(null);
+
+        Assert.True(
+            faces.Count == 3 && faces.Distinct().Count() == 1,
+            $"A*3 makes the faces {string.Join(", ", faces)}, expected three of the same face."
+        );
+    }
+
+    [Fact]
+    public void ASingleBackRepeatsForEveryFront()
+    {
+        var parameters = new PrintedParameters
+        {
+            Front = new QuickSide
+            {
+                Suits = [new QuickSuit { Id = new SnowTag(1), Values = "1-3" }],
+            },
+            Back = new QuickSide { Suits = [new QuickSuit { Id = new SnowTag(2), Values = "B" }] },
+        };
+
+        var items = parameters.Items(null);
+
+        var back = new QuickFace(new SnowTag(2), "B");
+        Assert.True(
+            items.Count == 3 && items.All(item => Equals(item.Back, back)),
+            $"The cards are {string.Join(", ", items)}, expected 3 cards with the back {back}."
+        );
+    }
+
+    [Theory]
+    [InlineData("1-3", "A-C", true)]
+    [InlineData("1-3", "B", true)]
+    [InlineData("F", "A-C", true)]
+    [InlineData("1-3", "A-B", false)]
+    public void SidesFitWhenTheyPairUp(string front, string back, bool fits)
+    {
+        var parameters = new PrintedParameters { Front = Quick(front), Back = Quick(back) };
+
+        Assert.True(
+            parameters.SidesFit(null) == fits,
+            $"A front of {front} and a back of {back} {(fits ? "don't fit" : "fit")}, expected the opposite: "
+                + "the sides fit when they have as many cards, or one is a single card."
+        );
+    }
+
+    [Theory]
+    [InlineData("1-9", "1, 2*", true)]
+    [InlineData("1-*", "1-3", true)]
+    [InlineData("1-3", "1-5, 6*", false)]
+    public void AnUnboundedSideFillsToTheOtherSide(string front, string back, bool fits)
+    {
+        var image = new SnowTag(1);
+        var R = new ListReader(new AssetManagement.ImageAsset { Id = image, Layout = new(3, 3) });
+        var parameters = new PrintedParameters
+        {
+            Front = new ImageSide { Image = image, Frames = front },
+            Back = new ImageSide { Image = image, Frames = back },
+        };
+
+        Assert.True(
+            parameters.SidesFit(R) == fits,
+            $"Frames {front} on the front and {back} on the back {(fits ? "don't fit" : "fit")}, expected the opposite: "
+                + "an unbounded expression fills to the other side, but bounded ones are never trimmed."
+        );
+    }
+
+    [Fact]
     public void EachRowMakesAsManyCardsAsItsQuantity()
     {
         SnowTag dataset = new(1),
@@ -107,15 +181,36 @@ public class SideParametersTests
         );
         var side = new TemplateSide { Dataset = dataset, Quantity = quantity };
 
-        var rows = string.Join(
-            ", ",
-            Enumerable.Range(0, side.Count(R)).Select(n => side.Row(n, R))
-        );
+        var rows = string.Join(", ", side.Rows(R));
 
         var want = string.Join(", ", a, a, c, d);
         Assert.True(
             rows == want,
             $"The cards show rows {rows}, expected {want}: two of a, none of b, and one each of c and d, whose quantities aren't numbers."
+        );
+    }
+
+    [Fact]
+    public void ADeletedRowMakesNoCard()
+    {
+        SnowTag dataset = new(1),
+            kept = new(2),
+            deleted = new(3);
+        var R = new ListReader(
+            new DataRow { Id = kept, DataSetId = dataset },
+            new DataRow
+            {
+                Id = deleted,
+                DataSetId = dataset,
+                Deleted = true,
+            }
+        );
+
+        var rows = new TemplateSide { Dataset = dataset }.Rows(R);
+
+        Assert.True(
+            rows.SequenceEqual([kept]),
+            $"The cards show rows {string.Join(", ", rows)}, expected only {kept}, since {deleted} is deleted."
         );
     }
 
@@ -135,8 +230,9 @@ public class SideParametersTests
 
     public static TheoryData<PrototypeItemRef> Items =>
         [
-            new PrintedItemRef(0, SnowTag.Empty, SnowTag.Empty),
-            new PrintedItemRef(2, new SnowTag(3), new SnowTag(4)),
+            new PrintedItemRef(null, null),
+            new PrintedItemRef(new RowFace(new SnowTag(3)), new RowFace(new SnowTag(4))),
+            new PrintedItemRef(new QuickFace(new SnowTag(3), "A"), new FrameFace(2)),
             new DieItemRef(SnowTag.Empty),
             new DieItemRef(new SnowTag(5)),
             null,

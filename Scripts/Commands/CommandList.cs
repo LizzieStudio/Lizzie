@@ -42,6 +42,7 @@ public static class CommandList
         StageCommands.DeleteBlueprint,
         UndoCommands.UndoChanges,
         PrototypeCommands.Edit,
+        PrototypeCommands.UpdateDecks,
         DataSetCommands.EditRow,
         DataSetCommands.DeleteRow,
         DataSetCommands.DeleteColumn,
@@ -85,6 +86,7 @@ public static class CommandList
         StageCommands.ResetTable,
         DataSetCommands.AddRow,
         DataSetCommands.AddColumn,
+        DataSetCommands.UpdateDecks,
     ]);
 
     /// <summary>

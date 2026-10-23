@@ -104,16 +104,45 @@ public class QuickTemplateTests
         var side = new QuickSide { Suits = [Suit with { Values = "A, A, 2" }] };
         var p = new PrintedParameters { Width = 63.5f, Height = 88.9f };
 
-        var drawing = QuickTemplate.Drawing(p, side);
-        var rows = Enumerable
-            .Range(0, 4)
-            .Select(n => QuickTemplate.CardRow(side, n).ToString())
+        var drawing = QuickTemplate.Drawing(p, side.Cards());
+        var rows = side.Faces(null)
+            .Select(face => QuickTemplate.Row(side, (QuickFace)face).ToString())
             .ToList();
 
         Assert.True(
-            drawing.Rows.Count == 2 && string.Join(", ", rows) == "1, 1, 2, 1",
-            $"Drew {drawing.Rows.Count} cards, shown by cards 1-4 as rows {string.Join(", ", rows)}; "
-                + "expected 2 cards, shown as rows 1, 1, 2, 1."
+            drawing.Rows.Count == 2 && string.Join(", ", rows) == "1, 1, 2",
+            $"Drew {drawing.Rows.Count} cards, shown by the 3 cards as rows {string.Join(", ", rows)}; "
+                + "expected 2 cards, shown as rows 1, 1, 2."
+        );
+    }
+
+    [Fact]
+    public void AValueTheSideNoLongerHasHasNoRow()
+    {
+        var suit = Suit with { Id = new SnowTag(1), Values = "A, 2" };
+        var side = new QuickSide { Suits = [suit] };
+
+        var row = QuickTemplate.Row(side, new QuickFace(suit.Id, "3"));
+
+        Assert.True(
+            row == SnowTag.Empty,
+            $"A card showing 3 has row {row} in a side of A and 2, expected none, so it draws on its own."
+        );
+    }
+
+    [Fact]
+    public void CardsOfDeletedSuitsShowTheirValuesOnDifferentBackgrounds()
+    {
+        var first = Draw(QuickSuit.Placeholder(new SnowTag(1)), "7");
+        var second = Draw(QuickSuit.Placeholder(new SnowTag(2)), "7");
+
+        Assert.True(
+            first[1].Text == "7" && second[1].Text == "7",
+            $"The cards show \"{first[1].Text}\" and \"{second[1].Text}\", expected \"7\" on both."
+        );
+        Assert.False(
+            first[0].BackgroundColor.IsEqualApprox(second[0].BackgroundColor),
+            $"Both deleted suits draw on {first[0].BackgroundColor}, expected different backgrounds."
         );
     }
 

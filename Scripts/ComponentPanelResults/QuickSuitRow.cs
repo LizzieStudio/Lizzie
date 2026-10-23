@@ -39,6 +39,8 @@ public partial class QuickSuitRow : HBoxContainer
 
     private string _iconName = "";
 
+    private SnowTag _id = SnowTag.Create();
+
     public override void _EnterTree()
     {
         AtomService.Instance.Watch(this, Sync);
@@ -102,6 +104,7 @@ public partial class QuickSuitRow : HBoxContainer
         get =>
             new()
             {
+                Id = _id,
                 Background = _background.Color,
                 Foreground = _foreground.Color,
                 Values = _values.Text,
@@ -110,6 +113,7 @@ public partial class QuickSuitRow : HBoxContainer
             };
         set
         {
+            _id = value.Id;
             _background.Color = value.Background;
             _foreground.Color = value.Foreground;
             _values.Text = value.Values;

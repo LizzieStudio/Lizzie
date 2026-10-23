@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Lizzie;
@@ -60,7 +61,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         var p = Parameters();
         _sidesInput.SetItemText(0, $"Auto (d{(p with { SideCount = 0 }).Resolve(R).Sides})");
 
-        int count = p.Faces is TemplateSide side ? side.Count(R) : 1;
+        int count = p.Faces is TemplateSide side ? side.Rows(R).Count : 1;
         _preview.ItemCount = count;
         _preview.MultiItemMode = count > 1;
 
@@ -107,7 +108,8 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var row = p.Faces.Row(_preview.CurrentItem, AtomService.Instance);
+        var rows = (p.Faces as TemplateSide)?.Rows(AtomService.Instance) ?? [];
+        var row = rows.ElementAtOrDefault(_preview.CurrentItem);
         _preview.Build(p, new DieItemRef(row), TextureFactory);
     }
 

@@ -53,6 +53,13 @@ public abstract partial class VisualComponentBase : Area3D
         AtomService.Instance.Watch(this, Sync);
         AtomService.Instance.Watch(this, SyncState);
         AtomService.Instance.Watch(this, SyncSelection);
+        AtomService.Instance.Watch(this, SyncResetMark);
+    }
+
+    private void SyncResetMark(IWatchReader R)
+    {
+        _markedForReset = ProjectService.Instance.GameObjects.IsMarkedForReset(R, Key);
+        UpdateHighlight();
     }
 
     private void SyncSelection(IWatchReader R)
@@ -143,7 +150,7 @@ public abstract partial class VisualComponentBase : Area3D
             return;
 
         Setup(proto.Parameters, R);
-        RebuildOutline();
+        RebuildHighlight();
         Built?.Invoke();
 
         // A rebuild can change the component's size, so the view restacks.
@@ -352,6 +359,9 @@ public abstract partial class VisualComponentBase : Area3D
     // the color of the other player who most recently selected this component, or null
     private Color? _othersColor;
 
+    // whether it's marked because a reset would delete it
+    private bool _markedForReset;
+
     private bool? _previewSelected;
 
     /// <summary>
@@ -401,7 +411,8 @@ public abstract partial class VisualComponentBase : Area3D
     private static readonly Color PlainHoverColor = Colors.White;
 
     /// <summary>
-    /// Outlines the component when it's a drop target, hovered, or selected by anyone.
+    /// Outlines the component when it's a drop target, hovered, or selected by anyone,
+    /// and paints it when a reset would delete it.
     /// </summary>
     protected virtual void UpdateHighlight()
     {
@@ -410,20 +421,21 @@ public abstract partial class VisualComponentBase : Area3D
             IsDrawSelected ? DrawAreaColor
             : _nothingSelected ? PlainHoverColor
             : null;
-        SetOutline(
+        SetHighlight(
             NeverHighlight ? null
-            : IsDropTarget ? DropTargetColor
-            : IsHovered && hover != null ? hover
-            : mine ? _localColor
-            : _othersColor
+                : IsDropTarget ? DropTargetColor
+                : IsHovered && hover != null ? hover
+                : mine ? _localColor
+                : _othersColor,
+            !NeverHighlight && _markedForReset
         );
     }
 
-    // Flat copies of the component's meshes that draw it into the outline mask.
-    private readonly List<MeshInstance3D> _outlineCopies = new();
-    private Color? _outlineColor;
+    // Flat copies of the component's meshes that draw it into the highlight mask.
+    private readonly List<MeshInstance3D> _maskCopies = new();
+    private (Color? Outline, bool Painted) _highlight;
 
-    // The color reserved with SelectionOutline.
+    // The outline color reserved with ComponentHighlight.
     private Color? _reservedColor;
 
     public override void _Notification(int what)
@@ -435,80 +447,80 @@ public abstract partial class VisualComponentBase : Area3D
     private void ReleaseOutlineColor()
     {
         if (_reservedColor is Color held)
-            SelectionOutline.Release(held);
+            ComponentHighlight.Release(held);
         _reservedColor = null;
     }
 
-    private void SetOutline(Color? color)
+    private void SetHighlight(Color? outline, bool painted)
     {
-        if (color == _outlineColor && (color == null || _outlineCopies.Count > 0))
+        if ((outline, painted) == _highlight && (_highlight == default || _maskCopies.Count > 0))
             return;
 
-        _outlineColor = color;
-        if (color is not Color c)
+        _highlight = (outline, painted);
+        if (_highlight == default)
         {
-            ClearOutlineCopies();
+            ClearMaskCopies();
             return;
         }
 
-        if (_outlineCopies.Count == 0)
-            BuildOutlineCopies();
+        if (_maskCopies.Count == 0)
+            BuildMaskCopies();
 
         ReleaseOutlineColor();
-        var material = SelectionOutline.Reserve(c);
-        _reservedColor = c;
-        foreach (var copy in _outlineCopies)
+        var material = ComponentHighlight.Reserve(outline, painted);
+        _reservedColor = outline;
+        foreach (var copy in _maskCopies)
             copy.MaterialOverride = material;
     }
 
     /// <summary>
-    /// Remakes the outline copies after the component's meshes change.
+    /// Remakes the mask copies after the component's meshes change.
     /// </summary>
-    private void RebuildOutline()
+    private void RebuildHighlight()
     {
-        ClearOutlineCopies();
-        var color = _outlineColor;
-        _outlineColor = null;
-        SetOutline(color);
+        ClearMaskCopies();
+        var (outline, painted) = _highlight;
+        _highlight = default;
+        SetHighlight(outline, painted);
     }
 
-    private void ClearOutlineCopies()
+    private void ClearMaskCopies()
     {
         ReleaseOutlineColor();
-        foreach (var copy in _outlineCopies)
+        foreach (var copy in _maskCopies)
         {
             if (!IsInstanceValid(copy))
                 continue;
             copy.GetParent()?.RemoveChild(copy);
             copy.QueueFree();
         }
-        _outlineCopies.Clear();
+        _maskCopies.Clear();
     }
 
     /// <summary>
-    /// The meshes whose shape the selection outline traces.
+    /// The meshes whose shape the highlight outlines and paints.
     /// </summary>
-    protected virtual IEnumerable<MeshInstance3D> OutlineMeshes()
+    protected virtual IEnumerable<MeshInstance3D> HighlightMeshes()
     {
         var meshes = new List<MeshInstance3D>();
         CollectMeshes(this, meshes);
         return meshes;
     }
 
-    private void BuildOutlineCopies()
+    private void BuildMaskCopies()
     {
         // Each copy of a mesh is a child of that mesh.
-        // That way if we animate the mesh, the outline moves with it.
-        foreach (var mesh in OutlineMeshes())
+        // That way if we animate the mesh, the highlight moves with it.
+        foreach (var mesh in HighlightMeshes())
         {
             var copy = new MeshInstance3D
             {
                 Mesh = mesh.Mesh,
-                Layers = SelectionOutline.MaskLayer,
+                Layers = ComponentHighlight.MaskLayer,
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             };
             mesh.AddChild(copy, false, InternalMode.Back);
-            _outlineCopies.Add(copy);
+            _maskCopies.Add(copy);
         }
     }
 
@@ -520,7 +532,7 @@ public abstract partial class VisualComponentBase : Area3D
                 continue;
             if (
                 child is MeshInstance3D { Mesh: not null } mesh
-                && (mesh.Layers & SelectionOutline.MaskLayer) == 0
+                && (mesh.Layers & ComponentHighlight.MaskLayer) == 0
             )
                 meshes.Add(mesh);
             CollectMeshes(child, meshes);

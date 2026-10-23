@@ -47,23 +47,22 @@ public sealed class FaceLoader(Action shown)
         IAtomReader R
     )
     {
-        var card = item as PrintedItemRef;
-        Face View(SideParameters side, string key, SnowTag row) =>
-            SideView(side, key, card?.Number ?? 0, row, prototype, factory, R);
+        Face View(SideParameters side, string key, FaceKey face) =>
+            SideView(side, key, face, prototype, factory, R);
         switch (prototype.Parameters)
         {
             case PrintedParameters p:
+                var card = item as PrintedItemRef;
                 // Each view holds its set once, so a back that shows the front gets its own view.
-                var frontRow = card?.FrontRow ?? SnowTag.Empty;
-                var front = View(p.Front, "f", frontRow);
+                var front = View(p.Front, "f", card?.Front);
                 var back =
-                    (p.Back == null ? null : View(p.Back, "b", card?.BackRow ?? SnowTag.Empty))
-                    ?? View(p.Front, "f", frontRow);
+                    (p.Back == null ? null : View(p.Back, "b", card?.Back))
+                    ?? View(p.Front, "f", card?.Front);
                 Queue(front ?? Face.Blank, back ?? Face.Blank);
                 break;
             case DieParameters p:
                 var row = (item as DieItemRef)?.Row ?? SnowTag.Empty;
-                Queue(View(p.Faces, "f", row) ?? Face.Blank, Face.Blank);
+                Queue(View(p.Faces, "f", new RowFace(row)) ?? Face.Blank, Face.Blank);
                 break;
         }
     }
@@ -93,15 +92,13 @@ public sealed class FaceLoader(Action shown)
     }
 
     /// <summary>
-    /// What <paramref name="side"/> shows on card <paramref name="n"/>, or null when it shows nothing.
+    /// What <paramref name="side"/> shows for <paramref name="face"/>, or null when it shows nothing.
     /// </summary>
     /// <param name="key">The key to use for the texture cache.</param>
-    /// <param name="row">The dataset row this side shows, for a template.</param>
     private static Face SideView(
         SideParameters side,
         string key,
-        int n,
-        SnowTag row,
+        FaceKey face,
         Prototype prototype,
         TextureFactory factory,
         IAtomReader R
@@ -111,15 +108,28 @@ public sealed class FaceLoader(Action shown)
         {
             case QuickSide quick when prototype.Parameters is PrintedParameters p:
             {
-                if (QuickTemplate.CardRow(quick, n) is not SnowTag cardRow)
+                if (face is not QuickFace quickFace)
                     return null;
+                var row = QuickTemplate.Row(quick, quickFace);
+                if (row != SnowTag.Empty)
+                    return FaceSet
+                        .Acquire(
+                            $"quick:{R.VersionKey(prototype)}:{key}",
+                            factory,
+                            _ => QuickTemplate.Drawing(p, quick.Cards())
+                        )
+                        .Face(row);
+                // A retired card whose value the side no longer has still draws, alone, in a placeholder if its suit is gone.
+                var suit =
+                    quick.Suits.FirstOrDefault(s => s.Id == quickFace.Suit)
+                    ?? QuickSuit.Placeholder(quickFace.Suit);
                 return FaceSet
                     .Acquire(
-                        $"quick:{R.VersionKey(prototype)}:{key}",
+                        $"quick:{R.VersionKey(prototype)}:{key}:{quickFace.Suit}:{quickFace.Value}",
                         factory,
-                        _ => QuickTemplate.Drawing(p, quick)
+                        _ => QuickTemplate.Drawing(p, [(suit, quickFace.Value)])
                     )
-                    .Face(cardRow);
+                    .Face(new SnowTag(1));
             }
 
             case QuickSide quick when prototype.Parameters is DieParameters die:
@@ -137,14 +147,9 @@ public sealed class FaceLoader(Action shown)
             case ImageSide image:
             {
                 var asset = R.Get(ImageAsset.ById, image.Image);
-                var values = image.FrameValues(
-                    R,
-                    ((PrintedParameters)prototype.Parameters).CardCount(R)
-                );
                 if (
-                    asset == null
-                    || n >= values.Length
-                    || asset.Layout.Frame(values[n]) is not int frame
+                    face is not FrameFace frameFace
+                    || asset?.Layout.Frame(frameFace.Frame) is not int frame
                 )
                     return Face.Missing;
                 return FaceSet.Acquire(asset).Frame(frame);
@@ -152,16 +157,29 @@ public sealed class FaceLoader(Action shown)
 
             case TemplateSide templateSide:
             {
-                return FaceSet
-                    .Acquire(
-                        $"tpl:{templateSide.Template}:{templateSide.Dataset}",
+                var row = (face as RowFace)?.Row ?? SnowTag.Empty;
+                FaceSet Set(string key, Func<IAtomReader, IEnumerable<DataRow>> rows) =>
+                    FaceSet.Acquire(
+                        $"tpl:{templateSide.Template}:{templateSide.Dataset}{key}",
                         factory,
                         R => new Drawing(
                             R.Get(Template.ById, templateSide.Template),
-                            R.Get(DataSet.ById, templateSide.Dataset) == null
-                                ? new Dictionary<SnowTag, IReadOnlyDictionary<string, string>>()
-                                : R.GetRows(templateSide.Dataset).ToDictionary(r => r.Id, R.Values)
+                            rows(R).ToDictionary(r => r.Id, R.Values)
                         )
+                    );
+                // A card whose row was deleted still draws it, alone.
+                if (R.Get(DataRow.ById, row) is { Deleted: true })
+                    return Set(
+                            $":{row}",
+                            R => R.Get(DataRow.ById, row) is { } deleted ? [deleted] : []
+                        )
+                        .Face(row);
+                return Set(
+                        "",
+                        R =>
+                            R.Get(DataSet.ById, templateSide.Dataset) == null
+                                ? []
+                                : R.GetRows(templateSide.Dataset)
                     )
                     .Face(row);
             }

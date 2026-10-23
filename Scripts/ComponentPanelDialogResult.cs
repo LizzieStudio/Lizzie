@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -29,4 +30,27 @@ public abstract partial class ComponentPanelDialogResult : Control
     public virtual void DisplayPrototype(Prototype prototype) { }
 
     public abstract List<string> ValidateParameters(ComponentParameters parameters);
+
+    /// <summary>
+    /// Raised when <see cref="Submittable"/> changes.
+    /// </summary>
+    public event Action SubmittableChanged;
+
+    private bool _submittable = true;
+
+    /// <summary>
+    /// Whether the parameters can be created or updated now.
+    /// The dialog disables its Create and Update buttons while they can't.
+    /// </summary>
+    public bool Submittable
+    {
+        get => _submittable;
+        protected set
+        {
+            if (_submittable == value)
+                return;
+            _submittable = value;
+            SubmittableChanged?.Invoke();
+        }
+    }
 }

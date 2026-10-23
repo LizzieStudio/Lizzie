@@ -23,6 +23,7 @@ public static class CommandIcons
     public const string Shuffle = Folder + "shuffle.svg";
     public const string Draw = Folder + "back_hand.svg";
     public const string Deal = Folder + "playing_cards.svg";
+    public const string UpdateDecks = Folder + "sync.svg";
     public const string Die = Folder + "ifl_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
     public const string SetFace = Folder + "looks_one.svg";
     public const string Add = Folder + "add.svg";

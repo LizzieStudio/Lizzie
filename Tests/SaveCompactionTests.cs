@@ -71,6 +71,14 @@ public class SaveCompactionTests
     public void AnUnreferencedVariantIsDropped() => AssertKept([Component(1), Variant(2)], 1);
 
     [Fact]
+    public void ADeckKeepsTheCardsItIssued() =>
+        AssertKept([Component(1), Variant(2) with { DeckRef = Tag(1) }], 1, 2);
+
+    [Fact]
+    public void AnUnreferencedRetiredCardIsDropped() =>
+        AssertKept([Component(1), Variant(2) with { DeckRef = Tag(1), Retired = true }], 1);
+
+    [Fact]
     public void ADeletedPrototypeAComponentUsesIsKept() =>
         AssertKept(
             [
@@ -202,6 +210,47 @@ public class SaveCompactionTests
     [Fact]
     public void RowsOfAMissingDataSetAreDropped() =>
         AssertKept([new DataRow { Id = Tag(2), DataSetId = Tag(1) }]);
+
+    [Fact]
+    public void ADeletedRowIsDropped() =>
+        AssertKept(
+            [
+                new DataSet { Id = Tag(1) },
+                new DataRow
+                {
+                    Id = Tag(2),
+                    DataSetId = Tag(1),
+                    Deleted = true,
+                },
+            ],
+            1
+        );
+
+    [Fact]
+    public void ADeletedRowACardShowsIsKept() =>
+        AssertKept(
+            [
+                new DataSet { Id = Tag(1) },
+                new DataRow
+                {
+                    Id = Tag(2),
+                    DataSetId = Tag(1),
+                    Deleted = true,
+                },
+                Component(3) with
+                {
+                    VariantRef = Tag(4),
+                },
+                Variant(4) with
+                {
+                    Item = new PrintedItemRef(new RowFace(Tag(2)), null),
+                },
+            ],
+            1,
+            2,
+            3,
+            4
+        );
 
     [Theory]
     [InlineData(true, true, true)]

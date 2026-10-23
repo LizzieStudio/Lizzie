@@ -26,8 +26,8 @@ public class GridLayoutTests
 
     [Theory]
     [InlineData("", null, "[1, 2, 3, 4, 5, 6]")]
-    [InlineData("  ", 4, "[1, 2, 3, 4]")]
-    [InlineData("", 8, "[1, 2, 3, 4, 5, 6, 1, 2]")]
+    [InlineData("  ", 4, "[1, 2, 3, 4, 5, 6]")]
+    [InlineData("", 8, "[1, 2, 3, 4, 5, 6]")]
     [InlineData("2, 5*2", null, "[2, 5, 5]")]
     public void BlankMeansEveryFrame(string expression, int? count, string expected)
     {

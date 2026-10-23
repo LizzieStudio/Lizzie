@@ -2,10 +2,26 @@
 
 [ext_resource type="Script" uid="uid://bieppen1i26w0" path="res://Scripts/UI/HandCard.cs" id="1_card"]
 [ext_resource type="PackedScene" uid="uid://bwkfdirtxku3d" path="res://Scenes/Controls/card_face.tscn" id="2_face"]
+[ext_resource type="Shader" uid="uid://clh1issg4vtqh" path="res://Shaders/component_paint.gdshader" id="3_paint"]
 
-[node name="HandCard" type="PanelContainer" unique_id=821400318]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_paint"]
+shader = ExtResource("3_paint")
+
+[node name="HandCard" type="PanelContainer" unique_id=821400318 node_paths=PackedStringArray("_paint")]
 mouse_filter = 2
 script = ExtResource("1_card")
+_paint = NodePath("Face/Paint")
 
 [node name="Face" parent="." unique_id=1266918473 instance=ExtResource("2_face")]
 layout_mode = 2
+
+[node name="Paint" type="ColorRect" parent="Face" unique_id=266501428]
+visible = false
+material = SubResource("ShaderMaterial_paint")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

@@ -1,10 +1,9 @@
-using System;
 using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
 /// <summary>
-/// An atom that each <see cref="global::Lizzie.Stage"/> holds its own version of, like a component's state.
+/// An atom that each <see cref="Lizzie.Stage"/> holds its own version of, like a component's state.
 ///
 /// <para>
 /// The state of a <see cref="StagedAtom"/> is temporal.

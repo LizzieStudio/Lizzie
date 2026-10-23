@@ -44,6 +44,17 @@ public partial class GameObjects : Node3D, ICommandView
     public WatchableValue<SnowTag> PickedStage { get; } = new();
 
     /// <summary>
+    /// Whether to mark components that a reset would delete.
+    /// </summary>
+    public WatchableValue<bool> MarksTemporary { get; } = new();
+
+    /// <summary>
+    /// Whether the component in <paramref name="key"/> is marked as temporary.
+    /// </summary>
+    public bool IsMarkedForReset(IAtomReader R, StageKey key) =>
+        R.Get(MarksTemporary) && ComponentPosition.GoesOnReset(R, key);
+
+    /// <summary>
     /// Gets the stage to show locally.
     /// </summary>
     public SnowTag ShownStage(IAtomReader R) =>

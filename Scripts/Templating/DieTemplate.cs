@@ -225,7 +225,8 @@ public static class DieTemplate
     /// </summary>
     public static IReadOnlyDictionary<string, string> Values(Color color, QuickSide side, int sides)
     {
-        SequenceExpressions.TryParseStrings(side.Expressions(), out var faces, sides);
+        SequenceExpressions.TryParseStrings(side.Expressions(), out var values, sides);
+        var faces = SequenceExpressions.Cycle(values, sides).ToArray();
         var data = new Dictionary<string, string> { [Background] = color.ToHtml() };
         for (int n = 0; n < faces.Length; n++)
         {

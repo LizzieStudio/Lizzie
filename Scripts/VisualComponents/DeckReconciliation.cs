@@ -1,0 +1,199 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+
+namespace Lizzie;
+
+/// <summary>
+/// Updates blueprint decks with their new contents after a prototype or dataset change.
+/// </summary>
+/// <remarks>
+/// Deck contents are marked with the deck they came from, to make them easy to find.
+/// Items that should be kept are updated, removed items are deleted, and new items are added to the VcDeck (if there is one).
+/// </remarks>
+public static class DeckReconciliation
+{
+    /// <summary>
+    /// The changes that bring every deck of <paramref name="prototype"/> in line with <paramref name="parameters"/>.
+    /// </summary>
+    /// <param name="parameters">The prototype's parameters, which may be newer than the ones written.</param>
+    /// <param name="newTag">Makes the Ids of new cards, for testing.</param>
+    /// <param name="stamp">Orders new cards under the others, for testing.</param>
+    public static List<IChange> Changes(
+        IAtomReader R,
+        SnowTag prototype,
+        PrintedParameters parameters,
+        Func<SnowTag> newTag = null,
+        SnowportId? stamp = null
+    )
+    {
+        var snowTagCreate = newTag ?? SnowTag.Create;
+        var snowportStamp = stamp ?? SnowportId.Create();
+
+        IEnumerable<Stage> Below(SnowTag parent) =>
+            Stage.GetChildren(R, parent).SelectMany(stage => Below(stage.Id).Prepend(stage));
+
+        var blueprints = Below(SnowTag.Empty).Where(stage => !stage.IsTable).ToList();
+        var wanted = parameters.Items(R);
+        var changes = blueprints
+            .SelectMany(stage =>
+                R.Get(ComponentPosition.ByStage, stage.Id)
+                    .Where(c =>
+                        R.GetVariant(c) is { IsItem: false } variant
+                        && variant.PrototypeRef == prototype
+                        && (
+                            stage.ParentRef == SnowTag.Empty
+                            || R.Get(ComponentPosition.ById, new StageKey(stage.ParentRef, c.Id))
+                                == null
+                        )
+                    )
+            )
+            .SelectMany(deck => Deck(R, deck, prototype, wanted, snowTagCreate, snowportStamp))
+            .ToList();
+
+        var retiring = changes
+            .OfType<ComponentVariant>()
+            .Where(v => v.Retired)
+            .Select(v => v.Id)
+            .ToHashSet();
+        bool IsRetired(ComponentPosition c) =>
+            retiring.Contains(c.VariantRef)
+            || R.GetVariant(c) is { Retired: true } variant && variant.PrototypeRef == prototype;
+        changes.AddRange(
+            blueprints.SelectMany(stage =>
+                R.Get(ComponentPosition.WrittenIn, stage.Id)
+                    .Where(c => !c.Removed && IsRetired(c))
+                    .Select(c => c with { Removed = true })
+            )
+        );
+        return changes;
+    }
+
+    /// <summary>
+    /// A new card face-down in <paramref name="deck"/>.
+    /// </summary>
+    public static Atom[] NewCard(
+        ComponentPosition deck,
+        SnowTag prototype,
+        PrintedItemRef item,
+        Func<SnowTag> newTag = null,
+        ZOrder order = default
+    )
+    {
+        var snowTagCreate = newTag ?? SnowTag.Create;
+
+        var variant = new ComponentVariant
+        {
+            Id = snowTagCreate(),
+            PrototypeRef = prototype,
+            Item = item,
+            DeckRef = deck.Id,
+        };
+        return
+        [
+            variant,
+            new ComponentPosition
+            {
+                Id = snowTagCreate(),
+                Stage = deck.Stage,
+                VariantRef = variant.Id,
+                ContainerRef = deck.Id,
+                Rotation = new Vector3(0, 0, Mathf.Pi),
+                ZOrder = order,
+            },
+        ];
+    }
+
+    /// <summary>
+    /// Pairs the <paramref name="issued"/> cards with the <paramref name="wanted"/> ones:
+    /// <list type="number">
+    /// <item>equal items</item>
+    /// <item>the same front</item>
+    /// <item>the same back</item>
+    /// </list>
+    /// A side only pairs cards when its key appears once on that side of each list.
+    /// Earlier cards pair first.
+    /// </summary>
+    /// <returns>
+    /// The pairs, the issued cards left unpaired, and the wanted cards left unpaired, as indexes into each list.
+    /// </returns>
+    public static (
+        List<(int Issued, int Wanted)> Pairs,
+        List<int> Unwanted,
+        List<int> Missing
+    ) Match(IReadOnlyList<PrintedItemRef> issued, IReadOnlyList<PrintedItemRef> wanted)
+    {
+        var pairs = new List<(int, int)>();
+        var unwanted = Enumerable.Range(0, issued.Count).ToList();
+        var missing = Enumerable.Range(0, wanted.Count).ToList();
+
+        void Pair(Func<PrintedItemRef, PrintedItemRef, bool> same)
+        {
+            foreach (int i in unwanted.ToList())
+            {
+                int w = missing.FindIndex(w => same(issued[i], wanted[w]));
+                if (w >= 0)
+                {
+                    pairs.Add((i, missing[w]));
+                    unwanted.Remove(i);
+                    missing.RemoveAt(w);
+                }
+            }
+        }
+
+        bool SameSide(FaceKey a, FaceKey b, Func<PrintedItemRef, FaceKey> side) =>
+            a != null
+            && Equals(a, b)
+            && issued.Count(item => Equals(side(item), a)) == 1
+            && wanted.Count(item => Equals(side(item), a)) == 1;
+
+        Pair(Equals);
+        Pair((a, b) => SameSide(a.Front, b.Front, item => item.Front));
+        Pair((a, b) => SameSide(a.Back, b.Back, item => item.Back));
+        return (pairs, unwanted, missing);
+    }
+
+    private static IEnumerable<IChange> Deck(
+        IAtomReader R,
+        ComponentPosition deck,
+        SnowTag prototype,
+        IReadOnlyList<PrintedItemRef> wanted,
+        Func<SnowTag> newTag,
+        SnowportId stamp
+    )
+    {
+        var held = R.Get(ComponentPosition.ByContainer, deck.In(deck.Id))
+            .Select(c => c.VariantRef)
+            .ToHashSet();
+
+        // The cards out of the deck pair first, so the deck retires the cards it holds.
+        var issued = R.Get(ComponentVariant.ByDeck, deck.Id)
+            .OrderBy(card => held.Contains(card.Id))
+            .ToList();
+        var (pairs, unwanted, missing) = Match(
+            issued.Select(card => (PrintedItemRef)card.Item).ToList(),
+            wanted
+        );
+
+        var changes = new List<IChange>();
+        foreach (var (i, w) in pairs)
+            if (!Equals(issued[i].Item, wanted[w]))
+                changes.Add(issued[i] with { Item = wanted[w] });
+        foreach (int i in unwanted)
+            changes.Add(issued[i] with { Retired = true });
+        // new cards go under the deck's current cards
+        int suborder = missing.Count;
+        foreach (int w in missing)
+            changes.AddRange(
+                NewCard(
+                    deck,
+                    prototype,
+                    wanted[w],
+                    newTag,
+                    new ZOrder(ZTarget.Bottom, suborder--, stamp)
+                )
+            );
+        return changes;
+    }
+}

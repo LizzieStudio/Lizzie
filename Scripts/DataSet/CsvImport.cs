@@ -57,7 +57,7 @@ public static class CsvImport
         }
 
         foreach (var existing in R.GetRows(dataset.Id))
-            changes.Add(R.Unset(existing));
+            changes.Add(existing with { Deleted = true });
 
         SnowRank rank = default;
         foreach (var line in lines.Skip(1))

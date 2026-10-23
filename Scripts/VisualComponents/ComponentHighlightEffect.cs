@@ -6,16 +6,16 @@ namespace Lizzie;
 
 /// <summary>
 /// <para>
-/// Draws <see cref="SelectionOutline"/>'s outlines in one compute pass over the view,
+/// Draws <see cref="ComponentHighlight"/>'s outlines and paint in one compute pass over the view,
 /// after its transparent objects.
 /// </para>
 ///
 /// <para>
-/// Runs on the render thread. <see cref="SelectionOutline"/> sets its fields on the main thread,
+/// Runs on the render thread. <see cref="ComponentHighlight"/> sets its fields on the main thread,
 /// replacing each whole, so the render thread always reads a complete one.
 /// </para>
 /// </summary>
-public partial class SelectionOutlineEffect : CompositorEffect
+public partial class ComponentHighlightEffect : CompositorEffect
 {
     /// <summary>The widest outline the shader can reach, in pixels.</summary>
     public const float MaxWidth = 8;
@@ -26,7 +26,7 @@ public partial class SelectionOutlineEffect : CompositorEffect
     /// <summary>The palette's size in the shader.</summary>
     public const int PaletteSize = 32;
 
-    /// <summary>The mask texture to outline, the size of the view.</summary>
+    /// <summary>The mask texture to highlight, the size of the view.</summary>
     public Rid Mask;
 
     /// <summary>The outline colors, indexed by the mask.</summary>
@@ -35,16 +35,19 @@ public partial class SelectionOutlineEffect : CompositorEffect
     /// <summary>The outline's width in pixels, including the dark rim on each side.</summary>
     public float Width = 5;
 
+    /// <summary>How far the paint's stripes have moved, in pixels.</summary>
+    public int Shift;
+
     private RenderingDevice _rd;
     private Rid _shader;
     private Rid _pipeline;
     private Rid _sampler;
     private Rid _palette;
 
-    public SelectionOutlineEffect()
+    public ComponentHighlightEffect()
     {
         EffectCallbackType = EffectCallbackTypeEnum.PostTransparent;
-        var spirv = GD.Load<RDShaderFile>("res://Shaders/selection_outline.glsl").GetSpirV();
+        var spirv = GD.Load<RDShaderFile>("res://Shaders/component_highlight.glsl").GetSpirV();
         RenderingServer.CallOnRenderThread(Callable.From(() => Create(spirv)));
     }
 
@@ -56,7 +59,7 @@ public partial class SelectionOutlineEffect : CompositorEffect
         if (spirv.CompileErrorCompute != "")
         {
             GD.PushError(
-                $"The selection outline's compute shader failed: {spirv.CompileErrorCompute}"
+                $"The component highlight's compute shader failed: {spirv.CompileErrorCompute}"
             );
             return;
         }
@@ -113,11 +116,16 @@ public partial class SelectionOutlineEffect : CompositorEffect
             0,
             0,
             0.75f, // rim_color
+            ComponentHighlight.PaintColor.R,
+            ComponentHighlight.PaintColor.G,
+            ComponentHighlight.PaintColor.B,
+            ComponentHighlight.PaintColor.A, // paint_color
             BitConverter.Int32BitsToSingle(size.X),
             BitConverter.Int32BitsToSingle(size.Y),
             Math.Min(Width, MaxWidth),
             1, // rim
             0.01f, // bias
+            BitConverter.Int32BitsToSingle(Shift),
         ];
         var pushConstant = new byte[values.Length * sizeof(float)];
         Buffer.BlockCopy(values, 0, pushConstant, 0, pushConstant.Length);

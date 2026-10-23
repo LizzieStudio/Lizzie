@@ -182,26 +182,23 @@ public static class AtomReaderExtensions
             : null;
 
     /// <summary>
-    /// The rows of a dataset in order.
+    /// The rows of a dataset that aren't deleted, in order.
     /// </summary>
     public static List<DataRow> GetRows(this IAtomReader R, SnowTag datasetRef) =>
-        Ranked(R, DataRow.ByDataSet, datasetRef);
+        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataRow.ByDataSet, datasetRef));
 
     /// <summary>
     /// The columns of a dataset in order.
     /// </summary>
     public static List<DataColumn> GetColumns(this IAtomReader R, SnowTag datasetRef) =>
-        Ranked(R, DataColumn.ByDataSet, datasetRef);
+        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataColumn.ByDataSet, datasetRef));
 
-    private static List<T> Ranked<T>(IAtomReader R, Lookup<T, SnowTag> lookup, SnowTag datasetRef)
-        where T : Atom, IRanked
+    private static List<T> Ranked<T>(IEnumerable<T> items)
+        where T : IRanked
     {
-        if (datasetRef == SnowTag.Empty)
-            return [];
-
-        var items = R.Get(lookup, datasetRef).ToList();
-        items.Sort((a, b) => a.Rank.CompareTo(b.Rank));
-        return items;
+        var ranked = items.ToList();
+        ranked.Sort((a, b) => a.Rank.CompareTo(b.Rank));
+        return ranked;
     }
 
     /// <summary>

@@ -131,6 +131,9 @@ public partial class UI : CanvasLayer
 
         _stages = GetNode<HBoxContainer>("%Stages");
 
+        GetNode<CheckButton>("%MarkReset").Toggled += on =>
+            ProjectService.Instance.GameObjects.MarksTemporary.Value = on;
+
         _componentName = GetNode<Label>("%ComponentName");
 
         _textureFactory = GetNode<TextureFactory>("%TextureFactory");

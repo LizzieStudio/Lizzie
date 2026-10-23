@@ -52,11 +52,20 @@ public partial class HandCard : PanelContainer
 
     private CardFace _face;
 
+    // Paints the card when a reset would delete it, like ComponentHighlight does on the table.
+    [Export]
+    private ColorRect _paint;
+
     public override void _Ready()
     {
         // Built in code, since its room comes from the outline's width.
         Theme = OutlineRoom;
         _face = GetNode<CardFace>("Face");
+        _paint.Color = ComponentHighlight.PaintColor;
+        ((ShaderMaterial)_paint.Material).SetShaderParameter(
+            "speed",
+            ComponentHighlight.StripeSpeed
+        );
     }
 
     public override void _EnterTree()
@@ -81,6 +90,7 @@ public partial class HandCard : PanelContainer
             new SelectionPlace(SelectionPlaces.StageView, Reference.Stage)
         );
         SelectionHighlight.Outline(this, "panel", colors, target);
+        _paint.Visible = ProjectService.Instance.GameObjects.IsMarkedForReset(R, Reference);
     }
 
     public static bool IsFaceDown(ComponentPosition s) => Mathf.Cos(s.Rotation.Z) < 0;

@@ -46,6 +46,14 @@ public record ComponentPosition : StagedAtom
     public StageKey In(SnowTag id) => new(Stage, id);
 
     /// <summary>
+    /// Whether resetting its stage would delete the component in <paramref name="key"/>.
+    /// </summary>
+    public static bool GoesOnReset(IAtomReader R, StageKey key) =>
+        R.Get(Lizzie.Stage.ById, key.Stage) is { ParentRef: var parent }
+        && parent != SnowTag.Empty
+        && R.Get(ById, key with { Stage = parent }) == null;
+
+    /// <summary>
     /// The state last written for a component.
     /// </summary>
     public static ComponentPosition Of(VisualComponentBase c) =>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Lizzie.Scripts.Templating;
 
@@ -120,9 +121,10 @@ public class TrackElement : TemplateElement
 
         SequenceExpressions.TryParseStrings(
             EvaluateTextParameter(Parameters, "Box Text", context),
-            out var boxValues,
+            out var parsed,
             spaceCount
         );
+        var boxValues = SequenceExpressions.Cycle(parsed, spaceCount).ToArray();
 
         var spaces = new List<SpaceDef>();
 

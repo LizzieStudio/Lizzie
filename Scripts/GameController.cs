@@ -108,8 +108,8 @@ public partial class GameController : Node
         List<(VisualComponentBase, Vector3)> components
     )
     {
-        var R = AtomService.Instance;
-        int count = side.Count(R);
+        var rows = side.Rows(AtomService.Instance);
+        int count = rows.Count;
         int cols = (int)Math.Ceiling(Math.Sqrt(count));
 
         int i = 0;
@@ -119,7 +119,7 @@ public partial class GameController : Node
 
         for (int n = 0; n < count; n++)
         {
-            var mc = SingleComponentSpawn(prototype, new DieItemRef(side.Row(n, R)));
+            var mc = SingleComponentSpawn(prototype, new DieItemRef(rows[n]));
 
             if (mc != null)
             {

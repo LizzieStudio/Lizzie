@@ -94,6 +94,13 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Import"
 
+[node name="UpdateDecks" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=2125368111]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.update_decks"
+ShowIcon = false
+
 [node name="GridMargin" type="MarginContainer" parent="Panel/VBoxContainer" unique_id=227603288]
 layout_mode = 2
 size_flags_vertical = 3

@@ -96,20 +96,130 @@
                       "$type": {
                         "const": "PrintedItem"
                       },
-                      "number": {
-                        "type": "integer"
+                      "front": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "FrameFace"
+                              },
+                              "frame": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "frame"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickFace"
+                              },
+                              "suit": true,
+                              "value": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "suit",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "RowFace"
+                              },
+                              "row": true
+                            },
+                            "required": [
+                              "row"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
                       },
-                      "frontRow": true,
-                      "backRow": true
+                      "back": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "FrameFace"
+                              },
+                              "frame": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "frame"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickFace"
+                              },
+                              "suit": true,
+                              "value": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "suit",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "RowFace"
+                              },
+                              "row": true
+                            },
+                            "required": [
+                              "row"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
                     },
                     "required": [
-                      "number",
-                      "frontRow",
-                      "backRow"
+                      "front",
+                      "back"
                     ],
                     "additionalProperties": false
                   }
                 ]
+              },
+              "deckRef": true,
+              "retired": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -178,7 +288,10 @@
               },
               "id": true,
               "dataSetId": true,
-              "rank": true
+              "rank": true,
+              "deleted": {
+                "type": "boolean"
+              }
             },
             "required": [
               "id"
@@ -472,6 +585,7 @@
                                     "null"
                                   ],
                                   "properties": {
+                                    "id": true,
                                     "background": true,
                                     "foreground": true,
                                     "values": {

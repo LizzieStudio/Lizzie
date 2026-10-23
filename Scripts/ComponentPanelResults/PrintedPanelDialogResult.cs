@@ -64,6 +64,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IWatchReader R)
     {
+        Submittable = GetParams().SidesFit(R);
         int count = GetParams().CardCount(R);
         _preview.ItemCount = count;
         _preview.MultiItemMode = count > 1;

@@ -15,14 +15,10 @@ namespace Lizzie;
 public abstract record SideParameters
 {
     /// <summary>
-    /// How many cards this side shows before it repeats.
+    /// What each component shows on this side, in order, before the side repeats.
     /// </summary>
-    public abstract int Count(IAtomReader R);
-
-    /// <summary>
-    /// The dataset row card <paramref name="n"/> shows, for a side drawn from a dataset.
-    /// </summary>
-    public virtual SnowTag Row(int n, IAtomReader R) => SnowTag.Empty;
+    /// <param name="count">How many components the prototype has, which a side that stretches fills.</param>
+    public abstract IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null);
 }
 
 /// <summary>
@@ -54,7 +50,8 @@ public sealed record QuickSide : SideParameters
             })
             .ToList();
 
-    public override int Count(IAtomReader R) => Cards().Count;
+    public override IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null) =>
+        Cards().Select(card => new QuickFace(card.Suit.Id, card.Value)).ToList();
 }
 
 /// <summary>
@@ -62,6 +59,11 @@ public sealed record QuickSide : SideParameters
 /// </summary>
 public sealed record QuickSuit
 {
+    /// <summary>
+    /// Used to identify the suit apart from the others of its side, even when they look the same.
+    /// </summary>
+    public SnowTag Id { get; init; }
+
     public Color Background { get; init; } = Colors.White;
 
     /// <summary>
@@ -81,6 +83,22 @@ public sealed record QuickSuit
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public bool ShowText { get; init; } = true;
+
+    /// <summary>
+    /// A plain stand-in for a deleted suit.
+    /// </summary>
+    public static QuickSuit Placeholder(SnowTag id) =>
+        new()
+        {
+            Id = id,
+            Background = Color.FromHsv(
+                // 2 / 1 + Sqrt(5) is the golden angle
+                // it's basically just an irrational number to use the id as a seed
+                (float)(id * (2f / (1f + Math.Sqrt(5f))) % 1f),
+                0.35f,
+                0.95f
+            ),
+        };
 }
 
 /// <summary>
@@ -96,19 +114,14 @@ public sealed record ImageSide : SideParameters
     /// </summary>
     public string Frames { get; init; } = "";
 
-    /// <summary>
-    /// The frame values, fitted to <paramref name="count"/> when there is one.
-    /// </summary>
-    public int[] FrameValues(IAtomReader R, int? count = null)
-    {
-        Layout(R).TryParse(Frames, out var values, count);
-        return values;
-    }
-
     public GridLayout Layout(IAtomReader R) =>
         R.Get(ImageAsset.ById, Image)?.Layout ?? GridLayout.Single;
 
-    public override int Count(IAtomReader R) => FrameValues(R).Length;
+    public override IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null)
+    {
+        Layout(R).TryParse(Frames, out var values, count);
+        return values.Select(value => new FrameFace(value)).ToList();
+    }
 }
 
 /// <summary>
@@ -126,18 +139,13 @@ public sealed record TemplateSide : SideParameters
     /// </summary>
     public SnowTag Quantity { get; init; }
 
-    public override int Count(IAtomReader R) => Rows(R).Count;
-
-    public override SnowTag Row(int n, IAtomReader R)
-    {
-        var rows = Rows(R);
-        return rows.Count == 0 ? SnowTag.Empty : rows[n % rows.Count];
-    }
+    public override IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null) =>
+        Rows(R).Select(row => new RowFace(row)).ToList();
 
     /// <summary>
     /// Each card's row, in order.
     /// </summary>
-    private List<SnowTag> Rows(IAtomReader R) =>
+    public List<SnowTag> Rows(IAtomReader R) =>
         R.GetRows(Dataset)
             .SelectMany(row =>
                 Enumerable.Repeat(

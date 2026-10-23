@@ -6,12 +6,12 @@ using System.Linq;
 namespace Lizzie;
 
 /// <summary>
-/// Utilities to create an in-memory template and dataset for quick cards.
+/// Utilities to create an in-memory template and dataset for quick decks.
 /// </summary>
 public static class QuickTemplate
 {
     /// <summary>
-    /// The most icons a card can show. A larger number shows one.
+    /// The most icons a component can show. A larger number shows one.
     /// </summary>
     /// <remarks>
     /// There's a bug in the icon code that starts at 10. Once we fix that, we can raise this.
@@ -67,33 +67,39 @@ public static class QuickTemplate
         };
 
     /// <summary>
-    /// What <paramref name="side"/> of a printed component draws.
+    /// What the <paramref name="items"/> of a printed component draw, like a side's <see cref="QuickSide.Cards"/>.
     /// </summary>
     /// <remarks>
-    /// Cards that repeat are only drawn once. This isn't exhaustive, but it catches things like A*2.
+    /// Cards that repeat, like A*2, are only drawn once.
     /// </remarks>
-    public static Drawing Drawing(PrintedParameters p, QuickSide side) =>
+    public static Drawing Drawing(
+        PrintedParameters p,
+        IEnumerable<(QuickSuit Suit, string Value)> items
+    ) =>
         new(
             Template with
             {
                 Width = p.Width / 10f / CmPerInch,
                 Height = p.Height / 10f / CmPerInch,
             },
-            side.Cards()
-                .Distinct()
+            items
+                .DistinctBy(c => (c.Suit.Id, c.Value))
                 .Select((c, i) => (Row: new SnowTag(i + 1), Values: Values(c.Suit, c.Value)))
                 .ToDictionary(r => r.Row, r => r.Values)
         );
 
     /// <summary>
-    /// The row of <see cref="Drawing"/> that card <paramref name="n"/> shows, or null when the side has no cards.
+    /// The row of <paramref name="side"/>'s <see cref="Drawing"/> that shows <paramref name="face"/>,
+    /// or <see cref="SnowTag.Empty"/> when the side no longer has it.
     /// </summary>
-    public static SnowTag? CardRow(QuickSide side, int n)
+    public static SnowTag Row(QuickSide side, QuickFace face)
     {
-        var cards = side.Cards();
-        if (cards.Count == 0)
-            return null;
-        return new SnowTag(cards.Distinct().ToList().IndexOf(cards[n % cards.Count]) + 1);
+        int index = side.Cards()
+            .Select(c => (c.Suit.Id, c.Value))
+            .Distinct()
+            .ToList()
+            .IndexOf((face.Suit, face.Value));
+        return index < 0 ? SnowTag.Empty : new SnowTag(index + 1);
     }
 
     /// <summary>

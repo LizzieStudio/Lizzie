@@ -17,6 +17,16 @@ public record ComponentVariant : Atom
     /// </summary>
     public required SnowTag Id { get; init; }
 
+    /// <summary>
+    /// The cards each deck issued and hasn't retired, by the deck's Id.
+    /// </summary>
+    /// <remarks>
+    /// A deck keeps these in saves, even after their components are deleted, so it doesn't issue them again.
+    /// </remarks>
+    public static readonly Lookup<ComponentVariant, SnowTag?> ByDeck = new(v =>
+        v.DeckRef == SnowTag.Empty || v.Retired ? null : v.DeckRef
+    );
+
     public SnowTag PrototypeRef { get; init; }
 
     /// <summary>
@@ -34,6 +44,20 @@ public record ComponentVariant : Atom
     /// </summary>
     [JsonIgnore]
     public bool IsItem => Item != null;
+
+    /// <summary>
+    /// The deck that issued this card, or <see cref="SnowTag.Empty"/> when it didn't come from a deck.
+    /// </summary>
+    /// <remarks>
+    /// Each card a deck issues gets its own variant, so a deck can count the cards it issued.
+    /// </remarks>
+    public SnowTag DeckRef { get; init; }
+
+    /// <summary>
+    /// Set when its deck no longer wants this card, after its prototype changed.
+    /// Components of a retired variant still show it until a player deletes them.
+    /// </summary>
+    public bool Retired { get; init; }
 
     /// <summary>
     /// A new variant for a node that hasn't been written yet, such as a spawn preview.

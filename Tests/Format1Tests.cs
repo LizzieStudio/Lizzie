@@ -87,9 +87,49 @@ public class Format1Tests
 
         var variants = OfType(writes, "ComponentVariant").ToDictionary(v => (int)v["id"]);
         Assert.Null(variants[(int)deck["variantRef"]]["item"]);
+        Assert.Equal((int)deck["id"], (int)variants[(int)card["variantRef"]]["deckRef"]);
         var item = variants[(int)card["variantRef"]]["item"];
         var bow = OfType(writes, "DataRow").OrderBy(r => (string)r["rank"]).Last();
-        Assert.Equal(1, (int)item["number"]);
-        Assert.Equal((int)bow["id"], (int)item["frontRow"]);
+        Assert.Equal("RowFace", (string)item["front"]["$type"]);
+        Assert.Equal((int)bow["id"], (int)item["front"]["row"]);
+        Assert.Null(item["back"]);
+    }
+
+    /// <summary>
+    /// A main-branch project with a quick deck of two cards, and a snapshot with its second card.
+    /// </summary>
+    private const string QuickProject = """
+        {
+          "Name": "P", "Templates": {}, "Datasets": {}, "Images": {},
+          "Prototypes": { "q1": { "PrototypeRef": "q1", "Name": "Quick", "Type": 3,
+            "Parameters": { "ComponentName": "Quick", "BaseName": "Printed", "Height": 88.9, "Width": 63.5,
+              "Mode": 5, "QuickCardData": [ { "Caption": "Ace" }, { "Caption": "1-3" } ] } } },
+          "GameStates": { "Setup": { "Name": "Setup", "CapturedAt": "2026-01-01T00:00:00Z", "Components": [
+            { "ComponentRef": "card", "PrototypeRef": "q1", "DataSetRow": "2", "Px": 0, "Pz": 0, "ZOrder": 1,
+              "ContainedComponents": [] } ] } },
+          "GameSettings": { "TableColorR": 0.5, "TableColorG": 0.5, "TableColorB": 0.5, "TableColorA": 1,
+            "Players": [] }
+        }
+        """;
+
+    [Fact]
+    public void AQuickCardShowsItsCaptionInItsOwnSuit()
+    {
+        var lines = new List<JsonObject> { JsonNode.Parse(QuickProject).AsObject() };
+        SaveUpgrade.Run(lines);
+        var writes = ((JsonArray)Assert.Single(lines)["writes"]).Cast<JsonObject>().ToList();
+
+        var suits = (
+            (JsonArray)Assert.Single(OfType(writes, "Prototype"))["parameters"]["front"]["suits"]
+        )
+            .Cast<JsonObject>()
+            .ToList();
+        Assert.Equal(["\"Ace\"", "\"1-3\""], suits.Select(s => (string)s["values"]));
+        Assert.NotEqual((int)suits[0]["id"], (int)suits[1]["id"]);
+
+        var front = Assert.Single(OfType(writes, "ComponentVariant"))["item"]["front"];
+        Assert.Equal("QuickFace", (string)front["$type"]);
+        Assert.Equal((int)suits[1]["id"], (int)front["suit"]);
+        Assert.Equal("1-3", (string)front["value"]);
     }
 }

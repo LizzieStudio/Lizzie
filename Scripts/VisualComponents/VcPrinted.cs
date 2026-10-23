@@ -328,13 +328,52 @@ public sealed record PrintedParameters : ComponentParameters
     public bool SpawnDeck { get; init; }
 
     /// <summary>
-    /// How many cards there are. The max of both sides.
+    /// How many cards there are, set by the side with biggest count.
     /// </summary>
-    public int CardCount(IAtomReader R) => Math.Max(Front?.Count(R) ?? 0, Back?.Count(R) ?? 0);
+    public int CardCount(IAtomReader R) =>
+        Math.Max(Front?.Faces(R).Count ?? 0, Back?.Faces(R).Count ?? 0);
 
     /// <summary>
-    /// Item <paramref name="n"/> of this prototype.
+    /// Each side's faces, with an unbounded expression filled to the <see cref="CardCount"/>.
+    /// The backs are null when the back shows the front.
+    /// </summary>
+    private (IReadOnlyList<FaceKey> Fronts, IReadOnlyList<FaceKey> Backs) Faces(IAtomReader R)
+    {
+        int count = CardCount(R);
+        return (Front?.Faces(R, count) ?? [], Back?.Faces(R, count));
+    }
+
+    /// <summary>
+    /// Whether the sides can pair up.
+    /// </summary>
+    public bool SidesFit(IAtomReader R)
+    {
+        var (fronts, backs) = Faces(R);
+        return backs == null
+            || fronts.Count == backs.Count
+            || fronts.Count == 1
+            || backs.Count == 1;
+    }
+
+    /// <summary>
+    /// Every card of this prototype, in order. A side with fewer cards repeats.
+    /// </summary>
+    public List<PrintedItemRef> Items(IAtomReader R)
+    {
+        var (fronts, backs) = Faces(R);
+        int count = Math.Max(fronts.Count, backs?.Count ?? 0);
+        return Enumerable
+            .Range(0, count)
+            .Select(n => new PrintedItemRef(At(fronts, n), backs == null ? null : At(backs, n)))
+            .ToList();
+    }
+
+    private static FaceKey At(IReadOnlyList<FaceKey> faces, int n) =>
+        faces.Count == 0 ? null : faces[n % faces.Count];
+
+    /// <summary>
+    /// Card <paramref name="n"/> of this prototype, or a blank card when it has fewer.
     /// </summary>
     public PrintedItemRef Item(int n, IAtomReader R) =>
-        new(n, Front?.Row(n, R) ?? SnowTag.Empty, Back?.Row(n, R) ?? SnowTag.Empty);
+        Items(R).ElementAtOrDefault(n) ?? new PrintedItemRef(null, null);
 }

@@ -26,7 +26,15 @@ public sealed class Format1 : IStep
         private readonly Dictionary<string, List<string>> _rows = [];
 
         /// <summary>How a prototype's components become variants.</summary>
-        private sealed record Kind(int Type, int Mode, string Dataset);
+        /// <param name="Faces">
+        /// A printed card's front and back keys, from its old number and its row's tag.
+        /// </param>
+        private sealed record Kind(
+            int Type,
+            int Mode,
+            string Dataset,
+            Func<int, int?, (JsonObject Front, JsonObject Back)> Faces
+        );
 
         /// <summary>The SnowTag of something in the old save, made the first time it's asked for.</summary>
         private int Tag(string kind, string key) =>
@@ -195,6 +203,7 @@ public sealed class Format1 : IStep
             int mode = (int?)p["Mode"] ?? 0;
 
             JsonObject parameters;
+            Func<int, int?, (JsonObject, JsonObject)> faces = null;
             switch (type)
             {
                 case 0:
@@ -205,7 +214,7 @@ public sealed class Format1 : IStep
                     parameters = Parameters(p, "DiscParameters", "Height", "Diameter");
                     parameters["color"] = Color(p, "Color");
                     break;
-                case 3 or 6 when Printed(p, type, mode) is { } printed:
+                case 3 or 6 when Printed(key, p, type, mode, out faces) is { } printed:
                     parameters = printed;
                     break;
                 case 7:
@@ -215,8 +224,14 @@ public sealed class Format1 : IStep
                         mode == 3
                             ? TemplateSide(p, "FrontTemplate")
                             : QuickSide(
-                                ((JsonArray)p["Sides"] ?? []).Select(side =>
-                                    Suit(p, "Color", (JsonObject)side)
+                                ((JsonArray)p["Sides"] ?? []).Select(
+                                    (side, i) =>
+                                        Suit(
+                                            p,
+                                            "Color",
+                                            (JsonObject)side,
+                                            Tag("suit", $"{key}/{i}")
+                                        )
                                 )
                             );
                     break;
@@ -251,7 +266,7 @@ public sealed class Format1 : IStep
                     return;
             }
 
-            _prototypes[key] = new Kind(type, mode, (string)p["Dataset"]);
+            _prototypes[key] = new Kind(type, mode, (string)p["Dataset"], faces);
             _writes.Add(
                 new JsonObject
                 {
@@ -266,51 +281,91 @@ public sealed class Format1 : IStep
         /// <summary>
         /// A token's or deck's parameters, or null for a kind there's no longer any way to make.
         /// </summary>
-        private JsonObject Printed(JsonObject p, int type, int mode)
+        /// <param name="faces">Gets a card's face keys, as <see cref="Kind.Faces"/>.</param>
+        private JsonObject Printed(
+            string key,
+            JsonObject p,
+            int type,
+            int mode,
+            out Func<int, int?, (JsonObject, JsonObject)> faces
+        )
         {
             bool differentBack = (bool?)p["DifferentBack"] ?? false;
             JsonObject front,
-                back = null;
+                back = null,
+                backFace = null;
             switch (mode)
             {
                 case 0:
-                    front = QuickSide([Suit(p, "FrontBgColor", (JsonObject)p["QuickFront"])]);
+                    var quickFront = (JsonObject)p["QuickFront"];
+                    int frontSuit = Tag("suit", $"{key}/front");
+                    front = QuickSide([Suit(p, "FrontBgColor", quickFront, frontSuit)]);
+                    var frontFace = QuickFace(frontSuit, (string)quickFront?["Caption"]);
                     if (differentBack && p["QuickBack"] is JsonObject quickBack)
-                        back = QuickSide([Suit(p, "BackBgColor", quickBack, quantity: false)]);
+                    {
+                        int backSuit = Tag("suit", $"{key}/back");
+                        back = QuickSide([
+                            Suit(p, "BackBgColor", quickBack, backSuit, quantity: false),
+                        ]);
+                        backFace = QuickFace(backSuit, (string)quickBack["Caption"]);
+                    }
+                    faces = (_, _) => (frontFace, backFace);
                     break;
                 case 5:
                     var cards = ((JsonArray)p["QuickCardData"] ?? []).Cast<JsonObject>().ToList();
+                    var suits = cards.Select((_, i) => Tag("suit", $"{key}/front/{i}")).ToList();
                     front = QuickSide(
-                        cards.Select(card => new JsonObject
-                        {
-                            ["background"] = Color(card, "BackgroundColor"),
-                            ["values"] = (string)card["Caption"] ?? "",
-                        })
+                        cards.Select(
+                            (card, i) =>
+                                new JsonObject
+                                {
+                                    ["id"] = suits[i],
+                                    ["background"] = Color(card, "BackgroundColor"),
+                                    ["values"] = Quote((string)card["Caption"]),
+                                }
+                        )
                     );
+                    var fronts = cards
+                        .Select((card, i) => QuickFace(suits[i], (string)card["Caption"]))
+                        .ToList();
                     if (differentBack && cards.Count > 0)
+                    {
+                        int backSuit = Tag("suit", $"{key}/back");
+                        var backValue = (string)cards[0]["CardBackValue"];
                         back = QuickSide([
                             new JsonObject
                             {
+                                ["id"] = backSuit,
                                 ["background"] = Color(cards[0], "CardBackColor"),
-                                ["values"] = Quote((string)cards[0]["CardBackValue"]),
+                                ["values"] = Quote(backValue),
                             },
                         ]);
+                        backFace = QuickFace(backSuit, backValue);
+                    }
+                    faces = (n, _) => (fronts.ElementAtOrDefault(n), backFace);
                     break;
                 case 2:
                     front = ImageSide((string)p["FrontGridImageKey"], "", p);
-                    if (differentBack && (string)p["BackGridImageKey"] is { Length: > 0 } backImage)
-                        back = ImageSide(
-                            backImage,
-                            (bool?)p["GridSingleBack"] ?? false ? "1" : "",
-                            p
-                        );
+                    bool singleBack = (bool?)p["GridSingleBack"] ?? false;
+                    bool imageBack =
+                        differentBack && (string)p["BackGridImageKey"] is { Length: > 0 };
+                    if (imageBack)
+                        back = ImageSide((string)p["BackGridImageKey"], singleBack ? "1" : "", p);
+                    faces = (n, _) =>
+                        (FrameFace(n + 1), imageBack ? FrameFace(singleBack ? 1 : n + 1) : null);
                     break;
                 case 3:
                     front = TemplateSide(p, "FrontTemplate");
-                    if ((string)p["BackTemplate"] is { Length: > 0 })
+                    bool templateBack = (string)p["BackTemplate"] is { Length: > 0 };
+                    if (templateBack)
                         back = TemplateSide(p, "BackTemplate");
+                    faces = (_, row) =>
+                        row is int r
+                            ? (RowFace(r), templateBack ? RowFace(r) : null)
+                            : (null, null);
                     break;
                 default:
+                    faces = null;
                     return null;
             }
 
@@ -335,6 +390,23 @@ public sealed class Format1 : IStep
             new() { ["$type"] = "QuickSide", ["suits"] = new JsonArray([.. suits]) };
 
         /// <summary>
+        /// The key of the card showing the <see cref="Quote"/>d <paramref name="text"/> in <paramref name="suit"/>.
+        /// </summary>
+        private static JsonObject QuickFace(int suit, string text) =>
+            new()
+            {
+                ["$type"] = "QuickFace",
+                ["suit"] = suit,
+                ["value"] = Literal(text),
+            };
+
+        private static JsonObject FrameFace(int frame) =>
+            new() { ["$type"] = "FrameFace", ["frame"] = frame };
+
+        private static JsonObject RowFace(int row) =>
+            new() { ["$type"] = "RowFace", ["row"] = row };
+
+        /// <summary>
         /// A quick suit from an old face: its text, repeated by its quantity, in its color,
         /// on the background named by <paramref name="background"/>.
         /// </summary>
@@ -342,6 +414,7 @@ public sealed class Format1 : IStep
             JsonObject p,
             string background,
             JsonObject face,
+            int id,
             bool quantity = true
         )
         {
@@ -349,6 +422,7 @@ public sealed class Format1 : IStep
             var values = Quote((string)face["Caption"]);
             return new JsonObject
             {
+                ["id"] = id,
                 ["background"] = Color(p, background),
                 ["foreground"] = Color(face, "ForegroundColor"),
                 ["values"] = count > 1 ? $"{values}*{count}" : values,
@@ -433,6 +507,10 @@ public sealed class Format1 : IStep
                 .Where(c => _prototypes.ContainsKey((string)c["PrototypeRef"]))
                 .Select(c => (string)c["ComponentRef"])
                 .ToHashSet();
+            var prototypes = components.ToDictionary(
+                c => (string)c["ComponentRef"],
+                c => (string)c["PrototypeRef"]
+            );
 
             foreach (var c in components)
             {
@@ -449,8 +527,12 @@ public sealed class Format1 : IStep
                     ["id"] = Tag("component", id),
                     ["stage"] = stage,
                     ["variantRef"] = Variant(
+                        id,
                         (string)c["PrototypeRef"],
-                        (string)c["DataSetRow"] ?? ""
+                        (string)c["DataSetRow"] ?? "",
+                        container != null && _prototypes[prototypes[container]].Type == 6
+                            ? Tag("component", container)
+                            : null
                     ),
                     ["zOrder"] = new JsonObject
                     {
@@ -479,21 +561,24 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>
-        /// The variant of a prototype's item, shared by every component of the same item.
+        /// The variant of a component, which is its own, since a deck counts the cards it issued.
+        /// A component in several snapshots has one variant.
         /// </summary>
-        private int Variant(string prototype, string row)
+        /// <param name="issuer">The tag of the deck holding the component, if any, which issued it.</param>
+        private int Variant(string component, string prototype, string row, int? issuer)
         {
-            string key = $"{prototype}/{row}";
-            if (_tags.ContainsKey($"variant:{key}"))
-                return Tag("variant", key);
+            if (_tags.ContainsKey($"variant:{component}"))
+                return Tag("variant", component);
 
-            int tag = Tag("variant", key);
+            int tag = Tag("variant", component);
             var variant = new JsonObject
             {
                 ["$type"] = "ComponentVariant",
                 ["id"] = tag,
                 ["prototypeRef"] = Tag("prototype", prototype),
             };
+            if (issuer != null)
+                variant["deckRef"] = issuer;
             var kind = _prototypes[prototype];
             var rows = kind.Dataset is { } dataset ? _rows.GetValueOrDefault(dataset) ?? [] : [];
             int index = rows.IndexOf(row);
@@ -504,18 +589,16 @@ public sealed class Format1 : IStep
             if (kind.Type is 3 or 6 && !deck)
             {
                 int.TryParse(row, out int number);
-                variant["item"] = new JsonObject
-                {
-                    ["$type"] = "PrintedItem",
-                    ["number"] = kind.Mode switch
-                    {
-                        5 => Math.Max(number - 1, 0),
-                        3 => Math.Max(index, 0),
-                        _ => number,
-                    },
-                    ["frontRow"] = rowTag ?? 0,
-                    ["backRow"] = rowTag ?? 0,
-                };
+                var (front, back) = kind.Faces(
+                    kind.Mode == 5 ? Math.Max(number - 1, 0) : number,
+                    rowTag
+                );
+                var item = new JsonObject { ["$type"] = "PrintedItem" };
+                if (front != null)
+                    item["front"] = front.DeepClone();
+                if (back != null)
+                    item["back"] = back.DeepClone();
+                variant["item"] = item;
             }
             else if (kind.Type == 7 && rowTag != null)
                 variant["item"] = new JsonObject { ["$type"] = "DieItem", ["row"] = rowTag };
@@ -561,7 +644,12 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>A sequence expression that's exactly <paramref name="text"/>.</summary>
-        private static string Quote(string text) => $"\"{(text ?? "").Replace("\"", "'")}\"";
+        private static string Quote(string text) => $"\"{Literal(text)}\"";
+
+        /// <summary>
+        /// The value a <see cref="Quote"/>d <paramref name="text"/> makes.
+        /// </summary>
+        private static string Literal(string text) => (text ?? "").Replace("\"", "'");
 
         /// <summary>
         /// The rank of the item at <paramref name="index"/>, three digits of the ordered characters <c>-</c> through <c>z</c>.

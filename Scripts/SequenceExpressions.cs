@@ -84,8 +84,9 @@ public static class SequenceExpressions
     /// The resulting values: <c>[1, 2, 3, J, J, Draw, then discard]</c>. On an error, the values before it.
     /// </param>
     /// <param name="count">
-    /// Repeats or trims the list to a length.
-    /// When included, the unbounded expression grows or shrinks to fit.
+    /// The length the one unbounded expression grows or shrinks to fit, if there is one.
+    /// The bounded expressions are never trimmed, so the list can still be longer.
+    /// Without an unbounded expression, the count is ignored.
     /// </param>
     /// <returns>Whether or not the parse completed without errors.</returns>
     public static bool TryParseStrings(string input, out string[] output, int? count = null)
@@ -390,21 +391,27 @@ public static class SequenceExpressions
             .Where(i => i.Item.Unbounded == Unbounded.No)
             .Sum(i => i.Item.Values.Count);
         var room = Math.Max((count ?? 0) - bounded, 0);
-        var values = items.SelectMany(i =>
-            (
-                i.Item.Unbounded switch
-                {
-                    Unbounded.No => i.Item.Values,
-                    Unbounded.Repeat => count == null ? i.Item.Values : Cycle(i.Item.Values, room),
-                    _ => Enumerable
-                        .Range(0, room)
-                        .Select(n => (int.Parse(i.Item.Values[0]) + n).ToString()),
-                }
-            ).Select(value => (i.Input, value))
-        );
-        return count is int c ? Cycle(values.ToList(), c).ToList() : values.ToList();
+        return items
+            .SelectMany(i =>
+                (
+                    i.Item.Unbounded switch
+                    {
+                        Unbounded.No => i.Item.Values,
+                        Unbounded.Repeat => count == null
+                            ? i.Item.Values
+                            : Cycle(i.Item.Values, room),
+                        _ => Enumerable
+                            .Range(0, room)
+                            .Select(n => (int.Parse(i.Item.Values[0]) + n).ToString()),
+                    }
+                ).Select(value => (i.Input, value))
+            )
+            .ToList();
     }
 
-    private static IEnumerable<T> Cycle<T>(List<T> values, int count) =>
+    /// <summary>
+    /// Repeats or trims <paramref name="values"/> to <paramref name="count"/> values. Nothing stays nothing.
+    /// </summary>
+    public static IEnumerable<T> Cycle<T>(IReadOnlyList<T> values, int count) =>
         values.Count == 0 ? [] : Enumerable.Range(0, count).Select(i => values[i % values.Count]);
 }

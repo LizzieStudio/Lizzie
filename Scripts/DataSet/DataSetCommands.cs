@@ -37,6 +37,46 @@ public static class DataSetCommands
         Effects = (R, sets, _) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
     };
 
+    public static readonly Command UpdateDecks = new AtomCommand<DataSet>
+    {
+        Name = new("dataset.update_decks"),
+        Icon = CommandIcons.UpdateDecks,
+        Caption = "Update Decks",
+        Tooltip =
+            "Adds new components and removes deleted components from blueprint decks that show this DataSet.",
+        Count = TargetCount.One,
+        ActsOn = Context.View,
+        ShowInMenu = false,
+        Requires =
+        [
+            (
+                "A prototype that shows this dataset now has different numbers of items on its front and back.",
+                (R, set) => Showing(R, set.Id).All(p => p.Parameters.SidesFit(R))
+            ),
+        ],
+        Effects = (R, sets, _) =>
+            Showing(R, sets[0].Id)
+                .SelectMany(p => DeckReconciliation.Changes(R, p.Id, p.Parameters))
+                .ToList(),
+    };
+
+    /// <summary>
+    /// The printed prototypes with a side that shows <paramref name="dataset"/>.
+    /// </summary>
+    private static IEnumerable<(SnowTag Id, PrintedParameters Parameters)> Showing(
+        IAtomReader R,
+        SnowTag dataset
+    ) =>
+        R.Get(Prototype.Live)
+            .Where(p =>
+                p.Parameters is PrintedParameters printed
+                && (
+                    printed.Front is TemplateSide front && front.Dataset == dataset
+                    || printed.Back is TemplateSide back && back.Dataset == dataset
+                )
+            )
+            .Select(p => (p.Id, (PrintedParameters)p.Parameters));
+
     public static readonly Command EditRow = new AtomCommand<DataRow>
     {
         Name = new("dataset.edit_row"),
@@ -44,6 +84,7 @@ public static class DataSetCommands
         Caption = "Edit Data Row",
         Count = TargetCount.One,
         ActsOn = Context.Referenced,
+        AppliesTo = (_, row) => !row.Deleted,
         SideEffects = (rows, _) =>
             EventBus.Instance.Publish(
                 new ShowDatasetEditor
@@ -62,7 +103,8 @@ public static class DataSetCommands
         Noun = ("Row", "Rows"),
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
-        Effects = (R, rows, _) => rows.Select(R.Unset),
+        AppliesTo = (_, row) => !row.Deleted,
+        Effects = (R, rows, _) => rows.Select(row => row with { Deleted = true }),
     };
 
     public static readonly Command DeleteColumn = new AtomCommand<DataColumn>

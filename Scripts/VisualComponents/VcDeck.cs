@@ -37,7 +37,7 @@ public partial class VcDeck : VisualComponentBase
     public override GeometryInstance3D DragMesh => _outline;
 
     // The deck draws only a frame sprite, so the outline traces a box added specifically for it.
-    protected override IEnumerable<MeshInstance3D> OutlineMeshes() => [_outlineShape];
+    protected override IEnumerable<MeshInstance3D> HighlightMeshes() => [_outlineShape];
 
     public override float MaxAxisSize => Math.Max(_height, _width);
 
@@ -93,31 +93,9 @@ public partial class VcDeck : VisualComponentBase
         if (proto?.Parameters is not PrintedParameters parameters)
             return [];
 
-        var R = AtomService.Instance;
         return Enumerable
-            .Range(0, parameters.CardCount(R))
-            .Reverse()
-            .SelectMany(n =>
-            {
-                var variant = new ComponentVariant
-                {
-                    Id = SnowTag.Create(),
-                    PrototypeRef = PrototypeRef,
-                    Item = parameters.Item(n, R),
-                };
-                return new Atom[]
-                {
-                    variant,
-                    new ComponentPosition
-                    {
-                        Id = SnowTag.Create(),
-                        Stage = self.Stage,
-                        VariantRef = variant.Id,
-                        ContainerRef = self.Id,
-                        Rotation = new Vector3(0, 0, Mathf.Pi),
-                    },
-                };
-            })
+            .Reverse(parameters.Items(AtomService.Instance))
+            .SelectMany(item => DeckReconciliation.NewCard(self, PrototypeRef, item))
             .ToList();
     }
 

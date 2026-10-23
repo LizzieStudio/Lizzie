@@ -40,11 +40,11 @@ public partial class QuickSideTab : SideTab
     {
         foreach (var row in Rows)
             Connect(row);
-        // Adding a new row copies the last one with a modified color.
+        // Adding a new row copies the last one with a modified color, as a new suit.
         _add.Pressed += () =>
         {
             var last = Rows.Last().Suit;
-            AddRow(last with { Background = NextColor(last.Background) });
+            AddRow(last with { Id = SnowTag.Create(), Background = NextColor(last.Background) });
             RaiseChanged();
         };
     }
@@ -103,7 +103,11 @@ public partial class QuickSideTab : SideTab
             return false;
         foreach (var row in Rows.ToList())
             RemoveRow(row);
-        foreach (var suit in quick.Suits.IsEmpty ? [new QuickSuit()] : quick.Suits)
+        foreach (
+            var suit in quick.Suits.IsEmpty
+                ? [new QuickSuit { Id = SnowTag.Create() }]
+                : quick.Suits
+        )
             AddRow(suit);
         return true;
     }

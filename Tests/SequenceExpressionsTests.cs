@@ -52,18 +52,25 @@ public class SequenceExpressionsTests
     ) => Check(input, null, true, expected);
 
     [Theory]
-    [InlineData("1-2", 5, "[1, 2, 1, 2, 1]")]
-    [InlineData("1-5", 3, "[1, 2, 3]")]
+    [InlineData("1-2", 5, "[1, 2]")]
+    [InlineData("1-5", 3, "[1, 2, 3, 4, 5]")]
     [InlineData("", 3, "[]")]
-    [InlineData("1-5", 0, "[]")]
+    [InlineData("1-5", 0, "[1, 2, 3, 4, 5]")]
+    public void IgnoresTheCountWithoutAnUnboundedExpression(
+        string input,
+        int count,
+        string expected
+    ) => Check(input, count, true, expected);
+
+    [Theory]
     [InlineData("1, 3*, 5", 5, "[1, 3, 3, 3, 5]")]
     [InlineData("1, 3-100*, 2", 5, "[1, 3, 4, 5, 2]")]
     [InlineData("1, 3-*", 5, "[1, 3, 4, 5, 6]")]
     [InlineData("(1,2)*, 9", 6, "[1, 2, 1, 2, 1, 9]")]
     [InlineData("1, 3-5*, 7", 2, "[1, 7]")]
-    [InlineData("1, 3-5*, 7", 1, "[1]")]
+    [InlineData("1, 3-5*, 7", 1, "[1, 7]")]
     [InlineData("1, 3-*, 7", 2, "[1, 7]")]
-    [InlineData("2*0*, 1", 3, "[1, 1, 1]")]
+    [InlineData("2*0*, 1", 3, "[1]")]
     public void FitsTheCount(string input, int count, string expected) =>
         Check(input, count, true, expected);
 
@@ -121,7 +128,7 @@ public class SequenceExpressionsTests
         CheckText(input, false, expected);
 
     [Theory]
-    [InlineData("1, 3-", 3, "[1, 1, 1]")]
+    [InlineData("1, 3-", 3, "[1]")]
     [InlineData("1-", 3, "[]")]
     [InlineData("1, 2*, 3*", 4, "[1, 2, 2, 2]")]
     public void FailsAndStillFitsTheCount(string input, int count, string expected) =>
@@ -150,10 +157,10 @@ public class SequenceExpressionsTests
 
     [Theory]
     [InlineData("1-2|A-C", null, true, "[0:1, 0:2, 1:A, 1:B, 1:C]")]
-    [InlineData("1-2|A", 6, true, "[0:1, 0:2, 1:A, 0:1, 0:2, 1:A]")]
+    [InlineData("1-2|A", 6, true, "[0:1, 0:2, 1:A]")]
     [InlineData("1-2|A, B*", 6, true, "[0:1, 0:2, 1:A, 1:B, 1:B, 1:B]")]
     [InlineData("1-*|A", 6, true, "[0:1, 0:2, 0:3, 0:4, 0:5, 1:A]")]
-    [InlineData("1-4|A", 3, true, "[0:1, 0:2, 0:3]")]
+    [InlineData("1-4|A", 3, true, "[0:1, 0:2, 0:3, 0:4, 1:A]")]
     [InlineData("1*|A*|B", 4, false, "[0:1, 0:1, 0:1, 0:1]")]
     [InlineData("1, (|A", null, false, "[0:1]")]
     public void ParsesSeveralInputsAsOne(string inputs, int? count, bool ok, string expected)

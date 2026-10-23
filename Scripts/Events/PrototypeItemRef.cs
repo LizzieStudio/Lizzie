@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace Lizzie;
@@ -17,11 +18,15 @@ public abstract record PrototypeItemRef
     /// <summary>
     /// The first item of a prototype with these <paramref name="parameters"/>, or null.
     /// </summary>
+    /// <remarks>
+    /// A printed prototype spawns its deck or stack instead, so this is only for its other kinds.
+    /// </remarks>
     public static PrototypeItemRef First(ComponentParameters parameters, IAtomReader R) =>
         parameters switch
         {
-            PrintedParameters printed => printed.Item(0, R),
-            DieParameters { Faces: TemplateSide side } => new DieItemRef(side.Row(0, R)),
+            DieParameters { Faces: TemplateSide side } => new DieItemRef(
+                side.Rows(R).FirstOrDefault()
+            ),
             _ => null,
         };
 }
@@ -29,14 +34,13 @@ public abstract record PrototypeItemRef
 /// <summary>
 /// One card of a printed prototype.
 /// </summary>
-/// <param name="Number">Which card in the list. Usually the frame or index.</param>
-/// <param name="FrontRow">The row of the DataSet for the front.</param>
-/// <param name="BackRow">The row of the DataSet for the back.</param>
+/// <param name="Front">What the front shows, or null for nothing.</param>
+/// <param name="Back">What the back shows, or null when the back shows the front.</param>
 [JsonName("PrintedItem")]
-public sealed record PrintedItemRef(int Number, SnowTag FrontRow, SnowTag BackRow)
-    : PrototypeItemRef
+public sealed record PrintedItemRef(FaceKey Front, FaceKey Back) : PrototypeItemRef
 {
-    public override IEnumerable<SnowTag> Rows() => [FrontRow, BackRow];
+    public override IEnumerable<SnowTag> Rows() =>
+        new[] { Front, Back }.OfType<RowFace>().Select(face => face.Row);
 }
 
 /// <summary>
@@ -48,3 +52,28 @@ public sealed record DieItemRef(SnowTag Row) : PrototypeItemRef
 {
     public override IEnumerable<SnowTag> Rows() => [Row];
 }
+
+/// <summary>
+/// What one face of a component shows.
+/// </summary>
+[JsonPolymorphic]
+public abstract record FaceKey;
+
+/// <summary>
+/// A dataset row drawn with a template.
+/// </summary>
+[JsonName("RowFace")]
+public sealed record RowFace(SnowTag Row) : FaceKey;
+
+/// <summary>
+/// A frame of an image, counting from 1.
+/// </summary>
+[JsonName("FrameFace")]
+public sealed record FrameFace(int Frame) : FaceKey;
+
+/// <summary>
+/// A value of a <see cref="QuickSuit"/>.
+/// </summary>
+/// <param name="Suit">The suit's <see cref="QuickSuit.Id"/>.</param>
+[JsonName("QuickFace")]
+public sealed record QuickFace(SnowTag Suit, string Value) : FaceKey;
