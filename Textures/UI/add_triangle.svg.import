@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://kuba1wevr0h4"
-path="res://.godot/imported/library_add.svg-c144b6a7ec9bb1d99685e176be3f461a.ctex"
+uid="uid://dfo5pg7ssfhiy"
+path="res://.godot/imported/add_triangle.svg-87223096b2cc9d8a19fff2a4ff8a957e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Textures/UI/library_add.svg"
-dest_files=["res://.godot/imported/library_add.svg-c144b6a7ec9bb1d99685e176be3f461a.ctex"]
+source_file="res://Textures/UI/add_triangle.svg"
+dest_files=["res://.godot/imported/add_triangle.svg-87223096b2cc9d8a19fff2a4ff8a957e.ctex"]
 
 [params]
 

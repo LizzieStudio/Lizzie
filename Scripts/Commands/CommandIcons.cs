@@ -39,10 +39,12 @@ public static class CommandIcons
     public const string Delete = Folder + "delete.svg";
     public const string Reset = Folder + "reset.svg";
     public const string ResetTable = Folder + "reset_table.svg";
+    public const string AddBlueprint = Folder + "add_box.svg";
     public const string AddTable = Folder + "add_circle.svg";
+    public const string AddComponent = Folder + "add_triangle.svg";
     public const string MakeCurrent = Folder + "play_circle.svg";
     public const string Show = Folder + "my_location.svg";
-    public const string Blueprints = Folder + "library_add.svg";
+    public const string Blueprints = Folder + "box.svg";
     public const string Rename = Folder + "drive_file_rename.svg";
     public const string MergeIntoParent = Folder + "call_merge.svg";
     public const string MergeIntoChildren = Folder + "call_split.svg";
@@ -53,8 +55,7 @@ public static class CommandIcons
     public const string ChangeSeat = Folder + "seating.svg";
     public const string Templates = Folder + "design_services.svg";
     public const string Datasets = Folder + "table.svg";
-    public const string Components = Folder + "category.svg";
+    public const string Components = Folder + "triangle.svg";
     public const string Images = Folder + "image.svg";
     public const string Settings = Folder + "settings.svg";
-    public const string AddBox = Folder + "add_box.svg";
 }

@@ -27,7 +27,7 @@ public static class StageCommands
     public static readonly Command AddBlueprint = new AtomCommand<Stage>
     {
         Name = new("blueprint.add"),
-        Icon = CommandIcons.AddBox,
+        Icon = CommandIcons.AddBlueprint,
         Caption = "Add Blueprint",
         Tooltip = "A blueprint is a saved configuration of components.",
         Count = TargetCount.Optional,

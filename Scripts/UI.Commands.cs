@@ -107,7 +107,7 @@ public partial class UI
     public static readonly GlobalCommand CreateComponent = new()
     {
         Name = new("editor.create_component"),
-        Icon = CommandIcons.AddBox,
+        Icon = CommandIcons.AddComponent,
         Caption = "Create New Component",
         SideEffects = _ => _instance?.ShowComponentDefinition(),
     };
