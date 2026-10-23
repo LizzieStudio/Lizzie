@@ -128,7 +128,7 @@ public partial class CommandButton : Button
         var heading =
             ShowCaption ? key
             : key == null ? label
-            : $"{label} - {key}";
+            : $"{label} ({key})";
         var reason = Disabled
             ? Command.DisabledReason(
                 R,

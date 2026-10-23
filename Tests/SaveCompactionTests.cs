@@ -160,7 +160,7 @@ public class SaveCompactionTests
         ]);
 
     [Fact]
-    public void AGameIsDroppedWithItsComponents() =>
+    public void AGameIsKeptWithItsComponents() =>
         AssertKept(
             [
                 new Stage { Id = Tag(1) },
@@ -185,7 +185,10 @@ public class SaveCompactionTests
                 },
             ],
             1,
-            3
+            2,
+            3,
+            3,
+            4
         );
 
     [Fact]

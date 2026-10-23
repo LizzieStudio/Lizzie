@@ -13,10 +13,10 @@ public sealed record Stage : Atom, IRanked
     public static readonly Identity<Stage, SnowTag> ById = new(s => s.Id);
 
     /// <summary>
-    /// Blueprints that are not deleted, by the stage they build on, with <see cref="SnowTag.Empty"/> for the roots.
+    /// Stages that are not deleted, by the stage they build on, with <see cref="SnowTag.Empty"/> for the roots.
     /// </summary>
-    public static readonly Lookup<Stage, SnowTag?> ChildBlueprints = new(s =>
-        s.Deleted || s.IsGame ? null : s.ParentRef
+    public static readonly Lookup<Stage, SnowTag?> Children = new(s =>
+        s.Deleted ? null : s.ParentRef
     );
 
     /// <summary>
@@ -27,7 +27,7 @@ public sealed record Stage : Atom, IRanked
     public string Name { get; init; }
 
     /// <summary>
-    /// The stage this one builds on, or <see cref="SnowTag.Empty"/> for a root blueprint.
+    /// The stage this one builds on, or <see cref="SnowTag.Empty"/> for a root.
     /// </summary>
     public SnowTag ParentRef { get; init; }
 
@@ -48,36 +48,40 @@ public sealed record Stage : Atom, IRanked
     public bool Deleted { get; init; }
 
     /// <summary>
-    /// Gets the changes that start a new game on <paramref name="blueprint"/>.
+    /// Gets a new empty game, last under <paramref name="parent"/>.
     /// </summary>
-    public static IChange[] NewGame(IAtomReader R, SnowTag blueprint)
-    {
-        var current = R.Get(CurrentGame.Only);
-        var game = new Stage
+    public static Stage NewGame(IAtomReader R, SnowTag parent) =>
+        new()
         {
             Id = SnowTag.Create(),
-            Name = "Game",
-            ParentRef = blueprint,
-            Rank = R.Get(ChildBlueprints, blueprint)
+            Name = NextGameName(R),
+            ParentRef = parent,
+            Rank = GetChildren(R, parent)
                 .Select(s => s.Rank)
                 .DefaultIfEmpty()
                 .Max()
                 .After(SnowportId.Create()),
             IsGame = true,
         };
-        IChange[] started =
-        [
-            game,
-            current with
-            {
-                StageRef = game.Id,
-            },
-            R.Get(ProjectGameSettings.Only) with
-            {
-                BlueprintRef = blueprint,
-            },
-        ];
-        return R.Get(ById, current.StageRef) is { } old ? [R.Unset(old), .. started] : started;
+
+    /// <summary>
+    /// "Game N", numbered one past the highest "Game N" anywhere in the tree.
+    /// </summary>
+    public static string NextGameName(IAtomReader R)
+    {
+        int Highest(SnowTag parent) =>
+            R.Get(Children, parent)
+                .Select(s =>
+                    Math.Max(
+                        s.Name?.StartsWith("Game ") == true && int.TryParse(s.Name[5..], out int n)
+                            ? n
+                            : 0,
+                        Highest(s.Id)
+                    )
+                )
+                .DefaultIfEmpty()
+                .Max();
+        return $"Game {Highest(SnowTag.Empty) + 1}";
     }
 
     /// <summary>
@@ -87,19 +91,10 @@ public sealed record Stage : Atom, IRanked
         Chain(R, R.Get(CurrentGame.Only).StageRef).Any(s => s.Id == id);
 
     /// <summary>
-    /// The stages built on <paramref name="parent"/>, the game included, in the order the blueprint manager shows them.
+    /// The stages built on <paramref name="parent"/>, in the order the blueprint manager shows them.
     /// </summary>
     public static List<Stage> GetChildren(IAtomReader R, SnowTag parent) =>
-        R.Get(ChildBlueprints, parent)
-            .Concat(
-                R.Get(ById, R.Get(CurrentGame.Only).StageRef) is { } game
-                && game.ParentRef == parent
-                    ? [game]
-                    : []
-            )
-            .OrderBy(s => s.Rank)
-            .ThenBy(s => s.Id)
-            .ToList();
+        R.Get(Children, parent).OrderBy(s => s.Rank).ThenBy(s => s.Id).ToList();
 
     /// <summary>
     /// Gets what <paramref name="into"/> must write to merge in <paramref name="from"/>.
@@ -134,13 +129,6 @@ public sealed record Stage : Atom, IRanked
             };
             siblings.Insert(index++, moved);
             changes.Add(moved);
-            if (child.IsGame)
-                changes.Add(
-                    R.Get(ProjectGameSettings.Only) with
-                    {
-                        BlueprintRef = stage.ParentRef,
-                    }
-                );
         }
         return changes;
     }
@@ -182,9 +170,8 @@ public sealed record Stage : Atom, IRanked
 }
 
 /// <summary>
-/// The game being played.
+/// The game being played, which everyone sees unless they pick another stage.
 /// </summary>
-[NotSaved]
 [JsonName("CurrentGame")]
 public sealed record CurrentGame : Atom
 {

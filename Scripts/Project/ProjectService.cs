@@ -417,8 +417,9 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Starts a game on the project's blueprint unless one is being played, which can't be undone.
-    /// A project without a blueprint gets an empty one.
+    /// Starts an empty game at the root unless the current game is in the tree, which can't be undone.
+    /// The current game is only missing from the tree in a new project,
+    /// or when two players' changes crossed, like one deleting the blueprint another started a game on.
     /// The host or a solo player runs it after a new game or a load.
     /// </summary>
     private void EnsureGame()
@@ -427,24 +428,16 @@ public partial class ProjectService : Node
             return;
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
-        if (R.Get(Stage.ById, R.Get(CurrentGame.Only).StageRef) != null)
+        if (Stage.Reachable(R, R.Get(CurrentGame.Only).StageRef))
             return;
-
-        var changes = new List<IChange>();
-        var blueprint = R.Get(ProjectGameSettings.Only).BlueprintRef;
-        if (!Stage.Reachable(R, blueprint))
-        {
-            var setup = new Stage
+        var game = Stage.NewGame(R, SnowTag.Empty);
+        AtomService.Instance.WriteAdmin([
+            game,
+            R.Get(CurrentGame.Only) with
             {
-                Id = SnowTag.Create(),
-                Name = "Setup",
-                Rank = default(SnowRank).After(SnowportId.Create()),
-            };
-            blueprint = setup.Id;
-            changes.Add(setup);
-        }
-        changes.AddRange(Stage.NewGame(R, blueprint));
-        AtomService.Instance.WriteAdmin(changes);
+                StageRef = game.Id,
+            },
+        ]);
     }
 
     public GameObjects GameObjects { get; set; }

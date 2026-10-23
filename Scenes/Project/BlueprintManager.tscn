@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" uid="uid://pdfq0xcglbmd" path="res://Scripts/Project/BlueprintManager.cs" id="1_bpmgr"]
 [ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="2_cmdbtn"]
-[ext_resource type="FontFile" uid="uid://ddqa2ny0nkyj5" path="res://Fonts/NotoSans/NotoSans-Bold.ttf" id="3_bold"]
 
 [node name="BlueprintManager" type="Window" unique_id=1177581211]
 oversampling_override = 1.0
@@ -10,7 +9,6 @@ title = "Blueprints"
 initial_position = 2
 size = Vector2i(420, 400)
 script = ExtResource("1_bpmgr")
-_shownFont = ExtResource("3_bold")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1481863233]
 anchors_preset = 15
@@ -32,19 +30,13 @@ script = ExtResource("2_cmdbtn")
 CommandName = "blueprint.add"
 ShowCaption = false
 
-[node name="EditBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=758586164]
+[node name="StartGameHere" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1152807118]
 layout_mode = 2
 theme_override_constants/icon_max_width = 20
 script = ExtResource("2_cmdbtn")
-CommandName = "blueprint.edit"
+CommandName = "blueprint.new_game"
 ShowCaption = false
-
-[node name="DuplicateBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1972478497]
-layout_mode = 2
-theme_override_constants/icon_max_width = 20
-script = ExtResource("2_cmdbtn")
-CommandName = "blueprint.duplicate"
-ShowCaption = false
+metadata/_custom_type_script = "uid://0trm78fpi5a"
 
 [node name="DeleteBlueprint" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=995875275]
 layout_mode = 2
@@ -53,18 +45,28 @@ script = ExtResource("2_cmdbtn")
 CommandName = "blueprint.delete"
 ShowCaption = false
 
-[node name="CommandButton" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1152807118]
+[node name="ShowOnTable" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=758586164]
 layout_mode = 2
+size_flags_horizontal = 10
 theme_override_constants/icon_max_width = 20
 script = ExtResource("2_cmdbtn")
-CommandName = "blueprint.new_game"
+CommandName = "blueprint.edit"
 ShowCaption = false
-metadata/_custom_type_script = "uid://0trm78fpi5a"
+
+[node name="MakeCurrent" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1069511616]
+layout_mode = 2
+size_flags_horizontal = 8
+theme_override_constants/icon_max_width = 20
+script = ExtResource("2_cmdbtn")
+CommandName = "game.make_current"
+ShowCaption = false
 
 [node name="Tree" type="Tree" parent="MarginContainer/VBoxContainer" unique_id=1195983423]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-columns = 2
+theme_override_constants/inner_item_margin_right = 8
+theme_override_constants/draw_guides = 0
+columns = 3
 allow_rmb_select = true
 hide_root = true

@@ -48,10 +48,9 @@ public partial class TableSurface : StaticBody3D
         // The grid is spaced in centimeters, so it needs the table's size.
         _blueprintMaterial.SetShaderParameter("table_size_cm", _mesh.Size);
 
-        // A blueprint shows as a blue grid with its number, and the game as its table.
-        var game = R.Get(CurrentGame.Only).StageRef;
+        // A blueprint shows as a blue grid with its number, and a game as its table.
         var shown = ProjectService.Instance.GameObjects.ShownStage(R);
-        var isGame = shown == game;
+        var isGame = R.Get(Stage.ById, shown) is { IsGame: true };
         _mesh.Material = isGame ? _playMaterial : _blueprintMaterial;
         _blueprintNumber.Visible = !isGame;
         // Numbered like the stage buttons, the root blueprint first.

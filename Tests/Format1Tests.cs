@@ -69,11 +69,14 @@ public class Format1Tests
     public void ASnapshotBecomesTheBlueprintTheGameStartsOn()
     {
         var writes = Writes();
-        var stage = Assert.Single(OfType(writes, "Stage"));
+        var stages = OfType(writes, "Stage");
+        var stage = Assert.Single(stages, s => s["isGame"] == null);
         Assert.Equal("Setup", (string)stage["name"]);
+        var game = Assert.Single(stages, s => s["isGame"] != null);
+        Assert.Equal((int)stage["id"], (int)game["parentRef"]);
         Assert.Equal(
-            (int)stage["id"],
-            (int)Assert.Single(OfType(writes, "ProjectGameSettings"))["blueprintRef"]
+            (int)game["id"],
+            (int)Assert.Single(OfType(writes, "CurrentGame"))["stageRef"]
         );
 
         var positions = OfType(writes, "ComponentPosition");

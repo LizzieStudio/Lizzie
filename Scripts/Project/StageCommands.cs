@@ -9,10 +9,12 @@ namespace Lizzie;
 /// </summary>
 public static class StageCommands
 {
-    /// <summary>
-    /// Gets whether or not <paramref name="stage"/> is a blueprint rather than a game.
-    /// </summary>
-    public static bool IsBlueprint(IAtomReader R, Stage stage) => !stage.IsGame;
+    // There's always a current game, so the commands that take a stage out of the tree leave it be.
+    // It comes before the commands, which read it as they're made.
+    private static readonly (string, AtomCommand<Stage>.AppliesToDelegate) NotTheCurrentGame = (
+        "Can't remove the current game.",
+        (R, s) => s.Id != R.Get(CurrentGame.Only).StageRef
+    );
 
     /// <summary>
     /// Adds an empty blueprint last under the selected one, or at the root when none are selected.
@@ -25,10 +27,10 @@ public static class StageCommands
     public static readonly Command AddBlueprint = new AtomCommand<Stage>
     {
         Name = new("blueprint.add"),
-        Icon = CommandIcons.Add,
+        Icon = CommandIcons.AddBox,
         Caption = "Add Blueprint",
+        Tooltip = "A blueprint is a saved configuration of components.",
         Count = TargetCount.Optional,
-        AppliesTo = IsBlueprint,
         Effects = (R, parents, _) =>
         {
             var parent = parents.FirstOrDefault();
@@ -46,45 +48,52 @@ public static class StageCommands
         },
     };
 
-    /// <summary>
-    /// Shows the selected blueprint, or the game, on the table.
-    /// </summary>
+    public static readonly Command NewGame = new AtomCommand<Stage>
+    {
+        Name = new("blueprint.new_game"),
+        Icon = CommandIcons.NewGame,
+        Caption = "Add Game",
+        Tooltip = "A game is a surface that multiple people can play on.",
+        Count = TargetCount.Optional,
+        Effects = (R, parents, _) =>
+            [Stage.NewGame(R, parents.FirstOrDefault()?.Id ?? SnowTag.Empty)],
+    };
+
     public static readonly Command EditBlueprint = new AtomCommand<Stage>
     {
         Name = new("blueprint.edit"),
-        Icon = CommandIcons.Edit,
-        Caption = "Show on Table",
-        Noun = ("Blueprint", "Blueprints"),
+        Icon = CommandIcons.ShowOnTable,
+        Caption = "Edit this.",
+        Tooltip = "Show it on just your table.",
         Count = TargetCount.One,
         SideEffects = (blueprints, _) =>
             ProjectService.Instance.GameObjects.PickedStage.Value = blueprints[0].Id,
     };
 
-    public static readonly Command NewGame = new AtomCommand<Stage>
+    public static readonly Command MakeCurrent = new AtomCommand<Stage>
     {
-        Name = new("blueprint.new_game"),
-        Icon = CommandIcons.NewGame,
-        Caption = "Start Game Here",
-        Noun = ("Blueprint", "Blueprints"),
-        Tooltip = "Ends the current game and starts a new one from this blueprint",
+        Name = new("game.make_current"),
+        Icon = CommandIcons.MakeCurrent,
+        Caption = "Play this.",
+        Noun = ("Game", "Games"),
+        Tooltip = "Take all players to this game.",
         Count = TargetCount.One,
-        AppliesTo = IsBlueprint,
-        Effects = (R, blueprints, _) => Stage.NewGame(R, blueprints[0].Id),
+        Requires = [("Select a game, not a blueprint.", (R, s) => s.IsGame)],
+        Effects = (R, games, _) => [R.Get(CurrentGame.Only) with { StageRef = games[0].Id }],
     };
 
     public static readonly Command DeleteBlueprint = new AtomCommand<Stage>
     {
         Name = new("blueprint.delete"),
         Icon = CommandIcons.Delete,
-        Caption = "Delete Blueprint",
-        Tooltip = "Deletes the blueprints and any blueprints built on them.",
+        Caption = "Delete",
+        Tooltip = "Deletes it and all of its children.",
         Noun = ("Blueprint", "Blueprints"),
         Keys = [Shortcuts.Key(Key.Delete)],
-        AppliesTo = IsBlueprint,
         Requires =
         [
             (
-                "Can't delete blueprints that the game is on.",
+                "Can't delete the current game or the blueprints it's on.",
                 (R, s) => !Stage.IsGameOrAncestor(R, s.Id)
             ),
         ],
@@ -115,19 +124,18 @@ public static class StageCommands
     };
 
     /// <summary>
-    /// Moves the changes of the selected blueprint, or the game, into its parent.
-    /// A blueprint is then deleted and its children move up into its place.
-    /// The game is replaced with a new one, which looks the same.
+    /// Moves the changes of the selected stage into its parent, then deletes it and moves its children up into its place.
     /// </summary>
     public static readonly Command MergeIntoParent = new AtomCommand<Stage>
     {
         Name = new("blueprint.merge_into_parent"),
         Icon = CommandIcons.MergeIntoParent,
         Caption = "Merge into Parent",
-        Tooltip = "Merges its changes into its parent blueprint.",
+        Tooltip = "Merges its changes into its parent.",
         Noun = ("Blueprint", "Blueprints"),
         Count = TargetCount.One,
         AppliesTo = (R, s) => s.ParentRef != SnowTag.Empty && HasChanges(R, s),
+        Requires = [NotTheCurrentGame],
         SideEffects = ShowParent,
         Effects = (R, stages, _) =>
         {
@@ -135,13 +143,13 @@ public static class StageCommands
             return
             [
                 .. Stage.Union(R, stage.ParentRef, stage.ParentRef, stage.Id),
-                .. stage.IsGame ? Stage.NewGame(R, stage.ParentRef) : Stage.Dissolve(R, stage),
+                .. Stage.Dissolve(R, stage),
             ];
         },
     };
 
     /// <summary>
-    /// Moves the changes of the selected blueprint into each of its children, where they don't have their own,
+    /// Moves the changes of the selected stage into each of its children, where they don't have their own,
     /// then deletes it and moves its children up into its place.
     /// </summary>
     public static readonly Command MergeIntoChildren = new AtomCommand<Stage>
@@ -153,20 +161,14 @@ public static class StageCommands
         Noun = ("Blueprint", "Blueprints"),
         Count = TargetCount.One,
         AppliesTo = (R, s) => HasChanges(R, s) && Stage.GetChildren(R, s.Id).Count > 0,
-        Requires =
-        [
-            (
-                "Can't merge into the game, since games aren't saved.",
-                (R, s) => !Stage.GetChildren(R, s.Id).Any(c => c.IsGame)
-            ),
-        ],
+        Requires = [NotTheCurrentGame],
         SideEffects = ShowParent,
         Effects = (R, stages, _) =>
         {
             var stage = stages[0];
             return
             [
-                .. R.Get(Stage.ChildBlueprints, stage.Id)
+                .. R.Get(Stage.Children, stage.Id)
                     .SelectMany(c => Stage.Union(R, c.Id, stage.Id, c.Id)),
                 .. Stage.Dissolve(R, stage),
             ];
@@ -174,7 +176,7 @@ public static class StageCommands
     };
 
     /// <summary>
-    /// Deletes the selected blueprint, which has no changes, and moves its children up into its place.
+    /// Deletes the selected stage, which has no changes, and moves its children up into its place.
     /// Either merge would do the same.
     /// </summary>
     public static readonly Command Dissolve = new AtomCommand<Stage>
@@ -182,18 +184,11 @@ public static class StageCommands
         Name = new("blueprint.dissolve"),
         Icon = CommandIcons.Dissolve,
         Caption = "Dissolve",
-        Tooltip = "Removes the blueprint but keeps its children.",
+        Tooltip = "Removes it but keeps its children.",
         Noun = ("Blueprint", "Blueprints"),
         Count = TargetCount.One,
         AppliesTo = (R, s) => !HasChanges(R, s) && Stage.GetChildren(R, s.Id).Count > 0,
-        Requires =
-        [
-            (
-                "The game needs a blueprint to build on.",
-                (R, s) =>
-                    s.ParentRef != SnowTag.Empty || !Stage.GetChildren(R, s.Id).Any(c => c.IsGame)
-            ),
-        ],
+        Requires = [NotTheCurrentGame],
         SideEffects = ShowParent,
         Effects = (R, stages, _) => Stage.Dissolve(R, stages[0]),
     };

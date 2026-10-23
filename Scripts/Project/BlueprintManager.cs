@@ -16,13 +16,11 @@ public partial class BlueprintManager : Window, ICommandView
 
     public static readonly SelectionPlace Place = new(SelectionPlaces.Blueprints, SnowTag.Empty);
 
-    private static readonly Texture2D GameIcon = GD.Load<Texture2D>(CommandIcons.NewGame);
-
-    /// <summary>
-    /// The font used to mark the stage that is currently on the table.
-    /// </summary>
-    [Export]
-    private Font _shownFont;
+    // Marks the current game, and the stage on the table when it's something else.
+    private static readonly Texture2D CurrentGameIcon = GD.Load<Texture2D>(
+        CommandIcons.MakeCurrent
+    );
+    private static readonly Texture2D ShownIcon = GD.Load<Texture2D>(CommandIcons.ShowOnTable);
 
     public override void _EnterTree()
     {
@@ -33,7 +31,8 @@ public partial class BlueprintManager : Window, ICommandView
     {
         _tree = GetNode<Tree>("%Tree");
         _tree.CreateItem();
-        _tree.SetColumnExpand(1, false);
+        _tree.SetColumnExpand(IconColumn, false);
+        _tree.SetColumnExpand(ChangesColumn, false);
         foreach (var style in new[] { "selected", "selected_focus" })
             _tree.AddThemeStyleboxOverride(style, new StyleBoxEmpty());
         foreach (var style in new[] { "hovered_selected", "hovered_selected_focus" })
@@ -56,6 +55,7 @@ public partial class BlueprintManager : Window, ICommandView
         _commands =
         [
             StageCommands.AddBlueprint,
+            StageCommands.NewGame,
             new AtomCommand<Stage>
             {
                 Name = new("blueprint.rename"),
@@ -100,9 +100,11 @@ public partial class BlueprintManager : Window, ICommandView
         var selected = R.GetSelection(Stage.ById, this).ToHashSet();
         var colors = R.SelectionColors(Place);
         var onTable = ProjectService.Instance.GameObjects.ShownStage(R);
+        var game = R.Get(CurrentGame.Only).StageRef;
         var listed = new HashSet<SnowTag>();
+        int indent = _tree.GetThemeConstant("item_margin");
 
-        AddChildren(_tree.GetRoot(), SnowTag.Empty);
+        AddChildren(_tree.GetRoot(), SnowTag.Empty, 0);
 
         // Freeing a row frees the rows under it, so every dead row comes off the tree before any is freed.
         var dead = _rows.Where(r => !listed.Contains(r.Key)).ToList();
@@ -114,7 +116,7 @@ public partial class BlueprintManager : Window, ICommandView
         foreach (var (_, item) in dead)
             item.Free();
 
-        void AddChildren(TreeItem parent, SnowTag parentRef)
+        void AddChildren(TreeItem parent, SnowTag parentRef, int depth)
         {
             foreach (var (stage, index) in Stage.GetChildren(R, parentRef).Select((s, i) => (s, i)))
             {
@@ -123,11 +125,15 @@ public partial class BlueprintManager : Window, ICommandView
                 if (!_rows.TryGetValue(stage.Id, out var item))
                 {
                     item = _tree.CreateItem(parent, index);
-                    item.SetMetadata(0, stage.Id);
-                    item.SetSelectable(1, false);
-                    item.SetTextAlignment(1, HorizontalAlignment.Right);
+                    item.SetMetadata(NameColumn, stage.Id);
+                    item.SetSelectable(IconColumn, false);
+                    item.SetSelectable(ChangesColumn, false);
+                    item.SetTextAlignment(ChangesColumn, HorizontalAlignment.Right);
                     // Only untrimmed text widens its column.
-                    item.SetTextOverrunBehavior(1, TextServer.OverrunBehavior.NoTrimming);
+                    item.SetTextOverrunBehavior(
+                        ChangesColumn,
+                        TextServer.OverrunBehavior.NoTrimming
+                    );
                     _rows[stage.Id] = item;
                 }
                 else if (index < parent.GetChildCount())
@@ -140,33 +146,90 @@ public partial class BlueprintManager : Window, ICommandView
                     item.GetParent().RemoveChild(item);
                     parent.AddChild(item);
                 }
-                item.SetText(0, stage.Name);
-                item.SetIcon(0, stage.IsGame ? GameIcon : null);
-                item.SetCustomFont(0, stage.Id == onTable ? _shownFont : null);
+                item.SetText(NameColumn, stage.Name);
+                // Translucent, since the tree draws its hover highlight underneath.
+                var fill = UI.StageColor(stage.IsGame, 0.42f) with
+                {
+                    A = 0.5f,
+                };
+                Color? outline = colors.TryGetValue(Stage.ById.Ref(stage.Id), out var color)
+                    ? color
+                    : null;
+                for (int column = NameColumn; column <= ChangesColumn; column++)
+                    item.SetCustomStylebox(
+                        column,
+                        RowPart(
+                            fill,
+                            outline,
+                            column,
+                            column == NameColumn ? depth * indent + Gap : Gap
+                        )
+                    );
+                var (icon, tooltip) =
+                    stage.Id == game ? (CurrentGameIcon, "The current game, which everyone plays")
+                    : stage.Id == onTable ? (ShownIcon, "On the table")
+                    : (null, "");
+                item.SetIcon(IconColumn, icon);
+                item.SetTooltipText(IconColumn, tooltip);
                 int changes = R.Count(ComponentPosition.WrittenIn, stage.Id);
-                item.SetText(1, changes.ToString());
+                item.SetText(ChangesColumn, changes.ToString());
                 item.SetTooltipText(
-                    1,
+                    ChangesColumn,
                     $"{changes} {(changes == 1 ? "change" : "changes")} to parent"
                 );
-                if (colors.TryGetValue(Stage.ById.Ref(stage.Id), out var color))
-                    item.SetCustomBgColor(0, color, justOutline: true);
-                else
-                    item.ClearCustomBgColor(0);
                 // Selecting a row that's already selected would close an open rename.
-                if (selected.Contains(stage.Id) != item.IsSelected(0))
+                if (selected.Contains(stage.Id) != item.IsSelected(NameColumn))
                 {
                     if (selected.Contains(stage.Id))
-                        item.Select(0);
+                        item.Select(NameColumn);
                     else
-                        item.Deselect(0);
+                        item.Deselect(NameColumn);
                 }
-                AddChildren(item, stage.Id);
+                AddChildren(item, stage.Id, depth + 1);
             }
         }
     }
 
-    private static SnowTag IdOf(TreeItem item) => (SnowTag)item.GetMetadata(0);
+    // The tree's columns
+    private const int NameColumn = 0;
+    private const int IconColumn = 1;
+    private const int ChangesColumn = 2;
+
+    // The space between a row's box and its neighbors, in pixels.
+    private const int Gap = 2;
+
+    /// <summary>
+    /// One cell's part of a row's rounded box, outlined in the color of whoever selected the row.
+    /// The cells meet at the column edges, and only the box's two ends are rounded.
+    /// The tree draws a cell's stylebox across the whole row height, and the name cell's from the tree's left edge,
+    /// so the box pulls in by <paramref name="inset"/> at its ends and by half the gap above and below.
+    /// </summary>
+    private static StyleBoxFlat RowPart(Color fill, Color? outline, int column, int inset)
+    {
+        const int radius = 4;
+        bool left = column == NameColumn;
+        bool right = column == ChangesColumn;
+        int border = outline == null ? 0 : 1;
+        return new StyleBoxFlat
+        {
+            BgColor = fill,
+            BorderColor = outline ?? default,
+            BorderWidthTop = border,
+            BorderWidthBottom = border,
+            BorderWidthLeft = left ? border : 0,
+            BorderWidthRight = right ? border : 0,
+            CornerRadiusTopLeft = left ? radius : 0,
+            CornerRadiusBottomLeft = left ? radius : 0,
+            CornerRadiusTopRight = right ? radius : 0,
+            CornerRadiusBottomRight = right ? radius : 0,
+            ExpandMarginLeft = left ? -inset : 0,
+            ExpandMarginRight = right ? -inset : 0,
+            ExpandMarginTop = -Gap / 2f,
+            ExpandMarginBottom = -Gap / 2f,
+        };
+    }
+
+    private static SnowTag IdOf(TreeItem item) => (SnowTag)item.GetMetadata(NameColumn);
 
     #region Moving blueprints
 
@@ -177,7 +240,7 @@ public partial class BlueprintManager : Window, ICommandView
         _tree.DropModeFlags = (int)(
             Tree.DropModeFlagsEnum.OnItem | Tree.DropModeFlagsEnum.Inbetween
         );
-        _tree.SetDragPreview(new Label { Text = item.GetText(0) });
+        _tree.SetDragPreview(new Label { Text = item.GetText(NameColumn) });
         return new BlueprintDrag { Id = IdOf(item) };
     }
 
@@ -224,12 +287,8 @@ public partial class BlueprintManager : Window, ICommandView
             : section is 0 or 2 ? item
             : item.GetParent();
         var parent = under == _tree.GetRoot() ? SnowTag.Empty : IdOf(under);
-        // Nothing builds on a game, a game needs a blueprint, and a stage can't build on itself.
-        if (
-            R.Get(Stage.ById, parent) is { IsGame: true }
-            || moved.IsGame && parent == SnowTag.Empty
-            || Stage.Chain(R, parent).Any(s => s.Id == moved.Id)
-        )
+        // A stage can't build on itself.
+        if (Stage.Chain(R, parent).Any(s => s.Id == moved.Id))
             return null;
 
         var others = under.GetChildren().Where(c => c != row).ToList();
@@ -249,16 +308,13 @@ public partial class BlueprintManager : Window, ICommandView
     {
         if (Placement(at, data) is not (var moved, var parent, var siblings, var index))
             return;
-        IAtomReader R = AtomService.Instance;
-        var placed = moved with
-        {
-            ParentRef = parent,
-            Rank = SnowRank.At(siblings, index, SnowportId.Create()),
-        };
-        IChange[] changes = moved.IsGame
-            ? [placed, R.Get(ProjectGameSettings.Only) with { BlueprintRef = parent }]
-            : [placed];
-        AtomService.Instance.Write(changes);
+        AtomService.Instance.Write(
+            moved with
+            {
+                ParentRef = parent,
+                Rank = SnowRank.At(siblings, index, SnowportId.Create()),
+            }
+        );
     }
 
     #endregion
@@ -282,7 +338,7 @@ public partial class BlueprintManager : Window, ICommandView
     private void OnItemEdited()
     {
         var item = _tree.GetEdited();
-        var name = item.GetText(0);
+        var name = item.GetText(NameColumn);
         if (AtomService.Instance.Get(Stage.ById, IdOf(item)) is { } stage && stage.Name != name)
             AtomService.Instance.Write(stage with { Name = name });
     }

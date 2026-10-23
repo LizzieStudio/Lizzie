@@ -40,17 +40,23 @@ public partial class UI : CanvasLayer
     private readonly ButtonGroup _stageGroup = new();
 
     // The style for the stage buttons.
-    private readonly (string State, StyleBox Box)[] _blueprintStyles = StageStyles(0.73f);
-    private readonly (string State, StyleBox Box)[] _gameStyles = StageStyles(0.40f);
+    private readonly (string State, StyleBox Box)[] _blueprintStyles = StageStyles(isGame: false);
+    private readonly (string State, StyleBox Box)[] _gameStyles = StageStyles(isGame: true);
 
-    private static (string State, StyleBox Box)[] StageStyles(float hue)
+    /// <summary>
+    /// The color that marks a stage, green for a game and blue for a blueprint, at <paramref name="lightness"/>.
+    /// </summary>
+    public static Color StageColor(bool isGame, float lightness) =>
+        Color.FromOkHsl(isGame ? 0.40f : 0.73f, 0.6f, lightness);
+
+    private static (string State, StyleBox Box)[] StageStyles(bool isGame)
     {
         // The default button box, so only the color differs.
         StyleBox Box(string state, float lightness)
         {
             var box = (StyleBoxFlat)
                 ThemeDB.GetDefaultTheme().GetStylebox(state, "Button").Duplicate();
-            box.BgColor = Color.FromOkHsl(hue, 0.6f, lightness);
+            box.BgColor = StageColor(isGame, lightness);
             return box;
         }
         var pressed = Box("pressed", 0.42f);
@@ -95,7 +101,7 @@ public partial class UI : CanvasLayer
                 ButtonGroup = _stageGroup,
                 ButtonPressed = stage.Id == shown,
             };
-            foreach (var (state, box) in stage.Id == game ? _gameStyles : _blueprintStyles)
+            foreach (var (state, box) in stage.IsGame ? _gameStyles : _blueprintStyles)
                 button.AddThemeStyleboxOverride(state, box);
             button.Pressed += () => ProjectService.Instance.GameObjects.PickedStage.Value = pick;
             _stages.AddChild(button);

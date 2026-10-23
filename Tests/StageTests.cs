@@ -4,7 +4,7 @@ using Xunit;
 namespace Lizzie.Tests;
 
 /// <summary>
-/// A stage exists only while its parents lead up to a root blueprint,
+/// A stage exists only while its parents lead up to a root,
 /// and merging stages takes the lower stage's writes.
 /// </summary>
 public class StageTests
@@ -19,11 +19,9 @@ public class StageTests
             Deleted = deleted,
         };
 
-    private static Stage Game(int id, int blueprint) =>
-        new()
+    private static Stage Game(int id, int parent = 0) =>
+        Blueprint(id, parent) with
         {
-            Id = Tag(id),
-            ParentRef = Tag(blueprint),
             IsGame = true,
         };
 
@@ -33,7 +31,7 @@ public class StageTests
             Blueprint(1),
             Blueprint(2, parent: 1),
             Blueprint(3, parent: 1),
-            Game(9, blueprint: 2),
+            Game(9, parent: 2),
             new CurrentGame { StageRef = Tag(9) },
             .. more,
         ]);
@@ -53,6 +51,41 @@ public class StageTests
         Assert.True(Stage.IsGameOrAncestor(R, Tag(1)));
         Assert.True(Stage.IsGameOrAncestor(R, Tag(2)));
         Assert.False(Stage.IsGameOrAncestor(R, Tag(3)));
+    }
+
+    [Fact]
+    public void GamesAreListedLikeBlueprintsWhetherOrNotTheyreCurrent()
+    {
+        var R = Project(Game(4), Game(5, parent: 4) with { Deleted = true });
+        Assert.Equal([Tag(1), Tag(4)], Stage.GetChildren(R, SnowTag.Empty).Select(s => s.Id));
+        Assert.Equal([Tag(9)], Stage.GetChildren(R, Tag(2)).Select(s => s.Id));
+        Assert.Empty(Stage.GetChildren(R, Tag(4)));
+    }
+
+    [Fact]
+    public void ANewGameIsNumberedPastTheHighestInTheTree()
+    {
+        Assert.Equal("Game 1", Stage.NextGameName(Project()));
+        var R = Project(
+            Game(4) with
+            {
+                Name = "Game 2",
+            },
+            Blueprint(5, parent: 3) with
+            {
+                Name = "Game 7",
+            },
+            Game(6, parent: 5) with
+            {
+                Name = "Game 9",
+                Deleted = true,
+            },
+            Game(7, parent: 2) with
+            {
+                Name = "Game 3b",
+            }
+        );
+        Assert.Equal("Game 8", Stage.NextGameName(R));
     }
 
     [Fact]

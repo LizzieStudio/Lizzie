@@ -266,7 +266,6 @@
                 "type": "integer"
               },
               "tableColor": true,
-              "blueprintRef": true,
               "rotationStepIndex": {
                 "type": "integer"
               },
