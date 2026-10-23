@@ -18,7 +18,7 @@ public static class UndoCommands
         Caption = "Undo Mine",
         Tooltip = "Undoes the last change that you made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z)],
-        SideEffects = v => Issue(Undo, UndoLog.Undo, Mine(v)),
+        SideEffects = v => Issue(Undo, TimelineUndo.Undo, Mine(v)),
     };
 
     public static readonly Command Redo = new GlobalCommand
@@ -28,7 +28,7 @@ public static class UndoCommands
         Caption = "Redo Mine",
         Tooltip = "Redoes an undo that you just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
-        SideEffects = v => Issue(Redo, UndoLog.Redo, Mine(v)),
+        SideEffects = v => Issue(Redo, TimelineUndo.Redo, Mine(v)),
     };
 
     public static readonly Command UndoOthers = new GlobalCommand
@@ -38,7 +38,7 @@ public static class UndoCommands
         Caption = "Undo Others",
         Tooltip = "Undoes the last change that any other player made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
-        SideEffects = v => Issue(UndoOthers, UndoLog.Undo, Others(v)),
+        SideEffects = v => Issue(UndoOthers, TimelineUndo.Undo, Others(v)),
     };
 
     public static readonly Command RedoOthers = new GlobalCommand
@@ -48,7 +48,7 @@ public static class UndoCommands
         Caption = "Redo Others",
         Tooltip = "Redoes an undo that any other player just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
-        SideEffects = v => Issue(RedoOthers, UndoLog.Redo, Others(v)),
+        SideEffects = v => Issue(RedoOthers, TimelineUndo.Redo, Others(v)),
     };
 
     /// <summary>
@@ -65,7 +65,7 @@ public static class UndoCommands
         SideEffects = (atoms, _) =>
         {
             var refs = atoms.Select(AtomRef.To).ToHashSet();
-            Issue(UndoChanges, UndoLog.Undo, (_, atom) => refs.Contains(AtomRef.To(atom)));
+            Issue(UndoChanges, TimelineUndo.Undo, (_, atom) => refs.Contains(AtomRef.To(atom)));
         },
     };
 
@@ -87,10 +87,10 @@ public static class UndoCommands
             : (author, atom) => author != Me && atom is not Selection && view.UndoScope(atom);
 
     /// <summary>
-    /// <see cref="UndoLog.Undo"/> or <see cref="UndoLog.Redo"/>.
+    /// <see cref="TimelineUndo.Undo"/> or <see cref="TimelineUndo.Redo"/>.
     /// This is used to make it easier to set which one.
     /// </summary>
-    private delegate UndoFlag Pick(EventLog log, byte me, Func<byte, Atom, bool> scope);
+    private delegate UndoFlag Pick(Timeline timeline, byte me, Func<byte, Atom, bool> scope);
 
     /// <summary>
     /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any,
@@ -101,9 +101,9 @@ public static class UndoCommands
         if (EventSynchronizer.Instance == null || scope == null)
             return;
 
-        // this creates a performance log in the debug console
+        // this creates a performance timeline in the debug console
         using var _ = DebugTimings.Measure(pick.Method.Name);
-        if (pick(EventSynchronizer.Instance.Log, Me, scope) is { } flag)
-            EventSynchronizer.Instance.Submit(TableEvent.Undoing(flag, command.Name));
+        if (pick(EventSynchronizer.Instance.Timeline, Me, scope) is { } flag)
+            EventSynchronizer.Instance.Submit(TimelineEvent.Undoing(flag, command.Name));
     }
 }

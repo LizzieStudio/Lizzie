@@ -188,7 +188,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         var prototypes = R.Get(Prototype.Live).ToList();
 
-        // The Qty column, counted on the stage the table shows.
+        // The Qty column, counted on the stage the view shows.
         // A prototype that spawns decks counts its decks, not their cards.
         var counts = R.Get(
                 ComponentPosition.ByStage,

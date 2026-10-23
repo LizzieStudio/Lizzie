@@ -34,12 +34,12 @@ public partial class GameObjects : Node3D, ICommandView
     public int AnimationCutoff { get; set; } = 500;
 
     // set when a component changes, and handled once the frame's updates are in, before it's drawn
-    private bool _tableChanged;
+    private bool _viewChanged;
 
     private GameController _gameController;
 
     /// <summary>
-    /// The stage the local player picked to show, or <see cref="SnowTag.Empty"/> for the game.
+    /// The stage the local player picked to show, or <see cref="SnowTag.Empty"/> for the current table.
     /// </summary>
     public WatchableValue<SnowTag> PickedStage { get; } = new();
 
@@ -49,14 +49,14 @@ public partial class GameObjects : Node3D, ICommandView
     public SnowTag ShownStage(IAtomReader R) =>
         R.Get(PickedStage) is var picked && Stage.Reachable(R, picked)
             ? picked
-            : R.Get(CurrentGame.Only).StageRef;
+            : R.Get(CurrentTable.Only).StageRef;
 
     /// <summary>
     /// Gets the list of stages shown at the top of the app.
     /// </summary>
     public List<Stage> PickableStages(IAtomReader R)
     {
-        var stages = Stage.Chain(R, R.Get(CurrentGame.Only).StageRef).Reverse().ToList();
+        var stages = Stage.Chain(R, R.Get(CurrentTable.Only).StageRef).Reverse().ToList();
         var shown = ShownStage(R);
         return stages.Any(s => s.Id == shown)
             ? stages
@@ -66,12 +66,12 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// Holds the nodes for the shown stage's components, and any spawn previews.
     /// </summary>
-    private Table _table;
+    private StageView _view;
 
     /// <summary>
     /// The shown stage's components.
     /// </summary>
-    private IReadOnlyList<VisualComponentBase> ComponentNodes => _table.Nodes;
+    private IReadOnlyList<VisualComponentBase> ComponentNodes => _view.Nodes;
 
     public CursorMode CursorMode { get; private set; }
 
@@ -122,7 +122,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private List<VisualComponentBase> PickedUp(VisualComponentBase pressed)
     {
-        // Its atom may have been unset this frame, before the table removes it.
+        // Its atom may have been unset this frame, before the view removes it.
         if (pressed.State is not { } state)
             return [];
         var place = state.ContainerRef;
@@ -154,7 +154,7 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// The full-screen control under the UI that takes the table's mouse input.
+    /// The full-screen control under the UI that takes the view's mouse input.
     /// It lets events pass through so that the camera and spawning can be handled in _UnhandledInput.
     /// </summary>
     [Export]
@@ -162,7 +162,7 @@ public partial class GameObjects : Node3D, ICommandView
 
     public override void _Ready()
     {
-        _table = CreateTable();
+        _view = CreateStageView();
 
         _tableMouseControl.SetDragForwarding(
             Callable.From<Vector2, Variant>(GetDragData),
@@ -177,12 +177,12 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// Replaces the table when the shown stage changes.
+    /// Replaces the StageView when the shown stage changes.
     /// </summary>
     private void SyncShownStage(IWatchReader R)
     {
-        if (ShownStage(R) != _table.StageRef)
-            ResetTable();
+        if (ShownStage(R) != _view.StageRef)
+            ResetView();
     }
 
     public override void _Notification(int notification)
@@ -198,18 +198,18 @@ public partial class GameObjects : Node3D, ICommandView
     private Vector2 ViewportPoint(Vector2 local) =>
         _tableMouseControl.GetGlobalTransformWithCanvas() * local;
 
-    private Table CreateTable()
+    private StageView CreateStageView()
     {
-        var table = new Table
+        var view = new StageView
         {
-            Name = "Table",
+            Name = "StageView",
             TextureFactory = TextureFactory,
             StageRef = ShownStage(AtomService.Instance),
         };
-        table.Changed += QueueTableUpdate;
-        table.ComponentRemoved += OnComponentRemoved;
-        AddChild(table);
-        return table;
+        view.Changed += QueueViewUpdate;
+        view.ComponentRemoved += OnComponentRemoved;
+        AddChild(view);
+        return view;
     }
 
     /// <summary>
@@ -228,7 +228,7 @@ public partial class GameObjects : Node3D, ICommandView
         _gameController = gameController;
     }
 
-    public VisualComponentBase GetComponent(SnowTag reference) => _table.GetComponent(reference);
+    public VisualComponentBase GetComponent(SnowTag reference) => _view.GetComponent(reference);
 
     /// <summary>The nodes for the given atoms, skipping any that have none yet.</summary>
     private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentPosition> atoms) =>
@@ -276,7 +276,7 @@ public partial class GameObjects : Node3D, ICommandView
             else if (@event.IsActionPressed("exit_mode"))
             {
                 ExitSpawnMode();
-                QueueTableUpdate();
+                QueueViewUpdate();
                 GetViewport().SetInputAsHandled();
             }
         }
@@ -293,7 +293,7 @@ public partial class GameObjects : Node3D, ICommandView
     #region ICommandView
 
     public SelectionPlace? SelectionScope(IAtomReader R) =>
-        new SelectionPlace(SelectionPlaces.Table, ShownStage(R));
+        new SelectionPlace(SelectionPlaces.StageView, ShownStage(R));
 
     public IEnumerable<AtomRef> Hovered() =>
         CursorMode is CursorMode.DragSelect or CursorMode.Spawn
@@ -310,7 +310,7 @@ public partial class GameObjects : Node3D, ICommandView
         return atom switch
         {
             ComponentPosition s => s.Stage == shown,
-            Selection s => s.Place == new SelectionPlace(SelectionPlaces.Table, shown),
+            Selection s => s.Place == new SelectionPlace(SelectionPlaces.StageView, shown),
             _ => false,
         };
     }
@@ -358,9 +358,9 @@ public partial class GameObjects : Node3D, ICommandView
             return;
         }
 
-        _table.AddChild(component);
+        _view.AddChild(component);
 
-        QueueTableUpdate();
+        QueueViewUpdate();
     }
 
     private void CreateComponents(IEnumerable<VisualComponentBase> components)
@@ -535,7 +535,7 @@ public partial class GameObjects : Node3D, ICommandView
     #region Stacking
 
     /// <summary>
-    /// The table's columns from the last stacking pass,
+    /// The view's columns from the last stacking pass,
     /// sorted from highest ceiling to lowest.
     /// Used during dragging to compute component height.
     /// </summary>
@@ -571,7 +571,7 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// The highest top among the table components under a dragged group, which it floats above.
+    /// The highest top among the components in the view under a dragged group, which it floats above.
     /// The group is placed around its dragging <paramref name="cursor"/>.
     /// </summary>
     private float DragLift(List<VisualComponentBase> dragged, Vector3 cursor)
@@ -614,20 +614,20 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// Restacks the table once the changes made this frame are in, before the frame is drawn.
+    /// Restacks the view once the changes made this frame are in, before the frame is drawn.
     /// Components sync at the end of a frame, so a call made while they sync still lands in that frame.
     /// </summary>
-    private void QueueTableUpdate()
+    private void QueueViewUpdate()
     {
-        if (_tableChanged)
+        if (_viewChanged)
             return;
-        _tableChanged = true;
-        Callable.From(UpdateTable).CallDeferred();
+        _viewChanged = true;
+        Callable.From(UpdateView).CallDeferred();
     }
 
-    private void UpdateTable()
+    private void UpdateView()
     {
-        _tableChanged = false;
+        _viewChanged = false;
         UpdateDragFloors();
         UpdateStackingHeights();
     }
@@ -776,8 +776,8 @@ public partial class GameObjects : Node3D, ICommandView
         set
         {
             _textureFactory = value;
-            if (_table != null)
-                _table.TextureFactory = value;
+            if (_view != null)
+                _view.TextureFactory = value;
         }
     }
 
@@ -957,7 +957,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// The key of <paramref name="id"/> in the shown stage.
     /// </summary>
-    private StageKey ShownKey(SnowTag id) => new(_table.StageRef, id);
+    private StageKey ShownKey(SnowTag id) => new(_view.StageRef, id);
 
     /// <summary>
     /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.
@@ -989,7 +989,7 @@ public partial class GameObjects : Node3D, ICommandView
 
         var R = AtomService.Instance;
         var cards = PlayerHandService.Inserted(
-            PlayerHandService.GetHand(R, _table.StageRef, seat),
+            PlayerHandService.GetHand(R, _view.StageRef, seat),
             held.Cards(R).ToList(),
             index,
             R.HandOf(seat),
@@ -1154,22 +1154,22 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     public void ResetForLoad()
     {
-        ResetTable();
+        ResetView();
         EventSynchronizer.Instance?.Clear();
     }
 
     /// <summary>
-    /// Replaces the table node with an empty one and forgets the local player's gestures.
+    /// Replaces the StageView with an empty one and forgets the local player's gestures.
     /// </summary>
-    public void ResetTable()
+    public void ResetView()
     {
-        // Removed now so its watch stops before the new table's starts.
-        var old = _table;
+        // Removed now so its watch stops before the new view's starts.
+        var old = _view;
         RemoveChild(old);
         old.QueueFree();
-        _table = CreateTable();
+        _view = CreateStageView();
 
-        // The gesture went with the table, so there's nothing to cancel.
+        // The gesture went with the view, so there's nothing to cancel.
         _held = null;
         AbandonMode();
         _hover = default;

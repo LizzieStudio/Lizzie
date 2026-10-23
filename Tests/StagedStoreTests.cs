@@ -22,7 +22,7 @@ public class StagedStoreTests
         public int X { get; init; }
     }
 
-    private readonly EventLog _log = new();
+    private readonly Timeline _timeline = new();
     private readonly AtomStore<Stage, SnowTag> _stages = new(Stage.ById);
     private readonly StagedStore<Piece> _store;
     private bool _bulkLoading;
@@ -47,16 +47,16 @@ public class StagedStoreTests
         };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the stores.</summary>
-    private TableEvent Write(params Atom[] atoms) =>
-        Record(new TableEvent { Id = NextId(), Writes = atoms });
+    private TimelineEvent Write(params Atom[] atoms) =>
+        Record(new TimelineEvent { Id = NextId(), Writes = atoms });
 
     /// <summary>Records an event unsetting <paramref name="atoms"/>, and merges it into the stores.</summary>
-    private TableEvent Unset(params Atom[] atoms) =>
-        Record(new TableEvent { Id = NextId(), Unsets = atoms });
+    private TimelineEvent Unset(params Atom[] atoms) =>
+        Record(new TimelineEvent { Id = NextId(), Unsets = atoms });
 
-    private TableEvent Undo(TableEvent e) =>
+    private TimelineEvent Undo(TimelineEvent e) =>
         Record(
-            new TableEvent
+            new TimelineEvent
             {
                 Id = NextId(),
                 Undo = new UndoFlag { Reverses = e.Id },
@@ -68,12 +68,12 @@ public class StagedStoreTests
     private SnowportId NextId() => new(++_clock, Snowport.HostSource);
 
     // Merges the piece store first, so the stage store hasn't seen the event yet, as can happen in AtomService.
-    private TableEvent Record(TableEvent e)
+    private TimelineEvent Record(TimelineEvent e)
     {
-        _log.Add(e.Id, e);
-        var changed = UndoLog.Changes(_log, e).ToList();
-        _store.Apply(_log, changed, _bulkLoading);
-        _stages.Apply(_log, changed, _bulkLoading);
+        _timeline.Add(e.Id, e);
+        var changed = TimelineUndo.Changes(_timeline, e).ToList();
+        _store.Apply(_timeline, changed, _bulkLoading);
+        _stages.Apply(_timeline, changed, _bulkLoading);
         _store.Settle();
         return e;
     }
@@ -193,9 +193,9 @@ public class StagedStoreTests
         Write(StageOf(1), StageOf(2, parent: 1));
         var late = new StagedStore<Piece>(Piece.ById, _stages);
 
-        var e = new TableEvent { Id = NextId(), Writes = [PieceOf(1, 10, x: 5)] };
-        _log.Add(e.Id, e);
-        late.Apply(_log, [e], bulkLoading: false);
+        var e = new TimelineEvent { Id = NextId(), Writes = [PieceOf(1, 10, x: 5)] };
+        _timeline.Add(e.Id, e);
+        late.Apply(_timeline, [e], bulkLoading: false);
         late.Settle();
 
         Assert.Equal(5, ((Piece)late.Find(Key(2, 10)).Value)?.X);
@@ -254,7 +254,7 @@ public class StagedStoreTests
         Write(StageOf(1), StageOf(2, parent: 1));
         Write(PieceOf(1, 10, x: 5), PieceOf(2, 11, x: 7));
         var newGame = Record(
-            new TableEvent
+            new TimelineEvent
             {
                 Id = NextId(),
                 Writes = [StageOf(3, parent: 1)],
@@ -429,7 +429,7 @@ public class StagedStoreTests
         Write(PieceOf(1, 10, x: 5));
         var open = NextId();
         Record(
-            new TableEvent
+            new TimelineEvent
             {
                 Id = open,
                 Group = open,
@@ -439,7 +439,7 @@ public class StagedStoreTests
         AssertShows(2, 10, 7);
 
         Record(
-            new TableEvent
+            new TimelineEvent
             {
                 Id = NextId(),
                 Group = open,

@@ -46,7 +46,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
 
     public int Count<K>(Lookup<T, K> lookup, K key) => _atoms.Count(lookup, key);
 
-    public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading)
+    public void Apply(Timeline timeline, IReadOnlyList<TimelineEvent> changed, bool bulkLoading)
     {
         var ids = changed
             .SelectMany(c => c.Writes.Concat(c.Unsets))
@@ -59,7 +59,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
         // The newest in-effect change of each id decides it: a write is its value, and an unset leaves it out.
         var latest = new Dictionary<I, AtomEntry>();
         var undecided = new HashSet<I>(ids);
-        foreach (var e in UndoLog.InEffect(log))
+        foreach (var e in TimelineUndo.InEffect(timeline))
         {
             // unsets first, since an unset beats a write in the same event
             foreach (var atom in e.Unsets.OfType<T>())

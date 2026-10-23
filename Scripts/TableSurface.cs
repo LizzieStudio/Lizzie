@@ -7,13 +7,13 @@ public partial class TableSurface : StaticBody3D
     private MeshInstance3D _tableMesh;
     private PlaneMesh _mesh;
 
-    // the game's surface, from the scene
+    // the play surface, from the scene
     private StandardMaterial3D _playMaterial;
 
     // a blue grid, for blueprints
     private ShaderMaterial _blueprintMaterial;
 
-    // which blueprint the table shows, counting from the root
+    // which blueprint the view shows, counting from the root
     private Label3D _blueprintNumber;
 
     // Called when the node enters the scene tree for the first time.
@@ -48,11 +48,11 @@ public partial class TableSurface : StaticBody3D
         // The grid is spaced in centimeters, so it needs the table's size.
         _blueprintMaterial.SetShaderParameter("table_size_cm", _mesh.Size);
 
-        // A blueprint shows as a blue grid with its number, and a game as its table.
+        // A blueprint shows as a blue grid with its number, and a table as its felt.
         var shown = ProjectService.Instance.GameObjects.ShownStage(R);
-        var isGame = R.Get(Stage.ById, shown) is { IsGame: true };
-        _mesh.Material = isGame ? _playMaterial : _blueprintMaterial;
-        _blueprintNumber.Visible = !isGame;
+        var isTable = R.Get(Stage.ById, shown) is { IsTable: true };
+        _mesh.Material = isTable ? _playMaterial : _blueprintMaterial;
+        _blueprintNumber.Visible = !isTable;
         // Numbered like the stage buttons, the root blueprint first.
         _blueprintNumber.Text = (
             ProjectService

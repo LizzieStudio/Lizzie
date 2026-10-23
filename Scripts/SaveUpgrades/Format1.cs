@@ -77,7 +77,7 @@ public sealed class Format1 : IStep
             for (int i = 0; i < snapshots.Count; i++)
                 Blueprint(snapshots[i], i);
             if (snapshots.Count > 0)
-                Game(Tag("snapshot", (string)snapshots[^1]["Name"]));
+                Table(Tag("snapshot", (string)snapshots[^1]["Name"]));
 
             return new JsonObject { ["id"] = Stamp * 2, ["writes"] = new JsonArray([.. _writes]) };
         }
@@ -388,23 +388,23 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>
-        /// The current game, started empty on <paramref name="blueprint"/>.
+        /// The current table, started empty on <paramref name="blueprint"/>.
         /// </summary>
-        private void Game(int blueprint)
+        private void Table(int blueprint)
         {
-            int game = Tag("game", "");
+            int table = Tag("table", "");
             _writes.Add(
                 new JsonObject
                 {
                     ["$type"] = "Stage",
-                    ["id"] = game,
-                    ["name"] = "Game 1",
+                    ["id"] = table,
+                    ["name"] = "Table 1",
                     ["parentRef"] = blueprint,
                     ["rank"] = Rank(0),
-                    ["isGame"] = true,
+                    ["isTable"] = true,
                 }
             );
-            _writes.Add(new JsonObject { ["$type"] = "CurrentGame", ["stageRef"] = game });
+            _writes.Add(new JsonObject { ["$type"] = "CurrentTable", ["stageRef"] = table });
         }
 
         /// <summary>

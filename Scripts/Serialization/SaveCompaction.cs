@@ -88,7 +88,7 @@ public static class SaveCompaction
     /// The event as one line of JSON, with its SnowTags and SnowportIds renumbered from 1 under the admin source.
     /// The numbers keep their order, and equal ids stay equal.
     /// </summary>
-    public static string Serialize(TableEvent save)
+    public static string Serialize(TimelineEvent save)
     {
         var tags = Renumber(save, SnowTag.Empty, Tag);
         var ids = Renumber(save, SnowportId.Empty, Id);
@@ -104,7 +104,7 @@ public static class SaveCompaction
 
     private static SnowportId Id(int n) => new(n, Snowport.AdminSource);
 
-    private static Dictionary<T, T> Renumber<T>(TableEvent save, T empty, Func<int, T> number)
+    private static Dictionary<T, T> Renumber<T>(TimelineEvent save, T empty, Func<int, T> number)
         where T : IComparable<T>
     {
         var found = new SortedSet<T>();

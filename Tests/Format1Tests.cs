@@ -66,17 +66,17 @@ public class Format1Tests
     }
 
     [Fact]
-    public void ASnapshotBecomesTheBlueprintTheGameStartsOn()
+    public void ASnapshotBecomesTheBlueprintTheTableStartsOn()
     {
         var writes = Writes();
         var stages = OfType(writes, "Stage");
-        var stage = Assert.Single(stages, s => s["isGame"] == null);
+        var stage = Assert.Single(stages, s => s["isTable"] == null);
         Assert.Equal("Setup", (string)stage["name"]);
-        var game = Assert.Single(stages, s => s["isGame"] != null);
-        Assert.Equal((int)stage["id"], (int)game["parentRef"]);
+        var table = Assert.Single(stages, s => s["isTable"] != null);
+        Assert.Equal((int)stage["id"], (int)table["parentRef"]);
         Assert.Equal(
-            (int)game["id"],
-            (int)Assert.Single(OfType(writes, "CurrentGame"))["stageRef"]
+            (int)table["id"],
+            (int)Assert.Single(OfType(writes, "CurrentTable"))["stageRef"]
         );
 
         var positions = OfType(writes, "ComponentPosition");

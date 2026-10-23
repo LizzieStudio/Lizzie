@@ -33,7 +33,7 @@ public static class DebugTimings
                 new Entry(
                     label,
                     Stopwatch.GetElapsedTime(start).TotalMilliseconds,
-                    EventSynchronizer.Instance?.Log.Count ?? 0
+                    EventSynchronizer.Instance?.Timeline.Count ?? 0
                 )
             );
         }

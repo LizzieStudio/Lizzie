@@ -35,28 +35,28 @@ public partial class UI : CanvasLayer
 
     private OptionButton _rotationStep;
 
-    // the toggle buttons that pick the stage the table shows, one for each in the game's chain
+    // the toggle buttons that pick the stage the view shows, one for each in the current table's chain
     private HBoxContainer _stages;
     private readonly ButtonGroup _stageGroup = new();
 
     // The style for the stage buttons.
-    private readonly (string State, StyleBox Box)[] _blueprintStyles = StageStyles(isGame: false);
-    private readonly (string State, StyleBox Box)[] _gameStyles = StageStyles(isGame: true);
+    private readonly (string State, StyleBox Box)[] _blueprintStyles = StageStyles(isTable: false);
+    private readonly (string State, StyleBox Box)[] _tableStyles = StageStyles(isTable: true);
 
     /// <summary>
-    /// The color that marks a stage, green for a game and blue for a blueprint, at <paramref name="lightness"/>.
+    /// The color that marks a stage, green for a table and blue for a blueprint, at <paramref name="lightness"/>.
     /// </summary>
-    public static Color StageColor(bool isGame, float lightness) =>
-        Color.FromOkHsl(isGame ? 0.40f : 0.73f, 0.6f, lightness);
+    public static Color StageColor(bool isTable, float lightness) =>
+        Color.FromOkHsl(isTable ? 0.40f : 0.73f, 0.6f, lightness);
 
-    private static (string State, StyleBox Box)[] StageStyles(bool isGame)
+    private static (string State, StyleBox Box)[] StageStyles(bool isTable)
     {
         // The default button box, so only the color differs.
         StyleBox Box(string state, float lightness)
         {
             var box = (StyleBoxFlat)
                 ThemeDB.GetDefaultTheme().GetStylebox(state, "Button").Duplicate();
-            box.BgColor = StageColor(isGame, lightness);
+            box.BgColor = StageColor(isTable, lightness);
             return box;
         }
         var pressed = Box("pressed", 0.42f);
@@ -88,12 +88,12 @@ public partial class UI : CanvasLayer
             old.QueueFree();
         }
 
-        var game = R.Get(CurrentGame.Only).StageRef;
+        var current = R.Get(CurrentTable.Only).StageRef;
         var shown = ProjectService.Instance.GameObjects.ShownStage(R);
         foreach (var stage in ProjectService.Instance.GameObjects.PickableStages(R))
         {
-            // Picking the game follows the game, even when a new one starts.
-            var pick = stage.Id == game ? SnowTag.Empty : stage.Id;
+            // Picking the current table follows it, even when another becomes current.
+            var pick = stage.Id == current ? SnowTag.Empty : stage.Id;
             var button = new Button
             {
                 Text = stage.Name,
@@ -101,7 +101,7 @@ public partial class UI : CanvasLayer
                 ButtonGroup = _stageGroup,
                 ButtonPressed = stage.Id == shown,
             };
-            foreach (var (state, box) in stage.IsGame ? _gameStyles : _blueprintStyles)
+            foreach (var (state, box) in stage.IsTable ? _tableStyles : _blueprintStyles)
                 button.AddThemeStyleboxOverride(state, box);
             button.Pressed += () => ProjectService.Instance.GameObjects.PickedStage.Value = pick;
             _stages.AddChild(button);

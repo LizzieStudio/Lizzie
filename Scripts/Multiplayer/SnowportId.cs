@@ -4,12 +4,12 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// A hybrid timestamp and logic clock with a source ID to make it unique to the table.
+/// A hybrid timestamp and logic clock with a source ID to make it unique to the project.
 /// </summary>
 public class Snowport
 {
     /// <summary>
-    /// The source of admin events, which belong to the table rather than a player.
+    /// The source of admin events, which belong to the project rather than a player.
     /// The host or a solo player writes them, and no one can undo them.
     /// </summary>
     public const byte AdminSource = 0;
@@ -46,7 +46,7 @@ public class Snowport
     /// <summary>
     /// Returns a clock under a new source that keeps the game time, hybrid clock, and tag counter.
     /// Use this instead of <c>new Snowport(source)</c> when the local player switches source
-    /// while keeping the current table (hosting).
+    /// while keeping the current project (hosting).
     /// </summary>
     public Snowport WithSource(byte newSource)
     {
@@ -59,7 +59,7 @@ public class Snowport
         };
     }
 
-    /// <summary>The table's shared time, in milliseconds.</summary>
+    /// <summary>The project's shared time, in milliseconds.</summary>
     private long GameTimeMsec => (long)Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
 
     /// <summary>

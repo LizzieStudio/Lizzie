@@ -7,7 +7,7 @@ using Lizzie.AssetManagement;
 namespace Lizzie;
 
 /// <summary>
-/// Loads the front and back faces of a printed component, for the table and the hand alike.
+/// Loads the front and back faces of a printed component, for the view and the hand alike.
 /// </summary>
 /// <remarks>
 /// When a bunch of rapid updates happen to a component, it will continue showing a face,

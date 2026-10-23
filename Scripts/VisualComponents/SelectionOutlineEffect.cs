@@ -6,7 +6,7 @@ namespace Lizzie;
 
 /// <summary>
 /// <para>
-/// Draws <see cref="SelectionOutline"/>'s outlines in one compute pass over the table's view,
+/// Draws <see cref="SelectionOutline"/>'s outlines in one compute pass over the view,
 /// after its transparent objects.
 /// </para>
 ///
@@ -26,7 +26,7 @@ public partial class SelectionOutlineEffect : CompositorEffect
     /// <summary>The palette's size in the shader.</summary>
     public const int PaletteSize = 32;
 
-    /// <summary>The mask texture to outline, the size of the table's view.</summary>
+    /// <summary>The mask texture to outline, the size of the view.</summary>
     public Rid Mask;
 
     /// <summary>The outline colors, indexed by the mask.</summary>

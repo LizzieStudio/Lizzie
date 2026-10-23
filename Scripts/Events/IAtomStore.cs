@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// Holds the current atoms of one type, worked out from the event log.
+/// Holds the current atoms of one type, worked out from the timeline.
 /// <see cref="AtomService"/> makes one for each type the first time it's read or written.
 /// </summary>
 public interface IAtomStore
@@ -18,12 +18,12 @@ public interface IAtomStore
     event Action<IReadOnlyList<Touch>> Changed;
 
     /// <summary>
-    /// Merges an event that was just recorded in <paramref name="log"/>.
+    /// Merges an event that was just recorded in <paramref name="timeline"/>.
     /// <paramref name="changed"/> are the events whose atoms it puts in or out of effect:
     /// the event itself, or what an undo or redo reverses.
     /// While <paramref name="bulkLoading"/>, the changes wait for <see cref="FlushBulkLoad"/>.
     /// </summary>
-    void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading);
+    void Apply(Timeline timeline, IReadOnlyList<TimelineEvent> changed, bool bulkLoading);
 
     /// <summary>
     /// Works out what changed since the last Settle call.

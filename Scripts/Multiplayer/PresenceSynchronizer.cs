@@ -5,7 +5,7 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// Tracks the players at the table.
+/// Tracks the players in the game.
 /// <list type="bullet">
 /// <item>seat requests, which it writes to <see cref="Seating"/></item>
 /// <item>each player's cursor position, which <see cref="CursorOverlay"/> draws</item>
@@ -26,7 +26,7 @@ public partial class PresenceSynchronizer : Node
     private readonly Dictionary<byte, Vector3> _positions = new();
 
     /// <summary>
-    /// Every player's cursor position on the table, by source.
+    /// Every player's cursor position in the view, by source.
     /// </summary>
     public IReadOnlyDictionary<byte, Vector3> Cursors => _positions;
 

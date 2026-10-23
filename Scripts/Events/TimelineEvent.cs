@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Lizzie.Replication.Machinery;
 
-public class TableEvent
+public class TimelineEvent
 {
     public SnowportId Id { get; set; }
 
@@ -56,22 +56,22 @@ public class TableEvent
     public SnowportId Unit => Group == SnowportId.Empty ? Id : Group;
 
     /// <summary>
-    /// Whether this is an admin event, which belongs to the table rather than a player.
+    /// Whether this is an admin event, which belongs to the project rather than a player.
     /// </summary>
     [JsonIgnore]
     public bool IsAdmin => Id.source == Snowport.AdminSource;
 
     /// <summary>Creates an event with a new SnowportId.</summary>
-    public static TableEvent Now(IChange[] changes, CommandName? command = null) =>
+    public static TimelineEvent Now(IChange[] changes, CommandName? command = null) =>
         Of(SnowportId.Create(), changes, command);
 
     /// <summary>
     /// Creates an admin event, which don't belong to any player.
     /// </summary>
-    public static TableEvent Admin(IChange[] changes) =>
+    public static TimelineEvent Admin(IChange[] changes) =>
         Of(SnowportId.CreateAdmin(), changes, null);
 
-    private static TableEvent Of(SnowportId id, IChange[] changes, CommandName? command) =>
+    private static TimelineEvent Of(SnowportId id, IChange[] changes, CommandName? command) =>
         new()
         {
             Id = id,
@@ -84,7 +84,7 @@ public class TableEvent
     /// Creates an undo or a redo, issued by <paramref name="command"/> if there was one.
     /// <paramref name="admin"/> makes it an admin event, which an undo command won't reverse.
     /// </summary>
-    public static TableEvent Undoing(
+    public static TimelineEvent Undoing(
         UndoFlag flag,
         CommandName? command = null,
         bool admin = false
@@ -101,7 +101,7 @@ public class TableEvent
     /// for a gesture that ended without its closing event.
     /// This is only really used as a fallback.
     /// </summary>
-    public static TableEvent Closing(SnowportId group) =>
+    public static TimelineEvent Closing(SnowportId group) =>
         new()
         {
             Id = SnowportId.Create(),
@@ -112,7 +112,7 @@ public class TableEvent
     /// <summary>
     /// Creates an event that cancels the open <paramref name="group"/>, so it never happened.
     /// </summary>
-    public static TableEvent Canceling(SnowportId group) =>
+    public static TimelineEvent Canceling(SnowportId group) =>
         new()
         {
             Id = SnowportId.Create(),
@@ -122,7 +122,7 @@ public class TableEvent
 }
 
 /// <summary>
-/// How an event ends its undo group, in <see cref="TableEvent.End"/>.
+/// How an event ends its undo group, in <see cref="TimelineEvent.End"/>.
 /// </summary>
 public enum GroupEnd
 {

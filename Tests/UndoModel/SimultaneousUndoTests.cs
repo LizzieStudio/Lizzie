@@ -22,9 +22,9 @@ public class SimultaneousUndoTests
     /// <summary>Asserts whether the session's first action, A, is in effect.</summary>
     private static void AssertLive(UndoSession session, IUndoApi api, bool live, string what)
     {
-        var a = session.Log.GetAt(0).Value;
+        var a = session.Timeline.GetAt(0).Value;
         Assert.True(
-            api.IsUndone(session.Log, a) != live,
+            api.IsUndone(session.Timeline, a) != live,
             $"{api.Name}: {what}\nlog:\n{session.Dump()}"
         );
     }
@@ -49,11 +49,11 @@ public class SimultaneousUndoTests
             ],
             api
         );
-        Assert.Equal(3, session.Log.Count);
+        Assert.Equal(3, session.Timeline.Count);
         AssertLive(session, api, false, "both undos should have taken A away");
 
         var redo = Assert.Single(session.Apply(new Op.Reversal(Me, true, Mine))).Undo;
-        var theirs = session.Log.Values.Single(e => e.Id.source == 2).Id;
+        var theirs = session.Timeline.Values.Single(e => e.Id.source == 2).Id;
         Assert.Equal([theirs], redo.Also);
         AssertLive(session, api, true, "one Redo should bring A back");
     }
@@ -76,7 +76,7 @@ public class SimultaneousUndoTests
             ],
             api
         );
-        Assert.Equal(4, session.Log.Count);
+        Assert.Equal(4, session.Timeline.Count);
         AssertLive(session, api, false, "their late undo should take A away");
 
         Assert.NotEmpty(session.Apply(new Op.Reversal(Me, false, Others)));
@@ -97,14 +97,14 @@ public class SimultaneousUndoTests
             ],
             api
         );
-        Assert.Equal(3, session.Log.Count);
+        Assert.Equal(3, session.Timeline.Count);
         AssertLive(session, api, false, "both undos should have taken A away");
 
         Assert.NotEmpty(session.Apply(new Op.Reversal(Me, false, Others)));
         AssertLive(session, api, true, "one Undo Others should bring A back");
     }
 
-    /// <summary>With nobody else pressing, reversals retire nothing, so they stay small in the log.</summary>
+    /// <summary>With nobody else pressing, reversals retire nothing, so they stay small in the timeline.</summary>
     [Theory]
     [MemberData(nameof(Apis))]
     public void ReversalsAloneRetireNothing(string name)
@@ -120,6 +120,6 @@ public class SimultaneousUndoTests
             ],
             Api(name)
         );
-        Assert.All(session.Log.Values, e => Assert.Null(e.Undo?.Also));
+        Assert.All(session.Timeline.Values, e => Assert.Null(e.Undo?.Also));
     }
 }

@@ -57,7 +57,7 @@ public sealed class CommandContext
     } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
-    /// Custom commands for this view to add to the context menu, like the table's Zoom to Component.
+    /// Custom commands for this view to add to the context menu, like the view's Zoom to Component.
     /// </summary>
     public IReadOnlyList<Command> Local { get; init; } = [];
 

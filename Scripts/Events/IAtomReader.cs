@@ -177,7 +177,7 @@ public static class AtomReaderExtensions
     /// </summary>
     public static CommandName? WrittenBy(this IAtomReader R, Atom atom) =>
         EventSynchronizer.Instance is { } sync
-        && sync.Log.TryGetValue(R.Version(atom), out var writer)
+        && sync.Timeline.TryGetValue(R.Version(atom), out var writer)
             ? writer.Command
             : null;
 
@@ -234,7 +234,7 @@ public static class AtomReaderExtensions
     /// <summary>
     /// What a component shows as. A printed prototype's decks share its prototype with its cards,
     /// but aren't one of its items, so they show as decks,
-    /// as the table does when it picks a component's scene.
+    /// as the StageView does when it picks a component's scene.
     /// </summary>
     public static VisualComponentBase.VisualComponentType Kind(
         this IAtomReader R,

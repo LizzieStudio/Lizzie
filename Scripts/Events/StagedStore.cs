@@ -82,8 +82,8 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     public int Count<K>(Lookup<T, K> lookup, K key) =>
         lookup is Written<T> ? _raw.Count(lookup, key) : _resolved.Count(lookup, key);
 
-    public void Apply(EventLog log, IReadOnlyList<TableEvent> changed, bool bulkLoading) =>
-        _raw.Apply(log, changed, bulkLoading);
+    public void Apply(Timeline timeline, IReadOnlyList<TimelineEvent> changed, bool bulkLoading) =>
+        _raw.Apply(timeline, changed, bulkLoading);
 
     public void FlushBulkLoad() => _raw.FlushBulkLoad();
 

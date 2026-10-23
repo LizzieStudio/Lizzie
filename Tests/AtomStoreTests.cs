@@ -24,7 +24,7 @@ public class AtomStoreTests
         s.IsOnTable ? null : s.ContainerRef
     );
 
-    private readonly EventLog _log = new();
+    private readonly Timeline _timeline = new();
     private readonly AtomStore<ComponentPosition, SnowTag> _store = new(ById);
     private long _clock;
 
@@ -34,18 +34,18 @@ public class AtomStoreTests
         new() { Id = Tag(id), ContainerRef = container == 0 ? SnowTag.Empty : Tag(container) };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
-    private TableEvent Write(params ComponentPosition[] atoms) =>
-        Record(new TableEvent { Id = NextId(), Writes = atoms });
+    private TimelineEvent Write(params ComponentPosition[] atoms) =>
+        Record(new TimelineEvent { Id = NextId(), Writes = atoms });
 
     /// <summary>Records an event unsetting the atom with <paramref name="id"/>, and merges it into the store.</summary>
-    private TableEvent Unset(int id) =>
-        Record(new TableEvent { Id = NextId(), Unsets = [Component(id)] });
+    private TimelineEvent Unset(int id) =>
+        Record(new TimelineEvent { Id = NextId(), Unsets = [Component(id)] });
 
     private ComponentPosition Value(int id) => (ComponentPosition)_store.Find(Tag(id)).Value;
 
-    private TableEvent Undo(TableEvent e) =>
+    private TimelineEvent Undo(TimelineEvent e) =>
         Record(
-            new TableEvent
+            new TimelineEvent
             {
                 Id = NextId(),
                 Undo = new UndoFlag { Reverses = e.Id },
@@ -54,10 +54,10 @@ public class AtomStoreTests
 
     private SnowportId NextId() => new(++_clock, Snowport.HostSource);
 
-    private TableEvent Record(TableEvent e)
+    private TimelineEvent Record(TimelineEvent e)
     {
-        _log.Add(e.Id, e);
-        _store.Apply(_log, UndoLog.Changes(_log, e).ToList(), false);
+        _timeline.Add(e.Id, e);
+        _store.Apply(_timeline, TimelineUndo.Changes(_timeline, e).ToList(), false);
         return e;
     }
 
@@ -124,7 +124,7 @@ public class AtomStoreTests
     {
         Write(Component(1, container: 5));
         Record(
-            new TableEvent
+            new TimelineEvent
             {
                 Id = NextId(),
                 Writes = [Component(1, container: 6)],

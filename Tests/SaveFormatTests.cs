@@ -14,7 +14,7 @@ namespace Lizzie.Tests;
 
 /// <summary>
 /// <para>
-/// Pins the format of saves and multiplayer messages, as a JSON schema of <see cref="TableEvent"/>
+/// Pins the format of saves and multiplayer messages, as a JSON schema of <see cref="TimelineEvent"/>
 /// in <c>SaveFormat.schema.json</c> next to this file, titled with <see cref="SaveUpgrade.Current"/>.
 /// </para>
 ///
@@ -49,7 +49,7 @@ public class SaveFormatTests
     private static string Schema()
     {
         var schema = LizzieJson.EventOptions.GetJsonSchemaAsNode(
-            typeof(TableEvent),
+            typeof(TimelineEvent),
             new JsonSchemaExporterOptions
             {
                 TransformSchemaNode = (_, node) =>

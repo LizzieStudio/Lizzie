@@ -12,7 +12,7 @@ public class UndoFlagJsonTests
     [Fact]
     public void RetiredReversalsSurviveTheRoundTrip()
     {
-        var reversal = new TableEvent
+        var reversal = new TimelineEvent
         {
             Id = Id(5, 1),
             Undo = new UndoFlag
@@ -24,7 +24,7 @@ public class UndoFlagJsonTests
         };
 
         var json = JsonSerializer.Serialize(reversal, LizzieJson.EventOptions);
-        var back = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
+        var back = JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
 
         Assert.Equal(reversal.Undo.Reverses, back.Undo.Reverses);
         Assert.True(back.Undo.ByRedo);
@@ -34,14 +34,14 @@ public class UndoFlagJsonTests
     [Fact]
     public void ReversalThatRetiresNothingLeavesAlsoOut()
     {
-        var reversal = new TableEvent
+        var reversal = new TimelineEvent
         {
             Id = Id(5, 1),
             Undo = new UndoFlag { Reverses = Id(3, 1) },
         };
 
         var json = JsonSerializer.Serialize(reversal, LizzieJson.EventOptions);
-        var back = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
+        var back = JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
 
         Assert.DoesNotContain("\"also\"", json);
         Assert.Null(back.Undo.Also);

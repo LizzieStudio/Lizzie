@@ -111,7 +111,7 @@ public partial class SelectionOutline : Node
 
     public override void _Ready()
     {
-        // Shares the table's world, but sees only the mask layer.
+        // Shares the view's world, but sees only the mask layer.
         // HDR keeps the indices and depths exact.
         _mask = new SubViewport
         {
@@ -127,7 +127,7 @@ public partial class SelectionOutline : Node
         {
             CullMask = MaskLayer,
             Current = true,
-            // The table's environment would change the mask's values.
+            // The view's environment would change the mask's values.
             Environment = new Environment { BackgroundMode = Environment.BGMode.ClearColor },
         };
         _mask.AddChild(_maskCamera);
@@ -154,7 +154,7 @@ public partial class SelectionOutline : Node
         if (camera == null)
             return;
 
-        // The table's camera never sees the mask copies, and runs the compute pass.
+        // The view's camera never sees the mask copies, and runs the compute pass.
         camera.CullMask &= ~MaskLayer;
         if (camera.Compositor != _compositor)
             camera.Compositor = _compositor;

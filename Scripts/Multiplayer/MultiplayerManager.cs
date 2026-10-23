@@ -169,14 +169,14 @@ public partial class MultiplayerManager : Node
 
         if (wasGuest)
         {
-            // Leaving someone else's game clears the table.
+            // Leaving someone else's game clears the project.
             EventSynchronizer.Instance?.CancelJoin();
             Snowport.Clock = new Snowport(Snowport.HostSource);
             ProjectService.Instance?.ReplaceWithNewGame();
         }
         else if (wasHost)
         {
-            // Leaving your own game keeps the table.
+            // Leaving your own game keeps the project.
             foreach (var source in guests)
                 ProjectService.Instance?.AbandonPlayer(source);
             PresenceSynchronizer.Instance?.SeatSoloPlayer();
@@ -279,7 +279,7 @@ public partial class MultiplayerManager : Node
                 return (byte)candidate;
         }
 
-        GD.PrintErr("No free Snowport source ids remain; table is full.");
+        GD.PrintErr("No free Snowport source ids remain; the game is full.");
         return 1;
     }
 

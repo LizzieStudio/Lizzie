@@ -8,7 +8,7 @@ namespace Lizzie;
 ///
 /// <para>
 /// The state of a <see cref="StagedAtom"/> is temporal.
-/// If you change it in a blueprint, it also changes in later blueprints and the game.
+/// If you change it in a blueprint, it also changes in the blueprints and tables built on it.
 /// This is different from a normal <see cref="Atom"/> like a prototype, which changes everywhere.
 /// </para>
 ///

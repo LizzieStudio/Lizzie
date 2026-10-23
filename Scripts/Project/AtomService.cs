@@ -7,7 +7,7 @@ using Lizzie.Replication.Machinery;
 namespace Lizzie;
 
 /// <summary>
-/// <para>The project's atoms, worked out from the event log.</para>
+/// <para>The project's atoms, worked out from the timeline.</para>
 ///
 /// <para>
 /// Read them through its <see cref="IAtomReader"/>, and <see cref="Watch"/> to rerun code when what it read changes.
@@ -33,14 +33,14 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     private readonly List<Listener> _listeners = new();
 
     // events to tell the listeners about at the end of the frame
-    private List<TableEvent> _pendingListenerEvents = new();
+    private List<TimelineEvent> _pendingListenerEvents = new();
 
     private bool _flushQueued;
 
-    private sealed record Listener(Node Owner, CommandName Name, Action<TableEvent> Handler)
+    private sealed record Listener(Node Owner, CommandName Name, Action<TimelineEvent> Handler)
     {
         /// <summary>Whether the local player made <paramref name="e"/> with this listener's command.</summary>
-        public bool ShouldHearEvent(TableEvent e) =>
+        public bool ShouldHearEvent(TimelineEvent e) =>
             e.Command == Name && e.Id.source == Snowport.Clock.source;
     }
 
@@ -60,17 +60,17 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     /// Merges an event into the stores, making the stores for what it writes if they're new,
     /// and keeps it for the listeners.
     /// </summary>
-    private void OnEventApplied(TableEvent e)
+    private void OnEventApplied(TimelineEvent e)
     {
         var sync = EventSynchronizer.Instance;
-        var changed = UndoLog.Changes(sync.Log, e).ToList();
+        var changed = TimelineUndo.Changes(sync.Timeline, e).ToList();
         var types = changed.SelectMany(c => c.Writes.Concat(c.Unsets).Select(r => r.GetType()));
         foreach (var type in types)
             if (!_stores.ContainsKey(type))
                 AddStore(NewStore(type));
 
         foreach (var store in _stores.Values)
-            store.Apply(sync.Log, changed, sync.BulkLoading);
+            store.Apply(sync.Timeline, changed, sync.BulkLoading);
         Settle();
 
         if (!sync.BulkLoading)
@@ -156,7 +156,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     {
         var all = changes.ToArray();
         if (all.Length > 0)
-            Submit(TableEvent.Now(all));
+            Submit(TimelineEvent.Now(all));
     }
 
     /// <summary>
@@ -177,17 +177,17 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     /// so the command's listeners hear it.
     /// </summary>
     public void Write(CommandName command, params IEnumerable<IChange> changes) =>
-        Submit(TableEvent.Now(changes.ToArray(), command));
+        Submit(TimelineEvent.Now(changes.ToArray(), command));
 
     /// <summary>
-    /// Writes changes as one admin event, which belongs to the table rather than a player,
+    /// Writes changes as one admin event, which belongs to the project rather than a player,
     /// so no one can undo it. Only the host or a solo player can write one. Does nothing without changes.
     /// </summary>
     public void WriteAdmin(params IEnumerable<IChange> changes)
     {
         var all = changes.ToArray();
         if (all.Length > 0)
-            Submit(TableEvent.Admin(all));
+            Submit(TimelineEvent.Admin(all));
     }
 
     /// <summary>
@@ -210,7 +210,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
 
     private SnowportId Open(CommandName? command, IEnumerable<IChange> changes)
     {
-        var e = TableEvent.Now(changes.ToArray(), command);
+        var e = TimelineEvent.Now(changes.ToArray(), command);
         e.Group = e.Id;
         Submit(e);
         return e.Id;
@@ -234,7 +234,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
         var all = changes.ToArray();
         if (all.Length == 0)
             return;
-        var e = TableEvent.Now(all, command);
+        var e = TimelineEvent.Now(all, command);
         e.Group = group;
         Submit(e);
     }
@@ -253,7 +253,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     private void Close(SnowportId group, CommandName? command, IEnumerable<IChange> changes)
     {
         var all = changes.ToArray();
-        var e = TableEvent.Now(all, command);
+        var e = TimelineEvent.Now(all, command);
         if (group == SnowportId.Empty)
         {
             if (all.Length > 0)
@@ -273,11 +273,11 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     public void CancelIfOpen(SnowportId group)
     {
         var sync = EventSynchronizer.Instance;
-        if (sync != null && UndoLog.IsOpen(sync.Log, group))
-            Submit(TableEvent.Canceling(group));
+        if (sync != null && TimelineUndo.IsOpen(sync.Timeline, group))
+            Submit(TimelineEvent.Canceling(group));
     }
 
-    private static void Submit(TableEvent e) => EventSynchronizer.Instance?.Submit(e);
+    private static void Submit(TimelineEvent e) => EventSynchronizer.Instance?.Submit(e);
 
     /// <inheritdoc/>
     IEnumerable<Atom> IAtomServiceMachinery.SavedAtoms() =>
@@ -324,7 +324,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     /// <summary>
     /// Calls <paramref name="handler"/> with each event the local player makes with <paramref name="command"/>.
     /// </summary>
-    public void Listen(Node owner, Command command, Action<TableEvent> handler) =>
+    public void Listen(Node owner, Command command, Action<TimelineEvent> handler) =>
         AddListener(new Listener(owner, command.Name, handler));
 
     private void AddListener(Listener listener)
@@ -340,7 +340,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     /// <summary>
     /// Keeps an event made by a command, undos and redos included, for the listeners.
     /// </summary>
-    private void ScheduleForListeners(TableEvent e)
+    private void ScheduleForListeners(TimelineEvent e)
     {
         if (e.Command == null || _listeners.Count == 0)
             return;

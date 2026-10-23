@@ -40,10 +40,10 @@ public partial class ProjectService : Node
     {
         GD.Print("ProjectService initialized");
 
-        Callable.From(SubscribeToEventLog).CallDeferred();
+        Callable.From(SubscribeToTimeline).CallDeferred();
     }
 
-    private void SubscribeToEventLog()
+    private void SubscribeToTimeline()
     {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.Applied += OnEventApplied;
@@ -53,7 +53,7 @@ public partial class ProjectService : Node
     /// <summary>
     /// Tracks unsaved changes.
     /// </summary>
-    private void OnEventApplied(TableEvent e)
+    private void OnEventApplied(TimelineEvent e)
     {
         if (EventSynchronizer.Instance?.BulkLoading == true || CurrentProject == null)
             return;
@@ -119,12 +119,12 @@ public partial class ProjectService : Node
         CurrentProject = new Project();
         HasUnsavedChanges = false;
         EnsureSeatContainers();
-        EnsureGame();
+        EnsureTable();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
     }
 
     /// <summary>
-    /// Replaces the table with a fresh, unnamed game, like before joining a game.
+    /// Replaces everything with a fresh, unnamed game, like before joining a game.
     /// </summary>
     public void ReplaceWithNewGame()
     {
@@ -188,7 +188,7 @@ public partial class ProjectService : Node
                     + $"Upgrade Lizzie to open \"{newerFile}\"."
             );
 
-        TableEvent[] events;
+        TimelineEvent[] events;
         try
         {
             // the file has a header and a list of events using JSON-lines
@@ -209,7 +209,7 @@ public partial class ProjectService : Node
                         + $"The new file will be \"{currentFile}\" instead."
                 );
             events = lines
-                .Select(l => l.Deserialize<TableEvent>(LizzieJson.EventOptions))
+                .Select(l => l.Deserialize<TimelineEvent>(LizzieJson.EventOptions))
                 .ToArray();
         }
         catch (Exception ex)
@@ -235,12 +235,12 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Replaces the table with the host's, from the events collected while joining,
-    /// all in one frame, so nothing sees the table half loaded.
+    /// Replaces the timeline with the host's, from the events collected while joining,
+    /// all in one frame, so nothing sees the project half loaded.
     /// </summary>
-    public void LoadJoinedTable(IEnumerable<TableEvent> events)
+    public void LoadJoinedTimeline(IEnumerable<TimelineEvent> events)
     {
-        GameObjects?.ResetTable();
+        GameObjects?.ResetView();
         EventSynchronizer.Instance?.Clear();
         CurrentProject = new Project();
 
@@ -254,10 +254,10 @@ public partial class ProjectService : Node
 
     private void SettleAfterIngest()
     {
-        SeedTagsFromLog();
+        SeedTagsFromTimeline();
         EndBulkLoad();
         EnsureSeatContainers();
-        EnsureGame();
+        EnsureTable();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
 
         HasUnsavedChanges = false;
@@ -322,7 +322,7 @@ public partial class ProjectService : Node
                 saveFile.StoreLine(SaveUpgrade.Header);
                 saveFile.StoreLine(
                     SaveCompaction.Serialize(
-                        TableEvent.Admin(
+                        TimelineEvent.Admin(
                             SaveCompaction.Collect(AtomService.Instance.Machinery().SavedAtoms())
                         )
                     )
@@ -365,15 +365,15 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Advances the tag counter past every SnowTag in the log.
+    /// Advances the tag counter past every SnowTag in the timeline.
     /// </summary>
-    private static void SeedTagsFromLog()
+    private static void SeedTagsFromTimeline()
     {
-        var log = EventSynchronizer.Instance?.Log;
-        if (log == null)
+        var timeline = EventSynchronizer.Instance?.Timeline;
+        if (timeline == null)
             return;
 
-        foreach (var e in log.Values)
+        foreach (var e in timeline.Values)
             JsonWalker.Visit<SnowTag>(e, Snowport.Clock.ObserveTag);
     }
 
@@ -417,25 +417,25 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Starts an empty game at the root unless the current game is in the tree, which can't be undone.
-    /// The current game is only missing from the tree in a new project,
-    /// or when two players' changes crossed, like one deleting the blueprint another started a game on.
+    /// Starts an empty table at the root unless the current table is in the tree, which can't be undone.
+    /// The current table is only missing from the tree in a new project,
+    /// or when two players' changes crossed, like one deleting the blueprint another made a table current on.
     /// The host or a solo player runs it after a new game or a load.
     /// </summary>
-    private void EnsureGame()
+    private void EnsureTable()
     {
         if (CurrentProject == null)
             return;
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
-        if (Stage.Reachable(R, R.Get(CurrentGame.Only).StageRef))
+        if (Stage.Reachable(R, R.Get(CurrentTable.Only).StageRef))
             return;
-        var game = Stage.NewGame(R, SnowTag.Empty);
+        var table = Stage.NewTable(R, SnowTag.Empty);
         AtomService.Instance.WriteAdmin([
-            game,
-            R.Get(CurrentGame.Only) with
+            table,
+            R.Get(CurrentTable.Only) with
             {
-                StageRef = game.Id,
+                StageRef = table.Id,
             },
         ]);
     }

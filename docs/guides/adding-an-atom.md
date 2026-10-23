@@ -26,7 +26,7 @@ The `SnowTag Id` could be any type and name you want, but `SnowTag Id` is the co
 
 The `Identity<MyAtom, SnowTag> ById = new(r => r.Id)` is a query which every atom needs. It tells Lizzie how to get this atom and differentiate it from other atoms.
 
-Importantly, atoms should be made immutable by using `{ get; init; }` properties. Atoms are kept in an event-log so that the user can undo and redo changes, so you can't update an atom once it's written.
+Importantly, atoms should be made immutable by using `{ get; init; }` properties. Atoms are kept in the Timeline so that the user can undo and redo changes, so you can't update an atom once it's written.
 
 ## Reading and Writing
 

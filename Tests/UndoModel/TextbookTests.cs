@@ -53,8 +53,8 @@ public abstract class TextbookTests : UndoTestBase
             }
 
             var inEffect = session
-                .Log.Values.Where(e =>
-                    e.Undo == null && e.Unit.source == me && !Actual.IsUndone(session.Log, e)
+                .Timeline.Values.Where(e =>
+                    e.Undo == null && e.Unit.source == me && !Actual.IsUndone(session.Timeline, e)
                 )
                 .Select(e => e.Unit)
                 .ToHashSet();

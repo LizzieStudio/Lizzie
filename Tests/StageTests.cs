@@ -19,20 +19,20 @@ public class StageTests
             Deleted = deleted,
         };
 
-    private static Stage Game(int id, int parent = 0) =>
+    private static Stage Table(int id, int parent = 0) =>
         Blueprint(id, parent) with
         {
-            IsGame = true,
+            IsTable = true,
         };
 
-    // A root blueprint with two children, the game on the first and nothing on the second.
+    // A root blueprint with two children, the current table on the first and nothing on the second.
     private static ListReader Project(params Atom[] more) =>
         new([
             Blueprint(1),
             Blueprint(2, parent: 1),
             Blueprint(3, parent: 1),
-            Game(9, parent: 2),
-            new CurrentGame { StageRef = Tag(9) },
+            Table(9, parent: 2),
+            new CurrentTable { StageRef = Tag(9) },
             .. more,
         ]);
 
@@ -45,47 +45,47 @@ public class StageTests
         };
 
     [Fact]
-    public void TheGamesChainHoldsItsBlueprintsButNotTheirSiblings()
+    public void TheCurrentTablesChainHoldsItsBlueprintsButNotTheirSiblings()
     {
         var R = Project();
-        Assert.True(Stage.IsGameOrAncestor(R, Tag(1)));
-        Assert.True(Stage.IsGameOrAncestor(R, Tag(2)));
-        Assert.False(Stage.IsGameOrAncestor(R, Tag(3)));
+        Assert.True(Stage.IsCurrentTableOrAncestor(R, Tag(1)));
+        Assert.True(Stage.IsCurrentTableOrAncestor(R, Tag(2)));
+        Assert.False(Stage.IsCurrentTableOrAncestor(R, Tag(3)));
     }
 
     [Fact]
-    public void GamesAreListedLikeBlueprintsWhetherOrNotTheyreCurrent()
+    public void TablesAreListedLikeBlueprintsWhetherOrNotTheyreCurrent()
     {
-        var R = Project(Game(4), Game(5, parent: 4) with { Deleted = true });
+        var R = Project(Table(4), Table(5, parent: 4) with { Deleted = true });
         Assert.Equal([Tag(1), Tag(4)], Stage.GetChildren(R, SnowTag.Empty).Select(s => s.Id));
         Assert.Equal([Tag(9)], Stage.GetChildren(R, Tag(2)).Select(s => s.Id));
         Assert.Empty(Stage.GetChildren(R, Tag(4)));
     }
 
     [Fact]
-    public void ANewGameIsNumberedPastTheHighestInTheTree()
+    public void ANewTableIsNumberedPastTheHighestInTheTree()
     {
-        Assert.Equal("Game 1", Stage.NextGameName(Project()));
+        Assert.Equal("Table 1", Stage.NextTableName(Project()));
         var R = Project(
-            Game(4) with
+            Table(4) with
             {
-                Name = "Game 2",
+                Name = "Table 2",
             },
             Blueprint(5, parent: 3) with
             {
-                Name = "Game 7",
+                Name = "Table 7",
             },
-            Game(6, parent: 5) with
+            Table(6, parent: 5) with
             {
-                Name = "Game 9",
+                Name = "Table 9",
                 Deleted = true,
             },
-            Game(7, parent: 2) with
+            Table(7, parent: 2) with
             {
-                Name = "Game 3b",
+                Name = "Table 3b",
             }
         );
-        Assert.Equal("Game 8", Stage.NextGameName(R));
+        Assert.Equal("Table 8", Stage.NextTableName(R));
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class StageTests
     }
 
     [Fact]
-    public void AGamesChainRunsUpToItsRoot()
+    public void ATablesChainRunsUpToItsRoot()
     {
         var R = Project();
         Assert.Equal([Tag(9), Tag(2), Tag(1)], Stage.Chain(R, Tag(9)).Select(s => s.Id).ToArray());

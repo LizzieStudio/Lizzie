@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 namespace Lizzie.Tests;
 
 /// <summary>
-/// Undo and redo as one player sees them, the way Emacs defines them, knowing nothing about logs,
+/// Undo and redo as one player sees them, the way Emacs defines them, knowing nothing about timelines,
 /// flags or groups. It's the second model the implementations are checked against: where the naive
 /// model restates the rules, this one says what the rules must add up to.
 /// </summary>

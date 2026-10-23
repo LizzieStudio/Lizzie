@@ -102,7 +102,7 @@ public abstract record Op
 }
 
 /// <summary>
-/// A log built by playing out operations, the way the game would build it.
+/// A timeline built by playing out operations, the way the game would build it.
 /// </summary>
 public sealed class UndoSession
 {
@@ -110,7 +110,7 @@ public sealed class UndoSession
     public const int AtomCount = 4;
     public static readonly byte[] Sources = [1, 2, 3, 4];
 
-    public readonly EventLog Log = new();
+    public readonly Timeline Timeline = new();
 
     // decides undos, redos and which gestures a leaving player left open
     private readonly IUndoApi _driver;
@@ -122,7 +122,7 @@ public sealed class UndoSession
     private long _clock;
 
     // the events the operation being applied has recorded
-    private readonly List<TableEvent> _recorded = new();
+    private readonly List<TimelineEvent> _recorded = new();
 
     public UndoSession(IUndoApi driver) => _driver = driver;
 
@@ -146,14 +146,14 @@ public sealed class UndoSession
     }
 
     /// <summary>Plays out one operation, and returns the events it recorded, oldest first.</summary>
-    public IReadOnlyList<TableEvent> Apply(Op op)
+    public IReadOnlyList<TimelineEvent> Apply(Op op)
     {
         _recorded.Clear();
         switch (op)
         {
             case Op.Act a:
                 Record(
-                    new TableEvent
+                    new TimelineEvent
                     {
                         Id = NextId(a.Source),
                         Group = _open.GetValueOrDefault(a.Source),
@@ -167,11 +167,11 @@ public sealed class UndoSession
             case Op.Gesture g:
                 CloseOpen(g.Source);
                 var head = NextId(g.Source);
-                Record(new TableEvent { Id = head, Group = head }, g.Atom);
+                Record(new TimelineEvent { Id = head, Group = head }, g.Atom);
                 for (int i = 0; i < g.Moves; i++)
-                    Record(new TableEvent { Id = NextId(g.Source), Group = head }, g.Atom);
+                    Record(new TimelineEvent { Id = NextId(g.Source), Group = head }, g.Atom);
                 Record(
-                    new TableEvent
+                    new TimelineEvent
                     {
                         Id = NextId(g.Source),
                         Group = head,
@@ -184,9 +184,12 @@ public sealed class UndoSession
             case Op.CanceledGesture c:
                 CloseOpen(c.Source);
                 var canceledHead = NextId(c.Source);
-                Record(new TableEvent { Id = canceledHead, Group = canceledHead }, c.Atom);
+                Record(new TimelineEvent { Id = canceledHead, Group = canceledHead }, c.Atom);
                 for (int i = 0; i < c.Moves; i++)
-                    Record(new TableEvent { Id = NextId(c.Source), Group = canceledHead }, c.Atom);
+                    Record(
+                        new TimelineEvent { Id = NextId(c.Source), Group = canceledHead },
+                        c.Atom
+                    );
                 Record(CancelOnly(canceledHead, c.Source));
                 break;
 
@@ -197,13 +200,13 @@ public sealed class UndoSession
             case Op.Start s:
                 CloseOpen(s.Source);
                 var first = NextId(s.Source);
-                Record(new TableEvent { Id = first, Group = first }, s.Atom);
+                Record(new TimelineEvent { Id = first, Group = first }, s.Atom);
                 _open[s.Source] = first;
                 break;
 
             case Op.End e when _open.Remove(e.Source, out var group):
                 Record(
-                    new TableEvent
+                    new TimelineEvent
                     {
                         Id = NextId(e.Source),
                         Group = group,
@@ -214,18 +217,18 @@ public sealed class UndoSession
                 break;
 
             case Op.Reversal p:
-                var flag = Decide(Log, p.Source, p.Redo, p.Scope);
+                var flag = Decide(Timeline, p.Source, p.Redo, p.Scope);
                 if (flag != null)
-                    Record(new TableEvent { Id = NextId(p.Source), Undo = flag });
+                    Record(new TimelineEvent { Id = NextId(p.Source), Undo = flag });
                 break;
 
             case Op.Concurrent c:
-                var unseen = Log
-                    .Keys.Skip(Math.Max(0, Log.Count - c.Back))
+                var unseen = Timeline
+                    .Keys.Skip(Math.Max(0, Timeline.Count - c.Back))
                     .Where(key => key.source != c.Source)
                     .ToList();
-                var seen = new EventLog();
-                foreach (var (key, known) in Log)
+                var seen = new Timeline();
+                foreach (var (key, known) in Timeline)
                     if (!unseen.Contains(key))
                         seen.Add(key, known);
 
@@ -238,22 +241,22 @@ public sealed class UndoSession
                     if (key.CompareTo(after) > 0)
                         after = key;
                 var reversalId = Id(after.logicClock + 1, c.Source);
-                if (Log.ContainsKey(reversalId))
+                if (Timeline.ContainsKey(reversalId))
                     break;
-                Record(new TableEvent { Id = reversalId, Undo = concurrent });
+                Record(new TimelineEvent { Id = reversalId, Undo = concurrent });
                 // Everything after is newer, as the player's clock has moved on too.
                 while (_clock < reversalId.logicClock)
                     _clock += 2;
                 break;
 
             case Op.Leave l when l.Source != Host:
-                foreach (var open in _driver.OpenGroups(Log, l.Source))
+                foreach (var open in _driver.OpenGroups(Timeline, l.Source))
                     Record(CancelOnly(open, Host));
                 _open.Remove(l.Source);
                 break;
 
-            case Op.RawFlag r when Log.Count > 0:
-                var picked = Log.GetAt(r.Pick / 4 % Log.Count).Value;
+            case Op.RawFlag r when Timeline.Count > 0:
+                var picked = Timeline.GetAt(r.Pick / 4 % Timeline.Count).Value;
                 var reverses = (r.Pick % 4) switch
                 {
                     0 => picked.Id,
@@ -261,7 +264,7 @@ public sealed class UndoSession
                     _ => picked.Unit,
                 };
                 Record(
-                    new TableEvent
+                    new TimelineEvent
                     {
                         Id = NextId(r.Source),
                         Undo = new UndoFlag { Reverses = reverses, ByRedo = r.ByRedo },
@@ -271,13 +274,13 @@ public sealed class UndoSession
 
             case Op.Late l when 2 * l.Back - 1 < _clock:
                 var id = Id(_clock - (2 * l.Back - 1), l.Source);
-                if (Log.ContainsKey(id))
+                if (Timeline.ContainsKey(id))
                     break;
                 // It joins the player's gesture only if it's newer than the gesture's first event.
                 var joins =
                     _open.TryGetValue(l.Source, out var gesture) && gesture.CompareTo(id) < 0;
                 Record(
-                    new TableEvent { Id = id, Group = joins ? gesture : SnowportId.Empty },
+                    new TimelineEvent { Id = id, Group = joins ? gesture : SnowportId.Empty },
                     l.Atom
                 );
                 break;
@@ -285,10 +288,10 @@ public sealed class UndoSession
         return _recorded.ToArray();
     }
 
-    private UndoFlag Decide(EventLog log, byte source, bool redo, TestScope scope) =>
+    private UndoFlag Decide(Timeline timeline, byte source, bool redo, TestScope scope) =>
         redo
-            ? _driver.Redo(log, source, scope.For(source))
-            : _driver.Undo(log, source, scope.For(source));
+            ? _driver.Redo(timeline, source, scope.For(source))
+            : _driver.Undo(timeline, source, scope.For(source));
 
     private void CloseOpen(byte source)
     {
@@ -296,7 +299,7 @@ public sealed class UndoSession
             Record(CloseOnly(group, source));
     }
 
-    private TableEvent CloseOnly(SnowportId group, byte source) =>
+    private TimelineEvent CloseOnly(SnowportId group, byte source) =>
         new()
         {
             Id = NextId(source),
@@ -304,7 +307,7 @@ public sealed class UndoSession
             End = GroupEnd.Closed,
         };
 
-    private TableEvent CancelOnly(SnowportId group, byte source) =>
+    private TimelineEvent CancelOnly(SnowportId group, byte source) =>
         new()
         {
             Id = NextId(source),
@@ -324,7 +327,7 @@ public sealed class UndoSession
     /// Records the event in id order, with the given atoms and values written.
     /// Every write gets a unique face or value, so the one that wins can be told apart.
     /// </summary>
-    private void Record(TableEvent e, int first = 0, int second = 0, int values = 0)
+    private void Record(TimelineEvent e, int first = 0, int second = 0, int values = 0)
     {
         var atoms = new List<Atom>();
         foreach (var atom in new[] { first, second }.Where(r => r != 0))
@@ -334,17 +337,18 @@ public sealed class UndoSession
         if (atoms.Count > 0)
             e.Writes = atoms.ToArray();
 
-        int at = Log.Count;
-        while (at > 0 && Log.GetAt(at - 1).Key.CompareTo(e.Id) > 0)
+        int at = Timeline.Count;
+        while (at > 0 && Timeline.GetAt(at - 1).Key.CompareTo(e.Id) > 0)
             at--;
-        Log.Insert(at, e.Id, e);
+        Timeline.Insert(at, e.Id, e);
         _recorded.Add(e);
     }
 
     #region Descriptions for failures
 
-    /// <summary>An event's name in <see cref="Dump"/>: its place in the log.</summary>
-    public string Name(SnowportId id) => Log.IndexOf(id) is var i and >= 0 ? $"#{i}" : $"?{id}";
+    /// <summary>An event's name in <see cref="Dump"/>: its place in the timeline.</summary>
+    public string Name(SnowportId id) =>
+        Timeline.IndexOf(id) is var i and >= 0 ? $"#{i}" : $"?{id}";
 
     public string Describe(UndoFlag flag) =>
         flag == null
@@ -356,11 +360,11 @@ public sealed class UndoSession
                         : ""
                 );
 
-    /// <summary>The log, one event per line, oldest first.</summary>
+    /// <summary>The timeline, one event per line, oldest first.</summary>
     public string Dump() =>
         string.Join(
             "\n",
-            Log.Values.Select(e =>
+            Timeline.Values.Select(e =>
             {
                 string group = e.Group == SnowportId.Empty ? "" : $" in {Name(e.Group)}";
                 string close =

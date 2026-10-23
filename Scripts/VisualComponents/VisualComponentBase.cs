@@ -40,7 +40,7 @@ public abstract partial class VisualComponentBase : Area3D
     {
         base._EnterTree();
 
-        // Normal nodes never change, since the Table replaces the node when they do.
+        // Normal nodes never change, since the StageView replaces the node when they do.
         // Previews have no atom and keep their own.
         if (State is { } atom)
         {
@@ -60,7 +60,7 @@ public abstract partial class VisualComponentBase : Area3D
         var key = Key;
         var target = ComponentPosition.ById.Ref(key);
         var local = Snowport.Clock.source;
-        var place = new SelectionPlace(SelectionPlaces.Table, key.Stage);
+        var place = new SelectionPlace(SelectionPlaces.StageView, key.Stage);
         var selections = R.Get(Selection.ByPlace, place);
         var mine = selections.FirstOrDefault(s => s.Player == local)?.Targets;
         _isMine = mine?.Contains(target) == true;
@@ -146,20 +146,20 @@ public abstract partial class VisualComponentBase : Area3D
         RebuildOutline();
         Built?.Invoke();
 
-        // A rebuild can change the component's size, so the table restacks.
-        OwningTable?.NotifyChanged();
+        // A rebuild can change the component's size, so the view restacks.
+        OwningView?.NotifyChanged();
     }
 
     /// <summary>
-    /// The table Node of this component, or null for a preview.
+    /// The StageView node of this component, or null for a preview.
     /// </summary>
-    protected Table OwningTable
+    protected StageView OwningView
     {
         get
         {
             for (var n = GetParent(); n != null; n = n.GetParent())
-                if (n is Table table)
-                    return table;
+                if (n is StageView view)
+                    return view;
             return null;
         }
     }
@@ -199,7 +199,7 @@ public abstract partial class VisualComponentBase : Area3D
             Rotation = s.Rotation;
         _placed = true;
 
-        OwningTable?.NotifyChanged();
+        OwningView?.NotifyChanged();
     }
 
     private Tween _slide;
@@ -213,7 +213,7 @@ public abstract partial class VisualComponentBase : Area3D
     {
         var from = new Vector2(Position.X, Position.Z);
         var to = new Vector2(target.X, target.Z);
-        var speed = OwningTable?.GetParentOrNull<GameObjects>()?.DropSpeed ?? 0;
+        var speed = OwningView?.GetParentOrNull<GameObjects>()?.DropSpeed ?? 0;
         if (speed <= 0)
             return false;
         float remaining = from.DistanceTo(to) / speed - msecSinceStart / 1000f;
@@ -274,14 +274,14 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// The component's atom, or null for a node without one, such as a spawn preview.
-    /// Also null between its atom being unset and the table removing it at the end of the frame.
+    /// Also null between its atom being unset and the view removing it at the end of the frame.
     /// </summary>
     public ComponentPosition State => AtomService.Instance.Get(ComponentPosition.ById, Key);
 
     /// <summary>
     /// The id of the component atom this node shows, in the stage its table shows.
     /// </summary>
-    public StageKey Key => new(OwningTable?.StageRef ?? SnowTag.Empty, Reference);
+    public StageKey Key => new(OwningView?.StageRef ?? SnowTag.Empty, Reference);
 
     /// <summary>
     /// Which of its prototype's items this is, or null.

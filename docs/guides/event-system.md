@@ -8,15 +8,17 @@ Atoms are the immutable, synchronized objects that drive multiplayer and project
 
 ## SnowTags
 
-A SnowTag is a 32 bit ID that is unique to the table. SnowTags are used to identify atoms.
+A SnowTag is a 32 bit ID that is unique to the project. SnowTags are used to identify atoms.
 
 ## SnowportIds
 
-The SnowportId is a 64 bit timestamped ID that is also unique to the table. SnowportIds are used to identify the events that communicate atom changes. SnowportIds have a guarenteed order when two clients have communicated in-between their minting. So, if Red Client sends event A to Blue client, events that Blue client generate afterwards are guarenteed to use a larger SnowportId than event A.
+The SnowportId is a 64 bit timestamped ID that is also unique to the project. SnowportIds are used to identify the events that communicate atom changes. SnowportIds have a guarenteed order when two clients have communicated in-between their minting. So, if Red Client sends event A to Blue client, events that Blue client generate afterwards are guarenteed to use a larger SnowportId than event A.
 
 ## Events, Commands, and Effects
 
 Events carry two parts: the Command that triggered it, if any, and an array of atom updates, if there are any. The Command helps to convey what prompted the event, while the atom updates specify what has changed. Some events won't have either the command or any updates.
+
+Every event is kept in the Timeline, in SnowportId order. The Timeline is the source of truth: the atoms are worked out from it, and undo and redo read it.
 
 ## Atom "upserts"
 
@@ -28,7 +30,7 @@ The last update to an atom is tracked internally using the SnowportId of the wri
 
 ## Clients Joining
 
-Clients who join the game receive the full event log from oldest to newest. This ensures undo/redo still works.
+Clients who join receive the full Timeline, from oldest to newest. This ensures undo/redo still works.
 
 ## Editing and saving a project
 

@@ -18,7 +18,7 @@ public class UndoScenarioTests
 
     private static bool Others(byte author, Atom _) => author != Me;
 
-    private readonly EventLog _log = new();
+    private readonly Timeline _timeline = new();
     private long _clock;
 
     private SnowportId NextId(byte source) => new(++_clock, source);
@@ -35,9 +35,9 @@ public class UndoScenarioTests
     )
     {
         var id = NextId(source);
-        _log.Add(
+        _timeline.Add(
             id,
-            new TableEvent
+            new TimelineEvent
             {
                 Id = id,
                 Group = group,
@@ -52,9 +52,9 @@ public class UndoScenarioTests
     private void CloseGroup(SnowportId group, byte source)
     {
         var id = NextId(source);
-        _log.Add(
+        _timeline.Add(
             id,
-            new TableEvent
+            new TimelineEvent
             {
                 Id = id,
                 Group = group,
@@ -64,29 +64,29 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records an event that cancels <paramref name="group"/>.</summary>
-    private TableEvent CancelGroup(SnowportId group, byte source)
+    private TimelineEvent CancelGroup(SnowportId group, byte source)
     {
         var id = NextId(source);
-        var e = new TableEvent
+        var e = new TimelineEvent
         {
             Id = id,
             Group = group,
             End = GroupEnd.Canceled,
         };
-        _log.Add(id, e);
+        _timeline.Add(id, e);
         return e;
     }
 
     /// <summary>Records a reversal directly, as the host does, as an admin event, for a player who left.</summary>
-    private TableEvent AddFlag(SnowportId reverses, byte source)
+    private TimelineEvent AddFlag(SnowportId reverses, byte source)
     {
         var id = NextId(source);
-        var e = new TableEvent
+        var e = new TimelineEvent
         {
             Id = id,
             Undo = new UndoFlag { Reverses = reverses },
         };
-        _log.Add(id, e);
+        _timeline.Add(id, e);
         return e;
     }
 
@@ -94,34 +94,35 @@ public class UndoScenarioTests
     private SnowportId StartGroup(byte source, int atom = 1)
     {
         var id = Act(source, atom);
-        _log[id].Group = id;
+        _timeline[id].Group = id;
         return id;
     }
 
     private UndoFlag Undo(Func<byte, Atom, bool> scope, byte source = Me) =>
-        Reversal(UndoLog.Undo(_log, source, scope), source);
+        Reversal(TimelineUndo.Undo(_timeline, source, scope), source);
 
     private UndoFlag Redo(Func<byte, Atom, bool> scope, byte source = Me) =>
-        Reversal(UndoLog.Redo(_log, source, scope), source);
+        Reversal(TimelineUndo.Redo(_timeline, source, scope), source);
 
     private UndoFlag Reversal(UndoFlag flag, byte source)
     {
         if (flag != null)
         {
             var id = NextId(source);
-            _log.Add(id, new TableEvent { Id = id, Undo = flag });
+            _timeline.Add(id, new TimelineEvent { Id = id, Undo = flag });
         }
         return flag;
     }
 
-    private bool IsUndone(SnowportId id) => !UndoLog.InEffect(_log).Contains(_log[id]);
+    private bool IsUndone(SnowportId id) =>
+        !TimelineUndo.InEffect(_timeline).Contains(_timeline[id]);
 
     /// <summary>The ids of the events <paramref name="e"/> may have changed, oldest first.</summary>
-    private SnowportId[] Changes(TableEvent e) =>
-        UndoLog.Changes(_log, e).Select(c => c.Id).ToArray();
+    private SnowportId[] Changes(TimelineEvent e) =>
+        TimelineUndo.Changes(_timeline, e).Select(c => c.Id).ToArray();
 
     /// <summary>The unit a reversal changes, which its chain of reversals comes down to.</summary>
-    private SnowportId Changed(UndoFlag flag) => NaiveUndo.UnitOf(_log, flag.Reverses);
+    private SnowportId Changed(UndoFlag flag) => NaiveUndo.UnitOf(_timeline, flag.Reverses);
 
     [Fact]
     public void UndoWalksBackThroughOwnActions()
@@ -294,7 +295,8 @@ public class UndoScenarioTests
 
     /// <summary>Where the component is: the newest action still in effect, or Empty if none is.</summary>
     private SnowportId Position() =>
-        _log.Values.LastOrDefault(e => e.Undo == null && !IsUndone(e.Id))?.Id ?? SnowportId.Empty;
+        _timeline.Values.LastOrDefault(e => e.Undo == null && !IsUndone(e.Id))?.Id
+        ?? SnowportId.Empty;
 
     [Fact]
     public void NewActionClearsRedo()
@@ -375,18 +377,18 @@ public class UndoScenarioTests
         var a = Act(Me);
         var missing = new SnowportId(999, Me);
         var id = NextId(Me);
-        _log.Add(
+        _timeline.Add(
             id,
-            new TableEvent
+            new TimelineEvent
             {
                 Id = id,
                 Undo = new UndoFlag { Reverses = missing },
             }
         );
 
-        Assert.Empty(Changes(_log[id]));
+        Assert.Empty(Changes(_timeline[id]));
         Assert.False(IsUndone(a));
-        Assert.Equal(a, Changed(UndoLog.Undo(_log, Me, Mine)));
+        Assert.Equal(a, Changed(TimelineUndo.Undo(_timeline, Me, Mine)));
     }
 
     [Fact]
@@ -397,8 +399,11 @@ public class UndoScenarioTests
         StartGroup(Me, atom: 2); // my drag, still going
 
         // Neither my undo nor another player's lands on the drag.
-        Assert.Equal(mine, Changed(UndoLog.Undo(_log, Me, Mine)));
-        Assert.Equal(mine, Changed(UndoLog.Undo(_log, Other, (author, _) => author != Other)));
+        Assert.Equal(mine, Changed(TimelineUndo.Undo(_timeline, Me, Mine)));
+        Assert.Equal(
+            mine,
+            Changed(TimelineUndo.Undo(_timeline, Other, (author, _) => author != Other))
+        );
     }
 
     [Fact]
@@ -406,7 +411,7 @@ public class UndoScenarioTests
     {
         var g = StartGroup(Me, atom: 1);
         Act(Me, atom: 2, group: g);
-        Assert.Null(UndoLog.Undo(_log, Me, Mine));
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
 
         // Closed by someone else, the gesture is still the player's own.
         CloseGroup(g, Other);
@@ -433,7 +438,7 @@ public class UndoScenarioTests
         var g = StartGroup(Other);
         AddFlag(g, Admin);
 
-        Assert.Null(UndoLog.Undo(_log, Me, Others));
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Others));
     }
 
     [Fact]
@@ -455,12 +460,12 @@ public class UndoScenarioTests
         Act(Other, atom: 4, group: finished, close: true);
         StartGroup(Me, atom: 5);
 
-        Assert.Equal([open], UndoLog.OpenGroups(_log, Other));
+        Assert.Equal([open], TimelineUndo.OpenGroups(_timeline, Other));
 
         // What the host, me here, writes when the player leaves.
         CancelGroup(open, Me);
 
-        Assert.Empty(UndoLog.OpenGroups(_log, Other));
+        Assert.Empty(TimelineUndo.OpenGroups(_timeline, Other));
         Assert.True(IsUndone(open));
         Assert.False(IsUndone(finished));
     }
@@ -470,11 +475,11 @@ public class UndoScenarioTests
     {
         var g = StartGroup(Me, atom: 1);
         var move = Act(Me, atom: 2, group: g);
-        Assert.True(UndoLog.IsOpen(_log, g));
+        Assert.True(TimelineUndo.IsOpen(_timeline, g));
 
         var cancel = CancelGroup(g, Me);
 
-        Assert.False(UndoLog.IsOpen(_log, g));
+        Assert.False(TimelineUndo.IsOpen(_timeline, g));
         Assert.True(IsUndone(g));
         Assert.True(IsUndone(move));
         Assert.True(IsUndone(cancel.Id));
@@ -633,7 +638,7 @@ public class UndoScenarioTests
     {
         Act(Admin, atom: 1);
         var id = NextId(Me);
-        _log.Add(id, new TableEvent { Id = id, Unsets = [new Prototype { Id = 1 }] });
+        _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [new Prototype { Id = 1 }] });
 
         Assert.Equal(id, Changed(Undo((_, r) => r is Prototype p && p.Id == 1)));
     }

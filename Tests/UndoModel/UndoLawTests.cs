@@ -44,10 +44,13 @@ public abstract class UndoLawTests : UndoTestBase
             {
                 var session = UndoSession.Play(ops, Actual);
                 var groups = session
-                    .Log.Values.Where(e => e.Undo == null && e.Group != SnowportId.Empty)
+                    .Timeline.Values.Where(e => e.Undo == null && e.Group != SnowportId.Empty)
                     .GroupBy(e => e.Group);
                 foreach (var group in groups)
-                    if (group.Select(e => Actual.IsUndone(session.Log, e)).Distinct().Count() > 1)
+                    if (
+                        group.Select(e => Actual.IsUndone(session.Timeline, e)).Distinct().Count()
+                        > 1
+                    )
                         Fail(session, $"{session.Name(group.Key)} is partly undone");
             }
         );
@@ -66,8 +69,8 @@ public abstract class UndoLawTests : UndoTestBase
                     if (
                         flag != null
                         && !NaiveUndo.IsClosed(
-                            session.Log,
-                            NaiveUndo.UnitOf(session.Log, flag.Reverses)
+                            session.Timeline,
+                            NaiveUndo.UnitOf(session.Timeline, flag.Reverses)
                         )
                     )
                         Fail(
@@ -93,7 +96,7 @@ public abstract class UndoLawTests : UndoTestBase
                     foreach (var (reversal, flag) in Reversals(session, me, scope))
                         if (
                             flag != null
-                            && NaiveUndo.UnitOf(session.Log, flag.Reverses).source != me
+                            && NaiveUndo.UnitOf(session.Timeline, flag.Reverses).source != me
                         )
                             Fail(
                                 session,
@@ -124,7 +127,7 @@ public abstract class UndoLawTests : UndoTestBase
                     var undo = session.Apply(new Op.Reversal(ending.Me, false, ending.Scope));
                     if (undo.Count == 0)
                         break;
-                    before.Add((state, NaiveUndo.UnitOf(session.Log, undo[0].Undo.Reverses)));
+                    before.Add((state, NaiveUndo.UnitOf(session.Timeline, undo[0].Undo.Reverses)));
                 }
 
                 var redone = new HashSet<SnowportId>();
@@ -164,18 +167,18 @@ public abstract class UndoLawTests : UndoTestBase
                 foreach (var op in ops)
                 {
                     var recorded = session.Apply(op);
-                    // Only a reversal decided on the whole log; one that missed some can't retire them.
+                    // Only a reversal decided on the whole timeline; one that missed some can't retire them.
                     if (op is not Op.Reversal || recorded.Count == 0)
                         continue;
 
                     var flag = recorded[0].Undo;
                     if (
-                        session.Log.TryGetValue(flag.Reverses, out var target)
+                        session.Timeline.TryGetValue(flag.Reverses, out var target)
                         && target.Undo is { } reversed
                         && reversed.Reverses.CompareTo(target.Id) < 0
-                        && session.Log.TryGetValue(reversed.Reverses, out var restored)
+                        && session.Timeline.TryGetValue(reversed.Reverses, out var restored)
                         && (restored.Undo != null || restored.Unit == restored.Id)
-                        && Actual.IsUndone(session.Log, restored)
+                        && Actual.IsUndone(session.Timeline, restored)
                     )
                         Fail(
                             session,
@@ -204,7 +207,7 @@ public abstract class UndoLawTests : UndoTestBase
                         new(ScopeKind.Anyone, 0),
                     }
                 )
-                    if (Actual.Redo(session.Log, ending.Me, scope.For(ending.Me)) is { } flag)
+                    if (Actual.Redo(session.Timeline, ending.Me, scope.For(ending.Me)) is { } flag)
                         Fail(
                             session,
                             $"Redo by s{ending.Me} in {scope} would still {session.Describe(flag)}"
@@ -220,14 +223,14 @@ public abstract class UndoLawTests : UndoTestBase
         TestScope scope
     ) =>
         [
-            ("Undo", Actual.Undo(session.Log, me, scope.For(me))),
-            ("Redo", Actual.Redo(session.Log, me, scope.For(me))),
+            ("Undo", Actual.Undo(session.Timeline, me, scope.For(me))),
+            ("Redo", Actual.Redo(session.Timeline, me, scope.For(me))),
         ];
 
     /// <summary>The actions in effect.</summary>
     private HashSet<SnowportId> InEffect(UndoSession session) =>
         session
-            .Log.Values.Where(e => e.Undo == null && !Actual.IsUndone(session.Log, e))
+            .Timeline.Values.Where(e => e.Undo == null && !Actual.IsUndone(session.Timeline, e))
             .Select(e => e.Id)
             .ToHashSet();
 
@@ -236,7 +239,7 @@ public abstract class UndoLawTests : UndoTestBase
         UndoSession session,
         HashSet<SnowportId> state,
         HashSet<SnowportId> units
-    ) => state.Where(id => !units.Contains(session.Log[id].Unit)).ToHashSet();
+    ) => state.Where(id => !units.Contains(session.Timeline[id].Unit)).ToHashSet();
 
     private static void Fail(UndoSession session, string message) =>
         Assert.Fail($"{message}\nlog:\n{session.Dump()}");

@@ -25,7 +25,7 @@ public partial class SceneController : Node3D
         CommandList.Register(CommandList.All.Concat(_gameObjects.Commands));
         ShortcutRelay.Install(GetTree());
         ClickRouting.Install(GetTree().Root);
-        // The table takes the main window's commands.
+        // The view takes the main window's commands.
         CommandViews.Attach(GetTree().Root, _gameObjects);
     }
 

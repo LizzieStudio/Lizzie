@@ -120,7 +120,7 @@
           {
             "properties": {
               "$type": {
-                "const": "CurrentGame"
+                "const": "CurrentTable"
               },
               "stageRef": true
             },
@@ -866,7 +866,7 @@
               },
               "parentRef": true,
               "rank": true,
-              "isGame": {
+              "isTable": {
                 "type": "boolean"
               },
               "deleted": {

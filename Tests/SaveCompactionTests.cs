@@ -23,11 +23,11 @@ public class SaveCompactionTests
 
     private static Prototype DeletedPrototype(int id) => new() { Id = Tag(id), Deleted = true };
 
-    private static TableEvent Save(params Atom[] atoms) =>
+    private static TimelineEvent Save(params Atom[] atoms) =>
         new() { Id = Id(1_000_000, Snowport.AdminSource), Writes = atoms };
 
-    private static TableEvent Load(string json) =>
-        JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
+    private static TimelineEvent Load(string json) =>
+        JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
 
     private static SnowTag IdOf(Atom atom) =>
         atom switch
@@ -160,7 +160,7 @@ public class SaveCompactionTests
         ]);
 
     [Fact]
-    public void AGameIsKeptWithItsComponents() =>
+    public void ATableIsKeptWithItsComponents() =>
         AssertKept(
             [
                 new Stage { Id = Tag(1) },
@@ -168,7 +168,7 @@ public class SaveCompactionTests
                 {
                     Id = Tag(2),
                     ParentRef = Tag(1),
-                    IsGame = true,
+                    IsTable = true,
                 },
                 Component(3) with
                 {

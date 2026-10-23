@@ -11,10 +11,10 @@ namespace Lizzie.Tests;
 /// <summary>
 /// Model-based properties. Random sessions of actions, gestures, reversals, departures and odd flags
 /// are played out, with <see cref="Expected"/> deciding what each reversal writes,
-/// and <see cref="Actual"/> must give the same answer to every question about the log.
+/// and <see cref="Actual"/> must give the same answer to every question about the timeline.
 /// </summary>
 /// <remarks>
-/// A failure prints the shrunk operations, the question that got different answers, and the log.
+/// A failure prints the shrunk operations, the question that got different answers, and the timeline.
 /// Rerun one exactly by passing the printed seed to <c>Sample</c>.
 /// </remarks>
 public abstract class UndoModelTests : UndoTestBase
@@ -108,12 +108,12 @@ public abstract class UndoModelTests : UndoTestBase
             ops =>
             {
                 var session = UndoSession.Play(ops, Expected);
-                foreach (var e in session.Log.Values)
+                foreach (var e in session.Timeline.Values)
                     Same(
                         session,
                         $"What {session.Name(e.Id)} may have changed",
-                        Show(session, Expected.Changes(session.Log, e).OrderBy(c => c.Id)),
-                        Show(session, Actual.Changes(session.Log, e).OrderBy(c => c.Id))
+                        Show(session, Expected.Changes(session.Timeline, e).OrderBy(c => c.Id)),
+                        Show(session, Actual.Changes(session.Timeline, e).OrderBy(c => c.Id))
                     );
             }
         );
@@ -162,32 +162,32 @@ public abstract class UndoModelTests : UndoTestBase
         Same(
             s,
             "Events in effect, newest first",
-            Show(s, Expected.InEffect(s.Log)),
-            Show(s, Actual.InEffect(s.Log))
+            Show(s, Expected.InEffect(s.Timeline)),
+            Show(s, Actual.InEffect(s.Timeline))
         );
 
     private void SameUndo(UndoSession s, byte me, TestScope scope) =>
         Same(
             s,
             $"Undo by s{me} in {scope}",
-            s.Describe(Expected.Undo(s.Log, me, scope.For(me))),
-            s.Describe(Actual.Undo(s.Log, me, scope.For(me)))
+            s.Describe(Expected.Undo(s.Timeline, me, scope.For(me))),
+            s.Describe(Actual.Undo(s.Timeline, me, scope.For(me)))
         );
 
     private void SameRedo(UndoSession s, byte me, TestScope scope) =>
         Same(
             s,
             $"Redo by s{me} in {scope}",
-            s.Describe(Expected.Redo(s.Log, me, scope.For(me))),
-            s.Describe(Actual.Redo(s.Log, me, scope.For(me)))
+            s.Describe(Expected.Redo(s.Timeline, me, scope.For(me))),
+            s.Describe(Actual.Redo(s.Timeline, me, scope.For(me)))
         );
 
     private void SameOpenGroups(UndoSession s, byte source) =>
         Same(
             s,
             $"Open groups of s{source}",
-            Show(s, Expected.OpenGroups(s.Log, source)),
-            Show(s, Actual.OpenGroups(s.Log, source))
+            Show(s, Expected.OpenGroups(s.Timeline, source)),
+            Show(s, Actual.OpenGroups(s.Timeline, source))
         );
 
     private void Same<T>(UndoSession session, string question, T expected, T actual)
@@ -201,7 +201,7 @@ public abstract class UndoModelTests : UndoTestBase
     private static string Show(UndoSession s, List<SnowportId> ids) =>
         ids == null ? "null" : "[" + string.Join(", ", ids.Order().Select(s.Name)) + "]";
 
-    private static string Show(UndoSession s, IEnumerable<TableEvent> events) =>
+    private static string Show(UndoSession s, IEnumerable<TimelineEvent> events) =>
         events == null ? "null" : "[" + string.Join(", ", events.Select(e => s.Name(e.Id))) + "]";
 
     #endregion

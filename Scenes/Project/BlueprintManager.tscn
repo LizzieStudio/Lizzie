@@ -30,11 +30,11 @@ script = ExtResource("2_cmdbtn")
 CommandName = "blueprint.add"
 ShowCaption = false
 
-[node name="StartGameHere" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1152807118]
+[node name="AddTable" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1152807118]
 layout_mode = 2
 theme_override_constants/icon_max_width = 20
 script = ExtResource("2_cmdbtn")
-CommandName = "blueprint.new_game"
+CommandName = "table.add"
 ShowCaption = false
 metadata/_custom_type_script = "uid://0trm78fpi5a"
 
@@ -45,12 +45,12 @@ script = ExtResource("2_cmdbtn")
 CommandName = "blueprint.delete"
 ShowCaption = false
 
-[node name="ShowOnTable" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=758586164]
+[node name="Show" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=758586164]
 layout_mode = 2
 size_flags_horizontal = 10
 theme_override_constants/icon_max_width = 20
 script = ExtResource("2_cmdbtn")
-CommandName = "blueprint.edit"
+CommandName = "stage.show"
 ShowCaption = false
 
 [node name="MakeCurrent" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1069511616]
@@ -58,7 +58,7 @@ layout_mode = 2
 size_flags_horizontal = 8
 theme_override_constants/icon_max_width = 20
 script = ExtResource("2_cmdbtn")
-CommandName = "game.make_current"
+CommandName = "table.make_current"
 ShowCaption = false
 
 [node name="Tree" type="Tree" parent="MarginContainer/VBoxContainer" unique_id=1195983423]

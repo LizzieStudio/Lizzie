@@ -13,18 +13,18 @@ public partial class EventSynchronizer : Node
     private static EventSynchronizer _instance;
     public static EventSynchronizer Instance => _instance;
 
-    public readonly EventLog Log = new();
+    public readonly Timeline Timeline = new();
 
     /// <summary>
     /// While true, events are recorded but not applied to the scene per-event.
-    /// Set during a project load, including the host's table after joining a game.
+    /// Set during a project load, including the host's timeline after joining a game.
     /// </summary>
     public bool BulkLoading { get; set; }
 
     /// <summary>
     /// Raised for each event recorded, from this player, another player, or a load.
     /// </summary>
-    public event Action<TableEvent> Applied;
+    public event Action<TimelineEvent> Applied;
 
     public override void _EnterTree()
     {
@@ -32,11 +32,11 @@ public partial class EventSynchronizer : Node
     }
 
     /// <summary>
-    /// Clears the log.
+    /// Clears the timeline.
     /// </summary>
     public void Clear()
     {
-        Log.Clear();
+        Timeline.Clear();
     }
 
     /// <summary>
@@ -45,8 +45,8 @@ public partial class EventSynchronizer : Node
     /// </summary>
     public void AbandonGroups(byte source)
     {
-        foreach (var group in UndoLog.OpenGroups(Log, source))
-            Submit(TableEvent.Canceling(group));
+        foreach (var group in TimelineUndo.OpenGroups(Timeline, source))
+            Submit(TimelineEvent.Canceling(group));
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public partial class EventSynchronizer : Node
     /// Write atoms with <see cref="AtomService.Write(IEnumerable{IChange})"/> and its gesture calls instead.
     /// This is for events that aren't plain writes, like undos.
     /// </remarks>
-    public void Submit(TableEvent e)
+    public void Submit(TimelineEvent e)
     {
         foreach (var atom in e.Writes)
             if (IdQuery.For(atom.GetType()).Of(atom) is SnowTag id && id == SnowTag.Empty)
@@ -64,7 +64,7 @@ public partial class EventSynchronizer : Node
                     $"A {atom.GetType().Name} was written without an Id. Give it SnowTag.Create() when it's made."
                 );
 
-        // The table is about to be replaced by the host's, so a change now would be lost.
+        // The timeline is about to be replaced by the host's, so a change now would be lost.
         if (Joining)
         {
             GD.PushWarning($"Ignored a change made while joining a game: {e.Command}");
@@ -85,17 +85,17 @@ public partial class EventSynchronizer : Node
             RpcId(1, nameof(ServerSubmitEvent), json);
     }
 
-    private bool TryRecord(TableEvent e)
+    private bool TryRecord(TimelineEvent e)
     {
-        if (Log.ContainsKey(e.Id))
+        if (Timeline.ContainsKey(e.Id))
             return false;
 
         // insert to maintain SnowportId order
         // most events arrive in order, so search from the end
-        int i = Log.Count - 1;
-        while (i >= 0 && Log.GetAt(i).Key.CompareTo(e.Id) > 0)
+        int i = Timeline.Count - 1;
+        while (i >= 0 && Timeline.GetAt(i).Key.CompareTo(e.Id) > 0)
             i--;
-        Log.Insert(i + 1, e.Id, e);
+        Timeline.Insert(i + 1, e.Id, e);
         return true;
     }
 
@@ -141,7 +141,7 @@ public partial class EventSynchronizer : Node
 
     private void ReceiveEvent(string json)
     {
-        var e = JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
+        var e = JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
         if (Joining)
             _joinBuffer.Add(e);
         else
@@ -151,7 +151,7 @@ public partial class EventSynchronizer : Node
     /// <summary>
     /// Record and apply an event locally without broadcasting it.
     /// </summary>
-    public void Ingest(TableEvent e)
+    public void Ingest(TimelineEvent e)
     {
         if (e == null)
             return;
@@ -168,7 +168,7 @@ public partial class EventSynchronizer : Node
     #region Catchup
 
     // the host's events, collected while joining, or null when not joining
-    private List<TableEvent> _joinBuffer;
+    private List<TimelineEvent> _joinBuffer;
 
     /// <summary>
     /// True while connecting to a game.
@@ -186,14 +186,14 @@ public partial class EventSynchronizer : Node
     public void CancelJoin() => _joinBuffer = null;
 
     /// <summary>
-    /// Stream the entire event log to a joining peer, oldest-to-newest.
+    /// Stream the entire timeline to a joining peer, oldest-to-newest.
     /// </summary>
     private void SendStateTo(int peerId)
     {
         if (MultiplayerManager.Instance?.IsServer != true)
             return;
 
-        foreach (var e in Log.Values)
+        foreach (var e in Timeline.Values)
             RpcId(
                 peerId,
                 nameof(ReceiveState),
@@ -209,7 +209,7 @@ public partial class EventSynchronizer : Node
     private void ReceiveState(string json) => ReceiveEvent(json);
 
     /// <summary>
-    /// Ask the host to stream this client the full event log as catchup.
+    /// Ask the host to stream this client the full timeline as catchup.
     /// </summary>
     public void RequestCatchup()
     {
@@ -249,10 +249,10 @@ public partial class EventSynchronizer : Node
     )]
     private void ClientCatchupComplete()
     {
-        GD.Print("[EventSynchronizer] Catchup complete - replacing the table.");
+        GD.Print("[EventSynchronizer] Catchup complete - replacing the timeline.");
         var events = _joinBuffer ?? [];
         _joinBuffer = null;
-        ProjectService.Instance?.LoadJoinedTable(events);
+        ProjectService.Instance?.LoadJoinedTimeline(events);
         EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
     }
 

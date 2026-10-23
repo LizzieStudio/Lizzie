@@ -5,7 +5,7 @@ using System.Linq;
 namespace Lizzie;
 
 /// <summary>
-/// A blueprint or a game being played.
+/// A blueprint or a table, which is played on.
 /// </summary>
 [JsonName("Stage")]
 public sealed record Stage : Atom, IRanked
@@ -41,39 +41,39 @@ public sealed record Stage : Atom, IRanked
     public SnowRank Rank { get; init; }
 
     /// <summary>
-    /// Whether this is a game rather than a blueprint.
+    /// Whether this is a table rather than a blueprint.
     /// </summary>
-    public bool IsGame { get; init; }
+    public bool IsTable { get; init; }
 
     public bool Deleted { get; init; }
 
     /// <summary>
-    /// Gets a new empty game, last under <paramref name="parent"/>.
+    /// Gets a new empty table, last under <paramref name="parent"/>.
     /// </summary>
-    public static Stage NewGame(IAtomReader R, SnowTag parent) =>
+    public static Stage NewTable(IAtomReader R, SnowTag parent) =>
         new()
         {
             Id = SnowTag.Create(),
-            Name = NextGameName(R),
+            Name = NextTableName(R),
             ParentRef = parent,
             Rank = GetChildren(R, parent)
                 .Select(s => s.Rank)
                 .DefaultIfEmpty()
                 .Max()
                 .After(SnowportId.Create()),
-            IsGame = true,
+            IsTable = true,
         };
 
     /// <summary>
-    /// "Game N", numbered one past the highest "Game N" anywhere in the tree.
+    /// "Table N", numbered one past the highest "Table N" anywhere in the tree.
     /// </summary>
-    public static string NextGameName(IAtomReader R)
+    public static string NextTableName(IAtomReader R)
     {
         int Highest(SnowTag parent) =>
             R.Get(Children, parent)
                 .Select(s =>
                     Math.Max(
-                        s.Name?.StartsWith("Game ") == true && int.TryParse(s.Name[5..], out int n)
+                        s.Name?.StartsWith("Table ") == true && int.TryParse(s.Name[6..], out int n)
                             ? n
                             : 0,
                         Highest(s.Id)
@@ -81,14 +81,14 @@ public sealed record Stage : Atom, IRanked
                 )
                 .DefaultIfEmpty()
                 .Max();
-        return $"Game {Highest(SnowTag.Empty) + 1}";
+        return $"Table {Highest(SnowTag.Empty) + 1}";
     }
 
     /// <summary>
-    /// Gets whether the game is <paramref name="id"/> or builds on it.
+    /// Gets whether the current table is <paramref name="id"/> or builds on it.
     /// </summary>
-    public static bool IsGameOrAncestor(IAtomReader R, SnowTag id) =>
-        Chain(R, R.Get(CurrentGame.Only).StageRef).Any(s => s.Id == id);
+    public static bool IsCurrentTableOrAncestor(IAtomReader R, SnowTag id) =>
+        Chain(R, R.Get(CurrentTable.Only).StageRef).Any(s => s.Id == id);
 
     /// <summary>
     /// The stages built on <paramref name="parent"/>, in the order the blueprint manager shows them.
@@ -170,15 +170,15 @@ public sealed record Stage : Atom, IRanked
 }
 
 /// <summary>
-/// The game being played, which everyone sees unless they pick another stage.
+/// The table being played, which everyone sees unless they pick another stage.
 /// </summary>
-[JsonName("CurrentGame")]
-public sealed record CurrentGame : Atom
+[JsonName("CurrentTable")]
+public sealed record CurrentTable : Atom
 {
-    public static readonly Singleton<CurrentGame> Only = new();
+    public static readonly Singleton<CurrentTable> Only = new();
 
     /// <summary>
-    /// The game's <see cref="Stage"/>.
+    /// The table's <see cref="Stage"/>.
     /// </summary>
     public SnowTag StageRef { get; init; }
 }

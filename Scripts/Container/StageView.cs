@@ -9,7 +9,7 @@ namespace Lizzie;
 /// Holds a node for every component atom one stage shows.
 /// Creates and removes the nodes, who then render their atom.
 /// </summary>
-public partial class Table : Node3D
+public partial class StageView : Node3D
 {
     public TextureFactory TextureFactory { get; set; }
 
@@ -24,7 +24,7 @@ public partial class Table : Node3D
     private readonly List<VisualComponentBase> _nodes = new();
 
     /// <summary>
-    /// Every component node on the table, including those inside decks and bags.
+    /// Every component node in the view, including those inside decks and bags.
     /// </summary>
     public IReadOnlyList<VisualComponentBase> Nodes => _nodes;
 
@@ -33,7 +33,7 @@ public partial class Table : Node3D
     /// </summary>
     public event Action Changed;
 
-    /// <summary>Called after a component is removed from the table.</summary>
+    /// <summary>Called after a component is removed from the view.</summary>
     public event Action<VisualComponentBase> ComponentRemoved;
 
     public override void _EnterTree()

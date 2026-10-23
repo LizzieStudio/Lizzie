@@ -12,35 +12,37 @@ public interface IUndoApi
 {
     string Name { get; }
 
-    UndoFlag Undo(EventLog log, byte me, Func<byte, Atom, bool> scope);
+    UndoFlag Undo(Timeline timeline, byte me, Func<byte, Atom, bool> scope);
 
-    UndoFlag Redo(EventLog log, byte me, Func<byte, Atom, bool> scope);
+    UndoFlag Redo(Timeline timeline, byte me, Func<byte, Atom, bool> scope);
 
-    List<SnowportId> OpenGroups(EventLog log, byte source);
+    List<SnowportId> OpenGroups(Timeline timeline, byte source);
 
-    IEnumerable<TableEvent> Changes(EventLog log, TableEvent e);
+    IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e);
 
-    IEnumerable<TableEvent> InEffect(EventLog log);
+    IEnumerable<TimelineEvent> InEffect(Timeline timeline);
 
     /// <summary>Whether the event's history entry is out of effect: for an action, whether it's undone.</summary>
-    bool IsUndone(EventLog log, TableEvent e) => !InEffect(log).Contains(e);
+    bool IsUndone(Timeline timeline, TimelineEvent e) => !InEffect(timeline).Contains(e);
 }
 
-/// <summary>The game's implementation, in Scripts/Events/UndoLog.cs.</summary>
+/// <summary>The game's implementation, in Scripts/Events/TimelineUndo.cs.</summary>
 public sealed class CurrentUndo : IUndoApi
 {
     public string Name => "current";
 
-    public UndoFlag Undo(EventLog log, byte me, Func<byte, Atom, bool> scope) =>
-        UndoLog.Undo(log, me, scope);
+    public UndoFlag Undo(Timeline timeline, byte me, Func<byte, Atom, bool> scope) =>
+        TimelineUndo.Undo(timeline, me, scope);
 
-    public UndoFlag Redo(EventLog log, byte me, Func<byte, Atom, bool> scope) =>
-        UndoLog.Redo(log, me, scope);
+    public UndoFlag Redo(Timeline timeline, byte me, Func<byte, Atom, bool> scope) =>
+        TimelineUndo.Redo(timeline, me, scope);
 
-    public List<SnowportId> OpenGroups(EventLog log, byte source) =>
-        UndoLog.OpenGroups(log, source);
+    public List<SnowportId> OpenGroups(Timeline timeline, byte source) =>
+        TimelineUndo.OpenGroups(timeline, source);
 
-    public IEnumerable<TableEvent> Changes(EventLog log, TableEvent e) => UndoLog.Changes(log, e);
+    public IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e) =>
+        TimelineUndo.Changes(timeline, e);
 
-    public IEnumerable<TableEvent> InEffect(EventLog log) => UndoLog.InEffect(log);
+    public IEnumerable<TimelineEvent> InEffect(Timeline timeline) =>
+        TimelineUndo.InEffect(timeline);
 }

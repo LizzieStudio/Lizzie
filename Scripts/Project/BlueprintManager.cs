@@ -16,11 +16,11 @@ public partial class BlueprintManager : Window, ICommandView
 
     public static readonly SelectionPlace Place = new(SelectionPlaces.Blueprints, SnowTag.Empty);
 
-    // Marks the current game, and the stage on the table when it's something else.
-    private static readonly Texture2D CurrentGameIcon = GD.Load<Texture2D>(
+    // Marks the current table, and the stage in your view when it's something else.
+    private static readonly Texture2D CurrentTableIcon = GD.Load<Texture2D>(
         CommandIcons.MakeCurrent
     );
-    private static readonly Texture2D ShownIcon = GD.Load<Texture2D>(CommandIcons.ShowOnTable);
+    private static readonly Texture2D ShownIcon = GD.Load<Texture2D>(CommandIcons.Show);
 
     public override void _EnterTree()
     {
@@ -55,7 +55,7 @@ public partial class BlueprintManager : Window, ICommandView
         _commands =
         [
             StageCommands.AddBlueprint,
-            StageCommands.NewGame,
+            StageCommands.AddTable,
             new AtomCommand<Stage>
             {
                 Name = new("blueprint.rename"),
@@ -99,8 +99,8 @@ public partial class BlueprintManager : Window, ICommandView
     {
         var selected = R.GetSelection(Stage.ById, this).ToHashSet();
         var colors = R.SelectionColors(Place);
-        var onTable = ProjectService.Instance.GameObjects.ShownStage(R);
-        var game = R.Get(CurrentGame.Only).StageRef;
+        var shown = ProjectService.Instance.GameObjects.ShownStage(R);
+        var current = R.Get(CurrentTable.Only).StageRef;
         var listed = new HashSet<SnowTag>();
         int indent = _tree.GetThemeConstant("item_margin");
 
@@ -148,7 +148,7 @@ public partial class BlueprintManager : Window, ICommandView
                 }
                 item.SetText(NameColumn, stage.Name);
                 // Translucent, since the tree draws its hover highlight underneath.
-                var fill = UI.StageColor(stage.IsGame, 0.42f) with
+                var fill = UI.StageColor(stage.IsTable, 0.42f) with
                 {
                     A = 0.5f,
                 };
@@ -166,8 +166,9 @@ public partial class BlueprintManager : Window, ICommandView
                         )
                     );
                 var (icon, tooltip) =
-                    stage.Id == game ? (CurrentGameIcon, "The current game, which everyone plays")
-                    : stage.Id == onTable ? (ShownIcon, "On the table")
+                    stage.Id == current
+                        ? (CurrentTableIcon, "The current table, which everyone plays")
+                    : stage.Id == shown ? (ShownIcon, "In your view")
                     : (null, "");
                 item.SetIcon(IconColumn, icon);
                 item.SetTooltipText(IconColumn, tooltip);

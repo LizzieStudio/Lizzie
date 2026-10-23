@@ -75,7 +75,7 @@ public partial class VcDeck : VisualComponentBase
         _frame.Position = new Vector3(0, (FrameHeight - total) / 2f, 0);
         _patch.Transform = _frame.Transform * _patchInFrame;
         YHeight = total;
-        OwningTable?.NotifyChanged();
+        OwningView?.NotifyChanged();
     }
 
     private static float CardHeight(IAtomReader R, ComponentPosition card) =>

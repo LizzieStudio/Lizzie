@@ -37,10 +37,10 @@ public static class CommandIcons
     public const string Clear = Folder + "ink_eraser.svg";
     public const string Delete = Folder + "delete.svg";
     public const string Reset = Folder + "reset.svg";
-    public const string ResetGame = Folder + "reset_game.svg";
-    public const string NewGame = Folder + "add_circle.svg";
+    public const string ResetTable = Folder + "reset_table.svg";
+    public const string AddTable = Folder + "add_circle.svg";
     public const string MakeCurrent = Folder + "play_circle.svg";
-    public const string ShowOnTable = Folder + "my_location.svg";
+    public const string Show = Folder + "my_location.svg";
     public const string Blueprints = Folder + "library_add.svg";
     public const string Rename = Folder + "drive_file_rename.svg";
     public const string MergeIntoParent = Folder + "call_merge.svg";

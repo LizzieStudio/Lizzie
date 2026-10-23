@@ -62,7 +62,7 @@ public readonly record struct SelectionPlace(SelectionPlaces View, SnowTag Withi
 
 public enum SelectionPlaces
 {
-    Table = 1,
+    StageView = 1,
     DataSet = 2,
     Blueprints = 3,
 }
@@ -74,7 +74,7 @@ public static class LocalSelection
 {
     /// <summary>
     /// The selection color to show each target in.
-    /// <paramref name="place"/> is where the selections live, like the stage the table shows.
+    /// <paramref name="place"/> is where the selections live, like the stage the view shows.
     ///
     /// <para>
     /// A target shows in the seat color of the player who selected it most recently,

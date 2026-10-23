@@ -71,7 +71,7 @@ public enum Context
 public interface ICommandView
 {
     /// <summary>
-    /// Where selections in this view live, like the table showing a stage.
+    /// Where selections in this view live, like the view showing a stage.
     ///
     /// <para>
     /// A view without a selection gives null.

@@ -129,9 +129,9 @@ theme_type_variation = &"MenuBar"
 text = "Game"
 script = ExtResource("cmd_menu")
 
-[node name="GameReset" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Game" unique_id=863353669]
+[node name="TableReset" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Game" unique_id=863353669]
 script = ExtResource("cmd_item")
-CommandName = "game.reset"
+CommandName = "table.reset"
 
 [node name="GameBlueprints" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Game" unique_id=459407097]
 script = ExtResource("cmd_item")

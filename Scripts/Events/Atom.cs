@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace Lizzie;
 
 /// <summary>
-/// <para>An atom, easily replicated in multiplayer through a write-only synchronized log.</para>
+/// <para>An atom, easily replicated in multiplayer through a write-only synchronized timeline.</para>
 /// <para>
 /// Write atoms with <see cref="AtomService.Write(IEnumerable{IChange})"/>,
 /// or return them from a command's <see cref="AtomCommand{T}.Effects"/>.

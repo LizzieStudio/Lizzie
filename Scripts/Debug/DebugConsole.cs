@@ -135,7 +135,7 @@ public partial class DebugConsole : Node
         {
             case "/events":
                 _eventsOpen = true;
-                Log("Opened the event log inspector.");
+                Log("Opened the timeline inspector.");
                 break;
             case "/outlines":
                 SelectionOutline.Enabled = !SelectionOutline.Enabled;
@@ -155,7 +155,7 @@ public partial class DebugConsole : Node
     }
 
     /// <summary>
-    /// Fills the event log with undoable no-op events for performance testing.
+    /// Fills the timeline with undoable no-op events for performance testing.
     /// Each rewrites a component with its current state.
     /// </summary>
     private void Spam(int count)
@@ -177,7 +177,7 @@ public partial class DebugConsole : Node
         try
         {
             for (int i = 0; i < count; i++)
-                EventSynchronizer.Instance.Submit(TableEvent.Now([states[i % states.Length]]));
+                EventSynchronizer.Instance.Submit(TimelineEvent.Now([states[i % states.Length]]));
         }
         finally
         {
@@ -185,7 +185,7 @@ public partial class DebugConsole : Node
         }
 
         Log(
-            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({EventSynchronizer.Instance.Log.Count} total)."
+            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({EventSynchronizer.Instance.Timeline.Count} total)."
         );
     }
 
@@ -216,15 +216,15 @@ public partial class DebugConsole : Node
 
     /// <summary>
     /// Infinite-scrolling list of events, newest first.
-    /// Only the rows on screen are read from the log.
+    /// Only the rows on screen are read from the timeline.
     /// </summary>
     private unsafe void DrawEvents()
     {
         ImGui.SetNextWindowSize(new SysVec2(360, 480), ImGuiCond.FirstUseEver);
-        if (ImGui.Begin("Event Log", ref _eventsOpen))
+        if (ImGui.Begin("Timeline", ref _eventsOpen))
         {
-            var eventLog = EventSynchronizer.Instance?.Log;
-            int count = eventLog?.Count ?? 0;
+            var timeline = EventSynchronizer.Instance?.Timeline;
+            int count = timeline?.Count ?? 0;
 
             ImGui.TextUnformatted($"{count} events");
             ImGui.TextDisabled("amber = undo/redo   sN = source");
@@ -245,7 +245,7 @@ public partial class DebugConsole : Node
                     for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
                     {
                         int i = count - 1 - row;
-                        var e = eventLog.GetAt(i).Value;
+                        var e = timeline.GetAt(i).Value;
                         bool colored = e.Undo != null;
                         if (colored)
                             ImGui.PushStyleColor(ImGuiCol.Text, amber);
@@ -253,12 +253,12 @@ public partial class DebugConsole : Node
                         string line = $"{i, 5}  s{e.Id.source, -3} {Describe(e)}";
                         if (e.Undo is { } u)
                         {
-                            int target = eventLog.IndexOf(u.Reverses);
+                            int target = timeline.IndexOf(u.Reverses);
                             line += target >= 0 ? $"  → #{target}" : "  → #?";
                             // other presses it retires with it
                             if (u.Also != null)
                                 foreach (var also in u.Also)
-                                    line += eventLog.IndexOf(also) is var at and >= 0
+                                    line += timeline.IndexOf(also) is var at and >= 0
                                         ? $", #{at}"
                                         : ", #?";
                         }
@@ -279,7 +279,7 @@ public partial class DebugConsole : Node
     /// <summary>
     /// A label for events. Either the command that made it or the atoms it writes.
     /// </summary>
-    private static string Describe(TableEvent e)
+    private static string Describe(TimelineEvent e)
     {
         if (e.Command is { } command)
             return command.Value;

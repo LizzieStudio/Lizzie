@@ -4,20 +4,20 @@ using Xunit;
 
 namespace Lizzie.Tests;
 
-public class TableEventJsonTests
+public class TimelineEventJsonTests
 {
     private static SnowportId Id(long clock, byte source) => new(clock, source);
 
-    private static TableEvent RoundTrip(TableEvent e, out string json)
+    private static TimelineEvent RoundTrip(TimelineEvent e, out string json)
     {
         json = JsonSerializer.Serialize(e, LizzieJson.EventOptions);
-        return JsonSerializer.Deserialize<TableEvent>(json, LizzieJson.EventOptions);
+        return JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
     }
 
     [Fact]
     public void CommandIsWrittenAsItsId()
     {
-        var e = new TableEvent { Id = Id(5, 1), Command = new CommandName("component.flip") };
+        var e = new TimelineEvent { Id = Id(5, 1), Command = new CommandName("component.flip") };
 
         var back = RoundTrip(e, out var json);
 
@@ -28,7 +28,7 @@ public class TableEventJsonTests
     [Fact]
     public void GestureLeavesCommandOut()
     {
-        var e = new TableEvent { Id = Id(5, 1) };
+        var e = new TimelineEvent { Id = Id(5, 1) };
 
         var back = RoundTrip(e, out var json);
 
@@ -39,7 +39,7 @@ public class TableEventJsonTests
     [Fact]
     public void ReversalKeepsItsCommand()
     {
-        var e = new TableEvent
+        var e = new TimelineEvent
         {
             Id = Id(5, 1),
             Command = new CommandName("app.undo_others"),
