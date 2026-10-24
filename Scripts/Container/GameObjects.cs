@@ -326,9 +326,9 @@ public partial class GameObjects : Node3D, ICommandView
         };
     }
 
+    [Command("table.duplicate")]
     private static readonly Command DuplicateComponent = new AtomCommand<ComponentPosition>
     {
-        Name = new("table.duplicate"),
         Icon = CommandIcons.Duplicate,
         Caption = "Duplicate Component",
         Keys = [Shortcuts.Ctrl(Key.D)],
@@ -342,9 +342,9 @@ public partial class GameObjects : Node3D, ICommandView
         },
     };
 
+    [Command("table.zoom")]
     private static readonly Command ZoomToComponent = new AtomCommand<ComponentPosition>
     {
-        Name = new("table.zoom"),
         Icon = CommandIcons.Zoom,
         Caption = "Zoom to Component",
         Keys = [Shortcuts.Key(Key.Z)],

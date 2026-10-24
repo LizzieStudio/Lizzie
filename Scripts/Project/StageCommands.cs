@@ -24,9 +24,9 @@ public static class StageCommands
     /// This is added as a local command in the blueprint manager to avoid it showing up everywhere.
     /// A <see cref="TargetCount.Optional"/> command would do that by default.
     /// </remarks>
+    [Command("blueprint.add")]
     public static readonly Command AddBlueprint = new AtomCommand<Stage>
     {
-        Name = new("blueprint.add"),
         Icon = CommandIcons.AddBlueprint,
         Caption = "Add Blueprint",
         Tooltip = "A blueprint is a saved configuration of components.",
@@ -48,9 +48,9 @@ public static class StageCommands
         },
     };
 
+    [Command("table.add")]
     public static readonly Command AddTable = new AtomCommand<Stage>
     {
-        Name = new("table.add"),
         Icon = CommandIcons.AddTable,
         Caption = "Add Table",
         Tooltip = "A table is a surface that multiple people can play on.",
@@ -59,9 +59,9 @@ public static class StageCommands
             [Stage.NewTable(R, parents.FirstOrDefault()?.Id ?? SnowTag.Empty)],
     };
 
+    [Command("stage.show")]
     public static readonly Command Show = new AtomCommand<Stage>
     {
-        Name = new("stage.show"),
         Icon = CommandIcons.Show,
         Caption = "Show this.",
         Tooltip = "Show it in just your view.",
@@ -70,9 +70,9 @@ public static class StageCommands
             ProjectService.Instance.GameObjects.PickedStage.Value = blueprints[0].Id,
     };
 
+    [Command("table.make_current")]
     public static readonly Command MakeCurrent = new AtomCommand<Stage>
     {
-        Name = new("table.make_current"),
         Icon = CommandIcons.MakeCurrent,
         Caption = "Play this.",
         Noun = ("Table", "Tables"),
@@ -82,9 +82,9 @@ public static class StageCommands
         Effects = (R, tables, _) => [R.Get(CurrentTable.Only) with { StageRef = tables[0].Id }],
     };
 
+    [Command("blueprint.delete")]
     public static readonly Command DeleteBlueprint = new AtomCommand<Stage>
     {
-        Name = new("blueprint.delete"),
         Icon = CommandIcons.Delete,
         Caption = "Delete",
         Tooltip = "Deletes it and all of its children.",
@@ -100,9 +100,9 @@ public static class StageCommands
         Effects = (R, blueprints, _) => [blueprints[0] with { Deleted = true }],
     };
 
+    [Command("blueprint.duplicate")]
     public static readonly Command Duplicate = new AtomCommand<Stage>
     {
-        Name = new("blueprint.duplicate"),
         Icon = CommandIcons.Duplicate,
         Caption = "Duplicate",
         Tooltip = "Makes a copy as a new blueprint.",
@@ -126,9 +126,9 @@ public static class StageCommands
     /// <summary>
     /// Moves the changes of the selected stage into its parent, then deletes it and moves its children up into its place.
     /// </summary>
+    [Command("blueprint.merge_into_parent")]
     public static readonly Command MergeIntoParent = new AtomCommand<Stage>
     {
-        Name = new("blueprint.merge_into_parent"),
         Icon = CommandIcons.MergeIntoParent,
         Caption = "Merge into Parent",
         Tooltip = "Merges its changes into its parent.",
@@ -152,9 +152,9 @@ public static class StageCommands
     /// Moves the changes of the selected stage into each of its children, where they don't have their own,
     /// then deletes it and moves its children up into its place.
     /// </summary>
+    [Command("blueprint.merge_into_children")]
     public static readonly Command MergeIntoChildren = new AtomCommand<Stage>
     {
-        Name = new("blueprint.merge_into_children"),
         Icon = CommandIcons.MergeIntoChildren,
         Caption = "Merge into Children",
         Tooltip = "Merges its changes into its children.",
@@ -179,9 +179,9 @@ public static class StageCommands
     /// Deletes the selected stage, which has no changes, and moves its children up into its place.
     /// Either merge would do the same.
     /// </summary>
+    [Command("blueprint.dissolve")]
     public static readonly Command Dissolve = new AtomCommand<Stage>
     {
-        Name = new("blueprint.dissolve"),
         Icon = CommandIcons.Dissolve,
         Caption = "Dissolve",
         Tooltip = "Removes it but keeps its children.",
@@ -203,9 +203,9 @@ public static class StageCommands
             picked.Value = stages[0].ParentRef;
     }
 
+    [Command("table.reset")]
     public static readonly GlobalCommand ResetTable = new()
     {
-        Name = new("table.reset"),
         Keys = [Shortcuts.Ctrl(Key.R)],
         Icon = CommandIcons.ResetTable,
         Caption = "Reset Table",

@@ -12,9 +12,9 @@ public static class DataSetCommands
     /// <summary>
     /// Adds a row after the last. The dataset editor's add buttons and Enter on its last row run it.
     /// </summary>
+    [Command("dataset.add_row")]
     public static readonly Command AddRow = new AtomCommand<DataSet>
     {
-        Name = new("dataset.add_row"),
         Icon = CommandIcons.Add,
         Caption = "Add Row",
         Count = TargetCount.One,
@@ -26,9 +26,9 @@ public static class DataSetCommands
     /// <summary>
     /// Adds a column after the last. The dataset editor's add buttons run it.
     /// </summary>
+    [Command("dataset.add_column")]
     public static readonly Command AddColumn = new AtomCommand<DataSet>
     {
-        Name = new("dataset.add_column"),
         Icon = CommandIcons.Add,
         Caption = "Add Column",
         Count = TargetCount.One,
@@ -37,9 +37,9 @@ public static class DataSetCommands
         Effects = (R, sets, _) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
     };
 
+    [Command("dataset.update_decks")]
     public static readonly Command UpdateDecks = new AtomCommand<DataSet>
     {
-        Name = new("dataset.update_decks"),
         Icon = CommandIcons.UpdateDecks,
         Caption = "Update Decks",
         Tooltip =
@@ -77,9 +77,9 @@ public static class DataSetCommands
             )
             .Select(p => (p.Id, (PrintedParameters)p.Parameters));
 
+    [Command("dataset.edit_row")]
     public static readonly Command EditRow = new AtomCommand<DataRow>
     {
-        Name = new("dataset.edit_row"),
         Icon = CommandIcons.Edit,
         Caption = "Edit Data Row",
         Count = TargetCount.One,
@@ -95,9 +95,9 @@ public static class DataSetCommands
             ),
     };
 
+    [Command("dataset.delete_row")]
     public static readonly Command DeleteRow = new AtomCommand<DataRow>
     {
-        Name = new("dataset.delete_row"),
         Icon = CommandIcons.Delete,
         Caption = "Delete {0}",
         Noun = ("Row", "Rows"),
@@ -107,9 +107,9 @@ public static class DataSetCommands
         Effects = (R, rows, _) => rows.Select(row => row with { Deleted = true }),
     };
 
+    [Command("dataset.delete_column")]
     public static readonly Command DeleteColumn = new AtomCommand<DataColumn>
     {
-        Name = new("dataset.delete_column"),
         Icon = CommandIcons.Delete,
         Caption = "Delete {0}",
         Noun = ("Column", "Columns"),
@@ -118,9 +118,9 @@ public static class DataSetCommands
         Effects = (R, columns, _) => columns.Select(R.Unset),
     };
 
+    [Command("dataset.clear_cells")]
     public static readonly Command ClearCells = new AtomCommand<DataCell>
     {
-        Name = new("dataset.clear_cells"),
         Icon = CommandIcons.Clear,
         Caption = "Clear {0}",
         Noun = ("Cell", "Cells"),
@@ -128,9 +128,9 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Cleared(R, cells),
     };
 
+    [Command("dataset.cut_cells")]
     public static readonly Command CutCells = new AtomCommand<DataCell>
     {
-        Name = new("dataset.cut_cells"),
         Icon = CommandIcons.Cut,
         Caption = "Cut {0}",
         Noun = ("Cell", "Cells"),
@@ -140,9 +140,9 @@ public static class DataSetCommands
         Effects = (R, cells, _) => Cleared(R, cells),
     };
 
+    [Command("dataset.copy_cells")]
     public static readonly Command CopyCells = new AtomCommand<DataCell>
     {
-        Name = new("dataset.copy_cells"),
         Icon = CommandIcons.Copy,
         Caption = "Copy {0}",
         Noun = ("Cell", "Cells"),
@@ -155,9 +155,9 @@ public static class DataSetCommands
     /// Values past the last column are dropped, and rows past the last row become new rows.
     /// A single value fills every selected cell instead.
     /// </summary>
+    [Command("dataset.paste_cells")]
     public static readonly Command PasteCells = new AtomCommand<DataCell>
     {
-        Name = new("dataset.paste_cells"),
         Icon = CommandIcons.Paste,
         Caption = "Paste",
         Keys = [Shortcuts.Ctrl(Key.V)],

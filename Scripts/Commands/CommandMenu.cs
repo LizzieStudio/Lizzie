@@ -118,7 +118,7 @@ public static class CommandMenu
             Items.Add((command, targets));
             menu.AddItem(command.Label(targets.Count), id);
             int index = menu.GetItemIndex(id);
-            var subItems = (command as Submenu)?.ItemsFor(R).ToList();
+            var subItems = (command as Submenu)?.Items(R).ToList();
             bool disabled =
                 subItems != null
                     ? CommandResolver.ForMenu(context, subItems).Count == 0

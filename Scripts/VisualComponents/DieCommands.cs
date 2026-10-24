@@ -8,9 +8,9 @@ namespace Lizzie;
 /// <summary>Commands for dice.</summary>
 public static class DieCommands
 {
+    [Command("die.roll")]
     public static readonly Command Roll = new AtomCommand<ComponentPosition>
     {
-        Name = new("die.roll"),
         Icon = CommandIcons.Die,
         Caption = "Roll {0}",
         Noun = ("Die", "Dice"),
@@ -19,9 +19,9 @@ public static class DieCommands
         Effects = (R, cs, _) => cs.Select(c => Rolled(R, c)),
     };
 
+    [Command("die.set_face")]
     public static readonly Command SetFace = new AtomCommand<ComponentPosition>
     {
-        Name = new("die.set_face"),
         Icon = CommandIcons.SetFace,
         Caption = "Set {0}",
         Noun = ("Die Face", "Die Faces"),

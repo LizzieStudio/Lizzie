@@ -16,27 +16,27 @@ public partial class UI
             _instance = null;
     }
 
+    [Command("project.manager")]
     public static readonly GlobalCommand OpenProjectManager = new()
     {
-        Name = new("project.manager"),
         Icon = CommandIcons.ProjectManager,
         Caption = "Project Manager",
         SideEffects = _ => _instance?.ShowProjectManager(),
     };
 
     /// <summary>Saves the project, asking for a name if it has none.</summary>
+    [Command("project.save")]
     public static readonly GlobalCommand SaveProject = new()
     {
-        Name = new("project.save"),
         Icon = CommandIcons.Save,
         Caption = "Save Project",
         Keys = [Shortcuts.Ctrl(Key.S)],
         SideEffects = _ => _instance?.Save(),
     };
 
+    [Command("app.multiplayer")]
     public static readonly GlobalCommand OpenMultiplayer = new()
     {
-        Name = new("app.multiplayer"),
         Icon = CommandIcons.Multiplayer,
         Caption = "Multiplayer...",
         SideEffects = _ => _instance?.ShowMultiplayerDialog(),
@@ -45,9 +45,9 @@ public partial class UI
     /// <summary>
     /// Asks the local player for a seat, or to observe.
     /// </summary>
+    [Command("app.change_seat")]
     public static readonly GlobalCommand ChangeSeat = new()
     {
-        Name = new("app.change_seat"),
         Icon = CommandIcons.ChangeSeat,
         Caption = "Change Seat...",
         Enabled = R =>
@@ -56,57 +56,57 @@ public partial class UI
         SideEffects = _ => _instance?.ShowPlayerPositionDialog(),
     };
 
+    [Command("editor.templates")]
     public static readonly GlobalCommand EditTemplates = new()
     {
-        Name = new("editor.templates"),
         Icon = CommandIcons.Templates,
         Caption = "Templates",
         SideEffects = _ => _instance?.ShowTemplateEditor(),
     };
 
+    [Command("editor.datasets")]
     public static readonly GlobalCommand EditDatasets = new()
     {
-        Name = new("editor.datasets"),
         Icon = CommandIcons.Datasets,
         Caption = "Datasets",
         SideEffects = _ => _instance?.ShowDatasetEditor(),
     };
 
+    [Command("editor.components")]
     public static readonly GlobalCommand EditComponents = new()
     {
-        Name = new("editor.components"),
         Icon = CommandIcons.Components,
         Caption = "Components",
         SideEffects = _ => _instance?.ShowPrototypeManifest(),
     };
 
+    [Command("editor.images")]
     public static readonly GlobalCommand EditImages = new()
     {
-        Name = new("editor.images"),
         Icon = CommandIcons.Images,
         Caption = "Images",
         SideEffects = _ => _instance?.ShowImageManager(),
     };
 
+    [Command("editor.blueprints")]
     public static readonly GlobalCommand EditBlueprints = new()
     {
-        Name = new("editor.blueprints"),
         Icon = CommandIcons.Blueprints,
         Caption = "Blueprints",
         SideEffects = _ => _instance?.ShowBlueprintManager(),
     };
 
+    [Command("editor.project_settings")]
     public static readonly GlobalCommand EditProjectSettings = new()
     {
-        Name = new("editor.project_settings"),
         Icon = CommandIcons.Settings,
         Caption = "Project Settings",
         SideEffects = _ => _instance?.ShowProjectSettings(),
     };
 
+    [Command("editor.create_component")]
     public static readonly GlobalCommand CreateComponent = new()
     {
-        Name = new("editor.create_component"),
         Icon = CommandIcons.AddComponent,
         Caption = "Create New Component",
         SideEffects = _ => _instance?.ShowComponentDefinition(),

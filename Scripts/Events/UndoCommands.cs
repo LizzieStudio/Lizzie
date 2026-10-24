@@ -11,9 +11,9 @@ namespace Lizzie;
 /// </summary>
 public static class UndoCommands
 {
+    [Command("app.undo")]
     public static readonly Command Undo = new GlobalCommand
     {
-        Name = new("app.undo"),
         Icon = CommandIcons.Undo,
         Caption = "Undo Mine",
         Tooltip = "Undoes the last change that you made in this view.",
@@ -21,9 +21,9 @@ public static class UndoCommands
         SideEffects = v => Issue(Undo, TimelineUndo.Undo, Mine(v)),
     };
 
+    [Command("app.redo")]
     public static readonly Command Redo = new GlobalCommand
     {
-        Name = new("app.redo"),
         Icon = CommandIcons.Redo,
         Caption = "Redo Mine",
         Tooltip = "Redoes an undo that you just did in this view.",
@@ -31,9 +31,9 @@ public static class UndoCommands
         SideEffects = v => Issue(Redo, TimelineUndo.Redo, Mine(v)),
     };
 
+    [Command("app.undo_others")]
     public static readonly Command UndoOthers = new GlobalCommand
     {
-        Name = new("app.undo_others"),
         Icon = CommandIcons.UndoOthers,
         Caption = "Undo Others",
         Tooltip = "Undoes the last change that any other player made in this view.",
@@ -41,9 +41,9 @@ public static class UndoCommands
         SideEffects = v => Issue(UndoOthers, TimelineUndo.Undo, Others(v)),
     };
 
+    [Command("app.redo_others")]
     public static readonly Command RedoOthers = new GlobalCommand
     {
-        Name = new("app.redo_others"),
         Icon = CommandIcons.RedoOthers,
         Caption = "Redo Others",
         Tooltip = "Redoes an undo that any other player just did in this view.",
@@ -55,9 +55,9 @@ public static class UndoCommands
     /// Undoes the newest change by anyone to the selected atoms, or to what's in them, like a deck's cards or a row's cells.
     /// The whole event or gesture is undone, even the parts that changed other atoms.
     /// </summary>
+    [Command("record.undo_changes")]
     public static readonly Command UndoChanges = new AtomCommand<Atom>
     {
-        Name = new("record.undo_changes"),
         Icon = CommandIcons.UndoComponent,
         Caption = "Undo This",
         Tooltip = "Undoes the last change that affected this component, regardless of who did it.",

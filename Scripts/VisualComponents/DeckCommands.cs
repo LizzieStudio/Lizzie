@@ -11,9 +11,9 @@ namespace Lizzie;
 /// </summary>
 public static class DeckCommands
 {
+    [Command("deck.shuffle")]
     public static readonly Command Shuffle = new AtomCommand<ComponentPosition>
     {
-        Name = new("deck.shuffle"),
         Icon = CommandIcons.Shuffle,
         Caption = "Shuffle {0}",
         Noun = ("Deck", "Decks"),
@@ -21,9 +21,9 @@ public static class DeckCommands
         Effects = (R, cs, _) => cs.SelectMany(c => Shuffled(R, c)),
     };
 
+    [Command("deck.draw")]
     public static readonly Command Draw = new AtomCommand<ComponentPosition>
     {
-        Name = new("deck.draw"),
         Icon = CommandIcons.Draw,
         Caption = "Draw Cards",
         AsksForNumber = true,
@@ -35,9 +35,9 @@ public static class DeckCommands
         Effects = (R, cs, n) => cs.SelectMany(c => Drawn(R, c, n)),
     };
 
+    [Command("deck.deal")]
     public static readonly Command Deal = new AtomCommand<ComponentPosition>
     {
-        Name = new("deck.deal"),
         Icon = CommandIcons.Deal,
         Caption = "Deal Cards",
         AsksForNumber = true,

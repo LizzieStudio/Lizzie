@@ -4,9 +4,9 @@ namespace Lizzie;
 
 public static class PrototypeCommands
 {
+    [Command("prototype.update_decks")]
     public static readonly Command UpdateDecks = new AtomCommand<Prototype>
     {
-        Name = new("prototype.update_decks"),
         Icon = CommandIcons.UpdateDecks,
         Caption = "Update Decks",
         Tooltip = "Adds new components and removes deleted components from blueprint decks.",
@@ -24,9 +24,9 @@ public static class PrototypeCommands
                 .ToList(),
     };
 
+    [Command("prototype.edit")]
     public static readonly Command Edit = new AtomCommand<Prototype>
     {
-        Name = new("prototype.edit"),
         Icon = CommandIcons.Edit,
         Caption = "Edit Component",
         Count = TargetCount.One,

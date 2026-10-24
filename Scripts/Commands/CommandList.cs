@@ -7,7 +7,7 @@ using Lizzie.Replication.Machinery;
 namespace Lizzie;
 
 /// <summary>
-/// Every command, each defined once in a class for what it acts on, like <see cref="DeckCommands"/>.
+/// Every command, each defined once in a public static field of a class for what it acts on, like <see cref="DeckCommands"/>.
 /// Menus and keyboard shortcuts both run them from here, through <see cref="Lizzie.Replication.Machinery.CommandResolver"/>.
 /// </summary>
 public static class CommandList
@@ -56,64 +56,58 @@ public static class CommandList
         UndoCommands.RedoOthers,
     ];
 
-    /// <summary>
-    /// Every command.
-    /// </summary>
-    /// <remarks>
-    /// Add a <see cref="Command"/> here (but not in <see cref="ContextMenu"/>) if you don't want it in context menus but do want it in:
-    /// <list type="bullet">
-    /// <item>keyboard shortcut</item>
-    /// <item>a CommandButton</item>
-    /// <item>the Menu Bar</item>
-    /// </list>
-    /// You still have to add it to those locations, but this makes it possible without it showing up in context menus.
-    /// </remarks>
-    public static readonly IReadOnlyList<Command> All = Checked([
-        .. ContextMenu,
-        UI.OpenProjectManager,
-        UI.SaveProject,
-        UI.OpenMultiplayer,
-        UI.ChangeSeat,
-        UI.EditTemplates,
-        UI.EditDatasets,
-        UI.EditComponents,
-        UI.CreateComponent,
-        UI.EditImages,
-        UI.EditProjectSettings,
-        UI.EditBlueprints,
-        StageCommands.AddBlueprint,
-        StageCommands.AddTable,
-        StageCommands.ResetTable,
-        DataSetCommands.AddRow,
-        DataSetCommands.AddColumn,
-        DataSetCommands.UpdateDecks,
-    ]);
+    // Every command in a static field, public or private, with the name its attribute gives it.
+    private static readonly Dictionary<Command, CommandName> Names = [];
 
     /// <summary>
-    /// Reports any command that isn't in <see cref="All"/>, which nothing could run,
-    /// and any name used by more than one command.
-    /// A command in a public static field of any command type is expected in <see cref="All"/>;
-    /// a view's own commands are private or built per instance.
+    /// Every command in a public static field with a <see cref="CommandAttribute"/>.
+    /// Keyboard shortcuts, CommandButtons, and the menu bar can run any of them.
+    /// Commands in private fields aren't here.
+    /// A view's local commands should be private.
     /// </summary>
-    private static IReadOnlyList<Command> Checked(IReadOnlyList<Command> all)
+    public static readonly IReadOnlyList<Command> All = Found();
+
+    /// <summary>
+    /// The name of <paramref name="command"/>, or an empty name for <see cref="Command.Divider"/>.
+    /// </summary>
+    public static CommandName NameOf(Command command) => Names.GetValueOrDefault(command);
+
+    /// <summary>
+    /// Populates <see cref="Names"/> and reports issues with commands and their attribute.
+    /// </summary>
+    private static IReadOnlyList<Command> Found()
     {
-        var listed = all.ToHashSet();
+        var all = new List<Command>();
         var fields = typeof(CommandList)
             .Assembly.GetTypes()
             .Where(t => !t.ContainsGenericParameters)
-            .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))
-            .Where(f => typeof(Command).IsAssignableFrom(f.FieldType));
+            .SelectMany(t =>
+                t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+            );
         foreach (var field in fields)
-            if (
-                field.GetValue(null) is Command command
-                && command != Command.Divider
-                && !listed.Contains(command)
-            )
-                GD.PushError(
-                    $"{field.DeclaringType.Name}.{field.Name} is not in CommandList.All, so no menu or shortcut can run it."
-                );
+        {
+            var attribute = field.GetCustomAttribute<CommandAttribute>();
+            var where = $"{field.DeclaringType.Name}.{field.Name}";
+            if (!typeof(Command).IsAssignableFrom(field.FieldType))
+            {
+                if (attribute != null)
+                    GD.PushError($"{where} has a [Command] attribute but isn't a Command.");
+                continue;
+            }
+            var command = (Command)field.GetValue(null);
+            if (command == Command.Divider)
+                continue;
+            if (attribute == null)
+            {
+                GD.PushError($"{where} needs a [Command(\"...\")] attribute to name it.");
+                continue;
+            }
+            Names[command] = new(attribute.Name);
+            if (field.IsPublic)
+                all.Add(command);
+        }
 
-        foreach (var name in all.GroupBy(c => c.Name).Where(g => g.Count() > 1))
+        foreach (var name in Names.Values.GroupBy(n => n).Where(g => g.Count() > 1))
             GD.PushError($"Command name \"{name.Key.Value}\" is used by {name.Count()} commands.");
 
         return all;
@@ -148,12 +142,8 @@ public static class CommandList
                 ShortcutActions.AddAction(ShortcutActions.Number(n), ShortcutActions.NumberKeys(n));
         }
 
-        // A view that's opened again builds its own commands again, under the same names.
-        foreach (
-            var command in commands.Where(c =>
-                c.Keys.Count > 0 && !Registered.Any(r => r.Name == c.Name)
-            )
-        )
+        // A view that's opened again registers its commands again.
+        foreach (var command in commands.Where(c => c.Keys.Count > 0 && !Registered.Contains(c)))
         {
             ReportClashes(command);
             ShortcutActions.AddAction(command.Action, command.Keys);

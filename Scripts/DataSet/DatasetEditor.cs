@@ -79,8 +79,6 @@ public partial class DatasetEditor : Window, ICommandView
     // It lets the mouse through except during one of those drags, since the cells would refuse the drop.
     private Control _dropZone;
 
-    private IReadOnlyList<Command> _commands;
-
     // The drop indicator's color.
     private static readonly Color Accent = Color.FromHtml("8cb1ff");
 
@@ -99,7 +97,6 @@ public partial class DatasetEditor : Window, ICommandView
     public override void _Ready()
     {
         InitializeSpreadsheet();
-        _commands = EditorCommands();
 
         CloseRequested += CloseDialog;
         MoveToCenter();
@@ -137,6 +134,13 @@ public partial class DatasetEditor : Window, ICommandView
                         .FirstOrDefault(h => _addedColumns.Contains(h.ColumnId))
                         ?.BeginRename()
             );
+
+        EventBus.Instance.Subscribe<RenameColumnEvent>(OnRenameColumn);
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance.Unsubscribe<RenameColumnEvent>(OnRenameColumn);
     }
 
     #region ICommandView
@@ -157,7 +161,11 @@ public partial class DatasetEditor : Window, ICommandView
     public AtomRef? Shown(IAtomReader R) =>
         R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty ? DataSet.ById.Ref(shown) : null;
 
-    public IReadOnlyList<Command> Commands => _commands;
+    /// <summary>
+    /// The commands only the editor offers, since they act on its grid.
+    /// </summary>
+    public IReadOnlyList<Command> Commands =>
+        [InsertRowAbove, InsertRowBelow, InsertColumnLeft, InsertColumnRight, RenameColumn];
 
     /// <summary>
     /// Undo walks the shown dataset's edits, rows, columns, and cells, and what's selected in it.
@@ -1013,31 +1021,22 @@ public partial class DatasetEditor : Window, ICommandView
             command.Run(targets, 1, this);
     }
 
-    /// <summary>
-    /// The commands only the editor offers, since they act on its grid.
-    /// </summary>
-    private IReadOnlyList<Command> EditorCommands() =>
-        [
-            InsertRowAbove,
-            InsertRowBelow,
-            InsertColumnLeft,
-            InsertColumnRight,
-            new AtomCommand<DataColumn>
-            {
-                Name = new("dataset.rename_column"),
-                Icon = CommandIcons.Edit,
-                Caption = "Rename Column",
-                Count = TargetCount.One,
-                SideEffects = (columns, _) => RenameColumn(columns[0]),
-            },
-        ];
+    // Every editor shares these. The editor's listeners focus the row an insert adds
+    // or start renaming the column.
 
-    // The inserts only read atoms, so every editor shares them. The editor's listeners
-    // focus the row they add or start renaming the column.
+    [Command("dataset.rename_column")]
+    private static readonly AtomCommand<DataColumn> RenameColumn = new()
+    {
+        Icon = CommandIcons.Edit,
+        Caption = "Rename Column",
+        Count = TargetCount.One,
+        SideEffects = (columns, _) =>
+            EventBus.Instance.Publish(new RenameColumnEvent { ColumnId = columns[0].Id }),
+    };
 
+    [Command("dataset.insert_row_above")]
     private static readonly AtomCommand<DataRow> InsertRowAbove = new()
     {
-        Name = new("dataset.insert_row_above"),
         Icon = CommandIcons.InsertRowAbove,
         Caption = "Insert Row Above",
         Count = TargetCount.One,
@@ -1045,9 +1044,9 @@ public partial class DatasetEditor : Window, ICommandView
             DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0])),
     };
 
+    [Command("dataset.insert_row_below")]
     private static readonly AtomCommand<DataRow> InsertRowBelow = new()
     {
-        Name = new("dataset.insert_row_below"),
         Icon = CommandIcons.InsertRowBelow,
         Caption = "Insert Row Below",
         Count = TargetCount.One,
@@ -1055,9 +1054,9 @@ public partial class DatasetEditor : Window, ICommandView
             DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0]) + 1),
     };
 
+    [Command("dataset.insert_column_left")]
     private static readonly AtomCommand<DataColumn> InsertColumnLeft = new()
     {
-        Name = new("dataset.insert_column_left"),
         Icon = CommandIcons.InsertColumnLeft,
         Caption = "Insert Column Left",
         Count = TargetCount.One,
@@ -1065,9 +1064,9 @@ public partial class DatasetEditor : Window, ICommandView
             DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0])),
     };
 
+    [Command("dataset.insert_column_right")]
     private static readonly AtomCommand<DataColumn> InsertColumnRight = new()
     {
-        Name = new("dataset.insert_column_right"),
         Icon = CommandIcons.InsertColumnRight,
         Caption = "Insert Column Right",
         Count = TargetCount.One,
@@ -1083,10 +1082,10 @@ public partial class DatasetEditor : Window, ICommandView
     private static int ColumnIndex(IAtomReader R, DataColumn column) =>
         R.GetColumns(column.DataSetId).FindIndex(c => c.Id == column.Id);
 
-    private void RenameColumn(DataColumn column)
+    private void OnRenameColumn(RenameColumnEvent e)
     {
         // Deferred so the closing menu doesn't take focus back from the name box.
-        if (_headerCells.FirstOrDefault(h => h.ColumnId == column.Id) is { } header)
+        if (_headerCells.FirstOrDefault(h => h.ColumnId == e.ColumnId) is { } header)
             Callable.From(header.BeginRename).CallDeferred();
     }
 

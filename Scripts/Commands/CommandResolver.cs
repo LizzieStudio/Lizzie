@@ -49,7 +49,7 @@ public static class CommandResolver
                 continue;
             if (command is Submenu submenu)
             {
-                if (all || ForMenu(context, submenu.ItemsFor(AtomService.Instance)).Count > 0)
+                if (all || ForMenu(context, submenu.Items(AtomService.Instance)).Count > 0)
                     items.Add((command, [], []));
                 continue;
             }

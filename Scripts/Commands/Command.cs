@@ -13,6 +13,25 @@ namespace Lizzie;
 public readonly record struct CommandName(string Value);
 
 /// <summary>
+/// Names the <see cref="Command"/> in a static field,
+/// which is then made available to <see cref="CommandButton"/> and <see cref="CommandItem"/>.
+///
+/// <code>
+/// [Command("some.name")]
+/// public static Command SomeName = new GlobalCommand
+/// {
+///     // ...
+/// }
+/// </code>
+/// </summary>
+/// <param name="name">Dot separated and snake case, like "component.flip".</param>
+[AttributeUsage(AttributeTargets.Field)]
+public sealed class CommandAttribute(string name) : Attribute
+{
+    public string Name { get; } = name;
+}
+
+/// <summary>
 /// How many targets a <see cref="AtomCommand{T}"/> can act on.
 /// </summary>
 public enum TargetCount
@@ -126,7 +145,8 @@ public interface ICommandView
 
 /// <summary>
 /// Something the user runs from a context menu or a keyboard shortcut.
-/// Every command is defined once, in a class for what it acts on, and listed in <see cref="CommandList"/>.
+/// Every command is defined once, in a public static field of a class for what it acts on,
+/// which puts it in <see cref="CommandList.All"/>.
 /// </summary>
 public abstract class Command
 {
@@ -137,9 +157,9 @@ public abstract class Command
     public static readonly Command Divider = new DividerCommand();
 
     /// <summary>
-    /// The commands unique name, with dot separation and snake case "some.command_name"
+    /// The command's unique name, from the <see cref="CommandAttribute"/> on its field.
     /// </summary>
-    public CommandName Name { get; set; }
+    public CommandName Name => CommandList.NameOf(this);
 
     /// <summary>
     /// The menu label, e.g. "Edit Component".
@@ -498,18 +518,8 @@ public sealed class Submenu : Command
     /// <summary>
     /// The commands it offers, built each time a menu shows this submenu.
     /// They act like any other command in the menu.
-    /// Items without their own <see cref="Command.Name"/> inherit the submenu's.
     /// </summary>
     public Func<IAtomReader, IEnumerable<Command>> Items { get; init; }
-
-    public IEnumerable<Command> ItemsFor(IAtomReader R) =>
-        Items(R)
-            .Select(item =>
-            {
-                if (item.Name.Value == null && item != Divider)
-                    item.Name = Name;
-                return item;
-            });
 
     public override bool Applies(IAtomReader R, AtomRef target) => false;
 

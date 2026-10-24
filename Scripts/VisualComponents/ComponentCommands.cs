@@ -12,9 +12,9 @@ namespace Lizzie;
 /// </summary>
 public static class ComponentCommands
 {
+    [Command("component.flip")]
     public static readonly Command Flip = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.flip"),
         Icon = CommandIcons.Flip,
         Caption = "Flip {0}",
         Keys = [Shortcuts.Key(Key.F)],
@@ -23,9 +23,9 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Flipped(R, cs),
     };
 
+    [Command("component.rotate_cw")]
     public static readonly Command RotateCw = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.rotate_cw"),
         Icon = CommandIcons.RotateRight,
         Caption = "Rotate {0} Right",
         Keys = [Shortcuts.Key(Key.E)],
@@ -34,9 +34,9 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => Rotated(c, -RotationStep(R))),
     };
 
+    [Command("component.rotate_ccw")]
     public static readonly Command RotateCcw = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.rotate_ccw"),
         Icon = CommandIcons.RotateLeft,
         Caption = "Rotate {0} Left",
         Keys = [Shortcuts.Key(Key.Q)],
@@ -45,9 +45,9 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(c => Rotated(c, RotationStep(R))),
     };
 
+    [Command("component.move_to_top")]
     public static readonly Command MoveToTop = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.move_to_top"),
         Icon = CommandIcons.SendToTop,
         Caption = "Move {0} to Top",
         Keys = [Shortcuts.Key(Key.T)],
@@ -56,9 +56,9 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Reordered(cs, ZTarget.Top),
     };
 
+    [Command("component.move_to_bottom")]
     public static readonly Command MoveToBottom = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.move_to_bottom"),
         Icon = CommandIcons.SendToBottom,
         Caption = "Move {0} to Bottom",
         Keys = [Shortcuts.Key(Key.B)],
@@ -67,9 +67,9 @@ public static class ComponentCommands
         Effects = (R, cs, _) => Reordered(cs, ZTarget.Bottom),
     };
 
+    [Command("component.delete")]
     public static readonly Command Delete = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.delete"),
         Icon = CommandIcons.Delete,
         Caption = "Delete {0}",
         Keys = [Shortcuts.Key(Key.Delete)],
@@ -82,9 +82,9 @@ public static class ComponentCommands
     /// Resets a component so that it goes back to where the parent blueprints have it.
     /// If the component was created in this stage, it's deleted.
     /// </summary>
+    [Command("component.reset")]
     public static readonly Command Reset = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.reset"),
         Icon = CommandIcons.Reset,
         Caption = "Reset {0}",
         Tooltip = "Moves a component back to where it is in the parent blueprint.",
@@ -94,9 +94,9 @@ public static class ComponentCommands
         Effects = (R, cs, _) => cs.Select(R.Unset),
     };
 
+    [Command("component.merge_into_blueprint")]
     public static readonly Command MergeIntoBlueprint = new AtomCommand<ComponentPosition>
     {
-        Name = new("component.merge_into_blueprint"),
         Icon = CommandIcons.MergeIntoParent,
         Caption = "Merge {0} into Blueprint",
         Tooltip = "Moves this component, in its current position, into the parent blueprint.",

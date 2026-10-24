@@ -245,6 +245,22 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
 }
 
 /// <summary>
+/// Starts renaming a column in the dataset editor showing it.
+/// </summary>
+public class RenameColumnEvent : IEvent
+{
+    public SnowTag ColumnId { get; set; }
+}
+
+/// <summary>
+/// Starts renaming a stage in the blueprint manager.
+/// </summary>
+public class RenameStageEvent : IEvent
+{
+    public SnowTag StageId { get; set; }
+}
+
+/// <summary>
 /// Published when the local player should be prompted to pick a player position.
 /// </summary>
 public class RequestPlayerPositionEvent : IEvent { }

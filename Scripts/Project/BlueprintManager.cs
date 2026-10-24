@@ -10,7 +10,6 @@ namespace Lizzie;
 public partial class BlueprintManager : Window, ICommandView
 {
     private Tree _tree;
-    private IReadOnlyList<Command> _commands;
 
     private readonly Dictionary<SnowTag, TreeItem> _rows = new();
 
@@ -22,10 +21,29 @@ public partial class BlueprintManager : Window, ICommandView
     );
     private static readonly Texture2D ShownIcon = GD.Load<Texture2D>(CommandIcons.Show);
 
+    [Command("blueprint.rename")]
+    private static readonly Command RenameStage = new AtomCommand<Stage>
+    {
+        Icon = CommandIcons.Rename,
+        Caption = "Rename",
+        Keys = [Shortcuts.Key(Key.F2)],
+        Count = TargetCount.One,
+        SideEffects = (stages, _) =>
+            EventBus.Instance.Publish(new RenameStageEvent { StageId = stages[0].Id }),
+    };
+
     public override void _EnterTree()
     {
         AtomService.Instance.Watch(this, Sync);
+        EventBus.Instance.Subscribe<RenameStageEvent>(OnRenameStage);
     }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance.Unsubscribe<RenameStageEvent>(OnRenameStage);
+    }
+
+    private void OnRenameStage(RenameStageEvent e) => Rename(e.StageId);
 
     public override void _Ready()
     {
@@ -52,21 +70,7 @@ public partial class BlueprintManager : Window, ICommandView
             Callable.From<Vector2, Variant>(Drop)
         );
 
-        _commands =
-        [
-            StageCommands.AddBlueprint,
-            StageCommands.AddTable,
-            new AtomCommand<Stage>
-            {
-                Name = new("blueprint.rename"),
-                Icon = CommandIcons.Rename,
-                Caption = "Rename",
-                Keys = [Shortcuts.Key(Key.F2)],
-                Count = TargetCount.One,
-                SideEffects = (stages, _) => Rename(stages[0].Id),
-            },
-        ];
-        CommandList.Register(_commands);
+        CommandList.Register(Commands);
 
         CloseRequested += QueueFree;
     }
@@ -77,7 +81,8 @@ public partial class BlueprintManager : Window, ICommandView
 
     public bool Shows(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
 
-    public IReadOnlyList<Command> Commands => _commands;
+    public IReadOnlyList<Command> Commands =>
+        [StageCommands.AddBlueprint, StageCommands.AddTable, RenameStage];
 
     public bool UndoScope(Atom atom)
     {
