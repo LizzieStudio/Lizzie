@@ -18,7 +18,6 @@ public static class CommandResolver
     /// <summary>
     /// The items a menu of <paramref name="commands"/> shows, with what each acts on.
     /// Commands have properties which decide when they can act on a certain target.
-    /// The commands inside of a Submenu are checked and that status is inherited by the submenu.
     /// A command shows when a relevant atom is selected.
     /// </summary>
     /// <param name="all">
@@ -45,15 +44,6 @@ public static class CommandResolver
                     items.Add((command, [], []));
                 continue;
             }
-            if (!command.ShowInMenu)
-                continue;
-            if (command is Submenu submenu)
-            {
-                if (all || ForMenu(context, submenu.Items(AtomService.Instance)).Count > 0)
-                    items.Add((command, [], []));
-                continue;
-            }
-
             // A global command applies to no target, so it fits with none and always shows.
             var targets = TargetsFor(command, context, AtomService.Instance, menu: true);
             var blocked = BlockedFor(command, context, AtomService.Instance, menu: true);
@@ -74,13 +64,23 @@ public static class CommandResolver
     public static bool RunShortcut(InputEvent e, ICommandView view)
     {
         var context = CommandContext.Of(view, AtomService.Instance, keys: true);
-        var bound = ForKeys(context).Where(k => k.Command.Matches(e, out _)).ToList();
+        var bound = ForKeys(context).Where(k => k.Command.Matches(e)).ToList();
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
-        if (ready.Count == 1 && ready[0].Command.IsAvailable(AtomService.Instance))
+        if (ready.Count == 1)
         {
             var (command, targets) = ready[0];
-            command.Matches(e, out int number);
-            command.Run(targets, number, view);
+            if (command is IChoiceCommand choice)
+            {
+                // A number key picks that choice, when there is one.
+                if (
+                    choice.NumberPressed(e) is { } n
+                    && choice.ChoicesFor(targets) is var choices
+                    && n <= choices.Count
+                )
+                    choice.Choose(targets, choices[n - 1].Value, view);
+            }
+            else
+                command.Run(targets, view);
         }
         return bound.Count > 0;
     }
@@ -111,7 +111,7 @@ public static class CommandResolver
     /// </summary>
     private static bool SharesKey(Command a, Command b) =>
         a == b
-        || (a.NumberKeys && b.NumberKeys)
+        || (a is IChoiceCommand { NumberKeys: true } && b is IChoiceCommand { NumberKeys: true })
         || KeysOf(a).Any(k => KeysOf(b).Any(o => k.IsMatch(o)));
 
     private static IEnumerable<InputEvent> KeysOf(Command command) =>
@@ -175,7 +175,9 @@ public static class CommandResolver
         int previous = -1;
         foreach (var command in local)
         {
-            int last = order.FindLastIndex(c => c.GetType() == command.GetType());
+            int last = order.FindLastIndex(c =>
+                c != Command.Divider && c.TargetType == command.TargetType
+            );
             int firstGlobal = order.FindIndex(c => c is GlobalCommand);
             previous =
                 command == Command.Divider ? previous + 1
@@ -191,7 +193,7 @@ public static class CommandResolver
             if (
                 before != Command.Divider
                 && after != Command.Divider
-                && before.GetType() != after.GetType()
+                && before.TargetType != after.TargetType
             )
                 order.Insert(i, Command.Divider);
         }

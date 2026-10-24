@@ -103,6 +103,10 @@ public static class CommandList
                 continue;
             }
             Names[command] = new(attribute.Name);
+            if (command is IChoiceCommand && command.Keys.Count > 0)
+                GD.PushError(
+                    $"{where} is a choice command, so its Keys do nothing. Set NumberKeys instead."
+                );
             if (field.IsPublic)
                 all.Add(command);
         }
@@ -129,12 +133,11 @@ public static class CommandList
     private static readonly List<Command> Registered = [];
 
     /// <summary>
-    /// Adds each command's keys to the <see cref="InputMap"/> as an action named by its name,
-    /// and the number keys once. Views call it for the commands they offer themselves.
+    /// Adds every command's keys and the number keys to the <see cref="InputMap"/>.
     /// Reports a key that would run two commands on the same kind of target,
     /// and a command key that another input action in the project also uses.
     /// </summary>
-    public static void Register(IEnumerable<Command> commands)
+    public static void RegisterKeys()
     {
         for (int n = 1; n <= ShortcutActions.NumberCount; n++)
         {
@@ -142,8 +145,8 @@ public static class CommandList
                 ShortcutActions.AddAction(ShortcutActions.Number(n), ShortcutActions.NumberKeys(n));
         }
 
-        // A view that's opened again registers its commands again.
-        foreach (var command in commands.Where(c => c.Keys.Count > 0 && !Registered.Contains(c)))
+        // The scene that calls this may start again.
+        foreach (var command in Names.Keys.Where(c => c.Keys.Count > 0 && !Registered.Contains(c)))
         {
             ReportClashes(command);
             ShortcutActions.AddAction(command.Action, command.Keys);
@@ -158,7 +161,7 @@ public static class CommandList
         {
             // Commands on different kinds of target may share a key: they only clash when both
             // have targets, and then neither runs. The number keys are shared on purpose and aren't in Keys.
-            foreach (var other in Registered.Where(o => o.GetType() == command.GetType()))
+            foreach (var other in Registered.Where(o => o.TargetType == command.TargetType))
             {
                 if (other.Keys.Any(k => k.IsMatch(key)))
                     GD.PushError(

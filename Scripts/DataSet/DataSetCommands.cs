@@ -17,10 +17,9 @@ public static class DataSetCommands
     {
         Icon = CommandIcons.Add,
         Caption = "Add Row",
-        Count = TargetCount.One,
+        MaxTargets = 1,
         ActsOn = Context.View,
-        ShowInMenu = false,
-        Effects = (R, sets, _) => NewRow(R, sets[0].Id, R.GetRows(sets[0].Id).Count),
+        Effects = (R, sets) => NewRow(R, sets[0].Id, R.GetRows(sets[0].Id).Count),
     };
 
     /// <summary>
@@ -31,10 +30,9 @@ public static class DataSetCommands
     {
         Icon = CommandIcons.Add,
         Caption = "Add Column",
-        Count = TargetCount.One,
+        MaxTargets = 1,
         ActsOn = Context.View,
-        ShowInMenu = false,
-        Effects = (R, sets, _) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
+        Effects = (R, sets) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
     };
 
     [Command("dataset.update_decks")]
@@ -44,9 +42,8 @@ public static class DataSetCommands
         Caption = "Update Decks",
         Tooltip =
             "Adds new components and removes deleted components from blueprint decks that show this DataSet.",
-        Count = TargetCount.One,
+        MaxTargets = 1,
         ActsOn = Context.View,
-        ShowInMenu = false,
         Requires =
         [
             (
@@ -54,7 +51,7 @@ public static class DataSetCommands
                 (R, set) => Showing(R, set.Id).All(p => p.Parameters.SidesFit(R))
             ),
         ],
-        Effects = (R, sets, _) =>
+        Effects = (R, sets) =>
             Showing(R, sets[0].Id)
                 .SelectMany(p => DeckReconciliation.Changes(R, p.Id, p.Parameters))
                 .ToList(),
@@ -82,10 +79,10 @@ public static class DataSetCommands
     {
         Icon = CommandIcons.Edit,
         Caption = "Edit Data Row",
-        Count = TargetCount.One,
+        MaxTargets = 1,
         ActsOn = Context.Referenced,
         AppliesTo = (_, row) => !row.Deleted,
-        SideEffects = (rows, _) =>
+        SideEffects = (_, rows) =>
             EventBus.Instance.Publish(
                 new ShowDatasetEditor
                 {
@@ -104,7 +101,7 @@ public static class DataSetCommands
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
         AppliesTo = (_, row) => !row.Deleted,
-        Effects = (R, rows, _) => rows.Select(row => row with { Deleted = true }),
+        Effects = (R, rows) => rows.Select(row => row with { Deleted = true }),
     };
 
     [Command("dataset.delete_column")]
@@ -115,7 +112,7 @@ public static class DataSetCommands
         Noun = ("Column", "Columns"),
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Containers,
-        Effects = (R, columns, _) => columns.Select(R.Unset),
+        Effects = (R, columns) => columns.Select(R.Unset),
     };
 
     [Command("dataset.clear_cells")]
@@ -125,7 +122,7 @@ public static class DataSetCommands
         Caption = "Clear {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Key(Key.Delete)],
-        Effects = (R, cells, _) => Cleared(R, cells),
+        Effects = Cleared,
     };
 
     [Command("dataset.cut_cells")]
@@ -136,8 +133,8 @@ public static class DataSetCommands
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.X)],
         // Copied first, since side effects run before the effects are made.
-        SideEffects = (cells, _) => DisplayServer.ClipboardSet(Copied(Reader, cells)),
-        Effects = (R, cells, _) => Cleared(R, cells),
+        SideEffects = (R, cells) => DisplayServer.ClipboardSet(Copied(R, cells)),
+        Effects = Cleared,
     };
 
     [Command("dataset.copy_cells")]
@@ -147,7 +144,7 @@ public static class DataSetCommands
         Caption = "Copy {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.C)],
-        SideEffects = (cells, _) => DisplayServer.ClipboardSet(Copied(Reader, cells)),
+        SideEffects = (R, cells) => DisplayServer.ClipboardSet(Copied(R, cells)),
     };
 
     /// <summary>
@@ -161,10 +158,8 @@ public static class DataSetCommands
         Icon = CommandIcons.Paste,
         Caption = "Paste",
         Keys = [Shortcuts.Ctrl(Key.V)],
-        Effects = (R, cells, _) => Pasted(R, cells, Tsv.Parse(DisplayServer.ClipboardGet())),
+        Effects = (R, cells) => Pasted(R, cells, Tsv.Parse(DisplayServer.ClipboardGet())),
     };
-
-    private static IAtomReader Reader => AtomService.Instance;
 
     private static (
         List<DataRow> Rows,

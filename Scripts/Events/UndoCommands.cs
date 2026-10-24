@@ -62,7 +62,7 @@ public static class UndoCommands
         Caption = "Undo This",
         Tooltip = "Undoes the last change that affected this component, regardless of who did it.",
         ActsOn = Context.Selected | Context.Contents,
-        SideEffects = (atoms, _) =>
+        SideEffects = (_, atoms) =>
         {
             var refs = atoms.Select(AtomRef.To).ToHashSet();
             Issue(UndoChanges, TimelineUndo.Undo, (_, atom) => refs.Contains(AtomRef.To(atom)));

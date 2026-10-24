@@ -32,27 +32,6 @@ public sealed class CommandAttribute(string name) : Attribute
 }
 
 /// <summary>
-/// How many targets a <see cref="AtomCommand{T}"/> can act on.
-/// </summary>
-public enum TargetCount
-{
-    /// <summary>
-    /// Should only appear if exactly one relevant target is in the context.
-    /// </summary>
-    One = 1,
-
-    /// <summary>
-    /// Should appear if any relevant targets are in the context.
-    /// </summary>
-    Many = 2,
-
-    /// <summary>
-    /// Should appear if 0 or 1 relevant targets are in the context.
-    /// </summary>
-    Optional = 3,
-}
-
-/// <summary>
 /// The parts of a <see cref="CommandContext"/> a Command can target, set with <see cref="Command.ActsOn"/>.
 /// </summary>
 [Flags]
@@ -145,8 +124,9 @@ public interface ICommandView
 
 /// <summary>
 /// Something the user runs from a context menu or a keyboard shortcut.
-/// Every command is defined once, in a public static field of a class for what it acts on,
-/// which puts it in <see cref="CommandList.All"/>.
+/// Every command is defined once, in a static field of a class for what it acts on,
+/// named by its <see cref="CommandAttribute"/>.
+/// The public ones are in <see cref="CommandList.All"/>, and a view's own commands are private.
 /// </summary>
 public abstract class Command
 {
@@ -160,6 +140,12 @@ public abstract class Command
     /// The command's unique name, from the <see cref="CommandAttribute"/> on its field.
     /// </summary>
     public CommandName Name => CommandList.NameOf(this);
+
+    /// <summary>
+    /// The kind of atom it acts on, or null for a command without targets.
+    /// Menus group commands by it, and keys may be shared across kinds.
+    /// </summary>
+    internal virtual Type TargetType => null;
 
     /// <summary>
     /// The menu label, e.g. "Edit Component".
@@ -195,25 +181,6 @@ public abstract class Command
     /// so the keys can be changed while the game runs. Null when it has no keys.
     /// </summary>
     public StringName Action => Keys.Count == 0 ? null : _action ??= Name.Value;
-
-    /// <summary>
-    /// Set to false to avoid showing this command in the context menu.
-    /// </summary>
-    public bool ShowInMenu { get; init; } = true;
-
-    /// <summary>Set to true to ask for a number through a submenu, such as how many cards to draw.</summary>
-    public bool AsksForNumber { get; init; }
-
-    /// <summary>
-    /// When <see cref="AsksForNumber"/> = true, an extra choice after the numbers, such as "All",
-    /// which runs the command with <see cref="int.MaxValue"/>. Null for none.
-    /// </summary>
-    public string InfiniteOption { get; init; }
-
-    /// <summary>
-    /// Set to true to have the number keys serve as keyboard shortcuts.
-    /// </summary>
-    public bool NumberKeys { get; init; }
 
     /// <summary>
     /// The parts of the context this Command will act on, in terms of the user's selection.
@@ -277,51 +244,20 @@ public abstract class Command
     public virtual bool IsAvailable(IAtomReader R) => true;
 
     /// <summary>
-    /// When <see cref="AsksForNumber"/> = true, the highest number worth offering for these targets,
-    /// like a die's face count, or null for the menu's default.
+    /// Acts on the targets, or does nothing when it can't act on them or isn't available.
     /// </summary>
-    public virtual int? MaxNumber(IReadOnlyList<AtomRef> targets) => null;
+    /// <param name="view">W it runs, or null outside any view.</param>
+    public abstract void Run(IReadOnlyList<AtomRef> targets, ICommandView view);
 
     /// <summary>
-    /// Acts on the targets. <paramref name="number"/> is 1 unless the command asks for one,
-    /// and <see cref="int.MaxValue"/> is its <see cref="InfiniteOption"/>.
-    /// <paramref name="view"/> is where it runs, or null outside any view.
+    /// Returns true if <paramref name="e"/> runs this command. Modifiers must match exactly.
     /// </summary>
-    public abstract void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view);
-
-    /// <summary>
-    /// Returns true if <paramref name="e"/> runs this command, and the number it gives.
-    /// Modifiers must match exactly.
-    /// </summary>
-    public bool Matches(InputEvent e, out int number)
-    {
-        number = 1;
-        if (Action != null && Shortcuts.Pressed(e, Action))
-            return true;
-        if (!NumberKeys)
-            return false;
-        for (int n = 1; n <= ShortcutActions.NumberCount; n++)
-        {
-            if (Shortcuts.Pressed(e, ShortcutActions.Number(n)))
-            {
-                number = n;
-                return true;
-            }
-        }
-        return false;
-    }
+    public virtual bool Matches(InputEvent e) => Action != null && Shortcuts.Pressed(e, Action);
 
     /// <summary>
     /// The keyboard shortcut to show beside this command in a menu, or null.
     /// </summary>
     public Shortcut ShortcutLabel() => ShortcutActions.Label(Action);
-
-    /// <summary>
-    /// The number key to show beside <paramref name="number"/> in the menu's number submenu,
-    /// or null when the number keys don't run it.
-    /// </summary>
-    public Shortcut NumberLabel(int number) =>
-        NumberKeys ? ShortcutActions.Label(ShortcutActions.Number(number)) : null;
 
     /// <summary>
     /// <para>Writes the changes as one event made by this command.</para>
@@ -344,23 +280,23 @@ public abstract class Command
 }
 
 /// <summary>
-/// A command on atoms of type <typeparamref name="T"/>.
+/// A command on atoms of type <typeparamref name="T"/>, with the rules for which atoms it acts on.
 /// It acts on what <see cref="AtomReaderExtensions.Resolve"/> gives for each target,
 /// so it also reaches an atom that was never written, like an empty cell.
 /// </summary>
 /// <remarks>
 /// To act on all atom types, set <typeparamref name="T"/> to <see cref="Atom"/>.
 /// </remarks>
-public sealed class AtomCommand<T> : Command
+public abstract class TargetedCommand<T> : Command
     where T : Atom
 {
     /// <summary>
     /// Determines whether this command can operate on a given <paramref name="atom"/>.
     /// </summary>
-    /// <param name="reader">The atom reader to pull data.</param>
+    /// <param name="R">The atom reader to pull data.</param>
     /// <param name="atom">The atom that this command may apply to.</param>
     /// <returns>True if this command has behavior for the given <paramref name="atom"/>.</returns>
-    public delegate bool AppliesToDelegate(IAtomReader reader, T atom);
+    public delegate bool AppliesToDelegate(IAtomReader R, T atom);
 
     /// <summary>
     /// <para>Returns true if this command has behavior for the given atom.</para>
@@ -374,36 +310,17 @@ public sealed class AtomCommand<T> : Command
     /// </summary>
     public IReadOnlyList<(string Reason, AppliesToDelegate Holds)> Requires { get; init; } = [];
 
-    /// <inheritdoc cref="TargetCount" />
-    public TargetCount Count { get; init; } = TargetCount.Many;
+    /// <summary>
+    /// The fewest targets it acts on.
+    /// </summary>
+    public int MinTargets { get; init; } = 1;
 
     /// <summary>
-    /// Produces the changes this command makes, which will be passed to <see cref="AtomService.Write"/>
-    /// Returning an empty list still fires an event, but returning null will not.
+    /// The most targets it acts on.
     /// </summary>
-    /// <param name="reader">The atom reader to pull data.</param>
-    /// <param name="atoms">The atoms that were targeted with this command.</param>
-    /// <param name="number">When <see cref="Command.AsksForNumber"/> is true, the number provided by the user.</param>
-    /// <returns>The changes, written as one event.</returns>
-    public delegate IEnumerable<IChange> EffectsDelegate(
-        IAtomReader reader,
-        IReadOnlyList<T> atoms,
-        int number
-    );
+    public int MaxTargets { get; init; } = int.MaxValue;
 
-    /// <inheritdoc cref="EffectsDelegate"/>
-    public EffectsDelegate Effects { get; init; }
-
-    /// <summary>
-    /// An action to apply arbitrary side-effects.
-    /// The second parameter provides a number if <see cref="Command.AsksForNumber"/> is true.
-    /// </summary>
-    public Action<IReadOnlyList<T>, int> SideEffects { get; init; }
-
-    /// <summary>
-    /// When <see cref="Command.AsksForNumber"/> is true, return the highest number worth offering for the atoms.
-    /// </summary>
-    public Func<IAtomReader, IReadOnlyList<T>, int> NumberLimit { get; init; }
+    internal override Type TargetType => typeof(T);
 
     public override bool Applies(IAtomReader R, AtomRef target) => Atom(R, target) != null;
 
@@ -412,13 +329,7 @@ public sealed class AtomCommand<T> : Command
             ? Requires.FirstOrDefault(rule => !rule.Holds(R, atom)).Reason
             : null;
 
-    public override bool Fits(int count) =>
-        Count switch
-        {
-            TargetCount.One => count == 1,
-            TargetCount.Optional => count <= 1,
-            _ => count > 0,
-        };
+    public override bool Fits(int count) => MinTargets <= count && count <= MaxTargets;
 
     public override string DisabledReason(IAtomReader R, int count, IReadOnlyList<string> blocked)
     {
@@ -428,26 +339,18 @@ public sealed class AtomCommand<T> : Command
             return string.Join("\n", blocked);
 
         var one = Noun?.One.ToLowerInvariant() ?? "item";
-        return Count switch
+        var many = Noun?.Many.ToLowerInvariant() ?? "items";
+        string Amount(int n) => n == 1 ? $"one {one}" : $"{n} {many}";
+        return (MinTargets, MaxTargets) switch
         {
-            TargetCount.One => $"Select one {one}.",
-            TargetCount.Optional => $"Select one {one} at most.",
-            _ => $"Select at least one {one}.",
+            var (min, max) when min == max => $"Select {Amount(min)}.",
+            (var min, int.MaxValue) => $"Select at least {Amount(min)}.",
+            (0, var max) => $"Select {Amount(max)} at most.",
+            var (min, max) => $"Select {min} to {max} {many}.",
         };
     }
 
-    public override int? MaxNumber(IReadOnlyList<AtomRef> targets) =>
-        NumberLimit?.Invoke(Reader, Atoms(Reader, targets));
-
-    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view)
-    {
-        var atoms = Atoms(Reader, targets);
-        SideEffects?.Invoke(atoms, number);
-        if (Effects != null && (atoms.Count > 0 || targets.Count == 0 && Fits(0)))
-            Submit(Effects(Reader, atoms, number), view);
-    }
-
-    private static IAtomReader Reader => AtomService.Instance;
+    protected static IAtomReader Reader => AtomService.Instance;
 
     // The atom it acts on, or what stands in for one never written, or null if it doesn't apply.
     private T Atom(IAtomReader R, AtomRef target) =>
@@ -457,9 +360,145 @@ public sealed class AtomCommand<T> : Command
             ? atom
             : null;
 
-    // An atom may be gone since the menu opened.
-    private List<T> Atoms(IAtomReader R, IReadOnlyList<AtomRef> targets) =>
-        targets.Select(t => Atom(R, t)).Where(r => r != null).ToList();
+    /// <summary>
+    /// The atoms it acts on, leaving out any gone since the menu opened,
+    /// or null when too few are left.
+    /// </summary>
+    protected List<T> Resolved(IReadOnlyList<AtomRef> targets)
+    {
+        var atoms = targets.Select(t => Atom(Reader, t)).Where(a => a != null).ToList();
+        return Fits(atoms.Count) ? atoms : null;
+    }
+}
+
+/// <summary>
+/// A command on atoms of type <typeparamref name="T"/>.
+/// </summary>
+public sealed class AtomCommand<T> : TargetedCommand<T>
+    where T : Atom
+{
+    /// <summary>
+    /// Produces the changes this command makes, which will be passed to <see cref="AtomService.Write"/>.
+    /// Returning an empty list still fires an event, but returning null will not.
+    /// </summary>
+    /// <param name="R">The atom reader to pull data.</param>
+    /// <param name="atoms">The atoms that were targeted with this command.</param>
+    /// <returns>The changes, written as one event.</returns>
+    public delegate IEnumerable<IChange> EffectsDelegate(IAtomReader R, IReadOnlyList<T> atoms);
+
+    /// <inheritdoc cref="EffectsDelegate"/>
+    public EffectsDelegate Effects { get; init; }
+
+    /// <summary>
+    /// Runs whenever the command runs.
+    /// </summary>
+    /// <param name="R">The atom reader to pull data.</param>
+    /// <param name="atoms">The atoms that were targeted with this command.</param>
+    public delegate void SideEffectsDelegate(IAtomReader R, IReadOnlyList<T> atoms);
+
+    /// <inheritdoc cref="SideEffectsDelegate"/>
+    public SideEffectsDelegate SideEffects { get; init; }
+
+    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view)
+    {
+        if (Resolved(targets) is not { } atoms)
+            return;
+        SideEffects?.Invoke(Reader, atoms);
+        if (Effects != null)
+            Submit(Effects(Reader, atoms), view);
+    }
+}
+
+/// <summary>
+/// A command that offers a submenu of choices.
+/// </summary>
+public interface IChoiceCommand
+{
+    /// <summary>
+    /// Whether number key n picks the nth choice.
+    /// </summary>
+    bool NumberKeys { get; }
+
+    /// <summary>
+    /// What it offers for <paramref name="targets"/>, in order.
+    /// </summary>
+    IReadOnlyList<(string Label, int Value)> ChoicesFor(IReadOnlyList<AtomRef> targets);
+
+    /// <summary>
+    /// The number key <paramref name="e"/> presses, from 1, when the number keys pick choices.
+    /// </summary>
+    int? NumberPressed(InputEvent e);
+
+    /// <summary>
+    /// Acts on the targets with the picked choice's <paramref name="value"/>.
+    /// </summary>
+    void Choose(IReadOnlyList<AtomRef> targets, int value, ICommandView view);
+}
+
+/// <summary>
+/// A command on atoms of type <typeparamref name="T"/> that offers a submenu of choices,
+/// and writes the <see cref="Effects"/> of the one picked.
+/// </summary>
+public sealed class ChoiceCommand<T> : TargetedCommand<T>, IChoiceCommand
+    where T : Atom
+{
+    /// <summary>
+    /// What options it offers for the atoms.
+    /// </summary>
+    /// <param name="R">The atom reader to pull data.</param>
+    /// <param name="atoms">The atoms that were targeted with this command.</param>
+    public delegate IReadOnlyList<(string Label, int Value)> ChoicesDelegate(
+        IAtomReader R,
+        IReadOnlyList<T> atoms
+    );
+
+    /// <inheritdoc cref="ChoicesDelegate"/>
+    public required ChoicesDelegate Choices { get; init; }
+
+    /// <summary>
+    /// Produces the changes for the picked choice, which will be passed to <see cref="AtomService.Write"/>.
+    /// Returning an empty list still fires an event, but returning null will not.
+    /// </summary>
+    /// <param name="R">The atom reader to pull data.</param>
+    /// <param name="atoms">The atoms that were targeted with this command.</param>
+    /// <param name="value">The value of the choice picked.</param>
+    /// <returns>The changes, written as one event.</returns>
+    public delegate IEnumerable<IChange> EffectsDelegate(
+        IAtomReader R,
+        IReadOnlyList<T> atoms,
+        int value
+    );
+
+    /// <inheritdoc cref="EffectsDelegate"/>
+    public required EffectsDelegate Effects { get; init; }
+
+    public bool NumberKeys { get; init; }
+
+    public override bool Matches(InputEvent e) => base.Matches(e) || NumberPressed(e) != null;
+
+    public IReadOnlyList<(string Label, int Value)> ChoicesFor(IReadOnlyList<AtomRef> targets) =>
+        Resolved(targets) is { } atoms ? Choices(Reader, atoms) : [];
+
+    public int? NumberPressed(InputEvent e)
+    {
+        if (!NumberKeys)
+            return null;
+        for (int n = 1; n <= ShortcutActions.NumberCount; n++)
+        {
+            if (Shortcuts.Pressed(e, ShortcutActions.Number(n)))
+                return n;
+        }
+        return null;
+    }
+
+    public void Choose(IReadOnlyList<AtomRef> targets, int value, ICommandView view)
+    {
+        if (Resolved(targets) is { } atoms)
+            Submit(Effects(Reader, atoms, value), view);
+    }
+
+    // Picking it opens its submenu.
+    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view) { }
 }
 
 /// <summary>A command that does not act on selected targets, such as undo.</summary>
@@ -470,12 +509,7 @@ public sealed class GlobalCommand : Command
     public override bool Fits(int count) => count == 0;
 
     /// <summary>
-    /// Whether the command can run right now.
-    /// </summary>
-    public Func<IAtomReader, bool> Enabled { get; init; }
-
-    /// <summary>
-    /// Define rules that must be met,
+    /// Define rules that must be met.
     /// Broken rules are displayed in the tooltip when the command is disabled.
     /// </summary>
     public IReadOnlyList<(string Reason, Func<IAtomReader, bool> Holds)> Requires { get; init; } =
@@ -483,16 +517,14 @@ public sealed class GlobalCommand : Command
 
     /// <summary>
     /// Generates the changes to write, as one event.
-    /// Returning an empty list still fires an event
-    /// Returning null does not fire an event.
+    /// Returning an empty list still fires an event, but returning null will not.
     /// </summary>
     public Func<IAtomReader, IEnumerable<IChange>> Effects { get; init; }
 
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }
 
-    public override bool IsAvailable(IAtomReader R) =>
-        (Enabled?.Invoke(R) ?? true) && Requires.All(rule => rule.Holds(R));
+    public override bool IsAvailable(IAtomReader R) => Requires.All(rule => rule.Holds(R));
 
     public override string DisabledReason(
         IAtomReader R,
@@ -500,33 +532,14 @@ public sealed class GlobalCommand : Command
         IReadOnlyList<string> blocked
     ) => Requires.FirstOrDefault(rule => !rule.Holds(R)).Reason;
 
-    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view)
+    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view)
     {
+        if (!IsAvailable(AtomService.Instance))
+            return;
         SideEffects?.Invoke(view);
         if (Effects != null)
             Submit(Effects(AtomService.Instance), null);
     }
-}
-
-/// <summary>
-/// A menu item with a submenu of other commands.
-/// It can go in any list of commands a menu shows, including another submenu,
-/// and shows only when one of its commands would show.
-/// </summary>
-public sealed class Submenu : Command
-{
-    /// <summary>
-    /// The commands it offers, built each time a menu shows this submenu.
-    /// They act like any other command in the menu.
-    /// </summary>
-    public Func<IAtomReader, IEnumerable<Command>> Items { get; init; }
-
-    public override bool Applies(IAtomReader R, AtomRef target) => false;
-
-    public override bool Fits(int count) => count == 0;
-
-    // Picking it opens its menu.
-    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view) { }
 }
 
 // This is just a sentinel so that we can put dividers in command lists.
@@ -536,7 +549,7 @@ file sealed class DividerCommand : Command
 
     public override bool Fits(int count) => count == 0;
 
-    public override void Run(IReadOnlyList<AtomRef> targets, int number, ICommandView view) { }
+    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view) { }
 }
 
 /// <summary>

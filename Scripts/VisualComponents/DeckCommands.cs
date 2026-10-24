@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 using static Lizzie.VisualComponentBase;
 
 namespace Lizzie;
@@ -18,36 +19,42 @@ public static class DeckCommands
         Caption = "Shuffle {0}",
         Noun = ("Deck", "Decks"),
         AppliesTo = HasCards,
-        Effects = (R, cs, _) => cs.SelectMany(c => Shuffled(R, c)),
+        Effects = (R, cs) => cs.SelectMany(c => Shuffled(R, c)),
     };
 
     [Command("deck.draw")]
-    public static readonly Command Draw = new AtomCommand<ComponentPosition>
+    public static readonly Command Draw = new ChoiceCommand<ComponentPosition>
     {
         Icon = CommandIcons.Draw,
         Caption = "Draw Cards",
-        AsksForNumber = true,
-        InfiniteOption = "All",
         NumberKeys = true,
-        // As many cards as the fullest deck has.
-        NumberLimit = (R, decks) => decks.Select(d => R.TokensOn(d).Count).DefaultIfEmpty().Max(),
         AppliesTo = HasCards,
+        // As many cards as the fullest deck has.
+        Choices = (R, decks) => Counts(decks.Max(d => R.TokensOn(d).Count)),
         Effects = (R, cs, n) => cs.SelectMany(c => Drawn(R, c, n)),
     };
 
     [Command("deck.deal")]
-    public static readonly Command Deal = new AtomCommand<ComponentPosition>
+    public static readonly Command Deal = new ChoiceCommand<ComponentPosition>
     {
         Icon = CommandIcons.Deal,
         Caption = "Deal Cards",
-        AsksForNumber = true,
-        InfiniteOption = "All",
-        // As many cards as each seat can get from the fullest deck.
-        NumberLimit = (R, decks) =>
-            decks.Select(d => PerSeat(R.TokensOn(d).Count, DealSeats(R))).DefaultIfEmpty().Max(),
         AppliesTo = HasCards,
+        // As many cards as each seat can get from the fullest deck.
+        Choices = (R, decks) => Counts(decks.Max(d => PerSeat(R.TokensOn(d).Count, DealSeats(R)))),
         Effects = (R, cs, n) => cs.SelectMany(c => Dealt(R, c, n)),
     };
+
+    /// <summary>
+    /// The counts from 1 to <paramref name="max"/>, no more than there are number keys, then "All".
+    /// </summary>
+    private static IReadOnlyList<(string Label, int Value)> Counts(int max) =>
+        [
+            .. Enumerable
+                .Range(1, Math.Min(max, ShortcutActions.NumberCount))
+                .Select(n => (n.ToString(), n)),
+            ("All", int.MaxValue),
+        ];
 
     private static bool IsDeck(IAtomReader R, ComponentPosition c) =>
         R.Kind(c) == VisualComponentType.Deck;

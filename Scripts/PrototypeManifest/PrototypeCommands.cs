@@ -19,7 +19,7 @@ public static class PrototypeCommands
                 (R, p) => ((PrintedParameters)p.Parameters).SidesFit(R)
             ),
         ],
-        Effects = (R, ps, _) =>
+        Effects = (R, ps) =>
             ps.SelectMany(p => DeckReconciliation.Changes(R, p.Id, (PrintedParameters)p.Parameters))
                 .ToList(),
     };
@@ -29,9 +29,9 @@ public static class PrototypeCommands
     {
         Icon = CommandIcons.Edit,
         Caption = "Edit Component",
-        Count = TargetCount.One,
+        MaxTargets = 1,
         ActsOn = Context.Selected | Context.Referenced,
-        SideEffects = (ps, _) =>
+        SideEffects = (_, ps) =>
             EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = ps[0].Id }),
     };
 }

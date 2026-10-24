@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
@@ -733,8 +734,19 @@ public partial class DatasetEditor : Window, ICommandView
             if (text.Contains('\t') || text.Contains('\n'))
             {
                 // Writes the cell first, so the paste starts from what it shows.
+                // Then it pastes as Ctrl+V would outside a cell.
                 GuiReleaseFocus();
-                RunOnSelection(DataSetCommands.PasteCells);
+                IAtomReader R = AtomService.Instance;
+                var paste = DataSetCommands.PasteCells;
+                paste.Run(
+                    CommandResolver.TargetsFor(
+                        paste,
+                        CommandContext.Of(this, R, keys: true),
+                        R,
+                        menu: false
+                    ),
+                    this
+                );
                 cell.AcceptEvent();
             }
             return;
@@ -792,7 +804,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
     private void AddRow() =>
-        DataSetCommands.AddRow.Run([DataSet.ById.Ref(ShownDataSet.Value)], 1, this);
+        DataSetCommands.AddRow.Run([DataSet.ById.Ref(ShownDataSet.Value)], this);
 
     private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
@@ -1013,14 +1025,6 @@ public partial class DatasetEditor : Window, ICommandView
         }
     }
 
-    /// <summary>Runs <paramref name="command"/> on what the local player has selected, as its shortcut would.</summary>
-    private void RunOnSelection(Command command)
-    {
-        var targets = MySelection().Where(t => command.Applies(AtomService.Instance, t)).ToList();
-        if (command.Fits(targets.Count))
-            command.Run(targets, 1, this);
-    }
-
     // Every editor shares these. The editor's listeners focus the row an insert adds
     // or start renaming the column.
 
@@ -1029,8 +1033,8 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Icon = CommandIcons.Edit,
         Caption = "Rename Column",
-        Count = TargetCount.One,
-        SideEffects = (columns, _) =>
+        MaxTargets = 1,
+        SideEffects = (_, columns) =>
             EventBus.Instance.Publish(new RenameColumnEvent { ColumnId = columns[0].Id }),
     };
 
@@ -1039,9 +1043,8 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Icon = CommandIcons.InsertRowAbove,
         Caption = "Insert Row Above",
-        Count = TargetCount.One,
-        Effects = (R, rows, _) =>
-            DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0])),
+        MaxTargets = 1,
+        Effects = (R, rows) => DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0])),
     };
 
     [Command("dataset.insert_row_below")]
@@ -1049,8 +1052,8 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Icon = CommandIcons.InsertRowBelow,
         Caption = "Insert Row Below",
-        Count = TargetCount.One,
-        Effects = (R, rows, _) =>
+        MaxTargets = 1,
+        Effects = (R, rows) =>
             DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0]) + 1),
     };
 
@@ -1059,8 +1062,8 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Icon = CommandIcons.InsertColumnLeft,
         Caption = "Insert Column Left",
-        Count = TargetCount.One,
-        Effects = (R, columns, _) =>
+        MaxTargets = 1,
+        Effects = (R, columns) =>
             DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0])),
     };
 
@@ -1069,8 +1072,8 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Icon = CommandIcons.InsertColumnRight,
         Caption = "Insert Column Right",
-        Count = TargetCount.One,
-        Effects = (R, columns, _) =>
+        MaxTargets = 1,
+        Effects = (R, columns) =>
             DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0]) + 1),
     };
 

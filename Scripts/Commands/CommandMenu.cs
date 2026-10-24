@@ -14,12 +14,6 @@ public static class CommandMenu
     // Icons are drawn at text size, whatever size they're made at.
     private const int IconSize = 20;
 
-    // The submenu offers the top row of number keys, 1 through 9, unless the command gives its own limit.
-    private const int SubmenuNumbers = 9;
-
-    // It never offers more numbers than there are number keys, even with a higher limit.
-    private const int MaxSubmenuNumbers = 20;
-
     private static PopupMenu _menu;
 
     // What the menu offers, by item id, and where it runs them.
@@ -50,7 +44,7 @@ public static class CommandMenu
     /// </summary>
     /// <param name="position">Where it opens, in the main window's coordinates.</param>
     /// <param name="view">Where the commands run, and what they act on, or null for neither.</param>
-    /// <param name="commands">What it offers, in order, with dividers and submenus.</param>
+    /// <param name="commands">What it offers, in order, with dividers.</param>
     /// <param name="closed">Called when this menu closes without a command running.</param>
     public static void Show(
         Vector2I position,
@@ -63,7 +57,7 @@ public static class CommandMenu
     /// <summary>
     /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
     /// taking the menu from wherever it was open.
-    /// Each item shows its shortcut, and commands that ask for a number get a submenu.
+    /// Each item shows its shortcut, and commands with choices get a submenu of them.
     /// </summary>
     /// <param name="position">Where it opens.</param>
     /// <param name="context">What the commands act on.</param>
@@ -113,16 +107,12 @@ public static class CommandMenu
                 continue;
             }
 
-            // Ids skip the separators, and count across submenus, so they index the items.
+            // Ids skip the separators, so they index the items.
             int id = Items.Count;
             Items.Add((command, targets));
             menu.AddItem(command.Label(targets.Count), id);
             int index = menu.GetItemIndex(id);
-            var subItems = (command as Submenu)?.Items(R).ToList();
-            bool disabled =
-                subItems != null
-                    ? CommandResolver.ForMenu(context, subItems).Count == 0
-                    : !command.Fits(targets.Count) || !command.IsAvailable(R);
+            bool disabled = !command.Fits(targets.Count) || !command.IsAvailable(R);
             menu.SetItemDisabled(index, disabled);
 
             // A key shows only if pressing it here would run this command.
@@ -143,16 +133,8 @@ public static class CommandMenu
             if (disabled)
                 continue;
 
-            if (subItems != null)
-            {
-                var sub = NewMenu($"Submenu_{id}");
-                Fill(sub, context, subItems, all);
-                menu.AddChild(sub);
-                menu.SetItemSubmenuNode(index, sub);
-            }
-
-            if (command.AsksForNumber)
-                AddNumberSubmenu(menu, command, targets, index, keys);
+            if (command is IChoiceCommand choice)
+                AddChoiceSubmenu(menu, choice, targets, index, keys);
         }
     }
 
@@ -181,8 +163,15 @@ public static class CommandMenu
     {
         if (!GodotObject.IsInstanceValid(_menu))
         {
-            _menu = NewMenu("CommandMenu");
+            _menu = new PopupMenu { Name = "CommandMenu" };
             _menu.PopupHide += Done;
+            _menu.IdPressed += id =>
+            {
+                var (command, targets) = Items[(int)id];
+                // The item of a command with choices only opens its submenu.
+                if (command is not IChoiceCommand)
+                    Run(command, targets);
+            };
         }
         if (_menu.GetParent() != window)
         {
@@ -190,20 +179,6 @@ public static class CommandMenu
             window.AddChild(_menu);
         }
         return _menu;
-    }
-
-    // The menu, or one of its submenus of commands, which run the command picked.
-    private static PopupMenu NewMenu(string name)
-    {
-        var menu = new PopupMenu { Name = name };
-        menu.IdPressed += id =>
-        {
-            var (command, targets) = Items[(int)id];
-            // The item of a command that asks for a number only opens its submenu.
-            if (!command.AsksForNumber)
-                Run(command, targets, 1);
-        };
-        return menu;
     }
 
     // Tells whoever opened what the menu shows that it's done with.
@@ -215,38 +190,42 @@ public static class CommandMenu
     }
 
     // Done first, so a command can change what closing changes, like Duplicate entering spawn mode.
-    private static void Run(Command command, IReadOnlyList<AtomRef> targets, int number)
+    private static void Run(Command command, IReadOnlyList<AtomRef> targets)
     {
         Done();
-        command.Run(targets, number, _view);
+        command.Run(targets, _view);
     }
 
-    private static void AddNumberSubmenu(
+    private static void AddChoiceSubmenu(
         PopupMenu menu,
-        Command command,
+        IChoiceCommand command,
         IReadOnlyList<AtomRef> targets,
         int index,
         bool keys
     )
     {
-        var sub = new PopupMenu { Name = $"NumberSubmenu_{index}" };
-        var numbers = new List<int>();
-        int last = Math.Min(command.MaxNumber(targets) ?? SubmenuNumbers, MaxSubmenuNumbers);
-        for (int n = 1; n <= last; n++)
+        var sub = new PopupMenu { Name = $"ChoiceSubmenu_{index}" };
+        var choices = command.ChoicesFor(targets);
+        foreach (var (label, _) in choices)
         {
-            sub.AddItem(n.ToString());
-            numbers.Add(n);
-            // The number keys run it with that number, so they show as its shortcuts.
-            if (keys && command.NumberLabel(n) is { } shortcut)
-                sub.SetItemShortcut(sub.ItemCount - 1, shortcut);
-        }
-        if (command.InfiniteOption != null)
-        {
-            sub.AddItem(command.InfiniteOption);
-            numbers.Add(int.MaxValue);
+            sub.AddItem(label);
+            // The number keys pick the first choices, so they show as their shortcuts.
+            int n = sub.ItemCount;
+            if (
+                keys
+                && command.NumberKeys
+                && n <= ShortcutActions.NumberCount
+                && ShortcutActions.Label(ShortcutActions.Number(n)) is { } shortcut
+            )
+                sub.SetItemShortcut(n - 1, shortcut);
         }
 
-        sub.IndexPressed += i => Run(command, targets, numbers[(int)i]);
+        // Done first, as for any other command.
+        sub.IndexPressed += i =>
+        {
+            Done();
+            command.Choose(targets, choices[(int)i].Value, _view);
+        };
         menu.AddChild(sub);
         menu.SetItemSubmenuNode(index, sub);
     }

@@ -158,11 +158,11 @@ public partial class CommandButton : Button
 
     private void Run()
     {
+        if (Command == null)
+            return;
         IAtomReader R = AtomService.Instance;
         var view = CommandViews.Of(this);
-        var targets = GetTargets(CommandContext.Of(view, R), R);
-        if (Command != null && Command.Fits(targets.Count) && Command.IsAvailable(R))
-            Command.Run(targets, 1, view);
+        Command.Run(GetTargets(CommandContext.Of(view, R), R), view);
     }
 
     /// <summary>
@@ -225,8 +225,8 @@ public partial class CommandButton : Button
         if (name == PropertyName.CommandName)
         {
             property["hint"] = (int)PropertyHint.Enum;
-            // A submenu has nothing to run.
-            property["hint_string"] = CommandList.NameHint(c => c is not Submenu);
+            // A button has nowhere to show choices.
+            property["hint_string"] = CommandList.NameHint(c => c is not IChoiceCommand);
         }
         else if (
             name == Button.PropertyName.TooltipText

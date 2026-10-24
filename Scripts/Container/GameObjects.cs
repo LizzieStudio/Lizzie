@@ -332,8 +332,8 @@ public partial class GameObjects : Node3D, ICommandView
         Icon = CommandIcons.Duplicate,
         Caption = "Duplicate Component",
         Keys = [Shortcuts.Ctrl(Key.D)],
-        Count = TargetCount.One,
-        SideEffects = (cs, _) =>
+        MaxTargets = 1,
+        SideEffects = (_, cs) =>
         {
             var variant = AtomService.Instance.GetVariant(cs[0]);
             EventBus.Instance.Publish(
@@ -348,9 +348,9 @@ public partial class GameObjects : Node3D, ICommandView
         Icon = CommandIcons.Zoom,
         Caption = "Zoom to Component",
         Keys = [Shortcuts.Key(Key.Z)],
-        Count = TargetCount.One,
+        MaxTargets = 1,
         AppliesTo = (R, c) => !R.IsContained(c) || R.IsInDeck(c),
-        SideEffects = (cs, _) =>
+        SideEffects = (_, cs) =>
         {
             if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)
                 CameraManager.Instance?.ZoomTo(node);

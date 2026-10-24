@@ -22,7 +22,7 @@ public partial class SceneController : Node3D
 
         PresenceSynchronizer.Instance?.SetContext(GetNode<DragPlane>("DragPlane"));
 
-        CommandList.Register(CommandList.All.Concat(_gameObjects.Commands));
+        CommandList.RegisterKeys();
         ShortcutRelay.Install(GetTree());
         ClickRouting.Install(GetTree().Root);
         // The view takes the main window's commands.

@@ -27,8 +27,8 @@ public partial class BlueprintManager : Window, ICommandView
         Icon = CommandIcons.Rename,
         Caption = "Rename",
         Keys = [Shortcuts.Key(Key.F2)],
-        Count = TargetCount.One,
-        SideEffects = (stages, _) =>
+        MaxTargets = 1,
+        SideEffects = (_, stages) =>
             EventBus.Instance.Publish(new RenameStageEvent { StageId = stages[0].Id }),
     };
 
@@ -69,8 +69,6 @@ public partial class BlueprintManager : Window, ICommandView
             Callable.From<Vector2, Variant, bool>((at, data) => Placement(at, data) != null),
             Callable.From<Vector2, Variant>(Drop)
         );
-
-        CommandList.Register(Commands);
 
         CloseRequested += QueueFree;
     }

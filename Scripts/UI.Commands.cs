@@ -50,9 +50,15 @@ public partial class UI
     {
         Icon = CommandIcons.ChangeSeat,
         Caption = "Change Seat...",
-        Enabled = R =>
-            R.Get(ProjectGameSettings.Only) is var settings
-            && (settings.Players.Length > 0 || settings.AllowObservers),
+        Requires =
+        [
+            (
+                "This project has no seats and doesn't allow observers.",
+                R =>
+                    R.Get(ProjectGameSettings.Only) is var settings
+                    && (settings.Players.Length > 0 || settings.AllowObservers)
+            ),
+        ],
         SideEffects = _ => _instance?.ShowPlayerPositionDialog(),
     };
 

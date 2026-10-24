@@ -20,7 +20,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Printed && !R.IsHidden(c),
-        Effects = (R, cs, _) => Flipped(R, cs),
+        Effects = (R, cs) => Flipped(R, cs),
     };
 
     [Command("component.rotate_cw")]
@@ -31,7 +31,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.E)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Turnable,
-        Effects = (R, cs, _) => cs.Select(c => Rotated(c, -RotationStep(R))),
+        Effects = (R, cs) => cs.Select(c => Rotated(c, -RotationStep(R))),
     };
 
     [Command("component.rotate_ccw")]
@@ -42,7 +42,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.Q)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Turnable,
-        Effects = (R, cs, _) => cs.Select(c => Rotated(c, RotationStep(R))),
+        Effects = (R, cs) => cs.Select(c => Rotated(c, RotationStep(R))),
     };
 
     [Command("component.move_to_top")]
@@ -53,7 +53,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.T)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
-        Effects = (R, cs, _) => Reordered(cs, ZTarget.Top),
+        Effects = (R, cs) => Reordered(cs, ZTarget.Top),
     };
 
     [Command("component.move_to_bottom")]
@@ -64,7 +64,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.B)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
-        Effects = (R, cs, _) => Reordered(cs, ZTarget.Bottom),
+        Effects = (R, cs) => Reordered(cs, ZTarget.Bottom),
     };
 
     [Command("component.delete")]
@@ -75,7 +75,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => !R.IsBeingDragged(c),
-        Effects = (R, cs, _) => cs.Select(c => c with { Removed = true }),
+        Effects = (R, cs) => cs.Select(c => c with { Removed = true }),
     };
 
     /// <summary>
@@ -91,7 +91,7 @@ public static class ComponentCommands
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => !R.IsBeingDragged(c),
         Requires = [("These components are already at their starting positions.", WrittenHere)],
-        Effects = (R, cs, _) => cs.Select(R.Unset),
+        Effects = (R, cs) => cs.Select(R.Unset),
     };
 
     [Command("component.merge_into_blueprint")]
@@ -106,7 +106,7 @@ public static class ComponentCommands
             && R.Get(Stage.ById, c.Stage)?.ParentRef is { } p
             && p != SnowTag.Empty,
         Requires = [("These components have no changes to merge.", WrittenHere)],
-        Effects = (R, cs, _) =>
+        Effects = (R, cs) =>
             cs.SelectMany(c =>
                 new IChange[]
                 {

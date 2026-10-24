@@ -16,23 +16,29 @@ public static class DieCommands
         Noun = ("Die", "Dice"),
         Keys = [Shortcuts.Key(Key.R)],
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Die,
-        Effects = (R, cs, _) => cs.Select(c => Rolled(R, c)),
+        Effects = (R, cs) => cs.Select(c => Rolled(R, c)),
     };
 
     [Command("die.set_face")]
-    public static readonly Command SetFace = new AtomCommand<ComponentPosition>
+    public static readonly Command SetFace = new ChoiceCommand<ComponentPosition>
     {
         Icon = CommandIcons.SetFace,
         Caption = "Set {0}",
         Noun = ("Die Face", "Die Faces"),
-        AsksForNumber = true,
         NumberKeys = true,
-        // Every face any of the dice has. A smaller die ignores the faces it lacks.
-        NumberLimit = (R, dice) =>
-            dice.Select(d => Parameters(R, d) is { } p ? VcDie.FaceRotations(p, R).Length : 0)
-                .DefaultIfEmpty()
-                .Max(),
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Die,
+        // Every face any of the dice has. A smaller die ignores the faces it lacks.
+        Choices = (R, dice) =>
+            [
+                .. Enumerable
+                    .Range(
+                        1,
+                        dice.Max(d =>
+                            Parameters(R, d) is { } p ? VcDie.FaceRotations(p, R).Length : 0
+                        )
+                    )
+                    .Select(n => (n.ToString(), n)),
+            ],
         Effects = (R, cs, n) => cs.Select(c => Showing(R, c, n)).Where(s => s != null),
     };
 
