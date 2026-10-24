@@ -15,14 +15,14 @@ namespace Lizzie;
 /// <list type="number">
 /// <item>Add a <see cref="CommandMenuBar"/> Node in a 2D scene.</item>
 /// <item>Inside that, add a <see cref="CommandMenuButton"/> Node.</item>
-/// <item>Inside that, add a <see cref="CommandItem"/> Node.</item>
-/// <item>Set the <see cref="CommandItem"/>'s Command Name.</item>
+/// <item>Inside that, add a <see cref="CommandMenuItem"/> Node.</item>
+/// <item>Set the <see cref="CommandMenuItem"/>'s Command Name.</item>
 /// </list>
 /// </remarks>
 [Tool]
 [GlobalClass]
-[Icon("res://Textures/Editor/CommandItem.svg")]
-public partial class CommandItem : Node
+[Icon("res://Textures/Editor/CommandMenuItem.svg")]
+public partial class CommandMenuItem : Node
 {
     /// <summary>
     /// The name of the command it offers, like "project.save", picked from a list in the Godot Inspector.
@@ -56,12 +56,13 @@ public partial class CommandItem : Node
         );
 
     /// <summary>
-    /// Whether <paramref name="name"/> was given by Godot ("CommandItem2") or by this node for
+    /// Whether <paramref name="name"/> was given by Godot ("CommandMenuItem2") or by this node for
     /// <paramref name="command"/> ("ProjectSave"), rather than typed by a developer.
     /// Godot adds a number to a name a sibling already has.
     /// </summary>
     internal static bool IsAutoNamed(string name, string command) =>
-        Numbered(name, nameof(CommandItem)) || command != "" && Numbered(name, NodeName(command));
+        Numbered(name, nameof(CommandMenuItem))
+        || command != "" && Numbered(name, NodeName(command));
 
     private static bool Numbered(string name, string stem) =>
         Regex.IsMatch(name, $"^{Regex.Escape(stem)}([ _-]?[0-9]+)?$");

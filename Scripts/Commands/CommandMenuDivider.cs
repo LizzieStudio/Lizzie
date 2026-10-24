@@ -9,8 +9,8 @@ namespace Lizzie;
 /// </summary>
 [Tool]
 [GlobalClass]
-[Icon("res://Textures/Editor/CommandDivider.svg")]
-public partial class CommandDivider : Node
+[Icon("res://Textures/Editor/CommandMenuDivider.svg")]
+public partial class CommandMenuDivider : Node
 {
     public override string[] _GetConfigurationWarnings() => CommandMenuButton.OutsideWarnings(this);
 

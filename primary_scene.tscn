@@ -11,8 +11,8 @@
 [ext_resource type="Texture2D" uid="uid://cx5dv08dde75e" path="res://Textures/UI/arrowup16.png" id="10_up"]
 [ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
 [ext_resource type="Script" uid="uid://csl5hqjqm38wh" path="res://Scripts/Commands/CommandMenuBar.cs" id="cmd_bar"]
-[ext_resource type="Script" uid="uid://bux026a2v4f2b" path="res://Scripts/Commands/CommandDivider.cs" id="cmd_divider"]
-[ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandItem.cs" id="cmd_item"]
+[ext_resource type="Script" uid="uid://bux026a2v4f2b" path="res://Scripts/Commands/CommandMenuDivider.cs" id="cmd_divider"]
+[ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandMenuItem.cs" id="cmd_item"]
 [ext_resource type="Script" uid="uid://b5mdnpo6px318" path="res://Scripts/Commands/CommandMenuButton.cs" id="cmd_menu"]
 
 [node name="PrimaryScene" type="Node" unique_id=410470090 node_paths=PackedStringArray("_textureFactory")]

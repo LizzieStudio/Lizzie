@@ -14,7 +14,7 @@ public readonly record struct CommandName(string Value);
 
 /// <summary>
 /// Names the <see cref="Command"/> in a static field,
-/// which is then made available to <see cref="CommandButton"/> and <see cref="CommandItem"/>.
+/// which is then made available to <see cref="CommandButton"/> and <see cref="CommandMenuItem"/>.
 ///
 /// <code>
 /// [Command("some.name")]
