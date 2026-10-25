@@ -53,7 +53,7 @@ public partial class EventSynchronizer : Node
     /// Publishes the event to all clients, including this one.
     /// </summary>
     /// <remarks>
-    /// Write atoms with <see cref="AtomService.Write(Node, IEnumerable{IChange})"/> and its gesture calls instead.
+    /// Write atoms with <see cref="Atoms.Write(Node, IEnumerable{IChange})"/> and its gesture calls instead.
     /// This is for events that aren't plain writes, like undos.
     /// </remarks>
     public void Submit(TimelineEvent e)

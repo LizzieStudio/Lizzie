@@ -106,15 +106,14 @@ public partial class DatasetEditor : Window, ICommandView
 
     public override void _EnterTree()
     {
-        var ps = AtomService.Instance;
-        ps.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
 
         // The local player's inserts focus the row they add, or start renaming the column,
         // once the grid shows it. A row insert writes only the new row.
         foreach (
             var insert in new Command[] { InsertRowAbove, InsertRowBelow, DataSetCommands.AddRow }
         )
-            ps.Listen(
+            Atoms.R.Listen(
                 this,
                 insert,
                 e => FocusCell(ViewOf(e.Writes.OfType<DataRow>().Single().Id), 0)
@@ -128,7 +127,7 @@ public partial class DatasetEditor : Window, ICommandView
                 DataSetCommands.AddColumn,
             }
         )
-            ps.Listen(
+            Atoms.R.Listen(
                 this,
                 insert,
                 _ =>
@@ -381,7 +380,7 @@ public partial class DatasetEditor : Window, ICommandView
     {
         Select([DataRow.ById.Ref(rowId)]);
         _revealRowOnSync = rowId;
-        AtomService.Instance.QueueSync(this);
+        Atoms.R.QueueSync(this);
     }
 
     private void OnNewDatasetPressed()
@@ -434,7 +433,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         var ds = new DataSet { Id = SnowTag.Create(), Name = name };
         ShownDataSet.Value = ds.Id;
-        AtomService.Instance.Write(this, ds);
+        Atoms.R.Write(this, ds);
     }
 
     private void CloseDialog()
@@ -718,13 +717,12 @@ public partial class DatasetEditor : Window, ICommandView
                 // Writes the cell first, so the paste starts from what it shows.
                 // Then it pastes as Ctrl+V would outside a cell.
                 GuiReleaseFocus();
-                IAtomReader R = AtomService.Instance;
                 var paste = DataSetCommands.PasteCells;
                 paste.Run(
                     CommandResolver.TargetsFor(
                         paste,
-                        CommandContext.Of(this, R, keys: true),
-                        R,
+                        CommandContext.Of(this, Atoms.R, keys: true),
+                        Atoms.R,
                         menu: false
                     ),
                     this
@@ -775,13 +773,11 @@ public partial class DatasetEditor : Window, ICommandView
             var text = view.Cells[i].Text;
             if (text == view.Values[i])
                 continue;
-            changes.AddRange(
-                DataCell.Set(AtomService.Instance, new CellId(view.Row.Id, _columnIds[i]), text)
-            );
+            changes.AddRange(DataCell.Set(Atoms.R, new CellId(view.Row.Id, _columnIds[i]), text));
             view.Values[i] = text;
         }
         if (changes.Count > 0)
-            AtomService.Instance.Write(this, changes);
+            Atoms.R.Write(this, changes);
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
@@ -797,13 +793,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (others.Count == 0)
             return;
 
-        AtomService.Instance.Write(
-            this,
-            row with
-            {
-                Rank = SnowRank.At(others, index, SnowportId.Create()),
-            }
-        );
+        Atoms.R.Write(this, row with { Rank = SnowRank.At(others, index, SnowportId.Create()) });
     }
 
     // The rows' or the columns' controls, for a drag along that axis.
@@ -888,7 +878,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        var columns = AtomService.Instance.GetColumns(ShownDataSet.Value);
+        var columns = Atoms.R.GetColumns(ShownDataSet.Value);
         int from = columns.FindIndex(c => c.Id == columnId);
         if (from < 0)
             return;
@@ -899,7 +889,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         var column = columns[from];
         columns.RemoveAt(from);
-        AtomService.Instance.Write(
+        Atoms.R.Write(
             this,
             column with
             {
@@ -910,17 +900,16 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void OnColumnRenamed(SnowTag columnId, string name)
     {
-        if (AtomService.Instance.Get(DataColumn.ById, columnId) is { } column)
-            AtomService.Instance.Write(this, column with { Name = name });
+        if (Atoms.R.Get(DataColumn.ById, columnId) is { } column)
+            Atoms.R.Write(this, column with { Name = name });
     }
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
     private ImmutableHashSet<AtomRef> MySelection() =>
-        AtomService.Instance.GetSelection(this)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
+        Atoms.R.GetSelection(this)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
-    private void Select(IEnumerable<AtomRef> targets) =>
-        AtomService.Instance.SetSelection(targets, this);
+    private void Select(IEnumerable<AtomRef> targets) => Atoms.R.SetSelection(targets, this);
 
     /// <summary>
     /// Selects a row, column or cell, as a click on it does. With Shift, it selects everything from the
@@ -1092,7 +1081,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         dialog.FileSelected += path =>
         {
-            CsvImport.Replace(this, AtomService.Instance, _currentDataSet, path);
+            CsvImport.Replace(this, Atoms.R, _currentDataSet, path);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;

@@ -10,7 +10,7 @@ namespace Lizzie;
 ///
 /// <para>
 /// Currently, there are only two types of <see cref="Query"/>: <see cref="Identity{T, I}"/> and <see cref="Lookup{T, K}"/>.
-/// A <see cref="AtomService.Watch"/> action that reads a <see cref="Query"/> will then update if the results of that <see cref="Query"/> change.
+/// A <see cref="Atoms.Watch"/> action that reads a <see cref="Query"/> will then update if the results of that <see cref="Query"/> change.
 /// The <see cref="Query"/>s are also used to determine which atoms survive a save. An atom is kept if it is accessible from a chain of <see cref="Query"/>s.
 /// </para>
 /// </summary>

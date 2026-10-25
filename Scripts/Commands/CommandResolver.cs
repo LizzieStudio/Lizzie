@@ -45,8 +45,8 @@ public static class CommandResolver
                 continue;
             }
             // A global command applies to no target, so it fits with none and always shows.
-            var targets = TargetsFor(command, context, AtomService.Instance, menu: true);
-            var blocked = BlockedFor(command, context, AtomService.Instance, menu: true);
+            var targets = TargetsFor(command, context, Atoms.R, menu: true);
+            var blocked = BlockedFor(command, context, Atoms.R, menu: true);
             if (all || command.Fits(targets.Count) || targets.Count > 0 || blocked.Count > 0)
                 items.Add((command, targets, blocked));
         }
@@ -63,7 +63,7 @@ public static class CommandResolver
     /// </summary>
     public static bool RunShortcut(InputEvent e, ICommandView view)
     {
-        var context = CommandContext.Of(view, AtomService.Instance, keys: true);
+        var context = CommandContext.Of(view, Atoms.R, keys: true);
         var bound = ForKeys(context).Where(k => k.Command.Matches(e)).ToList();
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
         if (ready.Count == 1)
@@ -104,7 +104,7 @@ public static class CommandResolver
     ) =>
         CommandList
             .All.Concat(context.Local)
-            .Select(c => (c, TargetsFor(c, context, AtomService.Instance, menu: false)));
+            .Select(c => (c, TargetsFor(c, context, Atoms.R, menu: false)));
 
     /// <summary>
     /// Whether both commands share a keyboard shortcut.

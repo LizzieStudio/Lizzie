@@ -16,7 +16,7 @@ public readonly record struct Drawing(
 );
 
 /// <summary>
-/// Uses a <see cref="AtomService.Watch"/> call to keep the faces of a <see cref="FaceSet"/> up to date.
+/// Uses a <see cref="Atoms.Watch"/> call to keep the faces of a <see cref="FaceSet"/> up to date.
 /// </summary>
 /// <remarks>
 /// Faces are drawn one at a time. The face being drawn finishes even when its atoms change again,
@@ -56,7 +56,7 @@ public partial class FaceDrawing : Node
     private Dictionary<SnowTag, Wanted> _wanted = new();
     private bool _drawing;
 
-    public override void _EnterTree() => AtomService.Instance.Watch(this, Sync);
+    public override void _EnterTree() => Atoms.R.Watch(this, Sync);
 
     /// <summary>
     /// The face that shows <paramref name="row"/>, drawn once a sync reads the row.
@@ -66,7 +66,7 @@ public partial class FaceDrawing : Node
         if (!_cells.TryGetValue(row, out var cell))
         {
             _cells[row] = cell = new Cell(new Face(FaceSet));
-            AtomService.Instance.QueueSync(this);
+            Atoms.R.QueueSync(this);
         }
         return cell.Face;
     }

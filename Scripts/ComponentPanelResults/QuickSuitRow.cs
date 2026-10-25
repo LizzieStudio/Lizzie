@@ -43,7 +43,7 @@ public partial class QuickSuitRow : HBoxContainer
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     public override void _Ready()

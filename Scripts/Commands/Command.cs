@@ -417,8 +417,6 @@ public abstract class TargetedCommand<T> : Command
         };
     }
 
-    protected static IAtomReader Reader => AtomService.Instance;
-
     // The atom it acts on, or what stands in for one never written, or null if it doesn't apply.
     private T Atom(IAtomReader R, AtomRef target) =>
         R?.Resolve(target) is T atom
@@ -433,7 +431,7 @@ public abstract class TargetedCommand<T> : Command
     /// </summary>
     protected List<T> Resolved(IReadOnlyList<AtomRef> targets)
     {
-        var atoms = targets.Select(t => Atom(Reader, t)).Where(a => a != null).ToList();
+        var atoms = targets.Select(t => Atom(Atoms.R, t)).Where(a => a != null).ToList();
         return Fits(atoms.Count) ? atoms : null;
     }
 
@@ -447,9 +445,9 @@ public abstract class TargetedCommand<T> : Command
             return;
         var gesture = view?.Gesture ?? SnowportId.Empty;
         if (gesture == SnowportId.Empty)
-            AtomService.Instance?.Write((Node)view, Name, changes);
+            Atoms.R?.Write((Node)view, Name, changes);
         else
-            AtomService.Instance?.Append(gesture, Name, changes);
+            Atoms.R?.Append(gesture, Name, changes);
     }
 }
 
@@ -460,7 +458,7 @@ public sealed class AtomCommand<T> : TargetedCommand<T>
     where T : Atom
 {
     /// <summary>
-    /// Produces the changes this command makes, which will be passed to <see cref="AtomService.Write"/>.
+    /// Produces the changes this command makes, which will be passed to <see cref="Atoms.Write"/>.
     /// Returning an empty list still fires an event, but returning null will not.
     /// </summary>
     /// <param name="R">The atom reader to pull data.</param>
@@ -485,9 +483,9 @@ public sealed class AtomCommand<T> : TargetedCommand<T>
     {
         if (Resolved(targets) is not { } atoms)
             return;
-        SideEffects?.Invoke(Reader, atoms);
+        SideEffects?.Invoke(Atoms.R, atoms);
         if (Effects != null)
-            Submit(Effects(Reader, atoms), view);
+            Submit(Effects(Atoms.R, atoms), view);
     }
 }
 
@@ -538,7 +536,7 @@ public sealed class ChoiceCommand<T> : TargetedCommand<T>, IChoiceCommand
     public required ChoicesDelegate Choices { get; init; }
 
     /// <summary>
-    /// Produces the changes for the picked choice, which will be passed to <see cref="AtomService.Write"/>.
+    /// Produces the changes for the picked choice, which will be passed to <see cref="Atoms.Write"/>.
     /// Returning an empty list still fires an event, but returning null will not.
     /// </summary>
     /// <param name="R">The atom reader to pull data.</param>
@@ -559,7 +557,7 @@ public sealed class ChoiceCommand<T> : TargetedCommand<T>, IChoiceCommand
     public override bool Matches(InputEvent e) => base.Matches(e) || NumberPressed(e) != null;
 
     public IReadOnlyList<(string Label, int Value)> ChoicesFor(IReadOnlyList<AtomRef> targets) =>
-        Resolved(targets) is { } atoms ? Choices(Reader, atoms) : [];
+        Resolved(targets) is { } atoms ? Choices(Atoms.R, atoms) : [];
 
     public int? NumberPressed(InputEvent e)
     {
@@ -576,7 +574,7 @@ public sealed class ChoiceCommand<T> : TargetedCommand<T>, IChoiceCommand
     public void Choose(IReadOnlyList<AtomRef> targets, int value, ICommandView view)
     {
         if (Resolved(targets) is { } atoms)
-            Submit(Effects(Reader, atoms, value), view);
+            Submit(Effects(Atoms.R, atoms, value), view);
     }
 
     // Picking it opens its submenu.
@@ -610,7 +608,7 @@ public sealed class GlobalCommand : Command
 
     public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view)
     {
-        if (!IsAvailable(AtomService.Instance))
+        if (!IsAvailable(Atoms.R))
             return;
         SideEffects?.Invoke(view);
     }

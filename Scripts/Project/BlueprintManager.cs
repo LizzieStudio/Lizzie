@@ -33,7 +33,7 @@ public partial class BlueprintManager : Window, ICommandView
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
         EventBus.Instance.Subscribe<RenameStageEvent>(OnRenameStage);
     }
 
@@ -261,9 +261,8 @@ public partial class BlueprintManager : Window, ICommandView
     {
         if (data.As<GodotObject>() is not BlueprintDrag drag)
             return null;
-        IAtomReader R = AtomService.Instance;
         if (
-            R.Get(Stage.ById, drag.Id) is not { } moved
+            Atoms.R.Get(Stage.ById, drag.Id) is not { } moved
             || !_rows.TryGetValue(moved.Id, out var row)
         )
             return null;
@@ -279,7 +278,7 @@ public partial class BlueprintManager : Window, ICommandView
             : item.GetParent();
         var parent = under == _tree.GetRoot() ? SnowTag.Empty : IdOf(under);
         // A stage can't build on itself.
-        if (Stage.Chain(R, parent).Any(s => s.Id == moved.Id))
+        if (Stage.Chain(Atoms.R, parent).Any(s => s.Id == moved.Id))
             return null;
 
         var others = under.GetChildren().Where(c => c != row).ToList();
@@ -292,14 +291,19 @@ public partial class BlueprintManager : Window, ICommandView
         };
         if (row.GetParent() == under && row.GetIndex() == index)
             return null;
-        return (moved, parent, others.Select(c => R.Get(Stage.ById, IdOf(c))).ToList(), index);
+        return (
+            moved,
+            parent,
+            others.Select(c => Atoms.R.Get(Stage.ById, IdOf(c))).ToList(),
+            index
+        );
     }
 
     private void Drop(Vector2 at, Variant data)
     {
         if (Placement(at, data) is not (var moved, var parent, var siblings, var index))
             return;
-        AtomService.Instance.Write(
+        Atoms.R.Write(
             this,
             moved with
             {
@@ -312,7 +316,7 @@ public partial class BlueprintManager : Window, ICommandView
     #endregion
 
     private void Select(IEnumerable<SnowTag> blueprints) =>
-        AtomService.Instance.SetSelection(Stage.ById, blueprints, this);
+        Atoms.R.SetSelection(Stage.ById, blueprints, this);
 
     /// <summary>
     /// Starts editing the name of <paramref name="stage"/>.
@@ -331,7 +335,7 @@ public partial class BlueprintManager : Window, ICommandView
     {
         var item = _tree.GetEdited();
         var name = item.GetText(NameColumn);
-        if (AtomService.Instance.Get(Stage.ById, IdOf(item)) is { } stage && stage.Name != name)
-            AtomService.Instance.Write(this, stage with { Name = name });
+        if (Atoms.R.Get(Stage.ById, IdOf(item)) is { } stage && stage.Name != name)
+            Atoms.R.Write(this, stage with { Name = name });
     }
 }

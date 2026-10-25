@@ -18,7 +18,7 @@ public partial class AtomSelector : OptionButton
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     public override void _Ready()
@@ -39,7 +39,7 @@ public partial class AtomSelector : OptionButton
         set
         {
             _items = value;
-            AtomService.Instance.QueueSync(this);
+            Atoms.R.QueueSync(this);
         }
     }
 

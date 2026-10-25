@@ -31,7 +31,7 @@ public partial class HandCard : PanelContainer
         set
         {
             _reference = value;
-            AtomService.Instance.QueueSync(this);
+            Atoms.R.QueueSync(this);
         }
     }
 
@@ -70,8 +70,8 @@ public partial class HandCard : PanelContainer
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
-        AtomService.Instance.Watch(this, SyncSelection);
+        Atoms.R.Watch(this, Sync);
+        Atoms.R.Watch(this, SyncSelection);
     }
 
     private void Sync(IWatchReader R)

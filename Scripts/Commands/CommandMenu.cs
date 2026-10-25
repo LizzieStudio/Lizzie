@@ -34,7 +34,7 @@ public static class CommandMenu
     /// </param>
     public static void Show(Vector2I position, ICommandView view, Action closed = null)
     {
-        var context = CommandContext.Of(view, AtomService.Instance);
+        var context = CommandContext.Of(view, Atoms.R);
         Show(position, context, CommandResolver.ForContextMenu(context), view, closed);
     }
 
@@ -51,8 +51,7 @@ public static class CommandMenu
         ICommandView view,
         IEnumerable<Command> commands,
         Action closed = null
-    ) =>
-        Show(position, CommandContext.Of(view, AtomService.Instance), commands, view, closed, true);
+    ) => Show(position, CommandContext.Of(view, Atoms.R), commands, view, closed, true);
 
     /// <summary>
     /// Opens the menu with <paramref name="commands"/> at <paramref name="position"/>,
@@ -98,7 +97,6 @@ public static class CommandMenu
         bool all
     )
     {
-        IAtomReader R = AtomService.Instance;
         foreach (var (command, targets, blocked) in CommandResolver.ForMenu(context, commands, all))
         {
             if (command == Command.Divider)
@@ -112,7 +110,7 @@ public static class CommandMenu
             Items.Add((command, targets));
             menu.AddItem(command.Label(targets.Count), id);
             int index = menu.GetItemIndex(id);
-            bool disabled = !command.Fits(targets.Count) || !command.IsAvailable(R);
+            bool disabled = !command.Fits(targets.Count) || !command.IsAvailable(Atoms.R);
             menu.SetItemDisabled(index, disabled);
 
             // A key shows only if pressing it here would run this command.
@@ -126,7 +124,7 @@ public static class CommandMenu
                 menu.SetItemIconMaxWidth(index, IconSize);
             }
 
-            var reason = disabled ? command.DisabledReason(R, targets.Count, blocked) : null;
+            var reason = disabled ? command.DisabledReason(Atoms.R, targets.Count, blocked) : null;
             if (command.TooltipWith(reason) is { } tooltip)
                 menu.SetItemTooltip(index, tooltip);
 

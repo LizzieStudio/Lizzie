@@ -18,7 +18,7 @@ public partial class ImageTile : MarginContainer
         set
         {
             _reference = value;
-            AtomService.Instance.QueueSync(this);
+            Atoms.R.QueueSync(this);
         }
     }
 
@@ -26,7 +26,7 @@ public partial class ImageTile : MarginContainer
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     // Called when the node enters the scene tree for the first time.

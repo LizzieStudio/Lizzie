@@ -94,7 +94,7 @@ public partial class CommandButton : Button
         if (Engine.IsEditorHint())
             Preview();
         else
-            AtomService.Instance.Watch(this, Sync);
+            Atoms.R.Watch(this, Sync);
     }
 
     public override void _Ready()
@@ -160,9 +160,8 @@ public partial class CommandButton : Button
     {
         if (Command == null)
             return;
-        IAtomReader R = AtomService.Instance;
         var view = CommandViews.Of(this);
-        Command.Run(GetTargets(CommandContext.Of(view, R), R), view);
+        Command.Run(GetTargets(CommandContext.Of(view, Atoms.R), Atoms.R), view);
     }
 
     /// <summary>
@@ -197,7 +196,7 @@ public partial class CommandButton : Button
             return false;
         if (!Engine.IsEditorHint())
         {
-            AtomService.Instance.QueueSync(this);
+            Atoms.R.QueueSync(this);
             return false;
         }
         Preview();

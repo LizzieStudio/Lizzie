@@ -54,8 +54,6 @@ public partial class PresenceSynchronizer : Node
 
     #region Seats
 
-    private static AtomService R => AtomService.Instance;
-
     /// <summary>
     /// Asks for a seat for the local player, or <see cref="SeatingReader.NoSeat"/> to observe.
     /// The host or a solo player takes it at once; a client asks the host.
@@ -78,7 +76,7 @@ public partial class PresenceSynchronizer : Node
             return;
 
         var source = Snowport.Clock.source;
-        var seats = R.Get(Seating.Only).Seats;
+        var seats = Atoms.R.Get(Seating.Only).Seats;
         var seated = seats.TryGetValue(source, out var current);
         if (seated && seats.Count == 1)
             return;
@@ -107,7 +105,7 @@ public partial class PresenceSynchronizer : Node
     /// </summary>
     private void TryAssignSeat(byte source, int seat, int requesterPeerId)
     {
-        if (R.IsSeatTaken(seat) && R.SeatOf(source) != seat)
+        if (Atoms.R.IsSeatTaken(seat) && Atoms.R.SeatOf(source) != seat)
         {
             if (requesterPeerId == 1)
                 OnSeatDenied();
@@ -121,14 +119,14 @@ public partial class PresenceSynchronizer : Node
 
     private static void Seat(byte source, int seat)
     {
-        var seats = R.Get(Seating.Only).Seats;
+        var seats = Atoms.R.Get(Seating.Only).Seats;
         WriteSeats(
             seat == SeatingReader.NoSeat ? seats.Remove(source) : seats.SetItem(source, seat)
         );
     }
 
     private static void WriteSeats(ImmutableDictionary<byte, int> seats) =>
-        R.WriteAdmin(R.Get(Seating.Only) with { Seats = seats });
+        Atoms.R.WriteAdmin(Atoms.R.Get(Seating.Only) with { Seats = seats });
 
     [Rpc(
         MultiplayerApi.RpcMode.Authority,
@@ -186,7 +184,7 @@ public partial class PresenceSynchronizer : Node
     /// The cursor position of the seated player whose cursor container is <paramref name="cursorRef"/>.
     /// </summary>
     public Vector3? CursorOf(SnowTag cursorRef) =>
-        R.HolderOf(cursorRef) is byte source && _positions.TryGetValue(source, out var pos)
+        Atoms.R.HolderOf(cursorRef) is byte source && _positions.TryGetValue(source, out var pos)
             ? pos
             : null;
 

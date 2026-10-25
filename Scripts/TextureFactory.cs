@@ -16,7 +16,7 @@ public partial class TextureFactory : SubViewport
     /// Holds the nodes that keep faces up to date.
     /// </summary>
     /// <remarks>
-    /// This allows us to use <see cref="AtomService.Watch"/> calls.
+    /// This allows us to use <see cref="Atoms.Watch"/> calls.
     /// </remarks>
     [Export]
     public Node Drawings { get; set; }
@@ -98,8 +98,8 @@ public partial class TextureFactory : SubViewport
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
-                    var asset = AtomService
-                        .Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
+                    var asset = Atoms
+                        .R.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
                         .FirstOrDefault();
                     if (asset != null && AssetImageCache.Instance.GetImage(asset) == null)
                     {
@@ -453,7 +453,7 @@ public partial class TextureFactory : SubViewport
     }
 
     private bool IsIconUserDefined(string name) =>
-        AtomService.Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(name)).Count > 0;
+        Atoms.R.Get(ImageAsset.ByName, ImageAsset.NameKey(name)).Count > 0;
 
     private Texture2D ResolveIconTexture(string name)
     {
@@ -464,8 +464,8 @@ public partial class TextureFactory : SubViewport
         {
             if (IsIconUserDefined(useName))
             {
-                var asset = AtomService
-                    .Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(useName))
+                var asset = Atoms
+                    .R.Get(ImageAsset.ByName, ImageAsset.NameKey(useName))
                     .FirstOrDefault();
 
                 var image = AssetImageCache.Instance.GetImage(asset);
@@ -937,8 +937,8 @@ public partial class TextureFactory : SubViewport
         if (obj.Text != null && obj.Text.StartsWith("u:"))
         {
             string imageName = obj.Text.Substring(2);
-            var asset = AtomService
-                .Instance.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
+            var asset = Atoms
+                .R.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
                 .FirstOrDefault();
             var assetImage = AssetImageCache.Instance.GetImage(asset);
             if (assetImage != null)

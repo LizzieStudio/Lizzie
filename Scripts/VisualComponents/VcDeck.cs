@@ -44,8 +44,8 @@ public partial class VcDeck : VisualComponentBase
     public override void _EnterTree()
     {
         base._EnterTree();
-        AtomService.Instance.Watch(this, SyncCount);
-        AtomService.Instance.Watch(this, SyncLayout);
+        Atoms.R.Watch(this, SyncCount);
+        Atoms.R.Watch(this, SyncLayout);
     }
 
     private void SyncCount(IWatchReader R)
@@ -89,12 +89,12 @@ public partial class VcDeck : VisualComponentBase
         var project = ProjectService.Instance.CurrentProject;
         if (project == null)
             return [];
-        var proto = AtomService.Instance.Get(Prototype.ById, PrototypeRef);
+        var proto = Atoms.R.Get(Prototype.ById, PrototypeRef);
         if (proto?.Parameters is not PrintedParameters parameters)
             return [];
 
         return Enumerable
-            .Reverse(parameters.Items(AtomService.Instance))
+            .Reverse(parameters.Items(Atoms.R))
             .SelectMany(item => DeckReconciliation.NewCard(self, PrototypeRef, item))
             .ToList();
     }

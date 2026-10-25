@@ -13,8 +13,6 @@ public partial class CursorOverlay : Control
     // The cursor's height as a fraction of the screen height.
     private const float CursorHeight = 0.02f;
 
-    private static AtomService R => AtomService.Instance;
-
     public override void _Process(double delta) => QueueRedraw();
 
     public override void _Draw()
@@ -32,7 +30,7 @@ public partial class CursorOverlay : Control
             if (source == Snowport.Clock.source || camera.IsPositionBehind(pos))
                 continue;
             var tip = camera.UnprojectPosition(pos);
-            DrawTextureRect(Texture, new Rect2(tip, size), false, R.SeatColor(source));
+            DrawTextureRect(Texture, new Rect2(tip, size), false, Atoms.R.SeatColor(source));
         }
     }
 }

@@ -47,7 +47,7 @@ public interface IAtomReader
 /// Used to get atoms and observe them for changes.
 /// </summary>
 /// <remarks>
-/// Only to be used with <see cref="AtomService.Watch"/>.
+/// Only to be used with <see cref="Atoms.Watch"/>.
 /// </remarks>
 public interface IWatchReader : IAtomReader
 {

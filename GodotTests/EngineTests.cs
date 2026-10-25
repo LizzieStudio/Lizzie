@@ -8,5 +8,5 @@ public class EngineTests
 {
     [TestCase]
     [RequireGodotRuntime]
-    public void AutoloadsAreLoaded() => AssertThat(AtomService.Instance).IsNotNull();
+    public void AutoloadsAreLoaded() => AssertThat(Atoms.R).IsNotNull();
 }

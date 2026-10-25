@@ -12,8 +12,8 @@ public class TargetedCommandTests
     public void ACommandLeftWithTooFewTargetsDoesNotRun()
     {
         var row = new DataRow { Id = SnowTag.Create() };
-        AtomService.Instance.WriteAdmin(row);
-        AssertThat(AtomService.Instance.Get(DataRow.ById, row.Id))
+        Atoms.R.WriteAdmin(row);
+        AssertThat(Atoms.R.Get(DataRow.ById, row.Id))
             .OverrideFailureMessage("The row written for the test isn't in the atom service.")
             .IsNotNull();
 

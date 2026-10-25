@@ -285,7 +285,7 @@ public partial class ComponentPreview : Panel
         var s = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            AtomService.Instance,
+            Atoms.R,
             item != null,
             true
         );

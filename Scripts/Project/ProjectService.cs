@@ -60,9 +60,6 @@ public partial class ProjectService : Node
         HasUnsavedChanges = true;
     }
 
-    // What the project's atoms are read through.
-    private static IAtomReader R => AtomService.Instance;
-
     private bool _hasUnsavedChanges;
 
     public bool HasUnsavedChanges
@@ -90,7 +87,7 @@ public partial class ProjectService : Node
             if (replaced)
             {
                 FaceSet.Clear();
-                AtomService.Instance.Machinery().Clear();
+                Atoms.R.Machinery().Clear();
             }
 
             UpdateWindowTitle();
@@ -270,7 +267,7 @@ public partial class ProjectService : Node
     {
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = false;
-        AtomService.Instance.Machinery().FlushBulkLoad();
+        Atoms.R.Machinery().FlushBulkLoad();
     }
 
     /// <summary>
@@ -284,10 +281,11 @@ public partial class ProjectService : Node
     public void AbandonPlayer(byte source)
     {
         EventSynchronizer.Instance?.AbandonGroups(source);
-        var seating = R.Get(Seating.Only);
-        AtomService.Instance.WriteAdmin(
-            R.Get(Selection.ByPlayer, source)
-                .Select(R.Unset)
+        var seating = Atoms.R.Get(Seating.Only);
+        Atoms.R.WriteAdmin(
+            Atoms
+                .R.Get(Selection.ByPlayer, source)
+                .Select(Atoms.R.Unset)
                 .Append<IChange>(seating with { Seats = seating.Seats.Remove(source) })
         );
     }
@@ -323,7 +321,7 @@ public partial class ProjectService : Node
                 saveFile.StoreLine(
                     SaveCompaction.Serialize(
                         TimelineEvent.Admin(
-                            SaveCompaction.Collect(AtomService.Instance.Machinery().SavedAtoms())
+                            SaveCompaction.Collect(Atoms.R.Machinery().SavedAtoms())
                         )
                     )
                 );
@@ -388,7 +386,7 @@ public partial class ProjectService : Node
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
 
-        var settings = R.Get(ProjectGameSettings.Only);
+        var settings = Atoms.R.Get(ProjectGameSettings.Only);
         var builder = settings.Players.ToBuilder();
         bool changed = false;
         for (int i = 0; i < builder.Count; i++)
@@ -413,7 +411,7 @@ public partial class ProjectService : Node
         if (!changed)
             return;
 
-        AtomService.Instance.WriteAdmin(settings with { Players = builder.ToImmutable() });
+        Atoms.R.WriteAdmin(settings with { Players = builder.ToImmutable() });
     }
 
     /// <summary>
@@ -428,16 +426,10 @@ public partial class ProjectService : Node
             return;
         if (MultiplayerManager.Instance?.HasAuthority() == false)
             return;
-        if (Stage.Reachable(R, R.Get(CurrentTable.Only).StageRef))
+        if (Stage.Reachable(Atoms.R, Atoms.R.Get(CurrentTable.Only).StageRef))
             return;
-        var table = Stage.NewTable(R, SnowTag.Empty);
-        AtomService.Instance.WriteAdmin([
-            table,
-            R.Get(CurrentTable.Only) with
-            {
-                StageRef = table.Id,
-            },
-        ]);
+        var table = Stage.NewTable(Atoms.R, SnowTag.Empty);
+        Atoms.R.WriteAdmin([table, Atoms.R.Get(CurrentTable.Only) with { StageRef = table.Id }]);
     }
 
     public GameObjects GameObjects { get; set; }
@@ -451,7 +443,7 @@ public partial class ProjectService : Node
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            AtomService.Instance,
+            Atoms.R,
             item != null
         );
 

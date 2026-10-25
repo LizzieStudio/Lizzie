@@ -55,7 +55,7 @@ public partial class HandManager : Panel
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void OnResizeHandleGuiInput(InputEvent @event)
@@ -133,15 +133,14 @@ public partial class HandManager : Panel
                 _previews.Add((copy, null));
             }
             var s = cards[i];
-            var R = AtomService.Instance;
             var (rect, shown) = _previews[i];
 
             // A card can be flipped, or its prototype edited, while it's held.
-            var prototype = R.GetPrototype(s);
-            var shows = (prototype, R.GetVariant(s).Item, HandCard.IsFaceDown(s));
+            var prototype = Atoms.R.GetPrototype(s);
+            var shows = (prototype, Atoms.R.GetVariant(s).Item, HandCard.IsFaceDown(s));
             if (shows != shown)
             {
-                rect.ShowCard(s, shows.Item3, R);
+                rect.ShowCard(s, shows.Item3, Atoms.R);
                 _previews[i] = (rect, shows);
             }
 
@@ -174,7 +173,7 @@ public partial class HandManager : Panel
         rect.Visible = false;
         if (shown == null)
             return;
-        rect.ShowCard(null, false, AtomService.Instance);
+        rect.ShowCard(null, false, Atoms.R);
         _previews[i] = (rect, null);
     }
 

@@ -24,7 +24,7 @@ public partial class VcBag : VisualComponentGroup
     public override void _EnterTree()
     {
         base._EnterTree();
-        AtomService.Instance.Watch(this, SyncCount);
+        Atoms.R.Watch(this, SyncCount);
     }
 
     private void SyncCount(IWatchReader R) =>
@@ -79,7 +79,7 @@ public partial class VcBag : VisualComponentGroup
 
     public override (ComponentPosition[], Atom[]) DragDraw()
     {
-        var contents = Contents(AtomService.Instance).ToList();
+        var contents = Contents(Atoms.R).ToList();
         return contents.Count == 0
             ? ([], [])
             : ([contents[Random.Shared.Next(contents.Count)] with { Position = Vector3.Zero }], []);

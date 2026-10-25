@@ -46,7 +46,7 @@ public partial class ImageManager : Window, ICommandView
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     // Called when the node enters the scene tree for the first time.
@@ -96,7 +96,7 @@ public partial class ImageManager : Window, ICommandView
 
         _countSet = GetNode<CheckBox>("%CountSet");
         _countSet.Toggled += on =>
-            AtomService.Instance.Update(
+            Atoms.R.Update(
                 this,
                 ImageAsset.ById,
                 _open,
@@ -125,9 +125,8 @@ public partial class ImageManager : Window, ICommandView
 
     private void OnRemovePressed()
     {
-        var R = AtomService.Instance;
-        if (R.Get(ImageAsset.ById, _open) is { } image)
-            R.Write(this, R.Unset(image));
+        if (Atoms.R.Get(ImageAsset.ById, _open) is { } image)
+            Atoms.R.Write(this, Atoms.R.Unset(image));
     }
 
     /// <summary>
@@ -139,7 +138,7 @@ public partial class ImageManager : Window, ICommandView
         // Ends the edits to the previous image's layout.
         GuiReleaseFocus();
         _open = image;
-        AtomService.Instance.QueueSync(this);
+        Atoms.R.QueueSync(this);
     }
 
     private void UpdateButtons(bool enable)
@@ -167,7 +166,7 @@ public partial class ImageManager : Window, ICommandView
             CloudPath = _urlInput.Text,
         };
 
-        AtomService.Instance.Write(this, asset);
+        Atoms.R.Write(this, asset);
         Open(asset.Id);
 
         _nameInput.Text = string.Empty;

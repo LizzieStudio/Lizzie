@@ -27,23 +27,23 @@ public partial class FocusEditGroup : Node
         _focus.GuiInput += OnGuiInput;
     }
 
-    /// <inheritdoc cref="AtomService.Update"/>
+    /// <inheritdoc cref="Atoms.Update"/>
     public void Update<T, I>(Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
     {
-        if (AtomService.Instance.Get(byId, id) is not { } atom)
+        if (Atoms.R.Get(byId, id) is not { } atom)
             return;
         if (_group == SnowportId.Empty)
-            _group = AtomService.Instance.Open(this, change(atom));
+            _group = Atoms.R.Open(this, change(atom));
         else
-            AtomService.Instance.Append(_group, change(atom));
+            Atoms.R.Append(_group, change(atom));
     }
 
     private void OnGuiInput(InputEvent e)
     {
         if (e.IsActionPressed("ui_cancel"))
         {
-            AtomService.Instance.CancelIfOpen(_group);
+            Atoms.R.CancelIfOpen(_group);
             _group = SnowportId.Empty;
             _focus.ReleaseFocus();
         }
@@ -51,7 +51,7 @@ public partial class FocusEditGroup : Node
 
     private void Close()
     {
-        AtomService.Instance.Close(_group);
+        Atoms.R.Close(_group);
         _group = SnowportId.Empty;
     }
 }

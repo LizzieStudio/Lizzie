@@ -21,7 +21,7 @@ public partial class ComponentPreviewPopup : Window
 
     public void ShowComponent(VisualComponentBase component, TextureFactory textureFactory)
     {
-        var prototype = AtomService.Instance.Get(Prototype.ById, component.PrototypeRef);
+        var prototype = Atoms.R.Get(Prototype.ById, component.PrototypeRef);
         if (prototype == null)
             return;
 

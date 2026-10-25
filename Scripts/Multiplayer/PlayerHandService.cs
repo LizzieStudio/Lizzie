@@ -21,7 +21,7 @@ public static class PlayerHandService
     ) =>
         card with
         {
-            ContainerRef = AtomService.Instance.HandOf(seatIndex),
+            ContainerRef = Atoms.R.HandOf(seatIndex),
             Rotation = card.Rotation with { Y = 0 },
             ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
         };

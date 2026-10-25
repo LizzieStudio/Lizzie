@@ -77,6 +77,6 @@ public static class CsvImport
                     );
         }
 
-        AtomService.Instance.Write(from, changes);
+        Atoms.R.Write(from, changes);
     }
 }

@@ -122,7 +122,7 @@ public static class LocalSelection
         IEnumerable<I> ids,
         ICommandView view
     )
-        where T : Atom => AtomService.Instance.Write((Node)view, R.NewSelection(byId, ids, view));
+        where T : Atom => Atoms.R.Write((Node)view, R.NewSelection(byId, ids, view));
 
     /// <summary>
     /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, ICommandView)"/> writes,
@@ -153,7 +153,7 @@ public static class LocalSelection
         ICommandView view
     )
     {
-        AtomService.Instance.Write((Node)view, R.NewSelection(targets, view));
+        Atoms.R.Write((Node)view, R.NewSelection(targets, view));
     }
 
     /// <summary>

@@ -76,7 +76,7 @@ public partial class ProjectSettingsDialog : Window, ICommandView
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)
@@ -218,7 +218,7 @@ public partial class ProjectSettingsDialog : Window, ICommandView
     private void OnSavePressed()
     {
         if (ProjectService.Instance.CurrentProject != null)
-            AtomService.Instance.Write(this, ReadUi());
+            Atoms.R.Write(this, ReadUi());
         QueueFree();
     }
 
@@ -227,7 +227,7 @@ public partial class ProjectSettingsDialog : Window, ICommandView
     /// </summary>
     private ProjectGameSettings ReadUi()
     {
-        var current = AtomService.Instance.Get(ProjectGameSettings.Only);
+        var current = Atoms.R.Get(ProjectGameSettings.Only);
         return current with
         {
             StartIn2D = _2dToggle.ButtonPressed,

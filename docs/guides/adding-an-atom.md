@@ -30,19 +30,19 @@ Importantly, atoms should be made immutable by using `{ get; init; }` properties
 
 ## Reading and Writing
 
-Write atoms with `AtomService.Instance.Write(myAtom, myAtom2, ...)`. It will then be available on all clients with `AtomService.Instance.Get(MyAtom.ById, itsId)`.
+Write atoms with `Atoms.R.Write(myAtom, myAtom2, ...)`. It will then be available on all clients with `Atoms.R.Get(MyAtom.ById, itsId)`.
 
 To update an atom, write a new one with the same type and Id. Records make this easy by giving you a `with` operator.
 
 ```C#
-var myAtom = AtomService.Instance.Get(MyAtom.ById, itsId);
-AtomService.Instance.Write(myAtom with { someProp = true });
+var myAtom = Atoms.R.Get(MyAtom.ById, itsId);
+Atoms.R.Write(myAtom with { someProp = true });
 ```
 
 To make this more convenient, you can use `Update`.
 
 ```C#
-AtomService.Instance.Update(
+Atoms.R.Update(
     MyAtom.ById,
     itsId,
     myAtom => myAtom with { someProp = true }
@@ -51,7 +51,7 @@ AtomService.Instance.Update(
 
 ##### The All query
 
-The `All` query gives clients access to all atoms of a type with `AtomService.Instance.Get(MyAtom.All)`.
+The `All` query gives clients access to all atoms of a type with `Atoms.R.Get(MyAtom.All)`.
 
 ```C#
 [JsonName("MyAtom")]
@@ -66,7 +66,7 @@ You can optionally add a filter to an `All` query: `All<MyAtom> MyAtoms = new(a 
 
 ##### The Lookup query
 
-A `Lookup<>` query partitions all atoms of a type into keyed groups which can be retreived by `AtomService.Instance.Get(MyAtom.ByParent, parentId)`. Return `null` if you don't want the atom to show up under any key.
+A `Lookup<>` query partitions all atoms of a type into keyed groups which can be retreived by `Atoms.R.Get(MyAtom.ByParent, parentId)`. Return `null` if you don't want the atom to show up under any key.
 
 ```C#
 [JsonName("MyAtom")]
@@ -82,7 +82,7 @@ You can have multiple of these queries on an atom as well.
 
 ##### The Singlton query
 
-If you only need one instance of an atom type per game, replace the `Identity` query with a `Singleton` query, then retreive it with `AtomService.Instance.Get(MyAtom.Only)`.
+If you only need one instance of an atom type per game, replace the `Identity` query with a `Singleton` query, then retreive it with `Atoms.R.Get(MyAtom.Only)`.
 
 ```C#
 [JsonName("ProjectGameSettings")]
@@ -103,20 +103,20 @@ The conventional structure is to have "root" atoms with an `All` query, like the
 
 ## Undo/Redo
 
-Atom updates that you `Write` together are undone together, so you should write related changes as one `Write` call: `AtomService.Instance.Write(A, B, C, ...)`.
+Atom updates that you `Write` together are undone together, so you should write related changes as one `Write` call: `Atoms.R.Write(A, B, C, ...)`.
 
 ##### Undo Groups
 
 You can combine multiple writes into one undo group with `Open`, `Append`, and `Close`.
 
 ```C#
-var groupId = AtomService.Instance.Open(myAtom);
+var groupId = Atoms.R.Open(myAtom);
 // ...
-AtomService.Instance.Append(groupId, someOtherAtom);
+Atoms.R.Append(groupId, someOtherAtom);
 // ...
-AtomService.Instance.Append(groupId, someThirdAtom);
+Atoms.R.Append(groupId, someThirdAtom);
 // ...
-AtomService.Instance.Close(groupId, someThirdAtom);
+Atoms.R.Close(groupId, someThirdAtom);
 ```
 
 While an undo group is "open", it cannot be Undone or Redone. Once it's "closed", Undo and Redo events will reverse or bring back all of the writes as a unit. This is useful for "gestures", like dragging components, or for repeated edits to a focused input like a number picker.
@@ -125,7 +125,7 @@ You can also Cancel the group with `CancelIfOpen`. When you cancel a group, all 
 
 ```C#
 // no writes because the group is going away
-AtomService.Instance.CancelIfOpen(groupId);
+Atoms.R.CancelIfOpen(groupId);
 ```
 
 ## Saving
@@ -150,12 +150,12 @@ public record Selection : Atom
 
 ## The Reactive API
 
-You'll often need to keep Godot Nodes in sync with the atoms. To subscribe to changes in the atoms, call `AtomService.Instance.Watch(myNode, Sync)` inside of a node's `_EnterTree`.
+You'll often need to keep Godot Nodes in sync with the atoms. To subscribe to changes in the atoms, call `Atoms.R.Watch(myNode, Sync)` inside of a node's `_EnterTree`.
 
 ```C#
 public override void _EnterTree()
 {
-    AtomService.Instance.Watch(this, Sync);
+    Atoms.R.Watch(this, Sync);
 }
 
 private void Sync(IWatchReader R)
@@ -166,7 +166,7 @@ private void Sync(IWatchReader R)
 }
 ```
 
-The `Sync` delegate won't actually run every time *any* atom changes. Instead, `Watch` will schedule the `Sync` to run once at the end of the current frame, at which point `Sync` will subscribe to any changes in atoms that it reads through `IWatchReader R`, which has the same interface for reading records as `AtomService.Instance`. Whenever any atom that was accessed is updated, the `Sync` will be rerun, and its subscriptions will be regenerated from that run.
+The `Sync` delegate won't actually run every time *any* atom changes. Instead, `Watch` will schedule the `Sync` to run once at the end of the current frame, at which point `Sync` will subscribe to any changes in atoms that it reads through `IWatchReader R`, which has the same interface for reading records as `Atoms.R`. Whenever any atom that was accessed is updated, the `Sync` will be rerun, and its subscriptions will be regenerated from that run.
 
 ##### Diff
 
@@ -177,7 +177,7 @@ public class MyAtomManager : Panel
 {
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)

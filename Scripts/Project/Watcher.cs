@@ -6,7 +6,7 @@ namespace Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Runs a callback and records every atom it reads so
-/// <see cref="AtomService"/> can rerun it when any of them change.
+/// <see cref="Atoms"/> can rerun it when any of them change.
 /// </summary>
 public sealed class Watcher : IWatchReader
 {

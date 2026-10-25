@@ -117,7 +117,7 @@ public partial class ComponentDefinition : Window, ICommandView
                     ? result.ComponentName
                     : $"Unnamed {result.ComponentType}",
             };
-            AtomService.Instance.Write(this, prototype);
+            Atoms.R.Write(this, prototype);
 
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = prototype.Id, AllRows = true }
@@ -148,7 +148,7 @@ public partial class ComponentDefinition : Window, ICommandView
 
         //update the project prototype
 
-        var prototype = AtomService.Instance.Get(Prototype.ById, _mapPrototype.Id);
+        var prototype = Atoms.R.Get(Prototype.ById, _mapPrototype.Id);
         if (prototype == null)
             return;
 
@@ -156,13 +156,12 @@ public partial class ComponentDefinition : Window, ICommandView
         var newParams = editResult?.GetParams();
         prototype = prototype with { Parameters = newParams, Name = newParams?.ComponentName };
 
-        var R = AtomService.Instance;
-        R.Write(
+        Atoms.R.Write(
             this,
             [
                 prototype,
                 .. newParams is PrintedParameters printed
-                    ? DeckReconciliation.Changes(R, prototype.Id, printed)
+                    ? DeckReconciliation.Changes(Atoms.R, prototype.Id, printed)
                     : [],
             ]
         );

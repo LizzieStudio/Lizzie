@@ -76,8 +76,8 @@ public partial class UI : CanvasLayer
     public override void _EnterTree()
     {
         _instance = this;
-        AtomService.Instance.Watch(this, Sync);
-        AtomService.Instance.Watch(this, SyncStages);
+        Atoms.R.Watch(this, Sync);
+        Atoms.R.Watch(this, SyncStages);
     }
 
     private void SyncStages(IWatchReader R)
@@ -206,7 +206,7 @@ public partial class UI : CanvasLayer
 
     private void ShowPlayerPositionDialog()
     {
-        var settings = AtomService.Instance.Get(ProjectGameSettings.Only);
+        var settings = Atoms.R.Get(ProjectGameSettings.Only);
 
         // Don't open if there are no player slots and observers are not allowed.
         if (settings.Players.Length == 0 && !settings.AllowObservers)
@@ -230,8 +230,8 @@ public partial class UI : CanvasLayer
 
     private void RotationStepSelected(long index)
     {
-        var settings = AtomService.Instance.Get(ProjectGameSettings.Only);
-        AtomService.Instance.Write(this, settings with { RotationStepIndex = (int)index });
+        var settings = Atoms.R.Get(ProjectGameSettings.Only);
+        Atoms.R.Write(this, settings with { RotationStepIndex = (int)index });
     }
 
     // Brings the window forward if it's open, so its command never opens a second one.
@@ -475,7 +475,7 @@ public partial class UI : CanvasLayer
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
-        var p = AtomService.Instance.Get(Prototype.ById, editEvent.PrototypeId);
+        var p = Atoms.R.Get(Prototype.ById, editEvent.PrototypeId);
         if (p == null)
         {
             return;

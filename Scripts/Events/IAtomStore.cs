@@ -5,7 +5,7 @@ namespace Lizzie.Replication.Machinery;
 
 /// <summary>
 /// Holds the current atoms of one type, worked out from the timeline.
-/// <see cref="AtomService"/> makes one for each type the first time it's read or written.
+/// <see cref="Atoms"/> makes one for each type the first time it's read or written.
 /// </summary>
 public interface IAtomStore
 {

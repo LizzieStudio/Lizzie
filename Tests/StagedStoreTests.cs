@@ -67,7 +67,6 @@ public class StagedStoreTests
 
     private SnowportId NextId() => new(++_clock, Snowport.HostSource);
 
-    // Merges the piece store first, so the stage store hasn't seen the event yet, as can happen in AtomService.
     private TimelineEvent Record(TimelineEvent e)
     {
         _timeline.Add(e.Id, e);

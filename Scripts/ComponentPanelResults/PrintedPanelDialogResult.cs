@@ -59,7 +59,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)
@@ -141,7 +141,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     /// <summary>
     /// Counts the cards again and redraws the preview, since a side changed.
     /// </summary>
-    private void Refresh() => AtomService.Instance.QueueSync(this);
+    private void Refresh() => Atoms.R.QueueSync(this);
 
     private string TypeKey() =>
         _typePicker.Selected switch
@@ -311,11 +311,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _preview.SetComponentVisibility(true);
 
         var parameters = GetParams();
-        _preview.Build(
-            parameters,
-            parameters.Item(_preview.CurrentItem, AtomService.Instance),
-            TextureFactory
-        );
+        _preview.Build(parameters, parameters.Item(_preview.CurrentItem, Atoms.R), TextureFactory);
     }
 
     private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e) => UpdatePreview();
@@ -371,7 +367,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _sameAsFront.ButtonPressed = p.Back == null;
         if (p.Back != null)
             _back.Side = p.Back;
-        AtomService.Instance.QueueSync(this);
+        Atoms.R.QueueSync(this);
 
         UpdateDimensionUI();
         Activate();

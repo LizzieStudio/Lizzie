@@ -72,10 +72,10 @@ public static class UndoCommands
     private static byte Me => Snowport.Clock.source;
 
     private static TimelineUndo.Scope MyScopeIn(ICommandView view) =>
-        view?.Place(AtomService.Instance) is { } place ? UndoScopes.Mine(Me, place) : null;
+        view?.Place(Atoms.R) is { } place ? UndoScopes.Mine(Me, place) : null;
 
     private static TimelineUndo.Scope OthersScopeIn(ICommandView view) =>
-        view?.Place(AtomService.Instance) is { } place ? UndoScopes.Others(Me, place) : null;
+        view?.Place(Atoms.R) is { } place ? UndoScopes.Others(Me, place) : null;
 
     /// <summary>
     /// <see cref="TimelineUndo.Undo"/> or <see cref="TimelineUndo.Redo"/>.

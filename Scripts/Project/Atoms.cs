@@ -7,7 +7,7 @@ using Lizzie.Replication.Machinery;
 namespace Lizzie;
 
 /// <summary>
-/// <para>The project's atoms, worked out from the timeline.</para>
+/// The project's atoms, worked out from the timeline.
 ///
 /// <para>
 /// Read them through its <see cref="IAtomReader"/>, and <see cref="Watch"/> to rerun code when what it read changes.
@@ -15,9 +15,9 @@ namespace Lizzie;
 /// write comes from this player, another player, or a loaded save.
 /// </para>
 /// </summary>
-public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
+public partial class Atoms : Node, IAtomReader, IAtomsMachinery
 {
-    public static AtomService Instance { get; private set; }
+    public static Atoms R { get; private set; }
 
     // Each atom type's store, made on first use.
     private readonly Dictionary<Type, IAtomStore> _stores = new();
@@ -46,7 +46,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
 
     public override void _EnterTree()
     {
-        Instance = this;
+        R = this;
     }
 
     // After the EventSynchronizer, which is an earlier autoload.
@@ -119,14 +119,14 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
         _stores.GetValueOrDefault(type) ?? AddStore(NewStore(type));
 
     /// <inheritdoc/>
-    void IAtomServiceMachinery.Clear()
+    void IAtomsMachinery.Clear()
     {
         foreach (var store in _stores.Values)
             store.Clear();
     }
 
     /// <inheritdoc/>
-    void IAtomServiceMachinery.FlushBulkLoad()
+    void IAtomsMachinery.FlushBulkLoad()
     {
         foreach (var store in _stores.Values)
             store.FlushBulkLoad();
@@ -294,7 +294,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     }
 
     /// <inheritdoc/>
-    IEnumerable<Atom> IAtomServiceMachinery.SavedAtoms() =>
+    IEnumerable<Atom> IAtomsMachinery.SavedAtoms() =>
         _stores.Values.SelectMany(s => s.SavedAtoms());
 
     #endregion
@@ -368,7 +368,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
             MarkDirty(watcher);
     }
 
-    void IAtomServiceMachinery.MarkDirty(Watcher watcher) => MarkDirty(watcher);
+    void IAtomsMachinery.MarkDirty(Watcher watcher) => MarkDirty(watcher);
 
     private void MarkDirty(Watcher watcher)
     {

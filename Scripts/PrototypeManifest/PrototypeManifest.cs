@@ -70,7 +70,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void InitializePrototypeGrid()
@@ -135,7 +135,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         dialog.Confirmed += () =>
         {
-            AtomService.Instance.Write(this, _selectedPrototype with { Deleted = true });
+            Atoms.R.Write(this, _selectedPrototype with { Deleted = true });
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;
@@ -149,10 +149,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (_selectedPrototype == null)
             return;
 
-        var existingNames = AtomService
-            .Instance.Get(Prototype.Live)
-            .Select(p => p.Name)
-            .ToHashSet();
+        var existingNames = Atoms.R.Get(Prototype.Live).Select(p => p.Name).ToHashSet();
 
         // Strip any existing trailing " (N)" suffix before generating the new name
         var baseName = System.Text.RegularExpressions.Regex.Replace(
@@ -176,7 +173,7 @@ public partial class PrototypeManifest : Window, ICommandView
             Parameters = _selectedPrototype.Parameters with { ComponentName = newName },
         };
 
-        AtomService.Instance.Write(this, duplicate);
+        Atoms.R.Write(this, duplicate);
     }
 
     private void Sync(IWatchReader R)
@@ -255,7 +252,7 @@ public partial class PrototypeManifest : Window, ICommandView
             _sortAscending = true;
         }
 
-        AtomService.Instance.QueueSync(this);
+        Atoms.R.QueueSync(this);
     }
 
     private void OnTreeItemSelected()
@@ -269,7 +266,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (prototypeRef == _selectedPrototype?.Id)
             return;
 
-        var prototype = AtomService.Instance.Get(Prototype.ById, prototypeRef);
+        var prototype = Atoms.R.Get(Prototype.ById, prototypeRef);
         if (prototype != null)
             SelectedPrototype = prototype;
     }
@@ -279,7 +276,7 @@ public partial class PrototypeManifest : Window, ICommandView
         //update the preview
         _preview.ClearComponent();
 
-        var item = PrototypeItemRef.First(SelectedPrototype.Parameters, AtomService.Instance);
+        var item = PrototypeItemRef.First(SelectedPrototype.Parameters, Atoms.R);
 
         _preview.Build(SelectedPrototype, item, TextureFactory);
     }

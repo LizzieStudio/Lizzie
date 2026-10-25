@@ -61,7 +61,7 @@ public partial class GameController : Node
 
     private void OnSpawnPrototype(SpawnPrototypeEvent e)
     {
-        var prototype = AtomService.Instance.Get(Prototype.ById, e.PrototypeRef);
+        var prototype = Atoms.R.Get(Prototype.ById, e.PrototypeRef);
         if (prototype == null)
         {
             GD.PrintErr($"SpawnPrototype: prototype {e.PrototypeRef} not found");
@@ -73,7 +73,7 @@ public partial class GameController : Node
         if (
             e.AllRows
             && prototype.Parameters is DieParameters { Faces: TemplateSide side } die
-            && AtomService.Instance.Get(DataSet.ById, side.Dataset) != null
+            && Atoms.R.Get(DataSet.ById, side.Dataset) != null
         )
         {
             SpawnRows(prototype, side, die.Size / 10f, components);
@@ -91,7 +91,7 @@ public partial class GameController : Node
             var item =
                 e.Item != null || prototype.Parameters is PrintedParameters
                     ? e.Item
-                    : PrototypeItemRef.First(prototype.Parameters, AtomService.Instance);
+                    : PrototypeItemRef.First(prototype.Parameters, Atoms.R);
             var component = SingleComponentSpawn(prototype, item);
             if (component != null)
                 components.Add((component, Vector3.Zero));
@@ -108,7 +108,7 @@ public partial class GameController : Node
         List<(VisualComponentBase, Vector3)> components
     )
     {
-        var rows = side.Rows(AtomService.Instance);
+        var rows = side.Rows(Atoms.R);
         int count = rows.Count;
         int cols = (int)Math.Ceiling(Math.Sqrt(count));
 
@@ -144,14 +144,13 @@ public partial class GameController : Node
         List<(VisualComponentBase, Vector3)> components
     )
     {
-        var R = AtomService.Instance;
-        int count = Math.Max(printed.CardCount(R), 1);
+        int count = Math.Max(printed.CardCount(Atoms.R), 1);
         float thickness = VcPrinted.ThicknessOf(printed);
 
         // Components are written bottom first, so the last card goes first.
         for (int n = count - 1; n >= 0; n--)
         {
-            var card = SingleComponentSpawn(prototype, printed.Item(n, R));
+            var card = SingleComponentSpawn(prototype, printed.Item(n, Atoms.R));
             if (card != null)
                 components.Add((card, new Vector3(0, thickness * (count - 1 - n), 0)));
         }
@@ -162,7 +161,7 @@ public partial class GameController : Node
         var scenePath = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
-            AtomService.Instance,
+            Atoms.R,
             item != null
         );
         if (string.IsNullOrEmpty(scenePath))

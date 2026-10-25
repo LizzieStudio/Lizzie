@@ -31,7 +31,7 @@ public sealed class WatchableValue<T>
                 return;
             _value = value;
             foreach (var watcher in _readers)
-                AtomService.Instance?.Machinery().MarkDirty(watcher);
+                Atoms.R?.Machinery().MarkDirty(watcher);
             // Readers will run again, adding them back if they read the value again.
             _readers.Clear();
         }

@@ -65,10 +65,7 @@ public partial class TemplateSideTab : SideTab
         set
         {
             _template.Items = R => R.Get(Template.All).Where(value).Select(t => (t.Name, t.Id));
-            if (
-                AtomService.Instance.Get(Template.ById, _templateRef) is { } template
-                && !value(template)
-            )
+            if (Atoms.R.Get(Template.ById, _templateRef) is { } template && !value(template))
             {
                 _templateRef = SnowTag.Empty;
                 _template.SelectedAtom = SnowTag.Empty;

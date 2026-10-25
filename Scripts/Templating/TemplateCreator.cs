@@ -93,7 +93,7 @@ public partial class TemplateCreator : Window, ICommandView
     // Called when the node enters the scene tree for the first time.
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)
@@ -373,10 +373,7 @@ public partial class TemplateCreator : Window, ICommandView
         if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
-        var switched = AtomService.Instance.Get(
-            Template.ById,
-            _templateNameSelector.GetItemId((int)index)
-        );
+        var switched = Atoms.R.Get(Template.ById, _templateNameSelector.GetItemId((int)index));
         if (switched != null)
         {
             SaveTemplate(); //save current template before switching
@@ -398,7 +395,7 @@ public partial class TemplateCreator : Window, ICommandView
                     .ToImmutableArray(),
             }
         );
-        AtomService.Instance.Write(this, _currentTemplate);
+        Atoms.R.Write(this, _currentTemplate);
 
         _hasUnsavedChanges = false;
     }
@@ -1171,7 +1168,7 @@ public partial class TemplateCreator : Window, ICommandView
         };
 
         CurrentTemplate = t;
-        AtomService.Instance.Write(this, t);
+        Atoms.R.Write(this, t);
 
         _newTemplateName.Clear();
 
@@ -1214,7 +1211,7 @@ public partial class TemplateCreator : Window, ICommandView
 
     private void UpdateProject()
     {
-        LoadTemplateNameSelector(AtomService.Instance);
+        LoadTemplateNameSelector(Atoms.R);
 
         if (_templateNameSelector.ItemCount == 0)
         {
@@ -1223,10 +1220,7 @@ public partial class TemplateCreator : Window, ICommandView
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = AtomService.Instance.Get(
-            Template.ById,
-            _templateNameSelector.GetItemId(0)
-        );
+        CurrentTemplate = Atoms.R.Get(Template.ById, _templateNameSelector.GetItemId(0));
 
         MapDataset();
     }
@@ -1596,22 +1590,21 @@ public partial class TemplateCreator : Window, ICommandView
 
     #region Datasets
 
-    private void ChangePage(object sender, ItemSelectedEventArgs e) =>
-        AtomService.Instance.QueueSync(this);
+    private void ChangePage(object sender, ItemSelectedEventArgs e) => Atoms.R.QueueSync(this);
 
     //Different dataset has been selected by the user
     private void OnDatasetChanged(SnowTag datasetRef)
     {
         EditCurrentTemplate(t => t with { DataSet = datasetRef });
         _pageControl.CurrentItem = 0;
-        AtomService.Instance.QueueSync(this);
+        Atoms.R.QueueSync(this);
     }
 
     private void MapDataset()
     {
         _dataSetSelector.SelectedAtom = CurrentTemplate.DataSet;
         _pageControl.CurrentItem = 0;
-        AtomService.Instance.QueueSync(this);
+        Atoms.R.QueueSync(this);
     }
 
     private void SyncDataset(IAtomReader R)

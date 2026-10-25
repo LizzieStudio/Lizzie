@@ -3,11 +3,11 @@ using System.Collections.Generic;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// What only the machinery calls on <see cref="AtomService"/>.
-/// It's implemented explicitly, so it doesn't show on <see cref="AtomService"/>;
-/// reach it with <see cref="AtomServiceMachinery.Machinery"/>.
+/// What only the machinery calls on <see cref="Atoms"/>.
+/// It's implemented explicitly, so it doesn't show on <see cref="Atoms"/>;
+/// reach it with <see cref="AtomsMachinery.Machinery"/>.
 /// </summary>
-public interface IAtomServiceMachinery
+public interface IAtomsMachinery
 {
     /// <summary>
     /// Removes every atom, e.g. when the project is replaced.
@@ -30,10 +30,10 @@ public interface IAtomServiceMachinery
     IEnumerable<Atom> SavedAtoms();
 }
 
-public static class AtomServiceMachinery
+public static class AtomsMachinery
 {
     /// <summary>
     /// The parts of <paramref name="atoms"/> only the machinery calls.
     /// </summary>
-    public static IAtomServiceMachinery Machinery(this AtomService atoms) => atoms;
+    public static IAtomsMachinery Machinery(this Atoms atoms) => atoms;
 }

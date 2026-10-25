@@ -44,7 +44,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void Sync(IWatchReader R)

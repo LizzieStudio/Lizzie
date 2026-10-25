@@ -27,7 +27,7 @@ public partial class PlayerHandsPanel : Panel
 
     public override void _EnterTree()
     {
-        AtomService.Instance.Watch(this, Sync);
+        Atoms.R.Watch(this, Sync);
     }
 
     private void OnShowHideButtonPressed()

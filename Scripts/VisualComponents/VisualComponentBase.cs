@@ -44,16 +44,16 @@ public abstract partial class VisualComponentBase : Area3D
         // Previews have no atom and keep their own.
         if (State is { } atom)
         {
-            var variant = AtomService.Instance.GetVariant(atom);
+            var variant = Atoms.R.GetVariant(atom);
             PrototypeRef = variant.PrototypeRef;
             Item = variant.Item;
         }
 
         // Builds first, so the first placement knows the component's height.
-        AtomService.Instance.Watch(this, Sync);
-        AtomService.Instance.Watch(this, SyncState);
-        AtomService.Instance.Watch(this, SyncSelection);
-        AtomService.Instance.Watch(this, SyncResetMark);
+        Atoms.R.Watch(this, Sync);
+        Atoms.R.Watch(this, SyncState);
+        Atoms.R.Watch(this, SyncSelection);
+        Atoms.R.Watch(this, SyncResetMark);
     }
 
     private void SyncResetMark(IWatchReader R)
@@ -97,7 +97,7 @@ public abstract partial class VisualComponentBase : Area3D
         set
         {
             field = value;
-            AtomService.Instance.QueueSync(this);
+            Atoms.R.QueueSync(this);
         }
     }
 
@@ -283,7 +283,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// The component's atom, or null for a node without one, such as a spawn preview.
     /// Also null between its atom being unset and the view removing it at the end of the frame.
     /// </summary>
-    public ComponentPosition State => AtomService.Instance.Get(ComponentPosition.ById, Key);
+    public ComponentPosition State => Atoms.R.Get(ComponentPosition.ById, Key);
 
     /// <summary>
     /// The id of the component atom this node shows, in the stage its table shows.
@@ -603,7 +603,7 @@ public abstract partial class VisualComponentBase : Area3D
     public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
-    public bool IsDragging => State is { } s && AtomService.Instance.IsBeingDragged(s);
+    public bool IsDragging => State is { } s && Atoms.R.IsBeingDragged(s);
 
     private bool _logicalVisible = true;
 

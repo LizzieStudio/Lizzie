@@ -160,9 +160,11 @@ public partial class DebugConsole : Node
     /// </summary>
     private void Spam(int count)
     {
-        var R = AtomService.Instance;
-        var states = R
-            ?.Get(ComponentPosition.ByStage, ProjectService.Instance.GameObjects.ShownStage(R))
+        var states = Atoms
+            .R?.Get(
+                ComponentPosition.ByStage,
+                ProjectService.Instance.GameObjects.ShownStage(Atoms.R)
+            )
             .ToArray();
         if (EventSynchronizer.Instance == null || states == null || states.Length == 0)
         {
