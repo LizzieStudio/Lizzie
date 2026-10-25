@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
@@ -75,7 +76,10 @@ public partial class VcTray : VisualComponentGroup
         ShapeProfiles.Add(new OffsetShape2D(r));
 
         _prototype = R.Get(Prototype.ById, p.DispenseRef);
-        _item = _prototype == null ? null : PrototypeItemRef.First(_prototype.Parameters, R);
+        _item =
+            _prototype == null
+                ? null
+                : PrototypeItemRef.All(_prototype.Parameters, R).FirstOrDefault();
 
         UpdateNameLabel();
         CreateTrayPrototype();

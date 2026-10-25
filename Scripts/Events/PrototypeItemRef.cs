@@ -16,18 +16,20 @@ public abstract record PrototypeItemRef
     public abstract IEnumerable<SnowTag> Rows();
 
     /// <summary>
-    /// The first item of a prototype with these <paramref name="parameters"/>, or null.
+    /// Every item of a prototype with these <paramref name="parameters"/>, in order.
+    /// Empty for a prototype whose components aren't items.
     /// </summary>
-    /// <remarks>
-    /// A printed prototype spawns its deck or stack instead, so this is only for its other kinds.
-    /// </remarks>
-    public static PrototypeItemRef First(ComponentParameters parameters, IAtomReader R) =>
+    public static IReadOnlyList<PrototypeItemRef> All(
+        ComponentParameters parameters,
+        IAtomReader R
+    ) =>
         parameters switch
         {
-            DieParameters { Faces: TemplateSide side } => new DieItemRef(
-                side.Rows(R).FirstOrDefault()
-            ),
-            _ => null,
+            PrintedParameters printed => printed.Items(R),
+            DieParameters { Faces: TemplateSide side } => side.Rows(R)
+                .Select(row => new DieItemRef(row))
+                .ToList(),
+            _ => [],
         };
 }
 

@@ -38,7 +38,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         ShowTemplates();
 
         _preview = GetNode<ComponentPreview>("%Preview");
-        _preview.ItemSelected += (_, _) => UpdatePreview();
     }
 
     public override void _EnterTree()
@@ -60,10 +59,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     {
         var p = Parameters();
         _sidesInput.SetItemText(0, $"Auto (d{(p with { SideCount = 0 }).Resolve(R).Sides})");
-
-        int count = p.Faces is TemplateSide side ? side.Rows(R).Count : 1;
-        _preview.ItemCount = count;
-        _preview.MultiItemMode = count > 1;
 
         if (_previewScene != null && _previewScene != Utility.DieScene(p, R))
             Activate();
@@ -109,9 +104,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var rows = (p.Faces as TemplateSide)?.Rows(Atoms.R) ?? [];
-        var row = rows.ElementAtOrDefault(_preview.CurrentItem);
-        _preview.Build(p, new DieItemRef(row), TextureFactory);
+        _preview.Build(p, TextureFactory);
     }
 
     public override void DisplayPrototype(Prototype prototype)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Lizzie;
@@ -91,7 +92,7 @@ public partial class GameController : Node
             var item =
                 e.Item != null || prototype.Parameters is PrintedParameters
                     ? e.Item
-                    : PrototypeItemRef.First(prototype.Parameters, Atoms.R);
+                    : PrototypeItemRef.All(prototype.Parameters, Atoms.R).FirstOrDefault();
             var component = SingleComponentSpawn(prototype, item);
             if (component != null)
                 components.Add((component, Vector3.Zero));

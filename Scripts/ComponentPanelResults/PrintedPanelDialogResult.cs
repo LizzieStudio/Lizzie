@@ -65,9 +65,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
     private void Sync(IWatchReader R)
     {
         Submittable = GetParams().SidesFit(R);
-        int count = GetParams().CardCount(R);
-        _preview.ItemCount = count;
-        _preview.MultiItemMode = count > 1;
         UpdatePreview();
     }
 
@@ -133,7 +130,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         };
 
         _preview = GetNode<ComponentPreview>("%Preview");
-        _preview.ItemSelected += PreviewOnItemSelected;
 
         OnTypeChanged(0);
     }
@@ -311,11 +307,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        var parameters = GetParams();
-        _preview.Build(parameters, parameters.Item(_preview.CurrentItem, Atoms.R), TextureFactory);
+        _preview.Build(GetParams(), TextureFactory);
     }
-
-    private void PreviewOnItemSelected(object sender, ItemSelectedEventArgs e) => UpdatePreview();
 
     public override void DisplayPrototype(Prototype prototype)
     {

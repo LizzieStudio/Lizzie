@@ -276,9 +276,7 @@ public partial class PrototypeManifest : Window, ICommandView
         //update the preview
         _preview.ClearComponent();
 
-        var item = PrototypeItemRef.First(SelectedPrototype.Parameters, Atoms.R);
-
-        _preview.Build(SelectedPrototype, item, TextureFactory);
+        _preview.Build(SelectedPrototype, TextureFactory);
     }
 
     public TextureFactory TextureFactory { get; set; }

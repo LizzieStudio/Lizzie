@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Godot;
 
@@ -29,9 +30,8 @@ public partial class ComponentPreview : Panel
         _parentNode = GetNode<Node3D>("%Node3D");
         _previewLabel = GetNode<Label>("%PreviewLabel");
         _pageControl = GetNode<PageControl>("%PageControl");
-        _pageControl.ItemSelected += ChangePage;
+        _pageControl.ItemSelected += (_, _) => Atoms.R.QueueSync(this);
         _pageControl.Visible = false;
-        _pageControl.SetItemCount(ItemCount);
 
         _spinButton = GetNode<Button>("%SpinButton");
         _spinButton.Pressed += SpinButtonOnPressed;
@@ -61,6 +61,41 @@ public partial class ComponentPreview : Panel
 
         _camera = _subViewport.GetCamera3D();
     }
+
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
+    }
+
+    /// <summary>
+    /// Shows the item on the current page.
+    /// </summary>
+    private void Sync(IWatchReader R)
+    {
+        if (_component == null)
+            return;
+
+        var items =
+            _fixedItems
+            ?? (
+                _component.GetPrototype(R) is { } prototype
+                    ? PrototypeItemRef.All(prototype.Parameters, R)
+                    : []
+            );
+        _pageControl.ItemCount = items.Count;
+        _pageControl.Visible = items.Count > 1;
+        _previewLabel.Visible = items.Count <= 1;
+
+        var item = items.ElementAtOrDefault(_pageControl.CurrentItem);
+        if (!Equals(item, _component.Item))
+        {
+            _component.Item = item;
+            Atoms.R.QueueSync(_component);
+        }
+    }
+
+    // The items to page through instead of the prototype's, or null.
+    private IReadOnlyList<PrototypeItemRef> _fixedItems;
 
     private void SpinButtonOnPressed()
     {
@@ -104,24 +139,19 @@ public partial class ComponentPreview : Panel
 
     private VisualComponentBase _component;
 
-    private bool _componentActive;
-
     private bool _zoomPending;
 
     public void SetComponent(VisualComponentBase component, Vector3 rotation)
     {
-        if (_componentActive)
-        {
-            ClearComponent();
-        }
+        ClearComponent();
 
         _component = component;
-        _componentActive = true;
         _parentNode.Scale = Vector3.One;
         _zoomPending = true;
         component.Built += () => OnComponentBuilt(component);
         _parentNode.AddChild(_component);
         _component.Rotation = rotation;
+        Atoms.R.QueueSync(this);
     }
 
     /// <summary>
@@ -153,7 +183,6 @@ public partial class ComponentPreview : Panel
             return;
         _component.QueueFree();
         _component = null;
-        _componentActive = false;
     }
 
     public void SetComponentVisibility(bool visibility)
@@ -245,19 +274,14 @@ public partial class ComponentPreview : Panel
         }
     }
 
-    public void Build(ComponentParameters parameters, TextureFactory textureFactory) =>
-        Build(parameters, null, textureFactory);
-
-    public void Build(
-        ComponentParameters parameters,
-        PrototypeItemRef item,
-        TextureFactory textureFactory
-    )
+    /// <summary>
+    /// Shows unsaved <paramref name="parameters"/> on the component set with <see cref="SetComponent"/>.
+    /// </summary>
+    public void Build(ComponentParameters parameters, TextureFactory textureFactory)
     {
         if (_component == null)
             return;
 
-        _component.Item = item;
         _component.TextureFactory = textureFactory;
 
         var json = JsonSerializer.Serialize(parameters, LizzieJson.EventOptions);
@@ -268,32 +292,42 @@ public partial class ComponentPreview : Panel
             _draftId = SnowTag.Create();
         }
         _component.DraftPrototype = new Prototype { Id = _draftId, Parameters = parameters };
+        Atoms.R.QueueSync(this);
     }
 
     private string _draftJson;
     private SnowTag _draftId;
 
-    public void Build(Prototype prototype, PrototypeItemRef item, TextureFactory textureFactory)
-    {
-        var c = SpawnComponent(prototype, item);
-        c.TextureFactory = textureFactory;
-        SetComponent(c, GetRotationVector(prototype.Type));
-    }
+    /// <summary>
+    /// Shows <paramref name="prototype"/>, starting on its first item.
+    /// </summary>
+    public void Build(Prototype prototype, TextureFactory textureFactory) =>
+        Spawn(prototype, null, textureFactory);
 
-    private VisualComponentBase SpawnComponent(Prototype prototype, PrototypeItemRef item)
+    /// <summary>
+    /// Shows only <paramref name="item"/> of <paramref name="prototype"/>.
+    /// </summary>
+    public void Build(Prototype prototype, PrototypeItemRef item, TextureFactory textureFactory) =>
+        Spawn(prototype, [item], textureFactory);
+
+    private void Spawn(
+        Prototype prototype,
+        IReadOnlyList<PrototypeItemRef> fixedItems,
+        TextureFactory textureFactory
+    )
     {
         var s = Utility.ComponentTypeToScenePath(
             prototype.Type,
             prototype.Parameters,
             Atoms.R,
-            item != null,
-            true
+            previewMode: true
         );
-        var scene = GD.Load<PackedScene>(s);
-        var c = scene.Instantiate<VisualComponentBase>();
+        var c = GD.Load<PackedScene>(s).Instantiate<VisualComponentBase>();
         c.PrototypeRef = prototype.Id;
-        c.Item = item;
-        return c;
+        c.TextureFactory = textureFactory;
+        _fixedItems = fixedItems;
+        _pageControl.CurrentItem = 0;
+        SetComponent(c, GetRotationVector(prototype.Type));
     }
 
     private Vector3 GetRotationVector(VisualComponentBase.VisualComponentType componentType)
@@ -319,54 +353,6 @@ public partial class ComponentPreview : Panel
         };
         return v;
     }
-
-    #region Multi-preview mode
-
-    private bool _multiItemMode;
-
-    public bool MultiItemMode
-    {
-        get => _multiItemMode;
-        set
-        {
-            _multiItemMode = value;
-            _previewLabel.Visible = !value;
-            _pageControl.Visible = value;
-        }
-    }
-
-    private void ChangePage(object sender, ItemSelectedEventArgs e)
-    {
-        ItemSelected?.Invoke(this, new ItemSelectedEventArgs(CurrentItem));
-    }
-
-    private int _itemCount = 1;
-
-    public int ItemCount
-    {
-        get => _itemCount;
-        set
-        {
-            if (value < 1)
-            {
-                _itemCount = 1;
-            }
-            else
-            {
-                _itemCount = value;
-            }
-            _pageControl.SetItemCount(_itemCount);
-        }
-    }
-
-    /// <summary>
-    /// The item the page control shows.
-    /// </summary>
-    public int CurrentItem => _pageControl.CurrentItem;
-
-    public event EventHandler<ItemSelectedEventArgs> ItemSelected;
-
-    #endregion
 
     #region Viewing controls
 

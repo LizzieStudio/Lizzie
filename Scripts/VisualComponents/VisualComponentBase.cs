@@ -102,7 +102,7 @@ public abstract partial class VisualComponentBase : Area3D
     }
 
     /// <summary>The prototype this component shows. Possibly a draft or even deleted.</summary>
-    protected Prototype GetPrototype(IAtomReader R) =>
+    public Prototype GetPrototype(IAtomReader R) =>
         DraftPrototype ?? R.Get(Prototype.ById, PrototypeRef);
 
     private Tween _yTween;
