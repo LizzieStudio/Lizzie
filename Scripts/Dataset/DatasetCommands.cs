@@ -7,13 +7,13 @@ namespace Lizzie;
 /// <summary>
 /// Commands for a dataset's rows, columns, and cells.
 /// </summary>
-public static class DataSetCommands
+public static class DatasetCommands
 {
     /// <summary>
     /// Adds a row after the last. The dataset editor's add buttons and Enter on its last row run it.
     /// </summary>
     [Command("dataset.add_row")]
-    public static readonly Command AddRow = new AtomCommand<DataSet>
+    public static readonly Command AddRow = new AtomCommand<Dataset>
     {
         Icon = CommandIcons.Add,
         Caption = "Add Row",
@@ -26,7 +26,7 @@ public static class DataSetCommands
     /// Adds a column after the last. The dataset editor's add buttons run it.
     /// </summary>
     [Command("dataset.add_column")]
-    public static readonly Command AddColumn = new AtomCommand<DataSet>
+    public static readonly Command AddColumn = new AtomCommand<Dataset>
     {
         Icon = CommandIcons.Add,
         Caption = "Add Column",
@@ -36,12 +36,12 @@ public static class DataSetCommands
     };
 
     [Command("dataset.update_decks")]
-    public static readonly Command UpdateDecks = new AtomCommand<DataSet>
+    public static readonly Command UpdateDecks = new AtomCommand<Dataset>
     {
         Icon = CommandIcons.UpdateDecks,
         Caption = "Update Decks",
         Tooltip =
-            "Adds new components and removes deleted components from blueprint decks that show this DataSet.",
+            "Adds new components and removes deleted components from blueprint decks that show this Dataset.",
         MaxTargets = 1,
         ActsOn = Context.View,
         Requires =
@@ -86,7 +86,7 @@ public static class DataSetCommands
             EventBus.Instance.Publish(
                 new ShowDatasetEditor
                 {
-                    DatasetRef = rows[0].DataSetId,
+                    DatasetRef = rows[0].DatasetId,
                     SelectedRowRef = rows[0].Id,
                 }
             ),
@@ -168,9 +168,9 @@ public static class DataSetCommands
         List<SnowTag> AllColumns
     ) Block(IAtomReader R, IReadOnlyList<DataCell> cells)
     {
-        var dataSetId = R.Get(DataRow.ById, cells[0].Id.Row).DataSetId;
-        var allRows = R.GetRows(dataSetId);
-        var allColumns = R.GetColumns(dataSetId).Select(c => c.Id).ToList();
+        var datasetId = R.Get(DataRow.ById, cells[0].Id.Row).DatasetId;
+        var allRows = R.GetRows(datasetId);
+        var allColumns = R.GetColumns(datasetId).Select(c => c.Id).ToList();
         var rowIds = cells.Select(c => c.Id.Row).ToHashSet();
         var columnIds = cells.Select(c => c.Id.Column).ToHashSet();
         return (
@@ -215,7 +215,7 @@ public static class DataSetCommands
                 row = new DataRow
                 {
                     Id = SnowTag.Create(),
-                    DataSetId = rows[0].DataSetId,
+                    DatasetId = rows[0].DatasetId,
                     Rank = rank = rank.After(SnowportId.Create()),
                 };
                 changes.Add(row);
@@ -231,25 +231,25 @@ public static class DataSetCommands
     private static IEnumerable<IChange> Cleared(IAtomReader R, IReadOnlyList<DataCell> cells) =>
         cells.SelectMany(c => DataCell.Set(R, c.Id, string.Empty));
 
-    public static IEnumerable<Atom> NewRow(IAtomReader R, SnowTag dataSetId, int index) =>
+    public static IEnumerable<Atom> NewRow(IAtomReader R, SnowTag datasetId, int index) =>
         [
             new DataRow
             {
                 Id = SnowTag.Create(),
-                DataSetId = dataSetId,
-                Rank = SnowRank.At(R.GetRows(dataSetId), index, SnowportId.Create()),
+                DatasetId = datasetId,
+                Rank = SnowRank.At(R.GetRows(datasetId), index, SnowportId.Create()),
             },
         ];
 
-    public static IEnumerable<Atom> NewColumn(IAtomReader R, SnowTag dataSetId, int index)
+    public static IEnumerable<Atom> NewColumn(IAtomReader R, SnowTag datasetId, int index)
     {
-        var columns = R.GetColumns(dataSetId);
+        var columns = R.GetColumns(datasetId);
         return
         [
             new DataColumn
             {
                 Id = SnowTag.Create(),
-                DataSetId = dataSetId,
+                DatasetId = datasetId,
                 Rank = SnowRank.At(columns, index, SnowportId.Create()),
                 Name = $"Column {columns.Count + 1}",
             },

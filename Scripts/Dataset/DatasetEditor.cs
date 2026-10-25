@@ -32,7 +32,7 @@ public partial class DatasetEditor : Window, ICommandView
         public AtomRef Target => DataRow.ById.Ref(Row.Id);
     }
 
-    private DataSet _currentDataSet;
+    private Dataset _currentDataset;
 
     private VBoxContainer _mainContainer;
     private Button _newButton;
@@ -50,7 +50,7 @@ public partial class DatasetEditor : Window, ICommandView
     private Label _newDatasetErrorLabel;
 
     // The grid is built for one dataset's column layout and rebuilt when either changes.
-    private SnowTag _shownDataSetId = SnowTag.Empty;
+    private SnowTag _shownDatasetId = SnowTag.Empty;
     private List<SnowTag> _columnIds = new();
     private readonly List<HeaderCell> _headerCells = new();
     private readonly Dictionary<SnowTag, float> _columnWidths = new();
@@ -111,7 +111,7 @@ public partial class DatasetEditor : Window, ICommandView
         // The local player's inserts focus the row they add, or start renaming the column,
         // once the grid shows it. A row insert writes only the new row.
         foreach (
-            var insert in new Command[] { InsertRowAbove, InsertRowBelow, DataSetCommands.AddRow }
+            var insert in new Command[] { InsertRowAbove, InsertRowBelow, DatasetCommands.AddRow }
         )
             Atoms.R.Listen(
                 this,
@@ -124,7 +124,7 @@ public partial class DatasetEditor : Window, ICommandView
             {
                 InsertColumnLeft,
                 InsertColumnRight,
-                DataSetCommands.AddColumn,
+                DatasetCommands.AddColumn,
             }
         )
             Atoms.R.Listen(
@@ -147,10 +147,10 @@ public partial class DatasetEditor : Window, ICommandView
     #region ICommandView
 
     /// <summary>The shown dataset. Setting it to empty opens the first one.</summary>
-    public WatchableValue<SnowTag> ShownDataSet { get; } = new();
+    public WatchableValue<SnowTag> ShownDataset { get; } = new();
 
     public ViewPlace? Place(IAtomReader R) =>
-        R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty
+        R.Get(ShownDataset) is var shown && shown != SnowTag.Empty
             ? ViewPlace.Of(this, shown)
             : null;
 
@@ -160,7 +160,7 @@ public partial class DatasetEditor : Window, ICommandView
             : R.Get(target) is { } atom && atom is not DataRow { Deleted: true };
 
     public AtomRef? Shown(IAtomReader R) =>
-        R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty ? DataSet.ById.Ref(shown) : null;
+        R.Get(ShownDataset) is var shown && shown != SnowTag.Empty ? Dataset.ById.Ref(shown) : null;
 
     /// <summary>
     /// The commands only the editor offers, since they act on its grid.
@@ -264,30 +264,30 @@ public partial class DatasetEditor : Window, ICommandView
     {
         // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
         // so the editor stays on it, where redo brings it back.
-        var id = R.Get(ShownDataSet);
+        var id = R.Get(ShownDataset);
         var ds =
-            id != SnowTag.Empty ? R.Get(DataSet.ById, id) : R.Get(DataSet.All).FirstOrDefault();
+            id != SnowTag.Empty ? R.Get(Dataset.ById, id) : R.Get(Dataset.All).FirstOrDefault();
         if (ds != null)
-            ShownDataSet.Value = ds.Id;
+            ShownDataset.Value = ds.Id;
 
-        _datasetList.SelectedAtom = ShownDataSet.Value;
-        _currentDataSet = ds;
+        _datasetList.SelectedAtom = ShownDataset.Value;
+        _currentDataset = ds;
 
         if (ds == null)
             ClearGrid();
         else
-            ShowDataSet(R, ds);
+            ShowDataset(R, ds);
     }
 
-    private void ShowDataSet(IAtomReader R, DataSet ds)
+    private void ShowDataset(IAtomReader R, Dataset ds)
     {
         var columns = R.GetColumns(ds.Id);
         var columnIds = columns.Select(c => c.Id).ToList();
-        if (ds.Id != _shownDataSetId || !columnIds.SequenceEqual(_columnIds))
+        if (ds.Id != _shownDatasetId || !columnIds.SequenceEqual(_columnIds))
         {
-            _addedColumns = ds.Id == _shownDataSetId ? columnIds.Except(_columnIds).ToList() : [];
+            _addedColumns = ds.Id == _shownDatasetId ? columnIds.Except(_columnIds).ToList() : [];
             ClearGrid();
-            _shownDataSetId = ds.Id;
+            _shownDatasetId = ds.Id;
             _columnIds = columnIds;
             BuildGrid();
         }
@@ -367,8 +367,8 @@ public partial class DatasetEditor : Window, ICommandView
         _newButton.Pressed += OnNewDatasetPressed;
 
         _datasetList = GetNode<AtomSelector>("%DatasetList");
-        _datasetList.Items = R => R.Get(DataSet.All).Select(d => (d.Name, d.Id));
-        _datasetList.AtomSelected += id => ShownDataSet.Value = id;
+        _datasetList.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
+        _datasetList.AtomSelected += id => ShownDataset.Value = id;
 
         InitializeNewDatasetDialog();
     }
@@ -431,8 +431,8 @@ public partial class DatasetEditor : Window, ICommandView
         if (string.IsNullOrWhiteSpace(name))
             return;
 
-        var ds = new DataSet { Id = SnowTag.Create(), Name = name };
-        ShownDataSet.Value = ds.Id;
+        var ds = new Dataset { Id = SnowTag.Create(), Name = name };
+        ShownDataset.Value = ds.Id;
         Atoms.R.Write(this, ds);
     }
 
@@ -469,7 +469,7 @@ public partial class DatasetEditor : Window, ICommandView
             _headerCells.Add(header);
         }
 
-        _headerContainer.AddChild(AddButton(DataSetCommands.AddColumn, HeaderHeight));
+        _headerContainer.AddChild(AddButton(DatasetCommands.AddColumn, HeaderHeight));
 
         // Lets the header scroll as far as the data, whose view is narrowed by its vertical scrollbar.
         var spacer = new Control();
@@ -478,7 +478,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         _addRowLine = new HBoxContainer();
         _dataContainer.AddChild(_addRowLine);
-        _addRowLine.AddChild(AddButton(DataSetCommands.AddRow, RowHeaderWidth));
+        _addRowLine.AddChild(AddButton(DatasetCommands.AddRow, RowHeaderWidth));
     }
 
     // A "+" icon after the last row or column, doing what the toolbar's button does.
@@ -509,7 +509,7 @@ public partial class DatasetEditor : Window, ICommandView
         }
         _headerCells.Clear();
 
-        _shownDataSetId = SnowTag.Empty;
+        _shownDatasetId = SnowTag.Empty;
         _columnIds = new List<SnowTag>();
     }
 
@@ -717,7 +717,7 @@ public partial class DatasetEditor : Window, ICommandView
                 // Writes the cell first, so the paste starts from what it shows.
                 // Then it pastes as Ctrl+V would outside a cell.
                 GuiReleaseFocus();
-                var paste = DataSetCommands.PasteCells;
+                var paste = DatasetCommands.PasteCells;
                 paste.Run(
                     CommandResolver.TargetsFor(
                         paste,
@@ -782,7 +782,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
     private void AddRow() =>
-        DataSetCommands.AddRow.Run([DataSet.ById.Ref(ShownDataSet.Value)], this);
+        DatasetCommands.AddRow.Run([Dataset.ById.Ref(ShownDataset.Value)], this);
 
     private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
@@ -878,7 +878,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        var columns = Atoms.R.GetColumns(ShownDataSet.Value);
+        var columns = Atoms.R.GetColumns(ShownDataset.Value);
         int from = columns.FindIndex(c => c.Id == columnId);
         if (from < 0)
             return;
@@ -1017,7 +1017,7 @@ public partial class DatasetEditor : Window, ICommandView
         Icon = CommandIcons.InsertRowAbove,
         Caption = "Insert Row Above",
         MaxTargets = 1,
-        Effects = (R, rows) => DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0])),
+        Effects = (R, rows) => DatasetCommands.NewRow(R, rows[0].DatasetId, RowIndex(R, rows[0])),
     };
 
     [Command("dataset.insert_row_below")]
@@ -1027,7 +1027,7 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Row Below",
         MaxTargets = 1,
         Effects = (R, rows) =>
-            DataSetCommands.NewRow(R, rows[0].DataSetId, RowIndex(R, rows[0]) + 1),
+            DatasetCommands.NewRow(R, rows[0].DatasetId, RowIndex(R, rows[0]) + 1),
     };
 
     [Command("dataset.insert_column_left")]
@@ -1037,7 +1037,7 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Column Left",
         MaxTargets = 1,
         Effects = (R, columns) =>
-            DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0])),
+            DatasetCommands.NewColumn(R, columns[0].DatasetId, ColumnIndex(R, columns[0])),
     };
 
     [Command("dataset.insert_column_right")]
@@ -1047,16 +1047,16 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Column Right",
         MaxTargets = 1,
         Effects = (R, columns) =>
-            DataSetCommands.NewColumn(R, columns[0].DataSetId, ColumnIndex(R, columns[0]) + 1),
+            DatasetCommands.NewColumn(R, columns[0].DatasetId, ColumnIndex(R, columns[0]) + 1),
     };
 
     // The row's place in its dataset.
     private static int RowIndex(IAtomReader R, DataRow row) =>
-        R.GetRows(row.DataSetId).FindIndex(r => r.Id == row.Id);
+        R.GetRows(row.DatasetId).FindIndex(r => r.Id == row.Id);
 
     // The column's place in its dataset.
     private static int ColumnIndex(IAtomReader R, DataColumn column) =>
-        R.GetColumns(column.DataSetId).FindIndex(c => c.Id == column.Id);
+        R.GetColumns(column.DatasetId).FindIndex(c => c.Id == column.Id);
 
     private void OnRenameColumn(RenameColumnEvent e)
     {
@@ -1067,7 +1067,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void OnImportPressed()
     {
-        if (_currentDataSet == null)
+        if (_currentDataset == null)
             return;
 
         var dialog = new FileDialog
@@ -1081,7 +1081,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         dialog.FileSelected += path =>
         {
-            CsvImport.Replace(this, Atoms.R, _currentDataSet, path);
+            CsvImport.Replace(this, Atoms.R, _currentDataset, path);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;

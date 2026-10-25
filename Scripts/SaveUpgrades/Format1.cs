@@ -58,7 +58,7 @@ public sealed class Format1 : IStep
                 );
 
             foreach (var (name, dataset) in (JsonObject)project["Datasets"])
-                DataSet(name, (JsonObject)dataset);
+                Dataset(name, (JsonObject)dataset);
 
             foreach (var (name, template) in (JsonObject)project["Templates"])
             {
@@ -71,7 +71,7 @@ public sealed class Format1 : IStep
                 };
                 Copy((JsonObject)template, atom, "SizeTemplate", "Width", "Height");
                 if ((string)template["DataSet"] is { Length: > 0 } dataset)
-                    atom["dataSet"] = Tag("dataset", dataset);
+                    atom["dataset"] = Tag("dataset", dataset);
                 _writes.Add(atom);
             }
 
@@ -128,13 +128,13 @@ public sealed class Format1 : IStep
         /// <summary>
         /// A dataset, with each row's name in a first column called Name.
         /// </summary>
-        private void DataSet(string name, JsonObject old)
+        private void Dataset(string name, JsonObject old)
         {
             int dataset = Tag("dataset", name);
             _writes.Add(
                 new JsonObject
                 {
-                    ["$type"] = "DataSet",
+                    ["$type"] = "Dataset",
                     ["id"] = dataset,
                     ["name"] = name,
                 }
@@ -152,7 +152,7 @@ public sealed class Format1 : IStep
                             {
                                 ["$type"] = "DataColumn",
                                 ["id"] = tag,
-                                ["dataSetId"] = dataset,
+                                ["datasetId"] = dataset,
                                 ["rank"] = Rank(i),
                                 ["name"] = column,
                             }
@@ -171,7 +171,7 @@ public sealed class Format1 : IStep
                     {
                         ["$type"] = "DataRow",
                         ["id"] = tag,
-                        ["dataSetId"] = dataset,
+                        ["datasetId"] = dataset,
                         ["rank"] = Rank(rows.Count),
                     }
                 );
@@ -529,7 +529,7 @@ public sealed class Format1 : IStep
                     ["variantRef"] = Variant(
                         id,
                         (string)c["PrototypeRef"],
-                        (string)c["DataSetRow"] ?? "",
+                        (string)c["DatasetRow"] ?? "",
                         container != null && _prototypes[prototypes[container]].Type == 6
                             ? Tag("component", container)
                             : null

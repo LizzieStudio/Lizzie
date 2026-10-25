@@ -11,7 +11,7 @@ public static class CsvImport
     /// Replaces the rows of <paramref name="dataset"/> with those in the CSV file at <paramref name="path"/>,
     /// in one event made from <paramref name="from"/>. The first line names the columns: if they differ from the dataset's, they replace them.
     /// </summary>
-    public static void Replace(Node from, IAtomReader R, DataSet dataset, string path)
+    public static void Replace(Node from, IAtomReader R, Dataset dataset, string path)
     {
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         if (file == null)
@@ -48,7 +48,7 @@ public static class CsvImport
                 .Select(h => new DataColumn
                 {
                     Id = SnowTag.Create(),
-                    DataSetId = dataset.Id,
+                    DatasetId = dataset.Id,
                     Rank = columnRank = columnRank.After(SnowportId.Create()),
                     Name = h,
                 })
@@ -66,7 +66,7 @@ public static class CsvImport
             var row = new DataRow
             {
                 Id = SnowTag.Create(),
-                DataSetId = dataset.Id,
+                DatasetId = dataset.Id,
                 Rank = rank,
             };
             changes.Add(row);

@@ -178,11 +178,11 @@ public readonly record struct SingletonId;
 /// <summary>
 /// A way to list atoms of <typeparamref name="T"/> by a key of <typeparamref name="K"/>.
 ///
-/// <code>public static readonly Lookup&lt;DataRow, SnowTag&gt; ByDataSet = new(r => r.DataSetId);</code>
+/// <code>public static readonly Lookup&lt;DataRow, SnowTag&gt; ByDataset = new(r => r.DatasetId);</code>
 ///
-/// You could read from one of the keys of <c>ByDataSet</c> with
+/// You could read from one of the keys of <c>ByDataset</c> with
 ///
-/// <code>R.Get(DataRow.ByDataSet, dataSetId)</code>
+/// <code>R.Get(DataRow.ByDataset, datasetId)</code>
 ///
 /// You may declare multiple Lookups on one atom type.
 /// Returning null for a key keeps the atom out of the lookup.

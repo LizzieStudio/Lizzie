@@ -124,14 +124,14 @@ layout_mode = 2
 [node name="Label" type="Label" parent="Template/VBoxContainer/DatasetRow" unique_id=1682498648]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-text = "DataSet:"
+text = "Dataset:"
 
 [node name="DatasetList" parent="Template/VBoxContainer/DatasetRow" unique_id=2077028222 instance=ExtResource("8_selector")]
 layout_mode = 2
 
 [node name="EditDataset" type="Button" parent="Template/VBoxContainer/DatasetRow" unique_id=1932239799]
 layout_mode = 2
-tooltip_text = "DataSet Editor"
+tooltip_text = "Dataset Editor"
 icon = ExtResource("9_pencil")
 
 [node name="QuantityRow" type="HBoxContainer" parent="Template/VBoxContainer" unique_id=1442731324]

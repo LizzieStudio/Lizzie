@@ -4,17 +4,17 @@ using System.Linq;
 
 namespace Lizzie;
 
-[JsonName("DataSet")]
-public record DataSet : Atom
+[JsonName("Dataset")]
+public record Dataset : Atom
 {
-    public static readonly Identity<DataSet, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Dataset, SnowTag> ById = new(r => r.Id);
 
     /// <summary>
     /// This atom's identity, created with <see cref="SnowTag.Create"/>.
     /// </summary>
     public required SnowTag Id { get; init; }
 
-    public static readonly All<DataSet> All = new();
+    public static readonly All<Dataset> All = new();
 
     public string Name { get; init; }
 }
@@ -35,12 +35,12 @@ public record DataColumn : Atom, IRanked
     /// <summary>
     /// The columns of each dataset, in no order. <see cref="AtomReaderExtensions.GetColumns"/> sorts them.
     /// </summary>
-    public static readonly Lookup<DataColumn, SnowTag> ByDataSet = new(c => c.DataSetId);
+    public static readonly Lookup<DataColumn, SnowTag> ByDataset = new(c => c.DatasetId);
 
     /// <summary>
     /// The dataset this column belongs to.
     /// </summary>
-    public SnowTag DataSetId { get; init; }
+    public SnowTag DatasetId { get; init; }
 
     /// <summary>
     /// The position of this column in its dataset.
@@ -53,12 +53,12 @@ public record DataColumn : Atom, IRanked
     /// A cell for each of the dataset's rows.
     /// </summary>
     public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
-        R.Get(DataRow.ByDataSet, DataSetId).Select(r => DataCell.ById.Ref(new CellId(r.Id, Id)));
+        R.Get(DataRow.ByDataset, DatasetId).Select(r => DataCell.ById.Ref(new CellId(r.Id, Id)));
 
     /// <summary>
     /// A column is inside its dataset.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IAtomReader R) => [DataSet.ById.Ref(DataSetId)];
+    public override IEnumerable<AtomRef> Containers(IAtomReader R) => [Dataset.ById.Ref(DatasetId)];
 }
 
 /// <summary>
@@ -77,14 +77,14 @@ public record DataRow : Atom, IRanked
     /// <summary>
     /// The rows of each dataset that aren't deleted, in no order. <see cref="AtomReaderExtensions.GetRows"/> sorts them.
     /// </summary>
-    public static readonly Lookup<DataRow, SnowTag?> ByDataSet = new(r =>
-        r.Deleted ? null : r.DataSetId
+    public static readonly Lookup<DataRow, SnowTag?> ByDataset = new(r =>
+        r.Deleted ? null : r.DatasetId
     );
 
     /// <summary>
     /// The dataset this row belongs to.
     /// </summary>
-    public SnowTag DataSetId { get; init; }
+    public SnowTag DatasetId { get; init; }
 
     /// <summary>
     /// The position of this row in its dataset.
@@ -100,12 +100,12 @@ public record DataRow : Atom, IRanked
     /// A cell for each of the dataset's columns.
     /// </summary>
     public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
-        R.GetColumns(DataSetId).Select(c => DataCell.ById.Ref(new CellId(Id, c.Id)));
+        R.GetColumns(DatasetId).Select(c => DataCell.ById.Ref(new CellId(Id, c.Id)));
 
     /// <summary>
     /// A row is inside its dataset.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IAtomReader R) => [DataSet.ById.Ref(DataSetId)];
+    public override IEnumerable<AtomRef> Containers(IAtomReader R) => [Dataset.ById.Ref(DatasetId)];
 }
 
 /// <summary>
@@ -123,7 +123,7 @@ public record DataCell : Atom
     );
 
     /// <summary>
-    /// Whether a cell's row and column are both in this DataSet.
+    /// Whether a cell's row and column are both in this Dataset.
     /// </summary>
     public static bool InGrid(IAtomReader R, CellId id) =>
         R.Get(DataRow.ById, id.Row) is { Deleted: false }

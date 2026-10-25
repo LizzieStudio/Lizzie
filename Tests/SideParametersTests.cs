@@ -165,12 +165,12 @@ public class SideParametersTests
             return new DataRow
             {
                 Id = id,
-                DataSetId = dataset,
+                DatasetId = dataset,
                 Rank = rank,
             };
         }
         var R = new ListReader(
-            new DataColumn { Id = quantity, DataSetId = dataset },
+            new DataColumn { Id = quantity, DatasetId = dataset },
             Row(a),
             Row(b),
             Row(c),
@@ -197,11 +197,11 @@ public class SideParametersTests
             kept = new(2),
             deleted = new(3);
         var R = new ListReader(
-            new DataRow { Id = kept, DataSetId = dataset },
+            new DataRow { Id = kept, DatasetId = dataset },
             new DataRow
             {
                 Id = deleted,
-                DataSetId = dataset,
+                DatasetId = dataset,
                 Deleted = true,
             }
         );

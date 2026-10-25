@@ -36,7 +36,7 @@ public class SaveCompactionTests
             ComponentVariant v => v.Id,
             Stage s => s.Id,
             Prototype p => p.Id,
-            DataSet d => d.Id,
+            Dataset d => d.Id,
             DataRow r => r.Id,
             DataColumn c => c.Id,
             _ => throw new ArgumentException($"No id for a {atom.GetType().Name}."),
@@ -200,26 +200,26 @@ public class SaveCompactionTests
         );
 
     [Fact]
-    public void ADataSetKeepsItsRows() =>
+    public void ADatasetKeepsItsRows() =>
         AssertKept(
-            [new DataSet { Id = Tag(1) }, new DataRow { Id = Tag(2), DataSetId = Tag(1) }],
+            [new Dataset { Id = Tag(1) }, new DataRow { Id = Tag(2), DatasetId = Tag(1) }],
             1,
             2
         );
 
     [Fact]
-    public void RowsOfAMissingDataSetAreDropped() =>
-        AssertKept([new DataRow { Id = Tag(2), DataSetId = Tag(1) }]);
+    public void RowsOfAMissingDatasetAreDropped() =>
+        AssertKept([new DataRow { Id = Tag(2), DatasetId = Tag(1) }]);
 
     [Fact]
     public void ADeletedRowIsDropped() =>
         AssertKept(
             [
-                new DataSet { Id = Tag(1) },
+                new Dataset { Id = Tag(1) },
                 new DataRow
                 {
                     Id = Tag(2),
-                    DataSetId = Tag(1),
+                    DatasetId = Tag(1),
                     Deleted = true,
                 },
             ],
@@ -230,11 +230,11 @@ public class SaveCompactionTests
     public void ADeletedRowACardShowsIsKept() =>
         AssertKept(
             [
-                new DataSet { Id = Tag(1) },
+                new Dataset { Id = Tag(1) },
                 new DataRow
                 {
                     Id = Tag(2),
-                    DataSetId = Tag(1),
+                    DatasetId = Tag(1),
                     Deleted = true,
                 },
                 Component(3) with
@@ -260,9 +260,9 @@ public class SaveCompactionTests
     {
         Atom[] atoms =
         [
-            new DataSet { Id = Tag(1) },
-            .. row ? [new DataRow { Id = Tag(2), DataSetId = Tag(1) }] : Array.Empty<Atom>(),
-            .. column ? [new DataColumn { Id = Tag(3), DataSetId = Tag(1) }] : Array.Empty<Atom>(),
+            new Dataset { Id = Tag(1) },
+            .. row ? [new DataRow { Id = Tag(2), DatasetId = Tag(1) }] : Array.Empty<Atom>(),
+            .. column ? [new DataColumn { Id = Tag(3), DatasetId = Tag(1) }] : Array.Empty<Atom>(),
             Cell(2, 3),
         ];
         var cells = SaveCompaction.Collect(atoms).OfType<DataCell>().Count();
@@ -305,8 +305,8 @@ public class SaveCompactionTests
     {
         var json = SaveCompaction.Serialize(
             Save(
-                new DataRow { Id = Tag(41), DataSetId = Tag(40) },
-                new DataColumn { Id = Tag(50), DataSetId = Tag(40) },
+                new DataRow { Id = Tag(41), DatasetId = Tag(40) },
+                new DataColumn { Id = Tag(50), DatasetId = Tag(40) },
                 Cell(41, 50)
             )
         );

@@ -31,7 +31,7 @@ public partial class TemplateSideTab : SideTab
     public override void _Ready()
     {
         ShowsTemplates = t => t.Sides == 0;
-        _dataset.Items = R => R.Get(DataSet.All).Select(d => (d.Name, d.Id));
+        _dataset.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
         _template.AtomSelected += id =>
         {
             _templateRef = id;

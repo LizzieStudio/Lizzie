@@ -283,7 +283,7 @@
                 "const": "DataColumn"
               },
               "id": true,
-              "dataSetId": true,
+              "datasetId": true,
               "rank": true,
               "name": {
                 "type": [
@@ -303,7 +303,7 @@
                 "const": "DataRow"
               },
               "id": true,
-              "dataSetId": true,
+              "datasetId": true,
               "rank": true,
               "deleted": {
                 "type": "boolean"
@@ -317,7 +317,7 @@
           {
             "properties": {
               "$type": {
-                "const": "DataSet"
+                "const": "Dataset"
               },
               "id": true,
               "name": {
@@ -1050,7 +1050,7 @@
                   }
                 }
               },
-              "dataSet": true
+              "dataset": true
             },
             "required": [
               "id"

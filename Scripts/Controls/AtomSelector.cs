@@ -31,7 +31,7 @@ public partial class AtomSelector : OptionButton
     /// and returns the atoms listed by name and id.
     ///
     /// <code>
-    /// _selector.Items = R => R.Get(DataSet.All).Select(d => (d.Name, d.Id));
+    /// _selector.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
     /// </code>
     /// </summary>
     public Func<IWatchReader, IEnumerable<(string Name, SnowTag Id)>> Items

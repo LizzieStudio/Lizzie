@@ -73,7 +73,7 @@ public partial class GameController : Node
         if (
             e.AllRows
             && prototype.Parameters is DieParameters { Faces: TemplateSide side } die
-            && Atoms.R.Get(DataSet.ById, side.Dataset) != null
+            && Atoms.R.Get(Dataset.ById, side.Dataset) != null
         )
         {
             SpawnRows(prototype, side, die.Size / 10f, components);

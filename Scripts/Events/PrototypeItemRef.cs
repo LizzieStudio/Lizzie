@@ -46,7 +46,7 @@ public sealed record PrintedItemRef(FaceKey Front, FaceKey Back) : PrototypeItem
 /// <summary>
 /// A die made from a <see cref="DataRow"/>.
 /// </summary>
-/// <param name="Row">The row of the DataSet its faces show.</param>
+/// <param name="Row">The row of the Dataset its faces show.</param>
 [JsonName("DieItem")]
 public sealed record DieItemRef(SnowTag Row) : PrototypeItemRef
 {

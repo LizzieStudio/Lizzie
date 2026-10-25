@@ -185,13 +185,13 @@ public static class AtomReaderExtensions
     /// The rows of a dataset that aren't deleted, in order.
     /// </summary>
     public static List<DataRow> GetRows(this IAtomReader R, SnowTag datasetRef) =>
-        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataRow.ByDataSet, datasetRef));
+        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataRow.ByDataset, datasetRef));
 
     /// <summary>
     /// The columns of a dataset in order.
     /// </summary>
     public static List<DataColumn> GetColumns(this IAtomReader R, SnowTag datasetRef) =>
-        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataColumn.ByDataSet, datasetRef));
+        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataColumn.ByDataset, datasetRef));
 
     private static List<T> Ranked<T>(IEnumerable<T> items)
         where T : IRanked
@@ -208,7 +208,7 @@ public static class AtomReaderExtensions
     public static IReadOnlyDictionary<string, string> Values(this IAtomReader R, DataRow row)
     {
         var values = new Dictionary<string, string>();
-        foreach (var column in R.GetColumns(row.DataSetId))
+        foreach (var column in R.GetColumns(row.DatasetId))
             values.TryAdd(
                 column.Name,
                 R.Get(DataCell.ById, new CellId(row.Id, column.Id))?.Value ?? string.Empty

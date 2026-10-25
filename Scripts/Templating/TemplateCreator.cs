@@ -80,7 +80,7 @@ public partial class TemplateCreator : Window, ICommandView
     private Button _newButton;
     private Button _saveButton;
     private Panel _previewWindow;
-    private AtomSelector _dataSetSelector;
+    private AtomSelector _datasetSelector;
 
     private PageControl _pageControl;
 
@@ -169,10 +169,10 @@ public partial class TemplateCreator : Window, ICommandView
         _cardSizes.ItemSelected += _ => SetHasUnsavedChanges();
         InitializeStandardSizes();
 
-        _dataSetSelector = GetNode<AtomSelector>("%Dataset");
-        _dataSetSelector.Items = R => R.Get(DataSet.All).Select(d => (d.Name, d.Id));
-        _dataSetSelector.AtomSelected += OnDatasetChanged;
-        _dataSetSelector.AtomSelected += _ => SetHasUnsavedChanges();
+        _datasetSelector = GetNode<AtomSelector>("%Dataset");
+        _datasetSelector.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
+        _datasetSelector.AtomSelected += OnDatasetChanged;
+        _datasetSelector.AtomSelected += _ => SetHasUnsavedChanges();
 
         _pageControl = GetNode<PageControl>("%PageControl");
         _pageControl.Hide();
@@ -1595,14 +1595,14 @@ public partial class TemplateCreator : Window, ICommandView
     //Different dataset has been selected by the user
     private void OnDatasetChanged(SnowTag datasetRef)
     {
-        EditCurrentTemplate(t => t with { DataSet = datasetRef });
+        EditCurrentTemplate(t => t with { Dataset = datasetRef });
         _pageControl.CurrentItem = 0;
         Atoms.R.QueueSync(this);
     }
 
     private void MapDataset()
     {
-        _dataSetSelector.SelectedAtom = CurrentTemplate.DataSet;
+        _datasetSelector.SelectedAtom = CurrentTemplate.Dataset;
         _pageControl.CurrentItem = 0;
         Atoms.R.QueueSync(this);
     }
@@ -1611,8 +1611,8 @@ public partial class TemplateCreator : Window, ICommandView
     {
         _updateRequired = true;
 
-        var datasetRef = CurrentTemplate?.DataSet ?? SnowTag.Empty;
-        var dataset = R.Get(DataSet.ById, datasetRef);
+        var datasetRef = CurrentTemplate?.Dataset ?? SnowTag.Empty;
+        var dataset = R.Get(Dataset.ById, datasetRef);
         if (dataset == null)
         {
             _textureContext.Values = null;

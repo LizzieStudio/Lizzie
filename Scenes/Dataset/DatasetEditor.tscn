@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dbskxotmh6h06"]
 
-[ext_resource type="Script" uid="uid://jnas4vg7if7d" path="res://Scripts/DataSet/DatasetEditor.cs" id="1_aexr7"]
+[ext_resource type="Script" uid="uid://jnas4vg7if7d" path="res://Scripts/Dataset/DatasetEditor.cs" id="1_aexr7"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="2_o5pyl"]
 [ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/AtomSelector.tscn" id="3_dssel"]
 [ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="4_cmdbtn"]

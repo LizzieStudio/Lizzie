@@ -44,7 +44,7 @@ public enum Context
     Selected = 1,
 
     /// <summary>
-    /// Atoms that are contained within the selected targets, like a deck's cards or a DataSet's rows.
+    /// Atoms that are contained within the selected targets, like a deck's cards or a Dataset's rows.
     /// </summary>
     Contents = 2,
 

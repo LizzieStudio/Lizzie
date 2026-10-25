@@ -25,9 +25,9 @@ public class Format1Tests
               "Mode": 3, "FrontTemplate": "Card", "BackTemplate": "", "Dataset": "Things" } } },
           "Images": {},
           "GameStates": { "Setup": { "Name": "Setup", "CapturedAt": "2026-01-01T00:00:00Z", "Components": [
-            { "ComponentRef": "deck", "PrototypeRef": "d1", "DataSetRow": "", "Px": 1.5, "Pz": -2, "ZOrder": 1,
+            { "ComponentRef": "deck", "PrototypeRef": "d1", "DatasetRow": "", "Px": 1.5, "Pz": -2, "ZOrder": 1,
               "ContainedComponents": [ "card" ] },
-            { "ComponentRef": "card", "PrototypeRef": "d1", "DataSetRow": "Bow", "Px": 0, "Pz": 0, "ZOrder": 2,
+            { "ComponentRef": "card", "PrototypeRef": "d1", "DatasetRow": "Bow", "Px": 0, "Pz": 0, "ZOrder": 2,
               "ContainedComponents": [] } ] } },
           "GameSettings": { "TableColorR": 0.5, "TableColorG": 0.5, "TableColorB": 0.5, "TableColorA": 1,
             "Players": [ { "Name": "Seat 1", "ColorR": 1, "ColorG": 0, "ColorB": 0, "ColorA": 1 } ] }
@@ -58,8 +58,8 @@ public class Format1Tests
     public void TemplatesAndDecksReferToTheirDataset()
     {
         var writes = Writes();
-        var dataset = (int)Assert.Single(OfType(writes, "DataSet"))["id"];
-        Assert.Equal(dataset, (int)Assert.Single(OfType(writes, "Template"))["dataSet"]);
+        var dataset = (int)Assert.Single(OfType(writes, "Dataset"))["id"];
+        Assert.Equal(dataset, (int)Assert.Single(OfType(writes, "Template"))["dataset"]);
         var side = Assert.Single(OfType(writes, "Prototype"))["parameters"]["front"];
         Assert.Equal("TemplateSide", (string)side["$type"]);
         Assert.Equal(dataset, (int)side["dataset"]);
@@ -105,7 +105,7 @@ public class Format1Tests
             "Parameters": { "ComponentName": "Quick", "BaseName": "Printed", "Height": 88.9, "Width": 63.5,
               "Mode": 5, "QuickCardData": [ { "Caption": "Ace" }, { "Caption": "1-3" } ] } } },
           "GameStates": { "Setup": { "Name": "Setup", "CapturedAt": "2026-01-01T00:00:00Z", "Components": [
-            { "ComponentRef": "card", "PrototypeRef": "q1", "DataSetRow": "2", "Px": 0, "Pz": 0, "ZOrder": 1,
+            { "ComponentRef": "card", "PrototypeRef": "q1", "DatasetRow": "2", "Px": 0, "Pz": 0, "ZOrder": 1,
               "ContainedComponents": [] } ] } },
           "GameSettings": { "TableColorR": 0.5, "TableColorG": 0.5, "TableColorB": 0.5, "TableColorA": 1,
             "Players": [] }

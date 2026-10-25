@@ -293,12 +293,12 @@ public partial class UI : CanvasLayer
     {
         if (!BroughtForward(_datasetEditor))
         {
-            string s = "res://Scenes/DataSet/DatasetEditor.tscn";
+            string s = "res://Scenes/Dataset/DatasetEditor.tscn";
             _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
             _modalDialogs.AddChild(_datasetEditor);
         }
         if (e.DatasetRef != SnowTag.Empty)
-            _datasetEditor.ShownDataSet.Value = e.DatasetRef;
+            _datasetEditor.ShownDataset.Value = e.DatasetRef;
         if (e.SelectedRowRef != SnowTag.Empty)
             _datasetEditor.RevealRow(e.SelectedRowRef);
     }
