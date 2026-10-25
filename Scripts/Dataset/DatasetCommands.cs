@@ -18,7 +18,7 @@ public static class DatasetCommands
         Icon = CommandIcons.Add,
         Caption = "Add Row",
         MaxTargets = 1,
-        ActsOn = Context.View,
+        ActsOn = Context.Subject,
         Effects = (R, sets) => NewRow(R, sets[0].Id, R.GetRows(sets[0].Id).Count),
     };
 
@@ -31,7 +31,7 @@ public static class DatasetCommands
         Icon = CommandIcons.Add,
         Caption = "Add Column",
         MaxTargets = 1,
-        ActsOn = Context.View,
+        ActsOn = Context.Subject,
         Effects = (R, sets) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
     };
 
@@ -47,7 +47,7 @@ public static class DatasetCommands
             * Retired cards are removed.
             """,
         MaxTargets = 1,
-        ActsOn = Context.View,
+        ActsOn = Context.Subject,
         Requires =
         [
             (

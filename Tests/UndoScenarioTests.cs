@@ -19,8 +19,8 @@ public class UndoScenarioTests
 
     private static bool Others(byte author, IReadOnlyList<TimelineEvent> _) => author != Me;
 
-    private static readonly ViewPlace Here = new("here", 1);
-    private static readonly ViewPlace There = new("there", 1);
+    private static readonly ViewPlace Here = new("here", null);
+    private static readonly ViewPlace There = new("there", null);
 
     private readonly Timeline _timeline = new();
     private long _clock;

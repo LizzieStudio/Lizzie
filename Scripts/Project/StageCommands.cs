@@ -216,7 +216,7 @@ public static class StageCommands
         Icon = CommandIcons.ResetTable,
         Caption = "Reset Table",
         Tooltip = "Resets the table back to its blueprint.",
-        ActsOn = Context.View,
+        ActsOn = Context.Subject,
         MaxTargets = 1,
         Requires =
         [

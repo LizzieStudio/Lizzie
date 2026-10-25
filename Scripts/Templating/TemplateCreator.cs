@@ -12,7 +12,7 @@ namespace Lizzie;
 public partial class TemplateCreator : Window, ICommandView
 {
     public ViewPlace? Place(IAtomReader R) =>
-        CurrentTemplate is { } template ? ViewPlace.Of(this, template.Id) : null;
+        CurrentTemplate is { } template ? ViewPlace.Of(this, Template.ById.Ref(template.Id)) : null;
 
     [Export]
     private TextureRect _preview;

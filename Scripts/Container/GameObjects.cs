@@ -302,9 +302,7 @@ public partial class GameObjects : Node3D, ICommandView
 
     #region ICommandView
 
-    public ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this, ShownStage(R));
-
-    public AtomRef? Shown(IAtomReader R) => Stage.ById.Ref(ShownStage(R));
+    public ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this, Stage.ById.Ref(ShownStage(R)));
 
     public IEnumerable<AtomRef> Hovered() =>
         CursorMode is CursorMode.DragSelect or CursorMode.Spawn

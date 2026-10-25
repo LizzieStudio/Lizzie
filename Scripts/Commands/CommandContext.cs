@@ -48,9 +48,9 @@ public sealed class CommandContext
     } = ImmutableHashSet<AtomRef>.Empty;
 
     /// <summary>
-    /// The atom the view shows, from its <see cref="ICommandView.Shown"/>, or empty.
+    /// The atom the view is open on, the <see cref="ViewPlace.Subject"/> of its <see cref="ICommandView.Place"/>, or empty.
     /// </summary>
-    public IEnumerable<AtomRef> View
+    public IEnumerable<AtomRef> Subject
     {
         get;
         init => field = value.ToImmutableHashSet();
@@ -100,7 +100,7 @@ public sealed class CommandContext
             Contents = Followed(t => R.Resolve(t)?.Contents(R) ?? []),
             Containers = Followed(t => R.Resolve(t)?.Containers(R) ?? []),
             Referenced = Related(chosen, t => R.Resolve(t)?.Referenced(R) ?? []),
-            View = view.Shown(R) is { } shown ? [shown] : [],
+            Subject = view.Place(R)?.Subject is { } subject ? [subject] : [],
             Local = view.Commands,
         };
     }

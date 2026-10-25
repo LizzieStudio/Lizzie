@@ -150,18 +150,13 @@ public partial class DatasetEditor : Window, ICommandView
 
     public ViewPlace? Place(IAtomReader R) =>
         R.Get(ShownDatasetRef) is var shown && shown != SnowTag.Empty
-            ? ViewPlace.Of(this, shown)
+            ? ViewPlace.Of(this, Dataset.ById.Ref(shown))
             : null;
 
-    public bool Shows(IAtomReader R, AtomRef target) =>
+    public bool CanSelect(IAtomReader R, AtomRef target) =>
         target.Id is CellId cell
             ? DataCell.InGrid(R, cell)
             : R.Get(target) is { } atom && atom is not DataRow { Deleted: true };
-
-    public AtomRef? Shown(IAtomReader R) =>
-        R.Get(ShownDatasetRef) is var shown && shown != SnowTag.Empty
-            ? Dataset.ById.Ref(shown)
-            : null;
 
     /// <summary>
     /// The commands only the editor offers, since they act on its grid.
@@ -985,7 +980,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// </summary>
     private void SyncSelection(IAtomReader R, SnowTag datasetId)
     {
-        var colors = R.SelectionColors(ViewPlace.Of(this, datasetId));
+        var colors = R.SelectionColors(ViewPlace.Of(this, Dataset.ById.Ref(datasetId)));
         foreach (var header in _headerCells)
             SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnRef));
         foreach (var view in _views)

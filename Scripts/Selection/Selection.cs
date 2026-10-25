@@ -82,7 +82,7 @@ public static class LocalSelection
     }
 
     /// <summary>
-    /// The local player's selection in <paramref name="view"/>, holding only the targets it <see cref="ICommandView.Shows"/>.
+    /// The local player's selection in <paramref name="view"/>, holding only the targets it <see cref="ICommandView.CanSelect"/>.
     /// Null if the view has no selection, or they have not yet selected anything there.
     /// </summary>
     /// <remarks>
@@ -95,7 +95,7 @@ public static class LocalSelection
             is { } selection
             ? selection with
             {
-                Targets = selection.Targets.Where(t => view.Shows(R, t)).ToImmutableHashSet(),
+                Targets = selection.Targets.Where(t => view.CanSelect(R, t)).ToImmutableHashSet(),
             }
             : null;
 

@@ -161,8 +161,8 @@ public static class CommandResolver
             targets = targets.Union(context.Containers);
         if (menu && acts.HasFlag(Context.Referenced))
             targets = targets.Union(context.Referenced);
-        if (acts.HasFlag(Context.View))
-            targets = targets.Union(context.View);
+        if (acts.HasFlag(Context.Subject))
+            targets = targets.Union(context.Subject);
         return targets;
     }
 

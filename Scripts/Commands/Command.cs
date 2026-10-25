@@ -58,9 +58,9 @@ public enum Context
     Referenced = 8,
 
     /// <summary>
-    /// What atom the whole view shows, like the dataset editor's currently open dataset.
+    /// The atom the whole view is open on, like the dataset editor's open dataset.
     /// </summary>
-    View = 16,
+    Subject = 16,
 }
 
 /// <summary>
@@ -72,25 +72,21 @@ public interface ICommandView
     /// Where in this view the player is, like the view showing a stage. Selections in the view live there.
     ///
     /// <para>
-    /// By default, the view as a whole. A view that shows one atom at a time gives that atom, or null while it shows none.
+    /// By default, the view as a whole. A view that shows one atom at a time is open on that atom,
+    /// its <see cref="ViewPlace.Subject"/>, or gives null while it shows none.
+    /// Commands that act on <see cref="Context.Subject"/> act on the subject.
     /// A Watch that reads it through <paramref name="R"/> runs again when it changes.
     /// </para>
     /// </summary>
     ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this);
 
     /// <summary>
-    /// Checks whether this view still shows <paramref name="target"/>, so a selection of it is still valid.
+    /// Checks whether <paramref name="target"/> can be selected in this view, so a selection of it is still valid.
     /// </summary>
     /// <remarks>
     /// Deleted atoms can keep their selection, so this call is used to check what's still on-screen.
     /// </remarks>
-    bool Shows(IAtomReader R, AtomRef target) => R.Get(target) != null;
-
-    /// <summary>
-    /// The atom the whole view shows, like the dataset editor's open dataset, or null for none.
-    /// Commands that act on <see cref="Context.View"/> act on it.
-    /// </summary>
-    AtomRef? Shown(IAtomReader R) => null;
+    bool CanSelect(IAtomReader R, AtomRef target) => R.Get(target) != null;
 
     /// <summary>
     /// The hovered target that keys act on when nothing is selected.
@@ -122,20 +118,20 @@ public interface ICommandView
 /// </para>
 /// </summary>
 /// <param name="View">The view's class name.</param>
-/// <param name="Within">The atom the view is showing, or empty when it shows a whole list.</param>
-public readonly record struct ViewPlace(string View, SnowTag Within)
+/// <param name="Subject">The atom the view is open on, or null when it shows a whole list.</param>
+public readonly record struct ViewPlace(string View, AtomRef? Subject)
 {
     /// <summary>
-    /// The place in view <typeparamref name="TView"/> showing <paramref name="within"/>.
+    /// The place in view <typeparamref name="TView"/> open on <paramref name="subject"/>.
     /// </summary>
-    public static ViewPlace Of<TView>(SnowTag within = default)
-        where TView : ICommandView => new(typeof(TView).Name, within);
+    public static ViewPlace Of<TView>(AtomRef? subject = null)
+        where TView : ICommandView => new(typeof(TView).Name, subject);
 
     /// <summary>
-    /// The place in <paramref name="view"/> showing <paramref name="within"/>.
+    /// The place in <paramref name="view"/> open on <paramref name="subject"/>.
     /// </summary>
-    public static ViewPlace Of(ICommandView view, SnowTag within = default) =>
-        new(view.GetType().Name, within);
+    public static ViewPlace Of(ICommandView view, AtomRef? subject = null) =>
+        new(view.GetType().Name, subject);
 }
 
 /// <summary>
@@ -206,7 +202,7 @@ public abstract class Command
     /// <item><see cref="Context.Contents"/> acts on the atoms inside the selected atoms, like a selected bag's tokens</item>
     /// <item><see cref="Context.Containers"/> acts on the atoms containing the selected atoms, like a selected card's deck</item>
     /// <item><see cref="Context.Referenced"/> acts on the atoms referenced by the selected atoms, like a selected cube's prototype</item>
-    /// <item><see cref="Context.View"/> acts on the atom the whole view shows, like the dataset editor's open dataset</item>
+    /// <item><see cref="Context.Subject"/> acts on the atom the whole view is open on, like the dataset editor's open dataset</item>
     /// </list>
     /// You can act on multiple Contexts simultaneously with
     /// <code>ActsOn = Context.Selected | Context.Contents | Context.Containers | Context.Referenced</code>

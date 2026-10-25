@@ -9,7 +9,7 @@ namespace Lizzie;
 /// </summary>
 public partial class BlueprintManager : Window, ICommandView
 {
-    public bool Shows(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
+    public bool CanSelect(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
 
     public IReadOnlyList<Command> Commands =>
         [StageCommands.AddBlueprint, StageCommands.AddTable, RenameStage];

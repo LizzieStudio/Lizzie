@@ -67,14 +67,14 @@ public abstract partial class VisualComponentBase : Area3D
         var key = Key;
         var target = ComponentPosition.ById.Ref(key);
         var local = Snowport.Clock.source;
-        var place = ViewPlace.Of<GameObjects>(key.StageRef);
+        var place = ViewPlace.Of<GameObjects>(Stage.ById.Ref(key.StageRef));
         var selections = R.Get(Selection.ByPlace, place);
         var mine = selections.FirstOrDefault(s => s.Player == local)?.Targets;
         _isMine = mine?.Contains(target) == true;
         _localColor = R.SeatColor(local);
         // We're avoiding using GetSelection here, which would watch every selected component.
         ICommandView table = ProjectService.Instance.GameObjects;
-        _nothingSelected = !_isMine && mine?.Any(t => table.Shows(R, t)) != true;
+        _nothingSelected = !_isMine && mine?.Any(t => table.CanSelect(R, t)) != true;
         var other = selections
             .Where(s => s.Player != local && s.Targets.Contains(target))
             .MaxBy(R.Version);

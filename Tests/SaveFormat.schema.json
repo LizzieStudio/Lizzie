@@ -18,7 +18,7 @@
             "null"
           ]
         },
-        "within": true
+        "subject": true
       },
       "additionalProperties": false
     },
@@ -873,7 +873,7 @@
                       "null"
                     ]
                   },
-                  "within": true
+                  "subject": true
                 },
                 "additionalProperties": false
               },
