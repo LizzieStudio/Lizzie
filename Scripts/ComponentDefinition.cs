@@ -4,8 +4,12 @@ using Godot;
 
 namespace Lizzie;
 
-public partial class ComponentDefinition : Window
+[View("component_definition")]
+public partial class ComponentDefinition : Window, ICommandView
 {
+    public ViewPlace? Place(IAtomReader R) =>
+        ViewPlace.Of(this, _mapPrototype?.Id ?? SnowTag.Empty);
+
     // Called when the node enters the scene tree for the first time.
     [Export]
     private ComponentTemplate[] _components;
@@ -113,7 +117,7 @@ public partial class ComponentDefinition : Window
                     ? result.ComponentName
                     : $"Unnamed {result.ComponentType}",
             };
-            AtomService.Instance.Write(prototype);
+            AtomService.Instance.Write(this, prototype);
 
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = prototype.Id, AllRows = true }
@@ -153,12 +157,15 @@ public partial class ComponentDefinition : Window
         prototype = prototype with { Parameters = newParams, Name = newParams?.ComponentName };
 
         var R = AtomService.Instance;
-        R.Write([
-            prototype,
-            .. newParams is PrintedParameters printed
-                ? DeckReconciliation.Changes(R, prototype.Id, printed)
-                : [],
-        ]);
+        R.Write(
+            this,
+            [
+                prototype,
+                .. newParams is PrintedParameters printed
+                    ? DeckReconciliation.Changes(R, prototype.Id, printed)
+                    : [],
+            ]
+        );
 
         QueueFree();
     }

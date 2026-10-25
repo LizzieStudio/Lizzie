@@ -149,35 +149,38 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     /// To bundle multiple discrete events into one undo group, use Open, Append, and Close.
     /// </para>
     /// <para>
+    /// Pass the node making the change as <paramref name="from"/>, like <c>Write(this, atom)</c>.
+    /// </para>
+    /// <para>
     /// Commands return their changes from <see cref="AtomCommand{T}.Effects"/> instead.
     /// </para>
     /// </summary>
-    public void Write(params IEnumerable<IChange> changes)
+    public void Write(Node from, params IEnumerable<IChange> changes)
     {
         var all = changes.ToArray();
         if (all.Length > 0)
-            Submit(TimelineEvent.Now(all));
+            Submit(TimelineEvent.Now(all, place: PlaceOf(from)));
     }
 
     /// <summary>
     /// Calls <paramref name="change"/> with the current version of the atom with <paramref name="id"/>,
-    /// then passes the result to <see cref="Write"/>. Does nothing if the atom is missing or unset.
+    /// then passes the result to <see cref="Write(Node, IEnumerable{IChange})"/>. Does nothing if the atom is missing or unset.
     ///
-    /// <inheritdoc cref="Write"/>
+    /// <inheritdoc cref="Write(Node, IEnumerable{IChange})"/>
     /// </summary>
-    public void Update<T, I>(Identity<T, I> byId, I id, Func<T, T> change)
+    public void Update<T, I>(Node from, Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
     {
         if (Get(byId, id) is { } atom)
-            Write(change(atom));
+            Write(from, change(atom));
     }
 
     /// <summary>
     /// Writes changes as one event made by <paramref name="command"/>, even if there are none,
     /// so the command's listeners hear it.
     /// </summary>
-    public void Write(CommandName command, params IEnumerable<IChange> changes) =>
-        Submit(TimelineEvent.Now(changes.ToArray(), command));
+    public void Write(Node from, CommandName command, params IEnumerable<IChange> changes) =>
+        Submit(TimelineEvent.Now(changes.ToArray(), command, PlaceOf(from)));
 
     /// <summary>
     /// Writes changes as one admin event, which belongs to the project rather than a player,
@@ -192,7 +195,7 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
 
     /// <summary>
     /// <para>
-    /// Starts a gesture, like a drag, by writing its first event.
+    /// Starts a gesture, like a drag, by writing its first event from <paramref name="from"/>.
     /// Returns the gesture's undo group to be used in Append and Close.
     /// </para>
     /// <para>
@@ -202,15 +205,16 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     /// A closed group is undone or redone all at once.
     /// </para>
     /// </summary>
-    public SnowportId Open(params IEnumerable<IChange> changes) => Open(null, changes);
+    public SnowportId Open(Node from, params IEnumerable<IChange> changes) =>
+        Open(from, null, changes);
 
-    /// <inheritdoc cref="Open(IEnumerable{IChange})"/>
-    public SnowportId Open(CommandName command, params IEnumerable<IChange> changes) =>
-        Open((CommandName?)command, changes);
+    /// <inheritdoc cref="Open(Node, IEnumerable{IChange})"/>
+    public SnowportId Open(Node from, CommandName command, params IEnumerable<IChange> changes) =>
+        Open(from, (CommandName?)command, changes);
 
-    private SnowportId Open(CommandName? command, IEnumerable<IChange> changes)
+    private SnowportId Open(Node from, CommandName? command, IEnumerable<IChange> changes)
     {
-        var e = TimelineEvent.Now(changes.ToArray(), command);
+        var e = TimelineEvent.Now(changes.ToArray(), command, PlaceOf(from));
         e.Group = e.Id;
         Submit(e);
         return e.Id;
@@ -278,6 +282,16 @@ public partial class AtomService : Node, IAtomReader, IAtomServiceMachinery
     }
 
     private static void Submit(TimelineEvent e) => EventSynchronizer.Instance?.Submit(e);
+
+    private ViewPlace? PlaceOf(Node from)
+    {
+        if (from != null && CommandViews.Of(from) is { } view)
+            return view.Place(this);
+        GD.PushError(
+            $"{from?.Name ?? "A null node"} isn't in a view, so undo can't reach what it wrote."
+        );
+        return null;
+    }
 
     /// <inheritdoc/>
     IEnumerable<Atom> IAtomServiceMachinery.SavedAtoms() =>

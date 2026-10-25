@@ -7,13 +7,12 @@ namespace Lizzie;
 /// <summary>
 /// The window for blueprints.
 /// </summary>
+[View("blueprints")]
 public partial class BlueprintManager : Window, ICommandView
 {
     private Tree _tree;
 
     private readonly Dictionary<SnowTag, TreeItem> _rows = new();
-
-    public static readonly SelectionPlace Place = new(SelectionPlaces.Blueprints, SnowTag.Empty);
 
     // Marks the current table, and the stage in your view when it's something else.
     private static readonly Texture2D CurrentTableIcon = GD.Load<Texture2D>(
@@ -75,22 +74,10 @@ public partial class BlueprintManager : Window, ICommandView
 
     #region ICommandView
 
-    public SelectionPlace? SelectionScope(IAtomReader R) => Place;
-
     public bool Shows(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
 
     public IReadOnlyList<Command> Commands =>
         [StageCommands.AddBlueprint, StageCommands.AddTable, RenameStage];
-
-    public bool UndoScope(Atom atom)
-    {
-        if (atom is Stage)
-            return true;
-        if (atom is Selection s && s.Place == Place)
-            return true;
-
-        return false;
-    }
 
     #endregion
 
@@ -101,7 +88,7 @@ public partial class BlueprintManager : Window, ICommandView
     private void Sync(IWatchReader R)
     {
         var selected = R.GetSelection(Stage.ById, this).ToHashSet();
-        var colors = R.SelectionColors(Place);
+        var colors = R.SelectionColors(ViewPlace.Of(this));
         var shown = ProjectService.Instance.GameObjects.ShownStage(R);
         var current = R.Get(CurrentTable.Only).StageRef;
         var listed = new HashSet<SnowTag>();
@@ -313,6 +300,7 @@ public partial class BlueprintManager : Window, ICommandView
         if (Placement(at, data) is not (var moved, var parent, var siblings, var index))
             return;
         AtomService.Instance.Write(
+            this,
             moved with
             {
                 ParentRef = parent,
@@ -344,6 +332,6 @@ public partial class BlueprintManager : Window, ICommandView
         var item = _tree.GetEdited();
         var name = item.GetText(NameColumn);
         if (AtomService.Instance.Get(Stage.ById, IdOf(item)) is { } stage && stage.Name != name)
-            AtomService.Instance.Write(stage with { Name = name });
+            AtomService.Instance.Write(this, stage with { Name = name });
     }
 }

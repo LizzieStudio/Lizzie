@@ -12,9 +12,9 @@ public interface IUndoApi
 {
     string Name { get; }
 
-    UndoFlag Undo(Timeline timeline, byte me, Func<byte, Atom, bool> scope);
+    UndoFlag Undo(Timeline timeline, byte me, TimelineUndo.Scope scope);
 
-    UndoFlag Redo(Timeline timeline, byte me, Func<byte, Atom, bool> scope);
+    UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope);
 
     List<SnowportId> OpenGroups(Timeline timeline, byte source);
 
@@ -31,10 +31,10 @@ public sealed class CurrentUndo : IUndoApi
 {
     public string Name => "current";
 
-    public UndoFlag Undo(Timeline timeline, byte me, Func<byte, Atom, bool> scope) =>
+    public UndoFlag Undo(Timeline timeline, byte me, TimelineUndo.Scope scope) =>
         TimelineUndo.Undo(timeline, me, scope);
 
-    public UndoFlag Redo(Timeline timeline, byte me, Func<byte, Atom, bool> scope) =>
+    public UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope) =>
         TimelineUndo.Redo(timeline, me, scope);
 
     public List<SnowportId> OpenGroups(Timeline timeline, byte source) =>

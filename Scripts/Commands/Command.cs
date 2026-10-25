@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using Godot;
 using Lizzie.Replication.Machinery;
 
@@ -64,19 +65,19 @@ public enum Context
 }
 
 /// <summary>
-/// A window or panel that commands run in.
+/// A window or panel that commands run in, named by its <see cref="ViewAttribute"/>.
 /// </summary>
 public interface ICommandView
 {
     /// <summary>
-    /// Where selections in this view live, like the view showing a stage.
+    /// Where in this view the player is, like the view showing a stage. Selections in the view live there.
     ///
     /// <para>
-    /// A view without a selection gives null.
+    /// By default, the view as a whole. A view that shows one atom at a time gives that atom, or null while it shows none.
     /// A Watch that reads it through <paramref name="R"/> runs again when it changes.
     /// </para>
     /// </summary>
-    SelectionPlace? SelectionScope(IAtomReader R) => null;
+    ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this);
 
     /// <summary>
     /// Checks whether this view still shows <paramref name="target"/>, so a selection of it is still valid.
@@ -108,18 +109,103 @@ public interface ICommandView
     ///
     /// <para>
     /// Commands that run on targets join it, so the gesture undoes as one.
-    /// Commands without targets never join.
     /// </para>
     /// </summary>
     SnowportId Gesture => SnowportId.Empty;
+}
+
+/// <summary>
+/// Names an <see cref="ICommandView"/> class, for the <see cref="ViewPlace"/>s in it.
+///
+/// <code>
+/// [View("some_view")]
+/// public partial class SomeView : Window, ICommandView
+/// </code>
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public sealed class ViewAttribute(string name) : Attribute
+{
+    public string Name { get; } = name;
+
+    // Every view's name, by its class.
+    private static readonly Dictionary<Type, string> Names = Found();
 
     /// <summary>
-    /// <para>Whether an undo or redo issued in this view should target an event that writes <paramref name="atom"/>.</para>
-    ///
-    /// Returning true will make undo or redo in this view reverse or reapply the write.
-    /// Returning false will make them skip it and search further backwards for another candidate.
+    /// The name of the view class <paramref name="view"/>.
     /// </summary>
-    bool UndoScope(Atom atom);
+    public static string NameOf(Type view) =>
+        Names.TryGetValue(view, out var name)
+            ? name
+            : throw new InvalidOperationException($"{view.Name} isn't an ICommandView.");
+
+    /// <summary>
+    /// Each view without a name, name without a view, and name used twice, as a message with the fix.
+    /// </summary>
+    public static IEnumerable<string> Problems()
+    {
+        var types = typeof(ViewAttribute).Assembly.GetTypes();
+        foreach (var type in types)
+        {
+            bool isView =
+                type.IsClass && !type.IsAbstract && typeof(ICommandView).IsAssignableFrom(type);
+            bool named = type.IsDefined(typeof(ViewAttribute), false);
+            if (isView && !type.IsSubclassOf(typeof(Node)))
+                yield return $"{type.Name} is an ICommandView but isn't a Node.\n"
+                    + "Writes find their view through the node tree, so a view has to be a node.";
+            if (isView && !named)
+                yield return $"{type.Name} is an ICommandView with no name.\n"
+                    + $"Add this above {type.Name}:\n"
+                    + $"    [View(\"some_view\")]";
+            else if (named && !isView)
+                yield return $"{type.Name} has a [View] attribute but isn't an ICommandView.\n"
+                    + "Remove the attribute, or implement ICommandView.";
+        }
+
+        foreach (
+            var name in types
+                .Where(t => t.IsDefined(typeof(ViewAttribute), false))
+                .GroupBy(t => t.GetCustomAttribute<ViewAttribute>().Name)
+                .Where(g => g.Count() > 1)
+        )
+            yield return $"\"{name.Key}\" names {string.Join(" and ", name.Select(t => t.Name))}.\n"
+                + "Give each view its own name.";
+    }
+
+    private static Dictionary<Type, string> Found()
+    {
+        var problems = Problems().ToList();
+        if (problems.Count > 0)
+            throw new InvalidOperationException(string.Join("\n\n", problems));
+        return typeof(ViewAttribute)
+            .Assembly.GetTypes()
+            .Where(t => t.IsDefined(typeof(ViewAttribute), false))
+            .ToDictionary(t => t, t => t.GetCustomAttribute<ViewAttribute>().Name);
+    }
+}
+
+/// <summary>
+/// A place in a view, like the dataset editor showing one dataset.
+///
+/// <para>
+/// Each view keeps its own selection in each place.
+/// Otherwise Undo/Redo would change your selection in closed windows.
+/// </para>
+/// </summary>
+/// <param name="View">The view's name, from its <see cref="ViewAttribute"/>.</param>
+/// <param name="Within">The atom the view is showing, or empty when it shows a whole list.</param>
+public readonly record struct ViewPlace(string View, SnowTag Within)
+{
+    /// <summary>
+    /// The place in view <typeparamref name="TView"/> showing <paramref name="within"/>.
+    /// </summary>
+    public static ViewPlace Of<TView>(SnowTag within = default)
+        where TView : ICommandView => new(ViewAttribute.NameOf(typeof(TView)), within);
+
+    /// <summary>
+    /// The place in <paramref name="view"/> showing <paramref name="within"/>.
+    /// </summary>
+    public static ViewPlace Of(ICommandView view, SnowTag within = default) =>
+        new(ViewAttribute.NameOf(view.GetType()), within);
 }
 
 /// <summary>
@@ -258,25 +344,6 @@ public abstract class Command
     /// The keyboard shortcut to show beside this command in a menu, or null.
     /// </summary>
     public Shortcut ShortcutLabel() => ShortcutActions.Label(Action);
-
-    /// <summary>
-    /// <para>Writes the changes as one event made by this command.</para>
-    ///
-    /// <para>
-    /// When <paramref name="view"/> has a <see cref="ICommandView.Gesture"/> open, the event joins it.
-    /// Pass a null view for a command without targets, which never joins one.
-    /// </para>
-    /// </summary>
-    protected void Submit(IEnumerable<IChange> changes, ICommandView view)
-    {
-        if (changes == null)
-            return;
-        var gesture = view?.Gesture ?? SnowportId.Empty;
-        if (gesture == SnowportId.Empty)
-            AtomService.Instance?.Write(Name, changes);
-        else
-            AtomService.Instance?.Append(gesture, Name, changes);
-    }
 }
 
 /// <summary>
@@ -368,6 +435,21 @@ public abstract class TargetedCommand<T> : Command
     {
         var atoms = targets.Select(t => Atom(Reader, t)).Where(a => a != null).ToList();
         return Fits(atoms.Count) ? atoms : null;
+    }
+
+    /// <summary>
+    /// Writes the changes as one event made by this command.
+    /// When <paramref name="view"/> has a <see cref="ICommandView.Gesture"/> open, the event joins it.
+    /// </summary>
+    protected void Submit(IEnumerable<IChange> changes, ICommandView view)
+    {
+        if (changes == null)
+            return;
+        var gesture = view?.Gesture ?? SnowportId.Empty;
+        if (gesture == SnowportId.Empty)
+            AtomService.Instance?.Write((Node)view, Name, changes);
+        else
+            AtomService.Instance?.Append(gesture, Name, changes);
     }
 }
 
@@ -515,12 +597,6 @@ public sealed class GlobalCommand : Command
     public IReadOnlyList<(string Reason, Func<IAtomReader, bool> Holds)> Requires { get; init; } =
     [];
 
-    /// <summary>
-    /// Generates the changes to write, as one event.
-    /// Returning an empty list still fires an event, but returning null will not.
-    /// </summary>
-    public Func<IAtomReader, IEnumerable<IChange>> Effects { get; init; }
-
     /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
     public Action<ICommandView> SideEffects { get; init; }
 
@@ -537,8 +613,6 @@ public sealed class GlobalCommand : Command
         if (!IsAvailable(AtomService.Instance))
             return;
         SideEffects?.Invoke(view);
-        if (Effects != null)
-            Submit(Effects(AtomService.Instance), null);
     }
 }
 

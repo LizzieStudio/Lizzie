@@ -6,6 +6,7 @@ using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
+[View("stage")]
 public partial class GameObjects : Node3D, ICommandView
 {
     [Export]
@@ -121,7 +122,7 @@ public partial class GameObjects : Node3D, ICommandView
 
         _held = new HeldDrag
         {
-            Group = R.Open(DragCommands.Pickup, atoms.Concat(alongside)),
+            Group = R.Open(this, DragCommands.Pickup, atoms.Concat(alongside)),
             Components = atoms.Select(ComponentPosition.ById.Of).ToArray(),
         };
         CursorMode = CursorMode.Drag;
@@ -303,8 +304,9 @@ public partial class GameObjects : Node3D, ICommandView
 
     #region ICommandView
 
-    public SelectionPlace? SelectionScope(IAtomReader R) =>
-        new SelectionPlace(SelectionPlaces.StageView, ShownStage(R));
+    public ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this, ShownStage(R));
+
+    public AtomRef? Shown(IAtomReader R) => Stage.ById.Ref(ShownStage(R));
 
     public IEnumerable<AtomRef> Hovered() =>
         CursorMode is CursorMode.DragSelect or CursorMode.Spawn
@@ -314,17 +316,6 @@ public partial class GameObjects : Node3D, ICommandView
             : [ComponentPosition.ById.Ref(hovered.Key)];
 
     public IReadOnlyList<Command> Commands => [DuplicateComponent, ZoomToComponent];
-
-    public bool UndoScope(Atom atom)
-    {
-        var shown = ShownStage(AtomService.Instance);
-        return atom switch
-        {
-            ComponentPosition s => s.Stage == shown,
-            Selection s => s.Place == new SelectionPlace(SelectionPlaces.StageView, shown),
-            _ => false,
-        };
-    }
 
     [Command("table.duplicate")]
     private static readonly Command DuplicateComponent = new AtomCommand<ComponentPosition>
@@ -405,7 +396,7 @@ public partial class GameObjects : Node3D, ICommandView
             }
         }
 
-        AtomService.Instance.Write(atoms);
+        AtomService.Instance.Write(this, atoms);
     }
 
     #endregion

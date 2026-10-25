@@ -34,14 +34,18 @@ public enum ScopeKind
 /// </summary>
 public sealed record TestScope(ScopeKind Kind, int Mask)
 {
-    public Func<byte, Atom, bool> For(byte me) =>
-        (author, atom) =>
+    public TimelineUndo.Scope For(byte me) =>
+        (author, events) =>
             Kind switch
             {
                 ScopeKind.Mine => author == me,
                 ScopeKind.Others => author != me,
                 _ => true,
-            } && (Mask == 0 || atom is TestAtom r && (Mask & (1 << (r.Id - 1))) != 0);
+            }
+            && events.Any(e =>
+                e.Writes.Concat(e.Unsets)
+                    .Any(atom => Mask == 0 || atom is TestAtom r && (Mask & (1 << (r.Id - 1))) != 0)
+            );
 
     public override string ToString() => Mask == 0 ? $"{Kind}" : $"{Kind} atoms {Mask}";
 }

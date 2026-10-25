@@ -67,7 +67,7 @@ public abstract partial class VisualComponentBase : Area3D
         var key = Key;
         var target = ComponentPosition.ById.Ref(key);
         var local = Snowport.Clock.source;
-        var place = new SelectionPlace(SelectionPlaces.StageView, key.Stage);
+        var place = ViewPlace.Of<GameObjects>(key.Stage);
         var selections = R.Get(Selection.ByPlace, place);
         var mine = selections.FirstOrDefault(s => s.Player == local)?.Targets;
         _isMine = mine?.Contains(target) == true;

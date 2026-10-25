@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Godot;
 using Lizzie.Replication.Machinery;
@@ -6,8 +5,8 @@ using Lizzie.Replication.Machinery;
 namespace Lizzie;
 
 /// <summary>
-/// Undo and redo. Those without targets walk the changes in their view's
-/// <see cref="ICommandView.UndoScope"/>, and do nothing outside any view.
+/// Undo and redo. Those without targets walk the changes made in their view's
+/// <see cref="ICommandView.Place"/>, and do nothing outside any place.
 /// </summary>
 public static class UndoCommands
 {
@@ -18,7 +17,7 @@ public static class UndoCommands
         Caption = "Undo Mine",
         Tooltip = "Undoes the last change that you made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z)],
-        SideEffects = v => Issue(Undo, TimelineUndo.Undo, Mine(v)),
+        SideEffects = v => Issue(Undo, TimelineUndo.Undo, MyScopeIn(v)),
     };
 
     [Command("app.redo")]
@@ -28,7 +27,7 @@ public static class UndoCommands
         Caption = "Redo Mine",
         Tooltip = "Redoes an undo that you just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
-        SideEffects = v => Issue(Redo, TimelineUndo.Redo, Mine(v)),
+        SideEffects = v => Issue(Redo, TimelineUndo.Redo, MyScopeIn(v)),
     };
 
     [Command("app.undo_others")]
@@ -38,7 +37,7 @@ public static class UndoCommands
         Caption = "Undo Others",
         Tooltip = "Undoes the last change that any other player made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
-        SideEffects = v => Issue(UndoOthers, TimelineUndo.Undo, Others(v)),
+        SideEffects = v => Issue(UndoOthers, TimelineUndo.Undo, OthersScopeIn(v)),
     };
 
     [Command("app.redo_others")]
@@ -48,7 +47,7 @@ public static class UndoCommands
         Caption = "Redo Others",
         Tooltip = "Redoes an undo that any other player just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
-        SideEffects = v => Issue(RedoOthers, TimelineUndo.Redo, Others(v)),
+        SideEffects = v => Issue(RedoOthers, TimelineUndo.Redo, OthersScopeIn(v)),
     };
 
     /// <summary>
@@ -63,40 +62,32 @@ public static class UndoCommands
         Tooltip = "Undoes the last change that affected this component, regardless of who did it.",
         ActsOn = Context.Selected | Context.Contents,
         SideEffects = (_, atoms) =>
-        {
-            var refs = atoms.Select(AtomRef.To).ToHashSet();
-            Issue(UndoChanges, TimelineUndo.Undo, (_, atom) => refs.Contains(AtomRef.To(atom)));
-        },
+            Issue(
+                UndoChanges,
+                TimelineUndo.Undo,
+                UndoScopes.Changing(atoms.Select(AtomRef.To).ToHashSet())
+            ),
     };
 
     private static byte Me => Snowport.Clock.source;
 
-    /// <summary>
-    /// A filter for the player's own changes in the view.
-    /// </summary>
-    private static Func<byte, Atom, bool> Mine(ICommandView view) =>
-        view == null ? null : (author, atom) => author == Me && view.UndoScope(atom);
+    private static TimelineUndo.Scope MyScopeIn(ICommandView view) =>
+        view?.Place(AtomService.Instance) is { } place ? UndoScopes.Mine(Me, place) : null;
 
-    /// <summary>
-    /// A filter for other players changes in the view.
-    /// Selection events, however, are passed over. That's too far.
-    /// </summary>
-    private static Func<byte, Atom, bool> Others(ICommandView view) =>
-        view == null
-            ? null
-            : (author, atom) => author != Me && atom is not Selection && view.UndoScope(atom);
+    private static TimelineUndo.Scope OthersScopeIn(ICommandView view) =>
+        view?.Place(AtomService.Instance) is { } place ? UndoScopes.Others(Me, place) : null;
 
     /// <summary>
     /// <see cref="TimelineUndo.Undo"/> or <see cref="TimelineUndo.Redo"/>.
     /// This is used to make it easier to set which one.
     /// </summary>
-    private delegate UndoFlag Pick(Timeline timeline, byte me, Func<byte, Atom, bool> scope);
+    private delegate UndoFlag Pick(Timeline timeline, byte me, TimelineUndo.Scope scope);
 
     /// <summary>
     /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any,
     /// as an event made by <paramref name="command"/>.
     /// </summary>
-    private static void Issue(Command command, Pick pick, Func<byte, Atom, bool> scope)
+    private static void Issue(Command command, Pick pick, TimelineUndo.Scope scope)
     {
         if (EventSynchronizer.Instance == null || scope == null)
             return;

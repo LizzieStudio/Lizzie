@@ -4,6 +4,7 @@ using Lizzie.AssetManagement;
 
 namespace Lizzie;
 
+[View("images")]
 public partial class ImageManager : Window, ICommandView
 {
     private Button _backButton;
@@ -47,9 +48,6 @@ public partial class ImageManager : Window, ICommandView
     {
         AtomService.Instance.Watch(this, Sync);
     }
-
-    /// <summary>Undo walks the edits to every image.</summary>
-    public bool UndoScope(Atom atom) => atom is ImageAsset;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -99,6 +97,7 @@ public partial class ImageManager : Window, ICommandView
         _countSet = GetNode<CheckBox>("%CountSet");
         _countSet.Toggled += on =>
             AtomService.Instance.Update(
+                this,
                 ImageAsset.ById,
                 _open,
                 a =>
@@ -128,7 +127,7 @@ public partial class ImageManager : Window, ICommandView
     {
         var R = AtomService.Instance;
         if (R.Get(ImageAsset.ById, _open) is { } image)
-            R.Write(R.Unset(image));
+            R.Write(this, R.Unset(image));
     }
 
     /// <summary>
@@ -168,7 +167,7 @@ public partial class ImageManager : Window, ICommandView
             CloudPath = _urlInput.Text,
         };
 
-        AtomService.Instance.Write(asset);
+        AtomService.Instance.Write(this, asset);
         Open(asset.Id);
 
         _nameInput.Text = string.Empty;

@@ -7,7 +7,7 @@ namespace Lizzie;
 /// <summary>
 /// <para>An atom, easily replicated in multiplayer through a write-only synchronized timeline.</para>
 /// <para>
-/// Write atoms with <see cref="AtomService.Write(IEnumerable{IChange})"/>,
+/// Write atoms with <see cref="AtomService.Write(Node, IEnumerable{IChange})"/>,
 /// or return them from a command's <see cref="AtomCommand{T}.Effects"/>.
 /// Unset them by writing <see cref="AtomReaderExtensions.Unset"/>.
 /// </para>

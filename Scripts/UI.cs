@@ -231,7 +231,7 @@ public partial class UI : CanvasLayer
     private void RotationStepSelected(long index)
     {
         var settings = AtomService.Instance.Get(ProjectGameSettings.Only);
-        AtomService.Instance.Write(settings with { RotationStepIndex = (int)index });
+        AtomService.Instance.Write(this, settings with { RotationStepIndex = (int)index });
     }
 
     // Brings the window forward if it's open, so its command never opens a second one.

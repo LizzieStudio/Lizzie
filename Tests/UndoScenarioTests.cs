@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Lizzie.Replication.Machinery;
 using Xunit;
@@ -14,9 +15,12 @@ public class UndoScenarioTests
     private const byte Me = 1;
     private const byte Other = 2;
 
-    private static bool Mine(byte author, Atom _) => author == Me;
+    private static bool Mine(byte author, IReadOnlyList<TimelineEvent> _) => author == Me;
 
-    private static bool Others(byte author, Atom _) => author != Me;
+    private static bool Others(byte author, IReadOnlyList<TimelineEvent> _) => author != Me;
+
+    private static readonly ViewPlace Here = new("here", 1);
+    private static readonly ViewPlace There = new("there", 1);
 
     private readonly Timeline _timeline = new();
     private long _clock;
@@ -25,13 +29,14 @@ public class UndoScenarioTests
 
     /// <summary>
     /// Records an action that writes <paramref name="atom"/>, in <paramref name="group"/> if given,
-    /// and closing it if <paramref name="close"/>.
+    /// and closing it if <paramref name="close"/>, made in <paramref name="place"/> if given.
     /// </summary>
     private SnowportId Act(
         byte source,
         int atom = 1,
         SnowportId group = default,
-        bool close = false
+        bool close = false,
+        ViewPlace? place = null
     )
     {
         var id = NextId(source);
@@ -42,6 +47,7 @@ public class UndoScenarioTests
                 Id = id,
                 Group = group,
                 End = close ? GroupEnd.Closed : GroupEnd.None,
+                Place = place,
                 Writes = [new Prototype { Id = atom }],
             }
         );
@@ -98,10 +104,10 @@ public class UndoScenarioTests
         return id;
     }
 
-    private UndoFlag Undo(Func<byte, Atom, bool> scope, byte source = Me) =>
+    private UndoFlag Undo(TimelineUndo.Scope scope, byte source = Me) =>
         Reversal(TimelineUndo.Undo(_timeline, source, scope), source);
 
-    private UndoFlag Redo(Func<byte, Atom, bool> scope, byte source = Me) =>
+    private UndoFlag Redo(TimelineUndo.Scope scope, byte source = Me) =>
         Reversal(TimelineUndo.Redo(_timeline, source, scope), source);
 
     private UndoFlag Reversal(UndoFlag flag, byte source)
@@ -629,7 +635,7 @@ public class UndoScenarioTests
     {
         Act(Admin, atom: 1);
 
-        Assert.Null(Undo((_, r) => r is Prototype p && p.Id == 1));
+        Assert.Null(Undo(UndoScopes.Changing(new HashSet<AtomRef> { Prototype.ById.Ref(1) })));
     }
 
     /// <summary>An unset is in scope when what it unsets is, so Undo This brings an unset atom back.</summary>
@@ -640,7 +646,10 @@ public class UndoScenarioTests
         var id = NextId(Me);
         _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [new Prototype { Id = 1 }] });
 
-        Assert.Equal(id, Changed(Undo((_, r) => r is Prototype p && p.Id == 1)));
+        Assert.Equal(
+            id,
+            Changed(Undo(UndoScopes.Changing(new HashSet<AtomRef> { Prototype.ById.Ref(1) })))
+        );
     }
 
     /// <summary>The host's bookkeeping, like giving a seat its hand, doesn't take away a player's redo.</summary>
@@ -653,5 +662,55 @@ public class UndoScenarioTests
 
         Assert.NotNull(Redo((_, _) => true));
         Assert.False(IsUndone(a));
+    }
+
+    /// <summary>Undo in a view passes over what the player did in another view.</summary>
+    [Fact]
+    public void UndoPassesOverChangesMadeElsewhere()
+    {
+        var here = Act(Me, place: Here);
+        Act(Me, atom: 2, place: There);
+
+        Assert.Equal(here, Changed(Undo(UndoScopes.Mine(Me, Here))));
+        Assert.Null(Undo(UndoScopes.Mine(Me, Here)));
+    }
+
+    /// <summary>A gesture is undone where it started, though only its first event holds the place.</summary>
+    [Fact]
+    public void GestureIsUndoneWhereItStarted()
+    {
+        var group = Act(Me, place: Here);
+        _timeline[group].Group = group;
+        Act(Me, atom: 2, group: group, close: true);
+
+        Assert.Null(Undo(UndoScopes.Mine(Me, There)));
+        Assert.Equal(group, Changed(Undo(UndoScopes.Mine(Me, Here))));
+    }
+
+    /// <summary>Undo Others passes over another player's selection, but not their other changes.</summary>
+    [Fact]
+    public void UndoOthersPassesOverSelections()
+    {
+        var change = Act(Other, place: Here);
+        var id = NextId(Other);
+        _timeline.Add(
+            id,
+            new TimelineEvent
+            {
+                Id = id,
+                Place = Here,
+                Writes =
+                [
+                    new Selection
+                    {
+                        Id = 3,
+                        Player = Other,
+                        Place = Here,
+                    },
+                ],
+            }
+        );
+
+        Assert.Equal(change, Changed(Undo(UndoScopes.Others(Me, Here))));
     }
 }

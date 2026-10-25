@@ -9,8 +9,12 @@ using Lizzie.Scripts.Templating;
 
 namespace Lizzie;
 
-public partial class TemplateCreator : Window
+[View("template")]
+public partial class TemplateCreator : Window, ICommandView
 {
+    public ViewPlace? Place(IAtomReader R) =>
+        CurrentTemplate is { } template ? ViewPlace.Of(this, template.Id) : null;
+
     [Export]
     private TextureRect _preview;
 
@@ -394,7 +398,7 @@ public partial class TemplateCreator : Window
                     .ToImmutableArray(),
             }
         );
-        AtomService.Instance.Write(_currentTemplate);
+        AtomService.Instance.Write(this, _currentTemplate);
 
         _hasUnsavedChanges = false;
     }
@@ -1166,8 +1170,8 @@ public partial class TemplateCreator : Window
             Height = inches.Height,
         };
 
-        AtomService.Instance.Write(t);
         CurrentTemplate = t;
+        AtomService.Instance.Write(this, t);
 
         _newTemplateName.Clear();
 

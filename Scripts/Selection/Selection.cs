@@ -25,7 +25,7 @@ public record Selection : Atom
     /// <summary>
     /// Every player's selection in each place, by <see cref="Place"/>.
     /// </summary>
-    public static readonly Lookup<Selection, SelectionPlace> ByPlace = new(s => s.Place);
+    public static readonly Lookup<Selection, ViewPlace> ByPlace = new(s => s.Place);
 
     /// <summary>
     /// Each player's selections, by <see cref="Player"/>.
@@ -42,29 +42,10 @@ public record Selection : Atom
     /// A player has one selection in each place, so each view undoes only its own.
     /// </para>
     /// </summary>
-    public SelectionPlace Place { get; init; }
+    public ViewPlace Place { get; init; }
 
     /// <summary>The selected things.</summary>
     public ImmutableHashSet<AtomRef> Targets { get; init; } = ImmutableHashSet<AtomRef>.Empty;
-}
-
-/// <summary>
-/// Where a <see cref="Selection"/> lives.
-///
-/// <para>
-/// Each view keeps its own selection.
-/// Otherwise Undo/Redo would change your selection in closed windows.
-/// </para>
-/// </summary>
-/// <param name="View">The view where the selection is.</param>
-/// <param name="Within">The atom the view is showing, or empty when it shows a whole list.</param>
-public readonly record struct SelectionPlace(SelectionPlaces View, SnowTag Within);
-
-public enum SelectionPlaces
-{
-    StageView = 1,
-    DataSet = 2,
-    Blueprints = 3,
 }
 
 /// <summary>
@@ -83,7 +64,7 @@ public static class LocalSelection
     /// </summary>
     public static IReadOnlyDictionary<AtomRef, Color> SelectionColors(
         this IAtomReader R,
-        SelectionPlace place
+        ViewPlace place
     )
     {
         var local = Snowport.Clock.source;
@@ -109,7 +90,7 @@ public static class LocalSelection
     /// but it's left out here, so changing the selection around it never writes an event that shows nothing.
     /// </remarks>
     public static Selection GetSelection(this IAtomReader R, ICommandView view) =>
-        view.SelectionScope(R) is { } place
+        view.Place(R) is { } place
         && R.Get(Selection.ByPlace, place).FirstOrDefault(s => s.Player == Snowport.Clock.source)
             is { } selection
             ? selection with
@@ -141,7 +122,7 @@ public static class LocalSelection
         IEnumerable<I> ids,
         ICommandView view
     )
-        where T : Atom => AtomService.Instance.Write(R.NewSelection(byId, ids, view));
+        where T : Atom => AtomService.Instance.Write((Node)view, R.NewSelection(byId, ids, view));
 
     /// <summary>
     /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, ICommandView)"/> writes,
@@ -172,7 +153,7 @@ public static class LocalSelection
         ICommandView view
     )
     {
-        AtomService.Instance.Write(R.NewSelection(targets, view));
+        AtomService.Instance.Write((Node)view, R.NewSelection(targets, view));
     }
 
     /// <summary>
@@ -185,7 +166,7 @@ public static class LocalSelection
         ICommandView view
     )
     {
-        if (view.SelectionScope(R) is not { } place)
+        if (view.Place(R) is not { } place)
             return [];
         var current = R.GetSelection(view);
         var next = targets.ToImmutableHashSet();

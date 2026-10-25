@@ -204,18 +204,23 @@ public static class StageCommands
     }
 
     [Command("table.reset")]
-    public static readonly GlobalCommand ResetTable = new()
+    public static readonly Command ResetTable = new AtomCommand<Stage>
     {
         Keys = [Shortcuts.Ctrl(Key.R)],
         Icon = CommandIcons.ResetTable,
         Caption = "Reset Table",
         Tooltip = "Resets the table back to its blueprint.",
-        Requires = [("There are no changes to reset.", (R) => Resettable(R).Any())],
-        Effects = R => Resettable(R).Select(R.Unset),
+        ActsOn = Context.View,
+        MaxTargets = 1,
+        Requires =
+        [
+            ("Only a table can be reset.", (R, s) => s.IsTable),
+            ("There are no changes to reset.", (R, s) => Resettable(R, s).Any()),
+        ],
+        Effects = (R, tables) => Resettable(R, tables[0]).Select(R.Unset),
     };
 
-    // What the current table wrote itself, except what someone is dragging.
-    private static IEnumerable<ComponentPosition> Resettable(IAtomReader R) =>
-        R.Get(ComponentPosition.WrittenIn, R.Get(CurrentTable.Only).StageRef)
-            .Where(c => !R.IsBeingDragged(c));
+    // What the table wrote itself, except what someone is dragging.
+    private static IEnumerable<ComponentPosition> Resettable(IAtomReader R, Stage table) =>
+        R.Get(ComponentPosition.WrittenIn, table.Id).Where(c => !R.IsBeingDragged(c));
 }

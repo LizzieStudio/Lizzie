@@ -5,7 +5,8 @@ using Godot;
 
 namespace Lizzie;
 
-public partial class ProjectSettingsDialog : Window
+[View("project_settings")]
+public partial class ProjectSettingsDialog : Window, ICommandView
 {
     /// <summary>
     /// The settings when the window was opened.
@@ -217,7 +218,7 @@ public partial class ProjectSettingsDialog : Window
     private void OnSavePressed()
     {
         if (ProjectService.Instance.CurrentProject != null)
-            AtomService.Instance.Write(ReadUi());
+            AtomService.Instance.Write(this, ReadUi());
         QueueFree();
     }
 

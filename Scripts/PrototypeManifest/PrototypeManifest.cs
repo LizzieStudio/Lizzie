@@ -4,6 +4,7 @@ using Godot;
 
 namespace Lizzie;
 
+[View("prototypes")]
 public partial class PrototypeManifest : Window, ICommandView
 {
     private SplitContainer _mainContainer;
@@ -30,9 +31,6 @@ public partial class PrototypeManifest : Window, ICommandView
 
     private int _sortColumn = 0;
     private bool _sortAscending = true;
-
-    /// <summary>Undo walks the edits to every prototype.</summary>
-    public bool UndoScope(Atom atom) => atom is Prototype;
 
     public override void _Ready()
     {
@@ -137,7 +135,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         dialog.Confirmed += () =>
         {
-            AtomService.Instance.Write(_selectedPrototype with { Deleted = true });
+            AtomService.Instance.Write(this, _selectedPrototype with { Deleted = true });
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;
@@ -178,7 +176,7 @@ public partial class PrototypeManifest : Window, ICommandView
             Parameters = _selectedPrototype.Parameters with { ComponentName = newName },
         };
 
-        AtomService.Instance.Write(duplicate);
+        AtomService.Instance.Write(this, duplicate);
     }
 
     private void Sync(IWatchReader R)

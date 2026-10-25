@@ -34,7 +34,7 @@ public partial class FocusEditGroup : Node
         if (AtomService.Instance.Get(byId, id) is not { } atom)
             return;
         if (_group == SnowportId.Empty)
-            _group = AtomService.Instance.Open(change(atom));
+            _group = AtomService.Instance.Open(this, change(atom));
         else
             AtomService.Instance.Append(_group, change(atom));
     }

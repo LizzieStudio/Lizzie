@@ -114,13 +114,13 @@ public sealed class NaiveUndo : IUndoApi
         return members.MaxBy(e => e.Id).End != GroupEnd.None;
     }
 
-    /// <summary>Whether any atom the unit's events write is in scope, as done by the author.</summary>
+    /// <summary>Whether the unit's events are in scope, as done by the author.</summary>
     private static bool InScope(
         Timeline timeline,
         SnowportId unit,
         byte author,
-        Func<byte, Atom, bool> scope
-    ) => Members(timeline, unit).Any(m => m.Writes.Any(r => scope(author, r)));
+        TimelineUndo.Scope scope
+    ) => scope(author, Members(timeline, unit));
 
     /// <summary>
     /// Whether Undo or Redo may act on the event: it isn't an admin event, the unit its entry
@@ -130,7 +130,7 @@ public sealed class NaiveUndo : IUndoApi
         Timeline timeline,
         TimelineEvent e,
         byte me,
-        Func<byte, Atom, bool> scope
+        TimelineUndo.Scope scope
     )
     {
         if (e.IsAdmin)
@@ -158,7 +158,7 @@ public sealed class NaiveUndo : IUndoApi
     /// older undo reversals included, and the newest entry still in effect is reversed.
     /// A Redo reversal is never history: it cancels out with the Undo reversal it reversed.
     /// </summary>
-    public UndoFlag Undo(Timeline timeline, byte me, Func<byte, Atom, bool> scope)
+    public UndoFlag Undo(Timeline timeline, byte me, TimelineUndo.Scope scope)
     {
         bool pastLatestReversals = false;
         foreach (var e in NewestFirst(timeline))
@@ -207,7 +207,7 @@ public sealed class NaiveUndo : IUndoApi
     /// Redo reverses the player's newest Undo reversal still in effect, among their latest reversals.
     /// Anything else that has happened since leaves nothing to redo.
     /// </summary>
-    public UndoFlag Redo(Timeline timeline, byte me, Func<byte, Atom, bool> scope)
+    public UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope)
     {
         foreach (var e in NewestFirst(timeline))
         {

@@ -50,23 +50,27 @@ namespace Lizzie.Replication.Machinery;
 /// </para>
 /// <para>
 /// When searching for the target for an undo or redo action, you can do so with a scope.
-/// A scope is just a filter on the events, so that a valid target is selected from within the filter.
-/// This is used extensively for many purposes:
+/// A scope is a filter on each unit's events, oldest first, so that a valid target is selected from within the filter.
+/// <see cref="UndoScopes"/> has the ones the undo commands use:
 /// <list type="bullet">
-/// <item>The default "Undo Mine" event targets your own events.</item>
-/// <item>The "Undo Others" event targets only the events that you didn't publish.</item>
-/// <item>The "Undo This" event targets the last event that updated a particular atom.</item>
-/// <item>Panels and the StageView filter by the atoms pertinent to that view, like the DatasetEditor and DataSets</item>
+/// <item>"Undo Mine" targets your own events made in the view's place.</item>
+/// <item>"Undo Others" targets the events other players made in the view's place.</item>
+/// <item>"Undo This" targets the last event that changed a particular atom.</item>
 /// </list>
-/// An unset is in scope when the atom it unsets is, as the player unsetting it saw it.
 /// </para>
 /// </remarks>
 public static class TimelineUndo
 {
     /// <summary>
+    /// Whether a unit, as done by <paramref name="author"/>, is something to undo or redo,
+    /// given its <paramref name="events"/> oldest first. The first names the unit and holds its place.
+    /// </summary>
+    public delegate bool Scope(byte author, IReadOnlyList<TimelineEvent> events);
+
+    /// <summary>
     /// Selects the target that Undo should submit, or null if there's nothing in scope to undo.
     /// </summary>
-    public static UndoFlag Undo(Timeline timeline, byte me, Func<byte, Atom, bool> scope)
+    public static UndoFlag Undo(Timeline timeline, byte me, Scope scope)
     {
         var reversed = new HashSet<SnowportId>();
         var ends = new Ends(timeline);
@@ -95,7 +99,7 @@ public static class TimelineUndo
     /// <summary>
     /// Selects the target that Redo should submit, or null if there's nothing in scope to redo.
     /// </summary>
-    public static UndoFlag Redo(Timeline timeline, byte me, Func<byte, Atom, bool> scope)
+    public static UndoFlag Redo(Timeline timeline, byte me, Scope scope)
     {
         var reversed = new HashSet<SnowportId>();
         var ends = new Ends(timeline);
@@ -205,17 +209,12 @@ public static class TimelineUndo
     /// <summary>
     /// What Undo and Redo may target, judged once per entry over a walk from newest to oldest.
     /// </summary>
-    private sealed class Targets(
-        Timeline timeline,
-        byte me,
-        Func<byte, Atom, bool> scope,
-        Ends ends
-    )
+    private sealed class Targets(Timeline timeline, byte me, Scope scope, Ends ends)
     {
         // the index of each unit's newest event, for units the walk has met
         private readonly Dictionary<SnowportId, int> _newest = new();
 
-        // whether each unit, as done by an author, changes something in scope
+        // whether each unit, as done by an author, is in scope
         private readonly Dictionary<(SnowportId, byte), bool> _inScope = new();
 
         // each entry's unit, and who it counts as done by
@@ -223,8 +222,7 @@ public static class TimelineUndo
 
         /// <summary>
         /// Whether the event at index <paramref name="i"/> is something to undo or redo:
-        /// the unit its entry comes down to is closed, and changes something in scope as done by
-        /// the entry's author. Call on every event in turn, after <see cref="Ends.Canceled"/>.
+        /// the unit its entry comes down to is closed, and is in scope as done by the entry's author. Call on every event in turn, after <see cref="Ends.Canceled"/>.
         /// </summary>
         public bool Include(TimelineEvent e, int i)
         {
@@ -270,19 +268,13 @@ public static class TimelineUndo
             Members(timeline, unit, _newest.GetValueOrDefault(unit, i));
 
         /// <summary>
-        /// Whether any of the unit's events changes something in scope, as done by the author.
+        /// Whether the unit is in scope, as done by the author.
         /// </summary>
         private bool InScope(SnowportId unit, byte author, int i)
         {
-            if (_inScope.TryGetValue((unit, author), out bool inScope))
-                return inScope;
-
-            foreach (var member in AllMembers(unit, i))
-            foreach (var atom in member.Writes.Concat(member.Unsets))
-                if (scope(author, atom))
-                    return _inScope[(unit, author)] = true;
-
-            return _inScope[(unit, author)] = false;
+            if (!_inScope.TryGetValue((unit, author), out bool inScope))
+                _inScope[(unit, author)] = inScope = scope(author, AllMembers(unit, i).ToList());
+            return inScope;
         }
     }
 

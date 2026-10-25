@@ -7,6 +7,7 @@ using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
+[View("dataset")]
 public partial class DatasetEditor : Window, ICommandView
 {
     /// <summary>
@@ -149,9 +150,9 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>The shown dataset. Setting it to empty opens the first one.</summary>
     public WatchableValue<SnowTag> ShownDataSet { get; } = new();
 
-    public SelectionPlace? SelectionScope(IAtomReader R) =>
+    public ViewPlace? Place(IAtomReader R) =>
         R.Get(ShownDataSet) is var shown && shown != SnowTag.Empty
-            ? new SelectionPlace(SelectionPlaces.DataSet, shown)
+            ? ViewPlace.Of(this, shown)
             : null;
 
     public bool Shows(IAtomReader R, AtomRef target) =>
@@ -167,24 +168,6 @@ public partial class DatasetEditor : Window, ICommandView
     /// </summary>
     public IReadOnlyList<Command> Commands =>
         [InsertRowAbove, InsertRowBelow, InsertColumnLeft, InsertColumnRight, RenameColumn];
-
-    /// <summary>
-    /// Undo walks the shown dataset's edits, rows, columns, and cells, and what's selected in it.
-    /// </summary>
-    public bool UndoScope(Atom atom)
-    {
-        var shown = ShownDataSet.Value;
-        return shown != SnowTag.Empty
-            && (
-                atom is DataSet ds && ds.Id == shown
-                || atom is DataRow row && row.DataSetId == shown
-                || atom is DataColumn column && column.DataSetId == shown
-                || atom is DataCell cell
-                    && AtomService.Instance.Get(DataRow.ById, cell.Id.Row)?.DataSetId == shown
-                || atom is Selection s
-                    && s.Place == new SelectionPlace(SelectionPlaces.DataSet, shown)
-            );
-    }
 
     #endregion
 
@@ -450,9 +433,8 @@ public partial class DatasetEditor : Window, ICommandView
             return;
 
         var ds = new DataSet { Id = SnowTag.Create(), Name = name };
-        AtomService.Instance.Write(ds);
-
         ShownDataSet.Value = ds.Id;
+        AtomService.Instance.Write(this, ds);
     }
 
     private void CloseDialog()
@@ -799,7 +781,7 @@ public partial class DatasetEditor : Window, ICommandView
             view.Values[i] = text;
         }
         if (changes.Count > 0)
-            AtomService.Instance.Write(changes);
+            AtomService.Instance.Write(this, changes);
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
@@ -816,6 +798,7 @@ public partial class DatasetEditor : Window, ICommandView
             return;
 
         AtomService.Instance.Write(
+            this,
             row with
             {
                 Rank = SnowRank.At(others, index, SnowportId.Create()),
@@ -917,6 +900,7 @@ public partial class DatasetEditor : Window, ICommandView
         var column = columns[from];
         columns.RemoveAt(from);
         AtomService.Instance.Write(
+            this,
             column with
             {
                 Rank = SnowRank.At(columns, to > from ? to - 1 : to, SnowportId.Create()),
@@ -927,7 +911,7 @@ public partial class DatasetEditor : Window, ICommandView
     private void OnColumnRenamed(SnowTag columnId, string name)
     {
         if (AtomService.Instance.Get(DataColumn.ById, columnId) is { } column)
-            AtomService.Instance.Write(column with { Name = name });
+            AtomService.Instance.Write(this, column with { Name = name });
     }
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
@@ -1007,7 +991,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// </summary>
     private void SyncSelection(IAtomReader R, SnowTag datasetId)
     {
-        var colors = R.SelectionColors(new SelectionPlace(SelectionPlaces.DataSet, datasetId));
+        var colors = R.SelectionColors(ViewPlace.Of(this, datasetId));
         foreach (var header in _headerCells)
             SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnId));
         foreach (var view in _views)
@@ -1108,7 +1092,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         dialog.FileSelected += path =>
         {
-            CsvImport.Replace(AtomService.Instance, _currentDataSet, path);
+            CsvImport.Replace(this, AtomService.Instance, _currentDataSet, path);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;

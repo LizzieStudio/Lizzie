@@ -14,6 +14,11 @@ public class TimelineEvent
     public CommandName? Command { get; set; }
 
     /// <summary>
+    /// In which view the player made this event, or null.
+    /// </summary>
+    public ViewPlace? Place { get; set; }
+
+    /// <summary>
     /// The atoms this event writes, each with its whole value.
     /// </summary>
     public Atom[] Writes { get; set; } = Array.Empty<Atom>();
@@ -62,20 +67,29 @@ public class TimelineEvent
     public bool IsAdmin => Id.source == Snowport.AdminSource;
 
     /// <summary>Creates an event with a new SnowportId.</summary>
-    public static TimelineEvent Now(IChange[] changes, CommandName? command = null) =>
-        Of(SnowportId.Create(), changes, command);
+    public static TimelineEvent Now(
+        IChange[] changes,
+        CommandName? command = null,
+        ViewPlace? place = null
+    ) => Of(SnowportId.Create(), changes, command, place);
 
     /// <summary>
     /// Creates an admin event, which don't belong to any player.
     /// </summary>
     public static TimelineEvent Admin(IChange[] changes) =>
-        Of(SnowportId.CreateAdmin(), changes, null);
+        Of(SnowportId.CreateAdmin(), changes, null, null);
 
-    private static TimelineEvent Of(SnowportId id, IChange[] changes, CommandName? command) =>
+    private static TimelineEvent Of(
+        SnowportId id,
+        IChange[] changes,
+        CommandName? command,
+        ViewPlace? place
+    ) =>
         new()
         {
             Id = id,
             Command = command,
+            Place = place,
             Writes = changes.OfType<Atom>().ToArray(),
             Unsets = changes.OfType<Unset>().Select(u => u.Atom).ToArray(),
         };
