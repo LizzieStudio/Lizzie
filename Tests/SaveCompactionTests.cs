@@ -104,11 +104,11 @@ public class SaveCompactionTests
                 new Stage { Id = Tag(1) },
                 Component(2) with
                 {
-                    Stage = Tag(1),
+                    StageRef = Tag(1),
                 },
                 Component(3) with
                 {
-                    Stage = Tag(1),
+                    StageRef = Tag(1),
                     Removed = true,
                 },
             ],
@@ -130,7 +130,7 @@ public class SaveCompactionTests
                 },
                 Component(3) with
                 {
-                    Stage = Tag(2),
+                    StageRef = Tag(2),
                 },
             ],
             1
@@ -150,7 +150,7 @@ public class SaveCompactionTests
                 new Stage { Id = Tag(3), ParentRef = Tag(2) },
                 Component(4) with
                 {
-                    Stage = Tag(3),
+                    StageRef = Tag(3),
                 },
             ],
             1
@@ -163,7 +163,7 @@ public class SaveCompactionTests
             new Stage { Id = Tag(2), ParentRef = Tag(1) },
             Component(3) with
             {
-                Stage = Tag(1),
+                StageRef = Tag(1),
             },
         ]);
 
@@ -180,16 +180,16 @@ public class SaveCompactionTests
                 },
                 Component(3) with
                 {
-                    Stage = Tag(1),
+                    StageRef = Tag(1),
                 },
                 Component(3) with
                 {
-                    Stage = Tag(2),
+                    StageRef = Tag(2),
                     X = 5,
                 },
                 Component(4) with
                 {
-                    Stage = Tag(2),
+                    StageRef = Tag(2),
                 },
             ],
             1,
@@ -202,14 +202,14 @@ public class SaveCompactionTests
     [Fact]
     public void ADatasetKeepsItsRows() =>
         AssertKept(
-            [new Dataset { Id = Tag(1) }, new DataRow { Id = Tag(2), DatasetId = Tag(1) }],
+            [new Dataset { Id = Tag(1) }, new DataRow { Id = Tag(2), DatasetRef = Tag(1) }],
             1,
             2
         );
 
     [Fact]
     public void RowsOfAMissingDatasetAreDropped() =>
-        AssertKept([new DataRow { Id = Tag(2), DatasetId = Tag(1) }]);
+        AssertKept([new DataRow { Id = Tag(2), DatasetRef = Tag(1) }]);
 
     [Fact]
     public void ADeletedRowIsDropped() =>
@@ -219,7 +219,7 @@ public class SaveCompactionTests
                 new DataRow
                 {
                     Id = Tag(2),
-                    DatasetId = Tag(1),
+                    DatasetRef = Tag(1),
                     Deleted = true,
                 },
             ],
@@ -234,7 +234,7 @@ public class SaveCompactionTests
                 new DataRow
                 {
                     Id = Tag(2),
-                    DatasetId = Tag(1),
+                    DatasetRef = Tag(1),
                     Deleted = true,
                 },
                 Component(3) with
@@ -261,8 +261,8 @@ public class SaveCompactionTests
         Atom[] atoms =
         [
             new Dataset { Id = Tag(1) },
-            .. row ? [new DataRow { Id = Tag(2), DatasetId = Tag(1) }] : Array.Empty<Atom>(),
-            .. column ? [new DataColumn { Id = Tag(3), DatasetId = Tag(1) }] : Array.Empty<Atom>(),
+            .. row ? [new DataRow { Id = Tag(2), DatasetRef = Tag(1) }] : Array.Empty<Atom>(),
+            .. column ? [new DataColumn { Id = Tag(3), DatasetRef = Tag(1) }] : Array.Empty<Atom>(),
             Cell(2, 3),
         ];
         var cells = SaveCompaction.Collect(atoms).OfType<DataCell>().Count();
@@ -305,8 +305,8 @@ public class SaveCompactionTests
     {
         var json = SaveCompaction.Serialize(
             Save(
-                new DataRow { Id = Tag(41), DatasetId = Tag(40) },
-                new DataColumn { Id = Tag(50), DatasetId = Tag(40) },
+                new DataRow { Id = Tag(41), DatasetRef = Tag(40) },
+                new DataColumn { Id = Tag(50), DatasetRef = Tag(40) },
                 Cell(41, 50)
             )
         );

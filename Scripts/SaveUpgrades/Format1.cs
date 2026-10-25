@@ -71,7 +71,7 @@ public sealed class Format1 : IStep
                 };
                 Copy((JsonObject)template, atom, "SizeTemplate", "Width", "Height");
                 if ((string)template["DataSet"] is { Length: > 0 } dataset)
-                    atom["dataset"] = Tag("dataset", dataset);
+                    atom["datasetRef"] = Tag("dataset", dataset);
                 _writes.Add(atom);
             }
 
@@ -152,7 +152,7 @@ public sealed class Format1 : IStep
                             {
                                 ["$type"] = "DataColumn",
                                 ["id"] = tag,
-                                ["datasetId"] = dataset,
+                                ["datasetRef"] = dataset,
                                 ["rank"] = Rank(i),
                                 ["name"] = column,
                             }
@@ -171,7 +171,7 @@ public sealed class Format1 : IStep
                     {
                         ["$type"] = "DataRow",
                         ["id"] = tag,
-                        ["datasetId"] = dataset,
+                        ["datasetRef"] = dataset,
                         ["rank"] = Rank(rows.Count),
                     }
                 );
@@ -187,8 +187,8 @@ public sealed class Format1 : IStep
                                 ["$type"] = "DataCell",
                                 ["id"] = new JsonObject
                                 {
-                                    ["row"] = tag,
-                                    ["column"] = columnTags[i],
+                                    ["rowRef"] = tag,
+                                    ["columnRef"] = columnTags[i],
                                 },
                                 ["value"] = values[i],
                             }
@@ -244,7 +244,7 @@ public sealed class Format1 : IStep
                     parameters = Parameters(p, "TrayParameters", "Height", "Width", "Length");
                     parameters["color"] = Color(p, "Color");
                     if ((string)p["Prototype"] is { Length: > 0 } contents)
-                        parameters["prototype"] = Tag("prototype", contents);
+                        parameters["dispenseRef"] = Tag("prototype", contents);
                     break;
                 case 11:
                     parameters = Parameters(p, "BagParameters", "Height", "Diameter", "ShowCount");
@@ -396,7 +396,7 @@ public sealed class Format1 : IStep
             new()
             {
                 ["$type"] = "QuickFace",
-                ["suit"] = suit,
+                ["suitRef"] = suit,
                 ["value"] = Literal(text),
             };
 
@@ -404,7 +404,7 @@ public sealed class Format1 : IStep
             new() { ["$type"] = "FrameFace", ["frame"] = frame };
 
         private static JsonObject RowFace(int row) =>
-            new() { ["$type"] = "RowFace", ["row"] = row };
+            new() { ["$type"] = "RowFace", ["rowRef"] = row };
 
         /// <summary>
         /// A quick suit from an old face: its text, repeated by its quantity, in its color,
@@ -444,7 +444,7 @@ public sealed class Format1 : IStep
             return new JsonObject
             {
                 ["$type"] = "ImageSide",
-                ["image"] = Tag("image", image),
+                ["imageRef"] = Tag("image", image),
                 ["frames"] = frames,
             };
         }
@@ -454,10 +454,10 @@ public sealed class Format1 : IStep
             var side = new JsonObject
             {
                 ["$type"] = "TemplateSide",
-                ["template"] = Tag("template", (string)p[template] ?? ""),
+                ["templateRef"] = Tag("template", (string)p[template] ?? ""),
             };
             if ((string)p["Dataset"] is { Length: > 0 } dataset)
-                side["dataset"] = Tag("dataset", dataset);
+                side["datasetRef"] = Tag("dataset", dataset);
             return side;
         }
 
@@ -525,7 +525,7 @@ public sealed class Format1 : IStep
                 {
                     ["$type"] = "ComponentPosition",
                     ["id"] = Tag("component", id),
-                    ["stage"] = stage,
+                    ["stageRef"] = stage,
                     ["variantRef"] = Variant(
                         id,
                         (string)c["PrototypeRef"],
@@ -601,7 +601,7 @@ public sealed class Format1 : IStep
                 variant["item"] = item;
             }
             else if (kind.Type == 7 && rowTag != null)
-                variant["item"] = new JsonObject { ["$type"] = "DieItem", ["row"] = rowTag };
+                variant["item"] = new JsonObject { ["$type"] = "DieItem", ["rowRef"] = rowTag };
 
             _writes.Add(variant);
             return tag;

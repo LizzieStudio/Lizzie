@@ -1595,14 +1595,14 @@ public partial class TemplateCreator : Window, ICommandView
     //Different dataset has been selected by the user
     private void OnDatasetChanged(SnowTag datasetRef)
     {
-        EditCurrentTemplate(t => t with { Dataset = datasetRef });
+        EditCurrentTemplate(t => t with { DatasetRef = datasetRef });
         _pageControl.CurrentItem = 0;
         Atoms.R.QueueSync(this);
     }
 
     private void MapDataset()
     {
-        _datasetSelector.SelectedAtom = CurrentTemplate.Dataset;
+        _datasetSelector.SelectedRef = CurrentTemplate.DatasetRef;
         _pageControl.CurrentItem = 0;
         Atoms.R.QueueSync(this);
     }
@@ -1611,7 +1611,7 @@ public partial class TemplateCreator : Window, ICommandView
     {
         _updateRequired = true;
 
-        var datasetRef = CurrentTemplate?.Dataset ?? SnowTag.Empty;
+        var datasetRef = CurrentTemplate?.DatasetRef ?? SnowTag.Empty;
         var dataset = R.Get(Dataset.ById, datasetRef);
         if (dataset == null)
         {

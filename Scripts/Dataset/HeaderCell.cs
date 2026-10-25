@@ -18,7 +18,7 @@ public partial class HeaderCell : PanelContainer
 
     private string _headerText = string.Empty;
 
-    public SnowTag ColumnId { get; set; }
+    public SnowTag ColumnRef { get; set; }
 
     /// <summary>A click on the name, with the modifiers held.</summary>
     public event Action<SnowTag, InputEventMouseButton> Clicked;
@@ -50,7 +50,7 @@ public partial class HeaderCell : PanelContainer
             Callable.From<Vector2, ReorderDrag>(_ => new ReorderDrag
             {
                 Axis = Vector2.Axis.X,
-                Id = ColumnId,
+                MovedRef = ColumnRef,
             }),
             default,
             default
@@ -108,7 +108,7 @@ public partial class HeaderCell : PanelContainer
             return;
 
         SetHeaderText(name);
-        NameCommitted?.Invoke(ColumnId, name);
+        NameCommitted?.Invoke(ColumnRef, name);
     }
 
     private void OnLabelInput(InputEvent e)
@@ -127,11 +127,11 @@ public partial class HeaderCell : PanelContainer
             // A drag takes the release from the label, so one that gets here is a click.
             case InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } release:
                 if (!_doubleClicked)
-                    Clicked?.Invoke(ColumnId, release);
+                    Clicked?.Invoke(ColumnRef, release);
                 _doubleClicked = false;
                 break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }:
-                RightPressed?.Invoke(ColumnId);
+                RightPressed?.Invoke(ColumnRef);
                 break;
             default:
                 return;
@@ -159,7 +159,7 @@ public partial class HeaderCell : PanelContainer
         else if (@event is InputEventMouseMotion mouseMotion && _isResizing)
         {
             float delta = mouseMotion.GlobalPosition.X - _resizeStartX;
-            WidthDragged?.Invoke(ColumnId, _resizeStartWidth + delta);
+            WidthDragged?.Invoke(ColumnRef, _resizeStartWidth + delta);
         }
     }
 }

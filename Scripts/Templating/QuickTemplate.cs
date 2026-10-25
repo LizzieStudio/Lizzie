@@ -98,7 +98,7 @@ public static class QuickTemplate
             .Select(c => (c.Suit.Id, c.Value))
             .Distinct()
             .ToList()
-            .IndexOf((face.Suit, face.Value));
+            .IndexOf((face.SuitRef, face.Value));
         return index < 0 ? SnowTag.Empty : new SnowTag(index + 1);
     }
 

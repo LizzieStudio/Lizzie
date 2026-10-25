@@ -107,7 +107,7 @@ public sealed record QuickSuit
 [JsonName("ImageSide")]
 public sealed record ImageSide : SideParameters
 {
-    public SnowTag Image { get; init; }
+    public SnowTag ImageRef { get; init; }
 
     /// <summary>
     /// Which frames to show, counting from 1, as a Sequence Expression. Blank uses every frame.
@@ -115,7 +115,7 @@ public sealed record ImageSide : SideParameters
     public string Frames { get; init; } = "";
 
     public GridLayout Layout(IAtomReader R) =>
-        R.Get(ImageAsset.ById, Image)?.Layout ?? GridLayout.Single;
+        R.Get(ImageAsset.ById, ImageRef)?.Layout ?? GridLayout.Single;
 
     public override IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null)
     {
@@ -130,14 +130,14 @@ public sealed record ImageSide : SideParameters
 [JsonName("TemplateSide")]
 public sealed record TemplateSide : SideParameters
 {
-    public SnowTag Template { get; init; }
-    public SnowTag Dataset { get; init; }
+    public SnowTag TemplateRef { get; init; }
+    public SnowTag DatasetRef { get; init; }
 
     /// <summary>
     /// The column holding how many cards each row makes, or empty for one card per row.
     /// A row whose cell isn't a whole number makes one card.
     /// </summary>
-    public SnowTag Quantity { get; init; }
+    public SnowTag QuantityRef { get; init; }
 
     public override IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null) =>
         Rows(R).Select(row => new RowFace(row)).ToList();
@@ -146,12 +146,12 @@ public sealed record TemplateSide : SideParameters
     /// Each card's row, in order.
     /// </summary>
     public List<SnowTag> Rows(IAtomReader R) =>
-        R.GetRows(Dataset)
+        R.GetRows(DatasetRef)
             .SelectMany(row =>
                 Enumerable.Repeat(
                     row.Id,
                     int.TryParse(
-                        R.Get(DataCell.ById, new CellId(row.Id, Quantity))?.Value,
+                        R.Get(DataCell.ById, new CellId(row.Id, QuantityRef))?.Value,
                         out var n
                     )
                         ? Math.Max(n, 0)

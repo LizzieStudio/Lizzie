@@ -61,7 +61,7 @@ public sealed class FaceLoader(Action shown)
                 Queue(front ?? Face.Blank, back ?? Face.Blank);
                 break;
             case DieParameters p:
-                var row = (item as DieItemRef)?.Row ?? SnowTag.Empty;
+                var row = (item as DieItemRef)?.RowRef ?? SnowTag.Empty;
                 Queue(View(p.Faces, "f", new RowFace(row)) ?? Face.Blank, Face.Blank);
                 break;
         }
@@ -121,11 +121,11 @@ public sealed class FaceLoader(Action shown)
                         .Face(row);
                 // A retired card whose value the side no longer has still draws, alone, in a placeholder if its suit is gone.
                 var suit =
-                    quick.Suits.FirstOrDefault(s => s.Id == quickFace.Suit)
-                    ?? QuickSuit.Placeholder(quickFace.Suit);
+                    quick.Suits.FirstOrDefault(s => s.Id == quickFace.SuitRef)
+                    ?? QuickSuit.Placeholder(quickFace.SuitRef);
                 return FaceSet
                     .Acquire(
-                        $"quick:{R.VersionKey(prototype)}:{key}:{quickFace.Suit}:{quickFace.Value}",
+                        $"quick:{R.VersionKey(prototype)}:{key}:{quickFace.SuitRef}:{quickFace.Value}",
                         factory,
                         _ => QuickTemplate.Drawing(p, [(suit, quickFace.Value)])
                     )
@@ -146,7 +146,7 @@ public sealed class FaceLoader(Action shown)
 
             case ImageSide image:
             {
-                var asset = R.Get(ImageAsset.ById, image.Image);
+                var asset = R.Get(ImageAsset.ById, image.ImageRef);
                 if (
                     face is not FrameFace frameFace
                     || asset?.Layout.Frame(frameFace.Frame) is not int frame
@@ -157,13 +157,13 @@ public sealed class FaceLoader(Action shown)
 
             case TemplateSide templateSide:
             {
-                var row = (face as RowFace)?.Row ?? SnowTag.Empty;
+                var row = (face as RowFace)?.RowRef ?? SnowTag.Empty;
                 FaceSet Set(string key, Func<IAtomReader, IEnumerable<DataRow>> rows) =>
                     FaceSet.Acquire(
-                        $"tpl:{templateSide.Template}:{templateSide.Dataset}{key}",
+                        $"tpl:{templateSide.TemplateRef}:{templateSide.DatasetRef}{key}",
                         factory,
                         R => new Drawing(
-                            R.Get(Template.ById, templateSide.Template),
+                            R.Get(Template.ById, templateSide.TemplateRef),
                             rows(R).ToDictionary(r => r.Id, R.Values)
                         )
                     );
@@ -177,9 +177,9 @@ public sealed class FaceLoader(Action shown)
                 return Set(
                         "",
                         R =>
-                            R.Get(Dataset.ById, templateSide.Dataset) == null
+                            R.Get(Dataset.ById, templateSide.DatasetRef) == null
                                 ? []
-                                : R.GetRows(templateSide.Dataset)
+                                : R.GetRows(templateSide.DatasetRef)
                     )
                     .Face(row);
             }

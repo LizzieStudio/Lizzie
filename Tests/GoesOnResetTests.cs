@@ -22,7 +22,7 @@ public class GoesOnResetTests
         },
     ];
 
-    private static ComponentPosition In(SnowTag stage) => new() { Id = Card, Stage = stage };
+    private static ComponentPosition In(SnowTag stage) => new() { Id = Card, StageRef = stage };
 
     [Fact]
     public void WhatOnlyTheTableHasGoes() =>

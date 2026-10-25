@@ -13,7 +13,7 @@ namespace Lizzie;
 /// </remarks>
 public partial class AtomSelector : OptionButton
 {
-    private SnowTag _selected = SnowTag.Empty;
+    private SnowTag _selectedRef = SnowTag.Empty;
     private Func<IWatchReader, IEnumerable<(string Name, SnowTag Id)>> _items = _ => [];
 
     public override void _EnterTree()
@@ -60,12 +60,12 @@ public partial class AtomSelector : OptionButton
     /// <summary>
     /// The Id of the selected atom.
     /// </summary>
-    public SnowTag SelectedAtom
+    public SnowTag SelectedRef
     {
-        get => _selected;
+        get => _selectedRef;
         set
         {
-            _selected = value;
+            _selectedRef = value;
             UpdateSelection();
         }
     }
@@ -75,7 +75,7 @@ public partial class AtomSelector : OptionButton
         // Before the first sync there's nothing to select; the sync selects it.
         if (ItemCount == 0)
             return;
-        var index = GetItemIndex(_selected);
+        var index = GetItemIndex(_selectedRef);
         if (index < 0)
             index = 0;
         Select(index);
@@ -83,8 +83,8 @@ public partial class AtomSelector : OptionButton
 
     private void OnItemSelected(long index)
     {
-        _selected = GetItemId((int)index);
-        AtomSelected?.Invoke(_selected);
+        _selectedRef = GetItemId((int)index);
+        AtomSelected?.Invoke(_selectedRef);
     }
 
     public event Action<SnowTag> AtomSelected;

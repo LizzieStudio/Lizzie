@@ -46,7 +46,7 @@ public partial class PrototypeManifest : Window, ICommandView
             if (SelectedPrototype != null)
             {
                 EventBus.Instance.Publish(
-                    new EditPrototypeEvent { PrototypeId = SelectedPrototype.Id }
+                    new EditPrototypeEvent { PrototypeRef = SelectedPrototype.Id }
                 );
             }
         };

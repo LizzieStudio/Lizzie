@@ -67,7 +67,7 @@ public abstract partial class VisualComponentBase : Area3D
         var key = Key;
         var target = ComponentPosition.ById.Ref(key);
         var local = Snowport.Clock.source;
-        var place = ViewPlace.Of<GameObjects>(key.Stage);
+        var place = ViewPlace.Of<GameObjects>(key.StageRef);
         var selections = R.Get(Selection.ByPlace, place);
         var mine = selections.FirstOrDefault(s => s.Player == local)?.Targets;
         _isMine = mine?.Contains(target) == true;
@@ -263,19 +263,19 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual SnowTag PrototypeRef { get; set; }
 
-    private SnowTag _reference = SnowTag.Create();
+    private SnowTag _componentRef = SnowTag.Create();
 
     /// <summary>
     /// The component atom this node shows. Must be set before adding the node to the tree.
     /// </summary>
-    public SnowTag Reference
+    public SnowTag ComponentRef
     {
-        get => _reference;
+        get => _componentRef;
         set
         {
             if (IsInsideTree())
-                throw new InvalidOperationException("Reference can't change once in the tree.");
-            _reference = value;
+                throw new InvalidOperationException("ComponentRef can't change once in the tree.");
+            _componentRef = value;
         }
     }
 
@@ -288,7 +288,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// The id of the component atom this node shows, in the stage its table shows.
     /// </summary>
-    public StageKey Key => new(OwningView?.StageRef ?? SnowTag.Empty, Reference);
+    public StageKey Key => new(OwningView?.StageRef ?? SnowTag.Empty, ComponentRef);
 
     /// <summary>
     /// Which of its prototype's items this is, or null.

@@ -42,7 +42,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// The stage the local player picked to show, or <see cref="SnowTag.Empty"/> for the current table.
     /// </summary>
-    public WatchableValue<SnowTag> PickedStage { get; } = new();
+    public WatchableValue<SnowTag> PickedStageRef { get; } = new();
 
     /// <summary>
     /// Whether to mark components that a reset would delete.
@@ -59,7 +59,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// Gets the stage to show locally.
     /// </summary>
     public SnowTag ShownStage(IAtomReader R) =>
-        R.Get(PickedStage) is var picked && Stage.Reachable(R, picked)
+        R.Get(PickedStageRef) is var picked && Stage.Reachable(R, picked)
             ? picked
             : R.Get(CurrentTable.Only).StageRef;
 
@@ -353,7 +353,7 @@ public partial class GameObjects : Node3D, ICommandView
 
     private void AddComponentToScene(VisualComponentBase component)
     {
-        if (component.Reference == SnowTag.Empty)
+        if (component.ComponentRef == SnowTag.Empty)
         {
             GD.PrintErr("component somehow lost its SnowTag");
             return;
@@ -503,7 +503,7 @@ public partial class GameObjects : Node3D, ICommandView
     #region Selection
     /// <summary>The components the local player has selected, read from their selection atom.</summary>
     private HashSet<SnowTag> GetSelection() =>
-        Atoms.R.GetSelection(ComponentPosition.ById, this).Select(k => k.Component).ToHashSet();
+        Atoms.R.GetSelection(ComponentPosition.ById, this).Select(k => k.ComponentRef).ToHashSet();
 
     /// <summary>Replaces the local player's selected components.</summary>
     public void SetSelection(IEnumerable<SnowTag> components) =>
@@ -698,7 +698,7 @@ public partial class GameObjects : Node3D, ICommandView
         )
             EndDragSelection();
         else if (CursorMode == CursorMode.Normal && IsSelectingPress(button))
-            Press(GetComponentAtPoint(ViewportPoint(button.Position)).Component?.Reference);
+            Press(GetComponentAtPoint(ViewportPoint(button.Position)).Component?.ComponentRef);
     }
 
     /// <summary>
@@ -1118,7 +1118,7 @@ public partial class GameObjects : Node3D, ICommandView
         _selectionRectangle.StopDragSelect();
 
         var nodes = ComponentNodes.OfType<VisualComponentBase>().ToList();
-        SetSelection(nodes.Where(c => c.PreviewSelected == true).Select(c => c.Reference));
+        SetSelection(nodes.Where(c => c.PreviewSelected == true).Select(c => c.ComponentRef));
         foreach (var c in nodes)
             c.PreviewSelected = null;
     }

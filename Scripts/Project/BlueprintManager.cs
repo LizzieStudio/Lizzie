@@ -28,7 +28,7 @@ public partial class BlueprintManager : Window, ICommandView
         Keys = [Shortcuts.Key(Key.F2)],
         MaxTargets = 1,
         SideEffects = (_, stages) =>
-            EventBus.Instance.Publish(new RenameStageEvent { StageId = stages[0].Id }),
+            EventBus.Instance.Publish(new RenameStageEvent { StageRef = stages[0].Id }),
     };
 
     public override void _EnterTree()
@@ -42,7 +42,7 @@ public partial class BlueprintManager : Window, ICommandView
         EventBus.Instance.Unsubscribe<RenameStageEvent>(OnRenameStage);
     }
 
-    private void OnRenameStage(RenameStageEvent e) => Rename(e.StageId);
+    private void OnRenameStage(RenameStageEvent e) => Rename(e.StageRef);
 
     public override void _Ready()
     {
@@ -232,13 +232,13 @@ public partial class BlueprintManager : Window, ICommandView
             Tree.DropModeFlagsEnum.OnItem | Tree.DropModeFlagsEnum.Inbetween
         );
         _tree.SetDragPreview(new Label { Text = item.GetText(NameColumn) });
-        return new BlueprintDrag { Id = IdOf(item) };
+        return new BlueprintDrag { StageRef = IdOf(item) };
     }
 
     // We need this for Godot drag and drop.
     private sealed partial class BlueprintDrag : RefCounted
     {
-        public SnowTag Id { get; init; }
+        public SnowTag StageRef { get; init; }
     }
 
     /// <summary>
@@ -262,7 +262,7 @@ public partial class BlueprintManager : Window, ICommandView
         if (data.As<GodotObject>() is not BlueprintDrag drag)
             return null;
         if (
-            Atoms.R.Get(Stage.ById, drag.Id) is not { } moved
+            Atoms.R.Get(Stage.ById, drag.StageRef) is not { } moved
             || !_rows.TryGetValue(moved.Id, out var row)
         )
             return null;

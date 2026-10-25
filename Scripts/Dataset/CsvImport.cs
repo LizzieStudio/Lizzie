@@ -48,7 +48,7 @@ public static class CsvImport
                 .Select(h => new DataColumn
                 {
                     Id = SnowTag.Create(),
-                    DatasetId = dataset.Id,
+                    DatasetRef = dataset.Id,
                     Rank = columnRank = columnRank.After(SnowportId.Create()),
                     Name = h,
                 })
@@ -66,7 +66,7 @@ public static class CsvImport
             var row = new DataRow
             {
                 Id = SnowTag.Create(),
-                DatasetId = dataset.Id,
+                DatasetRef = dataset.Id,
                 Rank = rank,
             };
             changes.Add(row);

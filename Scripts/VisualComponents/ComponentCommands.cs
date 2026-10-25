@@ -103,7 +103,7 @@ public static class ComponentCommands
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) =>
             !R.IsBeingDragged(c)
-            && R.Get(Stage.ById, c.Stage)?.ParentRef is { } p
+            && R.Get(Stage.ById, c.StageRef)?.ParentRef is { } p
             && p != SnowTag.Empty,
         Requires = [("These components have no changes to merge.", WrittenHere)],
         Effects = (R, cs) =>
@@ -112,7 +112,7 @@ public static class ComponentCommands
                 {
                     c with
                     {
-                        Stage = R.Get(Stage.ById, c.Stage).ParentRef,
+                        StageRef = R.Get(Stage.ById, c.StageRef).ParentRef,
                     },
                     R.Unset(c),
                 }
@@ -120,7 +120,7 @@ public static class ComponentCommands
     };
 
     private static bool WrittenHere(IAtomReader R, ComponentPosition c) =>
-        R.Get(ComponentPosition.WrittenIn, c.Stage).Any(w => w.Id == c.Id);
+        R.Get(ComponentPosition.WrittenIn, c.StageRef).Any(w => w.Id == c.Id);
 
     private static float RotationStep(IAtomReader R) =>
         R.Get(ProjectGameSettings.Only).RotationStep();

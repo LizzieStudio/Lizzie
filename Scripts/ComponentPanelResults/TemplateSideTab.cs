@@ -42,7 +42,7 @@ public partial class TemplateSideTab : SideTab
             _datasetRef = id;
             _quantityRef = SnowTag.Empty;
             ShowColumns(id);
-            _quantity.SelectedAtom = SnowTag.Empty;
+            _quantity.SelectedRef = SnowTag.Empty;
             RaiseChanged();
         };
         _quantity.AtomSelected += id =>
@@ -68,7 +68,7 @@ public partial class TemplateSideTab : SideTab
             if (Atoms.R.Get(Template.ById, _templateRef) is { } template && !value(template))
             {
                 _templateRef = SnowTag.Empty;
-                _template.SelectedAtom = SnowTag.Empty;
+                _template.SelectedRef = SnowTag.Empty;
             }
         }
     }
@@ -76,22 +76,22 @@ public partial class TemplateSideTab : SideTab
     public override SideParameters Side =>
         new TemplateSide
         {
-            Template = _templateRef,
-            Dataset = _datasetRef,
-            Quantity = _quantityRef,
+            TemplateRef = _templateRef,
+            DatasetRef = _datasetRef,
+            QuantityRef = _quantityRef,
         };
 
     public override bool TryLoad(SideParameters side)
     {
         if (side is not TemplateSide template)
             return false;
-        _templateRef = template.Template;
-        _template.SelectedAtom = template.Template;
-        _datasetRef = template.Dataset;
-        _dataset.SelectedAtom = template.Dataset;
-        _quantityRef = template.Quantity;
-        ShowColumns(template.Dataset);
-        _quantity.SelectedAtom = template.Quantity;
+        _templateRef = template.TemplateRef;
+        _template.SelectedRef = template.TemplateRef;
+        _datasetRef = template.DatasetRef;
+        _dataset.SelectedRef = template.DatasetRef;
+        _quantityRef = template.QuantityRef;
+        ShowColumns(template.DatasetRef);
+        _quantity.SelectedRef = template.QuantityRef;
         return true;
     }
 

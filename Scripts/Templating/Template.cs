@@ -56,5 +56,5 @@ public record Template : Atom
     [JsonIgnore]
     public bool TriangleFaces => Sides is 8 or 20;
 
-    public SnowTag Dataset { get; init; }
+    public SnowTag DatasetRef { get; init; }
 }

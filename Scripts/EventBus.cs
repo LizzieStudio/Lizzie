@@ -221,7 +221,7 @@ public class ShowImageManagerEvent : IEvent
 
 public class EditPrototypeEvent : IEvent
 {
-    public SnowTag PrototypeId { get; set; }
+    public SnowTag PrototypeRef { get; set; }
 }
 
 /// <summary>
@@ -249,7 +249,7 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
 /// </summary>
 public class RenameColumnEvent : IEvent
 {
-    public SnowTag ColumnId { get; set; }
+    public SnowTag ColumnRef { get; set; }
 }
 
 /// <summary>
@@ -257,7 +257,7 @@ public class RenameColumnEvent : IEvent
 /// </summary>
 public class RenameStageEvent : IEvent
 {
-    public SnowTag StageId { get; set; }
+    public SnowTag StageRef { get; set; }
 }
 
 /// <summary>

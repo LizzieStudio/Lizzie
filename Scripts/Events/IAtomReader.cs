@@ -208,7 +208,7 @@ public static class AtomReaderExtensions
     public static IReadOnlyDictionary<string, string> Values(this IAtomReader R, DataRow row)
     {
         var values = new Dictionary<string, string>();
-        foreach (var column in R.GetColumns(row.DatasetId))
+        foreach (var column in R.GetColumns(row.DatasetRef))
             values.TryAdd(
                 column.Name,
                 R.Get(DataCell.ById, new CellId(row.Id, column.Id))?.Value ?? string.Empty

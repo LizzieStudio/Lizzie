@@ -28,14 +28,14 @@ public class AtomRefTests
     public void ARefKeepsAStructId() =>
         AssertRoundTrips(
             DataCell.ById.Ref(new CellId(new SnowTag(5), new SnowTag(6))),
-            """{"type":"DataCell","id":{"row":5,"column":6}}"""
+            """{"type":"DataCell","id":{"rowRef":5,"columnRef":6}}"""
         );
 
     [Fact]
     public void ARefToAStagedAtomKeepsItsStage() =>
         AssertRoundTrips(
             ComponentPosition.ById.Ref(new StageKey(new SnowTag(5), new SnowTag(6))),
-            """{"type":"ComponentPosition","id":{"stage":5,"component":6}}"""
+            """{"type":"ComponentPosition","id":{"stageRef":5,"componentRef":6}}"""
         );
 
     [Fact]

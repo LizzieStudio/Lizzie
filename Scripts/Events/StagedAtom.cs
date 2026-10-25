@@ -3,7 +3,7 @@ using Lizzie.Replication.Machinery;
 namespace Lizzie;
 
 /// <summary>
-/// An atom that each <see cref="Lizzie.Stage"/> holds its own version of, like a component's state.
+/// An atom that each <see cref="Stage"/> holds its own version of, like a component's state.
 ///
 /// <para>
 /// The state of a <see cref="StagedAtom"/> is temporal.
@@ -25,7 +25,7 @@ public abstract record StagedAtom : Atom
     /// <summary>
     /// The stage this atom was written in or read from.
     /// </summary>
-    public SnowTag Stage { get; init; }
+    public SnowTag StageRef { get; init; }
 
     /// <summary>
     /// A tombstone. When true, this stage hides the atom the previous stages show.
@@ -40,4 +40,4 @@ public abstract record StagedAtom : Atom
 /// <summary>
 /// The id of a <see cref="StagedAtom"/>.
 /// </summary>
-public readonly record struct StageKey(SnowTag Stage, SnowTag Component);
+public readonly record struct StageKey(SnowTag StageRef, SnowTag ComponentRef);

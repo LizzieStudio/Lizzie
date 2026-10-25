@@ -43,7 +43,7 @@ public class DeckReconciliationTests
             new ComponentPosition
             {
                 Id = Deck,
-                Stage = Root,
+                StageRef = Root,
                 VariantRef = DeckVariant,
             },
         };
@@ -62,7 +62,7 @@ public class DeckReconciliationTests
                 new ComponentPosition
                 {
                     Id = new SnowTag(20 + i),
-                    Stage = Root,
+                    StageRef = Root,
                     VariantRef = new SnowTag(10 + i),
                     ContainerRef = onTable.Contains(i) ? SnowTag.Empty : Deck,
                 }
@@ -82,7 +82,7 @@ public class DeckReconciliationTests
             new ComponentPosition
             {
                 Id = new SnowTag(20 + card),
-                Stage = stage,
+                StageRef = stage,
                 VariantRef = new SnowTag(10 + card),
             },
         ];
@@ -132,7 +132,7 @@ public class DeckReconciliationTests
                 && variant.DeckRef == Deck
                 && position.VariantRef == variant.Id
                 && position.ContainerRef == Deck
-                && position.Stage == Root
+                && position.StageRef == Root
                 && position.ZOrder.Target == ZTarget.Bottom,
             $"Adding 3 wrote {Describe(changes)}, expected card 3 at the bottom of the deck in the root."
         );
@@ -288,7 +288,7 @@ public class DeckReconciliationTests
         var actualRemoved = changes
             .OfType<ComponentPosition>()
             .Where(p => p.Removed)
-            .Select(p => (p.Stage, p.Id))
+            .Select(p => (p.StageRef, p.Id))
             .Order();
         Assert.True(
             changes.Count == retired.Length + removed.Length

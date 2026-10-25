@@ -40,17 +40,17 @@ public abstract record PrototypeItemRef
 public sealed record PrintedItemRef(FaceKey Front, FaceKey Back) : PrototypeItemRef
 {
     public override IEnumerable<SnowTag> Rows() =>
-        new[] { Front, Back }.OfType<RowFace>().Select(face => face.Row);
+        new[] { Front, Back }.OfType<RowFace>().Select(face => face.RowRef);
 }
 
 /// <summary>
 /// A die made from a <see cref="DataRow"/>.
 /// </summary>
-/// <param name="Row">The row of the Dataset its faces show.</param>
+/// <param name="RowRef">The row of the Dataset its faces show.</param>
 [JsonName("DieItem")]
-public sealed record DieItemRef(SnowTag Row) : PrototypeItemRef
+public sealed record DieItemRef(SnowTag RowRef) : PrototypeItemRef
 {
-    public override IEnumerable<SnowTag> Rows() => [Row];
+    public override IEnumerable<SnowTag> Rows() => [RowRef];
 }
 
 /// <summary>
@@ -63,7 +63,7 @@ public abstract record FaceKey;
 /// A dataset row drawn with a template.
 /// </summary>
 [JsonName("RowFace")]
-public sealed record RowFace(SnowTag Row) : FaceKey;
+public sealed record RowFace(SnowTag RowRef) : FaceKey;
 
 /// <summary>
 /// A frame of an image, counting from 1.
@@ -74,6 +74,6 @@ public sealed record FrameFace(int Frame) : FaceKey;
 /// <summary>
 /// A value of a <see cref="QuickSuit"/>.
 /// </summary>
-/// <param name="Suit">The suit's <see cref="QuickSuit.Id"/>.</param>
+/// <param name="SuitRef">The suit's <see cref="QuickSuit.Id"/>.</param>
 [JsonName("QuickFace")]
-public sealed record QuickFace(SnowTag Suit, string Value) : FaceKey;
+public sealed record QuickFace(SnowTag SuitRef, string Value) : FaceKey;

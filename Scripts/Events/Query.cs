@@ -214,7 +214,7 @@ public class Lookup<T, K> : Query
 /// <code>public static readonly StagedId&lt;ComponentPosition&gt; ById = new(c => c.Id);</code>
 /// </summary>
 public sealed class StagedId<T>(Func<T, SnowTag> of)
-    : Identity<T, StageKey>(atom => new(atom.Stage, of(atom))),
+    : Identity<T, StageKey>(atom => new(atom.StageRef, of(atom))),
         IStagedId
     where T : StagedAtom;
 
@@ -232,7 +232,7 @@ internal interface IStagedId;
 /// This is used internally to differentiate between a component that was inherited from a blueprint
 /// and a component that was actually updated in a stage.
 /// </remarks>
-public sealed class Written<T>() : Lookup<T, SnowTag>(atom => atom.Stage)
+public sealed class Written<T>() : Lookup<T, SnowTag>(atom => atom.StageRef)
     where T : StagedAtom;
 
 /// <summary>

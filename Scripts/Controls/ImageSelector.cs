@@ -8,7 +8,7 @@ public partial class ImageSelector : Control
 {
     private OptionButton _optionDropdown;
     private Button _imageEditorButton;
-    private SnowTag _selected = SnowTag.Empty;
+    private SnowTag _selectedRef = SnowTag.Empty;
 
     public override void _EnterTree()
     {
@@ -40,24 +40,24 @@ public partial class ImageSelector : Control
 
     public void SetSelectedImage(SnowTag Id)
     {
-        _selected = Id;
+        _selectedRef = Id;
         UpdateSelection();
     }
 
     private void UpdateSelection()
     {
-        // Not synced yet; Sync reapplies _selected once the list is populated.
+        // Not synced yet; Sync reapplies _selectedRef once the list is populated.
         if (_optionDropdown.ItemCount == 0)
             return;
 
-        var index = _optionDropdown.GetItemIndex(_selected);
+        var index = _optionDropdown.GetItemIndex(_selectedRef);
         _optionDropdown.Select(index >= 0 ? index : 0);
     }
 
     private void ItemSelected(long index)
     {
-        _selected = _optionDropdown.GetItemId((int)index);
-        ImageSelected?.Invoke(_selected);
+        _selectedRef = _optionDropdown.GetItemId((int)index);
+        ImageSelected?.Invoke(_selectedRef);
     }
 
     public event Action<SnowTag> ImageSelected;

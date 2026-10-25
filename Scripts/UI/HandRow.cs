@@ -68,7 +68,7 @@ public partial class HandRow : Control
     /// </summary>
     public SnowTag? HoveredCard() =>
         Under(GetViewport()) == this
-            ? CardAt(GetLocalMousePosition().X)?.Reference.Component
+            ? CardAt(GetLocalMousePosition().X)?.Reference.ComponentRef
             : null;
 
     // The card at x, found without the spread or the gap, which would move the cards out from under the pointer.
@@ -80,7 +80,7 @@ public partial class HandRow : Control
         CardAt(at.X) is { } card
             ? ProjectService.Instance.GameObjects.GrabFromHand(
                 this,
-                card.Reference.Component,
+                card.Reference.ComponentRef,
                 GetGlobalTransformWithCanvas() * at
             )
             : default;
@@ -90,7 +90,7 @@ public partial class HandRow : Control
         if (e is InputEventMouseButton button && GameObjects.IsSelectingPress(button))
         {
             ProjectService.Instance.GameObjects.Press(
-                CardAt(button.Position.X)?.Reference.Component
+                CardAt(button.Position.X)?.Reference.ComponentRef
             );
             AcceptEvent();
         }

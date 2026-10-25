@@ -40,7 +40,7 @@ public class StageTests
         new()
         {
             Id = Tag(id),
-            Stage = Tag(stage),
+            StageRef = Tag(stage),
             X = x,
         };
 

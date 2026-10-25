@@ -32,6 +32,6 @@ public static class PrototypeCommands
         MaxTargets = 1,
         ActsOn = Context.Selected | Context.Referenced,
         SideEffects = (_, ps) =>
-            EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = ps[0].Id }),
+            EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeRef = ps[0].Id }),
     };
 }

@@ -26,14 +26,14 @@ public partial class ImageSideTab : SideTab
     }
 
     public override SideParameters Side =>
-        new ImageSide { Image = _imageRef, Frames = _frames.Text };
+        new ImageSide { ImageRef = _imageRef, Frames = _frames.Text };
 
     public override bool TryLoad(SideParameters side)
     {
         if (side is not ImageSide image)
             return false;
-        _imageRef = image.Image;
-        _image.SetSelectedImage(image.Image);
+        _imageRef = image.ImageRef;
+        _image.SetSelectedImage(image.ImageRef);
         _frames.Text = image.Frames;
         return true;
     }

@@ -74,7 +74,7 @@ public partial class VcTray : VisualComponentGroup
 
         ShapeProfiles.Add(new OffsetShape2D(r));
 
-        _prototype = R.Get(Prototype.ById, p.Prototype);
+        _prototype = R.Get(Prototype.ById, p.DispenseRef);
         _item = _prototype == null ? null : PrototypeItemRef.First(_prototype.Parameters, R);
 
         UpdateNameLabel();
@@ -138,7 +138,7 @@ public partial class VcTray : VisualComponentGroup
                 new ComponentPosition
                 {
                     Id = SnowTag.Create(),
-                    Stage = Key.Stage,
+                    StageRef = Key.StageRef,
                     VariantRef = variant.Id,
                 },
             ],
@@ -159,5 +159,5 @@ public sealed record TrayParameters : ComponentParameters
     public float Length { get; init; }
     public Color Color { get; init; } = Colors.Black;
 
-    public SnowTag Prototype { get; init; } = SnowTag.Empty;
+    public SnowTag DispenseRef { get; init; } = SnowTag.Empty;
 }

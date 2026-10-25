@@ -69,7 +69,7 @@
                 "additionalProperties": false
               },
               "containerRef": true,
-              "stage": true,
+              "stageRef": true,
               "removed": {
                 "type": "boolean"
               }
@@ -100,10 +100,10 @@
                       "$type": {
                         "const": "DieItem"
                       },
-                      "row": true
+                      "rowRef": true
                     },
                     "required": [
-                      "row"
+                      "rowRef"
                     ],
                     "additionalProperties": false
                   },
@@ -140,7 +140,7 @@
                               "$type": {
                                 "const": "QuickFace"
                               },
-                              "suit": true,
+                              "suitRef": true,
                               "value": {
                                 "type": [
                                   "string",
@@ -149,7 +149,7 @@
                               }
                             },
                             "required": [
-                              "suit",
+                              "suitRef",
                               "value"
                             ],
                             "additionalProperties": false
@@ -159,10 +159,10 @@
                               "$type": {
                                 "const": "RowFace"
                               },
-                              "row": true
+                              "rowRef": true
                             },
                             "required": [
-                              "row"
+                              "rowRef"
                             ],
                             "additionalProperties": false
                           }
@@ -196,7 +196,7 @@
                               "$type": {
                                 "const": "QuickFace"
                               },
-                              "suit": true,
+                              "suitRef": true,
                               "value": {
                                 "type": [
                                   "string",
@@ -205,7 +205,7 @@
                               }
                             },
                             "required": [
-                              "suit",
+                              "suitRef",
                               "value"
                             ],
                             "additionalProperties": false
@@ -215,10 +215,10 @@
                               "$type": {
                                 "const": "RowFace"
                               },
-                              "row": true
+                              "rowRef": true
                             },
                             "required": [
-                              "row"
+                              "rowRef"
                             ],
                             "additionalProperties": false
                           }
@@ -260,8 +260,8 @@
               "id": {
                 "type": "object",
                 "properties": {
-                  "row": true,
-                  "column": true
+                  "rowRef": true,
+                  "columnRef": true
                 },
                 "additionalProperties": false
               },
@@ -283,7 +283,7 @@
                 "const": "DataColumn"
               },
               "id": true,
-              "datasetId": true,
+              "datasetRef": true,
               "rank": true,
               "name": {
                 "type": [
@@ -303,7 +303,7 @@
                 "const": "DataRow"
               },
               "id": true,
-              "datasetId": true,
+              "datasetRef": true,
               "rank": true,
               "deleted": {
                 "type": "boolean"
@@ -578,7 +578,7 @@
                               "$type": {
                                 "const": "ImageSide"
                               },
-                              "image": true,
+                              "imageRef": true,
                               "frames": {
                                 "type": [
                                   "string",
@@ -631,9 +631,9 @@
                               "$type": {
                                 "const": "TemplateSide"
                               },
-                              "template": true,
-                              "dataset": true,
-                              "quantity": true
+                              "templateRef": true,
+                              "datasetRef": true,
+                              "quantityRef": true
                             },
                             "additionalProperties": false
                           }
@@ -748,7 +748,7 @@
                               "$type": {
                                 "const": "ImageSide"
                               },
-                              "image": true,
+                              "imageRef": true,
                               "frames": {
                                 "type": [
                                   "string",
@@ -774,9 +774,9 @@
                               "$type": {
                                 "const": "TemplateSide"
                               },
-                              "template": true,
-                              "dataset": true,
-                              "quantity": true
+                              "templateRef": true,
+                              "datasetRef": true,
+                              "quantityRef": true
                             },
                             "additionalProperties": false
                           }
@@ -796,7 +796,7 @@
                               "$type": {
                                 "const": "ImageSide"
                               },
-                              "image": true,
+                              "imageRef": true,
                               "frames": {
                                 "type": [
                                   "string",
@@ -822,9 +822,9 @@
                               "$type": {
                                 "const": "TemplateSide"
                               },
-                              "template": true,
-                              "dataset": true,
-                              "quantity": true
+                              "templateRef": true,
+                              "datasetRef": true,
+                              "quantityRef": true
                             },
                             "additionalProperties": false
                           }
@@ -866,7 +866,7 @@
                         "type": "number"
                       },
                       "color": true,
-                      "prototype": true,
+                      "dispenseRef": true,
                       "componentName": {
                         "type": [
                           "string",
@@ -1050,7 +1050,7 @@
                   }
                 }
               },
-              "dataset": true
+              "datasetRef": true
             },
             "required": [
               "id"

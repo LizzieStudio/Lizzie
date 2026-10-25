@@ -103,7 +103,7 @@ public partial class UI : CanvasLayer
             };
             foreach (var (state, box) in stage.IsTable ? _tableStyles : _blueprintStyles)
                 button.AddThemeStyleboxOverride(state, box);
-            button.Pressed += () => ProjectService.Instance.GameObjects.PickedStage.Value = pick;
+            button.Pressed += () => ProjectService.Instance.GameObjects.PickedStageRef.Value = pick;
             _stages.AddChild(button);
         }
     }
@@ -298,7 +298,7 @@ public partial class UI : CanvasLayer
             _modalDialogs.AddChild(_datasetEditor);
         }
         if (e.DatasetRef != SnowTag.Empty)
-            _datasetEditor.ShownDataset.Value = e.DatasetRef;
+            _datasetEditor.ShownDatasetRef.Value = e.DatasetRef;
         if (e.SelectedRowRef != SnowTag.Empty)
             _datasetEditor.RevealRow(e.SelectedRowRef);
     }
@@ -475,7 +475,7 @@ public partial class UI : CanvasLayer
 
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
-        var p = Atoms.R.Get(Prototype.ById, editEvent.PrototypeId);
+        var p = Atoms.R.Get(Prototype.ById, editEvent.PrototypeRef);
         if (p == null)
         {
             return;

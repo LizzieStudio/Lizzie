@@ -59,10 +59,10 @@ public class Format1Tests
     {
         var writes = Writes();
         var dataset = (int)Assert.Single(OfType(writes, "Dataset"))["id"];
-        Assert.Equal(dataset, (int)Assert.Single(OfType(writes, "Template"))["dataset"]);
+        Assert.Equal(dataset, (int)Assert.Single(OfType(writes, "Template"))["datasetRef"]);
         var side = Assert.Single(OfType(writes, "Prototype"))["parameters"]["front"];
         Assert.Equal("TemplateSide", (string)side["$type"]);
-        Assert.Equal(dataset, (int)side["dataset"]);
+        Assert.Equal(dataset, (int)side["datasetRef"]);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class Format1Tests
         var item = variants[(int)card["variantRef"]]["item"];
         var bow = OfType(writes, "DataRow").OrderBy(r => (string)r["rank"]).Last();
         Assert.Equal("RowFace", (string)item["front"]["$type"]);
-        Assert.Equal((int)bow["id"], (int)item["front"]["row"]);
+        Assert.Equal((int)bow["id"], (int)item["front"]["rowRef"]);
         Assert.Null(item["back"]);
     }
 
@@ -129,7 +129,7 @@ public class Format1Tests
 
         var front = Assert.Single(OfType(writes, "ComponentVariant"))["item"]["front"];
         Assert.Equal("QuickFace", (string)front["$type"]);
-        Assert.Equal((int)suits[1]["id"], (int)front["suit"]);
+        Assert.Equal((int)suits[1]["id"], (int)front["suitRef"]);
         Assert.Equal("1-3", (string)front["value"]);
     }
 }

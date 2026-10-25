@@ -96,7 +96,7 @@ public static class DeckReconciliation
             new ComponentPosition
             {
                 Id = snowTagCreate(),
-                Stage = deck.Stage,
+                StageRef = deck.StageRef,
                 VariantRef = variant.Id,
                 ContainerRef = deck.Id,
                 Rotation = new Vector3(0, 0, Mathf.Pi),

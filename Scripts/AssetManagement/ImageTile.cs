@@ -9,15 +9,15 @@ public partial class ImageTile : MarginContainer
     private Label _imageName;
     private TextureRect _thumbnail;
 
-    private SnowTag _reference;
+    private SnowTag _imageRef;
 
     /// <summary>The asset this tile shows.</summary>
-    public SnowTag Reference
+    public SnowTag ImageRef
     {
-        get => _reference;
+        get => _imageRef;
         set
         {
-            _reference = value;
+            _imageRef = value;
             Atoms.R.QueueSync(this);
         }
     }
@@ -42,20 +42,20 @@ public partial class ImageTile : MarginContainer
     {
         if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
         {
-            Clicked?.Invoke(Reference);
+            Clicked?.Invoke(ImageRef);
         }
     }
 
     private async void Sync(IWatchReader R)
     {
-        var asset = R.Get(ImageAsset.ById, Reference);
+        var asset = R.Get(ImageAsset.ById, ImageRef);
         if (asset == null)
             return;
 
         _imageName.Text = asset.Name;
         var image = await AssetImageCache.Instance.FetchImageAsync(asset);
         // The tile may have been removed or retargeted while the image loaded.
-        if (!IsInstanceValid(this) || asset.Id != Reference)
+        if (!IsInstanceValid(this) || asset.Id != ImageRef)
             return;
         if (image != null)
             _thumbnail.Texture = ImageTexture.CreateFromImage(image);

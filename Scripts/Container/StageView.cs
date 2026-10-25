@@ -115,7 +115,7 @@ public partial class StageView : Node3D
             return;
         }
 
-        component.Reference = id;
+        component.ComponentRef = id;
         component.TextureFactory = TextureFactory;
         AddChild(component);
         _components[id] = component;

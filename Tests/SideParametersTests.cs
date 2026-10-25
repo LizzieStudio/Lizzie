@@ -138,8 +138,8 @@ public class SideParametersTests
         var R = new ListReader(new AssetManagement.ImageAsset { Id = image, Layout = new(3, 3) });
         var parameters = new PrintedParameters
         {
-            Front = new ImageSide { Image = image, Frames = front },
-            Back = new ImageSide { Image = image, Frames = back },
+            Front = new ImageSide { ImageRef = image, Frames = front },
+            Back = new ImageSide { ImageRef = image, Frames = back },
         };
 
         Assert.True(
@@ -165,12 +165,12 @@ public class SideParametersTests
             return new DataRow
             {
                 Id = id,
-                DatasetId = dataset,
+                DatasetRef = dataset,
                 Rank = rank,
             };
         }
         var R = new ListReader(
-            new DataColumn { Id = quantity, DatasetId = dataset },
+            new DataColumn { Id = quantity, DatasetRef = dataset },
             Row(a),
             Row(b),
             Row(c),
@@ -179,7 +179,7 @@ public class SideParametersTests
             new DataCell { Id = new CellId(b, quantity), Value = "0" },
             new DataCell { Id = new CellId(c, quantity), Value = "many" }
         );
-        var side = new TemplateSide { Dataset = dataset, Quantity = quantity };
+        var side = new TemplateSide { DatasetRef = dataset, QuantityRef = quantity };
 
         var rows = string.Join(", ", side.Rows(R));
 
@@ -197,16 +197,16 @@ public class SideParametersTests
             kept = new(2),
             deleted = new(3);
         var R = new ListReader(
-            new DataRow { Id = kept, DatasetId = dataset },
+            new DataRow { Id = kept, DatasetRef = dataset },
             new DataRow
             {
                 Id = deleted,
-                DatasetId = dataset,
+                DatasetRef = dataset,
                 Deleted = true,
             }
         );
 
-        var rows = new TemplateSide { Dataset = dataset }.Rows(R);
+        var rows = new TemplateSide { DatasetRef = dataset }.Rows(R);
 
         Assert.True(
             rows.SequenceEqual([kept]),

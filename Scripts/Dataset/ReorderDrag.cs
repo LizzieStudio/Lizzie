@@ -11,5 +11,5 @@ public sealed partial class ReorderDrag : RefCounted
     public Vector2.Axis Axis { get; init; }
 
     /// <summary>The row or column being moved.</summary>
-    public SnowTag Id { get; init; }
+    public SnowTag MovedRef { get; init; }
 }

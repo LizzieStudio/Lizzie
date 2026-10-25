@@ -15,7 +15,7 @@ public class StagedStoreTests
     public sealed record Piece : StagedAtom
     {
         public static readonly StagedId<Piece> ById = new(p => p.Id);
-        public static readonly Lookup<Piece, SnowTag> ByStage = new(p => p.Stage);
+        public static readonly Lookup<Piece, SnowTag> ByStage = new(p => p.StageRef);
         public static readonly Written<Piece> WrittenIn = new();
 
         public required SnowTag Id { get; init; }
@@ -40,7 +40,7 @@ public class StagedStoreTests
     private static Piece PieceOf(int stage, int id, int x = 0, bool removed = false) =>
         new()
         {
-            Stage = Tag(stage),
+            StageRef = Tag(stage),
             Id = Tag(id),
             X = x,
             Removed = removed,
@@ -120,8 +120,8 @@ public class StagedStoreTests
     {
         var shown = Value(stage, id);
         Assert.True(
-            shown?.X == x && (shown == null || shown.Stage == Tag(stage)),
-            $"Stage {stage} shows the wrong piece {id}.\n\nExpected: {(x == null ? "nothing" : $"X = {x} in stage {stage}")}\nShown:    {(shown == null ? "nothing" : $"X = {shown.X} in stage {shown.Stage}")}"
+            shown?.X == x && (shown == null || shown.StageRef == Tag(stage)),
+            $"Stage {stage} shows the wrong piece {id}.\n\nExpected: {(x == null ? "nothing" : $"X = {x} in stage {stage}")}\nShown:    {(shown == null ? "nothing" : $"X = {shown.X} in stage {shown.StageRef}")}"
         );
     }
 

@@ -67,7 +67,7 @@ public static class StageCommands
         Tooltip = "Show it in just your view.",
         MaxTargets = 1,
         SideEffects = (_, blueprints) =>
-            ProjectService.Instance.GameObjects.PickedStage.Value = blueprints[0].Id,
+            ProjectService.Instance.GameObjects.PickedStageRef.Value = blueprints[0].Id,
     };
 
     [Command("table.make_current")]
@@ -198,7 +198,7 @@ public static class StageCommands
 
     private static void ShowParent(IAtomReader R, IReadOnlyList<Stage> stages)
     {
-        var picked = ProjectService.Instance.GameObjects.PickedStage;
+        var picked = ProjectService.Instance.GameObjects.PickedStageRef;
         if (picked.Value == stages[0].Id)
             picked.Value = stages[0].ParentRef;
     }

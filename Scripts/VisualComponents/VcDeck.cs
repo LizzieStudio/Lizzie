@@ -63,7 +63,7 @@ public partial class VcDeck : VisualComponentBase
         var heights = cards.Select(c => CardHeight(R, c)).ToList();
         float total = FrameHeight + heights.Sum();
 
-        var nodes = GetChildren().OfType<VisualComponentBase>().ToDictionary(n => n.Reference);
+        var nodes = GetChildren().OfType<VisualComponentBase>().ToDictionary(n => n.ComponentRef);
         float top = FrameHeight;
         for (int i = 0; i < cards.Count; i++)
         {

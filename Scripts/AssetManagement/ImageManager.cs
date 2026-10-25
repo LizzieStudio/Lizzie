@@ -35,12 +35,12 @@ public partial class ImageManager : Window, ICommandView
     /// <summary>
     /// The image open in the view, or <see cref="SnowTag.Empty">.
     /// </summary>
-    private SnowTag _open = SnowTag.Empty;
+    private SnowTag _openRef = SnowTag.Empty;
 
     /// <summary>
     /// The ImageAsset that <see cref="_image"/> was loaded for.
     /// </summary>
-    private SnowTag _loaded = SnowTag.Empty;
+    private SnowTag _loadedRef = SnowTag.Empty;
 
     private const string _tileScenePath = "res://Scenes/Controls/image_tile.tscn";
 
@@ -81,7 +81,7 @@ public partial class ImageManager : Window, ICommandView
         _columns.ValueChanged += value =>
             columnsEdits.Update(
                 ImageAsset.ById,
-                _open,
+                _openRef,
                 a => a with { Layout = a.Layout with { Columns = (int)value } }
             );
 
@@ -90,7 +90,7 @@ public partial class ImageManager : Window, ICommandView
         _rows.ValueChanged += value =>
             rowsEdits.Update(
                 ImageAsset.ById,
-                _open,
+                _openRef,
                 a => a with { Layout = a.Layout with { Rows = (int)value } }
             );
 
@@ -99,7 +99,7 @@ public partial class ImageManager : Window, ICommandView
             Atoms.R.Update(
                 this,
                 ImageAsset.ById,
-                _open,
+                _openRef,
                 a =>
                     a with
                     {
@@ -115,7 +115,7 @@ public partial class ImageManager : Window, ICommandView
         _count.ValueChanged += value =>
             countEdits.Update(
                 ImageAsset.ById,
-                _open,
+                _openRef,
                 a => a with { Layout = a.Layout with { Count = (int)value } }
             );
     }
@@ -125,7 +125,7 @@ public partial class ImageManager : Window, ICommandView
 
     private void OnRemovePressed()
     {
-        if (Atoms.R.Get(ImageAsset.ById, _open) is { } image)
+        if (Atoms.R.Get(ImageAsset.ById, _openRef) is { } image)
             Atoms.R.Write(this, Atoms.R.Unset(image));
     }
 
@@ -137,7 +137,7 @@ public partial class ImageManager : Window, ICommandView
     {
         // Ends the edits to the previous image's layout.
         GuiReleaseFocus();
-        _open = image;
+        _openRef = image;
         Atoms.R.QueueSync(this);
     }
 
@@ -188,14 +188,14 @@ public partial class ImageManager : Window, ICommandView
         foreach (var a in added)
             AddImageTile(a.Id);
 
-        var open = R.Get(ImageAsset.ById, _open);
+        var open = R.Get(ImageAsset.ById, _openRef);
         _library.Visible = _addNewButton.Visible = open == null;
         _imageView.Visible = _backButton.Visible = _removeButton.Visible = open != null;
         Title = open == null ? "Images" : $"Images: {open.Name}";
         if (open == null)
             return;
 
-        if (_loaded != open.Id)
+        if (_loadedRef != open.Id)
             LoadImage(open);
 
         var layout = open.Layout;
@@ -211,11 +211,11 @@ public partial class ImageManager : Window, ICommandView
 
     private async void LoadImage(ImageAsset asset)
     {
-        _loaded = asset.Id;
+        _loadedRef = asset.Id;
         _image.Texture = null;
         var image = await AssetImageCache.Instance.FetchImageAsync(asset);
         // safety checks to make sure nothing changed during the load
-        if (IsInstanceValid(this) && _loaded == asset.Id && image != null)
+        if (IsInstanceValid(this) && _loadedRef == asset.Id && image != null)
             _image.Texture = ImageTexture.CreateFromImage(image);
     }
 
@@ -223,7 +223,7 @@ public partial class ImageManager : Window, ICommandView
     {
         var tileScene = GD.Load<PackedScene>(_tileScenePath);
         var tile = tileScene.Instantiate<ImageTile>();
-        tile.Reference = id;
+        tile.ImageRef = id;
         tile.Clicked += Open;
         _tileContainer.AddChild(tile);
         _tiles[id] = tile;
@@ -236,7 +236,7 @@ public partial class ImageManager : Window, ICommandView
         _tileContainer.RemoveChild(tile);
         tile.QueueFree();
 
-        if (_open == id)
-            _open = SnowTag.Empty;
+        if (_openRef == id)
+            _openRef = SnowTag.Empty;
     }
 }

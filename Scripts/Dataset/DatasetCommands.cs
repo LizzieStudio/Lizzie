@@ -68,8 +68,8 @@ public static class DatasetCommands
             .Where(p =>
                 p.Parameters is PrintedParameters printed
                 && (
-                    printed.Front is TemplateSide front && front.Dataset == dataset
-                    || printed.Back is TemplateSide back && back.Dataset == dataset
+                    printed.Front is TemplateSide front && front.DatasetRef == dataset
+                    || printed.Back is TemplateSide back && back.DatasetRef == dataset
                 )
             )
             .Select(p => (p.Id, (PrintedParameters)p.Parameters));
@@ -86,7 +86,7 @@ public static class DatasetCommands
             EventBus.Instance.Publish(
                 new ShowDatasetEditor
                 {
-                    DatasetRef = rows[0].DatasetId,
+                    DatasetRef = rows[0].DatasetRef,
                     SelectedRowRef = rows[0].Id,
                 }
             ),
@@ -168,11 +168,11 @@ public static class DatasetCommands
         List<SnowTag> AllColumns
     ) Block(IAtomReader R, IReadOnlyList<DataCell> cells)
     {
-        var datasetId = R.Get(DataRow.ById, cells[0].Id.Row).DatasetId;
+        var datasetId = R.Get(DataRow.ById, cells[0].Id.RowRef).DatasetRef;
         var allRows = R.GetRows(datasetId);
         var allColumns = R.GetColumns(datasetId).Select(c => c.Id).ToList();
-        var rowIds = cells.Select(c => c.Id.Row).ToHashSet();
-        var columnIds = cells.Select(c => c.Id.Column).ToHashSet();
+        var rowIds = cells.Select(c => c.Id.RowRef).ToHashSet();
+        var columnIds = cells.Select(c => c.Id.ColumnRef).ToHashSet();
         return (
             allRows.Where(r => rowIds.Contains(r.Id)).ToList(),
             allColumns.Where(columnIds.Contains).ToList(),
@@ -215,7 +215,7 @@ public static class DatasetCommands
                 row = new DataRow
                 {
                     Id = SnowTag.Create(),
-                    DatasetId = rows[0].DatasetId,
+                    DatasetRef = rows[0].DatasetRef,
                     Rank = rank = rank.After(SnowportId.Create()),
                 };
                 changes.Add(row);
@@ -236,7 +236,7 @@ public static class DatasetCommands
             new DataRow
             {
                 Id = SnowTag.Create(),
-                DatasetId = datasetId,
+                DatasetRef = datasetId,
                 Rank = SnowRank.At(R.GetRows(datasetId), index, SnowportId.Create()),
             },
         ];
@@ -249,7 +249,7 @@ public static class DatasetCommands
             new DataColumn
             {
                 Id = SnowTag.Create(),
-                DatasetId = datasetId,
+                DatasetRef = datasetId,
                 Rank = SnowRank.At(columns, index, SnowportId.Create()),
                 Name = $"Column {columns.Count + 1}",
             },

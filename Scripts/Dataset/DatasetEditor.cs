@@ -50,8 +50,8 @@ public partial class DatasetEditor : Window, ICommandView
     private Label _newDatasetErrorLabel;
 
     // The grid is built for one dataset's column layout and rebuilt when either changes.
-    private SnowTag _shownDatasetId = SnowTag.Empty;
-    private List<SnowTag> _columnIds = new();
+    private SnowTag _shownDatasetRef = SnowTag.Empty;
+    private List<SnowTag> _columnRefs = new();
     private readonly List<HeaderCell> _headerCells = new();
     private readonly Dictionary<SnowTag, float> _columnWidths = new();
 
@@ -61,10 +61,10 @@ public partial class DatasetEditor : Window, ICommandView
     // The line under the last row, holding only a button that adds a row.
     private HBoxContainer _addRowLine;
 
-    private SnowTag _revealRowOnSync = SnowTag.Empty;
+    private SnowTag _revealRowRef = SnowTag.Empty;
 
     // The columns the last grid rebuild added to the shown dataset, for an insert's listener to rename.
-    private List<SnowTag> _addedColumns = [];
+    private List<SnowTag> _addedColumnRefs = [];
 
     // Whether a cell is being edited. Updated once focus settles: ShortcutRelay drops focus on a click
     // outside the focused cell before this window sees it, and the grid should still be editing,
@@ -132,7 +132,7 @@ public partial class DatasetEditor : Window, ICommandView
                 insert,
                 _ =>
                     _headerCells
-                        .FirstOrDefault(h => _addedColumns.Contains(h.ColumnId))
+                        .FirstOrDefault(h => _addedColumnRefs.Contains(h.ColumnRef))
                         ?.BeginRename()
             );
 
@@ -147,10 +147,10 @@ public partial class DatasetEditor : Window, ICommandView
     #region ICommandView
 
     /// <summary>The shown dataset. Setting it to empty opens the first one.</summary>
-    public WatchableValue<SnowTag> ShownDataset { get; } = new();
+    public WatchableValue<SnowTag> ShownDatasetRef { get; } = new();
 
     public ViewPlace? Place(IAtomReader R) =>
-        R.Get(ShownDataset) is var shown && shown != SnowTag.Empty
+        R.Get(ShownDatasetRef) is var shown && shown != SnowTag.Empty
             ? ViewPlace.Of(this, shown)
             : null;
 
@@ -160,7 +160,9 @@ public partial class DatasetEditor : Window, ICommandView
             : R.Get(target) is { } atom && atom is not DataRow { Deleted: true };
 
     public AtomRef? Shown(IAtomReader R) =>
-        R.Get(ShownDataset) is var shown && shown != SnowTag.Empty ? Dataset.ById.Ref(shown) : null;
+        R.Get(ShownDatasetRef) is var shown && shown != SnowTag.Empty
+            ? Dataset.ById.Ref(shown)
+            : null;
 
     /// <summary>
     /// The commands only the editor offers, since they act on its grid.
@@ -264,13 +266,13 @@ public partial class DatasetEditor : Window, ICommandView
     {
         // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
         // so the editor stays on it, where redo brings it back.
-        var id = R.Get(ShownDataset);
+        var id = R.Get(ShownDatasetRef);
         var ds =
             id != SnowTag.Empty ? R.Get(Dataset.ById, id) : R.Get(Dataset.All).FirstOrDefault();
         if (ds != null)
-            ShownDataset.Value = ds.Id;
+            ShownDatasetRef.Value = ds.Id;
 
-        _datasetList.SelectedAtom = ShownDataset.Value;
+        _datasetList.SelectedRef = ShownDatasetRef.Value;
         _currentDataset = ds;
 
         if (ds == null)
@@ -283,12 +285,13 @@ public partial class DatasetEditor : Window, ICommandView
     {
         var columns = R.GetColumns(ds.Id);
         var columnIds = columns.Select(c => c.Id).ToList();
-        if (ds.Id != _shownDatasetId || !columnIds.SequenceEqual(_columnIds))
+        if (ds.Id != _shownDatasetRef || !columnIds.SequenceEqual(_columnRefs))
         {
-            _addedColumns = ds.Id == _shownDatasetId ? columnIds.Except(_columnIds).ToList() : [];
+            _addedColumnRefs =
+                ds.Id == _shownDatasetRef ? columnIds.Except(_columnRefs).ToList() : [];
             ClearGrid();
-            _shownDatasetId = ds.Id;
-            _columnIds = columnIds;
+            _shownDatasetRef = ds.Id;
+            _columnRefs = columnIds;
             BuildGrid();
         }
 
@@ -298,16 +301,16 @@ public partial class DatasetEditor : Window, ICommandView
         ReconcileRows(R, R.GetRows(ds.Id));
         SyncSelection(R, ds.Id);
 
-        if (_revealRowOnSync != SnowTag.Empty)
+        if (_revealRowRef != SnowTag.Empty)
         {
-            if (_views.FirstOrDefault(v => v.Row.Id == _revealRowOnSync) is { } view)
+            if (_views.FirstOrDefault(v => v.Row.Id == _revealRowRef) is { } view)
             {
                 // defer so the grid has time to complete its layout
                 Callable
                     .From(() => _dataScrollContainer.EnsureControlVisible(view.Box))
                     .CallDeferred();
             }
-            _revealRowOnSync = SnowTag.Empty;
+            _revealRowRef = SnowTag.Empty;
         }
     }
 
@@ -368,7 +371,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         _datasetList = GetNode<AtomSelector>("%DatasetList");
         _datasetList.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
-        _datasetList.AtomSelected += id => ShownDataset.Value = id;
+        _datasetList.AtomSelected += id => ShownDatasetRef.Value = id;
 
         InitializeNewDatasetDialog();
     }
@@ -379,7 +382,7 @@ public partial class DatasetEditor : Window, ICommandView
     public void RevealRow(SnowTag rowId)
     {
         Select([DataRow.ById.Ref(rowId)]);
-        _revealRowOnSync = rowId;
+        _revealRowRef = rowId;
         Atoms.R.QueueSync(this);
     }
 
@@ -432,7 +435,7 @@ public partial class DatasetEditor : Window, ICommandView
             return;
 
         var ds = new Dataset { Id = SnowTag.Create(), Name = name };
-        ShownDataset.Value = ds.Id;
+        ShownDatasetRef.Value = ds.Id;
         Atoms.R.Write(this, ds);
     }
 
@@ -456,11 +459,11 @@ public partial class DatasetEditor : Window, ICommandView
         _headerContainer.AddChild(corner);
         corner.CustomMinimumSize = new Vector2(RowHeaderWidth, HeaderHeight);
 
-        foreach (var id in _columnIds)
+        foreach (var id in _columnRefs)
         {
             var header = new HeaderCell();
             _headerContainer.AddChild(header);
-            header.ColumnId = id;
+            header.ColumnRef = id;
             header.CustomMinimumSize = new Vector2(ColumnWidth(id), HeaderHeight);
             header.WidthDragged += OnColumnWidthDragged;
             header.NameCommitted += OnColumnRenamed;
@@ -509,8 +512,8 @@ public partial class DatasetEditor : Window, ICommandView
         }
         _headerCells.Clear();
 
-        _shownDatasetId = SnowTag.Empty;
-        _columnIds = new List<SnowTag>();
+        _shownDatasetRef = SnowTag.Empty;
+        _columnRefs = new List<SnowTag>();
     }
 
     private RowView CreateRowView()
@@ -531,7 +534,7 @@ public partial class DatasetEditor : Window, ICommandView
             Callable.From<Vector2, ReorderDrag>(_ => new ReorderDrag
             {
                 Axis = Vector2.Axis.Y,
-                Id = view.Row.Id,
+                MovedRef = view.Row.Id,
             }),
             default,
             default
@@ -543,12 +546,12 @@ public partial class DatasetEditor : Window, ICommandView
         view.Number.VerticalAlignment = VerticalAlignment.Center;
         view.Number.Modulate = new Color(1, 1, 1, 0.5f);
 
-        for (int i = 0; i < _columnIds.Count; i++)
+        for (int i = 0; i < _columnRefs.Count; i++)
         {
             var column = i;
             var cell = new LineEdit();
             view.Box.AddChild(cell);
-            cell.CustomMinimumSize = new Vector2(ColumnWidth(_columnIds[i]), RowHeight);
+            cell.CustomMinimumSize = new Vector2(ColumnWidth(_columnRefs[i]), RowHeight);
             cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
             cell.SizeFlagsVertical = Control.SizeFlags.Fill;
 
@@ -579,7 +582,7 @@ public partial class DatasetEditor : Window, ICommandView
     {
         view.Row = row;
         view.Number.Text = (index + 1).ToString();
-        view.Values = _columnIds
+        view.Values = _columnRefs
             .Select(c => R.Get(DataCell.ById, new CellId(row.Id, c))?.Value ?? string.Empty)
             .ToArray();
 
@@ -621,7 +624,7 @@ public partial class DatasetEditor : Window, ICommandView
         {
             int column = view.Cells.IndexOf(control as LineEdit);
             if (column >= 0)
-                return new CellId(view.Row.Id, _columnIds[column]);
+                return new CellId(view.Row.Id, _columnRefs[column]);
         }
         return null;
     }
@@ -629,8 +632,8 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>The text box showing <paramref name="cell"/>, or null if it isn't shown.</summary>
     private LineEdit CellControl(CellId cell)
     {
-        int column = _columnIds.IndexOf(cell.Column);
-        return column >= 0 ? ViewOf(cell.Row)?.Cells[column] : null;
+        int column = _columnRefs.IndexOf(cell.ColumnRef);
+        return column >= 0 ? ViewOf(cell.RowRef)?.Cells[column] : null;
     }
 
     // Updates whether a cell is being edited, which makes every cell a text box.
@@ -672,8 +675,11 @@ public partial class DatasetEditor : Window, ICommandView
             .Where(t => t.Type == typeof(DataCell))
             .Select(t => (CellId)t.Id)
             .ToList();
-        var row = _views.FirstOrDefault(v => cells.Any(c => c.Row == v.Row.Id));
-        var column = _columnIds.FirstOrDefault(id => cells.Any(c => c.Column == id), SnowTag.Empty);
+        var row = _views.FirstOrDefault(v => cells.Any(c => c.RowRef == v.Row.Id));
+        var column = _columnRefs.FirstOrDefault(
+            id => cells.Any(c => c.ColumnRef == id),
+            SnowTag.Empty
+        );
         return row != null && column != SnowTag.Empty ? new CellId(row.Row.Id, column) : null;
     }
 
@@ -694,7 +700,7 @@ public partial class DatasetEditor : Window, ICommandView
         SyncEditing();
 
         // The cell being edited is selected, so it shows the highlight too.
-        SelectTarget(Cell(new CellId(view.Row.Id, _columnIds[column])));
+        SelectTarget(Cell(new CellId(view.Row.Id, _columnRefs[column])));
 
         // Keyboard navigation selects the whole cell, like a spreadsheet; a click places the caret.
         if (!Input.IsMouseButtonPressed(MouseButton.Left))
@@ -773,7 +779,7 @@ public partial class DatasetEditor : Window, ICommandView
             var text = view.Cells[i].Text;
             if (text == view.Values[i])
                 continue;
-            changes.AddRange(DataCell.Set(Atoms.R, new CellId(view.Row.Id, _columnIds[i]), text));
+            changes.AddRange(DataCell.Set(Atoms.R, new CellId(view.Row.Id, _columnRefs[i]), text));
             view.Values[i] = text;
         }
         if (changes.Count > 0)
@@ -782,7 +788,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
     private void AddRow() =>
-        DatasetCommands.AddRow.Run([Dataset.ById.Ref(ShownDataset.Value)], this);
+        DatasetCommands.AddRow.Run([Dataset.ById.Ref(ShownDatasetRef.Value)], this);
 
     private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
@@ -857,9 +863,9 @@ public partial class DatasetEditor : Window, ICommandView
     private void DropReorder(ReorderDrag drag, Vector2 at)
     {
         if (drag.Axis == Vector2.Axis.Y)
-            DropRow(drag.Id, at);
+            DropRow(drag.MovedRef, at);
         else
-            DropColumn(drag.Id, at);
+            DropColumn(drag.MovedRef, at);
     }
 
     private void DropRow(SnowTag rowId, Vector2 at)
@@ -878,7 +884,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(SnowTag columnId, Vector2 at)
     {
-        var columns = Atoms.R.GetColumns(ShownDataset.Value);
+        var columns = Atoms.R.GetColumns(ShownDatasetRef.Value);
         int from = columns.FindIndex(c => c.Id == columnId);
         if (from < 0)
             return;
@@ -944,13 +950,13 @@ public partial class DatasetEditor : Window, ICommandView
         var rows = _views.Select(v => v.Row.Id).ToList();
         return (from.Id, to.Id) switch
         {
-            (CellId a, CellId b) => Span(rows, a.Row, b.Row)
+            (CellId a, CellId b) => Span(rows, a.RowRef, b.RowRef)
                 .SelectMany(r =>
-                    Span(_columnIds, a.Column, b.Column).Select(c => Cell(new CellId(r, c)))
+                    Span(_columnRefs, a.ColumnRef, b.ColumnRef).Select(c => Cell(new CellId(r, c)))
                 ),
             (SnowTag a, SnowTag b) when from.Type == typeof(DataRow) => Span(rows, a, b)
                 .Select(DataRow.ById.Ref),
-            (SnowTag a, SnowTag b) when from.Type == typeof(DataColumn) => Span(_columnIds, a, b)
+            (SnowTag a, SnowTag b) when from.Type == typeof(DataColumn) => Span(_columnRefs, a, b)
                 .Select(Column),
             _ => [to],
         };
@@ -982,7 +988,7 @@ public partial class DatasetEditor : Window, ICommandView
     {
         var colors = R.SelectionColors(ViewPlace.Of(this, datasetId));
         foreach (var header in _headerCells)
-            SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnId));
+            SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnRef));
         foreach (var view in _views)
         {
             SelectionHighlight.Outline(view.Header, "panel", colors, view.Target);
@@ -991,9 +997,9 @@ public partial class DatasetEditor : Window, ICommandView
                     view.Cells[i],
                     "normal",
                     colors,
-                    Cell(new CellId(view.Row.Id, _columnIds[i])),
+                    Cell(new CellId(view.Row.Id, _columnRefs[i])),
                     view.Target,
-                    Column(_columnIds[i])
+                    Column(_columnRefs[i])
                 );
         }
     }
@@ -1008,7 +1014,7 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Rename Column",
         MaxTargets = 1,
         SideEffects = (_, columns) =>
-            EventBus.Instance.Publish(new RenameColumnEvent { ColumnId = columns[0].Id }),
+            EventBus.Instance.Publish(new RenameColumnEvent { ColumnRef = columns[0].Id }),
     };
 
     [Command("dataset.insert_row_above")]
@@ -1017,7 +1023,7 @@ public partial class DatasetEditor : Window, ICommandView
         Icon = CommandIcons.InsertRowAbove,
         Caption = "Insert Row Above",
         MaxTargets = 1,
-        Effects = (R, rows) => DatasetCommands.NewRow(R, rows[0].DatasetId, RowIndex(R, rows[0])),
+        Effects = (R, rows) => DatasetCommands.NewRow(R, rows[0].DatasetRef, RowIndex(R, rows[0])),
     };
 
     [Command("dataset.insert_row_below")]
@@ -1027,7 +1033,7 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Row Below",
         MaxTargets = 1,
         Effects = (R, rows) =>
-            DatasetCommands.NewRow(R, rows[0].DatasetId, RowIndex(R, rows[0]) + 1),
+            DatasetCommands.NewRow(R, rows[0].DatasetRef, RowIndex(R, rows[0]) + 1),
     };
 
     [Command("dataset.insert_column_left")]
@@ -1037,7 +1043,7 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Column Left",
         MaxTargets = 1,
         Effects = (R, columns) =>
-            DatasetCommands.NewColumn(R, columns[0].DatasetId, ColumnIndex(R, columns[0])),
+            DatasetCommands.NewColumn(R, columns[0].DatasetRef, ColumnIndex(R, columns[0])),
     };
 
     [Command("dataset.insert_column_right")]
@@ -1047,21 +1053,21 @@ public partial class DatasetEditor : Window, ICommandView
         Caption = "Insert Column Right",
         MaxTargets = 1,
         Effects = (R, columns) =>
-            DatasetCommands.NewColumn(R, columns[0].DatasetId, ColumnIndex(R, columns[0]) + 1),
+            DatasetCommands.NewColumn(R, columns[0].DatasetRef, ColumnIndex(R, columns[0]) + 1),
     };
 
     // The row's place in its dataset.
     private static int RowIndex(IAtomReader R, DataRow row) =>
-        R.GetRows(row.DatasetId).FindIndex(r => r.Id == row.Id);
+        R.GetRows(row.DatasetRef).FindIndex(r => r.Id == row.Id);
 
     // The column's place in its dataset.
     private static int ColumnIndex(IAtomReader R, DataColumn column) =>
-        R.GetColumns(column.DatasetId).FindIndex(c => c.Id == column.Id);
+        R.GetColumns(column.DatasetRef).FindIndex(c => c.Id == column.Id);
 
     private void OnRenameColumn(RenameColumnEvent e)
     {
         // Deferred so the closing menu doesn't take focus back from the name box.
-        if (_headerCells.FirstOrDefault(h => h.ColumnId == e.ColumnId) is { } header)
+        if (_headerCells.FirstOrDefault(h => h.ColumnRef == e.ColumnRef) is { } header)
             Callable.From(header.BeginRename).CallDeferred();
     }
 
@@ -1092,7 +1098,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void OnColumnWidthDragged(SnowTag columnId, float width)
     {
-        int index = _columnIds.IndexOf(columnId);
+        int index = _columnRefs.IndexOf(columnId);
         if (index < 0)
             return;
 

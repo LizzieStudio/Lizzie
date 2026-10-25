@@ -10,7 +10,7 @@ namespace Lizzie.Replication.Machinery;
 /// <para>
 /// A stage shows its own write of an atom if it has one, and otherwise what its parent shows.
 /// A write with <see cref="StagedAtom.Removed"/> hides the parent atom.
-/// When you read a staged atom from a stage, its <see cref="StagedAtom.Stage"/> is set to the stage of the read.
+/// When you read a staged atom from a stage, its <see cref="StagedAtom.StageRef"/> is set to the stage of the read.
 /// </para>
 ///
 /// <para>
@@ -129,7 +129,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
 
         var keys = restructured
             ? Everything()
-            : _dirty.SelectMany(k => Below(k.Stage).Select(s => k with { Stage = s }));
+            : _dirty.SelectMany(k => Below(k.StageRef).Select(s => k with { StageRef = s }));
 
         foreach (var key in keys.ToHashSet())
         {
@@ -151,8 +151,8 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     private IEnumerable<StageKey> Everything()
     {
         var resolved = _resolved.Entries.Keys;
-        var stages = _parents.Keys.Concat(resolved.Select(k => k.Stage)).ToHashSet();
-        var atoms = _raw.Ids.Concat(resolved).Select(k => k.Component).ToHashSet();
+        var stages = _parents.Keys.Concat(resolved.Select(k => k.StageRef)).ToHashSet();
+        var atoms = _raw.Ids.Concat(resolved).Select(k => k.ComponentRef).ToHashSet();
         return stages.SelectMany(s => atoms.Select(c => new StageKey(s, c)));
     }
 
@@ -175,13 +175,13 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     /// </summary>
     private AtomEntry Resolve(StageKey key)
     {
-        for (var stage = key.Stage; _parents.TryGetValue(stage, out var parent); stage = parent)
+        for (var stage = key.StageRef; _parents.TryGetValue(stage, out var parent); stage = parent)
         {
-            var written = _raw.Find(key with { Stage = stage });
+            var written = _raw.Find(key with { StageRef = stage });
             if (written.Value is StagedAtom atom)
                 return atom.Removed
                     ? default
-                    : new AtomEntry(atom with { Stage = key.Stage }, written.LastUpdate);
+                    : new AtomEntry(atom with { StageRef = key.StageRef }, written.LastUpdate);
         }
         return default;
     }
@@ -219,7 +219,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
         _raw.SavedAtoms()
             .Where(a =>
                 a is not T { Removed: true } removed
-                || _parents.TryGetValue(removed.Stage, out var parent)
-                    && _resolved.Find(_byId.Of(removed) with { Stage = parent }).Value != null
+                || _parents.TryGetValue(removed.StageRef, out var parent)
+                    && _resolved.Find(_byId.Of(removed) with { StageRef = parent }).Value != null
             );
 }

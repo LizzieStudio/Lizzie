@@ -22,7 +22,7 @@ public record ComponentPosition : StagedAtom
     /// <summary>
     /// The components each stage shows.
     /// </summary>
-    public static readonly Lookup<ComponentPosition, SnowTag> ByStage = new(s => s.Stage);
+    public static readonly Lookup<ComponentPosition, SnowTag> ByStage = new(s => s.StageRef);
 
     /// <summary>
     /// The components in each container of a stage, by <see cref="ContainerRef"/>.
@@ -43,22 +43,22 @@ public record ComponentPosition : StagedAtom
     /// <remarks>
     /// This is useful when dealing with containers, since you can get the contents in the container's stage.
     /// </remarks>
-    public StageKey In(SnowTag id) => new(Stage, id);
+    public StageKey In(SnowTag id) => new(StageRef, id);
 
     /// <summary>
     /// Whether resetting its stage would delete the component in <paramref name="key"/>.
     /// </summary>
     public static bool GoesOnReset(IAtomReader R, StageKey key) =>
-        R.Get(Lizzie.Stage.ById, key.Stage) is { ParentRef: var parent }
+        R.Get(Stage.ById, key.StageRef) is { ParentRef: var parent }
         && parent != SnowTag.Empty
-        && R.Get(ById, key with { Stage = parent }) == null;
+        && R.Get(ById, key with { StageRef = parent }) == null;
 
     /// <summary>
     /// The state last written for a component.
     /// </summary>
     public static ComponentPosition Of(VisualComponentBase c) =>
         c.State
-        ?? throw new InvalidOperationException($"Component {c.Reference} has no written state.");
+        ?? throw new InvalidOperationException($"Component {c.ComponentRef} has no written state.");
 
     /// <summary>
     /// Captures a node that hasn't been written yet, such as a spawn preview, as <paramref name="variant"/>.
@@ -66,8 +66,8 @@ public record ComponentPosition : StagedAtom
     public static ComponentPosition Capture(VisualComponentBase c, ComponentVariant variant) =>
         new()
         {
-            Id = c.Reference,
-            Stage = c.Key.Stage,
+            Id = c.ComponentRef,
+            StageRef = c.Key.StageRef,
             VariantRef = variant.Id,
             Position = c.Position,
             Rotation = c.Rotation,

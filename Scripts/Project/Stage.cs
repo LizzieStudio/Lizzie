@@ -108,8 +108,8 @@ public sealed record Stage : Atom, IRanked
         from.SelectMany(s => R.Get(ComponentPosition.WrittenIn, s))
             .GroupBy(c => c.Id)
             .Select(g => g.Last())
-            .Where(c => c.Stage != into)
-            .Select(c => c with { Stage = into });
+            .Where(c => c.StageRef != into)
+            .Select(c => c with { StageRef = into });
 
     /// <summary>
     /// Gets the changes that delete <paramref name="stage"/> and replace it in the tree with its children.
