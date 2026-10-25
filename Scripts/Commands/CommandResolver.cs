@@ -122,15 +122,15 @@ public static class CommandResolver
     /// <summary>
     /// <para>The targets for this command.</para>
     /// Takes the parts of the context in <see cref="Command.ActsOn"/>
-    /// and filters it by those that return true when passed to <see cref="Command.Applies"/>.
+    /// and filters it by those that return true when passed to <see cref="Command.CanActOn"/>.
     /// </summary>
-    /// <param name="R">What <see cref="Command.Applies"/> reads through, like a Watch's reader.</param>
+    /// <param name="R">What <see cref="Command.CanActOn"/> reads through, like a Watch's reader.</param>
     public static List<AtomRef> TargetsFor(
         Command command,
         CommandContext context,
         IAtomReader R,
         bool menu
-    ) => Candidates(command, context, menu).Where(t => command.Applies(R, t)).ToList();
+    ) => Candidates(command, context, menu).Where(t => command.CanActOn(R, t)).ToList();
 
     /// <summary>
     /// Lists the reasons why <see cref="TargetsFor"/> rejected atoms, if any.

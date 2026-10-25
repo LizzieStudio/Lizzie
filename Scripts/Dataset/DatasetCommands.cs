@@ -40,8 +40,12 @@ public static class DatasetCommands
     {
         Icon = CommandIcons.UpdateDecks,
         Caption = "Update Decks",
-        Tooltip =
-            "Adds new components and removes deleted components from blueprint decks that show this Dataset.",
+        Tooltip = """
+            Updates decks that show this Dataset:
+            * New cards are added to the bottom of decks.
+            * Updated cards are left in place.
+            * Retired cards are removed.
+            """,
         MaxTargets = 1,
         ActsOn = Context.View,
         Requires =

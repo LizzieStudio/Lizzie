@@ -305,16 +305,18 @@ public abstract class Command
 
     /// <summary>
     /// Returns true if this command can act on <paramref name="target"/>:
-    /// an atom of the kind it's for, that it has behavior for.
+    /// an atom of the kind it's for, that it has behavior for and that meets its requirements.
     /// </summary>
-    public abstract bool Applies(IAtomReader R, AtomRef target);
+    public abstract bool CanActOn(IAtomReader R, AtomRef target);
 
     /// <summary>
     /// Why it can't act on <paramref name="target"/>, or null when it can.
     /// </summary>
     public virtual string Blocked(IAtomReader R, AtomRef target) => null;
 
-    /// <summary>Whether it can act on <paramref name="count"/> targets that it applies to.</summary>
+    /// <summary>
+    /// Whether it can act on <paramref name="count"/> targets that pass <see cref="CanActOn"/>.
+    /// </summary>
     public abstract bool Fits(int count);
 
     /// <summary>
@@ -381,14 +383,14 @@ public abstract class TargetedCommand<T> : Command
     public delegate bool AppliesToDelegate(IAtomReader R, T atom);
 
     /// <summary>
-    /// <para>Returns true if this command has behavior for the given atom.</para>
-    /// <para>For example, Shuffle only applies to decks.</para>
+    /// Returns true if this command has behavior for the given atom.
+    /// When it's false for every target, the command doesn't show.
     /// </summary>
     public AppliesToDelegate AppliesTo { get; init; } = (_, _) => true;
 
     /// <summary>
     /// Define rules a relevant atom must also meet.
-    /// Broken rules are displayed in the tooltip when the command is disabled.
+    /// Failing targets are left out. When too few are left, the command shows disabled with the reason.
     /// </summary>
     public IReadOnlyList<(string Reason, AppliesToDelegate Holds)> Requires { get; init; } = [];
 
@@ -404,7 +406,7 @@ public abstract class TargetedCommand<T> : Command
 
     internal override Type TargetType => typeof(T);
 
-    public override bool Applies(IAtomReader R, AtomRef target) => Atom(R, target) != null;
+    public override bool CanActOn(IAtomReader R, AtomRef target) => Atom(R, target) != null;
 
     public override string Blocked(IAtomReader R, AtomRef target) =>
         R?.Resolve(target) is T atom && AppliesTo(R, atom)
@@ -417,7 +419,7 @@ public abstract class TargetedCommand<T> : Command
     {
         if (Fits(count))
             return null;
-        if (count == 0 && blocked.Count > 0)
+        if (count < MinTargets && blocked.Count > 0)
             return string.Join("\n", blocked);
 
         var one = Noun?.One.ToLowerInvariant() ?? "item";
@@ -573,7 +575,7 @@ public sealed class ChoiceCommand<T> : TargetedCommand<T>, IChoiceCommand
 /// <summary>A command that does not act on selected targets, such as undo.</summary>
 public sealed class GlobalCommand : Command
 {
-    public override bool Applies(IAtomReader R, AtomRef target) => false;
+    public override bool CanActOn(IAtomReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
@@ -616,7 +618,7 @@ public sealed class GlobalCommand : Command
 // This is just a sentinel so that we can put dividers in command lists.
 file sealed class DividerCommand : Command
 {
-    public override bool Applies(IAtomReader R, AtomRef target) => false;
+    public override bool CanActOn(IAtomReader R, AtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 

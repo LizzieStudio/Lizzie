@@ -78,10 +78,6 @@ public static class ComponentCommands
         Effects = (R, cs) => cs.Select(c => c with { Removed = true }),
     };
 
-    /// <summary>
-    /// Resets a component so that it goes back to where the parent blueprints have it.
-    /// If the component was created in this stage, it's deleted.
-    /// </summary>
     [Command("component.reset")]
     public static readonly Command Reset = new AtomCommand<ComponentPosition>
     {
