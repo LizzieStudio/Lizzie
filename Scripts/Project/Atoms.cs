@@ -226,7 +226,10 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     public void Append(SnowportId group, params IEnumerable<IChange> changes) =>
         Append(group, null, changes);
 
-    /// <inheritdoc cref="Append(SnowportId, IEnumerable{IChange})"/>
+    /// <summary>
+    /// Writes changes as one event made by <paramref name="command"/> in the open <paramref name="group"/>,
+    /// even if there are none, so the command's listeners hear it.
+    /// </summary>
     public void Append(
         SnowportId group,
         CommandName command,
@@ -236,7 +239,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     private void Append(SnowportId group, CommandName? command, IEnumerable<IChange> changes)
     {
         var all = changes.ToArray();
-        if (all.Length == 0)
+        if (all.Length == 0 && command == null)
             return;
         var e = TimelineEvent.Now(all, command);
         e.Group = group;

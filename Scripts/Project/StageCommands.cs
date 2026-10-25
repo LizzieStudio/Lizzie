@@ -66,8 +66,11 @@ public static class StageCommands
         Caption = "Show this.",
         Tooltip = "Show it in just your view.",
         MaxTargets = 1,
-        SideEffects = (_, blueprints) =>
-            ProjectService.Instance.GameObjects.PickedStageRef.Value = blueprints[0].Id,
+        Effects = (_, blueprints) =>
+        {
+            ProjectService.Instance.GameObjects.PickedStageRef.Value = blueprints[0].Id;
+            return null;
+        },
     };
 
     [Command("table.make_current")]
@@ -136,10 +139,10 @@ public static class StageCommands
         MaxTargets = 1,
         AppliesTo = (R, s) => s.ParentRef != SnowTag.Empty && HasChanges(R, s),
         Requires = [NotTheCurrentTable],
-        SideEffects = ShowParent,
         Effects = (R, stages) =>
         {
             var stage = stages[0];
+            ShowParent(stage);
             return
             [
                 .. Stage.Union(R, stage.ParentRef, stage.ParentRef, stage.Id),
@@ -162,10 +165,10 @@ public static class StageCommands
         MaxTargets = 1,
         AppliesTo = (R, s) => HasChanges(R, s) && Stage.GetChildren(R, s.Id).Count > 0,
         Requires = [NotTheCurrentTable],
-        SideEffects = ShowParent,
         Effects = (R, stages) =>
         {
             var stage = stages[0];
+            ShowParent(stage);
             return
             [
                 .. R.Get(Stage.Children, stage.Id)
@@ -189,18 +192,21 @@ public static class StageCommands
         MaxTargets = 1,
         AppliesTo = (R, s) => !HasChanges(R, s) && Stage.GetChildren(R, s.Id).Count > 0,
         Requires = [NotTheCurrentTable],
-        SideEffects = ShowParent,
-        Effects = (R, stages) => Stage.Dissolve(R, stages[0]),
+        Effects = (R, stages) =>
+        {
+            ShowParent(stages[0]);
+            return Stage.Dissolve(R, stages[0]);
+        },
     };
 
     private static bool HasChanges(IAtomReader R, Stage stage) =>
         R.Count(ComponentPosition.WrittenIn, stage.Id) > 0;
 
-    private static void ShowParent(IAtomReader R, IReadOnlyList<Stage> stages)
+    private static void ShowParent(Stage stage)
     {
         var picked = ProjectService.Instance.GameObjects.PickedStageRef;
-        if (picked.Value == stages[0].Id)
-            picked.Value = stages[0].ParentRef;
+        if (picked.Value == stage.Id)
+            picked.Value = stage.ParentRef;
     }
 
     [Command("table.reset")]

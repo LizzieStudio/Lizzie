@@ -21,7 +21,11 @@ public class TargetedCommandTests
         var command = new AtomCommand<DataRow>
         {
             MinTargets = 2,
-            SideEffects = (_, _) => ran = true,
+            Effects = (_, _) =>
+            {
+                ran = true;
+                return null;
+            },
         };
         command.Run([DataRow.ById.Ref(row.Id), DataRow.ById.Ref(SnowTag.Create())], null);
         AssertThat(ran)

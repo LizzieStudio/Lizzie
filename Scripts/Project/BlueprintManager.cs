@@ -27,8 +27,11 @@ public partial class BlueprintManager : Window, ICommandView
         Caption = "Rename",
         Keys = [Shortcuts.Key(Key.F2)],
         MaxTargets = 1,
-        SideEffects = (_, stages) =>
-            EventBus.Instance.Publish(new RenameStageEvent { StageRef = stages[0].Id }),
+        Effects = (_, stages) =>
+        {
+            EventBus.Instance.Publish(new RenameStageEvent { StageRef = stages[0].Id });
+            return null;
+        },
     };
 
     public override void _EnterTree()

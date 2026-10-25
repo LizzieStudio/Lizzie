@@ -1013,8 +1013,11 @@ public partial class DatasetEditor : Window, ICommandView
         Icon = CommandIcons.Edit,
         Caption = "Rename Column",
         MaxTargets = 1,
-        SideEffects = (_, columns) =>
-            EventBus.Instance.Publish(new RenameColumnEvent { ColumnRef = columns[0].Id }),
+        Effects = (_, columns) =>
+        {
+            EventBus.Instance.Publish(new RenameColumnEvent { ColumnRef = columns[0].Id });
+            return null;
+        },
     };
 
     [Command("dataset.insert_row_above")]

@@ -323,12 +323,13 @@ public partial class GameObjects : Node3D, ICommandView
         Caption = "Duplicate Component",
         Keys = [Shortcuts.Ctrl(Key.D)],
         MaxTargets = 1,
-        SideEffects = (_, cs) =>
+        Effects = (R, cs) =>
         {
-            var variant = Atoms.R.GetVariant(cs[0]);
+            var variant = R.GetVariant(cs[0]);
             EventBus.Instance.Publish(
                 new SpawnPrototypeEvent { PrototypeRef = variant.PrototypeRef, Item = variant.Item }
             );
+            return null;
         },
     };
 
@@ -340,10 +341,11 @@ public partial class GameObjects : Node3D, ICommandView
         Keys = [Shortcuts.Key(Key.Z)],
         MaxTargets = 1,
         AppliesTo = (R, c) => !R.IsContained(c) || R.IsInDeck(c),
-        SideEffects = (_, cs) =>
+        Effects = (_, cs) =>
         {
             if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)
                 CameraManager.Instance?.ZoomTo(node);
+            return null;
         },
     };
     #endregion

@@ -31,7 +31,10 @@ public static class PrototypeCommands
         Caption = "Edit Component",
         MaxTargets = 1,
         ActsOn = Context.Selected | Context.Referenced,
-        SideEffects = (_, ps) =>
-            EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeRef = ps[0].Id }),
+        Effects = (_, ps) =>
+        {
+            EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeRef = ps[0].Id });
+            return null;
+        },
     };
 }

@@ -82,14 +82,17 @@ public static class DatasetCommands
         MaxTargets = 1,
         ActsOn = Context.Referenced,
         AppliesTo = (_, row) => !row.Deleted,
-        SideEffects = (_, rows) =>
+        Effects = (_, rows) =>
+        {
             EventBus.Instance.Publish(
                 new ShowDatasetEditor
                 {
                     DatasetRef = rows[0].DatasetRef,
                     SelectedRowRef = rows[0].Id,
                 }
-            ),
+            );
+            return null;
+        },
     };
 
     [Command("dataset.delete_row")]
@@ -132,9 +135,11 @@ public static class DatasetCommands
         Caption = "Cut {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.X)],
-        // Copied first, since side effects run before the effects are made.
-        SideEffects = (R, cells) => DisplayServer.ClipboardSet(Copied(R, cells)),
-        Effects = Cleared,
+        Effects = (R, cells) =>
+        {
+            DisplayServer.ClipboardSet(Copied(R, cells));
+            return Cleared(R, cells);
+        },
     };
 
     [Command("dataset.copy_cells")]
@@ -144,7 +149,11 @@ public static class DatasetCommands
         Caption = "Copy {0}",
         Noun = ("Cell", "Cells"),
         Keys = [Shortcuts.Ctrl(Key.C)],
-        SideEffects = (R, cells) => DisplayServer.ClipboardSet(Copied(R, cells)),
+        Effects = (R, cells) =>
+        {
+            DisplayServer.ClipboardSet(Copied(R, cells));
+            return null;
+        },
     };
 
     /// <summary>

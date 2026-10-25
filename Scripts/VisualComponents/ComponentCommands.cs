@@ -20,7 +20,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.F)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => R.Kind(c) == VisualComponentType.Printed && !R.IsHidden(c),
-        Effects = (R, cs) => Flipped(R, cs),
+        Effects = Flipped,
     };
 
     [Command("component.rotate_cw")]

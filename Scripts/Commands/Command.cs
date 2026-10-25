@@ -332,8 +332,23 @@ public abstract class Command
     /// <summary>
     /// Acts on the targets, or does nothing when it can't act on them or isn't available.
     /// </summary>
-    /// <param name="view">W it runs, or null outside any view.</param>
+    /// <param name="view">Where it runs, or null outside any view.</param>
     public abstract void Run(IReadOnlyList<AtomRef> targets, ICommandView view);
+
+    /// <summary>
+    /// Writes the changes as one event made by this command, or nothing when they're null.
+    /// When <paramref name="view"/> has a <see cref="ICommandView.Gesture"/> open, the event joins it.
+    /// </summary>
+    protected void Submit(IEnumerable<IChange> changes, ICommandView view)
+    {
+        if (changes == null)
+            return;
+        var gesture = view?.Gesture ?? SnowportId.Empty;
+        if (gesture == SnowportId.Empty)
+            Atoms.R?.Write((Node)view, Name, changes);
+        else
+            Atoms.R?.Append(gesture, Name, changes);
+    }
 
     /// <summary>
     /// Returns true if <paramref name="e"/> runs this command. Modifiers must match exactly.
@@ -434,21 +449,6 @@ public abstract class TargetedCommand<T> : Command
         var atoms = targets.Select(t => Atom(Atoms.R, t)).Where(a => a != null).ToList();
         return Fits(atoms.Count) ? atoms : null;
     }
-
-    /// <summary>
-    /// Writes the changes as one event made by this command.
-    /// When <paramref name="view"/> has a <see cref="ICommandView.Gesture"/> open, the event joins it.
-    /// </summary>
-    protected void Submit(IEnumerable<IChange> changes, ICommandView view)
-    {
-        if (changes == null)
-            return;
-        var gesture = view?.Gesture ?? SnowportId.Empty;
-        if (gesture == SnowportId.Empty)
-            Atoms.R?.Write((Node)view, Name, changes);
-        else
-            Atoms.R?.Append(gesture, Name, changes);
-    }
 }
 
 /// <summary>
@@ -458,33 +458,22 @@ public sealed class AtomCommand<T> : TargetedCommand<T>
     where T : Atom
 {
     /// <summary>
-    /// Produces the changes this command makes, which will be passed to <see cref="Atoms.Write"/>.
-    /// Returning an empty list still fires an event, but returning null will not.
+    /// Run whenever the user activates the command.
     /// </summary>
     /// <param name="R">The atom reader to pull data.</param>
     /// <param name="atoms">The atoms that were targeted with this command.</param>
-    /// <returns>The changes, written as one event.</returns>
+    /// <returns>
+    /// The atom writes, written as one event.
+    /// Null will not fire an event, but an empty collection will.
+    /// </returns>
     public delegate IEnumerable<IChange> EffectsDelegate(IAtomReader R, IReadOnlyList<T> atoms);
 
     /// <inheritdoc cref="EffectsDelegate"/>
-    public EffectsDelegate Effects { get; init; }
-
-    /// <summary>
-    /// Runs whenever the command runs.
-    /// </summary>
-    /// <param name="R">The atom reader to pull data.</param>
-    /// <param name="atoms">The atoms that were targeted with this command.</param>
-    public delegate void SideEffectsDelegate(IAtomReader R, IReadOnlyList<T> atoms);
-
-    /// <inheritdoc cref="SideEffectsDelegate"/>
-    public SideEffectsDelegate SideEffects { get; init; }
+    public required EffectsDelegate Effects { get; init; }
 
     public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view)
     {
-        if (Resolved(targets) is not { } atoms)
-            return;
-        SideEffects?.Invoke(Atoms.R, atoms);
-        if (Effects != null)
+        if (Resolved(targets) is { } atoms)
             Submit(Effects(Atoms.R, atoms), view);
     }
 }
@@ -595,8 +584,19 @@ public sealed class GlobalCommand : Command
     public IReadOnlyList<(string Reason, Func<IAtomReader, bool> Holds)> Requires { get; init; } =
     [];
 
-    /// <summary>What it does, given the view it runs in, or null outside any view.</summary>
-    public Action<ICommandView> SideEffects { get; init; }
+    /// <summary>
+    /// Runs whenever the user activates the command.
+    /// </summary>
+    /// <param name="R">The atom reader to pull data.</param>
+    /// <param name="view">The view it runs in, or null outside any view.</param>
+    /// <returns>
+    /// The atom writes, written as one event.
+    /// Null will not fire an event, but an empty collection will.
+    /// </returns>
+    public delegate IEnumerable<IChange> EffectsDelegate(IAtomReader R, ICommandView view);
+
+    /// <inheritdoc cref="EffectsDelegate"/>
+    public required EffectsDelegate Effects { get; init; }
 
     public override bool IsAvailable(IAtomReader R) => Requires.All(rule => rule.Holds(R));
 
@@ -608,9 +608,8 @@ public sealed class GlobalCommand : Command
 
     public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view)
     {
-        if (!IsAvailable(Atoms.R))
-            return;
-        SideEffects?.Invoke(view);
+        if (IsAvailable(Atoms.R))
+            Submit(Effects(Atoms.R, view), view);
     }
 }
 

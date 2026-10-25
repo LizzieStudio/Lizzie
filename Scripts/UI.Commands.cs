@@ -21,7 +21,11 @@ public partial class UI
     {
         Icon = CommandIcons.ProjectManager,
         Caption = "Project Manager",
-        SideEffects = _ => _instance?.ShowProjectManager(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowProjectManager();
+            return null;
+        },
     };
 
     /// <summary>Saves the project, asking for a name if it has none.</summary>
@@ -31,7 +35,11 @@ public partial class UI
         Icon = CommandIcons.Save,
         Caption = "Save Project",
         Keys = [Shortcuts.Ctrl(Key.S)],
-        SideEffects = _ => _instance?.Save(),
+        Effects = (_, _) =>
+        {
+            _instance?.Save();
+            return null;
+        },
     };
 
     [Command("app.multiplayer")]
@@ -39,7 +47,11 @@ public partial class UI
     {
         Icon = CommandIcons.Multiplayer,
         Caption = "Multiplayer...",
-        SideEffects = _ => _instance?.ShowMultiplayerDialog(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowMultiplayerDialog();
+            return null;
+        },
     };
 
     /// <summary>
@@ -59,7 +71,11 @@ public partial class UI
                     && (settings.Players.Length > 0 || settings.AllowObservers)
             ),
         ],
-        SideEffects = _ => _instance?.ShowPlayerPositionDialog(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowPlayerPositionDialog();
+            return null;
+        },
     };
 
     [Command("editor.templates")]
@@ -67,7 +83,11 @@ public partial class UI
     {
         Icon = CommandIcons.Templates,
         Caption = "Templates",
-        SideEffects = _ => _instance?.ShowTemplateEditor(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowTemplateEditor();
+            return null;
+        },
     };
 
     [Command("editor.datasets")]
@@ -75,7 +95,11 @@ public partial class UI
     {
         Icon = CommandIcons.Datasets,
         Caption = "Datasets",
-        SideEffects = _ => _instance?.ShowDatasetEditor(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowDatasetEditor();
+            return null;
+        },
     };
 
     [Command("editor.components")]
@@ -83,7 +107,11 @@ public partial class UI
     {
         Icon = CommandIcons.Components,
         Caption = "Components",
-        SideEffects = _ => _instance?.ShowPrototypeManifest(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowPrototypeManifest();
+            return null;
+        },
     };
 
     [Command("editor.images")]
@@ -91,7 +119,11 @@ public partial class UI
     {
         Icon = CommandIcons.Images,
         Caption = "Images",
-        SideEffects = _ => _instance?.ShowImageManager(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowImageManager();
+            return null;
+        },
     };
 
     [Command("editor.blueprints")]
@@ -99,7 +131,11 @@ public partial class UI
     {
         Icon = CommandIcons.Blueprints,
         Caption = "Blueprints",
-        SideEffects = _ => _instance?.ShowBlueprintManager(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowBlueprintManager();
+            return null;
+        },
     };
 
     [Command("editor.project_settings")]
@@ -107,7 +143,11 @@ public partial class UI
     {
         Icon = CommandIcons.Settings,
         Caption = "Project Settings",
-        SideEffects = _ => _instance?.ShowProjectSettings(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowProjectSettings();
+            return null;
+        },
     };
 
     [Command("editor.create_component")]
@@ -115,6 +155,10 @@ public partial class UI
     {
         Icon = CommandIcons.AddComponent,
         Caption = "Create New Component",
-        SideEffects = _ => _instance?.ShowComponentDefinition(),
+        Effects = (_, _) =>
+        {
+            _instance?.ShowComponentDefinition();
+            return null;
+        },
     };
 }

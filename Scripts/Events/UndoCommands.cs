@@ -17,7 +17,11 @@ public static class UndoCommands
         Caption = "Undo Mine",
         Tooltip = "Undoes the last change that you made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z)],
-        SideEffects = v => Issue(Undo, TimelineUndo.Undo, MyScopeIn(v)),
+        Effects = (R, v) =>
+        {
+            Issue(Undo, TimelineUndo.Undo, MyScopeIn(R, v));
+            return null;
+        },
     };
 
     [Command("app.redo")]
@@ -27,7 +31,11 @@ public static class UndoCommands
         Caption = "Redo Mine",
         Tooltip = "Redoes an undo that you just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y), Shortcuts.Ctrl(Key.Z, shift: true)],
-        SideEffects = v => Issue(Redo, TimelineUndo.Redo, MyScopeIn(v)),
+        Effects = (R, v) =>
+        {
+            Issue(Redo, TimelineUndo.Redo, MyScopeIn(R, v));
+            return null;
+        },
     };
 
     [Command("app.undo_others")]
@@ -37,7 +45,11 @@ public static class UndoCommands
         Caption = "Undo Others",
         Tooltip = "Undoes the last change that any other player made in this view.",
         Keys = [Shortcuts.Ctrl(Key.Z, alt: true)],
-        SideEffects = v => Issue(UndoOthers, TimelineUndo.Undo, OthersScopeIn(v)),
+        Effects = (R, v) =>
+        {
+            Issue(UndoOthers, TimelineUndo.Undo, OthersScopeIn(R, v));
+            return null;
+        },
     };
 
     [Command("app.redo_others")]
@@ -47,7 +59,11 @@ public static class UndoCommands
         Caption = "Redo Others",
         Tooltip = "Redoes an undo that any other player just did in this view.",
         Keys = [Shortcuts.Ctrl(Key.Y, alt: true)],
-        SideEffects = v => Issue(RedoOthers, TimelineUndo.Redo, OthersScopeIn(v)),
+        Effects = (R, v) =>
+        {
+            Issue(RedoOthers, TimelineUndo.Redo, OthersScopeIn(R, v));
+            return null;
+        },
     };
 
     /// <summary>
@@ -61,21 +77,24 @@ public static class UndoCommands
         Caption = "Undo This",
         Tooltip = "Undoes the last change that affected this component, regardless of who did it.",
         ActsOn = Context.Selected | Context.Contents,
-        SideEffects = (_, atoms) =>
+        Effects = (_, atoms) =>
+        {
             Issue(
                 UndoChanges,
                 TimelineUndo.Undo,
                 UndoScopes.Changing(atoms.Select(AtomRef.To).ToHashSet())
-            ),
+            );
+            return null;
+        },
     };
 
     private static byte Me => Snowport.Clock.source;
 
-    private static TimelineUndo.Scope MyScopeIn(ICommandView view) =>
-        view?.Place(Atoms.R) is { } place ? UndoScopes.Mine(Me, place) : null;
+    private static TimelineUndo.Scope MyScopeIn(IAtomReader R, ICommandView view) =>
+        view?.Place(R) is { } place ? UndoScopes.Mine(Me, place) : null;
 
-    private static TimelineUndo.Scope OthersScopeIn(ICommandView view) =>
-        view?.Place(Atoms.R) is { } place ? UndoScopes.Others(Me, place) : null;
+    private static TimelineUndo.Scope OthersScopeIn(IAtomReader R, ICommandView view) =>
+        view?.Place(R) is { } place ? UndoScopes.Others(Me, place) : null;
 
     /// <summary>
     /// <see cref="TimelineUndo.Undo"/> or <see cref="TimelineUndo.Redo"/>.
