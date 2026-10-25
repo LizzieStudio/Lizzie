@@ -271,6 +271,8 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
+    public override string PrototypeName => _nameInput.Text;
+
     public override PrintedParameters GetParams()
     {
         int shape = GetEffectiveShape();
@@ -280,7 +282,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         return new PrintedParameters
         {
-            ComponentName = _nameInput.Text,
             Height = height,
             Width = width,
             Thickness = ParamToFloat(_thicknessInput.Text),
@@ -378,8 +379,6 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
         var ret = new List<string>();
         var p = parameters as PrintedParameters;
 
-        if (string.IsNullOrEmpty(p?.ComponentName))
-            ret.Add("Name may not be blank");
         if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
         if ((p?.Width ?? 0) <= 0)

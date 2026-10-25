@@ -6,6 +6,8 @@ namespace Lizzie;
 
 public abstract partial class ComponentPanelDialogResult : Control
 {
+    public abstract string PrototypeName { get; }
+
     public abstract ComponentParameters GetParams();
 
     public virtual void Activate() { }

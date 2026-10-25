@@ -170,7 +170,7 @@ public partial class PrototypeManifest : Window, ICommandView
         {
             Id = SnowTag.Create(),
             Name = newName,
-            Parameters = _selectedPrototype.Parameters with { ComponentName = newName },
+            Parameters = _selectedPrototype.Parameters,
         };
 
         Atoms.R.Write(this, duplicate);

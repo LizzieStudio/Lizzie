@@ -138,9 +138,6 @@ public abstract partial class VisualComponentBase : Area3D
     protected virtual void Setup(ComponentParameters parameters, IAtomReader R)
     {
         ShapeProfiles.Clear();
-
-        if (parameters != null && !string.IsNullOrEmpty(parameters.ComponentName))
-            ComponentName = parameters.ComponentName;
     }
 
     private void Sync(IWatchReader R)
@@ -149,6 +146,7 @@ public abstract partial class VisualComponentBase : Area3D
         if (proto == null || TextureFactory == null)
             return;
 
+        ComponentName = proto.Name;
         Setup(proto.Parameters, R);
         RebuildHighlight();
         Built?.Invoke();

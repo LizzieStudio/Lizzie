@@ -88,12 +88,13 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
     private DieParameters Parameters() =>
         new()
         {
-            ComponentName = _nameInput.Text,
             Size = ParamToFloat(_diameterInput.Text),
             Color = _dieColor.Color,
             SideCount = SideCount,
             Faces = _faces.Side,
         };
+
+    public override string PrototypeName => _nameInput.Text;
 
     public override ComponentParameters GetParams() => Parameters();
 
@@ -131,8 +132,6 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
         var ret = new List<string>();
         var p = (DieParameters)parameters;
 
-        if (string.IsNullOrEmpty(p.ComponentName))
-            ret.Add("Name may not be blank");
         if (p.Size <= 0)
             ret.Add("Diameter must be > 0");
         if (p.Resolve(Atoms.R).Error is { } error)

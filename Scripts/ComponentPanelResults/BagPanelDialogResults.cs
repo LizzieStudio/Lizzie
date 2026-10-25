@@ -55,11 +55,12 @@ public partial class BagPanelDialogResults : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
+    public override string PrototypeName => _nameInput.Text;
+
     public override ComponentParameters GetParams()
     {
         return new BagParameters
         {
-            ComponentName = _nameInput.Text,
             Height = ParamToFloat(_heightInput.Text),
             Diameter = ParamToFloat(_diameterInput.Text),
             Color = _colorPicker.Color,
@@ -85,7 +86,6 @@ public partial class BagPanelDialogResults : ComponentPanelDialogResult
 
         var p = new BagParameters
         {
-            ComponentName = _nameInput.Text,
             Height = h * scale,
             Diameter = dia * scale,
             Color = _colorPicker.Color,
@@ -111,8 +111,6 @@ public partial class BagPanelDialogResults : ComponentPanelDialogResult
         var ret = new List<string>();
         var p = parameters as BagParameters;
 
-        if (string.IsNullOrEmpty(p?.ComponentName))
-            ret.Add("Name may not be blank");
         if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
         if ((p?.Diameter ?? 0) <= 0)

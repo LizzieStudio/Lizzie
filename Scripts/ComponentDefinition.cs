@@ -97,25 +97,14 @@ public partial class ComponentDefinition : Window, ICommandView
         if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
         {
             var result = r.GetParams();
-
-            var errors = r.ValidateParameters(result);
-            if (errors != null && errors.Count > 0)
-            {
-                _errorDialog.DialogText = string.Join("\n", errors);
-                _errorDialog.PopupCentered();
+            if (ShowErrors(r, result))
                 return;
-            }
-
-            if (string.IsNullOrEmpty(result.BaseName))
-                result = result with { BaseName = CurName };
 
             var prototype = new Prototype
             {
                 Id = SnowTag.Create(),
                 Parameters = result,
-                Name = !string.IsNullOrEmpty(result.ComponentName)
-                    ? result.ComponentName
-                    : $"Unnamed {result.ComponentType}",
+                Name = r.PrototypeName,
             };
             Atoms.R.Write(this, prototype);
 
@@ -135,16 +124,12 @@ public partial class ComponentDefinition : Window, ICommandView
         if (_mapPrototype == null)
             return;
 
-        if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
-        {
-            var errors = r.ValidateParameters(r.GetParams());
-            if (errors != null && errors.Count > 0)
-            {
-                _errorDialog.DialogText = string.Join("\n", errors);
-                _errorDialog.PopupCentered();
-                return;
-            }
-        }
+        if (_panelDictionary[CurName] is not ComponentPanelDialogResult r)
+            return;
+
+        var newParams = r.GetParams();
+        if (ShowErrors(r, newParams))
+            return;
 
         //update the project prototype
 
@@ -152,9 +137,7 @@ public partial class ComponentDefinition : Window, ICommandView
         if (prototype == null)
             return;
 
-        var editResult = _panelDictionary[CurName] as ComponentPanelDialogResult;
-        var newParams = editResult?.GetParams();
-        prototype = prototype with { Parameters = newParams, Name = newParams?.ComponentName };
+        prototype = prototype with { Parameters = newParams, Name = r.PrototypeName };
 
         Atoms.R.Write(
             this,
@@ -167,6 +150,23 @@ public partial class ComponentDefinition : Window, ICommandView
         );
 
         QueueFree();
+    }
+
+    /// <summary>
+    /// Shows what's wrong with the panel's name and <paramref name="parameters"/>, if anything.
+    /// </summary>
+    /// <returns>True if there were errors to show.</returns>
+    private bool ShowErrors(ComponentPanelDialogResult panel, ComponentParameters parameters)
+    {
+        var errors = panel.ValidateParameters(parameters);
+        if (string.IsNullOrEmpty(panel.PrototypeName))
+            errors.Insert(0, "Name may not be blank");
+        if (errors.Count == 0)
+            return false;
+
+        _errorDialog.DialogText = string.Join("\n", errors);
+        _errorDialog.PopupCentered();
+        return true;
     }
 
     private string CurName

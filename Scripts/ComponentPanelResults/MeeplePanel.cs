@@ -286,11 +286,12 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         }
     }
 
+    public override string PrototypeName => _nameInput.Text;
+
     public override ComponentParameters GetParams()
     {
         return new MeepleParameters
         {
-            ComponentName = _nameInput.Text,
             Height = ParamToFloat(_heightInput.Text),
             Thickness = ParamToFloat(_thicknessInput.Text),
             Color = _colorPicker.Color,
@@ -317,7 +318,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
         var p = new MeepleParameters
         {
-            ComponentName = _nameInput.Text,
             Height = 10f,
             Thickness = t * scale,
             Color = _colorPicker.Color,
@@ -348,8 +348,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         var ret = new List<string>();
         var p = parameters as MeepleParameters;
 
-        if (string.IsNullOrEmpty(p?.ComponentName))
-            ret.Add("Name may not be blank");
         if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
         if ((p?.Thickness ?? 0) <= 0)

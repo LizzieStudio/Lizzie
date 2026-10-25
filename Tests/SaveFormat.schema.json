@@ -506,18 +506,6 @@
                       "color": true,
                       "showCount": {
                         "type": "boolean"
-                      },
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
                       }
                     },
                     "additionalProperties": false
@@ -536,19 +524,7 @@
                       "length": {
                         "type": "number"
                       },
-                      "color": true,
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      }
+                      "color": true
                     },
                     "additionalProperties": false
                   },
@@ -638,18 +614,6 @@
                             "additionalProperties": false
                           }
                         ]
-                      },
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
                       }
                     },
                     "additionalProperties": false
@@ -665,19 +629,7 @@
                       "diameter": {
                         "type": "number"
                       },
-                      "color": true,
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      }
+                      "color": true
                     },
                     "additionalProperties": false
                   },
@@ -701,18 +653,6 @@
                             "type": "boolean"
                           }
                         }
-                      },
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
                       }
                     },
                     "additionalProperties": false
@@ -835,18 +775,6 @@
                       },
                       "spawnDeck": {
                         "type": "boolean"
-                      },
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
                       }
                     },
                     "additionalProperties": false
@@ -866,19 +794,7 @@
                         "type": "number"
                       },
                       "color": true,
-                      "dispenseRef": true,
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      }
+                      "dispenseRef": true
                     },
                     "additionalProperties": false
                   },
@@ -910,18 +826,6 @@
                         "items": {
                           "type": "integer"
                         }
-                      },
-                      "componentName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "baseName": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
                       }
                     },
                     "additionalProperties": false

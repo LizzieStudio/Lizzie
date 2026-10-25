@@ -608,12 +608,12 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>
-        /// Parameters of <paramref name="type"/> with their name and the listed properties copied.
+        /// Parameters of <paramref name="type"/> with the listed properties copied.
         /// </summary>
         private static JsonObject Parameters(JsonObject p, string type, params string[] names)
         {
             var parameters = new JsonObject { ["$type"] = type };
-            Copy(p, parameters, ["ComponentName", "BaseName", .. names]);
+            Copy(p, parameters, names);
             return parameters;
         }
 

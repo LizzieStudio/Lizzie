@@ -99,6 +99,8 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
             _seatRows[i].Option.Select(_seatChoices.GetValueOrDefault(i, OptDefault));
     }
 
+    public override string PrototypeName => _nameInput.Text;
+
     public override ComponentParameters GetParams()
     {
         var included = ImmutableArray.CreateBuilder<int>();
@@ -119,7 +121,6 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
         return new ZoneParameters
         {
-            ComponentName = _nameInput.Text,
             Width = ParamToFloat(_widthInput.Text),
             Depth = ParamToFloat(_depthInput.Text),
             DefaultIncluded = _defaultIncluded.ButtonPressed,
@@ -152,8 +153,6 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         var ret = new List<string>();
         var p = parameters as ZoneParameters;
 
-        if (string.IsNullOrEmpty(p?.ComponentName))
-            ret.Add("Name may not be blank");
         if ((p?.Width ?? 0) <= 0)
             ret.Add("Width must be > 0");
         if ((p?.Depth ?? 0) <= 0)

@@ -51,11 +51,12 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
+    public override string PrototypeName => _nameInput.Text;
+
     public override ComponentParameters GetParams()
     {
         return new CubeParameters
         {
-            ComponentName = _nameInput.Text,
             Height = ParamToFloat(_heightInput.Text),
             Width = ParamToFloat(_widthInput.Text),
             Length = ParamToFloat(_lengthInput.Text),
@@ -80,7 +81,6 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
 
         var p = new CubeParameters
         {
-            ComponentName = _nameInput.Text,
             Height = h,
             Width = w,
             Length = l,
@@ -107,8 +107,6 @@ public partial class CubePanelDialogResult : ComponentPanelDialogResult
         var ret = new List<string>();
         var p = parameters as CubeParameters;
 
-        if (string.IsNullOrEmpty(p?.ComponentName))
-            ret.Add("Name may not be blank");
         if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
         if ((p?.Width ?? 0) <= 0)
