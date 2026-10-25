@@ -4,7 +4,6 @@ using Godot;
 
 namespace Lizzie;
 
-[View("component_definition")]
 public partial class ComponentDefinition : Window, ICommandView
 {
     public ViewPlace? Place(IAtomReader R) =>

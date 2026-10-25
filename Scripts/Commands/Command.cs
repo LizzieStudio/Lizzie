@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using Godot;
 using Lizzie.Replication.Machinery;
 
@@ -65,7 +64,7 @@ public enum Context
 }
 
 /// <summary>
-/// A window or panel that commands run in, named by its <see cref="ViewAttribute"/>.
+/// A window or panel that commands run in, named by its class name.
 /// </summary>
 public interface ICommandView
 {
@@ -115,75 +114,6 @@ public interface ICommandView
 }
 
 /// <summary>
-/// Names an <see cref="ICommandView"/> class, for the <see cref="ViewPlace"/>s in it.
-///
-/// <code>
-/// [View("some_view")]
-/// public partial class SomeView : Window, ICommandView
-/// </code>
-/// </summary>
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class ViewAttribute(string name) : Attribute
-{
-    public string Name { get; } = name;
-
-    // Every view's name, by its class.
-    private static readonly Dictionary<Type, string> Names = Found();
-
-    /// <summary>
-    /// The name of the view class <paramref name="view"/>.
-    /// </summary>
-    public static string NameOf(Type view) =>
-        Names.TryGetValue(view, out var name)
-            ? name
-            : throw new InvalidOperationException($"{view.Name} isn't an ICommandView.");
-
-    /// <summary>
-    /// Each view without a name, name without a view, and name used twice, as a message with the fix.
-    /// </summary>
-    public static IEnumerable<string> Problems()
-    {
-        var types = typeof(ViewAttribute).Assembly.GetTypes();
-        foreach (var type in types)
-        {
-            bool isView =
-                type.IsClass && !type.IsAbstract && typeof(ICommandView).IsAssignableFrom(type);
-            bool named = type.IsDefined(typeof(ViewAttribute), false);
-            if (isView && !type.IsSubclassOf(typeof(Node)))
-                yield return $"{type.Name} is an ICommandView but isn't a Node.\n"
-                    + "Writes find their view through the node tree, so a view has to be a node.";
-            if (isView && !named)
-                yield return $"{type.Name} is an ICommandView with no name.\n"
-                    + $"Add this above {type.Name}:\n"
-                    + $"    [View(\"some_view\")]";
-            else if (named && !isView)
-                yield return $"{type.Name} has a [View] attribute but isn't an ICommandView.\n"
-                    + "Remove the attribute, or implement ICommandView.";
-        }
-
-        foreach (
-            var name in types
-                .Where(t => t.IsDefined(typeof(ViewAttribute), false))
-                .GroupBy(t => t.GetCustomAttribute<ViewAttribute>().Name)
-                .Where(g => g.Count() > 1)
-        )
-            yield return $"\"{name.Key}\" names {string.Join(" and ", name.Select(t => t.Name))}.\n"
-                + "Give each view its own name.";
-    }
-
-    private static Dictionary<Type, string> Found()
-    {
-        var problems = Problems().ToList();
-        if (problems.Count > 0)
-            throw new InvalidOperationException(string.Join("\n\n", problems));
-        return typeof(ViewAttribute)
-            .Assembly.GetTypes()
-            .Where(t => t.IsDefined(typeof(ViewAttribute), false))
-            .ToDictionary(t => t, t => t.GetCustomAttribute<ViewAttribute>().Name);
-    }
-}
-
-/// <summary>
 /// A place in a view, like the dataset editor showing one dataset.
 ///
 /// <para>
@@ -191,7 +121,7 @@ public sealed class ViewAttribute(string name) : Attribute
 /// Otherwise Undo/Redo would change your selection in closed windows.
 /// </para>
 /// </summary>
-/// <param name="View">The view's name, from its <see cref="ViewAttribute"/>.</param>
+/// <param name="View">The view's class name.</param>
 /// <param name="Within">The atom the view is showing, or empty when it shows a whole list.</param>
 public readonly record struct ViewPlace(string View, SnowTag Within)
 {
@@ -199,13 +129,13 @@ public readonly record struct ViewPlace(string View, SnowTag Within)
     /// The place in view <typeparamref name="TView"/> showing <paramref name="within"/>.
     /// </summary>
     public static ViewPlace Of<TView>(SnowTag within = default)
-        where TView : ICommandView => new(ViewAttribute.NameOf(typeof(TView)), within);
+        where TView : ICommandView => new(typeof(TView).Name, within);
 
     /// <summary>
     /// The place in <paramref name="view"/> showing <paramref name="within"/>.
     /// </summary>
     public static ViewPlace Of(ICommandView view, SnowTag within = default) =>
-        new(ViewAttribute.NameOf(view.GetType()), within);
+        new(view.GetType().Name, within);
 }
 
 /// <summary>

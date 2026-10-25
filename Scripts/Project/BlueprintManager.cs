@@ -7,9 +7,13 @@ namespace Lizzie;
 /// <summary>
 /// The window for blueprints.
 /// </summary>
-[View("blueprints")]
 public partial class BlueprintManager : Window, ICommandView
 {
+    public bool Shows(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
+
+    public IReadOnlyList<Command> Commands =>
+        [StageCommands.AddBlueprint, StageCommands.AddTable, RenameStage];
+
     private Tree _tree;
 
     private readonly Dictionary<SnowTag, TreeItem> _rows = new();
@@ -74,15 +78,6 @@ public partial class BlueprintManager : Window, ICommandView
 
         CloseRequested += QueueFree;
     }
-
-    #region ICommandView
-
-    public bool Shows(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
-
-    public IReadOnlyList<Command> Commands =>
-        [StageCommands.AddBlueprint, StageCommands.AddTable, RenameStage];
-
-    #endregion
 
     /// <summary>
     /// Updates the rows in place, so collapsed rows, the scroll and an open rename survive changes.

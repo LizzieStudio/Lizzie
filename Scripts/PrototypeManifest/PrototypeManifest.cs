@@ -4,7 +4,6 @@ using Godot;
 
 namespace Lizzie;
 
-[View("prototypes")]
 public partial class PrototypeManifest : Window, ICommandView
 {
     private SplitContainer _mainContainer;

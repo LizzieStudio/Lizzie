@@ -4,7 +4,6 @@ using Lizzie.AssetManagement;
 
 namespace Lizzie;
 
-[View("images")]
 public partial class ImageManager : Window, ICommandView
 {
     private Button _backButton;

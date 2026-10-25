@@ -9,7 +9,6 @@ using Lizzie.Scripts.Templating;
 
 namespace Lizzie;
 
-[View("template")]
 public partial class TemplateCreator : Window, ICommandView
 {
     public ViewPlace? Place(IAtomReader R) =>

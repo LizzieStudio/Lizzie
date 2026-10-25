@@ -5,7 +5,6 @@ using Godot;
 
 namespace Lizzie;
 
-[View("project_settings")]
 public partial class ProjectSettingsDialog : Window, ICommandView
 {
     /// <summary>

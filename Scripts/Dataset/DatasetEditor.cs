@@ -7,7 +7,6 @@ using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
-[View("dataset")]
 public partial class DatasetEditor : Window, ICommandView
 {
     /// <summary>

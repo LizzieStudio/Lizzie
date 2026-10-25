@@ -6,7 +6,6 @@ using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
-[View("stage")]
 public partial class GameObjects : Node3D, ICommandView
 {
     [Export]
