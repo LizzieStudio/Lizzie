@@ -131,22 +131,17 @@ public partial class VcTray : VisualComponentGroup
     {
         if (_prototype == null)
             return ([], []);
-        var variant = new ComponentVariant
-        {
-            Id = Ref<ComponentVariant>.Create(),
-            PrototypeRef = _prototype.Id,
-            Item = _item,
-        };
+        var tag = SnowTag.Create();
         return (
+            [new ComponentPosition { Id = tag, StageRef = Key.StageRef }],
             [
-                new ComponentPosition
+                new Component
                 {
-                    Id = SnowTag.Create(),
-                    StageRef = Key.StageRef,
-                    VariantRef = variant.Id,
+                    Id = new(tag),
+                    PrototypeRef = _prototype.Id,
+                    Item = _item,
                 },
-            ],
-            [variant]
+            ]
         );
     }
 }

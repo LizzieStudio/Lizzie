@@ -39,50 +39,7 @@
           {
             "properties": {
               "$type": {
-                "const": "ComponentPosition"
-              },
-              "id": true,
-              "variantRef": true,
-              "x": {
-                "type": "integer"
-              },
-              "z": {
-                "type": "integer"
-              },
-              "rotation": true,
-              "zOrder": {
-                "type": "object",
-                "properties": {
-                  "target": {
-                    "type": "integer"
-                  },
-                  "suborder": {
-                    "type": "integer"
-                  },
-                  "stamp": true
-                },
-                "required": [
-                  "target",
-                  "suborder",
-                  "stamp"
-                ],
-                "additionalProperties": false
-              },
-              "containerRef": true,
-              "stageRef": true,
-              "removed": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "id"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "properties": {
-              "$type": {
-                "const": "ComponentVariant"
+                "const": "Component"
               },
               "id": true,
               "prototypeRef": true,
@@ -235,6 +192,48 @@
               },
               "deckRef": true,
               "retired": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "ComponentPosition"
+              },
+              "id": true,
+              "x": {
+                "type": "integer"
+              },
+              "z": {
+                "type": "integer"
+              },
+              "rotation": true,
+              "zOrder": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "integer"
+                  },
+                  "suborder": {
+                    "type": "integer"
+                  },
+                  "stamp": true
+                },
+                "required": [
+                  "target",
+                  "suborder",
+                  "stamp"
+                ],
+                "additionalProperties": false
+              },
+              "containerRef": true,
+              "stageRef": true,
+              "removed": {
                 "type": "boolean"
               }
             },

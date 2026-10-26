@@ -51,21 +51,21 @@ public partial class StageView : Node3D
     // The scene a component's node is made from, and what its node can't change without being remade.
     private static readonly Basis<
         ComponentPosition,
-        (string Scene, Ref<ComponentVariant> Variant)
+        (string Scene, Component Component)
     > NodeBasis = new(
         (R, s) =>
         {
-            var variant = R.GetVariant(s);
-            var proto = R.Get(Prototype.ById, variant.PrototypeRef);
+            var component = R.GetComponent(s);
+            var proto = R.Get(Prototype.ById, component.PrototypeRef);
             if (proto == null)
                 return null;
             var scene = Utility.ComponentTypeToScenePath(
                 proto.Type,
                 proto.Parameters,
                 R,
-                variant.IsItem
+                component.IsItem
             );
-            return (scene, s.VariantRef);
+            return (scene, component);
         }
     );
 

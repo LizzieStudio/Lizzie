@@ -218,16 +218,16 @@ public static class AtomReaderExtensions
     }
 
     /// <summary>
-    /// Gets the <see cref="ComponentVariant"/> for <paramref name="s"/>.
+    /// Gets the <see cref="Component"/> that <paramref name="s"/> places, which shares its tag.
     /// </summary>
-    public static ComponentVariant GetVariant(this IAtomReader R, ComponentPosition s) =>
-        R.Get(ComponentVariant.ById, s.VariantRef);
+    public static Component GetComponent(this IAtomReader R, ComponentPosition s) =>
+        R.Get(Component.ById, new(s.Id));
 
     /// <summary>
     /// Gets the <see cref="Prototype"/> for <paramref name="s"/>, or null.
     /// </summary>
     public static Prototype GetPrototype(this IAtomReader R, ComponentPosition s) =>
-        R.Get(Prototype.ById, R.GetVariant(s).PrototypeRef);
+        R.Get(Prototype.ById, R.GetComponent(s).PrototypeRef);
 
     /// <summary>
     /// What a component shows as. A printed prototype's decks share its prototype with its cards,
@@ -240,7 +240,7 @@ public static class AtomReaderExtensions
     )
     {
         var type = R.GetPrototype(s)?.Type ?? VisualComponentBase.VisualComponentType.Unset;
-        return type == VisualComponentBase.VisualComponentType.Printed && !R.GetVariant(s).IsItem
+        return type == VisualComponentBase.VisualComponentType.Printed && !R.GetComponent(s).IsItem
             ? VisualComponentBase.VisualComponentType.Deck
             : type;
     }

@@ -32,7 +32,7 @@ public partial class CardFace : TextureRect
         else
             _faces.Load(
                 prototype,
-                R.GetVariant(s).Item,
+                R.GetComponent(s).Item,
                 ProjectService.Instance.GameObjects.TextureFactory,
                 R
             );

@@ -8,6 +8,7 @@ namespace Lizzie;
 
 /// <summary>
 /// Where a component is in one <see cref="Stage"/>.
+/// The <see cref="Component"/> with its shared tag defines the component.
 /// </summary>
 [JsonName("ComponentPosition")]
 public record ComponentPosition : StagedAtom
@@ -15,7 +16,7 @@ public record ComponentPosition : StagedAtom
     public static readonly StagedId<ComponentPosition> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// The component's tag, created with <see cref="SnowTag.Create"/>, which its <see cref="Component"/> shares.
     /// </summary>
     public required SnowTag Id { get; init; }
 
@@ -59,24 +60,6 @@ public record ComponentPosition : StagedAtom
     public static ComponentPosition Of(VisualComponentBase c) =>
         c.State
         ?? throw new InvalidOperationException($"Component {c.ComponentRef} has no written state.");
-
-    /// <summary>
-    /// Captures a node that hasn't been written yet, such as a spawn preview, as <paramref name="variant"/>.
-    /// </summary>
-    public static ComponentPosition Capture(VisualComponentBase c, ComponentVariant variant) =>
-        new()
-        {
-            Id = c.ComponentRef,
-            StageRef = c.Key.StageRef,
-            VariantRef = variant.Id,
-            Position = c.Position,
-            Rotation = c.Rotation,
-        };
-
-    /// <summary>
-    /// What this component is.
-    /// </summary>
-    public Ref<ComponentVariant> VariantRef { get; init; }
 
     /// <summary>
     /// X in its container's frame, in tenths of a millimeter.
@@ -163,8 +146,8 @@ public record ComponentPosition : StagedAtom
             : [];
 
     /// <summary>
-    /// What its <see cref="ComponentVariant"/> refers to.
+    /// What its <see cref="Component"/> refers to.
     /// </summary>
     public override IEnumerable<IAtomRef> Referenced(IAtomReader R) =>
-        R.GetVariant(this).Referenced(R);
+        R.GetComponent(this).Referenced(R);
 }

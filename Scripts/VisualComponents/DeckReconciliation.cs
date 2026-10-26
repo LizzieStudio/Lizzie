@@ -40,8 +40,8 @@ public static class DeckReconciliation
             .SelectMany(stage =>
                 R.Get(ComponentPosition.ByStage, stage.Id)
                     .Where(c =>
-                        R.GetVariant(c) is { IsItem: false } variant
-                        && variant.PrototypeRef == prototype
+                        R.GetComponent(c) is { IsItem: false } component
+                        && component.PrototypeRef == prototype
                         && (
                             stage.ParentRef.IsEmpty
                             || R.Get(
@@ -55,13 +55,14 @@ public static class DeckReconciliation
             .ToList();
 
         var retiring = changes
-            .OfType<ComponentVariant>()
-            .Where(v => v.Retired)
-            .Select(v => v.Id)
+            .OfType<Component>()
+            .Where(c => c.Retired)
+            .Select(c => c.Id)
             .ToHashSet();
         bool IsRetired(ComponentPosition c) =>
-            retiring.Contains(c.VariantRef)
-            || R.GetVariant(c) is { Retired: true } variant && variant.PrototypeRef == prototype;
+            retiring.Contains(new(c.Id))
+            || R.GetComponent(c) is { Retired: true } component
+                && component.PrototypeRef == prototype;
         changes.AddRange(
             blueprints.SelectMany(stage =>
                 R.Get(ComponentPosition.WrittenIn, stage.Id)
@@ -83,23 +84,20 @@ public static class DeckReconciliation
         ZOrder order = default
     )
     {
-        var snowTagCreate = newTag ?? SnowTag.Create;
-
-        var variant = new ComponentVariant
-        {
-            Id = new(snowTagCreate()),
-            PrototypeRef = prototype,
-            Item = item,
-            DeckRef = deck.Id,
-        };
+        var tag = (newTag ?? SnowTag.Create)();
         return
         [
-            variant,
+            new Component
+            {
+                Id = new(tag),
+                PrototypeRef = prototype,
+                Item = item,
+                DeckRef = new(deck.Id),
+            },
             new ComponentPosition
             {
-                Id = snowTagCreate(),
+                Id = tag,
                 StageRef = deck.StageRef,
-                VariantRef = variant.Id,
                 ContainerRef = deck.Id,
                 Rotation = new Vector3(0, 0, Mathf.Pi),
                 ZOrder = order,
@@ -166,12 +164,12 @@ public static class DeckReconciliation
     )
     {
         var held = R.Get(ComponentPosition.ByContainer, deck.In(deck.Id))
-            .Select(c => c.VariantRef)
+            .Select(c => c.Id)
             .ToHashSet();
 
         // The cards out of the deck pair first, so the deck retires the cards it holds.
-        var issued = R.Get(ComponentVariant.ByDeck, deck.Id)
-            .OrderBy(card => held.Contains(card.Id))
+        var issued = R.Get(Component.ByDeck, new Ref<Component>(deck.Id))
+            .OrderBy(card => held.Contains(card.Id.Tag))
             .ToList();
         var (pairs, unwanted, missing) = Match(
             issued.Select(card => (PrintedItemRef)card.Item).ToList(),

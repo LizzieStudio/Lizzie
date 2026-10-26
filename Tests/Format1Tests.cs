@@ -85,10 +85,10 @@ public class Format1Tests
         Assert.Equal(150, (int)deck["x"]);
         Assert.Equal((int)deck["id"], (int)card["containerRef"]);
 
-        var variants = OfType(writes, "ComponentVariant").ToDictionary(v => (int)v["id"]);
-        Assert.Null(variants[(int)deck["variantRef"]]["item"]);
-        Assert.Equal((int)deck["id"], (int)variants[(int)card["variantRef"]]["deckRef"]);
-        var item = variants[(int)card["variantRef"]]["item"];
+        var components = OfType(writes, "Component").ToDictionary(c => (int)c["id"]);
+        Assert.Null(components[(int)deck["id"]]["item"]);
+        Assert.Equal((int)deck["id"], (int)components[(int)card["id"]]["deckRef"]);
+        var item = components[(int)card["id"]]["item"];
         var bow = OfType(writes, "DataRow").OrderBy(r => (string)r["rank"]).Last();
         Assert.Equal("RowFace", (string)item["front"]["$type"]);
         Assert.Equal((int)bow["id"], (int)item["front"]["rowRef"]);
@@ -127,7 +127,7 @@ public class Format1Tests
         Assert.Equal(["\"Ace\"", "\"1-3\""], suits.Select(s => (string)s["values"]));
         Assert.NotEqual((int)suits[0]["id"], (int)suits[1]["id"]);
 
-        var front = Assert.Single(OfType(writes, "ComponentVariant"))["item"]["front"];
+        var front = Assert.Single(OfType(writes, "Component"))["item"]["front"];
         Assert.Equal("QuickFace", (string)front["$type"]);
         Assert.Equal((int)suits[1]["id"], (int)front["suitRef"]);
         Assert.Equal("1-3", (string)front["value"]);

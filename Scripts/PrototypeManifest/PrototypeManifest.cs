@@ -188,15 +188,15 @@ public partial class PrototypeManifest : Window, ICommandView
                 ComponentPosition.ByStage,
                 ProjectService.Instance.GameObjects.ShownStage(R)
             )
-            .Select(R.GetVariant)
-            .Where(v =>
+            .Select(R.GetComponent)
+            .Where(c =>
                 !(
-                    v.IsItem
-                    && R.Get(Prototype.ById, v.PrototypeRef)?.Parameters
+                    c.IsItem
+                    && R.Get(Prototype.ById, c.PrototypeRef)?.Parameters
                         is PrintedParameters { SpawnDeck: true }
                 )
             )
-            .GroupBy(v => v.PrototypeRef)
+            .GroupBy(c => c.PrototypeRef)
             .ToDictionary(g => g.Key, g => g.Count());
 
         var selectedRef = _selectedPrototype?.Id ?? Ref<Prototype>.Empty;

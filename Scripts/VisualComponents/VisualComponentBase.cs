@@ -40,13 +40,13 @@ public abstract partial class VisualComponentBase : Area3D
     {
         base._EnterTree();
 
-        // Normal nodes never change, since the StageView replaces the node when they do.
+        // Normal nodes never change, since the StageView replaces the node when its Component does.
         // Previews have no atom and keep their own.
         if (State is { } atom)
         {
-            var variant = Atoms.R.GetVariant(atom);
-            PrototypeRef = variant.PrototypeRef;
-            Item = variant.Item;
+            var component = Atoms.R.GetComponent(atom);
+            PrototypeRef = component.PrototypeRef;
+            Item = component.Item;
         }
 
         // Builds first, so the first placement knows the component's height.
@@ -233,7 +233,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// The components to spawn along with this one, such as a deck's cards, bottom first,
-    /// as their positions and the variants they need.
+    /// as their positions and the Components they need.
     /// <strong>The positions' ZOrders do not come assigned.</strong>
     /// </summary>
     /// <param name="self">The position this component spawns with.</param>

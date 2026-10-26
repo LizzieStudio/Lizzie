@@ -218,9 +218,9 @@ public class SideParametersTests
     [MemberData(nameof(Items))]
     public void ItemsSurviveSaving(PrototypeItemRef item)
     {
-        var variant = new ComponentVariant { Id = new(1), Item = item };
+        var component = new Component { Id = new(1), Item = item };
 
-        var back = RoundTrip(variant).Item;
+        var back = RoundTrip(component).Item;
 
         Assert.True(
             Equals(back, item),

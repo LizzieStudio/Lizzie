@@ -5,26 +5,30 @@ using System.Text.Json.Serialization;
 namespace Lizzie;
 
 /// <summary>
-/// What a component is. Its prototype and which item from that prototype.
+/// One component.
+/// 
+/// <para>
+/// This atom represents the components unchanging state, like its prototype and which card inside that prototype.
+/// The <see cref="ComponentPosition"/>s, which share its tag, then sets its position in different <see cref="Stage"/>s.
 /// </summary>
-[JsonName("ComponentVariant")]
-public record ComponentVariant : Atom
+[JsonName("Component")]
+public record Component : Atom
 {
-    public static readonly Identity<ComponentVariant, Ref<ComponentVariant>> ById = new(r => r.Id);
+    public static readonly Identity<Component, Ref<Component>> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
+    /// The component's tag, which its <see cref="ComponentPosition"/>s share.
     /// </summary>
-    public required Ref<ComponentVariant> Id { get; init; }
+    public required Ref<Component> Id { get; init; }
 
     /// <summary>
     /// The cards each deck issued and hasn't retired, by the deck's Id.
     /// </summary>
     /// <remarks>
-    /// A deck keeps these in saves, even after their components are deleted, so it doesn't issue them again.
+    /// A deck keeps these in saves, even after the cards are deleted from every stage, so it doesn't issue them again.
     /// </remarks>
-    public static readonly Lookup<ComponentVariant, SnowTag?> ByDeck = new(v =>
-        v.DeckRef == SnowTag.Empty || v.Retired ? null : v.DeckRef
+    public static readonly Lookup<Component, Ref<Component>?> ByDeck = new(c =>
+        c.DeckRef.IsEmpty || c.Retired ? null : c.DeckRef
     );
 
     public Ref<Prototype> PrototypeRef { get; init; }
@@ -46,29 +50,15 @@ public record ComponentVariant : Atom
     public bool IsItem => Item != null;
 
     /// <summary>
-    /// The deck that issued this card, or <see cref="SnowTag.Empty"/> when it didn't come from a deck.
+    /// The deck that issued this card, or <see cref="Ref{T}.Empty"/> when it didn't come from a deck.
     /// </summary>
-    /// <remarks>
-    /// Each card a deck issues gets its own variant, so a deck can count the cards it issued.
-    /// </remarks>
-    public SnowTag DeckRef { get; init; }
+    public Ref<Component> DeckRef { get; init; }
 
     /// <summary>
     /// Set when its deck no longer wants this card, after its prototype changed.
-    /// Components of a retired variant still show it until a player deletes them.
+    /// A retired card still shows until a player deletes it.
     /// </summary>
     public bool Retired { get; init; }
-
-    /// <summary>
-    /// A new variant for a node that hasn't been written yet, such as a spawn preview.
-    /// </summary>
-    public static ComponentVariant Capture(VisualComponentBase c) =>
-        new()
-        {
-            Id = Ref<ComponentVariant>.Create(),
-            PrototypeRef = c.PrototypeRef,
-            Item = c.Item,
-        };
 
     /// <summary>
     /// Its prototype and, for a card made from a dataset, its rows.

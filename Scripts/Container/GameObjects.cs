@@ -322,9 +322,13 @@ public partial class GameObjects : Node3D, ICommandView
         MaxTargets = 1,
         Effects = (R, cs) =>
         {
-            var variant = R.GetVariant(cs[0]);
+            var component = R.GetComponent(cs[0]);
             EventBus.Instance.Publish(
-                new SpawnPrototypeEvent { PrototypeRef = variant.PrototypeRef, Item = variant.Item }
+                new SpawnPrototypeEvent
+                {
+                    PrototypeRef = component.PrototypeRef,
+                    Item = component.Item,
+                }
             );
             return null;
         },
@@ -371,13 +375,22 @@ public partial class GameObjects : Node3D, ICommandView
 
         foreach (var component in components)
         {
-            var variant = ComponentVariant.Capture(component);
-            var self = ComponentPosition.Capture(component, variant) with
+            var self = new ComponentPosition
             {
                 Id = SnowTag.Create(),
+                StageRef = component.Key.StageRef,
+                Position = component.Position,
+                Rotation = component.Rotation,
                 ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
             };
-            atoms.Add(variant);
+            atoms.Add(
+                new Component
+                {
+                    Id = new(self.Id),
+                    PrototypeRef = component.PrototypeRef,
+                    Item = component.Item,
+                }
+            );
             atoms.Add(self);
 
             // The stack goes above the component, bottom first.

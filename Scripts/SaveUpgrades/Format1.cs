@@ -24,8 +24,9 @@ public sealed class Format1 : IStep
         private readonly Dictionary<string, JsonObject> _images = [];
         private readonly Dictionary<string, Kind> _prototypes = [];
         private readonly Dictionary<string, List<string>> _rows = [];
+        private readonly HashSet<string> _components = [];
 
-        /// <summary>How a prototype's components become variants.</summary>
+        /// <summary>How a prototype's components become Components.</summary>
         /// <param name="Faces">
         /// A printed card's front and back keys, from its old number and its row's tag.
         /// </param>
@@ -482,7 +483,7 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>
-        /// A snapshot as a root blueprint, holding a position and a variant for each component.
+        /// A snapshot as a root blueprint, holding a position for each component.
         /// </summary>
         private void Blueprint(JsonObject snapshot, int index)
         {
@@ -521,19 +522,19 @@ public sealed class Format1 : IStep
                 if (container != null && !kept.Contains(container))
                     continue;
 
+                Component(
+                    id,
+                    (string)c["PrototypeRef"],
+                    (string)c["DatasetRow"] ?? "",
+                    container != null && _prototypes[prototypes[container]].Type == 6
+                        ? Tag("component", container)
+                        : null
+                );
                 var position = new JsonObject
                 {
                     ["$type"] = "ComponentPosition",
                     ["id"] = Tag("component", id),
                     ["stageRef"] = stage,
-                    ["variantRef"] = Variant(
-                        id,
-                        (string)c["PrototypeRef"],
-                        (string)c["DatasetRow"] ?? "",
-                        container != null && _prototypes[prototypes[container]].Type == 6
-                            ? Tag("component", container)
-                            : null
-                    ),
                     ["zOrder"] = new JsonObject
                     {
                         ["target"] = 1,
@@ -561,24 +562,23 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>
-        /// The variant of a component, which is its own, since a deck counts the cards it issued.
-        /// A component in several snapshots has one variant.
+        /// Writes what <paramref name="component"/> is, the first time it appears,
+        /// since a component in several snapshots is one component.
         /// </summary>
         /// <param name="issuer">The tag of the deck holding the component, if any, which issued it.</param>
-        private int Variant(string component, string prototype, string row, int? issuer)
+        private void Component(string component, string prototype, string row, int? issuer)
         {
-            if (_tags.ContainsKey($"variant:{component}"))
-                return Tag("variant", component);
+            if (!_components.Add(component))
+                return;
 
-            int tag = Tag("variant", component);
-            var variant = new JsonObject
+            var written = new JsonObject
             {
-                ["$type"] = "ComponentVariant",
-                ["id"] = tag,
+                ["$type"] = "Component",
+                ["id"] = Tag("component", component),
                 ["prototypeRef"] = Tag("prototype", prototype),
             };
             if (issuer != null)
-                variant["deckRef"] = issuer;
+                written["deckRef"] = issuer;
             var kind = _prototypes[prototype];
             var rows = kind.Dataset is { } dataset ? _rows.GetValueOrDefault(dataset) ?? [] : [];
             int index = rows.IndexOf(row);
@@ -598,13 +598,12 @@ public sealed class Format1 : IStep
                     item["front"] = front.DeepClone();
                 if (back != null)
                     item["back"] = back.DeepClone();
-                variant["item"] = item;
+                written["item"] = item;
             }
             else if (kind.Type == 7 && rowTag != null)
-                variant["item"] = new JsonObject { ["$type"] = "DieItem", ["rowRef"] = rowTag };
+                written["item"] = new JsonObject { ["$type"] = "DieItem", ["rowRef"] = rowTag };
 
-            _writes.Add(variant);
-            return tag;
+            _writes.Add(written);
         }
 
         /// <summary>

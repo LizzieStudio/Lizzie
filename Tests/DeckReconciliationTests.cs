@@ -15,7 +15,6 @@ public class DeckReconciliationTests
     private static readonly Ref<Prototype> Proto = new(1);
     private static readonly Ref<Stage> Root = new(2),
         Child = new(3);
-    private static readonly Ref<ComponentVariant> DeckVariant = new(5);
     private static readonly SnowTag Deck = new(4),
         Numbers = new(6),
         Backs = new(7);
@@ -39,23 +38,18 @@ public class DeckReconciliationTests
         {
             new Stage { Id = Root },
             new Stage { Id = Child, ParentRef = Root },
-            new ComponentVariant { Id = DeckVariant, PrototypeRef = Proto },
-            new ComponentPosition
-            {
-                Id = Deck,
-                StageRef = Root,
-                VariantRef = DeckVariant,
-            },
+            new Component { Id = new(Deck), PrototypeRef = Proto },
+            new ComponentPosition { Id = Deck, StageRef = Root },
         };
         for (int i = 0; i < values.Length; i++)
         {
             atoms.Add(
-                new ComponentVariant
+                new Component
                 {
-                    Id = new(10 + i),
+                    Id = new(20 + i),
                     PrototypeRef = Proto,
                     Item = Card(values[i]),
-                    DeckRef = Deck,
+                    DeckRef = new(Deck),
                 }
             );
             atoms.Add(
@@ -63,7 +57,6 @@ public class DeckReconciliationTests
                 {
                     Id = new SnowTag(20 + i),
                     StageRef = Root,
-                    VariantRef = new(10 + i),
                     ContainerRef = onTable.Contains(i) ? SnowTag.Empty : Deck,
                 }
             );
@@ -77,22 +70,14 @@ public class DeckReconciliationTests
 
     /// <summary>Moves card <paramref name="card"/> onto the table in <paramref name="stage"/>, as a write of its own.</summary>
     private static List<Atom> MovedIn(List<Atom> atoms, Ref<Stage> stage, int card) =>
-        [
-            .. atoms,
-            new ComponentPosition
-            {
-                Id = new SnowTag(20 + card),
-                StageRef = stage,
-                VariantRef = new(10 + card),
-            },
-        ];
+        [.. atoms, new ComponentPosition { Id = new SnowTag(20 + card), StageRef = stage }];
 
-    /// <summary>Retires card <paramref name="card"/>'s variant.</summary>
+    /// <summary>Retires card <paramref name="card"/>.</summary>
     private static List<Atom> Retired(List<Atom> atoms, int card) =>
         [
             .. atoms.Select(a =>
-                a is ComponentVariant v && v.Id == new Ref<ComponentVariant>(10 + card)
-                    ? v with
+                a is Component c && c.Id == new Ref<Component>(20 + card)
+                    ? c with
                     {
                         Retired = true,
                     }
@@ -125,12 +110,12 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(Table(["1", "2"]), "1-3");
 
-        var variant = Assert.Single(changes.OfType<ComponentVariant>());
+        var component = Assert.Single(changes.OfType<Component>());
         var position = Assert.Single(changes.OfType<ComponentPosition>());
         Assert.True(
-            Equals(variant.Item, Card("3"))
-                && variant.DeckRef == Deck
-                && position.VariantRef == variant.Id
+            Equals(component.Item, Card("3"))
+                && component.DeckRef == new Ref<Component>(Deck)
+                && position.Id == component.Id.Tag
                 && position.ContainerRef == Deck
                 && position.StageRef == Root
                 && position.ZOrder.Target == ZTarget.Bottom,
@@ -143,7 +128,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(Table(["1", "2"]), "1");
 
-        AssertWrites(changes, retired: [11], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
     }
 
     [Fact]
@@ -152,7 +137,7 @@ public class DeckReconciliationTests
         // Two 1s: the first is on the table, the second is in the deck.
         var changes = Reconcile(Table(["1", "1"], onTable: 0), "1");
 
-        AssertWrites(changes, retired: [11], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
     }
 
     [Fact]
@@ -160,7 +145,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(Table(["1", "2"], onTable: 1), "1");
 
-        AssertWrites(changes, retired: [11], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
     }
 
     [Fact]
@@ -176,7 +161,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(MovedIn(Table(["1", "2"]), Child, 1), "1");
 
-        AssertWrites(changes, retired: [11], removed: [(Root, 21), (Child, 21)]);
+        AssertWrites(changes, retired: [21], removed: [(Root, 21), (Child, 21)]);
     }
 
     [Fact]
@@ -184,7 +169,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(AsTable(MovedIn(Table(["1", "2"]), Child, 1), Child), "1");
 
-        AssertWrites(changes, retired: [11], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
     }
 
     [Fact]
@@ -281,9 +266,9 @@ public class DeckReconciliationTests
     )
     {
         var actualRetired = changes
-            .OfType<ComponentVariant>()
-            .Where(v => v.Retired)
-            .Select(v => v.Id)
+            .OfType<Component>()
+            .Where(c => c.Retired)
+            .Select(c => c.Id)
             .Order();
         var actualRemoved = changes
             .OfType<ComponentPosition>()
@@ -292,11 +277,11 @@ public class DeckReconciliationTests
             .Order();
         Assert.True(
             changes.Count == retired.Length + removed.Length
-                && actualRetired.SequenceEqual(retired.Select(i => new Ref<ComponentVariant>(i)))
+                && actualRetired.SequenceEqual(retired.Select(i => new Ref<Component>(i)))
                 && actualRemoved.SequenceEqual(
                     removed.Select(r => (r.Stage, new SnowTag(r.Id))).Order()
                 ),
-            $"Wrote {Describe(changes)}.\n\nExpected only: variants [{string.Join(", ", retired)}] retired, "
+            $"Wrote {Describe(changes)}.\n\nExpected only: components [{string.Join(", ", retired)}] retired, "
                 + $"and positions [{string.Join(", ", removed)}] removed, as (stage, position)."
         );
     }

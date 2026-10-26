@@ -20,9 +20,9 @@ public class SaveCompactionTests
     private static SnowportId Id(long clock, byte source = Snowport.HostSource) =>
         new(clock, source);
 
-    private static ComponentPosition Component(int id) => new() { Id = Tag(id) };
+    private static ComponentPosition Position(int id) => new() { Id = Tag(id) };
 
-    private static ComponentVariant Variant(int id) => new() { Id = Tag<ComponentVariant>(id) };
+    private static Component Component(int id) => new() { Id = Tag<Component>(id) };
 
     private static Prototype DeletedPrototype(int id) =>
         new() { Id = Tag<Prototype>(id), Deleted = true };
@@ -37,7 +37,7 @@ public class SaveCompactionTests
         atom switch
         {
             ComponentPosition s => s.Id,
-            ComponentVariant v => v.Id.Tag,
+            Component c => c.Id.Tag,
             Stage s => s.Id.Tag,
             Prototype p => p.Id.Tag,
             Dataset d => d.Id.Tag,
@@ -61,44 +61,43 @@ public class SaveCompactionTests
     }
 
     [Fact]
-    public void ListedAtomsAreKept() => AssertKept([Component(1), Component(2)], 1, 2);
+    public void ListedAtomsAreKept() => AssertKept([Position(1), Position(2)], 1, 2);
 
     [Fact]
     public void AnUnreferencedDeletedPrototypeIsDropped() =>
-        AssertKept([Component(1), DeletedPrototype(2)], 1);
+        AssertKept([Position(1), DeletedPrototype(2)], 1);
 
     [Fact]
-    public void AComponentKeepsItsVariant() =>
-        AssertKept([Component(1) with { VariantRef = Tag<ComponentVariant>(2) }, Variant(2)], 1, 2);
+    public void APositionKeepsItsComponent() => AssertKept([Position(1), Component(1)], 1, 1);
 
     [Fact]
-    public void AnUnreferencedVariantIsDropped() => AssertKept([Component(1), Variant(2)], 1);
+    public void AComponentNothingPlacesIsDropped() => AssertKept([Position(1), Component(2)], 1);
 
     [Fact]
     public void ADeckKeepsTheCardsItIssued() =>
-        AssertKept([Component(1), Variant(2) with { DeckRef = Tag(1) }], 1, 2);
+        AssertKept([Position(1), Component(2) with { DeckRef = Tag<Component>(1) }], 1, 2);
 
     [Fact]
     public void AnUnreferencedRetiredCardIsDropped() =>
-        AssertKept([Component(1), Variant(2) with { DeckRef = Tag(1), Retired = true }], 1);
+        AssertKept(
+            [Position(1), Component(2) with { DeckRef = Tag<Component>(1), Retired = true }],
+            1
+        );
 
     [Fact]
     public void ADeletedPrototypeAComponentUsesIsKept() =>
         AssertKept(
             [
+                Position(1),
                 Component(1) with
-                {
-                    VariantRef = Tag<ComponentVariant>(3),
-                },
-                Variant(3) with
                 {
                     PrototypeRef = Tag<Prototype>(2),
                 },
                 DeletedPrototype(2),
             ],
             1,
-            2,
-            3
+            1,
+            2
         );
 
     [Fact]
@@ -106,11 +105,11 @@ public class SaveCompactionTests
         AssertKept(
             [
                 new Stage { Id = Tag<Stage>(1) },
-                Component(2) with
+                Position(2) with
                 {
                     StageRef = Tag<Stage>(1),
                 },
-                Component(3) with
+                Position(3) with
                 {
                     StageRef = Tag<Stage>(1),
                     Removed = true,
@@ -132,7 +131,7 @@ public class SaveCompactionTests
                     ParentRef = Tag<Stage>(1),
                     Deleted = true,
                 },
-                Component(3) with
+                Position(3) with
                 {
                     StageRef = Tag<Stage>(2),
                 },
@@ -152,7 +151,7 @@ public class SaveCompactionTests
                     Deleted = true,
                 },
                 new Stage { Id = Tag<Stage>(3), ParentRef = Tag<Stage>(2) },
-                Component(4) with
+                Position(4) with
                 {
                     StageRef = Tag<Stage>(3),
                 },
@@ -165,7 +164,7 @@ public class SaveCompactionTests
         AssertKept([
             new Stage { Id = Tag<Stage>(1), ParentRef = Tag<Stage>(2) },
             new Stage { Id = Tag<Stage>(2), ParentRef = Tag<Stage>(1) },
-            Component(3) with
+            Position(3) with
             {
                 StageRef = Tag<Stage>(1),
             },
@@ -182,16 +181,16 @@ public class SaveCompactionTests
                     ParentRef = Tag<Stage>(1),
                     IsTable = true,
                 },
-                Component(3) with
+                Position(3) with
                 {
                     StageRef = Tag<Stage>(1),
                 },
-                Component(3) with
+                Position(3) with
                 {
                     StageRef = Tag<Stage>(2),
                     X = 5,
                 },
-                Component(4) with
+                Position(4) with
                 {
                     StageRef = Tag<Stage>(2),
                 },
@@ -244,11 +243,8 @@ public class SaveCompactionTests
                     DatasetRef = Tag<Dataset>(1),
                     Deleted = true,
                 },
+                Position(3),
                 Component(3) with
-                {
-                    VariantRef = Tag<ComponentVariant>(4),
-                },
-                Variant(4) with
                 {
                     Item = new PrintedItemRef(new RowFace(Tag<DataRow>(2)), null),
                 },
@@ -256,7 +252,7 @@ public class SaveCompactionTests
             1,
             2,
             3,
-            4
+            3
         );
 
     [Theory]
@@ -289,13 +285,13 @@ public class SaveCompactionTests
     {
         var json = SaveCompaction.Serialize(
             Save(
-                Component(9) with
+                Position(9) with
                 {
                     ContainerRef = Tag(5, source: 3),
                 },
-                Component(7) with
+                Position(7) with
                 {
-                    VariantRef = Tag<ComponentVariant>(9),
+                    ContainerRef = Tag(9),
                 }
             )
         );
@@ -306,9 +302,8 @@ public class SaveCompactionTests
         Assert.Equal(new SnowTag(2), back[0].Id);
         Assert.Equal(new SnowTag(3), back[0].ContainerRef);
         Assert.Equal(new SnowTag(1), back[1].Id);
-        Assert.Equal(new SnowTag(2), back[1].VariantRef.Tag);
+        Assert.Equal(new SnowTag(2), back[1].ContainerRef);
         Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.source));
-        Assert.Equal(SnowTag.Empty, back[1].ContainerRef);
     }
 
     [Fact]
@@ -336,7 +331,7 @@ public class SaveCompactionTests
         var below = new ZOrder(ZTarget.Top, 0, Id(500, source: 2));
         var above = new ZOrder(ZTarget.Top, 0, Id(900, source: 1));
         var json = SaveCompaction.Serialize(
-            Save(Component(1) with { ZOrder = above }, Component(2) with { ZOrder = below })
+            Save(Position(1) with { ZOrder = above }, Position(2) with { ZOrder = below })
         );
 
         var back = Load(json);
@@ -352,10 +347,10 @@ public class SaveCompactionTests
     [Fact]
     public void UnsetIdsStayUnset()
     {
-        var json = SaveCompaction.Serialize(Save(Component(1)));
+        var json = SaveCompaction.Serialize(Save(Position(1)));
         var back = (ComponentPosition)Load(json).Writes[0];
 
-        Assert.Equal(SnowTag.Empty, back.VariantRef.Tag);
+        Assert.Equal(SnowTag.Empty, back.ContainerRef);
         Assert.Equal(SnowportId.Empty, back.ZOrder.Stamp);
     }
 
@@ -364,14 +359,12 @@ public class SaveCompactionTests
     {
         var first = SaveCompaction.Serialize(
             Save(
-                Component(8) with
+                Position(8) with
                 {
-                    VariantRef = Tag<ComponentVariant>(4, source: 2),
                     ZOrder = new ZOrder(ZTarget.Bottom, 1, Id(77)),
                 },
-                new ComponentVariant
+                Component(8) with
                 {
-                    Id = Tag<ComponentVariant>(4, source: 2),
                     PrototypeRef = Tag<Prototype>(3, source: 2),
                 },
                 new Prototype { Id = Tag<Prototype>(3, source: 2), Name = "Card" }
