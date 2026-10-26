@@ -1,2 +1,8 @@
 - name: Adding an Atom
   href: adding-an-atom.md
+- name: Adding a Command
+  href: adding-a-command.md
+- name: Adding a View
+  href: adding-a-view.md
+- name: The Timeline
+  href: timeline.md
