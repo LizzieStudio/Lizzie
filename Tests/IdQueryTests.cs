@@ -33,14 +33,18 @@ public class IdQueryTests
             Assert.Fail(string.Join("\n\n", problems));
     }
 
-    private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
+    private static Ref<T> Tag<T>(int counter)
+        where T : Atom => new(new SnowTag(Snowport.HostSource, counter));
 
     [Fact]
     public void AnEmptyCellIsInTheGridWhileItsRowAndColumnAre()
     {
-        var R = new ListReader(new DataRow { Id = Tag(1) }, new DataColumn { Id = Tag(2) });
-        Assert.True(DataCell.InGrid(R, new CellId(Tag(1), Tag(2))));
-        Assert.False(DataCell.InGrid(R, new CellId(Tag(3), Tag(2))));
-        Assert.False(DataCell.InGrid(R, new CellId(Tag(1), Tag(3))));
+        var R = new ListReader(
+            new DataRow { Id = Tag<DataRow>(1) },
+            new DataColumn { Id = Tag<DataColumn>(2) }
+        );
+        Assert.True(DataCell.InGrid(R, new CellId(Tag<DataRow>(1), Tag<DataColumn>(2))));
+        Assert.False(DataCell.InGrid(R, new CellId(Tag<DataRow>(3), Tag<DataColumn>(2))));
+        Assert.False(DataCell.InGrid(R, new CellId(Tag<DataRow>(1), Tag<DataColumn>(3))));
     }
 }

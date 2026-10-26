@@ -13,7 +13,7 @@ public abstract record PrototypeItemRef
     /// <summary>
     /// The dataset rows it shows, for a template.
     /// </summary>
-    public abstract IEnumerable<SnowTag> Rows();
+    public abstract IEnumerable<Ref<DataRow>> Rows();
 
     /// <summary>
     /// Every item of a prototype with these <paramref name="parameters"/>, in order.
@@ -41,7 +41,7 @@ public abstract record PrototypeItemRef
 [JsonName("PrintedItem")]
 public sealed record PrintedItemRef(FaceKey Front, FaceKey Back) : PrototypeItemRef
 {
-    public override IEnumerable<SnowTag> Rows() =>
+    public override IEnumerable<Ref<DataRow>> Rows() =>
         new[] { Front, Back }.OfType<RowFace>().Select(face => face.RowRef);
 }
 
@@ -50,9 +50,9 @@ public sealed record PrintedItemRef(FaceKey Front, FaceKey Back) : PrototypeItem
 /// </summary>
 /// <param name="RowRef">The row of the Dataset its faces show.</param>
 [JsonName("DieItem")]
-public sealed record DieItemRef(SnowTag RowRef) : PrototypeItemRef
+public sealed record DieItemRef(Ref<DataRow> RowRef) : PrototypeItemRef
 {
-    public override IEnumerable<SnowTag> Rows() => [RowRef];
+    public override IEnumerable<Ref<DataRow>> Rows() => [RowRef];
 }
 
 /// <summary>
@@ -65,7 +65,7 @@ public abstract record FaceKey;
 /// A dataset row drawn with a template.
 /// </summary>
 [JsonName("RowFace")]
-public sealed record RowFace(SnowTag RowRef) : FaceKey;
+public sealed record RowFace(Ref<DataRow> RowRef) : FaceKey;
 
 /// <summary>
 /// A frame of an image, counting from 1.

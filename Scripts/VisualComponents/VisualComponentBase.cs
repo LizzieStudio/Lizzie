@@ -65,18 +65,17 @@ public abstract partial class VisualComponentBase : Area3D
     private void SyncSelection(IWatchReader R)
     {
         var key = Key;
-        var target = ComponentPosition.ById.Ref(key);
         var local = Snowport.Clock.source;
-        var place = ViewPlace.Of<GameObjects>(Stage.ById.Ref(key.StageRef));
+        var place = ViewPlace.Of<GameObjects>(key.StageRef);
         var selections = R.Get(Selection.ByPlace, place);
         var mine = selections.FirstOrDefault(s => s.Player == local)?.Targets;
-        _isMine = mine?.Contains(target) == true;
+        _isMine = mine?.Contains(key) == true;
         _localColor = R.SeatColor(local);
         // We're avoiding using GetSelection here, which would watch every selected component.
         ICommandView table = ProjectService.Instance.GameObjects;
         _nothingSelected = !_isMine && mine?.Any(t => table.CanSelect(R, t)) != true;
         var other = selections
-            .Where(s => s.Player != local && s.Targets.Contains(target))
+            .Where(s => s.Player != local && s.Targets.Contains(key))
             .MaxBy(R.Version);
         _othersColor = other == null ? null : R.SeatColor(other.Player);
         UpdateHighlight();
@@ -259,7 +258,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual string ComponentName { get; set; }
 
-    public virtual SnowTag PrototypeRef { get; set; }
+    public virtual Ref<Prototype> PrototypeRef { get; set; }
 
     private SnowTag _componentRef = SnowTag.Create();
 
@@ -286,7 +285,8 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// The id of the component atom this node shows, in the stage its table shows.
     /// </summary>
-    public StageKey Key => new(OwningView?.StageRef ?? SnowTag.Empty, ComponentRef);
+    public StageKey<ComponentPosition> Key =>
+        new(OwningView?.StageRef ?? Ref<Stage>.Empty, ComponentRef);
 
     /// <summary>
     /// Which of its prototype's items this is, or null.

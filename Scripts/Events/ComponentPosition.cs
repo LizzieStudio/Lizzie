@@ -22,14 +22,14 @@ public record ComponentPosition : StagedAtom
     /// <summary>
     /// The components each stage shows.
     /// </summary>
-    public static readonly Lookup<ComponentPosition, SnowTag> ByStage = new(s => s.StageRef);
+    public static readonly Lookup<ComponentPosition, Ref<Stage>> ByStage = new(s => s.StageRef);
 
     /// <summary>
     /// The components in each container of a stage, by <see cref="ContainerRef"/>.
     /// <see cref="SnowTag.Empty"/> holds the ones on the table.
     /// </summary>
-    public static readonly Lookup<ComponentPosition, StageKey> ByContainer = new(s =>
-        s.In(s.ContainerRef)
+    public static readonly Lookup<ComponentPosition, StageKey<ComponentPosition>> ByContainer = new(
+        s => s.In(s.ContainerRef)
     );
 
     /// <summary>
@@ -43,14 +43,14 @@ public record ComponentPosition : StagedAtom
     /// <remarks>
     /// This is useful when dealing with containers, since you can get the contents in the container's stage.
     /// </remarks>
-    public StageKey In(SnowTag id) => new(StageRef, id);
+    public StageKey<ComponentPosition> In(SnowTag id) => new(StageRef, id);
 
     /// <summary>
     /// Whether resetting its stage would delete the component in <paramref name="key"/>.
     /// </summary>
-    public static bool GoesOnReset(IAtomReader R, StageKey key) =>
+    public static bool GoesOnReset(IAtomReader R, StageKey<ComponentPosition> key) =>
         R.Get(Stage.ById, key.StageRef) is { ParentRef: var parent }
-        && parent != SnowTag.Empty
+        && !parent.IsEmpty
         && R.Get(ById, key with { StageRef = parent }) == null;
 
     /// <summary>
@@ -76,7 +76,7 @@ public record ComponentPosition : StagedAtom
     /// <summary>
     /// What this component is.
     /// </summary>
-    public SnowTag VariantRef { get; init; }
+    public Ref<ComponentVariant> VariantRef { get; init; }
 
     /// <summary>
     /// X in its container's frame, in tenths of a millimeter.
@@ -147,8 +147,8 @@ public record ComponentPosition : StagedAtom
     /// <remarks>
     /// Any component used as a <see cref="ContainerRef"/> gets its contents here without changes.
     /// </remarks>
-    public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
-        R.Get(ByContainer, In(Id)).Select(AtomRef.To);
+    public override IEnumerable<IAtomRef> Contents(IAtomReader R) =>
+        R.Get(ByContainer, In(Id)).Select(IAtomRef.To);
 
     /// <summary>
     /// The deck or bag it's in.
@@ -156,15 +156,15 @@ public record ComponentPosition : StagedAtom
     /// <remarks>
     /// Any component referenced by <see cref="ContainerRef"/> becomes a container here without changes.
     /// </remarks>
-    public override IEnumerable<AtomRef> Containers(IAtomReader R) =>
+    public override IEnumerable<IAtomRef> Containers(IAtomReader R) =>
         // A hand or a cursor isn't a component, so it isn't found.
         !IsOnTable && R.Get(ById, In(ContainerRef)) is { } container
-            ? [AtomRef.To(container)]
+            ? [IAtomRef.To(container)]
             : [];
 
     /// <summary>
     /// What its <see cref="ComponentVariant"/> refers to.
     /// </summary>
-    public override IEnumerable<AtomRef> Referenced(IAtomReader R) =>
+    public override IEnumerable<IAtomRef> Referenced(IAtomReader R) =>
         R.GetVariant(this).Referenced(R);
 }

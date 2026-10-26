@@ -30,8 +30,8 @@ public static class UndoScopes
     /// Anyone's units that change one of <paramref name="targets"/>, wherever they were made.
     /// An unset changes the atom it unsets, as the player unsetting it saw it.
     /// </summary>
-    public static TimelineUndo.Scope Changing(IReadOnlySet<AtomRef> targets) =>
-        (_, events) => events.SelectMany(Changes).Any(atom => targets.Contains(AtomRef.To(atom)));
+    public static TimelineUndo.Scope Changing(IReadOnlySet<IAtomRef> targets) =>
+        (_, events) => events.SelectMany(Changes).Any(atom => targets.Contains(IAtomRef.To(atom)));
 
     private static IEnumerable<Atom> Changes(TimelineEvent e) => e.Writes.Concat(e.Unsets);
 }

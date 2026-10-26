@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
-using Lizzie.AssetManagement;
 
 namespace Lizzie;
 
@@ -107,7 +106,7 @@ public sealed record QuickSuit
 [JsonName("ImageSide")]
 public sealed record ImageSide : SideParameters
 {
-    public SnowTag ImageRef { get; init; }
+    public Ref<ImageAsset> ImageRef { get; init; }
 
     /// <summary>
     /// Which frames to show, counting from 1, as a Sequence Expression. Blank uses every frame.
@@ -130,14 +129,14 @@ public sealed record ImageSide : SideParameters
 [JsonName("TemplateSide")]
 public sealed record TemplateSide : SideParameters
 {
-    public SnowTag TemplateRef { get; init; }
-    public SnowTag DatasetRef { get; init; }
+    public Ref<Template> TemplateRef { get; init; }
+    public Ref<Dataset> DatasetRef { get; init; }
 
     /// <summary>
     /// The column holding how many cards each row makes, or empty for one card per row.
     /// A row whose cell isn't a whole number makes one card.
     /// </summary>
-    public SnowTag QuantityRef { get; init; }
+    public Ref<DataColumn> QuantityRef { get; init; }
 
     public override IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null) =>
         Rows(R).Select(row => new RowFace(row)).ToList();
@@ -145,7 +144,7 @@ public sealed record TemplateSide : SideParameters
     /// <summary>
     /// Each card's row, in order.
     /// </summary>
-    public List<SnowTag> Rows(IAtomReader R) =>
+    public List<Ref<DataRow>> Rows(IAtomReader R) =>
         R.GetRows(DatasetRef)
             .SelectMany(row =>
                 Enumerable.Repeat(

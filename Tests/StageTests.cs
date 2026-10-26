@@ -9,13 +9,13 @@ namespace Lizzie.Tests;
 /// </summary>
 public class StageTests
 {
-    private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
+    private static Ref<Stage> Tag(int counter) => new(new SnowTag(Snowport.HostSource, counter));
 
     private static Stage Blueprint(int id, int parent = 0, bool deleted = false) =>
         new()
         {
             Id = Tag(id),
-            ParentRef = parent == 0 ? SnowTag.Empty : Tag(parent),
+            ParentRef = parent == 0 ? Ref<Stage>.Empty : Tag(parent),
             Deleted = deleted,
         };
 
@@ -39,7 +39,7 @@ public class StageTests
     private static ComponentPosition Position(int id, int stage, int x) =>
         new()
         {
-            Id = Tag(id),
+            Id = Tag(id).Tag,
             StageRef = Tag(stage),
             X = x,
         };
@@ -57,7 +57,7 @@ public class StageTests
     public void TablesAreListedLikeBlueprintsWhetherOrNotTheyreCurrent()
     {
         var R = Project(Table(4), Table(5, parent: 4) with { Deleted = true });
-        Assert.Equal([Tag(1), Tag(4)], Stage.GetChildren(R, SnowTag.Empty).Select(s => s.Id));
+        Assert.Equal([Tag(1), Tag(4)], Stage.GetChildren(R, Ref<Stage>.Empty).Select(s => s.Id));
         Assert.Equal([Tag(9)], Stage.GetChildren(R, Tag(2)).Select(s => s.Id));
         Assert.Empty(Stage.GetChildren(R, Tag(4)));
     }

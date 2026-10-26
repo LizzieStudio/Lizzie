@@ -5,14 +5,13 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Godot;
-using Lizzie.Scripts.Templating;
 
 namespace Lizzie;
 
 public partial class TemplateCreator : Window, ICommandView
 {
     public ViewPlace? Place(IAtomReader R) =>
-        CurrentTemplate is { } template ? ViewPlace.Of(this, Template.ById.Ref(template.Id)) : null;
+        CurrentTemplate is { } template ? ViewPlace.Of(this, template.Id) : null;
 
     [Export]
     private TextureRect _preview;
@@ -99,7 +98,7 @@ public partial class TemplateCreator : Window, ICommandView
     {
         LoadTemplateNameSelector(R);
         _templateNameSelector.Select(
-            _templateNameSelector.GetItemIndex(CurrentTemplate?.Id ?? SnowTag.Empty)
+            _templateNameSelector.GetItemIndex(CurrentTemplate?.Id.Tag ?? SnowTag.Empty)
         );
 
         SyncDataset(R);
@@ -169,9 +168,10 @@ public partial class TemplateCreator : Window, ICommandView
         InitializeStandardSizes();
 
         _datasetSelector = GetNode<AtomSelector>("%Dataset");
-        _datasetSelector.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
-        _datasetSelector.AtomSelected += OnDatasetChanged;
-        _datasetSelector.AtomSelected += _ => SetHasUnsavedChanges();
+        _datasetSelector.List(
+            R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)),
+            new(R => R.Get(_currentTemplate)?.DatasetRef ?? Ref<Dataset>.Empty, OnDatasetChanged)
+        );
 
         _pageControl = GetNode<PageControl>("%PageControl");
         _pageControl.Hide();
@@ -237,7 +237,7 @@ public partial class TemplateCreator : Window, ICommandView
         }
     }
 
-    private Template _currentTemplate;
+    private readonly WatchableValue<Template> _currentTemplate = new();
 
     /// <summary>
     /// Switches the edited template and rebuilds the whole editor UI from it.
@@ -245,10 +245,10 @@ public partial class TemplateCreator : Window, ICommandView
     /// </summary>
     private Template CurrentTemplate
     {
-        get => _currentTemplate;
+        get => _currentTemplate.Value;
         set
         {
-            _currentTemplate = value;
+            _currentTemplate.Value = value;
             MapTemplate();
         }
     }
@@ -256,16 +256,16 @@ public partial class TemplateCreator : Window, ICommandView
     /// <summary>Replaces the current template without rebuiling the editor UI.</summary>
     private void EditCurrentTemplate(Func<Template, Template> edit)
     {
-        if (_currentTemplate != null)
-            _currentTemplate = edit(_currentTemplate);
+        if (_currentTemplate.Value is { } template)
+            _currentTemplate.Value = edit(template);
     }
 
-    public void SetTemplateById(SnowTag id)
+    public void SetTemplateById(Ref<Template> id)
     {
-        if (id == SnowTag.Empty)
+        if (id.IsEmpty)
             return;
 
-        var idx = _templateNameSelector.GetItemIndex(id);
+        var idx = _templateNameSelector.GetItemIndex(id.Tag);
         if (idx >= 0)
         {
             _templateNameSelector.Selected = idx;
@@ -372,7 +372,10 @@ public partial class TemplateCreator : Window, ICommandView
         if (index < 0 || index >= _templateNameSelector.ItemCount)
             return;
 
-        var switched = Atoms.R.Get(Template.ById, _templateNameSelector.GetItemId((int)index));
+        var switched = Atoms.R.Get(
+            Template.ById,
+            new Ref<Template>(_templateNameSelector.GetItemId((int)index))
+        );
         if (switched != null)
         {
             SaveTemplate(); //save current template before switching
@@ -394,7 +397,7 @@ public partial class TemplateCreator : Window, ICommandView
                     .ToImmutableArray(),
             }
         );
-        Atoms.R.Write(this, _currentTemplate);
+        Atoms.R.Write(this, CurrentTemplate);
 
         _hasUnsavedChanges = false;
     }
@@ -1159,7 +1162,7 @@ public partial class TemplateCreator : Window, ICommandView
 
         var t = new Template
         {
-            Id = SnowTag.Create(),
+            Id = Ref<Template>.Create(),
             Name = _newTemplateName.Text,
             SizeTemplate = size,
             Width = inches.Width,
@@ -1184,7 +1187,7 @@ public partial class TemplateCreator : Window, ICommandView
 
         foreach (var t in R.Get(Template.All).OrderBy(v => v.Name))
         {
-            _templateNameSelector.AddItem(t.Name, t.Id);
+            _templateNameSelector.AddItem(t.Name, t.Id.Tag);
         }
     }
 
@@ -1219,7 +1222,10 @@ public partial class TemplateCreator : Window, ICommandView
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = Atoms.R.Get(Template.ById, _templateNameSelector.GetItemId(0));
+        CurrentTemplate = Atoms.R.Get(
+            Template.ById,
+            new Ref<Template>(_templateNameSelector.GetItemId(0))
+        );
 
         MapDataset();
     }
@@ -1592,16 +1598,16 @@ public partial class TemplateCreator : Window, ICommandView
     private void ChangePage(object sender, ItemSelectedEventArgs e) => Atoms.R.QueueSync(this);
 
     //Different dataset has been selected by the user
-    private void OnDatasetChanged(SnowTag datasetRef)
+    private void OnDatasetChanged(Ref<Dataset> datasetRef)
     {
         EditCurrentTemplate(t => t with { DatasetRef = datasetRef });
+        SetHasUnsavedChanges();
         _pageControl.CurrentItem = 0;
         Atoms.R.QueueSync(this);
     }
 
     private void MapDataset()
     {
-        _datasetSelector.SelectedRef = CurrentTemplate.DatasetRef;
         _pageControl.CurrentItem = 0;
         Atoms.R.QueueSync(this);
     }
@@ -1610,7 +1616,7 @@ public partial class TemplateCreator : Window, ICommandView
     {
         _updateRequired = true;
 
-        var datasetRef = CurrentTemplate?.DatasetRef ?? SnowTag.Empty;
+        var datasetRef = CurrentTemplate?.DatasetRef ?? Ref<Dataset>.Empty;
         var dataset = R.Get(Dataset.ById, datasetRef);
         if (dataset == null)
         {

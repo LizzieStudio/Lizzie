@@ -64,9 +64,9 @@ public static class DatasetCommands
     /// <summary>
     /// The printed prototypes with a side that shows <paramref name="dataset"/>.
     /// </summary>
-    private static IEnumerable<(SnowTag Id, PrintedParameters Parameters)> Showing(
+    private static IEnumerable<(Ref<Prototype> Id, PrintedParameters Parameters)> Showing(
         IAtomReader R,
-        SnowTag dataset
+        Ref<Dataset> dataset
     ) =>
         R.Get(Prototype.Live)
             .Where(p =>
@@ -176,9 +176,9 @@ public static class DatasetCommands
 
     private static (
         List<DataRow> Rows,
-        List<SnowTag> Columns,
+        List<Ref<DataColumn>> Columns,
         List<DataRow> AllRows,
-        List<SnowTag> AllColumns
+        List<Ref<DataColumn>> AllColumns
     ) Block(IAtomReader R, IReadOnlyList<DataCell> cells)
     {
         var datasetId = R.Get(DataRow.ById, cells[0].Id.RowRef).DatasetRef;
@@ -227,7 +227,7 @@ public static class DatasetCommands
             {
                 row = new DataRow
                 {
-                    Id = SnowTag.Create(),
+                    Id = Ref<DataRow>.Create(),
                     DatasetRef = rows[0].DatasetRef,
                     Rank = rank = rank.After(SnowportId.Create()),
                 };
@@ -244,24 +244,24 @@ public static class DatasetCommands
     private static IEnumerable<IChange> Cleared(IAtomReader R, IReadOnlyList<DataCell> cells) =>
         cells.SelectMany(c => DataCell.Set(R, c.Id, string.Empty));
 
-    public static IEnumerable<Atom> NewRow(IAtomReader R, SnowTag datasetId, int index) =>
+    public static IEnumerable<Atom> NewRow(IAtomReader R, Ref<Dataset> datasetId, int index) =>
         [
             new DataRow
             {
-                Id = SnowTag.Create(),
+                Id = Ref<DataRow>.Create(),
                 DatasetRef = datasetId,
                 Rank = SnowRank.At(R.GetRows(datasetId), index, SnowportId.Create()),
             },
         ];
 
-    public static IEnumerable<Atom> NewColumn(IAtomReader R, SnowTag datasetId, int index)
+    public static IEnumerable<Atom> NewColumn(IAtomReader R, Ref<Dataset> datasetId, int index)
     {
         var columns = R.GetColumns(datasetId);
         return
         [
             new DataColumn
             {
-                Id = SnowTag.Create(),
+                Id = Ref<DataColumn>.Create(),
                 DatasetRef = datasetId,
                 Rank = SnowRank.At(columns, index, SnowportId.Create()),
                 Name = $"Column {columns.Count + 1}",

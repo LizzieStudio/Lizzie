@@ -33,14 +33,14 @@ public static class StageCommands
         Effects = (R, parents) =>
         {
             var parent = parents.FirstOrDefault();
-            var siblings = Stage.GetChildren(R, parent?.Id ?? SnowTag.Empty);
+            var siblings = Stage.GetChildren(R, parent?.Id ?? Ref<Stage>.Empty);
             var last = siblings.Select(s => s.Rank).DefaultIfEmpty().Max();
             int n = siblings.Count(s => !s.IsTable) + 1;
             var blueprint = new Stage
             {
-                Id = SnowTag.Create(),
+                Id = Ref<Stage>.Create(),
                 Name = parent == null ? $"Blueprint {n}" : $"{parent.Name}-{n}",
-                ParentRef = parent?.Id ?? SnowTag.Empty,
+                ParentRef = parent?.Id ?? Ref<Stage>.Empty,
                 Rank = last.After(SnowportId.Create()),
             };
             return [blueprint];
@@ -56,7 +56,7 @@ public static class StageCommands
         MinTargets = 0,
         MaxTargets = 1,
         Effects = (R, parents) =>
-            [Stage.NewTable(R, parents.FirstOrDefault()?.Id ?? SnowTag.Empty)],
+            [Stage.NewTable(R, parents.FirstOrDefault()?.Id ?? Ref<Stage>.Empty)],
     };
 
     [Command("stage.show")]
@@ -117,7 +117,7 @@ public static class StageCommands
             var siblings = Stage.GetChildren(R, original.ParentRef);
             var copy = new Stage
             {
-                Id = SnowTag.Create(),
+                Id = Ref<Stage>.Create(),
                 Name = $"{original.Name} Copy",
                 ParentRef = original.ParentRef,
                 Rank = SnowRank.At(siblings, siblings.IndexOf(original) + 1, SnowportId.Create()),
@@ -137,7 +137,7 @@ public static class StageCommands
         Tooltip = "Merges its changes into its parent.",
         Noun = ("Blueprint", "Blueprints"),
         MaxTargets = 1,
-        AppliesTo = (R, s) => s.ParentRef != SnowTag.Empty && HasChanges(R, s),
+        AppliesTo = (R, s) => !s.ParentRef.IsEmpty && HasChanges(R, s),
         Requires = [NotTheCurrentTable],
         Effects = (R, stages) =>
         {

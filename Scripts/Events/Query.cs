@@ -86,7 +86,7 @@ public abstract class IdQuery : Query
         if (ids.Count != 1 || ids[0] == null || ids[0].AtomType != atomType)
             throw new InvalidOperationException(
                 $"{atomType.Name} needs exactly one Id, declared as a public static readonly Identity<{atomType.Name}, I> field, "
-                    + "which says what makes two writes the same atom, like `public static readonly Id<DataRow, SnowTag> ById = new(r => r.Id);`, "
+                    + $"which says what makes two writes the same atom, like `public static readonly Identity<{atomType.Name}, Ref<{atomType.Name}>> ById = new(r => r.Id);`, "
                     + $"or as `public static readonly Singleton<{atomType.Name}> Only = new();` if it has only one atom."
             );
         if (typeof(StagedAtom).IsAssignableFrom(atomType) != ids[0] is IStagedId)
@@ -106,13 +106,14 @@ public abstract class IdQuery : Query
 /// Writes of <typeparamref name="T"/> that produce the same id are considered to be the same atom.
 /// A new write with the same id replaces the old.
 /// </para>
-/// <code>public static readonly Identity&lt;DataRow, SnowTag&gt; ById = new(r => r.Id);</code>
+/// <code>public static readonly Identity&lt;DataRow, Ref&lt;DataRow&gt;&gt; ById = new(r => r.Id);</code>
 /// Read an atom with <see cref="IAtomReader.Get{T, I}(Identity{T, I}, I)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
 /// <typeparam name="I">The type of the id.</typeparam>
 public class Identity<T, I> : IdQuery
     where T : Atom
+    where I : IAtomRef<T>
 {
     private readonly Func<T, I> _of;
     private readonly Func<I, T> _unwritten;
@@ -133,11 +134,6 @@ public class Identity<T, I> : IdQuery
     public I Of(T atom) => _of(atom);
 
     internal override object Of(Atom atom) => _of((T)atom);
-
-    /// <summary>
-    /// The ref to the atom with <paramref name="id"/>, whether or not it exists.
-    /// </summary>
-    public AtomRef Ref(I id) => new(typeof(T), id);
 
     /// <summary>
     /// What stands in for the atom with <paramref name="id"/> before it exists.
@@ -161,24 +157,25 @@ public class Identity<T, I> : IdQuery
 /// which gives the default <typeparamref name="T"/> until the first write.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
-public sealed class Singleton<T>() : Identity<T, SingletonId>(_ => default)
+public sealed class Singleton<T>() : Identity<T, SingletonId<T>>(_ => default)
     where T : Atom, new()
 {
     // What reads give before the first write, made on the first read.
     private T Shared => field ??= new();
 
-    internal override T Unwritten(SingletonId id) => Shared;
+    internal override T Unwritten(SingletonId<T> id) => Shared;
 }
 
 /// <summary>
 /// The id every write of a singleton shares. See <see cref="Singleton{T}"/>.
 /// </summary>
-public readonly record struct SingletonId;
+public readonly record struct SingletonId<T> : IAtomRef<T>
+    where T : Atom;
 
 /// <summary>
 /// A way to list atoms of <typeparamref name="T"/> by a key of <typeparamref name="K"/>.
 ///
-/// <code>public static readonly Lookup&lt;DataRow, SnowTag&gt; ByDataset = new(r => r.DatasetId);</code>
+/// <code>public static readonly Lookup&lt;DataRow, Ref&lt;Dataset&gt;&gt; ByDataset = new(r => r.DatasetRef);</code>
 ///
 /// You could read from one of the keys of <c>ByDataset</c> with
 ///
@@ -214,7 +211,7 @@ public class Lookup<T, K> : Query
 /// <code>public static readonly StagedId&lt;ComponentPosition&gt; ById = new(c => c.Id);</code>
 /// </summary>
 public sealed class StagedId<T>(Func<T, SnowTag> of)
-    : Identity<T, StageKey>(atom => new(atom.StageRef, of(atom))),
+    : Identity<T, StageKey<T>>(atom => new(atom.StageRef, of(atom))),
         IStagedId
     where T : StagedAtom;
 
@@ -232,7 +229,7 @@ internal interface IStagedId;
 /// This is used internally to differentiate between a component that was inherited from a blueprint
 /// and a component that was actually updated in a stage.
 /// </remarks>
-public sealed class Written<T>() : Lookup<T, SnowTag>(atom => atom.StageRef)
+public sealed class Written<T>() : Lookup<T, Ref<Stage>>(atom => atom.StageRef)
     where T : StagedAtom;
 
 /// <summary>

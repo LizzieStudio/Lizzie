@@ -16,7 +16,7 @@ public partial class StageView : Node3D
     /// <summary>
     /// The stage whose components it shows.
     /// </summary>
-    public SnowTag StageRef { get; init; }
+    public Ref<Stage> StageRef { get; init; }
 
     private readonly Dictionary<SnowTag, VisualComponentBase> _components = new();
 
@@ -49,23 +49,25 @@ public partial class StageView : Node3D
     public void NotifyChanged() => Changed?.Invoke();
 
     // The scene a component's node is made from, and what its node can't change without being remade.
-    private static readonly Basis<ComponentPosition, (string Scene, SnowTag Variant)> NodeBasis =
-        new(
-            (R, s) =>
-            {
-                var variant = R.GetVariant(s);
-                var proto = R.Get(Prototype.ById, variant.PrototypeRef);
-                if (proto == null)
-                    return null;
-                var scene = Utility.ComponentTypeToScenePath(
-                    proto.Type,
-                    proto.Parameters,
-                    R,
-                    variant.IsItem
-                );
-                return (scene, s.VariantRef);
-            }
-        );
+    private static readonly Basis<
+        ComponentPosition,
+        (string Scene, Ref<ComponentVariant> Variant)
+    > NodeBasis = new(
+        (R, s) =>
+        {
+            var variant = R.GetVariant(s);
+            var proto = R.Get(Prototype.ById, variant.PrototypeRef);
+            if (proto == null)
+                return null;
+            var scene = Utility.ComponentTypeToScenePath(
+                proto.Type,
+                proto.Parameters,
+                R,
+                variant.IsItem
+            );
+            return (scene, s.VariantRef);
+        }
+    );
 
     /// <summary>
     /// Keeps one node per live component,

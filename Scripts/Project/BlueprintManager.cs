@@ -9,14 +9,14 @@ namespace Lizzie;
 /// </summary>
 public partial class BlueprintManager : Window, ICommandView
 {
-    public bool CanSelect(IAtomReader R, AtomRef target) => Stage.Reachable(R, (SnowTag)target.Id);
+    public bool CanSelect(IAtomReader R, IAtomRef target) => Stage.Reachable(R, (Ref<Stage>)target);
 
     public IReadOnlyList<Command> Commands =>
         [StageCommands.AddBlueprint, StageCommands.AddTable, RenameStage];
 
     private Tree _tree;
 
-    private readonly Dictionary<SnowTag, TreeItem> _rows = new();
+    private readonly Dictionary<Ref<Stage>, TreeItem> _rows = new();
 
     // Marks the current table, and the stage in your view when it's something else.
     private static readonly Texture2D CurrentTableIcon = GD.Load<Texture2D>(
@@ -89,10 +89,10 @@ public partial class BlueprintManager : Window, ICommandView
         var colors = R.SelectionColors(ViewPlace.Of(this));
         var shown = ProjectService.Instance.GameObjects.ShownStage(R);
         var current = R.Get(CurrentTable.Only).StageRef;
-        var listed = new HashSet<SnowTag>();
+        var listed = new HashSet<Ref<Stage>>();
         int indent = _tree.GetThemeConstant("item_margin");
 
-        AddChildren(_tree.GetRoot(), SnowTag.Empty, 0);
+        AddChildren(_tree.GetRoot(), Ref<Stage>.Empty, 0);
 
         // Freeing a row frees the rows under it, so every dead row comes off the tree before any is freed.
         var dead = _rows.Where(r => !listed.Contains(r.Key)).ToList();
@@ -104,7 +104,7 @@ public partial class BlueprintManager : Window, ICommandView
         foreach (var (_, item) in dead)
             item.Free();
 
-        void AddChildren(TreeItem parent, SnowTag parentRef, int depth)
+        void AddChildren(TreeItem parent, Ref<Stage> parentRef, int depth)
         {
             foreach (var (stage, index) in Stage.GetChildren(R, parentRef).Select((s, i) => (s, i)))
             {
@@ -140,9 +140,7 @@ public partial class BlueprintManager : Window, ICommandView
                 {
                     A = 0.5f,
                 };
-                Color? outline = colors.TryGetValue(Stage.ById.Ref(stage.Id), out var color)
-                    ? color
-                    : null;
+                Color? outline = colors.TryGetValue(stage.Id, out var color) ? color : null;
                 for (int column = NameColumn; column <= ChangesColumn; column++)
                     item.SetCustomStylebox(
                         column,
@@ -218,7 +216,7 @@ public partial class BlueprintManager : Window, ICommandView
         };
     }
 
-    private static SnowTag IdOf(TreeItem item) => (SnowTag)item.GetMetadata(NameColumn);
+    private static Ref<Stage> IdOf(TreeItem item) => (Ref<Stage>)item.GetMetadata(NameColumn);
 
     #region Moving blueprints
 
@@ -236,7 +234,7 @@ public partial class BlueprintManager : Window, ICommandView
     // We need this for Godot drag and drop.
     private sealed partial class BlueprintDrag : RefCounted
     {
-        public SnowTag StageRef { get; init; }
+        public Ref<Stage> StageRef { get; init; }
     }
 
     /// <summary>
@@ -246,13 +244,13 @@ public partial class BlueprintManager : Window, ICommandView
     /// A Tuple of:
     /// <list type="number">
     /// <item>The dragged blueprint</item>
-    /// <item>The new parent, or <see cref="SnowTag.Empty"/> for the root.</item>
+    /// <item>The new parent, or <see cref="Ref{T}.Empty"/> for the root.</item>
     /// <item>The new siblings</item>
     /// <item>The position among the siblings</item>
     /// </list>
     /// Or null if it can't move there.
     /// </returns>
-    private (Stage Moved, SnowTag Parent, List<Stage> Siblings, int Index)? Placement(
+    private (Stage Moved, Ref<Stage> Parent, List<Stage> Siblings, int Index)? Placement(
         Vector2 at,
         Variant data
     )
@@ -274,7 +272,7 @@ public partial class BlueprintManager : Window, ICommandView
             item == null ? _tree.GetRoot()
             : section is 0 or 2 ? item
             : item.GetParent();
-        var parent = under == _tree.GetRoot() ? SnowTag.Empty : IdOf(under);
+        var parent = under == _tree.GetRoot() ? Ref<Stage>.Empty : IdOf(under);
         // A stage can't build on itself.
         if (Stage.Chain(Atoms.R, parent).Any(s => s.Id == moved.Id))
             return null;
@@ -313,13 +311,13 @@ public partial class BlueprintManager : Window, ICommandView
 
     #endregion
 
-    private void Select(IEnumerable<SnowTag> blueprints) =>
+    private void Select(IEnumerable<Ref<Stage>> blueprints) =>
         Atoms.R.SetSelection(Stage.ById, blueprints, this);
 
     /// <summary>
     /// Starts editing the name of <paramref name="stage"/>.
     /// </summary>
-    private void Rename(SnowTag stage) =>
+    private void Rename(Ref<Stage> stage) =>
         Callable
             .From(() =>
             {

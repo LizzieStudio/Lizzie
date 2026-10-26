@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Godot;
 
-namespace Lizzie.Scripts.Templating;
+namespace Lizzie;
 
 public class ImageElement : TemplateElement
 {

@@ -17,7 +17,7 @@ public class AtomCommandTests
                 return null;
             },
         };
-        command.Run([DataRow.ById.Ref(new SnowTag(5))], null);
+        command.Run([new Ref<DataRow>(5)], null);
         Assert.False(ran, "The effects ran with no atoms, though the command had a target.");
     }
 }

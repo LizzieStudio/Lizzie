@@ -86,13 +86,13 @@ public interface ICommandView
     /// <remarks>
     /// Deleted atoms can keep their selection, so this call is used to check what's still on-screen.
     /// </remarks>
-    bool CanSelect(IAtomReader R, AtomRef target) => R.Get(target) != null;
+    bool CanSelect(IAtomReader R, IAtomRef target) => R.Get(target) != null;
 
     /// <summary>
     /// The hovered target that keys act on when nothing is selected.
     /// Menus and buttons never use it.
     /// </summary>
-    IEnumerable<AtomRef> Hovered() => [];
+    IEnumerable<IAtomRef> Hovered() => [];
 
     /// <summary>
     /// Extra custom commands for this view to add to its context menu.
@@ -119,18 +119,18 @@ public interface ICommandView
 /// </summary>
 /// <param name="View">The view's class name.</param>
 /// <param name="Subject">The atom the view is open on, or null when it shows a whole list.</param>
-public readonly record struct ViewPlace(string View, AtomRef? Subject)
+public readonly record struct ViewPlace(string View, IAtomRef Subject)
 {
     /// <summary>
     /// The place in view <typeparamref name="TView"/> open on <paramref name="subject"/>.
     /// </summary>
-    public static ViewPlace Of<TView>(AtomRef? subject = null)
+    public static ViewPlace Of<TView>(IAtomRef subject = null)
         where TView : ICommandView => new(typeof(TView).Name, subject);
 
     /// <summary>
     /// The place in <paramref name="view"/> open on <paramref name="subject"/>.
     /// </summary>
-    public static ViewPlace Of(ICommandView view, AtomRef? subject = null) =>
+    public static ViewPlace Of(ICommandView view, IAtomRef subject = null) =>
         new(view.GetType().Name, subject);
 }
 
@@ -233,12 +233,12 @@ public abstract class Command
     /// Returns true if this command can act on <paramref name="target"/>:
     /// an atom of the kind it's for, that it has behavior for and that meets its requirements.
     /// </summary>
-    public abstract bool CanActOn(IAtomReader R, AtomRef target);
+    public abstract bool CanActOn(IAtomReader R, IAtomRef target);
 
     /// <summary>
     /// Why it can't act on <paramref name="target"/>, or null when it can.
     /// </summary>
-    public virtual string Blocked(IAtomReader R, AtomRef target) => null;
+    public virtual string Blocked(IAtomReader R, IAtomRef target) => null;
 
     /// <summary>
     /// Whether it can act on <paramref name="count"/> targets that pass <see cref="CanActOn"/>.
@@ -261,7 +261,7 @@ public abstract class Command
     /// Acts on the targets, or does nothing when it can't act on them or isn't available.
     /// </summary>
     /// <param name="view">Where it runs, or null outside any view.</param>
-    public abstract void Run(IReadOnlyList<AtomRef> targets, ICommandView view);
+    public abstract void Run(IReadOnlyList<IAtomRef> targets, ICommandView view);
 
     /// <summary>
     /// Writes the changes as one event made by this command, or nothing when they're null.
@@ -332,9 +332,9 @@ public abstract class TargetedCommand<T> : Command
 
     internal override Type TargetType => typeof(T);
 
-    public override bool CanActOn(IAtomReader R, AtomRef target) => Atom(R, target) != null;
+    public override bool CanActOn(IAtomReader R, IAtomRef target) => Atom(R, target) != null;
 
-    public override string Blocked(IAtomReader R, AtomRef target) =>
+    public override string Blocked(IAtomReader R, IAtomRef target) =>
         R?.Resolve(target) is T atom && AppliesTo(R, atom)
             ? Requires.FirstOrDefault(rule => !rule.Holds(R, atom)).Reason
             : null;
@@ -361,7 +361,7 @@ public abstract class TargetedCommand<T> : Command
     }
 
     // The atom it acts on, or what stands in for one never written, or null if it doesn't apply.
-    private T Atom(IAtomReader R, AtomRef target) =>
+    private T Atom(IAtomReader R, IAtomRef target) =>
         R?.Resolve(target) is T atom
         && AppliesTo(R, atom)
         && Requires.All(rule => rule.Holds(R, atom))
@@ -372,7 +372,7 @@ public abstract class TargetedCommand<T> : Command
     /// The atoms it acts on, leaving out any gone since the menu opened,
     /// or null when too few are left.
     /// </summary>
-    protected List<T> Resolved(IReadOnlyList<AtomRef> targets)
+    protected List<T> Resolved(IReadOnlyList<IAtomRef> targets)
     {
         var atoms = targets.Select(t => Atom(Atoms.R, t)).Where(a => a != null).ToList();
         return Fits(atoms.Count) ? atoms : null;
@@ -399,7 +399,7 @@ public sealed class AtomCommand<T> : TargetedCommand<T>
     /// <inheritdoc cref="EffectsDelegate"/>
     public required EffectsDelegate Effects { get; init; }
 
-    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view)
+    public override void Run(IReadOnlyList<IAtomRef> targets, ICommandView view)
     {
         if (Resolved(targets) is { } atoms)
             Submit(Effects(Atoms.R, atoms), view);
@@ -419,7 +419,7 @@ public interface IChoiceCommand
     /// <summary>
     /// What it offers for <paramref name="targets"/>, in order.
     /// </summary>
-    IReadOnlyList<(string Label, int Value)> ChoicesFor(IReadOnlyList<AtomRef> targets);
+    IReadOnlyList<(string Label, int Value)> ChoicesFor(IReadOnlyList<IAtomRef> targets);
 
     /// <summary>
     /// The number key <paramref name="e"/> presses, from 1, when the number keys pick choices.
@@ -429,7 +429,7 @@ public interface IChoiceCommand
     /// <summary>
     /// Acts on the targets with the picked choice's <paramref name="value"/>.
     /// </summary>
-    void Choose(IReadOnlyList<AtomRef> targets, int value, ICommandView view);
+    void Choose(IReadOnlyList<IAtomRef> targets, int value, ICommandView view);
 }
 
 /// <summary>
@@ -473,7 +473,7 @@ public sealed class ChoiceCommand<T> : TargetedCommand<T>, IChoiceCommand
 
     public override bool Matches(InputEvent e) => base.Matches(e) || NumberPressed(e) != null;
 
-    public IReadOnlyList<(string Label, int Value)> ChoicesFor(IReadOnlyList<AtomRef> targets) =>
+    public IReadOnlyList<(string Label, int Value)> ChoicesFor(IReadOnlyList<IAtomRef> targets) =>
         Resolved(targets) is { } atoms ? Choices(Atoms.R, atoms) : [];
 
     public int? NumberPressed(InputEvent e)
@@ -488,20 +488,20 @@ public sealed class ChoiceCommand<T> : TargetedCommand<T>, IChoiceCommand
         return null;
     }
 
-    public void Choose(IReadOnlyList<AtomRef> targets, int value, ICommandView view)
+    public void Choose(IReadOnlyList<IAtomRef> targets, int value, ICommandView view)
     {
         if (Resolved(targets) is { } atoms)
             Submit(Effects(Atoms.R, atoms, value), view);
     }
 
     // Picking it opens its submenu.
-    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view) { }
+    public override void Run(IReadOnlyList<IAtomRef> targets, ICommandView view) { }
 }
 
 /// <summary>A command that does not act on selected targets, such as undo.</summary>
 public sealed class GlobalCommand : Command
 {
-    public override bool CanActOn(IAtomReader R, AtomRef target) => false;
+    public override bool CanActOn(IAtomReader R, IAtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
@@ -534,7 +534,7 @@ public sealed class GlobalCommand : Command
         IReadOnlyList<string> blocked
     ) => Requires.FirstOrDefault(rule => !rule.Holds(R)).Reason;
 
-    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view)
+    public override void Run(IReadOnlyList<IAtomRef> targets, ICommandView view)
     {
         if (IsAvailable(Atoms.R))
             Submit(Effects(Atoms.R, view), view);
@@ -544,11 +544,11 @@ public sealed class GlobalCommand : Command
 // This is just a sentinel so that we can put dividers in command lists.
 file sealed class DividerCommand : Command
 {
-    public override bool CanActOn(IAtomReader R, AtomRef target) => false;
+    public override bool CanActOn(IAtomReader R, IAtomRef target) => false;
 
     public override bool Fits(int count) => count == 0;
 
-    public override void Run(IReadOnlyList<AtomRef> targets, ICommandView view) { }
+    public override void Run(IReadOnlyList<IAtomRef> targets, ICommandView view) { }
 }
 
 /// <summary>

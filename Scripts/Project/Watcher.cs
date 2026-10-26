@@ -65,9 +65,9 @@ public sealed class Watcher : IWatchReader
             _index.Add(this, query, value, count);
     }
 
-    public Atom Get(AtomRef atom)
+    public Atom Get(IAtomRef atom)
     {
-        Depend(IdQuery.For(atom.Type), atom.Id);
+        Depend(IdQuery.For(atom.AtomType), atom);
         return _source.Get(atom);
     }
 
@@ -80,6 +80,7 @@ public sealed class Watcher : IWatchReader
 
     public T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom
+        where I : IAtomRef<T>
     {
         Depend(byId, id);
         return _source.Get(byId, id);

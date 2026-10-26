@@ -11,7 +11,7 @@ public class TargetedCommandTests
     [RequireGodotRuntime]
     public void ACommandLeftWithTooFewTargetsDoesNotRun()
     {
-        var row = new DataRow { Id = SnowTag.Create() };
+        var row = new DataRow { Id = Ref<DataRow>.Create() };
         Atoms.R.WriteAdmin(row);
         AssertThat(Atoms.R.Get(DataRow.ById, row.Id))
             .OverrideFailureMessage("The row written for the test isn't in the atom service.")
@@ -27,7 +27,7 @@ public class TargetedCommandTests
                 return null;
             },
         };
-        command.Run([DataRow.ById.Ref(row.Id), DataRow.ById.Ref(SnowTag.Create())], null);
+        command.Run([row.Id, Ref<DataRow>.Create()], null);
         AssertThat(ran)
             .OverrideFailureMessage(
                 "A command for at least 2 rows ran with 1, after the other target was gone."

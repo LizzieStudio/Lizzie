@@ -1,6 +1,5 @@
 using System;
 using Godot;
-using Lizzie.AssetManagement;
 
 namespace Lizzie;
 
@@ -9,10 +8,10 @@ public partial class ImageTile : MarginContainer
     private Label _imageName;
     private TextureRect _thumbnail;
 
-    private SnowTag _imageRef;
+    private Ref<ImageAsset> _imageRef;
 
     /// <summary>The asset this tile shows.</summary>
-    public SnowTag ImageRef
+    public Ref<ImageAsset> ImageRef
     {
         get => _imageRef;
         set
@@ -22,7 +21,7 @@ public partial class ImageTile : MarginContainer
         }
     }
 
-    public event Action<SnowTag> Clicked;
+    public event Action<Ref<ImageAsset>> Clicked;
 
     public override void _EnterTree()
     {

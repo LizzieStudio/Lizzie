@@ -7,12 +7,12 @@ namespace Lizzie;
 [JsonName("Template")]
 public record Template : Atom
 {
-    public static readonly Identity<Template, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Template, Ref<Template>> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<Template> Id { get; init; }
 
     public static readonly All<Template> All = new();
 
@@ -56,5 +56,5 @@ public record Template : Atom
     [JsonIgnore]
     public bool TriangleFaces => Sides is 8 or 20;
 
-    public SnowTag DatasetRef { get; init; }
+    public Ref<Dataset> DatasetRef { get; init; }
 }

@@ -23,19 +23,19 @@ public abstract record Atom : IChange
     /// What's directly inside this atom, like a deck's cards or a DataRow's cells.
     /// These are followed recursively, so only list direct contents.
     /// </summary>
-    public virtual IEnumerable<AtomRef> Contents(IAtomReader R) => [];
+    public virtual IEnumerable<IAtomRef> Contents(IAtomReader R) => [];
 
     /// <summary>
     /// What this atom is directly inside, like a card's deck or a cell's <see cref="DataRow"/> and <see cref="DataColumn"/>.
     /// These are followed recursively, so only list direct containers.
     /// </summary>
-    public virtual IEnumerable<AtomRef> Containers(IAtomReader R) => [];
+    public virtual IEnumerable<IAtomRef> Containers(IAtomReader R) => [];
 
     /// <summary>
     /// What this atom refers to, like a component's prototype.
     /// Not followed further.
     /// </summary>
-    public virtual IEnumerable<AtomRef> Referenced(IAtomReader R) => [];
+    public virtual IEnumerable<IAtomRef> Referenced(IAtomReader R) => [];
 }
 
 /// <summary>

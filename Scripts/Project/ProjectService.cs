@@ -428,7 +428,7 @@ public partial class ProjectService : Node
             return;
         if (Stage.Reachable(Atoms.R, Atoms.R.Get(CurrentTable.Only).StageRef))
             return;
-        var table = Stage.NewTable(Atoms.R, SnowTag.Empty);
+        var table = Stage.NewTable(Atoms.R, Ref<Stage>.Empty);
         Atoms.R.WriteAdmin([table, Atoms.R.Get(CurrentTable.Only) with { StageRef = table.Id }]);
     }
 

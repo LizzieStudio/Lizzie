@@ -24,36 +24,43 @@ public partial class TemplateSideTab : SideTab
     [Export]
     private AtomSelector _quantity;
 
-    private SnowTag _templateRef = SnowTag.Empty;
-    private SnowTag _datasetRef = SnowTag.Empty;
-    private SnowTag _quantityRef = SnowTag.Empty;
+    private readonly WatchableValue<TemplateSide> _side = new() { Value = new() };
+    private readonly WatchableValue<Func<Template, bool>> _showsTemplates = new()
+    {
+        Value = t => t.Sides == 0,
+    };
 
     public override void _Ready()
     {
-        ShowsTemplates = t => t.Sides == 0;
-        _dataset.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
-        _template.AtomSelected += id =>
-        {
-            _templateRef = id;
-            RaiseChanged();
-        };
-        _dataset.AtomSelected += id =>
-        {
-            _datasetRef = id;
-            _quantityRef = SnowTag.Empty;
-            ShowColumns(id);
-            _quantity.SelectedRef = SnowTag.Empty;
-            RaiseChanged();
-        };
-        _quantity.AtomSelected += id =>
-        {
-            _quantityRef = id;
-            RaiseChanged();
-        };
+        _template.List(
+            R => R.Get(Template.All).Where(R.Get(_showsTemplates)).Select(t => (t.Id, t.Name)),
+            new(R => R.Get(_side).TemplateRef, id => Edit(s => s with { TemplateRef = id }))
+        );
+        _dataset.List(
+            R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)),
+            new(
+                R => R.Get(_side).DatasetRef,
+                id => Edit(s => s with { DatasetRef = id, QuantityRef = Ref<DataColumn>.Empty })
+            )
+        );
+        _quantity.List(
+            R => R.GetColumns(R.Get(_side).DatasetRef).Select(c => (c.Id, c.Name)),
+            new(R => R.Get(_side).QuantityRef, id => Edit(s => s with { QuantityRef = id }))
+        );
         _editTemplate.Pressed += () =>
-            EventBus.Instance.Publish(new ShowTemplateEditor { TemplateRef = _templateRef });
+            EventBus.Instance.Publish(
+                new ShowTemplateEditor { TemplateRef = _side.Value.TemplateRef }
+            );
         _editDataset.Pressed += () =>
-            EventBus.Instance.Publish(new ShowDatasetEditor { DatasetRef = _datasetRef });
+            EventBus.Instance.Publish(
+                new ShowDatasetEditor { DatasetRef = _side.Value.DatasetRef }
+            );
+    }
+
+    private void Edit(Func<TemplateSide, TemplateSide> edit)
+    {
+        _side.Value = edit(_side.Value);
+        RaiseChanged();
     }
 
     /// <summary>
@@ -64,37 +71,22 @@ public partial class TemplateSideTab : SideTab
     {
         set
         {
-            _template.Items = R => R.Get(Template.All).Where(value).Select(t => (t.Name, t.Id));
-            if (Atoms.R.Get(Template.ById, _templateRef) is { } template && !value(template))
-            {
-                _templateRef = SnowTag.Empty;
-                _template.SelectedRef = SnowTag.Empty;
-            }
+            _showsTemplates.Value = value;
+            if (
+                Atoms.R.Get(Template.ById, _side.Value.TemplateRef) is { } template
+                && !value(template)
+            )
+                _side.Value = _side.Value with { TemplateRef = Ref<Template>.Empty };
         }
     }
 
-    public override SideParameters Side =>
-        new TemplateSide
-        {
-            TemplateRef = _templateRef,
-            DatasetRef = _datasetRef,
-            QuantityRef = _quantityRef,
-        };
+    public override SideParameters Side => _side.Value;
 
     public override bool TryLoad(SideParameters side)
     {
         if (side is not TemplateSide template)
             return false;
-        _templateRef = template.TemplateRef;
-        _template.SelectedRef = template.TemplateRef;
-        _datasetRef = template.DatasetRef;
-        _dataset.SelectedRef = template.DatasetRef;
-        _quantityRef = template.QuantityRef;
-        ShowColumns(template.DatasetRef);
-        _quantity.SelectedRef = template.QuantityRef;
+        _side.Value = template;
         return true;
     }
-
-    private void ShowColumns(SnowTag dataset) =>
-        _quantity.Items = R => R.GetColumns(dataset).Select(c => (c.Name, c.Id));
 }

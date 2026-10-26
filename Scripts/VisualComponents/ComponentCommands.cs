@@ -98,9 +98,7 @@ public static class ComponentCommands
         Tooltip = "Moves this component, in its current position, into the parent blueprint.",
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) =>
-            !R.IsBeingDragged(c)
-            && R.Get(Stage.ById, c.StageRef)?.ParentRef is { } p
-            && p != SnowTag.Empty,
+            !R.IsBeingDragged(c) && R.Get(Stage.ById, c.StageRef)?.ParentRef is { } p && !p.IsEmpty,
         Requires = [("These components have no changes to merge.", WrittenHere)],
         Effects = (R, cs) =>
             cs.SelectMany(c =>

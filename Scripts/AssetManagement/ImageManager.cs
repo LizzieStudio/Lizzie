@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Godot;
-using Lizzie.AssetManagement;
 
 namespace Lizzie;
 
@@ -29,17 +28,17 @@ public partial class ImageManager : Window, ICommandView
     private CheckBox _countSet;
     private SpinBox _count;
 
-    private readonly Dictionary<SnowTag, ImageTile> _tiles = new();
+    private readonly Dictionary<Ref<ImageAsset>, ImageTile> _tiles = new();
 
     /// <summary>
-    /// The image open in the view, or <see cref="SnowTag.Empty">.
+    /// The image open in the view, or <see cref="Ref{T}.Empty">.
     /// </summary>
-    private SnowTag _openRef = SnowTag.Empty;
+    private Ref<ImageAsset> _openRef = Ref<ImageAsset>.Empty;
 
     /// <summary>
     /// The ImageAsset that <see cref="_image"/> was loaded for.
     /// </summary>
-    private SnowTag _loadedRef = SnowTag.Empty;
+    private Ref<ImageAsset> _loadedRef = Ref<ImageAsset>.Empty;
 
     private const string _tileScenePath = "res://Scenes/Controls/image_tile.tscn";
 
@@ -52,7 +51,7 @@ public partial class ImageManager : Window, ICommandView
     public override void _Ready()
     {
         _backButton = GetNode<Button>("%BackButton");
-        _backButton.Pressed += () => Open(SnowTag.Empty);
+        _backButton.Pressed += () => Open(Ref<ImageAsset>.Empty);
         _addNewButton = GetNode<Button>("%AddNewButton");
         _removeButton = GetNode<Button>("%RemoveButton");
         _addNewButton.Pressed += OnAddNewPressed;
@@ -130,9 +129,10 @@ public partial class ImageManager : Window, ICommandView
 
     /// <summary>
     /// For when the user clicks an image to see it,
-    /// or <see cref="SnowTag.Empty"/> when they go back to the thumbnails.
+    /// or <see cref="Ref{T}.Empty"/> when they go back to the thumbnails.
+    /// An image's edit button opens the manager on it with this too.
     /// </summary>
-    private void Open(SnowTag image)
+    public void Open(Ref<ImageAsset> image)
     {
         // Ends the edits to the previous image's layout.
         GuiReleaseFocus();
@@ -160,7 +160,7 @@ public partial class ImageManager : Window, ICommandView
         //create the new asset
         var asset = new ImageAsset
         {
-            Id = SnowTag.Create(),
+            Id = Ref<ImageAsset>.Create(),
             Name = _nameInput.Text,
             CloudPath = _urlInput.Text,
         };
@@ -218,7 +218,7 @@ public partial class ImageManager : Window, ICommandView
             _image.Texture = ImageTexture.CreateFromImage(image);
     }
 
-    private void AddImageTile(SnowTag id)
+    private void AddImageTile(Ref<ImageAsset> id)
     {
         var tileScene = GD.Load<PackedScene>(_tileScenePath);
         var tile = tileScene.Instantiate<ImageTile>();
@@ -228,7 +228,7 @@ public partial class ImageManager : Window, ICommandView
         _tiles[id] = tile;
     }
 
-    private void RemoveImageTile(SnowTag id)
+    private void RemoveImageTile(Ref<ImageAsset> id)
     {
         if (!_tiles.Remove(id, out var tile))
             return;
@@ -236,6 +236,6 @@ public partial class ImageManager : Window, ICommandView
         tile.QueueFree();
 
         if (_openRef == id)
-            _openRef = SnowTag.Empty;
+            _openRef = Ref<ImageAsset>.Empty;
     }
 }

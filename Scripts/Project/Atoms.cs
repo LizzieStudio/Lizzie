@@ -170,6 +170,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// </summary>
     public void Update<T, I>(Node from, Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
+        where I : IAtomRef<T>
     {
         if (Get(byId, id) is { } atom)
             Write(from, change(atom));
@@ -434,13 +435,14 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
 
     #region IAtomReader
 
-    public Atom Get(AtomRef atom) => StoreOf(atom.Type).Find(atom.Id).Value;
+    public Atom Get(IAtomRef atom) => StoreOf(atom.AtomType).Find(atom).Value;
 
     public SnowportId Version(Atom atom) =>
         StoreOf(atom.GetType()).Find(IdQuery.For(atom.GetType()).Of(atom)).LastUpdate;
 
     public T Get<T, I>(Identity<T, I> byId, I id)
-        where T : Atom => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
+        where T : Atom
+        where I : IAtomRef<T> => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
 
     public IReadOnlyList<T> Get<T, K>(Lookup<T, K> lookup, K key)
         where T : Atom => StoreOf<T>().Get(lookup, key);

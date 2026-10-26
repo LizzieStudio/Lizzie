@@ -289,14 +289,14 @@ public partial class ComponentPreview : Panel
         if (json != _draftJson)
         {
             _draftJson = json;
-            _draftId = SnowTag.Create();
+            _draftId = Ref<Prototype>.Create();
         }
         _component.DraftPrototype = new Prototype { Id = _draftId, Parameters = parameters };
         Atoms.R.QueueSync(this);
     }
 
     private string _draftJson;
-    private SnowTag _draftId;
+    private Ref<Prototype> _draftId;
 
     /// <summary>
     /// Shows <paramref name="prototype"/>, starting on its first item.

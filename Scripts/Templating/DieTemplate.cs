@@ -151,7 +151,7 @@ public static class DieTemplate
         var net = Nets[sides];
         var template = new Template
         {
-            Id = SnowTag.Empty,
+            Id = Ref<Template>.Empty,
             Name = $"Quick D{sides}",
             SizeTemplate = $"D{sides}",
         };

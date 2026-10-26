@@ -133,7 +133,7 @@ public partial class VcTray : VisualComponentGroup
             return ([], []);
         var variant = new ComponentVariant
         {
-            Id = SnowTag.Create(),
+            Id = Ref<ComponentVariant>.Create(),
             PrototypeRef = _prototype.Id,
             Item = _item,
         };
@@ -163,5 +163,5 @@ public sealed record TrayParameters : ComponentParameters
     public float Length { get; init; }
     public Color Color { get; init; } = Colors.Black;
 
-    public SnowTag DispenseRef { get; init; } = SnowTag.Empty;
+    public Ref<Prototype> DispenseRef { get; init; }
 }

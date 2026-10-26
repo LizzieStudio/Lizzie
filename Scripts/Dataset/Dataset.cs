@@ -7,12 +7,12 @@ namespace Lizzie;
 [JsonName("Dataset")]
 public record Dataset : Atom
 {
-    public static readonly Identity<Dataset, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Dataset, Ref<Dataset>> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<Dataset> Id { get; init; }
 
     public static readonly All<Dataset> All = new();
 
@@ -25,22 +25,22 @@ public record Dataset : Atom
 [JsonName("DataColumn")]
 public record DataColumn : Atom, IRanked
 {
-    public static readonly Identity<DataColumn, SnowTag> ById = new(c => c.Id);
+    public static readonly Identity<DataColumn, Ref<DataColumn>> ById = new(c => c.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<DataColumn> Id { get; init; }
 
     /// <summary>
     /// The columns of each dataset, in no order. <see cref="AtomReaderExtensions.GetColumns"/> sorts them.
     /// </summary>
-    public static readonly Lookup<DataColumn, SnowTag> ByDataset = new(c => c.DatasetRef);
+    public static readonly Lookup<DataColumn, Ref<Dataset>> ByDataset = new(c => c.DatasetRef);
 
     /// <summary>
     /// The dataset this column belongs to.
     /// </summary>
-    public SnowTag DatasetRef { get; init; }
+    public Ref<Dataset> DatasetRef { get; init; }
 
     /// <summary>
     /// The position of this column in its dataset.
@@ -52,14 +52,13 @@ public record DataColumn : Atom, IRanked
     /// <summary>
     /// A cell for each of the dataset's rows.
     /// </summary>
-    public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
-        R.Get(DataRow.ByDataset, DatasetRef).Select(r => DataCell.ById.Ref(new CellId(r.Id, Id)));
+    public override IEnumerable<IAtomRef> Contents(IAtomReader R) =>
+        R.Get(DataRow.ByDataset, DatasetRef).Select(r => new CellId(r.Id, Id)).Cast<IAtomRef>();
 
     /// <summary>
     /// A column is inside its dataset.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IAtomReader R) =>
-        [Dataset.ById.Ref(DatasetRef)];
+    public override IEnumerable<IAtomRef> Containers(IAtomReader R) => [DatasetRef];
 }
 
 /// <summary>
@@ -68,24 +67,24 @@ public record DataColumn : Atom, IRanked
 [JsonName("DataRow")]
 public record DataRow : Atom, IRanked
 {
-    public static readonly Identity<DataRow, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<DataRow, Ref<DataRow>> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<DataRow> Id { get; init; }
 
     /// <summary>
     /// The rows of each dataset that aren't deleted, in no order. <see cref="AtomReaderExtensions.GetRows"/> sorts them.
     /// </summary>
-    public static readonly Lookup<DataRow, SnowTag?> ByDataset = new(r =>
+    public static readonly Lookup<DataRow, Ref<Dataset>?> ByDataset = new(r =>
         r.Deleted ? null : r.DatasetRef
     );
 
     /// <summary>
     /// The dataset this row belongs to.
     /// </summary>
-    public SnowTag DatasetRef { get; init; }
+    public Ref<Dataset> DatasetRef { get; init; }
 
     /// <summary>
     /// The position of this row in its dataset.
@@ -100,14 +99,13 @@ public record DataRow : Atom, IRanked
     /// <summary>
     /// A cell for each of the dataset's columns.
     /// </summary>
-    public override IEnumerable<AtomRef> Contents(IAtomReader R) =>
-        R.GetColumns(DatasetRef).Select(c => DataCell.ById.Ref(new CellId(Id, c.Id)));
+    public override IEnumerable<IAtomRef> Contents(IAtomReader R) =>
+        R.GetColumns(DatasetRef).Select(c => new CellId(Id, c.Id)).Cast<IAtomRef>();
 
     /// <summary>
     /// A row is inside its dataset.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IAtomReader R) =>
-        [Dataset.ById.Ref(DatasetRef)];
+    public override IEnumerable<IAtomRef> Containers(IAtomReader R) => [DatasetRef];
 }
 
 /// <summary>
@@ -146,11 +144,11 @@ public record DataCell : Atom
     /// <summary>
     /// A cell is inside its row and its column.
     /// </summary>
-    public override IEnumerable<AtomRef> Containers(IAtomReader R) =>
-        [DataRow.ById.Ref(Id.RowRef), DataColumn.ById.Ref(Id.ColumnRef)];
+    public override IEnumerable<IAtomRef> Containers(IAtomReader R) => [Id.RowRef, Id.ColumnRef];
 }
 
 /// <summary>
 /// The Id of a <see cref="DataCell"/>.
 /// </summary>
-public readonly record struct CellId(SnowTag RowRef, SnowTag ColumnRef);
+public readonly record struct CellId(Ref<DataRow> RowRef, Ref<DataColumn> ColumnRef)
+    : IAtomRef<DataCell>;

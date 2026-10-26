@@ -25,7 +25,7 @@ public abstract record StagedAtom : Atom
     /// <summary>
     /// The stage this atom was written in or read from.
     /// </summary>
-    public SnowTag StageRef { get; init; }
+    public Ref<Stage> StageRef { get; init; }
 
     /// <summary>
     /// A tombstone. When true, this stage hides the atom the previous stages show.
@@ -38,6 +38,7 @@ public abstract record StagedAtom : Atom
 }
 
 /// <summary>
-/// The id of a <see cref="StagedAtom"/>.
+/// The id of a <see cref="StagedAtom"/> of <typeparamref name="T"/>.
 /// </summary>
-public readonly record struct StageKey(SnowTag StageRef, SnowTag ComponentRef);
+public readonly record struct StageKey<T>(Ref<Stage> StageRef, SnowTag ComponentRef) : IAtomRef<T>
+    where T : StagedAtom;

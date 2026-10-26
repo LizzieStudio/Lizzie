@@ -13,48 +13,48 @@ public sealed class CommandContext
     /// <summary>
     /// What the user is targeting. Usually the selection, but for keys it can be the hovered target.
     /// </summary>
-    public IEnumerable<AtomRef> Selected
+    public IEnumerable<IAtomRef> Selected
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<AtomRef>.Empty;
+    } = ImmutableHashSet<IAtomRef>.Empty;
 
     /// <summary>
     /// Targets that are contained within the selection, like a selected deck's cards.
     /// Matching commands act on these when their <see cref="Command.ActsOn"/> includes them.
     /// </summary>
-    public IEnumerable<AtomRef> Contents
+    public IEnumerable<IAtomRef> Contents
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<AtomRef>.Empty;
+    } = ImmutableHashSet<IAtomRef>.Empty;
 
     /// <summary>
     /// Targets that contain the selection, like a selected card's current deck.
     /// </summary>
-    public IEnumerable<AtomRef> Containers
+    public IEnumerable<IAtomRef> Containers
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<AtomRef>.Empty;
+    } = ImmutableHashSet<IAtomRef>.Empty;
 
     /// <summary>
     /// What the selected targets refer to, like a component's prototype or data row.
     /// </summary>
-    public IEnumerable<AtomRef> Referenced
+    public IEnumerable<IAtomRef> Referenced
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<AtomRef>.Empty;
+    } = ImmutableHashSet<IAtomRef>.Empty;
 
     /// <summary>
     /// The atom the view is open on, the <see cref="ViewPlace.Subject"/> of its <see cref="ICommandView.Place"/>, or empty.
     /// </summary>
-    public IEnumerable<AtomRef> Subject
+    public IEnumerable<IAtomRef> Subject
     {
         get;
         init => field = value.ToImmutableHashSet();
-    } = ImmutableHashSet<AtomRef>.Empty;
+    } = ImmutableHashSet<IAtomRef>.Empty;
 
     /// <summary>
     /// Custom commands for this view to add to the context menu, like the view's Zoom to Component.
@@ -73,18 +73,18 @@ public sealed class CommandContext
         if (view == null)
             return new();
 
-        var selected = R.GetSelection(view)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
+        var selected = R.GetSelection(view)?.Targets ?? ImmutableHashSet<IAtomRef>.Empty;
         var chosen = selected.IsEmpty && keys ? view.Hovered().ToImmutableHashSet() : selected;
 
-        IEnumerable<AtomRef> Related(
-            IEnumerable<AtomRef> targets,
-            Func<AtomRef, IEnumerable<AtomRef>> relation
+        IEnumerable<IAtomRef> Related(
+            IEnumerable<IAtomRef> targets,
+            Func<IAtomRef, IEnumerable<IAtomRef>> relation
         ) => targets.SelectMany(relation).Where(t => !chosen.Contains(t));
 
         // Each target is visited once, so if a relation ever does loop back it doesn't hang.
-        HashSet<AtomRef> Followed(Func<AtomRef, IEnumerable<AtomRef>> relation)
+        HashSet<IAtomRef> Followed(Func<IAtomRef, IEnumerable<IAtomRef>> relation)
         {
-            var found = new HashSet<AtomRef>();
+            var found = new HashSet<IAtomRef>();
             for (
                 var next = Related(chosen, relation).ToList();
                 next.Count > 0;

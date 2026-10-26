@@ -19,7 +19,7 @@ public class TimelineUndoTests
 
     private static TimelineEvent GetTableEvent(SnowportId id)
     {
-        return new TimelineEvent { Id = id, Writes = [new Prototype { Id = 1 }] };
+        return new TimelineEvent { Id = id, Writes = [new Prototype { Id = new(1) }] };
     }
 
     private static TimelineEvent GetUndoRedoEvent(
@@ -45,7 +45,7 @@ public class TimelineUndoTests
                 var id = GetId(i + 1, sources[i]);
                 timeline.Add(
                     id,
-                    new TimelineEvent { Id = id, Writes = [new Selection { Id = i + 1 }] }
+                    new TimelineEvent { Id = id, Writes = [new Selection { Id = new(i + 1) }] }
                 );
             }
         }

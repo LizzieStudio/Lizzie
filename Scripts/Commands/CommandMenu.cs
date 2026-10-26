@@ -17,7 +17,7 @@ public static class CommandMenu
     private static PopupMenu _menu;
 
     // What the menu offers, by item id, and where it runs them.
-    private static readonly List<(Command Command, IReadOnlyList<AtomRef> Targets)> Items = [];
+    private static readonly List<(Command Command, IReadOnlyList<IAtomRef> Targets)> Items = [];
     private static ICommandView _view;
 
     // Called once when what the menu shows is done with: dismissed, used, or replaced.
@@ -188,7 +188,7 @@ public static class CommandMenu
     }
 
     // Done first, so a command can change what closing changes, like Duplicate entering spawn mode.
-    private static void Run(Command command, IReadOnlyList<AtomRef> targets)
+    private static void Run(Command command, IReadOnlyList<IAtomRef> targets)
     {
         Done();
         command.Run(targets, _view);
@@ -197,7 +197,7 @@ public static class CommandMenu
     private static void AddChoiceSubmenu(
         PopupMenu menu,
         IChoiceCommand command,
-        IReadOnlyList<AtomRef> targets,
+        IReadOnlyList<IAtomRef> targets,
         int index,
         bool keys
     )

@@ -16,7 +16,7 @@ public class TemplateTests
     {
         var actual = new Template
         {
-            Id = new SnowTag(1),
+            Id = new(1),
             Width = width,
             Height = height,
         }.Pixels(100);
@@ -31,7 +31,7 @@ public class TemplateTests
     [InlineData("D20", 512, 512)]
     public void ADieTemplateIsTheSizeOfItsNet(string size, int pixelsWide, int pixelsHigh)
     {
-        var actual = new Template { Id = new SnowTag(1), SizeTemplate = size }.Pixels(100);
+        var actual = new Template { Id = new(1), SizeTemplate = size }.Pixels(100);
         Assert.True(
             actual == (pixelsWide, pixelsHigh),
             $"A {size} template is {actual} px at 100 per inch, expected ({pixelsWide}, {pixelsHigh})."

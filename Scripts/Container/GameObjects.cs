@@ -39,9 +39,9 @@ public partial class GameObjects : Node3D, ICommandView
     private GameController _gameController;
 
     /// <summary>
-    /// The stage the local player picked to show, or <see cref="SnowTag.Empty"/> for the current table.
+    /// The stage the local player picked to show, or <see cref="Ref{T}.Empty"/> for the current table.
     /// </summary>
-    public WatchableValue<SnowTag> PickedStageRef { get; } = new();
+    public WatchableValue<Ref<Stage>> PickedStageRef { get; } = new();
 
     /// <summary>
     /// Whether to mark components that a reset would delete.
@@ -51,13 +51,13 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// Whether the component in <paramref name="key"/> is marked as temporary.
     /// </summary>
-    public bool IsMarkedForReset(IAtomReader R, StageKey key) =>
+    public bool IsMarkedForReset(IAtomReader R, StageKey<ComponentPosition> key) =>
         R.Get(MarksTemporary) && ComponentPosition.GoesOnReset(R, key);
 
     /// <summary>
     /// Gets the stage to show locally.
     /// </summary>
-    public SnowTag ShownStage(IAtomReader R) =>
+    public Ref<Stage> ShownStage(IAtomReader R) =>
         R.Get(PickedStageRef) is var picked && Stage.Reachable(R, picked)
             ? picked
             : R.Get(CurrentTable.Only).StageRef;
@@ -302,14 +302,14 @@ public partial class GameObjects : Node3D, ICommandView
 
     #region ICommandView
 
-    public ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this, Stage.ById.Ref(ShownStage(R)));
+    public ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this, ShownStage(R));
 
-    public IEnumerable<AtomRef> Hovered() =>
+    public IEnumerable<IAtomRef> Hovered() =>
         CursorMode is CursorMode.DragSelect or CursorMode.Spawn
         || GetHoveredObject() is not { } hovered
         || hovered.State == null
             ? []
-            : [ComponentPosition.ById.Ref(hovered.Key)];
+            : [hovered.Key];
 
     public IReadOnlyList<Command> Commands => [DuplicateComponent, ZoomToComponent];
 
@@ -946,7 +946,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// The key of <paramref name="id"/> in the shown stage.
     /// </summary>
-    private StageKey ShownKey(SnowTag id) => new(_view.StageRef, id);
+    private StageKey<ComponentPosition> ShownKey(SnowTag id) => new(_view.StageRef, id);
 
     /// <summary>
     /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.

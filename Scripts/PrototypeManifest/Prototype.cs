@@ -5,12 +5,12 @@ namespace Lizzie;
 [JsonName("Prototype")]
 public record Prototype : Atom
 {
-    public static readonly Identity<Prototype, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Prototype, Ref<Prototype>> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<Prototype> Id { get; init; }
 
     /// <summary>
     /// Gets all prototypes that aren't deleted.

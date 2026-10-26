@@ -13,7 +13,7 @@ public interface IAtomReader
     /// <summary>
     /// The atom <paramref name="atomRef"/> points at, or null if it is missing or unset.
     /// </summary>
-    Atom Get(AtomRef atomRef);
+    Atom Get(IAtomRef atomRef);
 
     /// <summary>
     /// The id of the event that last updated <paramref name="atom"/>,
@@ -25,7 +25,8 @@ public interface IAtomReader
     /// Gets the atom with <paramref name="id"/>, or null if it is missing or unset.
     /// </summary>
     T Get<T, I>(Identity<T, I> byId, I id)
-        where T : Atom;
+        where T : Atom
+        where I : IAtomRef<T>;
 
     /// <summary>
     /// Gets the atoms with <paramref name="key"/> in <paramref name="lookup"/> that aren't unset.
@@ -112,8 +113,8 @@ public static class AtomReaderExtensions
     /// <remarks>
     /// Commands and relations act on what this gives.
     /// </remarks>
-    public static Atom Resolve(this IAtomReader R, AtomRef atomRef) =>
-        R.Get(atomRef) ?? IdQuery.For(atomRef.Type).Unwritten(atomRef.Id);
+    public static Atom Resolve(this IAtomReader R, IAtomRef atomRef) =>
+        R.Get(atomRef) ?? IdQuery.For(atomRef.AtomType).Unwritten(atomRef);
 
     /// <summary>
     /// The atoms <paramref name="all"/> lists.
@@ -184,14 +185,14 @@ public static class AtomReaderExtensions
     /// <summary>
     /// The rows of a dataset that aren't deleted, in order.
     /// </summary>
-    public static List<DataRow> GetRows(this IAtomReader R, SnowTag datasetRef) =>
-        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataRow.ByDataset, datasetRef));
+    public static List<DataRow> GetRows(this IAtomReader R, Ref<Dataset> datasetRef) =>
+        datasetRef.IsEmpty ? [] : Ranked(R.Get(DataRow.ByDataset, datasetRef));
 
     /// <summary>
     /// The columns of a dataset in order.
     /// </summary>
-    public static List<DataColumn> GetColumns(this IAtomReader R, SnowTag datasetRef) =>
-        datasetRef == SnowTag.Empty ? [] : Ranked(R.Get(DataColumn.ByDataset, datasetRef));
+    public static List<DataColumn> GetColumns(this IAtomReader R, Ref<Dataset> datasetRef) =>
+        datasetRef.IsEmpty ? [] : Ranked(R.Get(DataColumn.ByDataset, datasetRef));
 
     private static List<T> Ranked<T>(IEnumerable<T> items)
         where T : IRanked

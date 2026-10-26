@@ -93,7 +93,7 @@ public partial class UI : CanvasLayer
         foreach (var stage in ProjectService.Instance.GameObjects.PickableStages(R))
         {
             // Picking the current table follows it, even when another becomes current.
-            var pick = stage.Id == current ? SnowTag.Empty : stage.Id;
+            var pick = stage.Id == current ? Ref<Stage>.Empty : stage.Id;
             var button = new Button
             {
                 Text = stage.Name,
@@ -269,7 +269,7 @@ public partial class UI : CanvasLayer
 
     private void ShowTemplateEditor()
     {
-        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = SnowTag.Empty });
+        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = Ref<Template>.Empty });
     }
 
     private void ShowTemplateEditorFromEvent(ShowTemplateEditor e)
@@ -286,7 +286,7 @@ public partial class UI : CanvasLayer
 
     private void ShowDatasetEditor()
     {
-        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = SnowTag.Empty });
+        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = Ref<Dataset>.Empty });
     }
 
     private void ShowDatasetEditorFromEvent(ShowDatasetEditor e)
@@ -297,15 +297,15 @@ public partial class UI : CanvasLayer
             _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
             _modalDialogs.AddChild(_datasetEditor);
         }
-        if (e.DatasetRef != SnowTag.Empty)
+        if (!e.DatasetRef.IsEmpty)
             _datasetEditor.ShownDatasetRef.Value = e.DatasetRef;
-        if (e.SelectedRowRef != SnowTag.Empty)
+        if (!e.SelectedRowRef.IsEmpty)
             _datasetEditor.RevealRow(e.SelectedRowRef);
     }
 
     private void ShowImageManager()
     {
-        ShowImageManagerFromEvent(new ShowImageManagerEvent { ImageReference = Guid.Empty });
+        ShowImageManagerFromEvent(new ShowImageManagerEvent());
     }
 
     private void ShowProjectSettings()
@@ -328,11 +328,14 @@ public partial class UI : CanvasLayer
 
     private void ShowImageManagerFromEvent(ShowImageManagerEvent e)
     {
-        if (BroughtForward(_imageManager))
-            return;
-        string s = "res://Scenes/Controls/ImageManager.tscn";
-        _imageManager = GD.Load<PackedScene>(s).Instantiate<ImageManager>();
-        _modalDialogs.AddChild(_imageManager);
+        if (!BroughtForward(_imageManager))
+        {
+            string s = "res://Scenes/Controls/ImageManager.tscn";
+            _imageManager = GD.Load<PackedScene>(s).Instantiate<ImageManager>();
+            _modalDialogs.AddChild(_imageManager);
+        }
+        if (!e.ImageRef.IsEmpty)
+            _imageManager.Open(e.ImageRef);
     }
 
     /// <summary>

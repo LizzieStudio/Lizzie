@@ -22,7 +22,7 @@ public sealed partial class HeldDrag : RefCounted
     /// <summary>
     /// Every component the gesture picked up.
     /// </summary>
-    public IReadOnlyList<StageKey> Components { get; init; } = [];
+    public IReadOnlyList<StageKey<ComponentPosition>> Components { get; init; } = [];
 
     /// <summary>
     /// The atoms of the components it holds.

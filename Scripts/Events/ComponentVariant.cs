@@ -10,12 +10,12 @@ namespace Lizzie;
 [JsonName("ComponentVariant")]
 public record ComponentVariant : Atom
 {
-    public static readonly Identity<ComponentVariant, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<ComponentVariant, Ref<ComponentVariant>> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<ComponentVariant> Id { get; init; }
 
     /// <summary>
     /// The cards each deck issued and hasn't retired, by the deck's Id.
@@ -27,7 +27,7 @@ public record ComponentVariant : Atom
         v.DeckRef == SnowTag.Empty || v.Retired ? null : v.DeckRef
     );
 
-    public SnowTag PrototypeRef { get; init; }
+    public Ref<Prototype> PrototypeRef { get; init; }
 
     /// <summary>
     /// Which of its prototype's items it is, or null if it isn't one.
@@ -65,7 +65,7 @@ public record ComponentVariant : Atom
     public static ComponentVariant Capture(VisualComponentBase c) =>
         new()
         {
-            Id = SnowTag.Create(),
+            Id = Ref<ComponentVariant>.Create(),
             PrototypeRef = c.PrototypeRef,
             Item = c.Item,
         };
@@ -76,8 +76,9 @@ public record ComponentVariant : Atom
     /// <remarks>
     /// This will need to be extended as new references are invented.
     /// </remarks>
-    public override IEnumerable<AtomRef> Referenced(IAtomReader R) =>
-        new[] { Prototype.ById.Ref(PrototypeRef) }
-            .Concat((Item?.Rows() ?? []).Select(DataRow.ById.Ref))
-            .Where(r => (SnowTag)r.Id != SnowTag.Empty);
+    public override IEnumerable<IAtomRef> Referenced(IAtomReader R) =>
+        new[] { PrototypeRef }
+            .Where(p => !p.IsEmpty)
+            .Cast<IAtomRef>()
+            .Concat((Item?.Rows() ?? []).Where(r => !r.IsEmpty).Cast<IAtomRef>());
 }

@@ -134,8 +134,8 @@ public class SideParametersTests
     [InlineData("1-3", "1-5, 6*", false)]
     public void AnUnboundedSideFillsToTheOtherSide(string front, string back, bool fits)
     {
-        var image = new SnowTag(1);
-        var R = new ListReader(new AssetManagement.ImageAsset { Id = image, Layout = new(3, 3) });
+        var image = new Ref<ImageAsset>(1);
+        var R = new ListReader(new ImageAsset { Id = image, Layout = new(3, 3) });
         var parameters = new PrintedParameters
         {
             Front = new ImageSide { ImageRef = image, Frames = front },
@@ -152,16 +152,16 @@ public class SideParametersTests
     [Fact]
     public void EachRowMakesAsManyCardsAsItsQuantity()
     {
-        SnowTag dataset = new(1),
-            quantity = new(2),
-            a = new(3),
+        var dataset = new Ref<Dataset>(1);
+        var quantity = new Ref<DataColumn>(2);
+        Ref<DataRow> a = new(3),
             b = new(4),
             c = new(5),
             d = new(6);
         var rank = default(SnowRank);
-        DataRow Row(SnowTag id)
+        DataRow Row(Ref<DataRow> id)
         {
-            rank = rank.After(new SnowportId(id, Snowport.HostSource));
+            rank = rank.After(new SnowportId(id.Tag, Snowport.HostSource));
             return new DataRow
             {
                 Id = id,
@@ -193,8 +193,8 @@ public class SideParametersTests
     [Fact]
     public void ADeletedRowMakesNoCard()
     {
-        SnowTag dataset = new(1),
-            kept = new(2),
+        var dataset = new Ref<Dataset>(1);
+        Ref<DataRow> kept = new(2),
             deleted = new(3);
         var R = new ListReader(
             new DataRow { Id = kept, DatasetRef = dataset },
@@ -218,7 +218,7 @@ public class SideParametersTests
     [MemberData(nameof(Items))]
     public void ItemsSurviveSaving(PrototypeItemRef item)
     {
-        var variant = new ComponentVariant { Id = new SnowTag(1), Item = item };
+        var variant = new ComponentVariant { Id = new(1), Item = item };
 
         var back = RoundTrip(variant).Item;
 
@@ -231,10 +231,10 @@ public class SideParametersTests
     public static TheoryData<PrototypeItemRef> Items =>
         [
             new PrintedItemRef(null, null),
-            new PrintedItemRef(new RowFace(new SnowTag(3)), new RowFace(new SnowTag(4))),
+            new PrintedItemRef(new RowFace(new(3)), new RowFace(new(4))),
             new PrintedItemRef(new QuickFace(new SnowTag(3), "A"), new FrameFace(2)),
-            new DieItemRef(SnowTag.Empty),
-            new DieItemRef(new SnowTag(5)),
+            new DieItemRef(Ref<DataRow>.Empty),
+            new DieItemRef(new(5)),
             null,
         ];
 
@@ -243,7 +243,7 @@ public class SideParametersTests
     {
         var prototype = new Prototype
         {
-            Id = new SnowTag(1),
+            Id = new(1),
             Parameters = new PrintedParameters
             {
                 Front = new QuickSide { Suits = [new QuickSuit { ShowText = false }] },

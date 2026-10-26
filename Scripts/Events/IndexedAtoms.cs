@@ -10,6 +10,7 @@ namespace Lizzie.Replication.Machinery;
 /// </summary>
 internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
     where T : Atom
+    where I : IAtomRef<T>
 {
     private readonly Dictionary<I, AtomEntry> _atoms = new();
 

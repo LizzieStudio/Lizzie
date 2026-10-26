@@ -65,7 +65,7 @@ public static class PlayerHandService
     /// </summary>
     public static IReadOnlyList<ComponentPosition> GetHand(
         IAtomReader R,
-        SnowTag stage,
+        Ref<Stage> stage,
         int seatIndex
     )
     {
@@ -73,7 +73,10 @@ public static class PlayerHandService
         if (container == SnowTag.Empty)
             return [];
 
-        return R.Get(ComponentPosition.ByContainer, new StageKey(stage, container))
+        return R.Get(
+                ComponentPosition.ByContainer,
+                new StageKey<ComponentPosition>(stage, container)
+            )
             .OrderBy(s => s.ZOrder)
             .ToList();
     }

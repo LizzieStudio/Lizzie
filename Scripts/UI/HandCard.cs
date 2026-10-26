@@ -20,12 +20,12 @@ public partial class HandCard : PanelContainer
         return theme;
     }
 
-    private StageKey _reference;
+    private StageKey<ComponentPosition> _reference;
 
     /// <summary>
     /// The card's component atom.
     /// </summary>
-    public StageKey Reference
+    public StageKey<ComponentPosition> Reference
     {
         get => _reference;
         set
@@ -85,9 +85,8 @@ public partial class HandCard : PanelContainer
 
     private void SyncSelection(IWatchReader R)
     {
-        var target = ComponentPosition.ById.Ref(Reference);
-        var colors = R.SelectionColors(ViewPlace.Of<GameObjects>(Stage.ById.Ref(Reference.StageRef)));
-        SelectionHighlight.Outline(this, "panel", colors, target);
+        var colors = R.SelectionColors(ViewPlace.Of<GameObjects>(Reference.StageRef));
+        SelectionHighlight.Outline(this, "panel", colors, Reference);
         _paint.Visible = ProjectService.Instance.GameObjects.IsMarkedForReset(R, Reference);
     }
 

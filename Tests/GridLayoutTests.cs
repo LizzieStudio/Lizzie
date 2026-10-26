@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Lizzie.AssetManagement;
 using Lizzie.Replication.Machinery;
 using Xunit;
 
@@ -37,7 +36,7 @@ public class GridLayoutTests
 
     [Fact]
     public void AssetsDefaultToOneFrame() =>
-        Assert.Equal(GridLayout.Single, new ImageAsset { Id = new SnowTag(1) }.Layout);
+        Assert.Equal(GridLayout.Single, new ImageAsset { Id = new(1) }.Layout);
 
     [Fact]
     public void BlankUsesTheFirstFramesOfAnImageOverTheCap()
@@ -52,12 +51,12 @@ public class GridLayoutTests
 
     [Fact]
     public void AnAssetWithoutAPathIsNotDownloaded() =>
-        Assert.Null(AssetImageCache.Instance.GetImage(new ImageAsset { Id = new SnowTag(1) }));
+        Assert.Null(AssetImageCache.Instance.GetImage(new ImageAsset { Id = new(1) }));
 
     [Fact]
     public void LayoutSurvivesSaving()
     {
-        var asset = new ImageAsset { Id = new SnowTag(1), Layout = new GridLayout(8, 7, 56) };
+        var asset = new ImageAsset { Id = new(1), Layout = new GridLayout(8, 7, 56) };
 
         var json = JsonSerializer.Serialize<Atom>(asset, LizzieJson.EventOptions);
         var back = (ImageAsset)JsonSerializer.Deserialize<Atom>(json, LizzieJson.EventOptions);

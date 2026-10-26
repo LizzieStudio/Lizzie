@@ -23,7 +23,7 @@ public static class QuickTemplate
     public static Template Template { get; } =
         new()
         {
-            Id = SnowTag.Empty,
+            Id = Ref<Template>.Empty,
             Name = "Quick",
             Elements =
             [

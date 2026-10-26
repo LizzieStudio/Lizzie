@@ -15,7 +15,7 @@ public class StagedStoreTests
     public sealed record Piece : StagedAtom
     {
         public static readonly StagedId<Piece> ById = new(p => p.Id);
-        public static readonly Lookup<Piece, SnowTag> ByStage = new(p => p.StageRef);
+        public static readonly Lookup<Piece, Ref<Stage>> ByStage = new(p => p.StageRef);
         public static readonly Written<Piece> WrittenIn = new();
 
         public required SnowTag Id { get; init; }
@@ -23,7 +23,7 @@ public class StagedStoreTests
     }
 
     private readonly Timeline _timeline = new();
-    private readonly AtomStore<Stage, SnowTag> _stages = new(Stage.ById);
+    private readonly AtomStore<Stage, Ref<Stage>> _stages = new(Stage.ById);
     private readonly StagedStore<Piece> _store;
     private bool _bulkLoading;
     private long _clock;
@@ -32,15 +32,22 @@ public class StagedStoreTests
 
     private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
 
-    private static StageKey Key(int stage, int id) => new(Tag(stage), Tag(id));
+    private static Ref<T> Tag<T>(int counter)
+        where T : Atom => new(Tag(counter));
+
+    private static StageKey<Piece> Key(int stage, int id) => new(Tag<Stage>(stage), Tag(id));
 
     private static Stage StageOf(int id, int parent = 0) =>
-        new() { Id = Tag(id), ParentRef = parent == 0 ? SnowTag.Empty : Tag(parent) };
+        new()
+        {
+            Id = Tag<Stage>(id),
+            ParentRef = parent == 0 ? Ref<Stage>.Empty : Tag<Stage>(parent),
+        };
 
     private static Piece PieceOf(int stage, int id, int x = 0, bool removed = false) =>
         new()
         {
-            StageRef = Tag(stage),
+            StageRef = Tag<Stage>(stage),
             Id = Tag(id),
             X = x,
             Removed = removed,
@@ -120,7 +127,7 @@ public class StagedStoreTests
     {
         var shown = Value(stage, id);
         Assert.True(
-            shown?.X == x && (shown == null || shown.StageRef == Tag(stage)),
+            shown?.X == x && (shown == null || shown.StageRef == Tag<Stage>(stage)),
             $"Stage {stage} shows the wrong piece {id}.\n\nExpected: {(x == null ? "nothing" : $"X = {x} in stage {stage}")}\nShown:    {(shown == null ? "nothing" : $"X = {shown.X} in stage {shown.StageRef}")}"
         );
     }
@@ -232,18 +239,18 @@ public class StagedStoreTests
     {
         Write(StageOf(1), StageOf(2, parent: 1));
         Write(PieceOf(1, 10, x: 5), PieceOf(2, 11));
-        AssertIds(_store.Get(Piece.ByStage, Tag(2)), 10, 11);
+        AssertIds(_store.Get(Piece.ByStage, Tag<Stage>(2)), 10, 11);
 
         AssertTouched(
             TouchesOf(() => Unset(StageOf(2))),
             new Touch(Piece.ById, Key(2, 10), false),
             new Touch(Piece.ById, Key(2, 11), false),
-            new Touch(Piece.ByStage, Tag(2), false),
-            new Touch(Piece.ByStage, Tag(2), true)
+            new Touch(Piece.ByStage, Tag<Stage>(2), false),
+            new Touch(Piece.ByStage, Tag<Stage>(2), true)
         );
         AssertShows(2, 10, null);
         AssertShows(2, 11, null);
-        AssertIds(_store.Get(Piece.ByStage, Tag(2)));
+        AssertIds(_store.Get(Piece.ByStage, Tag<Stage>(2)));
         AssertShows(1, 10, 5);
     }
 
@@ -266,7 +273,7 @@ public class StagedStoreTests
 
         AssertShows(2, 10, 5);
         AssertShows(2, 11, 7);
-        AssertIds(_store.Get(Piece.ByStage, Tag(2)), 10, 11);
+        AssertIds(_store.Get(Piece.ByStage, Tag<Stage>(2)), 10, 11);
     }
 
     [Fact]
@@ -300,24 +307,24 @@ public class StagedStoreTests
         Write(StageOf(1), StageOf(2, parent: 1));
         Write(PieceOf(1, 10), PieceOf(2, 11));
 
-        AssertIds(_store.Get(Piece.ByStage, Tag(2)), 10, 11);
-        AssertIds(_store.Get(Piece.WrittenIn, Tag(2)), 11);
-        Assert.Equal(1, _store.Count(Piece.WrittenIn, Tag(2)));
+        AssertIds(_store.Get(Piece.ByStage, Tag<Stage>(2)), 10, 11);
+        AssertIds(_store.Get(Piece.WrittenIn, Tag<Stage>(2)), 11);
+        Assert.Equal(1, _store.Count(Piece.WrittenIn, Tag<Stage>(2)));
     }
 
     [Fact]
     public void AWriteTouchesTheWrittenLookupOfItsStageOnly()
     {
         Write(StageOf(1), StageOf(2, parent: 1));
-        _store.Get(Piece.WrittenIn, Tag(1));
-        _store.Get(Piece.WrittenIn, Tag(2));
+        _store.Get(Piece.WrittenIn, Tag<Stage>(1));
+        _store.Get(Piece.WrittenIn, Tag<Stage>(2));
 
         AssertTouched(
             TouchesOf(() => Write(PieceOf(1, 10))),
             new Touch(Piece.ById, Key(1, 10), false),
             new Touch(Piece.ById, Key(2, 10), false),
-            new Touch(Piece.WrittenIn, Tag(1), false),
-            new Touch(Piece.WrittenIn, Tag(1), true)
+            new Touch(Piece.WrittenIn, Tag<Stage>(1), false),
+            new Touch(Piece.WrittenIn, Tag<Stage>(1), true)
         );
     }
 

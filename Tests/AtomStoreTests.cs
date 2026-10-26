@@ -12,8 +12,10 @@ namespace Lizzie.Tests;
 /// </summary>
 public class AtomStoreTests
 {
-    // components by their tag alone, as if they had no stage
-    private static readonly Identity<ComponentPosition, SnowTag> ById = new(s => s.Id);
+    // components by their key, all in the empty stage
+    private static readonly Identity<ComponentPosition, StageKey<ComponentPosition>> ById = new(s =>
+        new(s.StageRef, s.Id)
+    );
 
     private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(s =>
         s.ContainerRef
@@ -25,10 +27,13 @@ public class AtomStoreTests
     );
 
     private readonly Timeline _timeline = new();
-    private readonly AtomStore<ComponentPosition, SnowTag> _store = new(ById);
+    private readonly AtomStore<ComponentPosition, StageKey<ComponentPosition>> _store = new(ById);
     private long _clock;
 
     private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
+
+    private static StageKey<ComponentPosition> Key(int counter) =>
+        new(Ref<Stage>.Empty, Tag(counter));
 
     private static ComponentPosition Component(int id, int container = 0) =>
         new() { Id = Tag(id), ContainerRef = container == 0 ? SnowTag.Empty : Tag(container) };
@@ -41,7 +46,7 @@ public class AtomStoreTests
     private TimelineEvent Unset(int id) =>
         Record(new TimelineEvent { Id = NextId(), Unsets = [Component(id)] });
 
-    private ComponentPosition Value(int id) => (ComponentPosition)_store.Find(Tag(id)).Value;
+    private ComponentPosition Value(int id) => (ComponentPosition)_store.Find(Key(id)).Value;
 
     private TimelineEvent Undo(TimelineEvent e) =>
         Record(
@@ -159,7 +164,7 @@ public class AtomStoreTests
     {
         Unset(1);
 
-        Assert.Null(_store.Find(Tag(1)).Value);
+        Assert.Null(_store.Find(Key(1)).Value);
     }
 
     [Fact]
@@ -208,7 +213,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 6))),
-            new Touch(ById, Tag(1), false),
+            new Touch(ById, Key(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(6), false),
             new Touch(ByContainer, Tag(5), true),
@@ -224,7 +229,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 5) with { X = 10 })),
-            new Touch(ById, Tag(1), false),
+            new Touch(ById, Key(1), false),
             new Touch(ByContainer, Tag(5), false)
         );
     }
@@ -237,7 +242,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Unset(1)),
-            new Touch(ById, Tag(1), false),
+            new Touch(ById, Key(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(5), true)
         );
@@ -250,7 +255,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 5))),
-            new Touch(ById, Tag(1), false),
+            new Touch(ById, Key(1), false),
             new Touch(ByContainer, Tag(5), false),
             new Touch(ByContainer, Tag(5), true)
         );
@@ -263,7 +268,7 @@ public class AtomStoreTests
 
         AssertTouched(
             TouchesOf(() => Write(Component(1, container: 6))),
-            new Touch(ById, Tag(1), false)
+            new Touch(ById, Key(1), false)
         );
     }
 }

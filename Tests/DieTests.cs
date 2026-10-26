@@ -166,7 +166,7 @@ public class DieTests
     [InlineData(null, 0, false)]
     public void ATemplateKnowsItsDie(string size, int sides, bool triangles)
     {
-        var template = new Template { Id = SnowTag.Empty, SizeTemplate = size };
+        var template = new Template { Id = Ref<Template>.Empty, SizeTemplate = size };
         Assert.True(
             template.Sides == sides && template.TriangleFaces == triangles,
             $"A \"{size}\" template has {template.Sides} sides and triangle faces {template.TriangleFaces}, "

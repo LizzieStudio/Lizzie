@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Lizzie.AssetManagement;
 
 namespace Lizzie;
 
@@ -61,7 +60,7 @@ public sealed class FaceLoader(Action shown)
                 Queue(front ?? Face.Blank, back ?? Face.Blank);
                 break;
             case DieParameters p:
-                var row = (item as DieItemRef)?.RowRef ?? SnowTag.Empty;
+                var row = (item as DieItemRef)?.RowRef ?? Ref<DataRow>.Empty;
                 Queue(View(p.Faces, "f", new RowFace(row)) ?? Face.Blank, Face.Blank);
                 break;
         }
@@ -157,14 +156,14 @@ public sealed class FaceLoader(Action shown)
 
             case TemplateSide templateSide:
             {
-                var row = (face as RowFace)?.RowRef ?? SnowTag.Empty;
+                var row = (face as RowFace)?.RowRef ?? Ref<DataRow>.Empty;
                 FaceSet Set(string key, Func<IAtomReader, IEnumerable<DataRow>> rows) =>
                     FaceSet.Acquire(
                         $"tpl:{templateSide.TemplateRef}:{templateSide.DatasetRef}{key}",
                         factory,
                         R => new Drawing(
                             R.Get(Template.ById, templateSide.TemplateRef),
-                            rows(R).ToDictionary(r => r.Id, R.Values)
+                            rows(R).ToDictionary(r => r.Id.Tag, R.Values)
                         )
                     );
                 // A card whose row was deleted still draws it, alone.
@@ -173,7 +172,7 @@ public sealed class FaceLoader(Action shown)
                             $":{row}",
                             R => R.Get(DataRow.ById, row) is { } deleted ? [deleted] : []
                         )
-                        .Face(row);
+                        .Face(row.Tag);
                 return Set(
                         "",
                         R =>
@@ -181,7 +180,7 @@ public sealed class FaceLoader(Action shown)
                                 ? []
                                 : R.GetRows(templateSide.DatasetRef)
                     )
-                    .Face(row);
+                    .Face(row.Tag);
             }
 
             default:

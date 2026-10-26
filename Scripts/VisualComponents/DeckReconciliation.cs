@@ -22,7 +22,7 @@ public static class DeckReconciliation
     /// <param name="stamp">Orders new cards under the others, for testing.</param>
     public static List<IChange> Changes(
         IAtomReader R,
-        SnowTag prototype,
+        Ref<Prototype> prototype,
         PrintedParameters parameters,
         Func<SnowTag> newTag = null,
         SnowportId? stamp = null
@@ -31,10 +31,10 @@ public static class DeckReconciliation
         var snowTagCreate = newTag ?? SnowTag.Create;
         var snowportStamp = stamp ?? SnowportId.Create();
 
-        IEnumerable<Stage> Below(SnowTag parent) =>
+        IEnumerable<Stage> Below(Ref<Stage> parent) =>
             Stage.GetChildren(R, parent).SelectMany(stage => Below(stage.Id).Prepend(stage));
 
-        var blueprints = Below(SnowTag.Empty).Where(stage => !stage.IsTable).ToList();
+        var blueprints = Below(Ref<Stage>.Empty).Where(stage => !stage.IsTable).ToList();
         var wanted = parameters.Items(R);
         var changes = blueprints
             .SelectMany(stage =>
@@ -43,9 +43,11 @@ public static class DeckReconciliation
                         R.GetVariant(c) is { IsItem: false } variant
                         && variant.PrototypeRef == prototype
                         && (
-                            stage.ParentRef == SnowTag.Empty
-                            || R.Get(ComponentPosition.ById, new StageKey(stage.ParentRef, c.Id))
-                                == null
+                            stage.ParentRef.IsEmpty
+                            || R.Get(
+                                ComponentPosition.ById,
+                                new StageKey<ComponentPosition>(stage.ParentRef, c.Id)
+                            ) == null
                         )
                     )
             )
@@ -75,7 +77,7 @@ public static class DeckReconciliation
     /// </summary>
     public static Atom[] NewCard(
         ComponentPosition deck,
-        SnowTag prototype,
+        Ref<Prototype> prototype,
         PrintedItemRef item,
         Func<SnowTag> newTag = null,
         ZOrder order = default
@@ -85,7 +87,7 @@ public static class DeckReconciliation
 
         var variant = new ComponentVariant
         {
-            Id = snowTagCreate(),
+            Id = new(snowTagCreate()),
             PrototypeRef = prototype,
             Item = item,
             DeckRef = deck.Id,
@@ -157,7 +159,7 @@ public static class DeckReconciliation
     private static IEnumerable<IChange> Deck(
         IAtomReader R,
         ComponentPosition deck,
-        SnowTag prototype,
+        Ref<Prototype> prototype,
         IReadOnlyList<PrintedItemRef> wanted,
         Func<SnowTag> newTag,
         SnowportId stamp

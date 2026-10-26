@@ -10,26 +10,26 @@ namespace Lizzie;
 [JsonName("Stage")]
 public sealed record Stage : Atom, IRanked
 {
-    public static readonly Identity<Stage, SnowTag> ById = new(s => s.Id);
+    public static readonly Identity<Stage, Ref<Stage>> ById = new(s => s.Id);
 
     /// <summary>
-    /// Stages that are not deleted, by the stage they build on, with <see cref="SnowTag.Empty"/> for the roots.
+    /// Stages that are not deleted, by the stage they build on, with <see cref="Ref{T}.Empty"/> for the roots.
     /// </summary>
-    public static readonly Lookup<Stage, SnowTag?> Children = new(s =>
+    public static readonly Lookup<Stage, Ref<Stage>?> Children = new(s =>
         s.Deleted ? null : s.ParentRef
     );
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<Stage> Id { get; init; }
 
     public string Name { get; init; }
 
     /// <summary>
-    /// The stage this one builds on, or <see cref="SnowTag.Empty"/> for a root.
+    /// The stage this one builds on, or <see cref="Ref{T}.Empty"/> for a root.
     /// </summary>
-    public SnowTag ParentRef { get; init; }
+    public Ref<Stage> ParentRef { get; init; }
 
     /// <summary>
     /// Its position among its siblings.
@@ -50,10 +50,10 @@ public sealed record Stage : Atom, IRanked
     /// <summary>
     /// Gets a new empty table, last under <paramref name="parent"/>.
     /// </summary>
-    public static Stage NewTable(IAtomReader R, SnowTag parent) =>
+    public static Stage NewTable(IAtomReader R, Ref<Stage> parent) =>
         new()
         {
-            Id = SnowTag.Create(),
+            Id = Ref<Stage>.Create(),
             Name = NextTableName(R),
             ParentRef = parent,
             Rank = GetChildren(R, parent)
@@ -69,7 +69,7 @@ public sealed record Stage : Atom, IRanked
     /// </summary>
     public static string NextTableName(IAtomReader R)
     {
-        int Highest(SnowTag parent) =>
+        int Highest(Ref<Stage> parent) =>
             R.Get(Children, parent)
                 .Select(s =>
                     Math.Max(
@@ -81,19 +81,19 @@ public sealed record Stage : Atom, IRanked
                 )
                 .DefaultIfEmpty()
                 .Max();
-        return $"Table {Highest(SnowTag.Empty) + 1}";
+        return $"Table {Highest(Ref<Stage>.Empty) + 1}";
     }
 
     /// <summary>
     /// Gets whether the current table is <paramref name="id"/> or builds on it.
     /// </summary>
-    public static bool IsCurrentTableOrAncestor(IAtomReader R, SnowTag id) =>
+    public static bool IsCurrentTableOrAncestor(IAtomReader R, Ref<Stage> id) =>
         Chain(R, R.Get(CurrentTable.Only).StageRef).Any(s => s.Id == id);
 
     /// <summary>
     /// The stages built on <paramref name="parent"/>, in the order the blueprint manager shows them.
     /// </summary>
-    public static List<Stage> GetChildren(IAtomReader R, SnowTag parent) =>
+    public static List<Stage> GetChildren(IAtomReader R, Ref<Stage> parent) =>
         R.Get(Children, parent).OrderBy(s => s.Rank).ThenBy(s => s.Id).ToList();
 
     /// <summary>
@@ -102,8 +102,8 @@ public sealed record Stage : Atom, IRanked
     /// </summary>
     public static IEnumerable<ComponentPosition> Union(
         IAtomReader R,
-        SnowTag into,
-        params SnowTag[] from
+        Ref<Stage> into,
+        params Ref<Stage>[] from
     ) =>
         from.SelectMany(s => R.Get(ComponentPosition.WrittenIn, s))
             .GroupBy(c => c.Id)
@@ -135,13 +135,17 @@ public sealed record Stage : Atom, IRanked
 
     /// <summary>
     /// The stage of <paramref name="id"/> and the stages it builds on, nearest first,
-    /// or nothing if it isn't <see cref="Reachable(IAtomReader, SnowTag)"/>.
+    /// or nothing if it isn't <see cref="Reachable(IAtomReader, Ref{Stage})"/>.
     /// </summary>
-    public static IEnumerable<Stage> Chain(IAtomReader R, SnowTag id)
+    public static IEnumerable<Stage> Chain(IAtomReader R, Ref<Stage> id)
     {
         if (!Reachable(R, id))
             yield break;
-        for (var stage = R.Get(ById, id); stage != null; stage = R.Get(ById, stage.ParentRef))
+        for (
+            var stage = R.Get(ById, id);
+            stage != null;
+            stage = R.Get(ById, stage.ParentRef)
+        )
             yield return stage;
     }
 
@@ -149,19 +153,22 @@ public sealed record Stage : Atom, IRanked
     /// Gets whether the stage <paramref name="id"/> is live,
     /// meaning neither it nor any of its ancestors have been removed.
     /// </summary>
-    public static bool Reachable(IAtomReader R, SnowTag id) =>
-        Reachable(id, s => R.Get(ById, s) is { Deleted: false } stage ? stage.ParentRef : null);
+    public static bool Reachable(IAtomReader R, Ref<Stage> id) =>
+        Reachable(
+            id,
+            s => R.Get(ById, s) is { Deleted: false } stage ? stage.ParentRef : null
+        );
 
-    /// <inheritdoc cref="Reachable(IAtomReader, SnowTag)"/>
+    /// <inheritdoc cref="Reachable(IAtomReader, Ref{Stage})"/>
     /// <param name="parentOf">A stage's parent, or null if it's missing or deleted.</param>
-    public static bool Reachable(SnowTag id, Func<SnowTag, SnowTag?> parentOf)
+    public static bool Reachable(Ref<Stage> id, Func<Ref<Stage>, Ref<Stage>?> parentOf)
     {
-        var walked = new HashSet<SnowTag>();
+        var walked = new HashSet<Ref<Stage>>();
         for (var stage = id; walked.Add(stage); )
         {
             if (parentOf(stage) is not { } parent)
                 return false;
-            if (parent == SnowTag.Empty)
+            if (parent.IsEmpty)
                 return true;
             stage = parent;
         }
@@ -180,5 +187,5 @@ public sealed record CurrentTable : Atom
     /// <summary>
     /// The table's <see cref="Stage"/>.
     /// </summary>
-    public SnowTag StageRef { get; init; }
+    public Ref<Stage> StageRef { get; init; }
 }

@@ -44,7 +44,7 @@ public partial class HandRow : Control
     [Export]
     public bool AlwaysShowBacks { get; set; }
 
-    private readonly Dictionary<StageKey, HandCard> _cards = new();
+    private readonly Dictionary<StageKey<ComponentPosition>, HandCard> _cards = new();
 
     private readonly List<HandCard> _order = new();
 
@@ -159,7 +159,7 @@ public partial class HandRow : Control
         }
     }
 
-    private HandCard AddCard(StageKey id)
+    private HandCard AddCard(StageKey<ComponentPosition> id)
     {
         var card = _cardScene.Instantiate<HandCard>();
         AddChild(card);
@@ -169,7 +169,7 @@ public partial class HandRow : Control
         return card;
     }
 
-    private void RemoveCard(StageKey id)
+    private void RemoveCard(StageKey<ComponentPosition> id)
     {
         if (!_cards.Remove(id, out var card))
             return;
@@ -236,7 +236,7 @@ public partial class HandRow : Control
     /// <summary>
     /// The middle of the card showing <paramref name="id"/> as a point on the viewport.
     /// </summary>
-    public Vector2 MiddleOf(StageKey id)
+    public Vector2 MiddleOf(StageKey<ComponentPosition> id)
     {
         var card = _cards[id];
         return card.GetGlobalTransformWithCanvas() * (card.Size / 2);

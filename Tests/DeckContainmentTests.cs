@@ -11,8 +11,8 @@ namespace Lizzie.Tests;
 /// </summary>
 public class DeckContainmentTests
 {
-    private static readonly SnowTag DeckProto = new(10);
-    private static readonly SnowTag BagProto = new(11);
+    private static readonly Ref<Prototype> DeckProto = new(10);
+    private static readonly Ref<Prototype> BagProto = new(11);
     private static readonly SnowTag Deck = new(20);
     private static readonly SnowTag Bag = new(21);
     private static readonly SnowTag Hand = new(30);
@@ -87,9 +87,9 @@ public class DeckContainmentTests
     [Fact]
     public void ACardIsContainedByItsDeck()
     {
-        Assert.Equal([AtomRef.To(TheDeck)], Top.Containers(R));
+        Assert.Equal([IAtomRef.To(TheDeck)], Top.Containers(R));
         Assert.Equal(
-            new[] { Bottom, Middle, Top }.Select(AtomRef.To).ToHashSet(),
+            new[] { Bottom, Middle, Top }.Select(IAtomRef.To).ToHashSet(),
             TheDeck.Contents(R).ToHashSet()
         );
         Assert.Empty(Loose.Containers(R));

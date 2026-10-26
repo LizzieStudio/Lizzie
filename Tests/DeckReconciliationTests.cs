@@ -12,11 +12,11 @@ namespace Lizzie.Tests;
 /// </summary>
 public class DeckReconciliationTests
 {
-    private static readonly SnowTag Proto = new(1),
-        Root = new(2),
-        Child = new(3),
-        Deck = new(4),
-        DeckVariant = new(5),
+    private static readonly Ref<Prototype> Proto = new(1);
+    private static readonly Ref<Stage> Root = new(2),
+        Child = new(3);
+    private static readonly Ref<ComponentVariant> DeckVariant = new(5);
+    private static readonly SnowTag Deck = new(4),
         Numbers = new(6),
         Backs = new(7);
 
@@ -52,7 +52,7 @@ public class DeckReconciliationTests
             atoms.Add(
                 new ComponentVariant
                 {
-                    Id = new SnowTag(10 + i),
+                    Id = new(10 + i),
                     PrototypeRef = Proto,
                     Item = Card(values[i]),
                     DeckRef = Deck,
@@ -63,7 +63,7 @@ public class DeckReconciliationTests
                 {
                     Id = new SnowTag(20 + i),
                     StageRef = Root,
-                    VariantRef = new SnowTag(10 + i),
+                    VariantRef = new(10 + i),
                     ContainerRef = onTable.Contains(i) ? SnowTag.Empty : Deck,
                 }
             );
@@ -72,18 +72,18 @@ public class DeckReconciliationTests
     }
 
     /// <summary>Makes <paramref name="stage"/> a table.</summary>
-    private static List<Atom> AsTable(List<Atom> atoms, SnowTag stage) =>
+    private static List<Atom> AsTable(List<Atom> atoms, Ref<Stage> stage) =>
         [.. atoms.Select(a => a is Stage s && s.Id == stage ? s with { IsTable = true } : a)];
 
     /// <summary>Moves card <paramref name="card"/> onto the table in <paramref name="stage"/>, as a write of its own.</summary>
-    private static List<Atom> MovedIn(List<Atom> atoms, SnowTag stage, int card) =>
+    private static List<Atom> MovedIn(List<Atom> atoms, Ref<Stage> stage, int card) =>
         [
             .. atoms,
             new ComponentPosition
             {
                 Id = new SnowTag(20 + card),
                 StageRef = stage,
-                VariantRef = new SnowTag(10 + card),
+                VariantRef = new(10 + card),
             },
         ];
 
@@ -91,7 +91,7 @@ public class DeckReconciliationTests
     private static List<Atom> Retired(List<Atom> atoms, int card) =>
         [
             .. atoms.Select(a =>
-                a is ComponentVariant v && v.Id == new SnowTag(10 + card)
+                a is ComponentVariant v && v.Id == new Ref<ComponentVariant>(10 + card)
                     ? v with
                     {
                         Retired = true,
@@ -277,7 +277,7 @@ public class DeckReconciliationTests
     private static void AssertWrites(
         List<IChange> changes,
         int[] retired,
-        (SnowTag Stage, int Id)[] removed
+        (Ref<Stage> Stage, int Id)[] removed
     )
     {
         var actualRetired = changes
@@ -292,7 +292,7 @@ public class DeckReconciliationTests
             .Order();
         Assert.True(
             changes.Count == retired.Length + removed.Length
-                && actualRetired.SequenceEqual(retired.Select(i => new SnowTag(i)))
+                && actualRetired.SequenceEqual(retired.Select(i => new Ref<ComponentVariant>(i)))
                 && actualRemoved.SequenceEqual(
                     removed.Select(r => (r.Stage, new SnowTag(r.Id))).Order()
                 ),

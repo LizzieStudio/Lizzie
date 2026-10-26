@@ -1,4 +1,3 @@
-using Lizzie.AssetManagement;
 using Xunit;
 
 namespace Lizzie.Tests;

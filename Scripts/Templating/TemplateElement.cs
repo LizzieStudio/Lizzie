@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using Godot;
 using static Lizzie.TextureFactory.TextureObject;
 
-namespace Lizzie.Scripts.Templating;
+namespace Lizzie;
 
 public class TemplateElement : ITemplateElement
 {

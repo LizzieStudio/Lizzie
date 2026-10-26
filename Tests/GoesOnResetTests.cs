@@ -7,9 +7,9 @@ namespace Lizzie.Tests;
 /// </summary>
 public class GoesOnResetTests
 {
-    private static readonly SnowTag Blueprint = new(1),
-        Table = new(2),
-        Card = new(3);
+    private static readonly Ref<Stage> Blueprint = new(1),
+        Table = new(2);
+    private static readonly SnowTag Card = new(3);
 
     private static readonly Stage[] Stages =
     [
@@ -22,7 +22,7 @@ public class GoesOnResetTests
         },
     ];
 
-    private static ComponentPosition In(SnowTag stage) => new() { Id = Card, StageRef = stage };
+    private static ComponentPosition In(Ref<Stage> stage) => new() { Id = Card, StageRef = stage };
 
     [Fact]
     public void WhatOnlyTheTableHasGoes() =>

@@ -18,39 +18,39 @@ namespace Lizzie.Replication.Machinery;
 /// <see cref="Settle"/> works out what each stage shows once the <see cref="Stage"/> atoms have merged the same event.
 /// </para>
 /// </summary>
-public sealed class StagedStore<T> : IAtomStore<T, StageKey>
+public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     where T : StagedAtom
 {
     private readonly StagedId<T> _byId;
 
-    private readonly AtomStore<Stage, SnowTag> _stages;
+    private readonly AtomStore<Stage, Ref<Stage>> _stages;
 
     /// <summary>
     /// The atoms as written, by the stage they were written in.
     /// </summary>
-    private readonly AtomStore<T, StageKey> _raw;
+    private readonly AtomStore<T, StageKey<T>> _raw;
 
     /// <summary>
     /// The atoms as each stage shows them.
     /// </summary>
-    private readonly IndexedAtoms<T, StageKey> _resolved;
+    private readonly IndexedAtoms<T, StageKey<T>> _resolved;
 
     // each stage's written parent, unless it's deleted
-    private readonly Dictionary<SnowTag, SnowTag> _written = new();
+    private readonly Dictionary<Ref<Stage>, Ref<Stage>> _written = new();
 
     // the parent of each stage that's Stage.Reachable
-    private Dictionary<SnowTag, SnowTag> _parents = new();
+    private Dictionary<Ref<Stage>, Ref<Stage>> _parents = new();
 
     // what changed since the last Settle
-    private readonly HashSet<StageKey> _dirty = new();
-    private readonly HashSet<SnowTag> _changedStages = new();
+    private readonly HashSet<StageKey<T>> _dirty = new();
+    private readonly HashSet<Ref<Stage>> _changedStages = new();
 
     // touches to report in the next Settle
     private List<Touch> _touches = new();
 
     /// <param name="byId">The type's Id.</param>
     /// <param name="stages">The store of <see cref="Stage"/> atoms, which says each stage's parent.</param>
-    public StagedStore(StagedId<T> byId, AtomStore<Stage, SnowTag> stages)
+    public StagedStore(StagedId<T> byId, AtomStore<Stage, Ref<Stage>> stages)
     {
         _byId = byId;
         _stages = stages;
@@ -68,9 +68,9 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     /// <summary>
     /// What the stage in <paramref name="id"/> shows for its atom, or an entry with a null value if nothing.
     /// </summary>
-    public AtomEntry Find(StageKey id) => _resolved.Find(id);
+    public AtomEntry Find(StageKey<T> id) => _resolved.Find(id);
 
-    AtomEntry IAtomStore.Find(object id) => id is StageKey typed ? Find(typed) : default;
+    AtomEntry IAtomStore.Find(object id) => id is StageKey<T> typed ? Find(typed) : default;
 
     /// <summary>
     /// The atoms with <paramref name="key"/> in <paramref name="lookup"/> as written for a <see cref="Written{T}"/>,
@@ -92,7 +92,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     {
         foreach (var touch in touches)
             if (touch.Query == _byId)
-                _dirty.Add((StageKey)touch.Key);
+                _dirty.Add((StageKey<T>)touch.Key);
             else
                 _touches.Add(touch);
     }
@@ -101,7 +101,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     {
         foreach (var touch in touches)
             if (touch.Query == Stage.ById)
-                _changedStages.Add((SnowTag)touch.Key);
+                _changedStages.Add((Ref<Stage>)touch.Key);
     }
 
     public void Settle()
@@ -148,21 +148,21 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     /// <summary>
     /// Every stage, and every stage something is resolved in, with every atom written or resolved.
     /// </summary>
-    private IEnumerable<StageKey> Everything()
+    private IEnumerable<StageKey<T>> Everything()
     {
         var resolved = _resolved.Entries.Keys;
         var stages = _parents.Keys.Concat(resolved.Select(k => k.StageRef)).ToHashSet();
         var atoms = _raw.Ids.Concat(resolved).Select(k => k.ComponentRef).ToHashSet();
-        return stages.SelectMany(s => atoms.Select(c => new StageKey(s, c)));
+        return stages.SelectMany(s => atoms.Select(c => new StageKey<T>(s, c)));
     }
 
     /// <summary>
     /// <paramref name="root"/> and every stage whose chain of parents reaches it.
     /// </summary>
-    private HashSet<SnowTag> Below(SnowTag root)
+    private HashSet<Ref<Stage>> Below(Ref<Stage> root)
     {
-        var found = new HashSet<SnowTag> { root };
-        var queue = new Queue<SnowTag>(found);
+        var found = new HashSet<Ref<Stage>> { root };
+        var queue = new Queue<Ref<Stage>>(found);
         while (queue.TryDequeue(out var stage))
             foreach (var (child, parent) in _parents)
                 if (parent == stage && found.Add(child))
@@ -173,7 +173,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey>
     /// <summary>
     /// What the stage in <paramref name="key"/> shows for its atom.
     /// </summary>
-    private AtomEntry Resolve(StageKey key)
+    private AtomEntry Resolve(StageKey<T> key)
     {
         for (var stage = key.StageRef; _parents.TryGetValue(stage, out var parent); stage = parent)
         {

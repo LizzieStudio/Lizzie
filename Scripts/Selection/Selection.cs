@@ -15,12 +15,12 @@ namespace Lizzie;
 [JsonName("Selection")]
 public record Selection : Atom
 {
-    public static readonly Identity<Selection, SnowTag> ById = new(r => r.Id);
+    public static readonly Identity<Selection, Ref<Selection>> ById = new(r => r.Id);
 
     /// <summary>
-    /// This atom's identity, created with <see cref="SnowTag.Create"/>.
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<Selection> Id { get; init; }
 
     /// <summary>
     /// Every player's selection in each place, by <see cref="Place"/>.
@@ -45,7 +45,7 @@ public record Selection : Atom
     public ViewPlace Place { get; init; }
 
     /// <summary>The selected things.</summary>
-    public ImmutableHashSet<AtomRef> Targets { get; init; } = ImmutableHashSet<AtomRef>.Empty;
+    public ImmutableHashSet<IAtomRef> Targets { get; init; } = ImmutableHashSet<IAtomRef>.Empty;
 }
 
 /// <summary>
@@ -62,13 +62,13 @@ public static class LocalSelection
     /// with the local player taking priority.
     /// </para>
     /// </summary>
-    public static IReadOnlyDictionary<AtomRef, Color> SelectionColors(
+    public static IReadOnlyDictionary<IAtomRef, Color> SelectionColors(
         this IAtomReader R,
         ViewPlace place
     )
     {
         var local = Snowport.Clock.source;
-        var colors = new Dictionary<AtomRef, Color>();
+        var colors = new Dictionary<IAtomRef, Color>();
         var newestFirst = R.Get(Selection.ByPlace, place)
             .OrderByDescending(s => s.Player == local)
             .ThenByDescending(R.Version);
@@ -108,8 +108,8 @@ public static class LocalSelection
         Identity<T, I> byId,
         ICommandView view
     )
-        where T : Atom =>
-        R.GetSelection(view)?.Targets.Where(t => t.Type == typeof(T)).Select(t => (I)t.Id) ?? [];
+        where T : Atom
+        where I : IAtomRef<T> => R.GetSelection(view)?.Targets.OfType<I>() ?? [];
 
     /// <summary>
     /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type in <paramref name="view"/>,
@@ -122,7 +122,8 @@ public static class LocalSelection
         IEnumerable<I> ids,
         ICommandView view
     )
-        where T : Atom => Atoms.R.Write((Node)view, R.NewSelection(byId, ids, view));
+        where T : Atom
+        where I : IAtomRef<T> => Atoms.R.Write((Node)view, R.NewSelection(byId, ids, view));
 
     /// <summary>
     /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, ICommandView)"/> writes,
@@ -135,12 +136,10 @@ public static class LocalSelection
         ICommandView view
     )
         where T : Atom
+        where I : IAtomRef<T>
     {
-        var old = R.GetSelection(view)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
-        return R.NewSelection(
-            old.Where(t => t.Type != typeof(T)).Concat(ids.Select(byId.Ref)),
-            view
-        );
+        var old = R.GetSelection(view)?.Targets ?? ImmutableHashSet<IAtomRef>.Empty;
+        return R.NewSelection(old.Where(t => t is not I).Concat(ids.Cast<IAtomRef>()), view);
     }
 
     /// <summary>
@@ -149,7 +148,7 @@ public static class LocalSelection
     /// </summary>
     public static void SetSelection(
         this IAtomReader R,
-        IEnumerable<AtomRef> targets,
+        IEnumerable<IAtomRef> targets,
         ICommandView view
     )
     {
@@ -162,7 +161,7 @@ public static class LocalSelection
     /// </summary>
     private static Selection[] NewSelection(
         this IAtomReader R,
-        IEnumerable<AtomRef> targets,
+        IEnumerable<IAtomRef> targets,
         ICommandView view
     )
     {
@@ -170,14 +169,14 @@ public static class LocalSelection
             return [];
         var current = R.GetSelection(view);
         var next = targets.ToImmutableHashSet();
-        if (next.SetEquals(current?.Targets ?? ImmutableHashSet<AtomRef>.Empty))
+        if (next.SetEquals(current?.Targets ?? ImmutableHashSet<IAtomRef>.Empty))
             return [];
 
         var atom =
             current
             ?? new Selection
             {
-                Id = SnowTag.Create(),
+                Id = Ref<Selection>.Create(),
                 Player = Snowport.Clock.source,
                 Place = place,
             };

@@ -167,7 +167,7 @@ public partial class CommandButton : Button
     /// <summary>
     /// What commands would act on in the context, as its context menu would.
     /// </summary>
-    private List<AtomRef> GetTargets(CommandContext context, IAtomReader R) =>
+    private List<IAtomRef> GetTargets(CommandContext context, IAtomReader R) =>
         CommandResolver.TargetsFor(Command, context, R, menu: true);
 
     // A view's own commands are only known once the button is in it.

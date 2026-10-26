@@ -204,24 +204,24 @@ public interface IEvent { }
 
 public class ShowTemplateEditor : IEvent
 {
-    public SnowTag TemplateRef { get; set; }
+    public Ref<Template> TemplateRef { get; set; }
 }
 
 public class ShowDatasetEditor : IEvent
 {
-    public SnowTag DatasetRef { get; set; }
+    public Ref<Dataset> DatasetRef { get; set; }
 
-    public SnowTag SelectedRowRef { get; set; }
+    public Ref<DataRow> SelectedRowRef { get; set; }
 }
 
 public class ShowImageManagerEvent : IEvent
 {
-    public Guid ImageReference { get; set; }
+    public Ref<ImageAsset> ImageRef { get; set; }
 }
 
 public class EditPrototypeEvent : IEvent
 {
-    public SnowTag PrototypeRef { get; set; }
+    public Ref<Prototype> PrototypeRef { get; set; }
 }
 
 /// <summary>
@@ -229,7 +229,7 @@ public class EditPrototypeEvent : IEvent
 /// </summary>
 public class SpawnPrototypeEvent : IEvent
 {
-    public SnowTag PrototypeRef { get; set; }
+    public Ref<Prototype> PrototypeRef { get; set; }
     public PrototypeItemRef Item { get; set; }
 
     /// <summary>
@@ -249,7 +249,7 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
 /// </summary>
 public class RenameColumnEvent : IEvent
 {
-    public SnowTag ColumnRef { get; set; }
+    public Ref<DataColumn> ColumnRef { get; set; }
 }
 
 /// <summary>
@@ -257,7 +257,7 @@ public class RenameColumnEvent : IEvent
 /// </summary>
 public class RenameStageEvent : IEvent
 {
-    public SnowTag StageRef { get; set; }
+    public Ref<Stage> StageRef { get; set; }
 }
 
 /// <summary>

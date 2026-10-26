@@ -18,13 +18,13 @@ public partial class HeaderCell : PanelContainer
 
     private string _headerText = string.Empty;
 
-    public SnowTag ColumnRef { get; set; }
+    public Ref<DataColumn> ColumnRef { get; set; }
 
     /// <summary>A click on the name, with the modifiers held.</summary>
-    public event Action<SnowTag, InputEventMouseButton> Clicked;
-    public event Action<SnowTag> RightPressed;
-    public event Action<SnowTag, float> WidthDragged;
-    public event Action<SnowTag, string> NameCommitted;
+    public event Action<Ref<DataColumn>, InputEventMouseButton> Clicked;
+    public event Action<Ref<DataColumn>> RightPressed;
+    public event Action<Ref<DataColumn>, float> WidthDragged;
+    public event Action<Ref<DataColumn>, string> NameCommitted;
 
     // Set by a double-click, so the release that follows it isn't a click.
     private bool _doubleClicked;
@@ -50,7 +50,7 @@ public partial class HeaderCell : PanelContainer
             Callable.From<Vector2, ReorderDrag>(_ => new ReorderDrag
             {
                 Axis = Vector2.Axis.X,
-                MovedRef = ColumnRef,
+                MovedRef = ColumnRef.Tag,
             }),
             default,
             default

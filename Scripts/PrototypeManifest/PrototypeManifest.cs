@@ -167,7 +167,7 @@ public partial class PrototypeManifest : Window, ICommandView
 
         var duplicate = new Prototype
         {
-            Id = SnowTag.Create(),
+            Id = Ref<Prototype>.Create(),
             Name = newName,
             Parameters = _selectedPrototype.Parameters,
         };
@@ -199,7 +199,7 @@ public partial class PrototypeManifest : Window, ICommandView
             .GroupBy(v => v.PrototypeRef)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var selectedRef = _selectedPrototype?.Id ?? SnowTag.Empty;
+        var selectedRef = _selectedPrototype?.Id ?? Ref<Prototype>.Empty;
         _selectedPrototype = prototypes.FirstOrDefault(p => p.Id == selectedRef);
         if (_selectedPrototype == null)
         {
@@ -260,7 +260,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (selectedItem == null)
             return;
 
-        var prototypeRef = (SnowTag)selectedItem.GetMetadata(0);
+        var prototypeRef = (Ref<Prototype>)selectedItem.GetMetadata(0);
 
         if (prototypeRef == _selectedPrototype?.Id)
             return;

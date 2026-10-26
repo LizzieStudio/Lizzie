@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Lizzie;
@@ -11,8 +12,8 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
     private LineEdit _lengthInput;
     private ColorPickerButton _colorPicker;
     private ComponentPreview _preview;
-    private OptionButton _prototypeList;
-    private SnowTag _selectedPrototypeRef = SnowTag.Empty;
+    private AtomSelector _prototypeList;
+    private readonly WatchableValue<Ref<Prototype>> _selectedPrototypeRef = new();
 
     public override void _Ready()
     {
@@ -29,39 +30,20 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _colorPicker = GetNode<ColorPickerButton>("%Color");
         _colorPicker.ColorChanged += ColorPickerOnColorChanged;
 
-        _prototypeList = GetNode<OptionButton>("%PrototypeList");
-        _prototypeList.ItemSelected += PrototypeSelected;
+        _prototypeList = GetNode<AtomSelector>("%PrototypeList");
+        _prototypeList.List(
+            R => R.Get(Prototype.Live).Select(p => (p.Id, p.Name)),
+            new(
+                R => R.Get(_selectedPrototypeRef),
+                id =>
+                {
+                    _selectedPrototypeRef.Value = id;
+                    UpdatePreview();
+                }
+            )
+        );
 
         _preview = GetNode<ComponentPreview>("%Preview");
-    }
-
-    private void UpdatePrototypeSelection()
-    {
-        var index = _prototypeList.GetItemIndex(_selectedPrototypeRef);
-        if (index >= 0)
-            _prototypeList.Selected = index;
-    }
-
-    public override void _EnterTree()
-    {
-        Atoms.R.Watch(this, Sync);
-    }
-
-    private void Sync(IWatchReader R)
-    {
-        _prototypeList.Clear();
-        _prototypeList.AddItem("(none)", SnowTag.Empty);
-
-        foreach (var p in R.Get(Prototype.Live))
-            _prototypeList.AddItem(p.Name, p.Id);
-
-        UpdatePrototypeSelection();
-    }
-
-    private void PrototypeSelected(long index)
-    {
-        _selectedPrototypeRef = _prototypeList.GetItemId((int)index);
-        UpdatePreview();
     }
 
     private void ColorPickerOnColorChanged(Color color)
@@ -96,7 +78,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             Width = ParamToFloat(_widthInput.Text),
             Length = ParamToFloat(_lengthInput.Text),
             Color = _colorPicker.Color,
-            DispenseRef = _selectedPrototypeRef,
+            DispenseRef = _selectedPrototypeRef.Value,
         };
     }
 
@@ -121,7 +103,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             Width = w,
             Length = l,
             Color = _colorPicker.Color,
-            DispenseRef = _selectedPrototypeRef,
+            DispenseRef = _selectedPrototypeRef.Value,
         };
         _preview.Build(p, TextureFactory);
     }
@@ -135,9 +117,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _lengthInput.Text = p.Length.ToString();
         _colorPicker.Color = p.Color;
 
-        _selectedPrototypeRef = p.DispenseRef;
-
-        UpdatePrototypeSelection();
+        _selectedPrototypeRef.Value = p.DispenseRef;
 
         Activate();
     }
@@ -153,7 +133,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             ret.Add("Width must be > 0");
         if ((p?.Length ?? 0) <= 0)
             ret.Add("Length must be > 0");
-        if ((p?.DispenseRef ?? SnowTag.Empty) == SnowTag.Empty)
+        if (p?.DispenseRef.IsEmpty ?? true)
             ret.Add("Component must be specified");
 
         return ret;

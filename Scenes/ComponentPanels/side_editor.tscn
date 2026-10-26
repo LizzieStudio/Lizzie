@@ -5,7 +5,6 @@
 [ext_resource type="Script" uid="uid://bpgo8u8la1rmp" path="res://Scripts/ComponentPanelResults/ImageSideTab.cs" id="3_image"]
 [ext_resource type="Script" uid="uid://d16g0ehlod7ow" path="res://Scripts/ComponentPanelResults/TemplateSideTab.cs" id="4_template"]
 [ext_resource type="PackedScene" uid="uid://cn3pcewp6eemn" path="res://Scenes/ComponentPanels/quick_suit_row.tscn" id="5_row"]
-[ext_resource type="PackedScene" uid="uid://byv8s3wlrrbwb" path="res://Scenes/Controls/ImageSelector.tscn" id="6_image"]
 [ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/AtomSelector.tscn" id="8_selector"]
 [ext_resource type="Texture2D" uid="uid://cugnc5143oecw" path="res://Textures/UI/pencil.png" id="9_pencil"]
 [ext_resource type="PackedScene" uid="uid://boxmo6a5jmo47" path="res://Scenes/Controls/number_sequence_edit.tscn" id="10_frames"]
@@ -53,10 +52,11 @@ theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 metadata/_tab_index = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Image" unique_id=1395542527 node_paths=PackedStringArray("_image", "_frames")]
+[node name="VBoxContainer" type="VBoxContainer" parent="Image" unique_id=1395542527 node_paths=PackedStringArray("_image", "_editImage", "_frames")]
 layout_mode = 2
 script = ExtResource("3_image")
-_image = NodePath("ImageRow/ImageSelector")
+_image = NodePath("ImageRow/ImageList")
+_editImage = NodePath("ImageRow/EditImage")
 _frames = NodePath("FramesRow/Frames")
 
 [node name="ImageRow" type="HBoxContainer" parent="Image/VBoxContainer" unique_id=1818202006]
@@ -66,9 +66,14 @@ layout_mode = 2
 layout_mode = 2
 text = "Image  "
 
-[node name="ImageSelector" parent="Image/VBoxContainer/ImageRow" unique_id=1938796384 instance=ExtResource("6_image")]
+[node name="ImageList" parent="Image/VBoxContainer/ImageRow" unique_id=1938796384 instance=ExtResource("8_selector")]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="EditImage" type="Button" parent="Image/VBoxContainer/ImageRow" unique_id=33992371]
+layout_mode = 2
+tooltip_text = "Image Manager"
+icon = ExtResource("9_pencil")
 
 [node name="FramesRow" type="HBoxContainer" parent="Image/VBoxContainer" unique_id=154782622]
 layout_mode = 2

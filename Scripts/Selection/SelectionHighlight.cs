@@ -25,8 +25,8 @@ public static class SelectionHighlight
     public static void Outline(
         Control control,
         string style,
-        IReadOnlyDictionary<AtomRef, Color> colors,
-        params AtomRef[] targets
+        IReadOnlyDictionary<IAtomRef, Color> colors,
+        params IAtomRef[] targets
     )
     {
         var color = Of(colors, targets);
@@ -49,7 +49,7 @@ public static class SelectionHighlight
         control.AddThemeStyleboxOverride(style, outlined);
     }
 
-    private static Color? Of(IReadOnlyDictionary<AtomRef, Color> colors, params AtomRef[] targets)
+    private static Color? Of(IReadOnlyDictionary<IAtomRef, Color> colors, params IAtomRef[] targets)
     {
         foreach (var target in targets)
             if (colors.TryGetValue(target, out var color))

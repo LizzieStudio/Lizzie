@@ -28,10 +28,8 @@ public partial class DatasetEditor : Window, ICommandView
         /// <summary>
         /// What clicking its header selects.
         /// </summary>
-        public AtomRef Target => DataRow.ById.Ref(Row.Id);
+        public IAtomRef Target => Row.Id;
     }
-
-    private Dataset _currentDataset;
 
     private VBoxContainer _mainContainer;
     private Button _newButton;
@@ -49,10 +47,10 @@ public partial class DatasetEditor : Window, ICommandView
     private Label _newDatasetErrorLabel;
 
     // The grid is built for one dataset's column layout and rebuilt when either changes.
-    private SnowTag _shownDatasetRef = SnowTag.Empty;
-    private List<SnowTag> _columnRefs = new();
+    private Ref<Dataset> _shownDatasetRef = Ref<Dataset>.Empty;
+    private List<Ref<DataColumn>> _columnRefs = new();
     private readonly List<HeaderCell> _headerCells = new();
-    private readonly Dictionary<SnowTag, float> _columnWidths = new();
+    private readonly Dictionary<Ref<DataColumn>, float> _columnWidths = new();
 
     // Rows are reconciled by id so edits don't lose focus.
     private List<RowView> _views = new();
@@ -60,10 +58,10 @@ public partial class DatasetEditor : Window, ICommandView
     // The line under the last row, holding only a button that adds a row.
     private HBoxContainer _addRowLine;
 
-    private SnowTag _revealRowRef = SnowTag.Empty;
+    private Ref<DataRow> _revealRowRef = Ref<DataRow>.Empty;
 
     // The columns the last grid rebuild added to the shown dataset, for an insert's listener to rename.
-    private List<SnowTag> _addedColumnRefs = [];
+    private List<Ref<DataColumn>> _addedColumnRefs = [];
 
     // Whether a cell is being edited. Updated once focus settles: ShortcutRelay drops focus on a click
     // outside the focused cell before this window sees it, and the grid should still be editing,
@@ -71,7 +69,7 @@ public partial class DatasetEditor : Window, ICommandView
     private bool _editing;
 
     // Where Shift+click selects from: the last row, column or cell selected without Shift.
-    private AtomRef? _anchor;
+    private IAtomRef _anchor;
 
     // The row or column being dragged with Godot's drag and drop, or null.
     private ReorderDrag _reorder;
@@ -145,16 +143,17 @@ public partial class DatasetEditor : Window, ICommandView
 
     #region ICommandView
 
-    /// <summary>The shown dataset. Setting it to empty opens the first one.</summary>
-    public WatchableValue<SnowTag> ShownDatasetRef { get; } = new();
+    /// <summary>
+    /// The shown dataset, or <see cref="Ref{T}.Empty"/> for none. It opens on the first one.
+    /// A shown one that's gone was undone, so the editor stays on it, where redo brings it back.
+    /// </summary>
+    public WatchableValue<Ref<Dataset>> ShownDatasetRef { get; } = new();
 
     public ViewPlace? Place(IAtomReader R) =>
-        R.Get(ShownDatasetRef) is var shown && shown != SnowTag.Empty
-            ? ViewPlace.Of(this, Dataset.ById.Ref(shown))
-            : null;
+        R.Get(ShownDatasetRef) is var shown && !shown.IsEmpty ? ViewPlace.Of(this, shown) : null;
 
-    public bool CanSelect(IAtomReader R, AtomRef target) =>
-        target.Id is CellId cell
+    public bool CanSelect(IAtomReader R, IAtomRef target) =>
+        target is CellId cell
             ? DataCell.InGrid(R, cell)
             : R.Get(target) is { } atom && atom is not DataRow { Deleted: true };
 
@@ -226,12 +225,12 @@ public partial class DatasetEditor : Window, ICommandView
 
         if (click is { ButtonIndex: MouseButton.Left, Pressed: true })
         {
-            SelectTarget(Cell(cell), click);
+            SelectTarget(cell, click);
             if (click.DoubleClick && !modified)
                 BeginEdit(cell);
         }
         else if (click is { ButtonIndex: MouseButton.Right, Pressed: true })
-            SelectForMenu(Cell(cell));
+            SelectForMenu(cell);
         SetInputAsHandled();
     }
 
@@ -258,17 +257,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void Sync(IWatchReader R)
     {
-        // It opens on the first dataset when none is chosen. A chosen one that's gone was undone,
-        // so the editor stays on it, where redo brings it back.
-        var id = R.Get(ShownDatasetRef);
-        var ds =
-            id != SnowTag.Empty ? R.Get(Dataset.ById, id) : R.Get(Dataset.All).FirstOrDefault();
-        if (ds != null)
-            ShownDatasetRef.Value = ds.Id;
-
-        _datasetList.SelectedRef = ShownDatasetRef.Value;
-        _currentDataset = ds;
-
+        var ds = R.Get(Dataset.ById, R.Get(ShownDatasetRef));
         if (ds == null)
             ClearGrid();
         else
@@ -295,7 +284,7 @@ public partial class DatasetEditor : Window, ICommandView
         ReconcileRows(R, R.GetRows(ds.Id));
         SyncSelection(R, ds.Id);
 
-        if (_revealRowRef != SnowTag.Empty)
+        if (!_revealRowRef.IsEmpty)
         {
             if (_views.FirstOrDefault(v => v.Row.Id == _revealRowRef) is { } view)
             {
@@ -304,7 +293,7 @@ public partial class DatasetEditor : Window, ICommandView
                     .From(() => _dataScrollContainer.EnsureControlVisible(view.Box))
                     .CallDeferred();
             }
-            _revealRowRef = SnowTag.Empty;
+            _revealRowRef = Ref<DataRow>.Empty;
         }
     }
 
@@ -364,8 +353,8 @@ public partial class DatasetEditor : Window, ICommandView
         _newButton.Pressed += OnNewDatasetPressed;
 
         _datasetList = GetNode<AtomSelector>("%DatasetList");
-        _datasetList.Items = R => R.Get(Dataset.All).Select(d => (d.Name, d.Id));
-        _datasetList.AtomSelected += id => ShownDatasetRef.Value = id;
+        _datasetList.List(R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)), ShownDatasetRef);
+        ShownDatasetRef.Value = Atoms.R.Get(Dataset.All).FirstOrDefault()?.Id ?? Ref<Dataset>.Empty;
 
         InitializeNewDatasetDialog();
     }
@@ -373,9 +362,9 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>
     /// Selects a row of the shown dataset and scrolls it into view.
     /// </summary>
-    public void RevealRow(SnowTag rowId)
+    public void RevealRow(Ref<DataRow> rowId)
     {
-        Select([DataRow.ById.Ref(rowId)]);
+        Select([rowId]);
         _revealRowRef = rowId;
         Atoms.R.QueueSync(this);
     }
@@ -428,7 +417,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (string.IsNullOrWhiteSpace(name))
             return;
 
-        var ds = new Dataset { Id = SnowTag.Create(), Name = name };
+        var ds = new Dataset { Id = Ref<Dataset>.Create(), Name = name };
         ShownDatasetRef.Value = ds.Id;
         Atoms.R.Write(this, ds);
     }
@@ -440,12 +429,8 @@ public partial class DatasetEditor : Window, ICommandView
         QueueFree();
     }
 
-    private float ColumnWidth(SnowTag id) =>
+    private float ColumnWidth(Ref<DataColumn> id) =>
         _columnWidths.GetValueOrDefault(id, DefaultColumnWidth);
-
-    private static AtomRef Column(SnowTag id) => DataColumn.ById.Ref(id);
-
-    private static AtomRef Cell(CellId id) => DataCell.ById.Ref(id);
 
     private void BuildGrid()
     {
@@ -461,8 +446,8 @@ public partial class DatasetEditor : Window, ICommandView
             header.CustomMinimumSize = new Vector2(ColumnWidth(id), HeaderHeight);
             header.WidthDragged += OnColumnWidthDragged;
             header.NameCommitted += OnColumnRenamed;
-            header.Clicked += (columnId, click) => SelectTarget(Column(columnId), click);
-            header.RightPressed += columnId => SelectForMenu(Column(columnId));
+            header.Clicked += (columnId, click) => SelectTarget(columnId, click);
+            header.RightPressed += columnId => SelectForMenu(columnId);
             _headerCells.Add(header);
         }
 
@@ -506,8 +491,8 @@ public partial class DatasetEditor : Window, ICommandView
         }
         _headerCells.Clear();
 
-        _shownDatasetRef = SnowTag.Empty;
-        _columnRefs = new List<SnowTag>();
+        _shownDatasetRef = Ref<Dataset>.Empty;
+        _columnRefs = new List<Ref<DataColumn>>();
     }
 
     private RowView CreateRowView()
@@ -528,7 +513,7 @@ public partial class DatasetEditor : Window, ICommandView
             Callable.From<Vector2, ReorderDrag>(_ => new ReorderDrag
             {
                 Axis = Vector2.Axis.Y,
-                MovedRef = view.Row.Id,
+                MovedRef = view.Row.Id.Tag,
             }),
             default,
             default
@@ -665,16 +650,13 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>The top-left of the block of selected cells, or null without any.</summary>
     private CellId? TopLeftCell()
     {
-        var cells = MySelection()
-            .Where(t => t.Type == typeof(DataCell))
-            .Select(t => (CellId)t.Id)
-            .ToList();
+        var cells = MySelection().OfType<CellId>().ToList();
         var row = _views.FirstOrDefault(v => cells.Any(c => c.RowRef == v.Row.Id));
         var column = _columnRefs.FirstOrDefault(
             id => cells.Any(c => c.ColumnRef == id),
-            SnowTag.Empty
+            Ref<DataColumn>.Empty
         );
-        return row != null && column != SnowTag.Empty ? new CellId(row.Row.Id, column) : null;
+        return row != null && !column.IsEmpty ? new CellId(row.Row.Id, column) : null;
     }
 
     private RowView Neighbor(RowView view, int step)
@@ -694,7 +676,7 @@ public partial class DatasetEditor : Window, ICommandView
         SyncEditing();
 
         // The cell being edited is selected, so it shows the highlight too.
-        SelectTarget(Cell(new CellId(view.Row.Id, _columnRefs[column])));
+        SelectTarget(new CellId(view.Row.Id, _columnRefs[column]));
 
         // Keyboard navigation selects the whole cell, like a spreadsheet; a click places the caret.
         if (!Input.IsMouseButtonPressed(MouseButton.Left))
@@ -781,10 +763,9 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
-    private void AddRow() =>
-        DatasetCommands.AddRow.Run([Dataset.ById.Ref(ShownDatasetRef.Value)], this);
+    private void AddRow() => DatasetCommands.AddRow.Run([ShownDatasetRef.Value], this);
 
-    private RowView ViewOf(SnowTag rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
+    private RowView ViewOf(Ref<DataRow> rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
 
     /// <summary>Moves <paramref name="row"/> so it sits at <paramref name="index"/> among the other rows.</summary>
     private void MoveRow(DataRow row, int index)
@@ -857,12 +838,12 @@ public partial class DatasetEditor : Window, ICommandView
     private void DropReorder(ReorderDrag drag, Vector2 at)
     {
         if (drag.Axis == Vector2.Axis.Y)
-            DropRow(drag.MovedRef, at);
+            DropRow(new(drag.MovedRef), at);
         else
-            DropColumn(drag.MovedRef, at);
+            DropColumn(new(drag.MovedRef), at);
     }
 
-    private void DropRow(SnowTag rowId, Vector2 at)
+    private void DropRow(Ref<DataRow> rowId, Vector2 at)
     {
         var view = ViewOf(rowId);
         int from = _views.IndexOf(view);
@@ -876,7 +857,7 @@ public partial class DatasetEditor : Window, ICommandView
         MoveRow(view.Row, to > from ? to - 1 : to);
     }
 
-    private void DropColumn(SnowTag columnId, Vector2 at)
+    private void DropColumn(Ref<DataColumn> columnId, Vector2 at)
     {
         var columns = Atoms.R.GetColumns(ShownDatasetRef.Value);
         int from = columns.FindIndex(c => c.Id == columnId);
@@ -898,18 +879,18 @@ public partial class DatasetEditor : Window, ICommandView
         );
     }
 
-    private void OnColumnRenamed(SnowTag columnId, string name)
+    private void OnColumnRenamed(Ref<DataColumn> columnId, string name)
     {
         if (Atoms.R.Get(DataColumn.ById, columnId) is { } column)
             Atoms.R.Write(this, column with { Name = name });
     }
 
     /// <summary>What the local player has selected in the shown dataset.</summary>
-    private ImmutableHashSet<AtomRef> MySelection() =>
-        Atoms.R.GetSelection(this)?.Targets ?? ImmutableHashSet<AtomRef>.Empty;
+    private ImmutableHashSet<IAtomRef> MySelection() =>
+        Atoms.R.GetSelection(this)?.Targets ?? ImmutableHashSet<IAtomRef>.Empty;
 
     /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
-    private void Select(IEnumerable<AtomRef> targets) => Atoms.R.SetSelection(targets, this);
+    private void Select(IEnumerable<IAtomRef> targets) => Atoms.R.SetSelection(targets, this);
 
     /// <summary>
     /// Selects a row, column or cell, as a click on it does. With Shift, it selects everything from the
@@ -918,18 +899,22 @@ public partial class DatasetEditor : Window, ICommandView
     /// A click takes focus from the cell being edited, so keys like Delete go to the selection.
     /// Focusing a cell selects it without a click.
     /// </summary>
-    private void SelectTarget(AtomRef target, InputEventWithModifiers click = null)
+    private void SelectTarget(IAtomRef target, InputEventWithModifiers click = null)
     {
         var mine = MySelection();
-        var kind = mine.Where(t => t.Type == target.Type);
-        if (click?.ShiftPressed == true && _anchor is { } anchor && anchor.Type == target.Type)
+        var kind = mine.Where(t => t.AtomType == target.AtomType);
+        if (
+            click?.ShiftPressed == true
+            && _anchor is { } anchor
+            && anchor.AtomType == target.AtomType
+        )
             Select(Range(anchor, target));
         else
         {
             _anchor = target;
             Select(
                 click?.IsCommandOrControlPressed() != true ? [target]
-                : mine.Contains(target) ? kind.Where(t => t != target)
+                : mine.Contains(target) ? kind.Where(t => !t.Equals(target))
                 : kind.Append(target)
             );
         }
@@ -939,25 +924,24 @@ public partial class DatasetEditor : Window, ICommandView
     }
 
     /// <summary>Everything from one row, column or cell to another, in the grid's order. Cells make a rectangle.</summary>
-    private IEnumerable<AtomRef> Range(AtomRef from, AtomRef to)
+    private IEnumerable<IAtomRef> Range(IAtomRef from, IAtomRef to)
     {
         var rows = _views.Select(v => v.Row.Id).ToList();
-        return (from.Id, to.Id) switch
+        return (from, to) switch
         {
             (CellId a, CellId b) => Span(rows, a.RowRef, b.RowRef)
                 .SelectMany(r =>
-                    Span(_columnRefs, a.ColumnRef, b.ColumnRef).Select(c => Cell(new CellId(r, c)))
-                ),
-            (SnowTag a, SnowTag b) when from.Type == typeof(DataRow) => Span(rows, a, b)
-                .Select(DataRow.ById.Ref),
-            (SnowTag a, SnowTag b) when from.Type == typeof(DataColumn) => Span(_columnRefs, a, b)
-                .Select(Column),
+                    Span(_columnRefs, a.ColumnRef, b.ColumnRef).Select(c => new CellId(r, c))
+                )
+                .Cast<IAtomRef>(),
+            (Ref<DataRow> a, Ref<DataRow> b) => Span(rows, a, b).Cast<IAtomRef>(),
+            (Ref<DataColumn> a, Ref<DataColumn> b) => Span(_columnRefs, a, b).Cast<IAtomRef>(),
             _ => [to],
         };
     }
 
     // The ids from one to the other, both included, in order. Just the last if either is gone.
-    private static IEnumerable<SnowTag> Span(List<SnowTag> order, SnowTag from, SnowTag to)
+    private static IEnumerable<T> Span<T>(List<T> order, T from, T to)
     {
         int i = order.IndexOf(from);
         int j = order.IndexOf(to);
@@ -969,7 +953,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// If it was already selected, it does nothing, so as not to clear the selection.
     /// Right clicking on empty space keeps the selection.
     /// </summary>
-    private void SelectForMenu(AtomRef target)
+    private void SelectForMenu(IAtomRef target)
     {
         if (!MySelection().Contains(target))
             SelectTarget(target);
@@ -978,11 +962,11 @@ public partial class DatasetEditor : Window, ICommandView
     /// <summary>
     /// Highlights the selected rows, columns and cells in the colors <see cref="LocalSelection.SelectionColors"/> gives them.
     /// </summary>
-    private void SyncSelection(IAtomReader R, SnowTag datasetId)
+    private void SyncSelection(IAtomReader R, Ref<Dataset> datasetId)
     {
-        var colors = R.SelectionColors(ViewPlace.Of(this, Dataset.ById.Ref(datasetId)));
+        var colors = R.SelectionColors(ViewPlace.Of(this, datasetId));
         foreach (var header in _headerCells)
-            SelectionHighlight.Outline(header, "panel", colors, Column(header.ColumnRef));
+            SelectionHighlight.Outline(header, "panel", colors, header.ColumnRef);
         foreach (var view in _views)
         {
             SelectionHighlight.Outline(view.Header, "panel", colors, view.Target);
@@ -991,9 +975,9 @@ public partial class DatasetEditor : Window, ICommandView
                     view.Cells[i],
                     "normal",
                     colors,
-                    Cell(new CellId(view.Row.Id, _columnRefs[i])),
+                    new CellId(view.Row.Id, _columnRefs[i]),
                     view.Target,
-                    Column(_columnRefs[i])
+                    _columnRefs[i]
                 );
         }
     }
@@ -1070,7 +1054,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void OnImportPressed()
     {
-        if (_currentDataset == null)
+        if (Atoms.R.Get(Dataset.ById, ShownDatasetRef.Value) is not { } dataset)
             return;
 
         var dialog = new FileDialog
@@ -1084,7 +1068,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         dialog.FileSelected += path =>
         {
-            CsvImport.Replace(this, Atoms.R, _currentDataset, path);
+            CsvImport.Replace(this, Atoms.R, dataset, path);
             dialog.QueueFree();
         };
         dialog.Canceled += dialog.QueueFree;
@@ -1093,7 +1077,7 @@ public partial class DatasetEditor : Window, ICommandView
         dialog.PopupCentered(new Vector2I(700, 450));
     }
 
-    private void OnColumnWidthDragged(SnowTag columnId, float width)
+    private void OnColumnWidthDragged(Ref<DataColumn> columnId, float width)
     {
         int index = _columnRefs.IndexOf(columnId);
         if (index < 0)

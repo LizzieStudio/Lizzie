@@ -21,6 +21,13 @@ public static class JsonWalker
             return;
         }
 
+        // A Ref's converter writes its SnowTag.
+        if (value is IRef atom)
+        {
+            Visit(atom.Tag, visit);
+            return;
+        }
+
         var info = LizzieJson.EventOptions.GetTypeInfo(value.GetType());
 
         switch (info.Kind)

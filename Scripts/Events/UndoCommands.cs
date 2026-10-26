@@ -82,7 +82,7 @@ public static class UndoCommands
             Issue(
                 UndoChanges,
                 TimelineUndo.Undo,
-                UndoScopes.Changing(atoms.Select(AtomRef.To).ToHashSet())
+                UndoScopes.Changing(atoms.Select(IAtomRef.To).ToHashSet())
             );
             return null;
         },

@@ -48,7 +48,7 @@ public class UndoScenarioTests
                 Group = group,
                 End = close ? GroupEnd.Closed : GroupEnd.None,
                 Place = place,
-                Writes = [new Prototype { Id = atom }],
+                Writes = [new Prototype { Id = new(atom) }],
             }
         );
         return id;
@@ -635,7 +635,7 @@ public class UndoScenarioTests
     {
         Act(Admin, atom: 1);
 
-        Assert.Null(Undo(UndoScopes.Changing(new HashSet<AtomRef> { Prototype.ById.Ref(1) })));
+        Assert.Null(Undo(UndoScopes.Changing(new HashSet<IAtomRef> { new Ref<Prototype>(1) })));
     }
 
     /// <summary>An unset is in scope when what it unsets is, so Undo This brings an unset atom back.</summary>
@@ -644,11 +644,11 @@ public class UndoScenarioTests
     {
         Act(Admin, atom: 1);
         var id = NextId(Me);
-        _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [new Prototype { Id = 1 }] });
+        _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [new Prototype { Id = new(1) }] });
 
         Assert.Equal(
             id,
-            Changed(Undo(UndoScopes.Changing(new HashSet<AtomRef> { Prototype.ById.Ref(1) })))
+            Changed(Undo(UndoScopes.Changing(new HashSet<IAtomRef> { new Ref<Prototype>(1) })))
         );
     }
 
@@ -703,7 +703,7 @@ public class UndoScenarioTests
                 [
                     new Selection
                     {
-                        Id = 3,
+                        Id = new(3),
                         Player = Other,
                         Place = Here,
                     },

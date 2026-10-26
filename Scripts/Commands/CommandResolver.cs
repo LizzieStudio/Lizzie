@@ -26,14 +26,14 @@ public static class CommandResolver
     /// </param>
     public static List<(
         Command Command,
-        IReadOnlyList<AtomRef> Targets,
+        IReadOnlyList<IAtomRef> Targets,
         IReadOnlyList<string> Blocked
     )> ForMenu(CommandContext context, IEnumerable<Command> commands, bool all = false)
     {
         var items =
             new List<(
                 Command Command,
-                IReadOnlyList<AtomRef> Targets,
+                IReadOnlyList<IAtomRef> Targets,
                 IReadOnlyList<string> Blocked
             )>();
         foreach (var command in commands)
@@ -99,7 +99,7 @@ public static class CommandResolver
     /// Every command that keyboard shortcuts could run in <paramref name="context"/>,
     /// with the targets those shortcuts act on.
     /// </summary>
-    private static IEnumerable<(Command Command, List<AtomRef> Targets)> ForKeys(
+    private static IEnumerable<(Command Command, List<IAtomRef> Targets)> ForKeys(
         CommandContext context
     ) =>
         CommandList
@@ -125,7 +125,7 @@ public static class CommandResolver
     /// and filters it by those that return true when passed to <see cref="Command.CanActOn"/>.
     /// </summary>
     /// <param name="R">What <see cref="Command.CanActOn"/> reads through, like a Watch's reader.</param>
-    public static List<AtomRef> TargetsFor(
+    public static List<IAtomRef> TargetsFor(
         Command command,
         CommandContext context,
         IAtomReader R,
@@ -147,7 +147,7 @@ public static class CommandResolver
             .Distinct()
             .ToList();
 
-    private static IEnumerable<AtomRef> Candidates(
+    private static IEnumerable<IAtomRef> Candidates(
         Command command,
         CommandContext context,
         bool menu
