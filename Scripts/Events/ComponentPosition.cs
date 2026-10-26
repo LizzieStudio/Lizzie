@@ -16,9 +16,10 @@ public record ComponentPosition : StagedAtom
     public static readonly StagedId<ComponentPosition> ById = new(r => r.Id);
 
     /// <summary>
-    /// The component's tag, created with <see cref="SnowTag.Create"/>, which its <see cref="Component"/> shares.
+    /// The <see cref="Component"/> this is the position of, which is the same in every stage.
+    /// Create one with <see cref="Ref{T}.Create"/> for the position and the <see cref="Component"/> both.
     /// </summary>
-    public required SnowTag Id { get; init; }
+    public required Ref<Component> Id { get; init; }
 
     /// <summary>
     /// The components each stage shows.
@@ -30,7 +31,7 @@ public record ComponentPosition : StagedAtom
     /// <see cref="SnowTag.Empty"/> holds the ones on the table.
     /// </summary>
     public static readonly Lookup<ComponentPosition, StageKey<ComponentPosition>> ByContainer = new(
-        s => s.In(s.ContainerRef)
+        s => s.ContainerKey
     );
 
     /// <summary>
@@ -39,12 +40,12 @@ public record ComponentPosition : StagedAtom
     public static readonly Written<ComponentPosition> WrittenIn = new();
 
     /// <summary>
-    /// The key of the component <paramref name="id"/> in this component's stage.
+    /// The key of <paramref name="component"/> in this component's stage.
     /// </summary>
     /// <remarks>
     /// This is useful when dealing with containers, since you can get the contents in the container's stage.
     /// </remarks>
-    public StageKey<ComponentPosition> In(SnowTag id) => new(StageRef, id);
+    public StageKey<ComponentPosition> In(Ref<Component> component) => new(StageRef, component);
 
     /// <summary>
     /// Whether resetting its stage would delete the component in <paramref name="key"/>.
@@ -125,6 +126,13 @@ public record ComponentPosition : StagedAtom
     public bool IsOnTable => ContainerRef == SnowTag.Empty;
 
     /// <summary>
+    /// Its container's key in its stage, which <see cref="ByContainer"/> lists it under.
+    /// A hand or a cursor isn't a component, so its tag stands in for one here.
+    /// </summary>
+    [JsonIgnore]
+    public StageKey<ComponentPosition> ContainerKey => In(new(ContainerRef));
+
+    /// <summary>
     /// The components whose <see cref="ContainerRef"/> is this one.
     /// </summary>
     /// <remarks>
@@ -141,7 +149,7 @@ public record ComponentPosition : StagedAtom
     /// </remarks>
     public override IEnumerable<IAtomRef> Containers(IAtomReader R) =>
         // A hand or a cursor isn't a component, so it isn't found.
-        !IsOnTable && R.Get(ById, In(ContainerRef)) is { } container
+        !IsOnTable && R.Get(ById, ContainerKey) is { } container
             ? [IAtomRef.To(container)]
             : [];
 

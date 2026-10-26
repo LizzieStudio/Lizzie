@@ -9,7 +9,7 @@ public class GoesOnResetTests
 {
     private static readonly Ref<Stage> Blueprint = new(1),
         Table = new(2);
-    private static readonly SnowTag Card = new(3);
+    private static readonly Ref<Component> Card = new(3);
 
     private static readonly Stage[] Stages =
     [

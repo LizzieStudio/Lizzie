@@ -33,10 +33,10 @@ public class AtomStoreTests
     private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
 
     private static StageKey<ComponentPosition> Key(int counter) =>
-        new(Ref<Stage>.Empty, Tag(counter));
+        new(Ref<Stage>.Empty, new(Tag(counter)));
 
     private static ComponentPosition Component(int id, int container = 0) =>
-        new() { Id = Tag(id), ContainerRef = container == 0 ? SnowTag.Empty : Tag(container) };
+        new() { Id = new(Tag(id)), ContainerRef = container == 0 ? SnowTag.Empty : Tag(container) };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
     private TimelineEvent Write(params ComponentPosition[] atoms) =>
@@ -89,7 +89,7 @@ public class AtomStoreTests
     private static void AssertIds(IEnumerable<ComponentPosition> atoms, params int[] expected)
     {
         var ids = atoms.Select(r => r.Id).Order().ToArray();
-        var want = expected.Select(Tag).Order().ToArray();
+        var want = expected.Select(n => new Ref<Component>(Tag(n))).Order().ToArray();
         Assert.True(
             ids.SequenceEqual(want),
             $"Found the wrong atoms.\n\nExpected: {string.Join(", ", want)}\nFound:    {string.Join(", ", ids)}"

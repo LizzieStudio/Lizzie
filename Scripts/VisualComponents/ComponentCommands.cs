@@ -139,7 +139,7 @@ public static class ComponentCommands
             .GroupBy(c =>
                 R.IsInHand(c)
                     ? (c.ContainerRef, 0, 0, c.Id)
-                    : (c.ContainerRef, c.X, c.Z, SnowTag.Empty)
+                    : (c.ContainerRef, c.X, c.Z, Ref<Component>.Empty)
             )
             .SelectMany(pile =>
             {

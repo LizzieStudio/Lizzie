@@ -35,7 +35,7 @@ public class AtomRefTests
     [Fact]
     public void ARefToAStagedAtomKeepsItsStage() =>
         AssertRoundTrips(
-            new StageKey<ComponentPosition>(new(5), new SnowTag(6)),
+            new StageKey<ComponentPosition>(new(5), new(6)),
             """{"type":"ComponentPosition","id":{"stageRef":5,"componentRef":6}}"""
         );
 
@@ -53,7 +53,7 @@ public class AtomRefTests
     public void ASelectionKeepsItsRefs()
     {
         var targets = ImmutableHashSet.Create<IAtomRef>(
-            new StageKey<ComponentPosition>(new(2), new SnowTag(1)),
+            new StageKey<ComponentPosition>(new(2), new(1)),
             new Ref<DataColumn>(1)
         );
         var json = JsonSerializer.Serialize<Atom>(

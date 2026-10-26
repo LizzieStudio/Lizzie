@@ -18,7 +18,7 @@ public partial class StageView : Node3D
     /// </summary>
     public Ref<Stage> StageRef { get; init; }
 
-    private readonly Dictionary<SnowTag, VisualComponentBase> _components = new();
+    private readonly Dictionary<Ref<Component>, VisualComponentBase> _components = new();
 
     // Cached here to prevent reading it from Godot, which got expensive.
     private readonly List<VisualComponentBase> _nodes = new();
@@ -41,9 +41,9 @@ public partial class StageView : Node3D
         Atoms.R.Watch(this, Sync);
     }
 
-    /// <summary>The node for a component atom, or null.</summary>
-    public VisualComponentBase GetComponent(SnowTag reference) =>
-        _components.GetValueOrDefault(reference);
+    /// <summary>The node for a component, or null.</summary>
+    public VisualComponentBase GetComponent(Ref<Component> component) =>
+        _components.GetValueOrDefault(component);
 
     /// <summary>Called by components after they apply their atom.</summary>
     public void NotifyChanged() => Changed?.Invoke();
@@ -86,7 +86,7 @@ public partial class StageView : Node3D
         {
             if (!_components.TryGetValue(s.Id, out var node))
                 continue;
-            var parent = _components.GetValueOrDefault(s.ContainerRef) ?? (Node)this;
+            var parent = _components.GetValueOrDefault(new(s.ContainerRef)) ?? (Node)this;
             if (node.GetParent() != parent)
                 node.Reparent(parent);
         }
@@ -94,7 +94,7 @@ public partial class StageView : Node3D
         Changed?.Invoke();
     }
 
-    private void RemoveComponent(SnowTag id)
+    private void RemoveComponent(Ref<Component> id)
     {
         if (!_components.Remove(id, out var component))
             return;
@@ -107,7 +107,7 @@ public partial class StageView : Node3D
         ComponentRemoved?.Invoke(component);
     }
 
-    private void AddComponent(SnowTag id, string scenePath)
+    private void AddComponent(Ref<Component> id, string scenePath)
     {
         var scene = GD.Load<PackedScene>(scenePath).Instantiate();
         if (scene is not VisualComponentBase component)

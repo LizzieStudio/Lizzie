@@ -66,7 +66,7 @@ public partial class HandRow : Control
     /// <summary>
     /// The card under the mouse, or null.
     /// </summary>
-    public SnowTag? HoveredCard() =>
+    public Ref<Component>? HoveredCard() =>
         Under(GetViewport()) == this
             ? CardAt(GetLocalMousePosition().X)?.Reference.ComponentRef
             : null;

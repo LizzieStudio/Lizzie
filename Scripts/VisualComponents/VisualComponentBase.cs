@@ -260,12 +260,12 @@ public abstract partial class VisualComponentBase : Area3D
 
     public virtual Ref<Prototype> PrototypeRef { get; set; }
 
-    private SnowTag _componentRef = SnowTag.Create();
+    private Ref<Component> _componentRef = Ref<Component>.Create();
 
     /// <summary>
-    /// The component atom this node shows. Must be set before adding the node to the tree.
+    /// The component this node shows. Must be set before adding the node to the tree.
     /// </summary>
-    public SnowTag ComponentRef
+    public Ref<Component> ComponentRef
     {
         get => _componentRef;
         set

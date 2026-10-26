@@ -20,7 +20,7 @@ public class SaveCompactionTests
     private static SnowportId Id(long clock, byte source = Snowport.HostSource) =>
         new(clock, source);
 
-    private static ComponentPosition Position(int id) => new() { Id = Tag(id) };
+    private static ComponentPosition Position(int id) => new() { Id = Tag<Component>(id) };
 
     private static Component Component(int id) => new() { Id = Tag<Component>(id) };
 
@@ -36,7 +36,7 @@ public class SaveCompactionTests
     private static SnowTag IdOf(Atom atom) =>
         atom switch
         {
-            ComponentPosition s => s.Id,
+            ComponentPosition s => s.Id.Tag,
             Component c => c.Id.Tag,
             Stage s => s.Id.Tag,
             Prototype p => p.Id.Tag,
@@ -299,11 +299,11 @@ public class SaveCompactionTests
         var back = Load(json).Writes.Cast<ComponentPosition>().ToArray();
 
         // in order: 7 < 9 < (source 3, 5)
-        Assert.Equal(new SnowTag(2), back[0].Id);
+        Assert.Equal(new SnowTag(2), back[0].Id.Tag);
         Assert.Equal(new SnowTag(3), back[0].ContainerRef);
-        Assert.Equal(new SnowTag(1), back[1].Id);
+        Assert.Equal(new SnowTag(1), back[1].Id.Tag);
         Assert.Equal(new SnowTag(2), back[1].ContainerRef);
-        Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.source));
+        Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.Tag.source));
     }
 
     [Fact]

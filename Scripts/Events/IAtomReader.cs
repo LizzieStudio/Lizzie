@@ -218,10 +218,10 @@ public static class AtomReaderExtensions
     }
 
     /// <summary>
-    /// Gets the <see cref="Component"/> that <paramref name="s"/> places, which shares its tag.
+    /// Gets the <see cref="Component"/> that <paramref name="s"/> places.
     /// </summary>
     public static Component GetComponent(this IAtomReader R, ComponentPosition s) =>
-        R.Get(Component.ById, new(s.Id));
+        R.Get(Component.ById, s.Id);
 
     /// <summary>
     /// Gets the <see cref="Prototype"/> for <paramref name="s"/>, or null.
@@ -299,7 +299,7 @@ public static class AtomReaderExtensions
     /// </summary>
     public static bool IsInDeck(this IAtomReader R, ComponentPosition c) =>
         !c.IsOnTable
-        && R.Get(ComponentPosition.ById, c.In(c.ContainerRef)) is { } container
+        && R.Get(ComponentPosition.ById, c.ContainerKey) is { } container
         && R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
 
     /// <summary>

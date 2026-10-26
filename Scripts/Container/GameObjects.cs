@@ -238,7 +238,8 @@ public partial class GameObjects : Node3D, ICommandView
         _gameController = gameController;
     }
 
-    public VisualComponentBase GetComponent(SnowTag reference) => _view.GetComponent(reference);
+    public VisualComponentBase GetComponent(Ref<Component> component) =>
+        _view.GetComponent(component);
 
     /// <summary>The nodes for the given atoms, skipping any that have none yet.</summary>
     private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentPosition> atoms) =>
@@ -356,9 +357,9 @@ public partial class GameObjects : Node3D, ICommandView
 
     private void AddComponentToScene(VisualComponentBase component)
     {
-        if (component.ComponentRef == SnowTag.Empty)
+        if (component.ComponentRef.IsEmpty)
         {
-            GD.PrintErr("component somehow lost its SnowTag");
+            GD.PrintErr("component somehow lost its ComponentRef");
             return;
         }
 
@@ -377,7 +378,7 @@ public partial class GameObjects : Node3D, ICommandView
         {
             var self = new ComponentPosition
             {
-                Id = SnowTag.Create(),
+                Id = Ref<Component>.Create(),
                 StageRef = component.Key.StageRef,
                 Position = component.Position,
                 Rotation = component.Rotation,
@@ -386,7 +387,7 @@ public partial class GameObjects : Node3D, ICommandView
             atoms.Add(
                 new Component
                 {
-                    Id = new(self.Id),
+                    Id = self.Id,
                     PrototypeRef = component.PrototypeRef,
                     Item = component.Item,
                 }
@@ -514,11 +515,11 @@ public partial class GameObjects : Node3D, ICommandView
 
     #region Selection
     /// <summary>The components the local player has selected, read from their selection atom.</summary>
-    private HashSet<SnowTag> GetSelection() =>
+    private HashSet<Ref<Component>> GetSelection() =>
         Atoms.R.GetSelection(ComponentPosition.ById, this).Select(k => k.ComponentRef).ToHashSet();
 
     /// <summary>Replaces the local player's selected components.</summary>
-    public void SetSelection(IEnumerable<SnowTag> components) =>
+    public void SetSelection(IEnumerable<Ref<Component>> components) =>
         Atoms.R.SetSelection(ComponentPosition.ById, components.Select(ShownKey), this);
 
     /// <summary>
@@ -552,7 +553,9 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private void UpdateStackingHeights()
     {
-        var table = Nodes(Atoms.R.Get(ComponentPosition.ByContainer, ShownKey(SnowTag.Empty)))
+        var table = Nodes(
+                Atoms.R.Get(ComponentPosition.ByContainer, ShownKey(Ref<Component>.Empty))
+            )
             .ToArray();
         var floors = Stacking.Floors(table, out _tableTops);
 
@@ -720,7 +723,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// A press on a selected component keeps the selection, and anything else replaces the selection.
     /// </para>
     /// </summary>
-    public void Press(SnowTag? component)
+    public void Press(Ref<Component>? component)
     {
         var selection = GetSelection();
         SetSelection(
@@ -846,7 +849,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// <param name="cardRef">The card that was pressed.</param>
     /// <param name="press">Where the press happened, in the viewport.</param>
     /// <returns>The drag, or nothing if the card can't be picked up.</returns>
-    public Variant GrabFromHand(HandRow row, SnowTag cardRef, Vector2 press)
+    public Variant GrabFromHand(HandRow row, Ref<Component> cardRef, Vector2 press)
     {
         if (CursorMode != CursorMode.Normal || GetComponent(cardRef) is not { } card)
             return default;
@@ -952,14 +955,14 @@ public partial class GameObjects : Node3D, ICommandView
         return Nodes(
             Atoms
                 .R.Cursors()
-                .SelectMany(c => Atoms.R.Get(ComponentPosition.ByContainer, ShownKey(c)))
+                .SelectMany(c => Atoms.R.Get(ComponentPosition.ByContainer, ShownKey(new(c))))
         );
     }
 
     /// <summary>
     /// The key of <paramref name="id"/> in the shown stage.
     /// </summary>
-    private StageKey<ComponentPosition> ShownKey(SnowTag id) => new(_view.StageRef, id);
+    private StageKey<ComponentPosition> ShownKey(Ref<Component> id) => new(_view.StageRef, id);
 
     /// <summary>
     /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.
@@ -1019,7 +1022,7 @@ public partial class GameObjects : Node3D, ICommandView
         var ordered = dropped.OrderBy(s => s.ZOrder).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
         var decks = Atoms
-            .R.Get(ComponentPosition.ByContainer, ShownKey(SnowTag.Empty))
+            .R.Get(ComponentPosition.ByContainer, ShownKey(Ref<Component>.Empty))
             .Where(s => Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
             .ToList();
 
@@ -1045,7 +1048,7 @@ public partial class GameObjects : Node3D, ICommandView
                         ? placed
                         : placed with
                         {
-                            ContainerRef = deck.Id,
+                            ContainerRef = deck.Id.Tag,
                             X = 0,
                             Z = 0,
                             Rotation = placed.Rotation with
@@ -1066,7 +1069,7 @@ public partial class GameObjects : Node3D, ICommandView
     private (int X, int Z) SnapDelta(List<ComponentPosition> dropped)
     {
         var targets = Atoms
-            .R.Get(ComponentPosition.ByContainer, ShownKey(SnowTag.Empty))
+            .R.Get(ComponentPosition.ByContainer, ShownKey(Ref<Component>.Empty))
             .Where(s =>
                 Atoms.R.Kind(s)
                     is VisualComponentBase.VisualComponentType.Printed

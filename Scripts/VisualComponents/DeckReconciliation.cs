@@ -18,17 +18,17 @@ public static class DeckReconciliation
     /// The changes that bring every deck of <paramref name="prototype"/> in line with <paramref name="parameters"/>.
     /// </summary>
     /// <param name="parameters">The prototype's parameters, which may be newer than the ones written.</param>
-    /// <param name="newTag">Makes the Ids of new cards, for testing.</param>
+    /// <param name="newId">Makes the Ids of new cards, for testing.</param>
     /// <param name="stamp">Orders new cards under the others, for testing.</param>
     public static List<IChange> Changes(
         IAtomReader R,
         Ref<Prototype> prototype,
         PrintedParameters parameters,
-        Func<SnowTag> newTag = null,
+        Func<Ref<Component>> newId = null,
         SnowportId? stamp = null
     )
     {
-        var snowTagCreate = newTag ?? SnowTag.Create;
+        var idCreate = newId ?? Ref<Component>.Create;
         var snowportStamp = stamp ?? SnowportId.Create();
 
         IEnumerable<Stage> Below(Ref<Stage> parent) =>
@@ -51,7 +51,7 @@ public static class DeckReconciliation
                         )
                     )
             )
-            .SelectMany(deck => Deck(R, deck, prototype, wanted, snowTagCreate, snowportStamp))
+            .SelectMany(deck => Deck(R, deck, prototype, wanted, idCreate, snowportStamp))
             .ToList();
 
         var retiring = changes
@@ -60,7 +60,7 @@ public static class DeckReconciliation
             .Select(c => c.Id)
             .ToHashSet();
         bool IsRetired(ComponentPosition c) =>
-            retiring.Contains(new(c.Id))
+            retiring.Contains(c.Id)
             || R.GetComponent(c) is { Retired: true } component
                 && component.PrototypeRef == prototype;
         changes.AddRange(
@@ -80,25 +80,25 @@ public static class DeckReconciliation
         ComponentPosition deck,
         Ref<Prototype> prototype,
         PrintedItemRef item,
-        Func<SnowTag> newTag = null,
+        Func<Ref<Component>> newId = null,
         ZOrder order = default
     )
     {
-        var tag = (newTag ?? SnowTag.Create)();
+        var id = (newId ?? Ref<Component>.Create)();
         return
         [
             new Component
             {
-                Id = new(tag),
+                Id = id,
                 PrototypeRef = prototype,
                 Item = item,
-                DeckRef = new(deck.Id),
+                DeckRef = deck.Id,
             },
             new ComponentPosition
             {
-                Id = tag,
+                Id = id,
                 StageRef = deck.StageRef,
-                ContainerRef = deck.Id,
+                ContainerRef = deck.Id.Tag,
                 Rotation = new Vector3(0, 0, Mathf.Pi),
                 ZOrder = order,
             },
@@ -159,7 +159,7 @@ public static class DeckReconciliation
         ComponentPosition deck,
         Ref<Prototype> prototype,
         IReadOnlyList<PrintedItemRef> wanted,
-        Func<SnowTag> newTag,
+        Func<Ref<Component>> newId,
         SnowportId stamp
     )
     {
@@ -168,8 +168,8 @@ public static class DeckReconciliation
             .ToHashSet();
 
         // The cards out of the deck pair first, so the deck retires the cards it holds.
-        var issued = R.Get(Component.ByDeck, new Ref<Component>(deck.Id))
-            .OrderBy(card => held.Contains(card.Id.Tag))
+        var issued = R.Get(Component.ByDeck, deck.Id)
+            .OrderBy(card => held.Contains(card.Id))
             .ToList();
         var (pairs, unwanted, missing) = Match(
             issued.Select(card => (PrintedItemRef)card.Item).ToList(),
@@ -190,7 +190,7 @@ public static class DeckReconciliation
                     deck,
                     prototype,
                     wanted[w],
-                    newTag,
+                    newId,
                     new ZOrder(ZTarget.Bottom, suborder--, stamp)
                 )
             );

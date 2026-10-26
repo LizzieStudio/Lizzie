@@ -14,13 +14,13 @@ public class HandInsertTests
             .Range(1, n)
             .Select(i => new ComponentPosition
             {
-                Id = new SnowTag(i),
+                Id = new(i),
                 ContainerRef = Hand,
                 ZOrder = new ZOrder(ZTarget.Top, 0, new SnowportId(((long)i << 8) | 1)),
             })
             .ToList();
 
-    private static ComponentPosition Card(int id) => new() { Id = new SnowTag(id) };
+    private static ComponentPosition Card(int id) => new() { Id = new(id) };
 
     // The hand's order once the atoms are applied.
     private static int[] Order(List<ComponentPosition> hand, IEnumerable<ComponentPosition> written)
@@ -31,7 +31,7 @@ public class HandInsertTests
         return all
             .Values.Where(c => c.ContainerRef == Hand)
             .OrderBy(c => c.ZOrder)
-            .Select(c => (int)c.Id)
+            .Select(c => (int)c.Id.Tag)
             .ToArray();
     }
 
@@ -45,7 +45,7 @@ public class HandInsertTests
 
         Assert.Equal(new[] { 1, 2, 9, 3, 4 }, Order(hand, written));
         // The cards before the drop keep their order without being written.
-        Assert.Equal(new[] { 9, 3, 4 }, written.Select(c => (int)c.Id));
+        Assert.Equal(new[] { 9, 3, 4 }, written.Select(c => (int)c.Id.Tag));
     }
 
     [Fact]

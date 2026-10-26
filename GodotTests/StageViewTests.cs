@@ -13,7 +13,6 @@ public class StageViewTests
     public async Task ACardShowsWhatItBecomes()
     {
         var stage = Ref<Stage>.Create();
-        var tag = SnowTag.Create();
         var prototype = new Prototype
         {
             Id = Ref<Prototype>.Create(),
@@ -21,7 +20,7 @@ public class StageViewTests
         };
         var card = new Component
         {
-            Id = new(tag),
+            Id = Ref<Component>.Create(),
             PrototypeRef = prototype.Id,
             Item = new PrintedItemRef(new FrameFace(1), null),
         };
@@ -29,7 +28,7 @@ public class StageViewTests
             new Stage { Id = stage },
             prototype,
             card,
-            new ComponentPosition { Id = tag, StageRef = stage }
+            new ComponentPosition { Id = card.Id, StageRef = stage }
         );
         var view = new StageView { StageRef = stage };
         using var runner = ISceneRunner.Load(view, true);
@@ -39,7 +38,7 @@ public class StageViewTests
         Atoms.R.WriteAdmin(card with { Item = becomes });
         await runner.AwaitIdleFrame();
 
-        var shown = view.GetComponent(tag)?.Item;
+        var shown = view.GetComponent(card.Id)?.Item;
         AssertThat(Equals(shown, becomes))
             .OverrideFailureMessage(
                 $"The card shows {shown?.ToString() ?? "nothing"}, expected {becomes}."

@@ -18,7 +18,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
             Atom (s, i) =>
                 s with
                 {
-                    ContainerRef = ComponentRef,
+                    ContainerRef = ComponentRef.Tag,
                     ZOrder = new ZOrder(ZTarget.Top, i, stamp),
                 }
         );

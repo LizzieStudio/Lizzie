@@ -15,8 +15,8 @@ public class DeckReconciliationTests
     private static readonly Ref<Prototype> Proto = new(1);
     private static readonly Ref<Stage> Root = new(2),
         Child = new(3);
-    private static readonly SnowTag Deck = new(4),
-        Numbers = new(6),
+    private static readonly Ref<Component> Deck = new(4);
+    private static readonly SnowTag Numbers = new(6),
         Backs = new(7);
 
     private static QuickFace Number(string value) => new(Numbers, value);
@@ -38,7 +38,7 @@ public class DeckReconciliationTests
         {
             new Stage { Id = Root },
             new Stage { Id = Child, ParentRef = Root },
-            new Component { Id = new(Deck), PrototypeRef = Proto },
+            new Component { Id = Deck, PrototypeRef = Proto },
             new ComponentPosition { Id = Deck, StageRef = Root },
         };
         for (int i = 0; i < values.Length; i++)
@@ -49,15 +49,15 @@ public class DeckReconciliationTests
                     Id = new(20 + i),
                     PrototypeRef = Proto,
                     Item = Card(values[i]),
-                    DeckRef = new(Deck),
+                    DeckRef = Deck,
                 }
             );
             atoms.Add(
                 new ComponentPosition
                 {
-                    Id = new SnowTag(20 + i),
+                    Id = new(20 + i),
                     StageRef = Root,
-                    ContainerRef = onTable.Contains(i) ? SnowTag.Empty : Deck,
+                    ContainerRef = onTable.Contains(i) ? SnowTag.Empty : Deck.Tag,
                 }
             );
         }
@@ -70,7 +70,7 @@ public class DeckReconciliationTests
 
     /// <summary>Moves card <paramref name="card"/> onto the table in <paramref name="stage"/>, as a write of its own.</summary>
     private static List<Atom> MovedIn(List<Atom> atoms, Ref<Stage> stage, int card) =>
-        [.. atoms, new ComponentPosition { Id = new SnowTag(20 + card), StageRef = stage }];
+        [.. atoms, new ComponentPosition { Id = new(20 + card), StageRef = stage }];
 
     /// <summary>Retires card <paramref name="card"/>.</summary>
     private static List<Atom> Retired(List<Atom> atoms, int card) =>
@@ -92,7 +92,7 @@ public class DeckReconciliationTests
             new ListReader([.. atoms]),
             Proto,
             Cards(values),
-            () => new SnowTag(next++),
+            () => new Ref<Component>(next++),
             new SnowportId(1 << 8)
         );
     }
@@ -114,9 +114,9 @@ public class DeckReconciliationTests
         var position = Assert.Single(changes.OfType<ComponentPosition>());
         Assert.True(
             Equals(component.Item, Card("3"))
-                && component.DeckRef == new Ref<Component>(Deck)
-                && position.Id == component.Id.Tag
-                && position.ContainerRef == Deck
+                && component.DeckRef == Deck
+                && position.Id == component.Id
+                && position.ContainerRef == Deck.Tag
                 && position.StageRef == Root
                 && position.ZOrder.Target == ZTarget.Bottom,
             $"Adding 3 wrote {Describe(changes)}, expected card 3 at the bottom of the deck in the root."
@@ -279,7 +279,7 @@ public class DeckReconciliationTests
             changes.Count == retired.Length + removed.Length
                 && actualRetired.SequenceEqual(retired.Select(i => new Ref<Component>(i)))
                 && actualRemoved.SequenceEqual(
-                    removed.Select(r => (r.Stage, new SnowTag(r.Id))).Order()
+                    removed.Select(r => (r.Stage, new Ref<Component>(r.Id))).Order()
                 ),
             $"Wrote {Describe(changes)}.\n\nExpected only: components [{string.Join(", ", retired)}] retired, "
                 + $"and positions [{string.Join(", ", removed)}] removed, as (stage, position)."

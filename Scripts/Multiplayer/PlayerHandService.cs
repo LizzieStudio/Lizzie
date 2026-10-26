@@ -75,7 +75,7 @@ public static class PlayerHandService
 
         return R.Get(
                 ComponentPosition.ByContainer,
-                new StageKey<ComponentPosition>(stage, container)
+                new StageKey<ComponentPosition>(stage, new(container))
             )
             .OrderBy(s => s.ZOrder)
             .ToList();

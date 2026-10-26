@@ -18,7 +18,7 @@ public class StagedStoreTests
         public static readonly Lookup<Piece, Ref<Stage>> ByStage = new(p => p.StageRef);
         public static readonly Written<Piece> WrittenIn = new();
 
-        public required SnowTag Id { get; init; }
+        public required Ref<Component> Id { get; init; }
         public int X { get; init; }
     }
 
@@ -35,7 +35,8 @@ public class StagedStoreTests
     private static Ref<T> Tag<T>(int counter)
         where T : Atom => new(Tag(counter));
 
-    private static StageKey<Piece> Key(int stage, int id) => new(Tag<Stage>(stage), Tag(id));
+    private static StageKey<Piece> Key(int stage, int id) =>
+        new(Tag<Stage>(stage), Tag<Component>(id));
 
     private static Stage StageOf(int id, int parent = 0) =>
         new()
@@ -48,7 +49,7 @@ public class StagedStoreTests
         new()
         {
             StageRef = Tag<Stage>(stage),
-            Id = Tag(id),
+            Id = Tag<Component>(id),
             X = x,
             Removed = removed,
         };
@@ -115,7 +116,7 @@ public class StagedStoreTests
     private static void AssertIds(IEnumerable<Piece> atoms, params int[] expected)
     {
         var ids = atoms.Select(p => p.Id).Order().ToArray();
-        var want = expected.Select(Tag).Order().ToArray();
+        var want = expected.Select(n => Tag<Component>(n)).Order().ToArray();
         Assert.True(
             ids.SequenceEqual(want),
             $"Found the wrong atoms.\n\nExpected: {string.Join(", ", want)}\nFound:    {string.Join(", ", ids)}"

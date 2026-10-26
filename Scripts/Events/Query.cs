@@ -210,7 +210,7 @@ public class Lookup<T, K> : Query
 ///
 /// <code>public static readonly StagedId&lt;ComponentPosition&gt; ById = new(c => c.Id);</code>
 /// </summary>
-public sealed class StagedId<T>(Func<T, SnowTag> of)
+public sealed class StagedId<T>(Func<T, Ref<Component>> of)
     : Identity<T, StageKey<T>>(atom => new(atom.StageRef, of(atom))),
         IStagedId
     where T : StagedAtom;

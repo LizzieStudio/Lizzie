@@ -39,7 +39,7 @@ public class StageTests
     private static ComponentPosition Position(int id, int stage, int x) =>
         new()
         {
-            Id = Tag(id).Tag,
+            Id = new(Tag(id).Tag),
             StageRef = Tag(stage),
             X = x,
         };

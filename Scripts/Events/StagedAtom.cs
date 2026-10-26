@@ -40,5 +40,6 @@ public abstract record StagedAtom : Atom
 /// <summary>
 /// The id of a <see cref="StagedAtom"/> of <typeparamref name="T"/>.
 /// </summary>
-public readonly record struct StageKey<T>(Ref<Stage> StageRef, SnowTag ComponentRef) : IAtomRef<T>
+public readonly record struct StageKey<T>(Ref<Stage> StageRef, Ref<Component> ComponentRef)
+    : IAtomRef<T>
     where T : StagedAtom;

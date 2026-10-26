@@ -13,12 +13,12 @@ public class DeckContainmentTests
 {
     private static readonly Ref<Prototype> DeckProto = new(10);
     private static readonly Ref<Prototype> BagProto = new(11);
-    private static readonly SnowTag Deck = new(20);
-    private static readonly SnowTag Bag = new(21);
+    private static readonly Ref<Component> Deck = new(20);
+    private static readonly Ref<Component> Bag = new(21);
     private static readonly SnowTag Hand = new(30);
 
     private static ComponentPosition State(
-        SnowTag id,
+        Ref<Component> id,
         SnowTag container = default,
         int order = 0,
         float yaw = 0
@@ -34,26 +34,26 @@ public class DeckContainmentTests
     private static Component Card(ComponentPosition s) =>
         new()
         {
-            Id = new(s.Id),
+            Id = s.Id,
             PrototypeRef = DeckProto,
             Item = new PrintedItemRef(null, null),
         };
 
     // A deck of three cards, a bag with a token in it, a loose token, and a token in a hand.
     private static readonly ComponentPosition TheDeck = State(Deck);
-    private static readonly ComponentPosition Bottom = State(new(2), Deck, 1);
-    private static readonly ComponentPosition Middle = State(new(3), Deck, 2);
-    private static readonly ComponentPosition Top = State(new(4), Deck, 3);
+    private static readonly ComponentPosition Bottom = State(new(2), Deck.Tag, 1);
+    private static readonly ComponentPosition Middle = State(new(3), Deck.Tag, 2);
+    private static readonly ComponentPosition Top = State(new(4), Deck.Tag, 3);
     private static readonly ComponentPosition TheBag = State(Bag);
-    private static readonly ComponentPosition InBag = State(new(6), Bag);
+    private static readonly ComponentPosition InBag = State(new(6), Bag.Tag);
     private static readonly ComponentPosition Loose = State(new(7));
     private static readonly ComponentPosition InHand = State(new(8), Hand);
 
     private static readonly ListReader R = new(
         new Prototype { Id = DeckProto, Parameters = new PrintedParameters() },
         new Prototype { Id = BagProto, Parameters = new BagParameters() },
-        new Component { Id = new(Deck), PrototypeRef = DeckProto },
-        new Component { Id = new(Bag), PrototypeRef = BagProto },
+        new Component { Id = Deck, PrototypeRef = DeckProto },
+        new Component { Id = Bag, PrototypeRef = BagProto },
         Card(Bottom),
         Card(Middle),
         Card(Top),
