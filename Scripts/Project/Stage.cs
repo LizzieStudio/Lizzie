@@ -141,11 +141,7 @@ public sealed record Stage : Atom, IRanked
     {
         if (!Reachable(R, id))
             yield break;
-        for (
-            var stage = R.Get(ById, id);
-            stage != null;
-            stage = R.Get(ById, stage.ParentRef)
-        )
+        for (var stage = R.Get(ById, id); stage != null; stage = R.Get(ById, stage.ParentRef))
             yield return stage;
     }
 
@@ -154,10 +150,7 @@ public sealed record Stage : Atom, IRanked
     /// meaning neither it nor any of its ancestors have been removed.
     /// </summary>
     public static bool Reachable(IAtomReader R, Ref<Stage> id) =>
-        Reachable(
-            id,
-            s => R.Get(ById, s) is { Deleted: false } stage ? stage.ParentRef : null
-        );
+        Reachable(id, s => R.Get(ById, s) is { Deleted: false } stage ? stage.ParentRef : null);
 
     /// <inheritdoc cref="Reachable(IAtomReader, Ref{Stage})"/>
     /// <param name="parentOf">A stage's parent, or null if it's missing or deleted.</param>

@@ -6,8 +6,7 @@ namespace Lizzie;
 
 /// <summary>
 /// One component.
-/// 
-/// <para>
+///
 /// This atom represents the components unchanging state, like its prototype and which card inside that prototype.
 /// The <see cref="ComponentPosition"/>s, which share its tag, then sets its position in different <see cref="Stage"/>s.
 /// </summary>
