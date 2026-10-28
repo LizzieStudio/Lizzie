@@ -6,7 +6,7 @@ namespace Lizzie.Tests;
 
 public class HandInsertTests
 {
-    private static readonly SnowTag Hand = new(100);
+    private static readonly Ref<Seat> Seat = new(100);
 
     // Cards 1 to n already in the hand, in order, stacked by older stamps.
     private static List<ComponentPosition> HandOf(int n) =>
@@ -15,7 +15,7 @@ public class HandInsertTests
             .Select(i => new ComponentPosition
             {
                 Id = new(i),
-                ContainerRef = Hand,
+                Container = new InHand(Seat),
                 ZOrder = new ZOrder(ZTarget.Top, 0, new SnowportId(((long)i << 8) | 1)),
             })
             .ToList();
@@ -29,7 +29,7 @@ public class HandInsertTests
         foreach (var c in written)
             all[c.Id] = c;
         return all
-            .Values.Where(c => c.ContainerRef == Hand)
+            .Values.Where(c => c.Container == new InHand(Seat))
             .OrderBy(c => c.ZOrder)
             .Select(c => (int)c.Id.Tag)
             .ToArray();
@@ -41,7 +41,7 @@ public class HandInsertTests
     public void ACardGoesWhereItsDropped()
     {
         var hand = HandOf(4);
-        var written = PlayerHandService.Inserted(hand, [Card(9)], 2, Hand, Stamp).ToList();
+        var written = PlayerHandService.Inserted(hand, [Card(9)], 2, Seat, Stamp).ToList();
 
         Assert.Equal(new[] { 1, 2, 9, 3, 4 }, Order(hand, written));
         // The cards before the drop keep their order without being written.
@@ -52,7 +52,7 @@ public class HandInsertTests
     public void ACardMovesWithinItsHand()
     {
         var hand = HandOf(4);
-        var written = PlayerHandService.Inserted(hand, [hand[3]], 0, Hand, Stamp);
+        var written = PlayerHandService.Inserted(hand, [hand[3]], 0, Seat, Stamp);
 
         Assert.Equal(new[] { 4, 1, 2, 3 }, Order(hand, written));
     }
@@ -61,7 +61,7 @@ public class HandInsertTests
     public void SeveralCardsKeepTheirOrder()
     {
         var hand = HandOf(3);
-        var written = PlayerHandService.Inserted(hand, [Card(8), Card(9)], 1, Hand, Stamp);
+        var written = PlayerHandService.Inserted(hand, [Card(8), Card(9)], 1, Seat, Stamp);
 
         Assert.Equal(new[] { 1, 8, 9, 2, 3 }, Order(hand, written));
     }
@@ -70,7 +70,7 @@ public class HandInsertTests
     public void AnIndexPastTheEndAppends()
     {
         var hand = HandOf(2);
-        var written = PlayerHandService.Inserted(hand, [Card(9)], 10, Hand, Stamp).ToList();
+        var written = PlayerHandService.Inserted(hand, [Card(9)], 10, Seat, Stamp).ToList();
 
         Assert.Equal(new[] { 1, 2, 9 }, Order(hand, written));
         Assert.Single(written);

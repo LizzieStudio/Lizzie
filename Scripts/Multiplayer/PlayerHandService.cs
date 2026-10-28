@@ -15,13 +15,13 @@ public static class PlayerHandService
     /// </summary>
     public static ComponentPosition MovedToHand(
         ComponentPosition card,
-        int seatIndex,
+        Ref<Seat> seat,
         int suborder,
         SnowportId stamp
     ) =>
         card with
         {
-            ContainerRef = Atoms.R.HandOf(seatIndex),
+            Container = new InHand(seat),
             Rotation = card.Rotation with { Y = 0 },
             ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
         };
@@ -35,12 +35,12 @@ public static class PlayerHandService
     /// </para>
     /// </summary>
     /// <param name="hand">The hand's cards, in order, which can include members of <paramref name="cards"/>.</param>
-    /// <param name="handRef">The hand's container.</param>
+    /// <param name="seat">The seat whose hand it is.</param>
     public static IEnumerable<ComponentPosition> Inserted(
         IReadOnlyList<ComponentPosition> hand,
         IReadOnlyList<ComponentPosition> cards,
         int index,
-        SnowTag handRef,
+        Ref<Seat> seat,
         SnowportId stamp
     )
     {
@@ -53,31 +53,24 @@ public static class PlayerHandService
                 (c, i) =>
                     c with
                     {
-                        ContainerRef = handRef,
+                        Container = new InHand(seat),
                         ZOrder = new ZOrder(ZTarget.Top, i, stamp),
                     }
             );
     }
 
     /// <summary>
-    /// Returns the cards in a given seat's hand in a stage, ordered by their ZOrder.
-    /// Returns an empty list for observer seats.
+    /// Returns the cards in a seat's hand in a stage, ordered by their ZOrder.
+    /// Returns an empty list for <see cref="Ref{T}.Empty"/>, the seat of a player without one.
     /// </summary>
     public static IReadOnlyList<ComponentPosition> GetHand(
         IAtomReader R,
         Ref<Stage> stage,
-        int seatIndex
-    )
-    {
-        var container = R.HandOf(seatIndex);
-        if (container == SnowTag.Empty)
-            return [];
-
-        return R.Get(
-                ComponentPosition.ByContainer,
-                new StageKey<ComponentPosition>(stage, new(container))
-            )
-            .OrderBy(s => s.ZOrder)
-            .ToList();
-    }
+        Ref<Seat> seat
+    ) =>
+        seat.IsEmpty
+            ? []
+            : R.Get(ComponentPosition.ByContainer, new(stage, new InHand(seat)))
+                .OrderBy(s => s.ZOrder)
+                .ToList();
 }

@@ -37,38 +37,38 @@ public partial class PlayerHandsPanel : Panel
         IsShowingChanged?.Invoke(this, !_isHidden);
     }
 
-    private readonly Dictionary<int, (VBoxContainer Row, Label Label)> _rows = new();
+    private readonly Dictionary<Ref<Seat>, (VBoxContainer Row, Label Label)> _rows = new();
 
     private void Sync(IWatchReader R)
     {
-        var players = R.Get(ProjectGameSettings.Only).Players;
+        var seats = R.Seats();
         var stage = ProjectService.Instance.GameObjects.ShownStage(R);
-        int localSeat = R.LocalSeat();
+        var localSeat = R.LocalSeat();
 
         // the local player is shown in HandManager, not here
-        var seats = Enumerable.Range(0, players.Length).Where(s => s != localSeat).ToList();
+        var others = seats.Where(s => s.Id != localSeat).ToList();
 
-        foreach (var seat in _rows.Keys.Except(seats).ToList())
+        foreach (var seat in _rows.Keys.Except(others.Select(s => s.Id)).ToList())
         {
             _rows.Remove(seat, out var gone);
             _playerHandsContainer.RemoveChild(gone.Row);
             gone.Row.QueueFree();
         }
 
-        for (int i = 0; i < seats.Count; i++)
+        for (int i = 0; i < others.Count; i++)
         {
-            int seat = seats[i];
-            if (!_rows.TryGetValue(seat, out var row))
-                _rows[seat] = row = AddRow(seat);
+            var seat = others[i];
+            if (!_rows.TryGetValue(seat.Id, out var row))
+                _rows[seat.Id] = row = AddRow(seat.Id);
             _playerHandsContainer.MoveChild(row.Row, i);
 
-            var player = players[seat];
-            row.Label.Text = $"{player.Name}  ({PlayerHandService.GetHand(R, stage, seat).Count})";
-            row.Label.AddThemeColorOverride("font_color", player.Color);
+            var label = seat.Label(seats.IndexOf(seat));
+            row.Label.Text = $"{label}  ({PlayerHandService.GetHand(R, stage, seat.Id).Count})";
+            row.Label.AddThemeColorOverride("font_color", seat.Color);
         }
     }
 
-    private (VBoxContainer Row, Label Label) AddRow(int seat)
+    private (VBoxContainer Row, Label Label) AddRow(Ref<Seat> seat)
     {
         var row = _opponentHandScene.Instantiate<VBoxContainer>();
         _playerHandsContainer.AddChild(row);

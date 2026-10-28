@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Godot;
 
 namespace Lizzie;
@@ -23,7 +24,10 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     private readonly List<(Label Label, OptionButton Option)> _seatRows = new();
 
-    private readonly Dictionary<int, int> _seatChoices = new();
+    // The seat each row shows, in order.
+    private readonly List<Ref<Seat>> _seats = new();
+
+    private readonly Dictionary<Ref<Seat>, int> _seatChoices = new();
 
     public override void _Ready()
     {
@@ -42,28 +46,26 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IWatchReader R)
     {
-        var players = R.Get(ProjectGameSettings.Only).Players;
+        var seats = R.Seats();
 
-        while (_seatRows.Count > players.Length)
+        while (_seatRows.Count > seats.Count)
         {
             _seatRows[^1].Label.GetParent().QueueFree();
             _seatRows.RemoveAt(_seatRows.Count - 1);
         }
 
-        while (_seatRows.Count < players.Length)
+        while (_seatRows.Count < seats.Count)
             _seatRows.Add(AddSeatRow(_seatRows.Count));
 
-        for (int i = 0; i < players.Length; i++)
-        {
-            _seatRows[i].Label.Text = string.IsNullOrEmpty(players[i].Name)
-                ? $"Seat {i + 1}"
-                : players[i].Name;
-        }
+        _seats.Clear();
+        _seats.AddRange(seats.Select(s => s.Id));
+        for (int i = 0; i < seats.Count; i++)
+            _seatRows[i].Label.Text = seats[i].Label(i);
 
         ShowSeatChoices();
     }
 
-    private (Label, OptionButton) AddSeatRow(int seat)
+    private (Label, OptionButton) AddSeatRow(int index)
     {
         var row = new HBoxContainer();
 
@@ -88,7 +90,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         row.AddChild(option);
 
         _seatList.AddChild(row);
-        option.ItemSelected += index => _seatChoices[seat] = option.GetItemId((int)index);
+        option.ItemSelected += item => _seatChoices[_seats[index]] = option.GetItemId((int)item);
 
         return (label, option);
     }
@@ -96,28 +98,15 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
     private void ShowSeatChoices()
     {
         for (int i = 0; i < _seatRows.Count; i++)
-            _seatRows[i].Option.Select(_seatChoices.GetValueOrDefault(i, OptDefault));
+            _seatRows[i].Option.Select(_seatChoices.GetValueOrDefault(_seats[i], OptDefault));
     }
 
     public override string PrototypeName => _nameInput.Text;
 
     public override ComponentParameters GetParams()
     {
-        var included = ImmutableArray.CreateBuilder<int>();
-        var excluded = ImmutableArray.CreateBuilder<int>();
-
-        for (int seat = 0; seat < _seatRows.Count; seat++)
-        {
-            switch (_seatChoices.GetValueOrDefault(seat, OptDefault))
-            {
-                case OptIncluded:
-                    included.Add(seat);
-                    break;
-                case OptExcluded:
-                    excluded.Add(seat);
-                    break;
-            }
-        }
+        ImmutableArray<Ref<Seat>> Chose(int choice) =>
+            [.. _seats.Where(seat => _seatChoices.GetValueOrDefault(seat, OptDefault) == choice)];
 
         return new ZoneParameters
         {
@@ -125,8 +114,8 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
             Depth = ParamToFloat(_depthInput.Text),
             DefaultIncluded = _defaultIncluded.ButtonPressed,
             HiddenWhenExcluded = _hiddenWhenExcluded.ButtonPressed,
-            IncludedSeats = included.ToImmutable(),
-            ExcludedSeats = excluded.ToImmutable(),
+            IncludedSeats = Chose(OptIncluded),
+            ExcludedSeats = Chose(OptExcluded),
         };
     }
 

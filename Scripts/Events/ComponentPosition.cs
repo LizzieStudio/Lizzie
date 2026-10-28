@@ -27,11 +27,11 @@ public record ComponentPosition : StagedAtom
     public static readonly Lookup<ComponentPosition, Ref<Stage>> ByStage = new(s => s.StageRef);
 
     /// <summary>
-    /// The components in each container of a stage, by <see cref="ContainerRef"/>.
-    /// <see cref="SnowTag.Empty"/> holds the ones on the table.
+    /// The components in each container of a stage, by <see cref="Container"/>.
+    /// A null container holds the ones on the table.
     /// </summary>
-    public static readonly Lookup<ComponentPosition, StageKey<ComponentPosition>> ByContainer = new(
-        s => s.ContainerKey
+    public static readonly Lookup<ComponentPosition, ContainerKey> ByContainer = new(s =>
+        new(s.StageRef, s.Container)
     );
 
     /// <summary>
@@ -109,47 +109,46 @@ public record ComponentPosition : StagedAtom
     public ZOrder ZOrder { get; init; }
 
     /// <summary>
-    /// What holds this component:
-    /// <list type="bullet">
-    /// <item><see cref="SnowTag.Empty"/> when it's on the table</item>
-    /// <item>a component Id, for decks and bags</item>
-    /// <item>a seat's hand Id, for a player hand</item>
-    /// <item>a seat's cursor Id, when being dragged by a player</item>
-    /// </list>
+    /// What holds this component, or null when it's on the table.
     /// </summary>
-    public SnowTag ContainerRef { get; init; } = SnowTag.Empty;
+    public Container Container { get; init; }
 
     /// <summary>
     /// True if it's sitting on the table, outside a container, and not being dragged.
     /// </summary>
     [JsonIgnore]
-    public bool IsOnTable => ContainerRef == SnowTag.Empty;
+    public bool IsOnTable => Container == null;
 
     /// <summary>
-    /// Its container's key in its stage, which <see cref="ByContainer"/> lists it under.
-    /// A hand or a cursor isn't a component, so its tag stands in for one here.
+    /// True while a player drags it.
     /// </summary>
     [JsonIgnore]
-    public StageKey<ComponentPosition> ContainerKey => In(new(ContainerRef));
+    public bool IsHeld => Container is Held;
 
     /// <summary>
-    /// The components whose <see cref="ContainerRef"/> is this one.
+    /// Its inside, which <see cref="ByContainer"/> lists the components in, like a deck's cards.
+    /// </summary>
+    [JsonIgnore]
+    public ContainerKey Inside => ContainerKey.Of(In(Id));
+
+    /// <summary>
+    /// The components in this one.
     /// </summary>
     /// <remarks>
-    /// Any component used as a <see cref="ContainerRef"/> gets its contents here without changes.
+    /// Any component used as an <see cref="InComponent"/> gets its contents here without changes.
     /// </remarks>
     public override IEnumerable<IAtomRef> Contents(IAtomReader R) =>
-        R.Get(ByContainer, In(Id)).Select(IAtomRef.To);
+        R.Get(ByContainer, Inside).Select(IAtomRef.To);
 
     /// <summary>
     /// The deck or bag it's in.
     /// </summary>
     /// <remarks>
-    /// Any component referenced by <see cref="ContainerRef"/> becomes a container here without changes.
+    /// Any component used as an <see cref="InComponent"/> becomes a container here without changes.
     /// </remarks>
     public override IEnumerable<IAtomRef> Containers(IAtomReader R) =>
-        // A hand or a cursor isn't a component, so it isn't found.
-        !IsOnTable && R.Get(ById, ContainerKey) is { } container
+        Container is InComponent { Component: var holder }
+        && R.Get(ById, In(holder)) is { } container
             ? [IAtomRef.To(container)]
             : [];
 

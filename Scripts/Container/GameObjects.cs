@@ -102,20 +102,20 @@ public partial class GameObjects : Node3D, ICommandView
     private void StartDrag(IEnumerable<ComponentPosition> pickup, IEnumerable<Atom> alongside)
     {
         bool overHand = HandRow.Under(GetViewport()) != null;
-        var holder = overHand ? Atoms.R.LocalHandHold() : Atoms.R.LocalCursor();
+        var seat = Atoms.R.LocalSeat();
         var stamp = SnowportId.Create();
         var atoms = pickup
             .Select(
                 (s, i) =>
                     s with
                     {
-                        ContainerRef = holder,
+                        Container = new Held(seat, overHand),
                         ZOrder = new ZOrder(ZTarget.Top, i, stamp),
                     }
             )
             .ToArray();
         // Players without a seat can't drag.
-        if (atoms.Length == 0 || holder == SnowTag.Empty)
+        if (atoms.Length == 0 || seat.IsEmpty)
             return;
 
         _held = new HeldDrag
@@ -135,10 +135,10 @@ public partial class GameObjects : Node3D, ICommandView
         // Its atom may have been unset this frame, before the view removes it.
         if (pressed.State is not { } state)
             return [];
-        var place = state.ContainerRef;
+        var place = state.Container;
         return GetSelection()
             .Select(GetComponent)
-            .Where(o => o?.State?.ContainerRef == place)
+            .Where(o => o?.State != null && o.State.Container == place)
             .OrderBy(o => o.State.ZOrder)
             .ToList();
     }
@@ -342,7 +342,8 @@ public partial class GameObjects : Node3D, ICommandView
         Caption = "Zoom to Component",
         Keys = [Shortcuts.Key(Key.Z)],
         MaxTargets = 1,
-        AppliesTo = (R, c) => !R.IsContained(c) || R.IsInDeck(c),
+        // Cards in a hand or a bag aren't on the table to zoom to.
+        AppliesTo = (R, c) => c.Container is null or Held || R.IsInDeck(c),
         Effects = (_, cs) =>
         {
             if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)
@@ -553,10 +554,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private void UpdateStackingHeights()
     {
-        var table = Nodes(
-                Atoms.R.Get(ComponentPosition.ByContainer, ShownKey(Ref<Component>.Empty))
-            )
-            .ToArray();
+        var table = Nodes(Atoms.R.Get(ComponentPosition.ByContainer, ShownTable)).ToArray();
         var floors = Stacking.Floors(table, out _tableTops);
 
         for (int i = 0; i < table.Length; i++)
@@ -568,7 +566,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private void UpdateDragFloors()
     {
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.ContainerRef))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Container))
         {
             var dragged = group.ToArray();
             var floors = Stacking.Floors(dragged, out _);
@@ -694,13 +692,13 @@ public partial class GameObjects : Node3D, ICommandView
         {
             EnterDragMode(hit.Component, cursor);
         }
-        return Held();
+        return DragData();
     }
 
     /// <summary>
     /// The Godot-style data of what the local player holds, or nothing if they hold nothing.
     /// </summary>
-    private Variant Held() => _held != null ? _held : default(Variant);
+    private Variant DragData() => _held != null ? _held : default(Variant);
 
     private void OnTableInput(InputEvent e)
     {
@@ -867,7 +865,7 @@ public partial class GameObjects : Node3D, ICommandView
                 }),
             []
         );
-        return Held();
+        return DragData();
     }
 
     // The container a drop would go into, outlined while the drag is over it.
@@ -889,11 +887,11 @@ public partial class GameObjects : Node3D, ICommandView
         if (overHand != _heldOverHand)
         {
             _heldOverHand = overHand;
-            var holder = _heldOverHand ? Atoms.R.LocalHandHold() : Atoms.R.LocalCursor();
+            var holder = new Held(Atoms.R.LocalSeat(), _heldOverHand);
             float turn = HandTurn(nearest, overHand);
             Atoms.R.Append(
                 held.Group,
-                cards.Select(s => HandCard.Turned(s, turn) with { ContainerRef = holder })
+                cards.Select(s => HandCard.Turned(s, turn) with { Container = holder })
             );
         }
         if (overHand)
@@ -950,19 +948,25 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// The components dragged by any player.
     /// </summary>
-    private IEnumerable<VisualComponentBase> GetDraggingObjects()
-    {
-        return Nodes(
+    private IEnumerable<VisualComponentBase> GetDraggingObjects() =>
+        Nodes(
             Atoms
-                .R.Cursors()
-                .SelectMany(c => Atoms.R.Get(ComponentPosition.ByContainer, ShownKey(new(c))))
+                .R.Get(Seat.Live)
+                .SelectMany(seat => new[] { new Held(seat.Id, false), new Held(seat.Id, true) })
+                .SelectMany(held =>
+                    Atoms.R.Get(ComponentPosition.ByContainer, new(_view.StageRef, held))
+                )
         );
-    }
 
     /// <summary>
     /// The key of <paramref name="id"/> in the shown stage.
     /// </summary>
     private StageKey<ComponentPosition> ShownKey(Ref<Component> id) => new(_view.StageRef, id);
+
+    /// <summary>
+    /// The table of the shown stage, as <see cref="ComponentPosition.ByContainer"/> lists it.
+    /// </summary>
+    private ContainerKey ShownTable => new(_view.StageRef, null);
 
     /// <summary>
     /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.
@@ -985,7 +989,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// Drops what <paramref name="held"/> holds into a seat's hand.
     /// </summary>
-    public void DropInHand(HeldDrag held, int seat, int index)
+    public void DropInHand(HeldDrag held, Ref<Seat> seat, int index)
     {
         // Puts the cards in the hold over the hand first, if the mouse got there since the last frame.
         UpdateDrag(held, GetViewport().GetMousePosition());
@@ -996,7 +1000,7 @@ public partial class GameObjects : Node3D, ICommandView
             PlayerHandService.GetHand(Atoms.R, _view.StageRef, seat),
             held.Cards(Atoms.R).ToList(),
             index,
-            Atoms.R.HandOf(seat),
+            seat,
             SnowportId.Create()
         );
         var rest = held.Atoms(Atoms.R)
@@ -1022,7 +1026,7 @@ public partial class GameObjects : Node3D, ICommandView
         var ordered = dropped.OrderBy(s => s.ZOrder).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
         var decks = Atoms
-            .R.Get(ComponentPosition.ByContainer, ShownKey(Ref<Component>.Empty))
+            .R.Get(ComponentPosition.ByContainer, ShownTable)
             .Where(s => Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
             .ToList();
 
@@ -1033,7 +1037,7 @@ public partial class GameObjects : Node3D, ICommandView
                 {
                     var placed = s with
                     {
-                        ContainerRef = SnowTag.Empty,
+                        Container = null,
                         X = s.X + snapX,
                         Z = s.Z + snapZ,
                         ZOrder = new ZOrder(ZTarget.Top, i, stamp),
@@ -1048,7 +1052,7 @@ public partial class GameObjects : Node3D, ICommandView
                         ? placed
                         : placed with
                         {
-                            ContainerRef = deck.Id.Tag,
+                            Container = new InComponent(deck.Id),
                             X = 0,
                             Z = 0,
                             Rotation = placed.Rotation with
@@ -1069,7 +1073,7 @@ public partial class GameObjects : Node3D, ICommandView
     private (int X, int Z) SnapDelta(List<ComponentPosition> dropped)
     {
         var targets = Atoms
-            .R.Get(ComponentPosition.ByContainer, ShownKey(Ref<Component>.Empty))
+            .R.Get(ComponentPosition.ByContainer, ShownTable)
             .Where(s =>
                 Atoms.R.Kind(s)
                     is VisualComponentBase.VisualComponentType.Printed
@@ -1211,9 +1215,9 @@ public partial class GameObjects : Node3D, ICommandView
         if (cursors == null)
             return;
 
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.ContainerRef))
+        foreach (var group in GetDraggingObjects().GroupBy(c => (Held)c.State.Container))
         {
-            if (cursors.CursorOf(group.Key) is not { } cursor)
+            if (cursors.CursorOf(group.Key.Seat) is not { } cursor)
                 continue;
 
             // Follow the cursor, then float the group, keeping its shape, above what's below.

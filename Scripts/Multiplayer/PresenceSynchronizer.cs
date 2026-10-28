@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Godot;
 
 namespace Lizzie;
@@ -55,10 +56,10 @@ public partial class PresenceSynchronizer : Node
     #region Seats
 
     /// <summary>
-    /// Asks for a seat for the local player, or <see cref="SeatingReader.NoSeat"/> to observe.
+    /// Asks for a seat for the local player, or <see cref="Ref{T}.Empty"/> for none.
     /// The host or a solo player takes it at once; a client asks the host.
     /// </summary>
-    public void RequestSeat(int seat)
+    public void RequestSeat(Ref<Seat> seat)
     {
         var mm = MultiplayerManager.Instance;
         if (mm?.IsMultiplayerActive == true && !mm.IsServer)
@@ -68,7 +69,7 @@ public partial class PresenceSynchronizer : Node
     }
 
     /// <summary>
-    /// In solo play, seats the local player alone, keeping their seat if they have one, or seat 0.
+    /// In solo play, seats the local player alone, keeping their seat if they have one, or the first seat.
     /// </summary>
     public void SeatSoloPlayer()
     {
@@ -80,7 +81,9 @@ public partial class PresenceSynchronizer : Node
         var seated = seats.TryGetValue(source, out var current);
         if (seated && seats.Count == 1)
             return;
-        WriteSeats(ImmutableDictionary<byte, int>.Empty.Add(source, seated ? current : 0));
+        var seat = seated ? current : Atoms.R.Seats().FirstOrDefault()?.Id ?? Ref<Seat>.Empty;
+        var solo = ImmutableDictionary<byte, Ref<Seat>>.Empty;
+        WriteSeats(seat.IsEmpty ? solo : solo.Add(source, seat));
     }
 
     [Rpc(
@@ -97,13 +100,13 @@ public partial class PresenceSynchronizer : Node
         if (MultiplayerManager.Instance.Players.TryGetValue(peer, out var pi) != true)
             return;
 
-        TryAssignSeat(pi.Source, seat, peer);
+        TryAssignSeat(pi.Source, new Ref<Seat>(seat), peer);
     }
 
     /// <summary>
     /// The host's decision: a seat goes to whoever asks first, and anyone later asks again.
     /// </summary>
-    private void TryAssignSeat(byte source, int seat, int requesterPeerId)
+    private void TryAssignSeat(byte source, Ref<Seat> seat, int requesterPeerId)
     {
         if (Atoms.R.IsSeatTaken(seat) && Atoms.R.SeatOf(source) != seat)
         {
@@ -114,18 +117,16 @@ public partial class PresenceSynchronizer : Node
             return;
         }
 
-        Seat(source, seat);
+        Assign(source, seat);
     }
 
-    private static void Seat(byte source, int seat)
+    private static void Assign(byte source, Ref<Seat> seat)
     {
         var seats = Atoms.R.Get(Seating.Only).Seats;
-        WriteSeats(
-            seat == SeatingReader.NoSeat ? seats.Remove(source) : seats.SetItem(source, seat)
-        );
+        WriteSeats(seat.IsEmpty ? seats.Remove(source) : seats.SetItem(source, seat));
     }
 
-    private static void WriteSeats(ImmutableDictionary<byte, int> seats) =>
+    private static void WriteSeats(ImmutableDictionary<byte, Ref<Seat>> seats) =>
         Atoms.R.WriteAdmin(Atoms.R.Get(Seating.Only) with { Seats = seats });
 
     [Rpc(
@@ -181,12 +182,15 @@ public partial class PresenceSynchronizer : Node
     }
 
     /// <summary>
-    /// The cursor position of the seated player whose cursor container is <paramref name="cursorRef"/>.
+    /// The cursor position of the player sitting in <paramref name="seat"/>.
     /// </summary>
-    public Vector3? CursorOf(SnowTag cursorRef) =>
-        Atoms.R.HolderOf(cursorRef) is byte source && _positions.TryGetValue(source, out var pos)
-            ? pos
-            : null;
+    public Vector3? CursorOf(Ref<Seat> seat)
+    {
+        foreach (var (source, sitting) in Atoms.R.Get(Seating.Only).Seats)
+            if (sitting == seat && _positions.TryGetValue(source, out var pos))
+                return pos;
+        return null;
+    }
 
     /// <summary>
     /// Forgets the cursor of <paramref name="source"/>, a player who left.

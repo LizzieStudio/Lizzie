@@ -57,7 +57,7 @@ public class DeckReconciliationTests
                 {
                     Id = new(20 + i),
                     StageRef = Root,
-                    ContainerRef = onTable.Contains(i) ? SnowTag.Empty : Deck.Tag,
+                    Container = onTable.Contains(i) ? null : new InComponent(Deck),
                 }
             );
         }
@@ -116,7 +116,7 @@ public class DeckReconciliationTests
             Equals(component.Item, Card("3"))
                 && component.DeckRef == Deck
                 && position.Id == component.Id
-                && position.ContainerRef == Deck.Tag
+                && position.Container == new InComponent(Deck)
                 && position.StageRef == Root
                 && position.ZOrder.Target == ZTarget.Bottom,
             $"Adding 3 wrote {Describe(changes)}, expected card 3 at the bottom of the deck in the root."

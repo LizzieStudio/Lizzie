@@ -50,8 +50,9 @@ public partial class VcDeck : VisualComponentBase
 
     private void SyncCount(IWatchReader R)
     {
-        if (R.Get(ComponentPosition.ById, Key) is { } deck && !R.IsBeingDragged(deck))
-            _componentCount.Text = R.Count(ComponentPosition.ByContainer, Key).ToString();
+        if (R.Get(ComponentPosition.ById, Key) is { IsHeld: false })
+            _componentCount.Text = R.Count(ComponentPosition.ByContainer, ContainerKey.Of(Key))
+                .ToString();
     }
 
     /// <summary>
@@ -59,7 +60,9 @@ public partial class VcDeck : VisualComponentBase
     /// </summary>
     private void SyncLayout(IWatchReader R)
     {
-        var cards = R.Get(ComponentPosition.ByContainer, Key).OrderBy(c => c.ZOrder).ToList();
+        var cards = R.Get(ComponentPosition.ByContainer, ContainerKey.Of(Key))
+            .OrderBy(c => c.ZOrder)
+            .ToList();
         var heights = cards.Select(c => CardHeight(R, c)).ToList();
         float total = FrameHeight + heights.Sum();
 

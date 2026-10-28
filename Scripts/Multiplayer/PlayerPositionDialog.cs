@@ -4,7 +4,7 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// Modal dialog that lets the local player pick a player position (or observer).
+/// Modal dialog that lets the local player pick a seat, or none.
 /// Instantiate, add to the scene tree, then call Show().
 /// The dialog frees itself when the player confirms or cancels.
 /// </summary>
@@ -13,8 +13,8 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     private ItemList _seatList;
     private Label _statusLabel;
 
-    // Maps list index -> seat, or NoSeat to observe
-    private readonly List<int> _seatIndexMap = new();
+    // Maps list index -> seat, or Empty for no seat
+    private readonly List<Ref<Seat>> _seatIndexMap = new();
 
     public override void _Ready()
     {
@@ -63,20 +63,21 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     private void Sync(IWatchReader R)
     {
         var selected = _seatList.GetSelectedItems();
-        int? selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : R.LocalSeat();
+        var selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : R.LocalSeat();
+        // A player without a seat starts on the first free one, unless they picked No Seat.
+        bool keep = selected.Length > 0 || !selectedSeat.IsEmpty;
 
         _seatList.Clear();
         _seatIndexMap.Clear();
 
-        var settings = R.Get(ProjectGameSettings.Only);
-
-        for (int i = 0; i < settings.Players.Length; i++)
+        var seats = R.Seats();
+        for (int i = 0; i < seats.Count; i++)
         {
-            var player = settings.Players[i];
-            bool current = R.LocalSeat() == i;
-            bool available = current || !R.IsSeatTaken(i);
+            var seat = seats[i];
+            bool current = R.LocalSeat() == seat.Id;
+            bool available = current || !R.IsSeatTaken(seat.Id);
 
-            var label = player.Name;
+            var label = seat.Label(i);
             if (current)
                 label += "  [current]";
             else if (!available)
@@ -85,20 +86,17 @@ public partial class PlayerPositionDialog : ConfirmationDialog
             _seatList.AddItem(label);
             _seatList.SetItemDisabled(_seatList.ItemCount - 1, !available);
 
-            // Color the icon using the player's configured color
-            _seatList.SetItemCustomFgColor(_seatList.ItemCount - 1, player.Color);
+            // Color the icon using the seat's color
+            _seatList.SetItemCustomFgColor(_seatList.ItemCount - 1, seat.Color);
 
-            _seatIndexMap.Add(i);
+            _seatIndexMap.Add(seat.Id);
         }
 
-        if (settings.AllowObservers)
-        {
-            _seatList.AddItem("Observer  (watch only)");
-            _seatIndexMap.Add(SeatingReader.NoSeat);
-        }
+        _seatList.AddItem("No Seat");
+        _seatIndexMap.Add(Ref<Seat>.Empty);
 
         // Keep the player's choice selected while it's still available
-        var kept = selectedSeat is int seat ? _seatIndexMap.IndexOf(seat) : -1;
+        var kept = keep ? _seatIndexMap.IndexOf(selectedSeat) : -1;
         if (kept >= 0 && !_seatList.IsItemDisabled(kept))
         {
             _seatList.Select(kept);
@@ -127,10 +125,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
             return;
         }
 
-        int listIdx = selected[0];
-        int seatIdx = _seatIndexMap[listIdx];
-
-        PresenceSynchronizer.Instance?.RequestSeat(seatIdx);
+        PresenceSynchronizer.Instance?.RequestSeat(_seatIndexMap[selected[0]]);
         // The dialog will be freed once the claim result comes back (or immediately for local).
         QueueFree();
     }

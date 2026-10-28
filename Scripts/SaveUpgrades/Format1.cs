@@ -45,7 +45,7 @@ public sealed class Format1 : IStep
 
         public JsonObject Run(JsonObject project)
         {
-            var settings = Settings((JsonObject)project["GameSettings"]);
+            Settings((JsonObject)project["GameSettings"]);
 
             foreach (var (key, image) in (JsonObject)project["Images"])
                 _writes.Add(
@@ -91,7 +91,7 @@ public sealed class Format1 : IStep
             return new JsonObject { ["id"] = Stamp * 2, ["writes"] = new JsonArray([.. _writes]) };
         }
 
-        private JsonObject Settings(JsonObject old)
+        private void Settings(JsonObject old)
         {
             var settings = new JsonObject { ["$type"] = "ProjectGameSettings" };
             Copy(
@@ -103,8 +103,6 @@ public sealed class Format1 : IStep
                 "TableHeight",
                 "TableUnits",
                 "RotationStepIndex",
-                "AllowObservers",
-                "MaxPlayers",
                 "GameTitle",
                 "Designers",
                 "GraphicDesign",
@@ -113,18 +111,33 @@ public sealed class Format1 : IStep
                 "VisionStatement"
             );
             settings["tableColor"] = Color(old, "TableColor");
-            if (old["Players"] is JsonArray players)
-                settings["players"] = new JsonArray([
-                    .. players.Select(p => new JsonObject
-                    {
-                        ["name"] = (string)p["Name"],
-                        ["color"] = Color((JsonObject)p, "Color"),
-                        ["isAdmin"] = (bool?)p["IsAdmin"] ?? false,
-                    }),
-                ]);
             _writes.Add(settings);
-            return settings;
+
+            var players = (JsonArray)old["Players"] ?? [];
+            for (int i = 0; i < players.Count; i++)
+            {
+                var player = (JsonObject)players[i];
+                var seat = new JsonObject
+                {
+                    ["$type"] = "Seat",
+                    ["id"] = Tag("seat", i.ToString()),
+                    ["rank"] = Rank(i),
+                    ["color"] = Color(player, "Color"),
+                    ["isAdmin"] = (bool?)player["IsAdmin"] ?? false,
+                };
+                // A seat with its default name goes by its number instead.
+                var name = (string)player["Name"];
+                if (name != $"Seat {i + 1}" && name != $"Player {i + 1}")
+                    seat["name"] = name;
+                _writes.Add(seat);
+            }
         }
+
+        /// <summary>
+        /// The Seats of the old seat numbers in <paramref name="numbers"/>.
+        /// </summary>
+        private JsonArray Seats(JsonNode numbers) =>
+            [.. ((JsonArray)numbers ?? []).Select(n => (JsonNode)Tag("seat", ((int)n).ToString()))];
 
         /// <summary>
         /// A dataset, with each row's name in a first column called Name.
@@ -258,10 +271,10 @@ public sealed class Format1 : IStep
                         "Width",
                         "Depth",
                         "DefaultIncluded",
-                        "HiddenWhenExcluded",
-                        "IncludedSeats",
-                        "ExcludedSeats"
+                        "HiddenWhenExcluded"
                     );
+                    parameters["includedSeats"] = Seats(p["IncludedSeats"]);
+                    parameters["excludedSeats"] = Seats(p["ExcludedSeats"]);
                     break;
                 default:
                     return;
@@ -543,7 +556,11 @@ public sealed class Format1 : IStep
                     },
                 };
                 if (container != null)
-                    position["containerRef"] = Tag("component", container);
+                    position["container"] = new JsonObject
+                    {
+                        ["$type"] = "InComponent",
+                        ["component"] = Tag("component", container),
+                    };
                 else
                 {
                     position["x"] = (int)Math.Round(((double?)c["Px"] ?? 0) * 100);

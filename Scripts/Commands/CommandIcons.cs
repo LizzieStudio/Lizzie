@@ -58,4 +58,5 @@ public static class CommandIcons
     public const string Components = Folder + "triangle.svg";
     public const string Images = Folder + "image.svg";
     public const string Settings = Folder + "settings.svg";
+    public const string Seats = Folder + "seating.svg";
 }

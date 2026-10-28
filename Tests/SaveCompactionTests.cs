@@ -41,6 +41,7 @@ public class SaveCompactionTests
             Stage s => s.Id.Tag,
             Prototype p => p.Id.Tag,
             Dataset d => d.Id.Tag,
+            Seat s => s.Id.Tag,
             DataRow r => r.Id.Tag,
             DataColumn c => c.Id.Tag,
             _ => throw new ArgumentException($"No id for a {atom.GetType().Name}."),
@@ -83,6 +84,24 @@ public class SaveCompactionTests
             [Position(1), Component(2) with { DeckRef = Tag<Component>(1), Retired = true }],
             1
         );
+
+    [Fact]
+    public void ADeletedSeatAHandIsInIsKept() =>
+        AssertKept(
+            [
+                Position(1) with
+                {
+                    Container = new InHand(Tag<Seat>(2)),
+                },
+                new Seat { Id = Tag<Seat>(2), Deleted = true },
+            ],
+            1,
+            2
+        );
+
+    [Fact]
+    public void AnUnreferencedDeletedSeatIsDropped() =>
+        AssertKept([Position(1), new Seat { Id = Tag<Seat>(2), Deleted = true }], 1);
 
     [Fact]
     public void ADeletedPrototypeAComponentUsesIsKept() =>
@@ -287,11 +306,11 @@ public class SaveCompactionTests
             Save(
                 Position(9) with
                 {
-                    ContainerRef = Tag(5, source: 3),
+                    Container = new InComponent(Tag<Component>(5, source: 3)),
                 },
                 Position(7) with
                 {
-                    ContainerRef = Tag(9),
+                    Container = new InComponent(Tag<Component>(9)),
                 }
             )
         );
@@ -300,9 +319,9 @@ public class SaveCompactionTests
 
         // in order: 7 < 9 < (source 3, 5)
         Assert.Equal(new SnowTag(2), back[0].Id.Tag);
-        Assert.Equal(new SnowTag(3), back[0].ContainerRef);
+        Assert.Equal(new InComponent(new(new SnowTag(3))), back[0].Container);
         Assert.Equal(new SnowTag(1), back[1].Id.Tag);
-        Assert.Equal(new SnowTag(2), back[1].ContainerRef);
+        Assert.Equal(new InComponent(new(new SnowTag(2))), back[1].Container);
         Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.Tag.source));
     }
 
@@ -350,7 +369,7 @@ public class SaveCompactionTests
         var json = SaveCompaction.Serialize(Save(Position(1)));
         var back = (ComponentPosition)Load(json).Writes[0];
 
-        Assert.Equal(SnowTag.Empty, back.ContainerRef);
+        Assert.Equal(Ref<Stage>.Empty, back.StageRef);
         Assert.Equal(SnowportId.Empty, back.ZOrder.Stamp);
     }
 

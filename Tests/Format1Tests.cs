@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -34,9 +35,9 @@ public class Format1Tests
         }
         """;
 
-    private static List<JsonObject> Writes()
+    private static List<JsonObject> Writes(string project = Project)
     {
-        var lines = new List<JsonObject> { JsonNode.Parse(Project).AsObject() };
+        var lines = new List<JsonObject> { JsonNode.Parse(project).AsObject() };
         SaveUpgrade.Run(lines);
         return ((JsonArray)Assert.Single(lines)["writes"]).Cast<JsonObject>().ToList();
     }
@@ -80,10 +81,11 @@ public class Format1Tests
         );
 
         var positions = OfType(writes, "ComponentPosition");
-        var deck = positions.Single(p => p["containerRef"] == null);
-        var card = positions.Single(p => p["containerRef"] != null);
+        var deck = positions.Single(p => p["container"] == null);
+        var card = positions.Single(p => p["container"] != null);
         Assert.Equal(150, (int)deck["x"]);
-        Assert.Equal((int)deck["id"], (int)card["containerRef"]);
+        Assert.Equal("InComponent", (string)card["container"]["$type"]);
+        Assert.Equal((int)deck["id"], (int)card["container"]["component"]);
 
         var components = OfType(writes, "Component").ToDictionary(c => (int)c["id"]);
         Assert.Null(components[(int)deck["id"]]["item"]);
@@ -115,9 +117,7 @@ public class Format1Tests
     [Fact]
     public void AQuickCardShowsItsCaptionInItsOwnSuit()
     {
-        var lines = new List<JsonObject> { JsonNode.Parse(QuickProject).AsObject() };
-        SaveUpgrade.Run(lines);
-        var writes = ((JsonArray)Assert.Single(lines)["writes"]).Cast<JsonObject>().ToList();
+        var writes = Writes(QuickProject);
 
         var suits = (
             (JsonArray)Assert.Single(OfType(writes, "Prototype"))["parameters"]["front"]["suits"]
@@ -131,5 +131,38 @@ public class Format1Tests
         Assert.Equal("QuickFace", (string)front["$type"]);
         Assert.Equal((int)suits[1]["id"], (int)front["suitRef"]);
         Assert.Equal("1-3", (string)front["value"]);
+    }
+
+    /// <summary>
+    /// A main-branch project with two seats, the first with its default name,
+    /// and a zone that lets in only the second.
+    /// </summary>
+    private const string SeatProject = """
+        {
+          "Name": "P", "Templates": {}, "Datasets": {}, "Images": {}, "GameStates": {},
+          "Prototypes": { "z1": { "PrototypeRef": "z1", "Name": "Zone", "Type": 12,
+            "Parameters": { "ComponentName": "Zone", "BaseName": "Zone", "Width": 10, "Depth": 10,
+              "DefaultIncluded": false, "HiddenWhenExcluded": true, "IncludedSeats": [ 1 ], "ExcludedSeats": [] } } },
+          "GameSettings": { "TableColorR": 0.5, "TableColorG": 0.5, "TableColorB": 0.5, "TableColorA": 1,
+            "Players": [ { "Name": "Player 1", "ColorR": 1, "ColorG": 0, "ColorB": 0, "ColorA": 1 },
+                         { "Name": "North", "ColorR": 0, "ColorG": 0, "ColorB": 1, "ColorA": 1, "IsAdmin": true } ] }
+        }
+        """;
+
+    [Fact]
+    public void PlayersBecomeSeatsThatZonesReferTo()
+    {
+        var writes = Writes(SeatProject);
+        var seats = OfType(writes, "Seat")
+            .OrderBy(s => (string)s["rank"], StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Equal(2, seats.Count);
+        // A default name is dropped, so the seat goes by its number.
+        Assert.Null(seats[0]["name"]);
+        Assert.Equal("North", (string)seats[1]["name"]);
+        Assert.True((bool)seats[1]["isAdmin"]);
+        var zone = Assert.Single(OfType(writes, "Prototype"))["parameters"];
+        Assert.Equal([(int)seats[1]["id"]], ((JsonArray)zone["includedSeats"]).Select(s => (int)s));
     }
 }

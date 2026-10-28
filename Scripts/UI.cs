@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -70,6 +71,7 @@ public partial class UI : CanvasLayer
     }
 
     private BlueprintManager _blueprintManager;
+    private SeatsWindow _seats;
 
     private Node _modalDialogs;
 
@@ -78,6 +80,19 @@ public partial class UI : CanvasLayer
         _instance = this;
         Atoms.R.Watch(this, Sync);
         Atoms.R.Watch(this, SyncStages);
+        Atoms.R.Watch(this, PromptIfSeatRemoved);
+    }
+
+    // A copy of the local player's seat to detect changes for reprompting them.
+    private Ref<Seat> _currentSeat;
+
+    private void PromptIfSeatRemoved(IWatchReader R)
+    {
+        var seat = R.Get(Seating.Only).Seats.GetValueOrDefault(Snowport.Clock.source);
+        var wasRemoved = R.Get(Seat.ById, seat) is { Deleted: true };
+        if (wasRemoved && seat != _currentSeat)
+            ShowPlayerSeatingDialog();
+        _currentSeat = wasRemoved ? seat : Ref<Seat>.Empty;
     }
 
     private void SyncStages(IWatchReader R)
@@ -201,17 +216,11 @@ public partial class UI : CanvasLayer
 
     private void OnRequestPlayerPosition(RequestPlayerPositionEvent _)
     {
-        ShowPlayerPositionDialog();
+        ShowPlayerSeatingDialog();
     }
 
-    private void ShowPlayerPositionDialog()
+    private void ShowPlayerSeatingDialog()
     {
-        var settings = Atoms.R.Get(ProjectGameSettings.Only);
-
-        // Don't open if there are no player slots and observers are not allowed.
-        if (settings.Players.Length == 0 && !settings.AllowObservers)
-            return;
-
         string s = "res://Scenes/Controls/player_position_dialog.tscn";
 
         _playerPositionDialog = GD.Load<PackedScene>(s).Instantiate<PlayerPositionDialog>();
@@ -315,6 +324,15 @@ public partial class UI : CanvasLayer
         string s = "res://Scenes/Project/ProjectSettings.tscn";
         _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettingsDialog>();
         _modalDialogs.AddChild(_projectSettings);
+    }
+
+    private void ShowSeats()
+    {
+        if (BroughtForward(_seats))
+            return;
+        var s = "res://Scenes/Project/SeatsWindow.tscn";
+        _seats = GD.Load<PackedScene>(s).Instantiate<SeatsWindow>();
+        _modalDialogs.AddChild(_seats);
     }
 
     private void ShowBlueprintManager()

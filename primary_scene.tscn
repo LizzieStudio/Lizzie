@@ -119,6 +119,10 @@ CommandName = "editor.images"
 [node name="Divider2" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1024246169]
 script = ExtResource("cmd_divider")
 
+[node name="EditorSeats" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=962608578]
+script = ExtResource("cmd_item")
+CommandName = "editor.seats"
+
 [node name="EditorProjectSettings" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/Edit" unique_id=1107351943]
 script = ExtResource("cmd_item")
 CommandName = "editor.project_settings"

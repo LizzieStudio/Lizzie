@@ -98,7 +98,7 @@ public static class DeckReconciliation
             {
                 Id = id,
                 StageRef = deck.StageRef,
-                ContainerRef = deck.Id.Tag,
+                Container = new InComponent(deck.Id),
                 Rotation = new Vector3(0, 0, Mathf.Pi),
                 ZOrder = order,
             },
@@ -163,9 +163,7 @@ public static class DeckReconciliation
         SnowportId stamp
     )
     {
-        var held = R.Get(ComponentPosition.ByContainer, deck.In(deck.Id))
-            .Select(c => c.Id)
-            .ToHashSet();
+        var held = R.Get(ComponentPosition.ByContainer, deck.Inside).Select(c => c.Id).ToHashSet();
 
         // The cards out of the deck pair first, so the deck retires the cards it holds.
         var issued = R.Get(Component.ByDeck, deck.Id)

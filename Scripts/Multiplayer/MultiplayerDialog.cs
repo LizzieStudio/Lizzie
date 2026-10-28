@@ -9,7 +9,6 @@ namespace Lizzie;
 public partial class MultiplayerDialog : Window
 {
     private LineEdit _portInput;
-    private SpinBox _maxPlayersInput;
     private Button _hostButton;
     private LineEdit _addressInput;
     private LineEdit _clientPortInput;
@@ -19,7 +18,6 @@ public partial class MultiplayerDialog : Window
     private ItemList _playerList;
 
     private const int DefaultPort = 7777;
-    private const int DefaultMaxPlayers = 4;
 
     public override void _Ready()
     {
@@ -66,7 +64,6 @@ public partial class MultiplayerDialog : Window
     {
         _statusLabel = GetNode<Label>("%StatusLabel");
         _portInput = GetNode<LineEdit>("%PortInput");
-        _maxPlayersInput = GetNode<SpinBox>("%MaxPlayerInput");
         _hostButton = GetNode<Button>("%HostButton");
         _addressInput = GetNode<LineEdit>("%AddressInput");
         _clientPortInput = GetNode<LineEdit>("%ClientPortInput");
@@ -75,8 +72,6 @@ public partial class MultiplayerDialog : Window
         _disconnectButton = GetNode<Button>("%DisconnectButton");
 
         //_portInput.Text = DefaultPort.ToString();
-
-        _maxPlayersInput.Value = DefaultMaxPlayers;
 
         _hostButton.Pressed += OnHostPressed;
 
@@ -101,7 +96,6 @@ public partial class MultiplayerDialog : Window
         _portInput.Editable = !isConnected;
         _addressInput.Editable = !isConnected;
         _clientPortInput.Editable = !isConnected;
-        _maxPlayersInput.Editable = !isConnected;
         _disconnectButton.Disabled = !isConnected;
 
         if (!isConnected)
@@ -128,21 +122,19 @@ public partial class MultiplayerDialog : Window
         if (mm?.IsMultiplayerActive != true)
             return;
 
+        var seats = R.Seats();
         foreach (var player in mm.Players.Values)
         {
-            int seat = R.SeatOf(player.Source);
-            var seatSettings = R.SeatSettings(seat);
+            var seatRef = R.SeatOf(player.Source);
+            int place = seats.FindIndex(s => s.Id == seatRef);
 
-            var label =
-                seatSettings == null ? "Watching"
-                : string.IsNullOrWhiteSpace(seatSettings.Name) ? $"Seat {seat}"
-                : seatSettings.Name;
+            var label = place < 0 ? "No Seat" : seats[place].Label(place);
             if (player.IsLocal)
                 label += " (you)";
 
             int idx = _playerList.AddItem(label);
-            if (seatSettings != null)
-                _playerList.SetItemCustomFgColor(idx, seatSettings.Color);
+            if (place >= 0)
+                _playerList.SetItemCustomFgColor(idx, seats[place].Color);
         }
     }
 
@@ -153,9 +145,7 @@ public partial class MultiplayerDialog : Window
             port = DefaultPort;
         }
 
-        int maxPlayers = (int)_maxPlayersInput.Value;
-
-        var error = MultiplayerManager.Instance.HostServer(port, maxPlayers);
+        var error = MultiplayerManager.Instance.HostServer(port);
         if (error != Error.Ok)
         {
             _statusLabel.Text = $"Failed to host server: {error}";

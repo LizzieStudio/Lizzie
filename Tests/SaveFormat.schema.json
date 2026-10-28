@@ -231,7 +231,57 @@
                 ],
                 "additionalProperties": false
               },
-              "containerRef": true,
+              "container": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "$type"
+                ],
+                "anyOf": [
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "Held"
+                      },
+                      "seat": true,
+                      "overHand": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "seat",
+                      "overHand"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "InComponent"
+                      },
+                      "component": true
+                    },
+                    "required": [
+                      "component"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "InHand"
+                      },
+                      "seat": true
+                    },
+                    "required": [
+                      "seat"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
               "stageRef": true,
               "removed": {
                 "type": "boolean"
@@ -396,37 +446,6 @@
               "tableColor": true,
               "rotationStepIndex": {
                 "type": "integer"
-              },
-              "allowObservers": {
-                "type": "boolean"
-              },
-              "maxPlayers": {
-                "type": "integer"
-              },
-              "players": {
-                "type": "array",
-                "items": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "properties": {
-                    "name": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "color": true,
-                    "isAdmin": {
-                      "type": "boolean"
-                    },
-                    "handRef": true,
-                    "cursorRef": true,
-                    "handHoldRef": true
-                  },
-                  "additionalProperties": false
-                }
               },
               "gameTitle": {
                 "type": [
@@ -815,21 +834,41 @@
                         "type": "boolean"
                       },
                       "includedSeats": {
-                        "type": "array",
-                        "items": {
-                          "type": "integer"
-                        }
+                        "type": "array"
                       },
                       "excludedSeats": {
-                        "type": "array",
-                        "items": {
-                          "type": "integer"
-                        }
+                        "type": "array"
                       }
                     },
                     "additionalProperties": false
                   }
                 ]
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Seat"
+              },
+              "id": true,
+              "rank": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "color": true,
+              "isAdmin": {
+                "type": "boolean"
+              },
+              "deleted": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -846,10 +885,7 @@
                 "type": [
                   "object",
                   "null"
-                ],
-                "additionalProperties": {
-                  "type": "integer"
-                }
+                ]
               }
             },
             "additionalProperties": false

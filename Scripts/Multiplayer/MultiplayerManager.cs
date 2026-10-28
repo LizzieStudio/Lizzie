@@ -67,9 +67,9 @@ public partial class MultiplayerManager : Node
     /// <summary>
     /// Host a local server
     /// </summary>
-    public Error HostServer(int port = 7777, int maxPlayers = 8)
+    public Error HostServer(int port = 7777)
     {
-        var error = CreatePeer(peer => peer.CreateServer(port, maxPlayers));
+        var error = CreatePeer(peer => peer.CreateServer(port));
 
         if (error != Error.Ok)
         {

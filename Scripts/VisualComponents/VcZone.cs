@@ -19,8 +19,8 @@ public partial class VcZone : VisualComponentBase
 
     private bool _defaultIncluded;
     private bool _hiddenWhenExcluded;
-    private HashSet<int> _includedSeats = new();
-    private HashSet<int> _excludedSeats = new();
+    private HashSet<Ref<Seat>> _includedSeats = new();
+    private HashSet<Ref<Seat>> _excludedSeats = new();
 
     private const float HandleLift = 0.08f;
 
@@ -88,17 +88,17 @@ public partial class VcZone : VisualComponentBase
 
     public bool DefaultIncluded => _defaultIncluded;
     public bool HiddenWhenExcluded => _hiddenWhenExcluded;
-    public HashSet<int> IncludedSeats => new(_includedSeats);
-    public HashSet<int> ExcludedSeats => new(_excludedSeats);
+    public HashSet<Ref<Seat>> IncludedSeats => new(_includedSeats);
+    public HashSet<Ref<Seat>> ExcludedSeats => new(_excludedSeats);
 
     /// <summary>
     /// Whether the given seat is considered "included" by this zone's rules.
     /// </summary>
-    public bool SeatIncluded(int seatIndex)
+    public bool SeatIncluded(Ref<Seat> seat)
     {
-        if (ExcludedSeats.Contains(seatIndex))
+        if (ExcludedSeats.Contains(seat))
             return false;
-        if (IncludedSeats.Contains(seatIndex))
+        if (IncludedSeats.Contains(seat))
             return true;
         return DefaultIncluded;
     }
@@ -115,6 +115,6 @@ public sealed record ZoneParameters : ComponentParameters
     public float Depth { get; init; } = 2f;
     public bool DefaultIncluded { get; init; }
     public bool HiddenWhenExcluded { get; init; }
-    public ImmutableArray<int> IncludedSeats { get; init; } = ImmutableArray<int>.Empty;
-    public ImmutableArray<int> ExcludedSeats { get; init; } = ImmutableArray<int>.Empty;
+    public ImmutableArray<Ref<Seat>> IncludedSeats { get; init; } = [];
+    public ImmutableArray<Ref<Seat>> ExcludedSeats { get; init; } = [];
 }

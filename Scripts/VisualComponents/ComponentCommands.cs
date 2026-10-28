@@ -74,7 +74,7 @@ public static class ComponentCommands
         Caption = "Delete {0}",
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = (R, c) => !R.IsBeingDragged(c),
+        AppliesTo = (R, c) => !c.IsHeld,
         Effects = (R, cs) => cs.Select(c => c with { Removed = true }),
     };
 
@@ -85,7 +85,7 @@ public static class ComponentCommands
         Caption = "Reset {0}",
         Tooltip = "Moves a component back to where it is in the parent blueprint.",
         ActsOn = Context.Selected | Context.Contents,
-        AppliesTo = (R, c) => !R.IsBeingDragged(c),
+        AppliesTo = (R, c) => !c.IsHeld,
         Requires = [("These components are already at their starting positions.", WrittenHere)],
         Effects = (R, cs) => cs.Select(R.Unset),
     };
@@ -98,7 +98,7 @@ public static class ComponentCommands
         Tooltip = "Moves this component, in its current position, into the parent blueprint.",
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) =>
-            !R.IsBeingDragged(c) && R.Get(Stage.ById, c.StageRef)?.ParentRef is { } p && !p.IsEmpty,
+            !c.IsHeld && R.Get(Stage.ById, c.StageRef)?.ParentRef is { } p && !p.IsEmpty,
         Requires = [("These components have no changes to merge.", WrittenHere)],
         Effects = (R, cs) =>
             cs.SelectMany(c =>
@@ -137,9 +137,9 @@ public static class ComponentCommands
     ) =>
         tokens
             .GroupBy(c =>
-                R.IsInHand(c)
-                    ? (c.ContainerRef, 0, 0, c.Id)
-                    : (c.ContainerRef, c.X, c.Z, Ref<Component>.Empty)
+                c.Container is InHand
+                    ? (c.Container, 0, 0, c.Id)
+                    : (c.Container, c.X, c.Z, Ref<Component>.Empty)
             )
             .SelectMany(pile =>
             {

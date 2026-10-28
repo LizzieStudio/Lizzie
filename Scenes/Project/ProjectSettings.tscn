@@ -116,48 +116,6 @@ popup/item_4/id = 4
 popup/item_5/text = "180°"
 popup/item_5/id = 5
 
-[node name="Players" type="MarginContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=1042105751]
-visible = false
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
-metadata/_tab_index = 1
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players" unique_id=276233634]
-layout_mode = 2
-
-[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer" unique_id=1340418435]
-layout_mode = 2
-columns = 2
-
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=1052519456]
-layout_mode = 2
-text = "Allow Observers"
-
-[node name="ObserverToggle" type="CheckButton" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=1181583422]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 0
-
-[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=234621506]
-layout_mode = 2
-text = "Max Players"
-
-[node name="MaxPlayers" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/GridContainer" unique_id=616620205]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 0
-
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer" unique_id=2000285049]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="PlayerDefinitionContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Players/VBoxContainer/ScrollContainer" unique_id=665993197]
-unique_name_in_owner = true
-layout_mode = 2
-
 [node name="Game Info" type="MarginContainer" parent="MarginContainer/VBoxContainer/TabContainer" unique_id=614151916]
 visible = false
 layout_mode = 2
@@ -165,7 +123,7 @@ theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
-metadata/_tab_index = 2
+metadata/_tab_index = 1
 
 [node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game Info" unique_id=1243388763]
 layout_mode = 2

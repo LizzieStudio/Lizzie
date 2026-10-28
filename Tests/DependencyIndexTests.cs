@@ -11,7 +11,7 @@ namespace Lizzie.Tests;
 public class DependencyIndexTests
 {
     private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(s =>
-        s.ContainerRef
+        s.Container is InComponent c ? c.Component.Tag : SnowTag.Empty
     );
 
     private readonly DependencyIndex<string> _index = new();

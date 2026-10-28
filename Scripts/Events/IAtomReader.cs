@@ -249,57 +249,14 @@ public static class AtomReaderExtensions
     /// The cards in a deck, top first.
     /// </summary>
     public static List<ComponentPosition> TokensOn(this IAtomReader R, ComponentPosition deck) =>
-        R.Get(ComponentPosition.ByContainer, deck.In(deck.Id))
-            .OrderByDescending(s => s.ZOrder)
-            .ToList();
-
-    /// <summary>
-    /// The containers each seat drags with.
-    /// <list type="bullet">
-    /// <item>Its container for dragging on the table.</item>
-    /// <item>Its container for dragging over the hand.</item>
-    /// </list>
-    /// </summary>
-    public static HashSet<SnowTag> Cursors(this IAtomReader R) =>
-        R.Get(ProjectGameSettings.Only)
-            .Players.SelectMany(p => new[] { p.CursorRef, p.HandHoldRef })
-            .Where(c => c != SnowTag.Empty)
-            .ToHashSet();
-
-    /// <summary>
-    /// Whether a player is dragging <paramref name="c"/>.
-    /// </summary>
-    public static bool IsBeingDragged(this IAtomReader R, ComponentPosition c) =>
-        !c.IsOnTable
-        && R.Get(ProjectGameSettings.Only)
-            .Players.Any(p => p.CursorRef == c.ContainerRef || p.HandHoldRef == c.ContainerRef);
-
-    /// <summary>
-    /// Whether a player is dragging <paramref name="c"/> over their hand, where no one else sees it.
-    /// </summary>
-    public static bool IsHeldOverHand(this IAtomReader R, ComponentPosition c) =>
-        !c.IsOnTable
-        && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandHoldRef == c.ContainerRef);
-
-    /// <summary>
-    /// True if it's inside a container, such as a bag or a player's hand, rather than on the table.
-    /// </summary>
-    public static bool IsContained(this IAtomReader R, ComponentPosition c) =>
-        !c.IsOnTable && !R.IsBeingDragged(c);
-
-    /// <summary>
-    /// Whether <paramref name="c"/> is in a player's hand.
-    /// </summary>
-    public static bool IsInHand(this IAtomReader R, ComponentPosition c) =>
-        !c.IsOnTable
-        && R.Get(ProjectGameSettings.Only).Players.Any(p => p.HandRef == c.ContainerRef);
+        R.Get(ComponentPosition.ByContainer, deck.Inside).OrderByDescending(s => s.ZOrder).ToList();
 
     /// <summary>
     /// Whether <paramref name="c"/> is a card in a deck.
     /// </summary>
     public static bool IsInDeck(this IAtomReader R, ComponentPosition c) =>
-        !c.IsOnTable
-        && R.Get(ComponentPosition.ById, c.ContainerKey) is { } container
+        c.Container is InComponent { Component: var holder }
+        && R.Get(ComponentPosition.ById, c.In(holder)) is { } container
         && R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
 
     /// <summary>
@@ -309,5 +266,10 @@ public static class AtomReaderExtensions
     /// As of writing this, only bags do this.
     /// </remarks>
     public static bool IsHidden(this IAtomReader R, ComponentPosition c) =>
-        R.IsContained(c) && !R.IsInDeck(c) && !R.IsInHand(c);
+        c.Container is InComponent && !R.IsInDeck(c);
+
+    /// <summary>
+    /// The seats that aren't deleted, in order.
+    /// </summary>
+    public static List<Seat> Seats(this IAtomReader R) => Ranked(R.Get(Seat.Live));
 }

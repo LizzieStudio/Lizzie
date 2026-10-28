@@ -41,7 +41,8 @@ public static class DeckCommands
         Caption = "Deal Cards",
         AppliesTo = HasCards,
         // As many cards as each seat can get from the fullest deck.
-        Choices = (R, decks) => Counts(decks.Max(d => PerSeat(R.TokensOn(d).Count, DealSeats(R)))),
+        Choices = (R, decks) =>
+            Counts(decks.Max(d => PerSeat(R.TokensOn(d).Count, R.Seats().Count))),
         Effects = (R, cs, n) => cs.SelectMany(c => Dealt(R, c, n)),
     };
 
@@ -88,8 +89,8 @@ public static class DeckCommands
         if (R.Get(ProjectGameSettings.Only).EnablePlayerHands)
         {
             // A player without a seat has no hand to draw into.
-            int seat = R.LocalSeat();
-            if (seat < 0)
+            var seat = R.LocalSeat();
+            if (seat.IsEmpty)
                 return [];
             return cards.Select((c, i) => PlayerHandService.MovedToHand(c, seat, i, stamp));
         }
@@ -101,7 +102,7 @@ public static class DeckCommands
             (c, i) =>
                 c with
                 {
-                    ContainerRef = SnowTag.Empty,
+                    Container = null,
                     Position = frame + new Vector3(width * (1.5f + i), 0, 0),
                     Rotation = c.Rotation with { Y = deck.Rotation.Y + c.Rotation.Y },
                     ZOrder = new ZOrder(ZTarget.Top, i, stamp),
@@ -110,7 +111,7 @@ public static class DeckCommands
     }
 
     /// <summary>
-    /// Deals <paramref name="countPerPlayer"/> cards to every seat with a hand in turn, like a real deal.
+    /// Deals <paramref name="countPerPlayer"/> cards to every seat in turn, like a real deal.
     /// When the deck runs out, the last seats get fewer. With no seats, the local player draws instead.
     /// </summary>
     private static IEnumerable<ComponentPosition> Dealt(
@@ -119,43 +120,27 @@ public static class DeckCommands
         int countPerPlayer
     )
     {
-        if (DealSeats(R) is not { } seats)
-            return Drawn(R, deck, countPerPlayer);
+        var seats = R.Seats();
         if (seats.Count == 0)
-            return [];
+            return Drawn(R, deck, countPerPlayer);
 
         var cards = R.TokensOn(deck);
         int total = (int)Math.Min((long)countPerPlayer * seats.Count, cards.Count);
-        var suborder = new int[seats.Max() + 1];
         var stamp = SnowportId.Create();
-        var dealt = new List<ComponentPosition>(total);
-        for (int i = 0; i < total; i++)
-        {
-            int seat = seats[i % seats.Count];
-            dealt.Add(PlayerHandService.MovedToHand(cards[i], seat, suborder[seat]++, stamp));
-        }
-        return dealt;
+        // Each seat's cards go into its hand in the order they're dealt.
+        return cards
+            .Take(total)
+            .Select(
+                (card, i) =>
+                    PlayerHandService.MovedToHand(
+                        card,
+                        seats[i % seats.Count].Id,
+                        i / seats.Count,
+                        stamp
+                    )
+            );
     }
 
-    /// <summary>
-    /// The seats a deal goes to: every seat with a hand. Null when the project has no seats,
-    /// so the local player draws instead.
-    /// </summary>
-    private static List<int> DealSeats(IAtomReader R)
-    {
-        var players = R.Get(ProjectGameSettings.Only).Players.Length;
-        if (players == 0)
-            return null;
-
-        return Enumerable.Range(0, players).Where(seat => R.HandOf(seat) != SnowTag.Empty).ToList();
-    }
-
-    /// <summary>How many of <paramref name="cards"/> each seat can be dealt, rounding up.</summary>
-    private static int PerSeat(int cards, List<int> seats) =>
-        seats switch
-        {
-            null => cards,
-            [] => 0,
-            _ => (cards + seats.Count - 1) / seats.Count,
-        };
+    private static int PerSeat(int cards, int seats) =>
+        seats == 0 ? cards : (cards + seats - 1) / seats;
 }

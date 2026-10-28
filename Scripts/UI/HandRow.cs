@@ -24,12 +24,12 @@ public partial class HandRow : Control
     [Export(PropertyHint.Range, "0,40,1,suffix:px")]
     public float Separation { get; set; } = 6;
 
-    private int _seat = -1;
+    private Ref<Seat> _seat;
 
     /// <summary>
-    /// The seat whose hand this row shows. Observer seats show no cards.
+    /// The seat whose hand this row shows. <see cref="Ref{T}.Empty"/>, no seat, shows no cards.
     /// </summary>
-    public int Seat
+    public Ref<Seat> Seat
     {
         get => _seat;
         set

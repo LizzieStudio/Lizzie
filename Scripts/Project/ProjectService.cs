@@ -115,7 +115,7 @@ public partial class ProjectService : Node
     {
         CurrentProject = new Project();
         HasUnsavedChanges = false;
-        EnsureSeatContainers();
+        Atoms.R.WriteAdmin(Seat.Defaults());
         EnsureTable();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
     }
@@ -253,7 +253,6 @@ public partial class ProjectService : Node
     {
         SeedTagsFromTimeline();
         EndBulkLoad();
-        EnsureSeatContainers();
         EnsureTable();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
 
@@ -373,45 +372,6 @@ public partial class ProjectService : Node
 
         foreach (var e in timeline.Values)
             JsonWalker.Visit<SnowTag>(e, Snowport.Clock.ObserveTag);
-    }
-
-    /// <summary>
-    /// Assigns hand, cursor, and over-the-hand container SnowTags to any seat that lacks them.
-    /// The host or a solo player runs it after a new game or a load.
-    /// </summary>
-    private void EnsureSeatContainers()
-    {
-        if (CurrentProject == null)
-            return;
-        if (MultiplayerManager.Instance?.HasAuthority() == false)
-            return;
-
-        var settings = Atoms.R.Get(ProjectGameSettings.Only);
-        var builder = settings.Players.ToBuilder();
-        bool changed = false;
-        for (int i = 0; i < builder.Count; i++)
-        {
-            if (builder[i].HandRef == SnowTag.Empty)
-            {
-                builder[i] = builder[i] with { HandRef = SnowTag.Create() };
-                changed = true;
-            }
-            if (builder[i].CursorRef == SnowTag.Empty)
-            {
-                builder[i] = builder[i] with { CursorRef = SnowTag.Create() };
-                changed = true;
-            }
-            if (builder[i].HandHoldRef == SnowTag.Empty)
-            {
-                builder[i] = builder[i] with { HandHoldRef = SnowTag.Create() };
-                changed = true;
-            }
-        }
-
-        if (!changed)
-            return;
-
-        Atoms.R.WriteAdmin(settings with { Players = builder.ToImmutable() });
     }
 
     /// <summary>

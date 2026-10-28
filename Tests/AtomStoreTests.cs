@@ -17,14 +17,16 @@ public class AtomStoreTests
         new(s.StageRef, s.Id)
     );
 
-    private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(s =>
-        s.ContainerRef
-    );
+    private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(HolderOf);
 
     // a lookup only components in a container are in
     private static readonly Lookup<ComponentPosition, SnowTag?> InContainer = new(s =>
-        s.IsOnTable ? null : s.ContainerRef
+        s.IsOnTable ? null : HolderOf(s)
     );
+
+    // the tag of the component holding s, or Empty on the table
+    private static SnowTag HolderOf(ComponentPosition s) =>
+        s.Container is InComponent c ? c.Component.Tag : SnowTag.Empty;
 
     private readonly Timeline _timeline = new();
     private readonly AtomStore<ComponentPosition, StageKey<ComponentPosition>> _store = new(ById);
@@ -35,8 +37,10 @@ public class AtomStoreTests
     private static StageKey<ComponentPosition> Key(int counter) =>
         new(Ref<Stage>.Empty, new(Tag(counter)));
 
+    private static InComponent In(int container) => new(new(Tag(container)));
+
     private static ComponentPosition Component(int id, int container = 0) =>
-        new() { Id = new(Tag(id)), ContainerRef = container == 0 ? SnowTag.Empty : Tag(container) };
+        new() { Id = new(Tag(id)), Container = container == 0 ? null : In(container) };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
     private TimelineEvent Write(params ComponentPosition[] atoms) =>
@@ -102,7 +106,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Write(Component(1, container: 6));
 
-        Assert.Equal(Tag(6), Value(1).ContainerRef);
+        Assert.Equal(In(6), Value(1).Container);
     }
 
     [Fact]
@@ -112,7 +116,7 @@ public class AtomStoreTests
         var newer = Write(Component(1, container: 6));
         Undo(newer);
 
-        Assert.Equal(Tag(5), Value(1).ContainerRef);
+        Assert.Equal(In(5), Value(1).Container);
     }
 
     [Fact]
@@ -147,7 +151,7 @@ public class AtomStoreTests
         Unset(1);
         Write(Component(1, container: 6));
 
-        Assert.Equal(Tag(6), Value(1)?.ContainerRef);
+        Assert.Equal(In(6), Value(1)?.Container);
     }
 
     [Fact]
@@ -156,7 +160,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Undo(Unset(1));
 
-        Assert.Equal(Tag(5), Value(1)?.ContainerRef);
+        Assert.Equal(In(5), Value(1)?.Container);
     }
 
     [Fact]

@@ -38,23 +38,6 @@ public sealed record ProjectGameSettings : Atom
     /// </summary>
     public float RotationStep() => RotationSteps[RotationStepIndex];
 
-    // Players tab
-    public bool AllowObservers { get; init; } = false;
-    public int MaxPlayers { get; init; } = 4;
-
-    public ImmutableArray<ProjectPlayerSettings> Players { get; init; } =
-        new[] { 0, 1, 2, 3 }
-            .Select(
-                (n) =>
-                    new ProjectPlayerSettings
-                    {
-                        Name = $"Seat {n + 1}",
-                        // 13/34 is roughly the golden angle. It picks distinct colors on the color wheel.
-                        Color = Color.FromOkHsl((1f / 12f) + (13f / 34f * n), 1.0f, 0.65f),
-                    }
-            )
-            .ToImmutableArray();
-
     // Game Info tab
     public string GameTitle { get; init; } = string.Empty;
     public string Designers { get; init; } = string.Empty;
@@ -62,28 +45,4 @@ public sealed record ProjectGameSettings : Atom
     public string Artists { get; init; } = string.Empty;
     public string ContactInfo { get; init; } = string.Empty;
     public string VisionStatement { get; init; } = string.Empty;
-}
-
-public record ProjectPlayerSettings
-{
-    public string Name { get; init; } = string.Empty;
-    public Color Color { get; init; } = new Color(1f, 1f, 1f, 1f);
-    public bool IsAdmin { get; init; } = false;
-
-    /// <summary>
-    /// The container id for this seat's hand.
-    /// </summary>
-    public SnowTag HandRef { get; init; } = SnowTag.Empty;
-
-    /// <summary>
-    /// The container id for what this seat's player is dragging over the table.
-    /// </summary>
-    public SnowTag CursorRef { get; init; } = SnowTag.Empty;
-
-    /// <summary>
-    /// The container id for what this seat's player is dragging over their hand.
-    /// It isn't in the hand, and it isn't on the table.
-    /// Importantly, it's kept private, allowing for card flipping before a card reaches the table.
-    /// </summary>
-    public SnowTag HandHoldRef { get; init; } = SnowTag.Empty;
 }

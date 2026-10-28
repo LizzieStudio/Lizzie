@@ -180,8 +180,7 @@ public abstract partial class VisualComponentBase : Area3D
         if (s == null)
             return;
 
-        var held = R.IsBeingDragged(s);
-        LogicalVisible = s.IsOnTable || R.IsInDeck(s) || held && !R.IsHeldOverHand(s);
+        LogicalVisible = s.IsOnTable || R.IsInDeck(s) || s.Container is Held { OverHand: false };
 
         // A new state ends any slide toward the old one.
         if (IsInstanceValid(_slide))
@@ -193,7 +192,7 @@ public abstract partial class VisualComponentBase : Area3D
         var writtenBy = _placed && age <= cutoff ? R.WrittenBy(s) : null;
 
         // A held node is placed by its holder's cursor.
-        if (!held)
+        if (!s.IsHeld)
         {
             var target = s.PositionAt(_placed || _stackedAtLeastOnce ? Position.Y : YHeight / 2f);
             if (writtenBy != DragCommands.Drop || !Slide(target, age))
@@ -601,7 +600,7 @@ public abstract partial class VisualComponentBase : Area3D
     public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
-    public bool IsDragging => State is { } s && Atoms.R.IsBeingDragged(s);
+    public bool IsDragging => State is { IsHeld: true };
 
     private bool _logicalVisible = true;
 

@@ -55,25 +55,16 @@ public partial class UI
     };
 
     /// <summary>
-    /// Asks the local player for a seat, or to observe.
+    /// Asks the local player for a seat, or none.
     /// </summary>
     [Command("app.change_seat")]
     public static readonly GlobalCommand ChangeSeat = new()
     {
         Icon = CommandIcons.ChangeSeat,
         Caption = "Change Seat...",
-        Requires =
-        [
-            (
-                "This project has no seats and doesn't allow observers.",
-                R =>
-                    R.Get(ProjectGameSettings.Only) is var settings
-                    && (settings.Players.Length > 0 || settings.AllowObservers)
-            ),
-        ],
         Effects = (_, _) =>
         {
-            _instance?.ShowPlayerPositionDialog();
+            _instance?.ShowPlayerSeatingDialog();
             return null;
         },
     };
@@ -134,6 +125,18 @@ public partial class UI
         Effects = (_, _) =>
         {
             _instance?.ShowBlueprintManager();
+            return null;
+        },
+    };
+
+    [Command("editor.seats")]
+    public static readonly GlobalCommand EditSeats = new()
+    {
+        Icon = CommandIcons.Seats,
+        Caption = "Seats",
+        Effects = (_, _) =>
+        {
+            _instance?.ShowSeats();
             return null;
         },
     };

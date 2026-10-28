@@ -228,5 +228,5 @@ public static class StageCommands
 
     // What the table wrote itself, except what someone is dragging.
     private static IEnumerable<ComponentPosition> Resettable(IAtomReader R, Stage table) =>
-        R.Get(ComponentPosition.WrittenIn, table.Id).Where(c => !R.IsBeingDragged(c));
+        R.Get(ComponentPosition.WrittenIn, table.Id).Where(c => !c.IsHeld);
 }
