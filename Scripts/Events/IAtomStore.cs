@@ -64,7 +64,7 @@ public interface IAtomStore<T> : IAtomStore
     /// The atoms with <paramref name="key"/> in <paramref name="lookup"/>, leaving out unset ones.
     /// The lookup is indexed on first read and kept up to date from then on.
     /// </summary>
-    IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key);
+    List<T> Get<K>(Lookup<T, K> lookup, K key);
 
     /// <summary>How many atoms with <paramref name="key"/> in <paramref name="lookup"/> aren't unset.</summary>
     int Count<K>(Lookup<T, K> lookup, K key);

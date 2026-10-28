@@ -30,7 +30,7 @@ public static class DeckCommands
         NumberKeys = true,
         AppliesTo = HasCards,
         // As many cards as the fullest deck has.
-        Choices = (R, decks) => Counts(decks.Max(d => R.TokensOn(d).Count)),
+        Choices = (R, decks) => Counts(decks.Max(d => CardCount(R, d))),
         Effects = (R, cs, n) => cs.SelectMany(c => Drawn(R, c, n)),
     };
 
@@ -42,7 +42,7 @@ public static class DeckCommands
         AppliesTo = HasCards,
         // As many cards as each seat can get from the fullest deck.
         Choices = (R, decks) =>
-            Counts(decks.Max(d => PerSeat(R.TokensOn(d).Count, R.Seats().Count))),
+            Counts(decks.Max(d => PerSeat(CardCount(R, d), R.Count(Seat.Live)))),
         Effects = (R, cs, n) => cs.SelectMany(c => Dealt(R, c, n)),
     };
 
@@ -62,7 +62,10 @@ public static class DeckCommands
 
     // There's nothing to shuffle, draw or deal in an empty deck.
     private static bool HasCards(IAtomReader R, ComponentPosition c) =>
-        IsDeck(R, c) && R.TokensOn(c).Count > 0;
+        IsDeck(R, c) && CardCount(R, c) > 0;
+
+    private static int CardCount(IAtomReader R, ComponentPosition deck) =>
+        R.Count(ComponentPosition.ByContainer, deck.Inside);
 
     /// <summary>The deck's cards with their ZOrders shuffled among them.</summary>
     private static IEnumerable<ComponentPosition> Shuffled(IAtomReader R, ComponentPosition deck)
@@ -120,7 +123,7 @@ public static class DeckCommands
         int countPerPlayer
     )
     {
-        var seats = R.Seats();
+        var seats = R.Get(Seat.Live);
         if (seats.Count == 0)
             return Drawn(R, deck, countPerPlayer);
 

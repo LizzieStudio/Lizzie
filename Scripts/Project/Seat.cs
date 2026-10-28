@@ -16,9 +16,9 @@ public sealed record Seat : Atom, IRanked
     public static readonly Identity<Seat, Ref<Seat>> ById = new(s => s.Id);
 
     /// <summary>
-    /// The seats that aren't deleted, in no order. <see cref="AtomReaderExtensions.Seats"/> sorts them.
+    /// The seats that aren't deleted, in order.
     /// </summary>
-    public static readonly All<Seat> Live = new(s => !s.Deleted);
+    public static readonly All<Seat> Live = new(s => !s.Deleted, IRanked.ByRank);
 
     /// <summary>
     /// This atom's identity, created with <see cref="Ref{T}.Create"/>.

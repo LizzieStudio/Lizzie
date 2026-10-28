@@ -10,7 +10,7 @@ namespace Lizzie.Replication.Machinery;
 /// </summary>
 internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
     where T : Atom
-    where I : IAtomRef<T>
+    where I : IAtomRef<T>, IComparable<I>
 {
     private readonly Dictionary<I, AtomEntry> _atoms = new();
 
@@ -24,7 +24,7 @@ internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
     /// </summary>
     public AtomEntry Find(I id) => _atoms.GetValueOrDefault(id);
 
-    public IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key) =>
+    public List<T> Get<K>(Lookup<T, K> lookup, K key) =>
         key is null ? [] : IndexOf(lookup).Atoms(key);
 
     public int Count<K>(Lookup<T, K> lookup, K key) => key is null ? 0 : IndexOf(lookup).Count(key);
@@ -98,8 +98,17 @@ internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
     {
         private readonly Dictionary<K, Dictionary<I, T>> _buckets = new();
 
-        public IReadOnlyList<T> Atoms(K key) =>
-            _buckets.TryGetValue(key, out var bucket) ? bucket.Values.ToArray() : [];
+        // each bucket in the lookup's order, from its first read until it changes
+        private readonly Dictionary<K, List<T>> _ordered = new();
+
+        public List<T> Atoms(K key)
+        {
+            if (!_buckets.TryGetValue(key, out var bucket))
+                return [];
+            if (!_ordered.TryGetValue(key, out var ordered))
+                _ordered[key] = ordered = lookup.Ordered(bucket.Values);
+            return [.. ordered];
+        }
 
         public int Count(K key) => _buckets.GetValueOrDefault(key)?.Count ?? 0;
 
@@ -110,6 +119,7 @@ internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
             if (!_buckets.TryGetValue(key, out var bucket))
                 _buckets[key] = bucket = new();
             bucket[id] = (T)entry.Value;
+            _ordered.Remove(key);
         }
 
         public void Remove(I id, AtomEntry entry)
@@ -120,9 +130,14 @@ internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
             bucket.Remove(id);
             if (bucket.Count == 0)
                 _buckets.Remove(key);
+            _ordered.Remove(key);
         }
 
-        public void Clear() => _buckets.Clear();
+        public void Clear()
+        {
+            _buckets.Clear();
+            _ordered.Clear();
+        }
 
         /// <summary>
         /// The lookup keys whose atoms a change touched, and the lookup keys whose count it changed.
@@ -151,5 +166,24 @@ internal sealed class IndexedAtoms<T, I>(Identity<T, I> byId)
             key = entry.Value == null ? default : lookup.Of((T)entry.Value);
             return entry.Value != null && key is not null;
         }
+    }
+}
+
+public static class LookupMachinery
+{
+    /// <summary>
+    /// <paramref name="atoms"/> in <paramref name="lookup"/>'s order, with ties in id order,
+    /// or as they come when it has none.
+    /// </summary>
+    public static List<T> Ordered<T, K>(this Lookup<T, K> lookup, IEnumerable<T> atoms)
+        where T : Atom
+    {
+        var ordered = atoms.ToList();
+        if (lookup.Order is { } order)
+        {
+            var ids = IdQuery.For(typeof(T));
+            ordered.Sort((a, b) => order(a, b) is var c and not 0 ? c : ids.CompareIds(a, b));
+        }
+        return ordered;
     }
 }

@@ -10,7 +10,7 @@ namespace Lizzie.Replication.Machinery;
 /// </summary>
 public sealed class AtomStore<T, I> : IAtomStore<T, I>
     where T : Atom
-    where I : IAtomRef<T>
+    where I : IAtomRef<T>, IComparable<I>
 {
     private static readonly bool Saved = !typeof(T).IsDefined(typeof(NotSavedAttribute), true);
 
@@ -43,7 +43,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
     /// </summary>
     internal IEnumerable<I> Ids => _atoms.Entries.Keys;
 
-    public IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key) => _atoms.Get(lookup, key);
+    public List<T> Get<K>(Lookup<T, K> lookup, K key) => _atoms.Get(lookup, key);
 
     public int Count<K>(Lookup<T, K> lookup, K key) => _atoms.Count(lookup, key);
 

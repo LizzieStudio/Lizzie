@@ -109,7 +109,7 @@ public static class LocalSelection
         ICommandView view
     )
         where T : Atom
-        where I : IAtomRef<T> => R.GetSelection(view)?.Targets.OfType<I>() ?? [];
+        where I : IAtomRef<T>, IComparable<I> => R.GetSelection(view)?.Targets.OfType<I>() ?? [];
 
     /// <summary>
     /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type in <paramref name="view"/>,
@@ -123,7 +123,8 @@ public static class LocalSelection
         ICommandView view
     )
         where T : Atom
-        where I : IAtomRef<T> => Atoms.R.Write((Node)view, R.NewSelection(byId, ids, view));
+        where I : IAtomRef<T>, IComparable<I> =>
+        Atoms.R.Write((Node)view, R.NewSelection(byId, ids, view));
 
     /// <summary>
     /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, ICommandView)"/> writes,
@@ -136,7 +137,7 @@ public static class LocalSelection
         ICommandView view
     )
         where T : Atom
-        where I : IAtomRef<T>
+        where I : IAtomRef<T>, IComparable<I>
     {
         var old = R.GetSelection(view)?.Targets ?? ImmutableHashSet<IAtomRef>.Empty;
         return R.NewSelection(old.Where(t => t is not I).Concat(ids.Cast<IAtomRef>()), view);

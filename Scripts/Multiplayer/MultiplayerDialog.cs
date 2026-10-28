@@ -122,7 +122,7 @@ public partial class MultiplayerDialog : Window
         if (mm?.IsMultiplayerActive != true)
             return;
 
-        var seats = R.Seats();
+        var seats = R.Get(Seat.Live);
         foreach (var player in mm.Players.Values)
         {
             var seatRef = R.SeatOf(player.Source);

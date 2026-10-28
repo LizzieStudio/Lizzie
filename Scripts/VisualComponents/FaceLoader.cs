@@ -178,7 +178,7 @@ public sealed class FaceLoader(Action shown)
                         R =>
                             R.Get(Dataset.ById, templateSide.DatasetRef) == null
                                 ? []
-                                : R.GetRows(templateSide.DatasetRef)
+                                : R.Get(DataRow.ByDataset, templateSide.DatasetRef)
                     )
                     .Face(row.Tag);
             }

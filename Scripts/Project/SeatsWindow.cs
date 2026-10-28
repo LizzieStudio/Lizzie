@@ -22,7 +22,7 @@ public partial class SeatsWindow : Window, ICommandView
     // The seat being dragged, while it is.
     private SeatDrag _drag;
 
-    private readonly Dictionary<Ref<Seat>, PlayerDefinition> _rows = new();
+    private ChildList<Ref<Seat>, PlayerDefinition> _rows;
 
     public override void _EnterTree()
     {
@@ -32,6 +32,15 @@ public partial class SeatsWindow : Window, ICommandView
     public override void _Ready()
     {
         _list = GetNode<VBoxContainer>("%SeatList");
+        _rows = new(
+            _list,
+            _ =>
+            {
+                var row = GD.Load<PackedScene>(RowScene).Instantiate<PlayerDefinition>();
+                _list.AddChild(row);
+                return row;
+            }
+        );
         _dropZone = GetNode<Control>("%SeatDropZone");
         _dropLine = GetNode<ColorRect>("%SeatDropLine");
         GetNode<Button>("%AddSeat").Pressed += AddSeat;
@@ -54,24 +63,10 @@ public partial class SeatsWindow : Window, ICommandView
     /// </summary>
     private void Sync(IWatchReader R)
     {
-        var seats = R.Seats();
-        foreach (var gone in _rows.Keys.Except(seats.Select(s => s.Id)).ToList())
-        {
-            _rows.Remove(gone, out var row);
-            _list.RemoveChild(row);
-            row.QueueFree();
-        }
+        var seats = R.Get(Seat.Live);
+        var rows = _rows.Show(seats, s => s.Id);
         for (int i = 0; i < seats.Count; i++)
-        {
-            if (!_rows.TryGetValue(seats[i].Id, out var row))
-            {
-                row = GD.Load<PackedScene>(RowScene).Instantiate<PlayerDefinition>();
-                _list.AddChild(row);
-                _rows[seats[i].Id] = row;
-            }
-            _list.MoveChild(row, i);
-            row.ShowSeat(seats[i], i);
-        }
+            rows[i].ShowSeat(seats[i], i);
     }
 
     /// <summary>
@@ -79,7 +74,7 @@ public partial class SeatsWindow : Window, ICommandView
     /// </summary>
     private void AddSeat()
     {
-        var seats = Atoms.R.Seats();
+        var seats = Atoms.R.Get(Seat.Live);
         Atoms.R.Write(this, Seat.New(SnowRank.At(seats, seats.Count, SnowportId.Create()), seats));
     }
 
@@ -142,7 +137,7 @@ public partial class SeatsWindow : Window, ICommandView
     /// </summary>
     private void DropSeat(Ref<Seat> moved, Vector2 at)
     {
-        var seats = Atoms.R.Seats();
+        var seats = Atoms.R.Get(Seat.Live);
         int from = seats.FindIndex(s => s.Id == moved);
         int to = DropIndex(at);
         if (from < 0 || to == from || to == from + 1)

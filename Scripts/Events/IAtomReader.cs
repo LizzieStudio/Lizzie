@@ -26,12 +26,15 @@ public interface IAtomReader
     /// </summary>
     T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom
-        where I : IAtomRef<T>;
+        where I : IAtomRef<T>, IComparable<I>;
 
     /// <summary>
     /// Gets the atoms with <paramref name="key"/> in <paramref name="lookup"/> that aren't unset.
     /// </summary>
-    IReadOnlyList<T> Get<T, K>(Lookup<T, K> lookup, K key)
+    /// <remarks>
+    /// The returned list is a copy you may change.
+    /// </remarks>
+    List<T> Get<T, K>(Lookup<T, K> lookup, K key)
         where T : Atom;
 
     /// <summary>
@@ -119,7 +122,7 @@ public static class AtomReaderExtensions
     /// <summary>
     /// The atoms <paramref name="all"/> lists.
     /// </summary>
-    public static IReadOnlyList<T> Get<T>(this IAtomReader R, All<T> all)
+    public static List<T> Get<T>(this IAtomReader R, All<T> all)
         where T : Atom => R.Get(all, true);
 
     /// <summary>
@@ -183,33 +186,13 @@ public static class AtomReaderExtensions
             : null;
 
     /// <summary>
-    /// The rows of a dataset that aren't deleted, in order.
-    /// </summary>
-    public static List<DataRow> GetRows(this IAtomReader R, Ref<Dataset> datasetRef) =>
-        datasetRef.IsEmpty ? [] : Ranked(R.Get(DataRow.ByDataset, datasetRef));
-
-    /// <summary>
-    /// The columns of a dataset in order.
-    /// </summary>
-    public static List<DataColumn> GetColumns(this IAtomReader R, Ref<Dataset> datasetRef) =>
-        datasetRef.IsEmpty ? [] : Ranked(R.Get(DataColumn.ByDataset, datasetRef));
-
-    private static List<T> Ranked<T>(IEnumerable<T> items)
-        where T : IRanked
-    {
-        var ranked = items.ToList();
-        ranked.Sort((a, b) => a.Rank.CompareTo(b.Rank));
-        return ranked;
-    }
-
-    /// <summary>
     /// What <paramref name="row"/> holds in each of its dataset's columns, by column name, for a template to show.
     /// If two columns share a name, the first one is used.
     /// </summary>
     public static IReadOnlyDictionary<string, string> Values(this IAtomReader R, DataRow row)
     {
         var values = new Dictionary<string, string>();
-        foreach (var column in R.GetColumns(row.DatasetRef))
+        foreach (var column in R.Get(DataColumn.ByDataset, row.DatasetRef))
             values.TryAdd(
                 column.Name,
                 R.Get(DataCell.ById, new CellId(row.Id, column.Id))?.Value ?? string.Empty
@@ -248,8 +231,12 @@ public static class AtomReaderExtensions
     /// <summary>
     /// The cards in a deck, top first.
     /// </summary>
-    public static List<ComponentPosition> TokensOn(this IAtomReader R, ComponentPosition deck) =>
-        R.Get(ComponentPosition.ByContainer, deck.Inside).OrderByDescending(s => s.ZOrder).ToList();
+    public static List<ComponentPosition> TokensOn(this IAtomReader R, ComponentPosition deck)
+    {
+        var cards = R.Get(ComponentPosition.ByContainer, deck.Inside);
+        cards.Reverse();
+        return cards;
+    }
 
     /// <summary>
     /// Whether <paramref name="c"/> is a card in a deck.
@@ -267,9 +254,4 @@ public static class AtomReaderExtensions
     /// </remarks>
     public static bool IsHidden(this IAtomReader R, ComponentPosition c) =>
         c.Container is InComponent && !R.IsInDeck(c);
-
-    /// <summary>
-    /// The seats that aren't deleted, in order.
-    /// </summary>
-    public static List<Seat> Seats(this IAtomReader R) => Ranked(R.Get(Seat.Live));
 }

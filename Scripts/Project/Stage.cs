@@ -13,10 +13,12 @@ public sealed record Stage : Atom, IRanked
     public static readonly Identity<Stage, Ref<Stage>> ById = new(s => s.Id);
 
     /// <summary>
-    /// Stages that are not deleted, by the stage they build on, with <see cref="Ref{T}.Empty"/> for the roots.
+    /// Stages that are not deleted, by the stage they build on, with <see cref="Ref{T}.Empty"/> for the roots,
+    /// in the order the blueprint manager shows them.
     /// </summary>
-    public static readonly Lookup<Stage, Ref<Stage>?> Children = new(s =>
-        s.Deleted ? null : s.ParentRef
+    public static readonly Lookup<Stage, Ref<Stage>?> Children = new(
+        s => s.Deleted ? null : s.ParentRef,
+        IRanked.ByRank
     );
 
     /// <summary>
@@ -50,19 +52,18 @@ public sealed record Stage : Atom, IRanked
     /// <summary>
     /// Gets a new empty table, last under <paramref name="parent"/>.
     /// </summary>
-    public static Stage NewTable(IAtomReader R, Ref<Stage> parent) =>
-        new()
+    public static Stage NewTable(IAtomReader R, Ref<Stage> parent)
+    {
+        var siblings = R.Get(Children, parent);
+        return new()
         {
             Id = Ref<Stage>.Create(),
             Name = NextTableName(R),
             ParentRef = parent,
-            Rank = GetChildren(R, parent)
-                .Select(s => s.Rank)
-                .DefaultIfEmpty()
-                .Max()
-                .After(SnowportId.Create()),
+            Rank = SnowRank.At(siblings, siblings.Count, SnowportId.Create()),
             IsTable = true,
         };
+    }
 
     /// <summary>
     /// "Table N", numbered one past the highest "Table N" anywhere in the tree.
@@ -91,12 +92,6 @@ public sealed record Stage : Atom, IRanked
         Chain(R, R.Get(CurrentTable.Only).StageRef).Any(s => s.Id == id);
 
     /// <summary>
-    /// The stages built on <paramref name="parent"/>, in the order the blueprint manager shows them.
-    /// </summary>
-    public static List<Stage> GetChildren(IAtomReader R, Ref<Stage> parent) =>
-        R.Get(Children, parent).OrderBy(s => s.Rank).ThenBy(s => s.Id).ToList();
-
-    /// <summary>
     /// Gets what <paramref name="into"/> must write to merge in <paramref name="from"/>.
     /// The later stages take priority over earlier stages.
     /// </summary>
@@ -116,11 +111,11 @@ public sealed record Stage : Atom, IRanked
     /// </summary>
     public static IEnumerable<IChange> Dissolve(IAtomReader R, Stage stage)
     {
-        var siblings = GetChildren(R, stage.ParentRef);
+        var siblings = R.Get(Children, stage.ParentRef);
         int index = siblings.IndexOf(stage);
         siblings.RemoveAt(index);
         var changes = new List<IChange> { stage with { Deleted = true } };
-        foreach (var child in GetChildren(R, stage.Id))
+        foreach (var child in R.Get(Children, stage.Id))
         {
             var moved = child with
             {

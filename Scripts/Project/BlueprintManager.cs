@@ -106,7 +106,9 @@ public partial class BlueprintManager : Window, ICommandView
 
         void AddChildren(TreeItem parent, Ref<Stage> parentRef, int depth)
         {
-            foreach (var (stage, index) in Stage.GetChildren(R, parentRef).Select((s, i) => (s, i)))
+            foreach (
+                var (stage, index) in R.Get(Stage.Children, parentRef).Select((s, i) => (s, i))
+            )
             {
                 listed.Add(stage.Id);
                 // The rows before it are in place already, so the one at its index is the first one after it.

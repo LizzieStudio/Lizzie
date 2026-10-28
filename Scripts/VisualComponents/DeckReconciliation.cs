@@ -32,7 +32,7 @@ public static class DeckReconciliation
         var snowportStamp = stamp ?? SnowportId.Create();
 
         IEnumerable<Stage> Below(Ref<Stage> parent) =>
-            Stage.GetChildren(R, parent).SelectMany(stage => Below(stage.Id).Prepend(stage));
+            R.Get(Stage.Children, parent).SelectMany(stage => Below(stage.Id).Prepend(stage));
 
         var blueprints = Below(Ref<Stage>.Empty).Where(stage => !stage.IsTable).ToList();
         var wanted = parameters.Items(R);

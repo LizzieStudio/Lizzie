@@ -44,7 +44,7 @@ public partial class TemplateSideTab : SideTab
             )
         );
         _quantity.List(
-            R => R.GetColumns(R.Get(_side).DatasetRef).Select(c => (c.Id, c.Name)),
+            R => R.Get(DataColumn.ByDataset, R.Get(_side).DatasetRef).Select(c => (c.Id, c.Name)),
             new(R => R.Get(_side).QuantityRef, id => Edit(s => s with { QuantityRef = id }))
         );
         _editTemplate.Pressed += () =>

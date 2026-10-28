@@ -180,7 +180,7 @@ public partial class PrototypeManifest : Window, ICommandView
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
 
-        var prototypes = R.Get(Prototype.Live).ToList();
+        var prototypes = R.Get(Prototype.Live);
 
         // The Qty column, counted on the stage the view shows.
         // A prototype that spawns decks counts its decks, not their cards.

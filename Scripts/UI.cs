@@ -221,6 +221,9 @@ public partial class UI : CanvasLayer
 
     private void ShowPlayerSeatingDialog()
     {
+        if (BroughtForward(_playerPositionDialog))
+            return;
+
         string s = "res://Scenes/Controls/player_position_dialog.tscn";
 
         _playerPositionDialog = GD.Load<PackedScene>(s).Instantiate<PlayerPositionDialog>();

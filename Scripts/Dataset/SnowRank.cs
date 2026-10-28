@@ -155,4 +155,9 @@ public readonly record struct SnowRank : IComparable<SnowRank>
 public interface IRanked
 {
     SnowRank Rank { get; }
+
+    /// <summary>
+    /// Orders a lookup by rank, like <c>new(r => r.DatasetRef, IRanked.ByRank)</c>.
+    /// </summary>
+    static int ByRank(IRanked a, IRanked b) => a.Rank.CompareTo(b.Rank);
 }

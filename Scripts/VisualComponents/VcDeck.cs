@@ -60,9 +60,7 @@ public partial class VcDeck : VisualComponentBase
     /// </summary>
     private void SyncLayout(IWatchReader R)
     {
-        var cards = R.Get(ComponentPosition.ByContainer, ContainerKey.Of(Key))
-            .OrderBy(c => c.ZOrder)
-            .ToList();
+        var cards = R.Get(ComponentPosition.ByContainer, ContainerKey.Of(Key));
         var heights = cards.Select(c => CardHeight(R, c)).ToList();
         float total = FrameHeight + heights.Sum();
 

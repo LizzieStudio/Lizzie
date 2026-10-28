@@ -76,7 +76,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     /// The atoms with <paramref name="key"/> in <paramref name="lookup"/> as written for a <see cref="Written{T}"/>,
     /// and as each stage shows them otherwise.
     /// </summary>
-    public IReadOnlyList<T> Get<K>(Lookup<T, K> lookup, K key) =>
+    public List<T> Get<K>(Lookup<T, K> lookup, K key) =>
         lookup is Written<T> ? _raw.Get(lookup, key) : _resolved.Get(lookup, key);
 
     public int Count<K>(Lookup<T, K> lookup, K key) =>

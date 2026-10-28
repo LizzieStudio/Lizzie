@@ -27,11 +27,12 @@ public record ComponentPosition : StagedAtom
     public static readonly Lookup<ComponentPosition, Ref<Stage>> ByStage = new(s => s.StageRef);
 
     /// <summary>
-    /// The components in each container of a stage, by <see cref="Container"/>.
+    /// The components in each container of a stage, by <see cref="Container"/>, from the bottom of the stack up.
     /// A null container holds the ones on the table.
     /// </summary>
-    public static readonly Lookup<ComponentPosition, ContainerKey> ByContainer = new(s =>
-        new(s.StageRef, s.Container)
+    public static readonly Lookup<ComponentPosition, ContainerKey> ByContainer = new(
+        s => new(s.StageRef, s.Container),
+        (a, b) => a.ZOrder.CompareTo(b.ZOrder)
     );
 
     /// <summary>

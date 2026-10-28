@@ -19,7 +19,7 @@ public static class DatasetCommands
         Caption = "Add Row",
         MaxTargets = 1,
         ActsOn = Context.Subject,
-        Effects = (R, sets) => NewRow(R, sets[0].Id, R.GetRows(sets[0].Id).Count),
+        Effects = (R, sets) => NewRow(R, sets[0].Id, R.Count(DataRow.ByDataset, sets[0].Id)),
     };
 
     /// <summary>
@@ -32,7 +32,7 @@ public static class DatasetCommands
         Caption = "Add Column",
         MaxTargets = 1,
         ActsOn = Context.Subject,
-        Effects = (R, sets) => NewColumn(R, sets[0].Id, R.GetColumns(sets[0].Id).Count),
+        Effects = (R, sets) => NewColumn(R, sets[0].Id, R.Count(DataColumn.ByDataset, sets[0].Id)),
     };
 
     [Command("dataset.update_decks")]
@@ -182,8 +182,8 @@ public static class DatasetCommands
     ) Block(IAtomReader R, IReadOnlyList<DataCell> cells)
     {
         var datasetId = R.Get(DataRow.ById, cells[0].Id.RowRef).DatasetRef;
-        var allRows = R.GetRows(datasetId);
-        var allColumns = R.GetColumns(datasetId).Select(c => c.Id).ToList();
+        var allRows = R.Get(DataRow.ByDataset, datasetId);
+        var allColumns = R.Get(DataColumn.ByDataset, datasetId).Select(c => c.Id).ToList();
         var rowIds = cells.Select(c => c.Id.RowRef).ToHashSet();
         var columnIds = cells.Select(c => c.Id.ColumnRef).ToHashSet();
         return (
@@ -250,13 +250,13 @@ public static class DatasetCommands
             {
                 Id = Ref<DataRow>.Create(),
                 DatasetRef = datasetId,
-                Rank = SnowRank.At(R.GetRows(datasetId), index, SnowportId.Create()),
+                Rank = SnowRank.At(R.Get(DataRow.ByDataset, datasetId), index, SnowportId.Create()),
             },
         ];
 
     public static IEnumerable<Atom> NewColumn(IAtomReader R, Ref<Dataset> datasetId, int index)
     {
-        var columns = R.GetColumns(datasetId);
+        var columns = R.Get(DataColumn.ByDataset, datasetId);
         return
         [
             new DataColumn

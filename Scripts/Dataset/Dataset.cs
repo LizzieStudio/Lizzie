@@ -33,9 +33,12 @@ public record DataColumn : Atom, IRanked
     public required Ref<DataColumn> Id { get; init; }
 
     /// <summary>
-    /// The columns of each dataset, in no order. <see cref="AtomReaderExtensions.GetColumns"/> sorts them.
+    /// The columns of each dataset, in order.
     /// </summary>
-    public static readonly Lookup<DataColumn, Ref<Dataset>> ByDataset = new(c => c.DatasetRef);
+    public static readonly Lookup<DataColumn, Ref<Dataset>> ByDataset = new(
+        c => c.DatasetRef,
+        IRanked.ByRank
+    );
 
     /// <summary>
     /// The dataset this column belongs to.
@@ -75,10 +78,11 @@ public record DataRow : Atom, IRanked
     public required Ref<DataRow> Id { get; init; }
 
     /// <summary>
-    /// The rows of each dataset that aren't deleted, in no order. <see cref="AtomReaderExtensions.GetRows"/> sorts them.
+    /// The rows of each dataset that aren't deleted, in order.
     /// </summary>
-    public static readonly Lookup<DataRow, Ref<Dataset>?> ByDataset = new(r =>
-        r.Deleted ? null : r.DatasetRef
+    public static readonly Lookup<DataRow, Ref<Dataset>?> ByDataset = new(
+        r => r.Deleted ? null : r.DatasetRef,
+        IRanked.ByRank
     );
 
     /// <summary>
@@ -100,7 +104,7 @@ public record DataRow : Atom, IRanked
     /// A cell for each of the dataset's columns.
     /// </summary>
     public override IEnumerable<IAtomRef> Contents(IAtomReader R) =>
-        R.GetColumns(DatasetRef).Select(c => new CellId(Id, c.Id)).Cast<IAtomRef>();
+        R.Get(DataColumn.ByDataset, DatasetRef).Select(c => new CellId(Id, c.Id)).Cast<IAtomRef>();
 
     /// <summary>
     /// A row is inside its dataset.
@@ -151,4 +155,11 @@ public record DataCell : Atom
 /// The Id of a <see cref="DataCell"/>.
 /// </summary>
 public readonly record struct CellId(Ref<DataRow> RowRef, Ref<DataColumn> ColumnRef)
-    : IAtomRef<DataCell>;
+    : IAtomRef<DataCell>,
+        IComparable<CellId>
+{
+    public int CompareTo(CellId other) =>
+        RowRef.CompareTo(other.RowRef) is var c and not 0
+            ? c
+            : ColumnRef.CompareTo(other.ColumnRef);
+}

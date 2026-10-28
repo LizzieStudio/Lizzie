@@ -70,7 +70,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         _seatList.Clear();
         _seatIndexMap.Clear();
 
-        var seats = R.Seats();
+        var seats = R.Get(Seat.Live);
         for (int i = 0; i < seats.Count; i++)
         {
             var seat = seats[i];

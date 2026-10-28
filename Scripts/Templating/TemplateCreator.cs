@@ -1625,7 +1625,7 @@ public partial class TemplateCreator : Window, ICommandView
             return;
         }
 
-        var rows = R.GetRows(datasetRef);
+        var rows = R.Get(DataRow.ByDataset, datasetRef);
         _pageControl.SetItemCount(rows.Count);
         _pageControl.Show();
 

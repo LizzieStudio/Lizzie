@@ -67,6 +67,11 @@ public abstract class IdQuery : Query
     /// </summary>
     internal abstract Atom Unwritten(object id);
 
+    /// <summary>
+    /// Compares the ids of two atoms of its type.
+    /// </summary>
+    internal abstract int CompareIds(Atom a, Atom b);
+
     private static readonly Dictionary<Type, IdQuery> Declared = new();
 
     /// <summary>
@@ -110,10 +115,10 @@ public abstract class IdQuery : Query
 /// Read an atom with <see cref="IAtomReader.Get{T, I}(Identity{T, I}, I)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the atom.</typeparam>
-/// <typeparam name="I">The type of the id.</typeparam>
+/// <typeparam name="I">The type of the id, whose order breaks ties in an ordered <see cref="Lookup{T, K}"/>.</typeparam>
 public class Identity<T, I> : IdQuery
     where T : Atom
-    where I : IAtomRef<T>
+    where I : IAtomRef<T>, IComparable<I>
 {
     private readonly Func<T, I> _of;
     private readonly Func<I, T> _unwritten;
@@ -142,6 +147,8 @@ public class Identity<T, I> : IdQuery
 
     internal override Atom Unwritten(object id) => Unwritten((I)id);
 
+    internal override int CompareIds(Atom a, Atom b) => _of((T)a).CompareTo(_of((T)b));
+
     internal override Type IdType => typeof(I);
 
     private protected override Type AtomType => typeof(T);
@@ -169,8 +176,11 @@ public sealed class Singleton<T>() : Identity<T, SingletonId<T>>(_ => default)
 /// <summary>
 /// The id every write of a singleton shares. See <see cref="Singleton{T}"/>.
 /// </summary>
-public readonly record struct SingletonId<T> : IAtomRef<T>
-    where T : Atom;
+public readonly record struct SingletonId<T> : IAtomRef<T>, IComparable<SingletonId<T>>
+    where T : Atom
+{
+    public int CompareTo(SingletonId<T> other) => 0;
+}
 
 /// <summary>
 /// A way to list atoms of <typeparamref name="T"/> by a key of <typeparamref name="K"/>.
@@ -192,10 +202,18 @@ public class Lookup<T, K> : Query
 {
     private readonly Func<T, K> _of;
 
-    /// <param name="of">
-    /// The key an atom is under, or null for none. It may only read the atom.
-    /// </param>
-    public Lookup(Func<T, K> of) => _of = of;
+    /// <param name="of">The key an atom is under, or null for none. It may only read the atom.</param>
+    /// <param name="order">The order of the atoms, or null.</param>
+    public Lookup(Func<T, K> of, Comparison<T> order = null)
+    {
+        _of = of;
+        Order = order;
+    }
+
+    /// <summary>
+    /// The order of the atoms, or null.
+    /// </summary>
+    internal Comparison<T> Order { get; }
 
     /// <summary>
     /// The key <paramref name="atom"/> is under, or null for none.
@@ -238,6 +256,7 @@ public sealed class Written<T>() : Lookup<T, Ref<Stage>>(atom => atom.StageRef)
 /// You generally want to avoid adding this to most atom types, however, since save files will always keep an atom an <see cref="All{T}"/> lists.
 /// </summary>
 /// <param name="where">Which atoms it lists, or every one when null.</param>
-public sealed class All<T>(Func<T, bool> where = null)
-    : Lookup<T, bool?>(atom => where == null || where(atom) ? true : null)
+/// <param name="order">The order of the atoms, or null.</param>
+public sealed class All<T>(Func<T, bool> where = null, Comparison<T> order = null)
+    : Lookup<T, bool?>(atom => where == null || where(atom) ? true : null, order)
     where T : Atom;

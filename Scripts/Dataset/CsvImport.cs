@@ -38,7 +38,7 @@ public static class CsvImport
         var changes = new List<IChange>();
 
         var header = lines[0];
-        var columns = R.GetColumns(dataset.Id);
+        var columns = R.Get(DataColumn.ByDataset, dataset.Id);
         if (!columns.Select(c => c.Name).SequenceEqual(header))
         {
             // TODO: we should do column matching based on string
@@ -56,7 +56,7 @@ public static class CsvImport
             changes.AddRange(columns);
         }
 
-        foreach (var existing in R.GetRows(dataset.Id))
+        foreach (var existing in R.Get(DataRow.ByDataset, dataset.Id))
             changes.Add(existing with { Deleted = true });
 
         SnowRank rank = default;

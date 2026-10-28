@@ -266,7 +266,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void ShowDataset(IAtomReader R, Dataset ds)
     {
-        var columns = R.GetColumns(ds.Id);
+        var columns = R.Get(DataColumn.ByDataset, ds.Id);
         var columnIds = columns.Select(c => c.Id).ToList();
         if (ds.Id != _shownDatasetRef || !columnIds.SequenceEqual(_columnRefs))
         {
@@ -281,7 +281,7 @@ public partial class DatasetEditor : Window, ICommandView
         for (int i = 0; i < _headerCells.Count; i++)
             _headerCells[i].SetHeaderText(columns[i].Name);
 
-        ReconcileRows(R, R.GetRows(ds.Id));
+        ReconcileRows(R, R.Get(DataRow.ByDataset, ds.Id));
         SyncSelection(R, ds.Id);
 
         if (!_revealRowRef.IsEmpty)
@@ -859,7 +859,7 @@ public partial class DatasetEditor : Window, ICommandView
 
     private void DropColumn(Ref<DataColumn> columnId, Vector2 at)
     {
-        var columns = Atoms.R.GetColumns(ShownDatasetRef.Value);
+        var columns = Atoms.R.Get(DataColumn.ByDataset, ShownDatasetRef.Value);
         int from = columns.FindIndex(c => c.Id == columnId);
         if (from < 0)
             return;
@@ -1039,11 +1039,11 @@ public partial class DatasetEditor : Window, ICommandView
 
     // The row's place in its dataset.
     private static int RowIndex(IAtomReader R, DataRow row) =>
-        R.GetRows(row.DatasetRef).FindIndex(r => r.Id == row.Id);
+        R.Get(DataRow.ByDataset, row.DatasetRef).FindIndex(r => r.Id == row.Id);
 
     // The column's place in its dataset.
     private static int ColumnIndex(IAtomReader R, DataColumn column) =>
-        R.GetColumns(column.DatasetRef).FindIndex(c => c.Id == column.Id);
+        R.Get(DataColumn.ByDataset, column.DatasetRef).FindIndex(c => c.Id == column.Id);
 
     private void OnRenameColumn(RenameColumnEvent e)
     {

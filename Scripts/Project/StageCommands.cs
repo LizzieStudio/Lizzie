@@ -33,15 +33,14 @@ public static class StageCommands
         Effects = (R, parents) =>
         {
             var parent = parents.FirstOrDefault();
-            var siblings = Stage.GetChildren(R, parent?.Id ?? Ref<Stage>.Empty);
-            var last = siblings.Select(s => s.Rank).DefaultIfEmpty().Max();
+            var siblings = R.Get(Stage.Children, parent?.Id ?? Ref<Stage>.Empty);
             int n = siblings.Count(s => !s.IsTable) + 1;
             var blueprint = new Stage
             {
                 Id = Ref<Stage>.Create(),
                 Name = parent == null ? $"Blueprint {n}" : $"{parent.Name}-{n}",
                 ParentRef = parent?.Id ?? Ref<Stage>.Empty,
-                Rank = last.After(SnowportId.Create()),
+                Rank = SnowRank.At(siblings, siblings.Count, SnowportId.Create()),
             };
             return [blueprint];
         },
@@ -114,7 +113,7 @@ public static class StageCommands
         Effects = (R, stages) =>
         {
             var original = stages[0];
-            var siblings = Stage.GetChildren(R, original.ParentRef);
+            var siblings = R.Get(Stage.Children, original.ParentRef);
             var copy = new Stage
             {
                 Id = Ref<Stage>.Create(),
@@ -163,7 +162,7 @@ public static class StageCommands
         Tooltip = "Merges its changes into its children.",
         Noun = ("Blueprint", "Blueprints"),
         MaxTargets = 1,
-        AppliesTo = (R, s) => HasChanges(R, s) && Stage.GetChildren(R, s.Id).Count > 0,
+        AppliesTo = (R, s) => HasChanges(R, s) && R.Count(Stage.Children, s.Id) > 0,
         Requires = [NotTheCurrentTable],
         Effects = (R, stages) =>
         {
@@ -190,7 +189,7 @@ public static class StageCommands
         Tooltip = "Removes it but keeps its children.",
         Noun = ("Blueprint", "Blueprints"),
         MaxTargets = 1,
-        AppliesTo = (R, s) => !HasChanges(R, s) && Stage.GetChildren(R, s.Id).Count > 0,
+        AppliesTo = (R, s) => !HasChanges(R, s) && R.Count(Stage.Children, s.Id) > 0,
         Requires = [NotTheCurrentTable],
         Effects = (R, stages) =>
         {

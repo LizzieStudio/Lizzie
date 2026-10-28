@@ -81,6 +81,38 @@ public record MyAtom : Atom
 
 You can have multiple of these queries on an atom as well.
 
+### Ordering
+
+If the results of `Lookup` or `All` should have an order, you can supply them a `Comparison<T>`.
+
+```C#
+public static readonly Lookup<MyAtom, Ref<MyAtom>?> ByParent = new(
+    a => a.ParentRef,
+    (a, b) => string.CompareOrdinal(a.Name, b.Name)
+);
+```
+
+`Get(MyAtom.ByParent, myId)` will then return the results in Ordinal order.
+
+Item insertion in a distributed system is difficult. To make this easier, implement `IRanked` on your atom with a `SnowRank Rank` and order them with `IRanked.ByRank`.
+
+```C#
+public record MyAtom : Atom, IRanked
+{
+    // ...
+    public SnowRank Rank { get; init; }
+    public static readonly All<MyAtom> MyAtoms = new(order: IRanked.ByRank);
+}
+```
+
+To insert a new atom, use `SnowRank.At(atoms, index, SnowportId)`.
+
+```C#
+var last = SnowRank.At(atoms, 5, SnowportId.Create());
+```
+
+The advantage of using SnowRank instead of integers is that they're always unique and you don't need to edit the surrounding atoms to insert a new one.
+
 ### The Singleton query
 
 If you only need one instance of an atom type per project, replace the `Identity` query with a `Singleton Only` query, then retrieve it with `Atoms.R.Get(MyAtom.Only)`.

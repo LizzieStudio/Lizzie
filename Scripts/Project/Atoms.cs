@@ -170,7 +170,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// </summary>
     public void Update<T, I>(Node from, Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
-        where I : IAtomRef<T>
+        where I : IAtomRef<T>, IComparable<I>
     {
         if (Get(byId, id) is { } atom)
             Write(from, change(atom));
@@ -442,9 +442,9 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
 
     public T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom
-        where I : IAtomRef<T> => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
+        where I : IAtomRef<T>, IComparable<I> => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
 
-    public IReadOnlyList<T> Get<T, K>(Lookup<T, K> lookup, K key)
+    public List<T> Get<T, K>(Lookup<T, K> lookup, K key)
         where T : Atom => StoreOf<T>().Get(lookup, key);
 
     public int Count<T, K>(Lookup<T, K> lookup, K key)

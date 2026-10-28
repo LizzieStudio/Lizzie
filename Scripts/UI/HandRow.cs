@@ -44,9 +44,9 @@ public partial class HandRow : Control
     [Export]
     public bool AlwaysShowBacks { get; set; }
 
-    private readonly Dictionary<StageKey<ComponentPosition>, HandCard> _cards = new();
+    private ChildList<StageKey<ComponentPosition>, HandCard> _cards;
 
-    private readonly List<HandCard> _order = new();
+    private IReadOnlyList<HandCard> _order = [];
 
     private int _hovered = -1;
 
@@ -56,6 +56,11 @@ public partial class HandRow : Control
     public override void _EnterTree()
     {
         Atoms.R.Watch(this, Sync);
+    }
+
+    public override void _Ready()
+    {
+        _cards = new(this, AddCard);
     }
 
     /// <summary>
@@ -143,20 +148,8 @@ public partial class HandRow : Control
             ProjectService.Instance.GameObjects.ShownStage(R),
             Seat
         );
-        var ids = hand.Select(ComponentPosition.ById.Of).ToList();
-
-        foreach (var id in _cards.Keys.Except(ids).ToList())
-            RemoveCard(id);
-
-        _order.Clear();
-        for (int i = 0; i < hand.Count; i++)
-        {
-            if (!_cards.TryGetValue(ids[i], out var card))
-                card = AddCard(ids[i]);
-            // Later cards draw over earlier ones.
-            MoveChild(card, i);
-            _order.Add(card);
-        }
+        // Later cards draw over earlier ones.
+        _order = _cards.Show(hand, ComponentPosition.ById.Of);
     }
 
     private HandCard AddCard(StageKey<ComponentPosition> id)
@@ -165,16 +158,7 @@ public partial class HandRow : Control
         AddChild(card);
         card.Reference = id;
         card.AlwaysShowBack = AlwaysShowBacks;
-        _cards[id] = card;
         return card;
-    }
-
-    private void RemoveCard(StageKey<ComponentPosition> id)
-    {
-        if (!_cards.Remove(id, out var card))
-            return;
-        RemoveChild(card);
-        card.QueueFree();
     }
 
     /// <summary>

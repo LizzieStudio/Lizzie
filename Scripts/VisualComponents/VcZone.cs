@@ -88,17 +88,15 @@ public partial class VcZone : VisualComponentBase
 
     public bool DefaultIncluded => _defaultIncluded;
     public bool HiddenWhenExcluded => _hiddenWhenExcluded;
-    public HashSet<Ref<Seat>> IncludedSeats => new(_includedSeats);
-    public HashSet<Ref<Seat>> ExcludedSeats => new(_excludedSeats);
 
     /// <summary>
     /// Whether the given seat is considered "included" by this zone's rules.
     /// </summary>
     public bool SeatIncluded(Ref<Seat> seat)
     {
-        if (ExcludedSeats.Contains(seat))
+        if (_excludedSeats.Contains(seat))
             return false;
-        if (IncludedSeats.Contains(seat))
+        if (_includedSeats.Contains(seat))
             return true;
         return DefaultIncluded;
     }

@@ -36,7 +36,7 @@ public class SeatTests
         var seats = SeatsOf(3);
         var R = new ListReader([.. seats, InsertedAt(seats, 0)]);
 
-        Assert.Equal([9, 1, 2, 3], R.Seats().Select(s => (int)s.Id.Tag));
+        Assert.Equal([9, 1, 2, 3], R.Get(Seat.Live).Select(s => (int)s.Id.Tag));
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class SeatTests
         seats[1] = seats[1] with { Name = "North" };
         var R = new ListReader([.. seats, InsertedAt(seats, 0)]);
 
-        Assert.Equal(["Seat 1", "Seat 2", "North"], R.Seats().Select((s, i) => s.Label(i)));
+        Assert.Equal(["Seat 1", "Seat 2", "North"], R.Get(Seat.Live).Select((s, i) => s.Label(i)));
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class SeatTests
         var seats = SeatsOf(2);
         var R = new ListReader(seats[0] with { Deleted = true }, seats[1]);
 
-        Assert.Equal([2], R.Seats().Select(s => (int)s.Id.Tag));
+        Assert.Equal([2], R.Get(Seat.Live).Select(s => (int)s.Id.Tag));
     }
 
     [Fact]

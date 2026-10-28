@@ -81,7 +81,9 @@ public partial class PresenceSynchronizer : Node
         var seated = seats.TryGetValue(source, out var current);
         if (seated && seats.Count == 1)
             return;
-        var seat = seated ? current : Atoms.R.Seats().FirstOrDefault()?.Id ?? Ref<Seat>.Empty;
+        var seat = seated
+            ? current
+            : Atoms.R.Get(Seat.Live).FirstOrDefault()?.Id ?? Ref<Seat>.Empty;
         var solo = ImmutableDictionary<byte, Ref<Seat>>.Empty;
         WriteSeats(seat.IsEmpty ? solo : solo.Add(source, seat));
     }

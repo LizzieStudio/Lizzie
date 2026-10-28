@@ -46,7 +46,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     private void Sync(IWatchReader R)
     {
-        var seats = R.Seats();
+        var seats = R.Get(Seat.Live);
 
         while (_seatRows.Count > seats.Count)
         {
@@ -105,8 +105,11 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 
     public override ComponentParameters GetParams()
     {
+        // Includes the rules for removed seats, which have no row.
+        // This makes it where Undoing a delete of a seat brings back its zone rules.
+        // The downside is that this will keep the rules in the save forever. We should fix that.
         ImmutableArray<Ref<Seat>> Chose(int choice) =>
-            [.. _seats.Where(seat => _seatChoices.GetValueOrDefault(seat, OptDefault) == choice)];
+            [.. _seatChoices.Where(c => c.Value == choice).Select(c => c.Key)];
 
         return new ZoneParameters
         {

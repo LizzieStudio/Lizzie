@@ -30,7 +30,7 @@ public partial class FocusEditGroup : Node
     /// <inheritdoc cref="Atoms.Update"/>
     public void Update<T, I>(Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
-        where I : IAtomRef<T>
+        where I : IAtomRef<T>, IComparable<I>
     {
         if (Atoms.R.Get(byId, id) is not { } atom)
             return;

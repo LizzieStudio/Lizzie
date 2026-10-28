@@ -61,16 +61,10 @@ public static class PlayerHandService
 
     /// <summary>
     /// Returns the cards in a seat's hand in a stage, ordered by their ZOrder.
-    /// Returns an empty list for <see cref="Ref{T}.Empty"/>, the seat of a player without one.
     /// </summary>
     public static IReadOnlyList<ComponentPosition> GetHand(
         IAtomReader R,
         Ref<Stage> stage,
         Ref<Seat> seat
-    ) =>
-        seat.IsEmpty
-            ? []
-            : R.Get(ComponentPosition.ByContainer, new(stage, new InHand(seat)))
-                .OrderBy(s => s.ZOrder)
-                .ToList();
+    ) => R.Get(ComponentPosition.ByContainer, new(stage, new InHand(seat)));
 }

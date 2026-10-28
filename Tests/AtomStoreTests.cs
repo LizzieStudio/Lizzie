@@ -19,6 +19,12 @@ public class AtomStoreTests
 
     private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(HolderOf);
 
+    // the same lookup, from the bottom of each stack up
+    private static readonly Lookup<ComponentPosition, SnowTag> ByStack = new(
+        HolderOf,
+        (a, b) => a.ZOrder.CompareTo(b.ZOrder)
+    );
+
     // a lookup only components in a container are in
     private static readonly Lookup<ComponentPosition, SnowTag?> InContainer = new(s =>
         s.IsOnTable ? null : HolderOf(s)
@@ -41,6 +47,12 @@ public class AtomStoreTests
 
     private static ComponentPosition Component(int id, int container = 0) =>
         new() { Id = new(Tag(id)), Container = container == 0 ? null : In(container) };
+
+    private static ComponentPosition Stacked(int id, int suborder) =>
+        Component(id, container: 5) with
+        {
+            ZOrder = new ZOrder(ZTarget.Top, suborder, new SnowportId(1)),
+        };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
     private TimelineEvent Write(params ComponentPosition[] atoms) =>
@@ -188,6 +200,35 @@ public class AtomStoreTests
 
         AssertIds(_store.Get(ByContainer, Tag(5)));
         AssertIds(_store.Get(ByContainer, Tag(6)), 1);
+    }
+
+    [StackTraceHidden]
+    private static void AssertOrder(IEnumerable<ComponentPosition> atoms, params int[] expected)
+    {
+        var ids = atoms.Select(r => r.Id).ToArray();
+        var want = expected.Select(n => new Ref<Component>(Tag(n))).ToArray();
+        Assert.True(
+            ids.SequenceEqual(want),
+            $"Found the atoms in the wrong order.\n\nExpected: {string.Join(", ", want)}\nFound:    {string.Join(", ", ids)}"
+        );
+    }
+
+    [Fact]
+    public void AnOrderedLookupGivesItsAtomsInItsOrder()
+    {
+        Write(Stacked(1, suborder: 2), Stacked(2, suborder: 0), Stacked(3, suborder: 1));
+        AssertOrder(_store.Get(ByStack, Tag(5)), 2, 3, 1);
+
+        Write(Stacked(1, suborder: -1));
+        AssertOrder(_store.Get(ByStack, Tag(5)), 1, 2, 3);
+    }
+
+    [Fact]
+    public void AtomsThatTieInAnOrderedLookupComeInIdOrder()
+    {
+        Write(Stacked(3, suborder: 0), Stacked(1, suborder: 0), Stacked(2, suborder: 0));
+
+        AssertOrder(_store.Get(ByStack, Tag(5)), 1, 2, 3);
     }
 
     [Fact]

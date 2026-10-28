@@ -57,9 +57,9 @@ public class StageTests
     public void TablesAreListedLikeBlueprintsWhetherOrNotTheyreCurrent()
     {
         var R = Project(Table(4), Table(5, parent: 4) with { Deleted = true });
-        Assert.Equal([Tag(1), Tag(4)], Stage.GetChildren(R, Ref<Stage>.Empty).Select(s => s.Id));
-        Assert.Equal([Tag(9)], Stage.GetChildren(R, Tag(2)).Select(s => s.Id));
-        Assert.Empty(Stage.GetChildren(R, Tag(4)));
+        Assert.Equal([Tag(1), Tag(4)], R.Get(Stage.Children, Ref<Stage>.Empty).Select(s => s.Id));
+        Assert.Equal([Tag(9)], R.Get(Stage.Children, Tag(2)).Select(s => s.Id));
+        Assert.Empty(R.Get(Stage.Children, Tag(4)));
     }
 
     [Fact]

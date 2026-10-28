@@ -1,3 +1,4 @@
+using System;
 using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
@@ -41,5 +42,12 @@ public abstract record StagedAtom : Atom
 /// The id of a <see cref="StagedAtom"/> of <typeparamref name="T"/>.
 /// </summary>
 public readonly record struct StageKey<T>(Ref<Stage> StageRef, Ref<Component> ComponentRef)
-    : IAtomRef<T>
-    where T : StagedAtom;
+    : IAtomRef<T>,
+        IComparable<StageKey<T>>
+    where T : StagedAtom
+{
+    public int CompareTo(StageKey<T> other) =>
+        StageRef.CompareTo(other.StageRef) is var c and not 0
+            ? c
+            : ComponentRef.CompareTo(other.ComponentRef);
+}

@@ -80,13 +80,13 @@ public sealed class Watcher : IWatchReader
 
     public T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom
-        where I : IAtomRef<T>
+        where I : IAtomRef<T>, IComparable<I>
     {
         Depend(byId, id);
         return _source.Get(byId, id);
     }
 
-    public IReadOnlyList<T> Get<T, K>(Lookup<T, K> lookup, K key)
+    public List<T> Get<T, K>(Lookup<T, K> lookup, K key)
         where T : Atom
     {
         Depend(lookup, key);

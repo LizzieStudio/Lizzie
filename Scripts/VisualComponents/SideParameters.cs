@@ -145,7 +145,7 @@ public sealed record TemplateSide : SideParameters
     /// Each card's row, in order.
     /// </summary>
     public List<Ref<DataRow>> Rows(IAtomReader R) =>
-        R.GetRows(DatasetRef)
+        R.Get(DataRow.ByDataset, DatasetRef)
             .SelectMany(row =>
                 Enumerable.Repeat(
                     row.Id,
