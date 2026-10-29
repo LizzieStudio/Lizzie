@@ -295,7 +295,13 @@ public partial class DebugConsole : Node
         return string.Join(
             ", ",
             e.Writes.Select(AtomLabel)
-                .Concat(e.Unsets.Select(u => $"Unset {u.GetType().Name}"))
+                .Concat(
+                    e.Unsets.Select(u =>
+                        u.Query is IdQuery
+                            ? $"Unset {u.Query.AtomType.Name}"
+                            : $"Unset {u.Query.AtomType.Name}.{u.Query.Name}"
+                    )
+                )
                 .GroupBy(label => label)
                 .Select(g => g.Count() > 1 ? $"{g.Key}×{g.Count()}" : g.Key)
         );

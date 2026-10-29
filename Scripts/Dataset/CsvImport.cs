@@ -42,7 +42,7 @@ public static class CsvImport
         if (!columns.Select(c => c.Name).SequenceEqual(header))
         {
             // TODO: we should do column matching based on string
-            changes.AddRange(columns.Select(R.Unset));
+            changes.Add(R.UnsetAll(DataColumn.ByDataset, dataset.Id));
             var columnRanks = SnowRank.AfterAll(header.Length);
             columns = header
                 .Select(

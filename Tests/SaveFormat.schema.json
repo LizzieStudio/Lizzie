@@ -1054,10 +1054,7 @@
       "type": [
         "array",
         "null"
-      ],
-      "items": {
-        "$ref": "#/properties/writes/items"
-      }
+      ]
     },
     "undo": {
       "type": [

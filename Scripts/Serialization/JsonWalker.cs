@@ -28,6 +28,13 @@ public static class JsonWalker
             return;
         }
 
+        // An Unset's converter writes its key.
+        if (value is Unset unset)
+        {
+            Visit(unset.Key, visit);
+            return;
+        }
+
         var info = LizzieJson.EventOptions.GetTypeInfo(value.GetType());
 
         switch (info.Kind)

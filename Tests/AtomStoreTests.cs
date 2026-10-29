@@ -63,7 +63,13 @@ public class AtomStoreTests
 
     /// <summary>Records an event unsetting the atom with <paramref name="id"/>, and merges it into the store.</summary>
     private TimelineEvent Unset(int id) =>
-        Record(new TimelineEvent { Id = NextId(), Unsets = [Component(id)] });
+        Record(new TimelineEvent { Id = NextId(), Unsets = [new Unset(ById, Key(id))] });
+
+    /// <summary>Records an event unsetting every atom in <paramref name="container"/>, and merges it into the store.</summary>
+    private TimelineEvent UnsetAllIn(int container) =>
+        Record(
+            new TimelineEvent { Id = NextId(), Unsets = [new Unset(ByContainer, Tag(container))] }
+        );
 
     private ComponentPosition Value(int id) => (ComponentPosition)_store.Find(Key(id)).Value;
 
@@ -80,7 +86,11 @@ public class AtomStoreTests
 
     private TimelineEvent Record(TimelineEvent e)
     {
-        _timeline.Add(e.Id, e);
+        // in id order, as the synchronizer keeps it, for events that arrive late
+        int at = _timeline.Count;
+        while (at > 0 && _timeline.GetAt(at - 1).Key.CompareTo(e.Id) > 0)
+            at--;
+        _timeline.Insert(at, e.Id, e);
         _store.Apply(_timeline, TimelineUndo.Changes(_timeline, e).ToList(), false);
         return e;
     }
@@ -144,7 +154,7 @@ public class AtomStoreTests
     }
 
     [Fact]
-    public void AnUnsetBeatsAWriteInTheSameEvent()
+    public void AWriteBeatsAnUnsetInTheSameEvent()
     {
         Write(Component(1, container: 5));
         Record(
@@ -152,11 +162,77 @@ public class AtomStoreTests
             {
                 Id = NextId(),
                 Writes = [Component(1, container: 6)],
-                Unsets = [Component(1)],
+                Unsets = [new Unset(ById, Key(1))],
             }
         );
 
+        Assert.Equal(In(6), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void ALookupUnsetUnsetsEveryAtomUnderItsKey()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5), Component(3, container: 6));
+        UnsetAllIn(5);
+
         Assert.Null(Value(1));
+        Assert.Null(Value(2));
+        Assert.Equal(In(6), Value(3)?.Container);
+    }
+
+    [Fact]
+    public void ALookupUnsetCoversAnOlderWriteThatArrivesLate()
+    {
+        var late = NextId();
+        UnsetAllIn(5);
+        Record(new TimelineEvent { Id = late, Writes = [Component(1, container: 5)] });
+
+        Assert.Null(Value(1));
+    }
+
+    [Fact]
+    public void ALookupUnsetSparesNewerWrites()
+    {
+        Write(Component(1, container: 5));
+        UnsetAllIn(5);
+        Write(Component(1, container: 5));
+
+        Assert.Equal(In(5), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void ALookupUnsetJudgesEachAtomByItsNewestWriteBeforeIt()
+    {
+        Write(Component(1, container: 5));
+        Write(Component(1, container: 6));
+        UnsetAllIn(5);
+
+        Assert.Equal(In(6), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void UndoingALookupUnsetBringsItsAtomsBack()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5));
+        Undo(UnsetAllIn(5));
+
+        AssertIds(_store.Get(ByContainer, Tag(5)), 1, 2);
+    }
+
+    [Fact]
+    public void AWriteBeatsALookupUnsetInTheSameEvent()
+    {
+        Write(Component(1, container: 5));
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Writes = [Component(2, container: 5)],
+                Unsets = [new Unset(ByContainer, Tag(5))],
+            }
+        );
+
+        AssertIds(_store.Get(ByContainer, Tag(5)), 2);
     }
 
     [Fact]

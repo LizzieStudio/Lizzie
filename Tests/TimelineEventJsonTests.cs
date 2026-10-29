@@ -51,4 +51,28 @@ public class TimelineEventJsonTests
         Assert.Equal(new CommandName("app.undo_others"), back.Command);
         Assert.Equal(Id(3, 2), back.Undo.Reverses);
     }
+
+    [Fact]
+    public void UnsetKeepsItsQueryAndKey()
+    {
+        var position = new StageKey<ComponentPosition>(
+            new Ref<Stage>(new SnowTag(1, 4)),
+            new Ref<Component>(new SnowTag(1, 5))
+        );
+        var dataset = new Ref<Dataset>(new SnowTag(2, 6));
+        var e = new TimelineEvent
+        {
+            Id = Id(5, 1),
+            Unsets =
+            [
+                new Unset(ComponentPosition.ById, position),
+                new Unset(DataColumn.ByDataset, dataset),
+            ],
+        };
+
+        var back = RoundTrip(e, out var json);
+
+        Assert.Contains("{\"type\":\"DataColumn\",\"query\":\"ByDataset\",\"key\":", json);
+        Assert.Equal(e.Unsets, back.Unsets);
+    }
 }

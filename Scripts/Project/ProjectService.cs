@@ -282,10 +282,11 @@ public partial class ProjectService : Node
         EventSynchronizer.Instance?.AbandonGroups(source);
         var seating = Atoms.R.Get(Seating.Only);
         Atoms.R.WriteAdmin(
-            Atoms
-                .R.Get(Selection.ByPlayer, source)
-                .Select(Atoms.R.Unset)
-                .Append<IChange>(seating with { Seats = seating.Seats.Remove(source) })
+            Atoms.R.UnsetAll(Selection.ByPlayer, source),
+            seating with
+            {
+                Seats = seating.Seats.Remove(source),
+            }
         );
     }
 

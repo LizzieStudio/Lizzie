@@ -635,7 +635,7 @@ public class UndoScenarioTests
     {
         Act(Admin, atom: 1);
 
-        Assert.Null(Undo(UndoScopes.Changing(new HashSet<IAtomRef> { new Ref<Prototype>(1) })));
+        Assert.Null(Undo(Changing(1)));
     }
 
     /// <summary>An unset is in scope when what it unsets is, so Undo This brings an unset atom back.</summary>
@@ -643,13 +643,43 @@ public class UndoScenarioTests
     public void UnsetIsInTheScopeOfWhatItUnsets()
     {
         Act(Admin, atom: 1);
-        var id = NextId(Me);
-        _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [new Prototype { Id = new(1) }] });
+        var id = Unsetting(new Unset(Prototype.ById, new Ref<Prototype>(1)));
 
-        Assert.Equal(
-            id,
-            Changed(Undo(UndoScopes.Changing(new HashSet<IAtomRef> { new Ref<Prototype>(1) })))
+        Assert.Equal(id, Changed(Undo(Changing(1))));
+    }
+
+    /// <summary>A lookup unset is in scope for the atoms whose newest write before it was under its key.</summary>
+    [Fact]
+    public void LookupUnsetIsInTheScopeOfWhatItCovered()
+    {
+        Act(Admin, atom: 1);
+        Write(Admin, new Prototype { Id = new(2), Deleted = true });
+        var id = Unsetting(new Unset(Prototype.Live, (bool?)true));
+
+        Assert.Null(Undo(Changing(2)));
+        Assert.Equal(id, Changed(Undo(Changing(1))));
+    }
+
+    /// <summary>Undo This on the prototypes with these ids.</summary>
+    private TimelineUndo.Scope Changing(params int[] prototypes) =>
+        UndoScopes.Changing(
+            _timeline,
+            prototypes.Select(p => (IAtomRef)new Ref<Prototype>(p)).ToHashSet()
         );
+
+    /// <summary>Records my event that makes <paramref name="unset"/>.</summary>
+    private SnowportId Unsetting(Unset unset)
+    {
+        var id = NextId(Me);
+        _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [unset] });
+        return id;
+    }
+
+    /// <summary>Records an event that writes <paramref name="atom"/>.</summary>
+    private void Write(byte source, Atom atom)
+    {
+        var id = NextId(source);
+        _timeline.Add(id, new TimelineEvent { Id = id, Writes = [atom] });
     }
 
     /// <summary>The host's bookkeeping, like giving a seat its hand, doesn't take away a player's redo.</summary>

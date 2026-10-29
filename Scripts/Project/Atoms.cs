@@ -64,7 +64,9 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     {
         var sync = EventSynchronizer.Instance;
         var changed = TimelineUndo.Changes(sync.Timeline, e).ToList();
-        var types = changed.SelectMany(c => c.Writes.Concat(c.Unsets).Select(r => r.GetType()));
+        var types = changed.SelectMany(c =>
+            c.Writes.Select(a => a.GetType()).Concat(c.Unsets.Select(u => u.Query.AtomType))
+        );
         foreach (var type in types)
             if (!_stores.ContainsKey(type))
                 AddStore(NewStore(type));
@@ -92,7 +94,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
                     StoreOf<Stage>()
                 )
                 : Activator.CreateInstance(
-                    typeof(AtomStore<,>).MakeGenericType(type, byId.IdType),
+                    typeof(AtomStore<,>).MakeGenericType(type, byId.KeyType),
                     byId
                 )
         );

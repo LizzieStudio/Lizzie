@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -41,13 +38,6 @@ public interface IAtomRef
     // Saved and sent as { "type": the atom type's JsonName, "id": the id itself }.
     private sealed class Json : JsonConverter<IAtomRef>
     {
-        private static readonly Dictionary<string, Type> Named = typeof(Atom)
-            .Assembly.GetTypes()
-            .Where(t =>
-                t.IsSubclassOf(typeof(Atom)) && t.IsDefined(typeof(JsonNameAttribute), false)
-            )
-            .ToDictionary(t => t.GetCustomAttribute<JsonNameAttribute>(false).Name);
-
         public override IAtomRef Read(
             ref Utf8JsonReader reader,
             Type typeToConvert,
@@ -55,8 +45,8 @@ public interface IAtomRef
         )
         {
             var json = JsonElement.ParseValue(ref reader);
-            var type = Named[json.GetProperty("type").GetString()];
-            return (IAtomRef)json.GetProperty("id").Deserialize(IdQuery.For(type).IdType, options);
+            var type = JsonNameAttribute.Find<Atom>(json.GetProperty("type").GetString());
+            return (IAtomRef)json.GetProperty("id").Deserialize(IdQuery.For(type).KeyType, options);
         }
 
         public override void Write(
@@ -66,10 +56,7 @@ public interface IAtomRef
         )
         {
             writer.WriteStartObject();
-            writer.WriteString(
-                "type",
-                atom.AtomType.GetCustomAttribute<JsonNameAttribute>(false).Name
-            );
+            writer.WriteString("type", JsonNameAttribute.Of(atom.AtomType));
             writer.WritePropertyName("id");
             JsonSerializer.Serialize(writer, atom, atom.GetType(), options);
             writer.WriteEndObject();

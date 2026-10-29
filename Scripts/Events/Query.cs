@@ -27,6 +27,31 @@ public abstract class Query
     internal abstract object Of(Atom atom);
 
     /// <summary>
+    /// The type of the atoms it gets.
+    /// </summary>
+    internal abstract Type AtomType { get; }
+
+    /// <summary>
+    /// The type of its ids or lookup keys.
+    /// </summary>
+    internal abstract Type KeyType { get; }
+
+    /// <summary>
+    /// The name of the field on its atom type that declares it, which saves and messages use.
+    /// </summary>
+    internal string Name =>
+        field ??= AtomType
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .First(f => f.GetValue(null) == this)
+            .Name;
+
+    /// <summary>
+    /// The query <paramref name="atomType"/> declares in the field named <paramref name="name"/>.
+    /// </summary>
+    internal static Query Named(Type atomType, string name) =>
+        DeclaredOn(atomType).Single(q => q.Name == name);
+
+    /// <summary>
     /// The queries <paramref name="atomType"/> declares as public static fields: its Id and its Lookups.
     /// </summary>
     internal static IReadOnlyList<Query> DeclaredOn(Type atomType)
@@ -54,13 +79,6 @@ public abstract class Query
 public abstract class IdQuery : Query
 {
     private protected IdQuery() { }
-
-    /// <summary>
-    /// The type of the ids.
-    /// </summary>
-    internal abstract Type IdType { get; }
-
-    private protected abstract Type AtomType { get; }
 
     /// <summary>
     /// What stands in for the atom with <paramref name="id"/> before it exists, or null if the type has no stand-in.
@@ -149,9 +167,9 @@ public class Identity<T, I> : IdQuery
 
     internal override int CompareIds(Atom a, Atom b) => _of((T)a).CompareTo(_of((T)b));
 
-    internal override Type IdType => typeof(I);
+    internal override Type AtomType => typeof(T);
 
-    private protected override Type AtomType => typeof(T);
+    internal override Type KeyType => typeof(I);
 }
 
 /// <summary>
@@ -221,6 +239,10 @@ public class Lookup<T, K> : Query
     public K Of(T atom) => _of(atom);
 
     internal override object Of(Atom atom) => _of((T)atom);
+
+    internal override Type AtomType => typeof(T);
+
+    internal override Type KeyType => typeof(K);
 }
 
 /// <summary>
@@ -247,8 +269,13 @@ internal interface IStagedId;
 /// This is used internally to differentiate between a component that was inherited from a blueprint
 /// and a component that was actually updated in a stage.
 /// </remarks>
-public sealed class Written<T>() : Lookup<T, Ref<Stage>>(atom => atom.StageRef)
+public sealed class Written<T>() : Lookup<T, Ref<Stage>>(atom => atom.StageRef), IWritten
     where T : StagedAtom;
+
+/// <summary>
+/// Marks a <see cref="Written{T}"/> for code that doesn't know <c>T</c>.
+/// </summary>
+internal interface IWritten;
 
 /// <summary>
 /// Lists every atom of <typeparamref name="T"/>, read with <see cref="AtomReaderExtensions.Get{T}(IAtomReader, All{T})"/>.

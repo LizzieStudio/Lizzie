@@ -58,9 +58,11 @@ public class StagedStoreTests
     private TimelineEvent Write(params Atom[] atoms) =>
         Record(new TimelineEvent { Id = NextId(), Writes = atoms });
 
+    private static readonly IAtomReader R = new ListReader();
+
     /// <summary>Records an event unsetting <paramref name="atoms"/>, and merges it into the stores.</summary>
     private TimelineEvent Unset(params Atom[] atoms) =>
-        Record(new TimelineEvent { Id = NextId(), Unsets = atoms });
+        Record(new TimelineEvent { Id = NextId(), Unsets = atoms.Select(R.Unset).ToArray() });
 
     private TimelineEvent Undo(TimelineEvent e) =>
         Record(
@@ -186,6 +188,29 @@ public class StagedStoreTests
     }
 
     [Fact]
+    public void UnsettingWhatAStageWroteRevealsItsParentsAndLeavesItsInheritedAtoms()
+    {
+        Write(StageOf(1), StageOf(2, parent: 1));
+        Write(PieceOf(1, 10, x: 5), PieceOf(1, 12, x: 6));
+        Write(PieceOf(2, 10, x: 7), PieceOf(2, 11, x: 8));
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Unsets = [R.UnsetAll(Piece.WrittenIn, Tag<Stage>(2))],
+            }
+        );
+
+        AssertShows(2, 10, 5);
+        AssertShows(2, 11, null);
+        AssertShows(2, 12, 6);
+    }
+
+    [Fact]
+    public void AStagedTypeCanOnlyBeUnsetByWhatAStageWrote() =>
+        Assert.Throws<System.ArgumentException>(() => R.UnsetAll(Piece.ByStage, Tag<Stage>(2)));
+
+    [Fact]
     public void AGrandparentsWriteReachesTheGrandchild()
     {
         Write(StageOf(1), StageOf(2, parent: 1), StageOf(3, parent: 2));
@@ -265,7 +290,7 @@ public class StagedStoreTests
             {
                 Id = NextId(),
                 Writes = [StageOf(3, parent: 1)],
-                Unsets = [StageOf(2, parent: 1)],
+                Unsets = [R.Unset(StageOf(2, parent: 1))],
             }
         );
         AssertShows(2, 11, null);

@@ -24,9 +24,9 @@ public class TimelineEvent
     public Atom[] Writes { get; set; } = Array.Empty<Atom>();
 
     /// <summary>
-    /// The atoms this event unsets, as the player saw them. An unset beats a write of the same atom in <see cref="Writes"/>.
+    /// The atoms this event unsets. A write of the same atom in <see cref="Writes"/> wins over them.
     /// </summary>
-    public Atom[] Unsets { get; set; } = Array.Empty<Atom>();
+    public Unset[] Unsets { get; set; } = Array.Empty<Unset>();
 
     /// <summary>
     /// Set on an undo or a redo, which changes nothing itself but reverses an earlier entry in history.
@@ -91,7 +91,7 @@ public class TimelineEvent
             Command = command,
             Place = place,
             Writes = changes.OfType<Atom>().ToArray(),
-            Unsets = changes.OfType<Unset>().Select(u => u.Atom).ToArray(),
+            Unsets = changes.OfType<Unset>().ToArray(),
         };
 
     /// <summary>

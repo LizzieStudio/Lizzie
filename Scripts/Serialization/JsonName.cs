@@ -8,7 +8,8 @@ using System.Text.Json.Serialization.Metadata;
 namespace Lizzie;
 
 /// <summary>
-/// <para>The name a type is saved and sent under, beneath its <c>[JsonPolymorphic]</c> base, like <see cref="Atom"/>.</para>
+/// The name a type is saved and sent under, beneath its <c>[JsonPolymorphic]</c> base, like <see cref="Atom"/>.
+///
 /// <para>
 /// Every class under such a base needs one. <see cref="ThrowIfAnyUnnamed"/> reports any that don't at startup,
 /// and <c>JsonNameTests</c> in the tests.
@@ -21,12 +22,24 @@ public sealed class JsonNameAttribute(string name) : Attribute
 {
     public string Name { get; } = name;
 
-    private static readonly Type[] Named = typeof(JsonNameAttribute)
+    private static readonly (Type Type, string Name)[] Named = typeof(JsonNameAttribute)
         .Assembly.GetTypes()
         .Where(t => t.IsDefined(typeof(JsonNameAttribute), false))
+        .Select(t => (t, Of(t)))
         // in name order, so the order doesn't depend on where the types are declared
-        .OrderBy(t => t.GetCustomAttribute<JsonNameAttribute>().Name, StringComparer.Ordinal)
+        .OrderBy(n => n.Item2, StringComparer.Ordinal)
         .ToArray();
+
+    /// <summary>
+    /// The name <paramref name="type"/> is saved and sent under.
+    /// </summary>
+    public static string Of(Type type) => type.GetCustomAttribute<JsonNameAttribute>(false).Name;
+
+    /// <summary>
+    /// The class under <typeparamref name="TBase"/> that's saved and sent as <paramref name="name"/>.
+    /// </summary>
+    public static Type Find<TBase>(string name) =>
+        Named.First(n => n.Name == name && n.Type.IsSubclassOf(typeof(TBase))).Type;
 
     /// <summary>
     /// Each class under a <c>[JsonPolymorphic]</c> base without a name, as a message with the line to add.
@@ -63,9 +76,7 @@ public sealed class JsonNameAttribute(string name) : Attribute
         // Only types marked [JsonPolymorphic] have polymorphism options.
         if (info.PolymorphismOptions == null)
             return;
-        foreach (var type in Named.Where(t => t.IsSubclassOf(info.Type)))
-            info.PolymorphismOptions.DerivedTypes.Add(
-                new JsonDerivedType(type, type.GetCustomAttribute<JsonNameAttribute>().Name)
-            );
+        foreach (var (type, name) in Named.Where(n => n.Type.IsSubclassOf(info.Type)))
+            info.PolymorphismOptions.DerivedTypes.Add(new JsonDerivedType(type, name));
     }
 }

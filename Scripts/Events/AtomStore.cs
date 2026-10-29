@@ -49,28 +49,48 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
 
     public void Apply(Timeline timeline, IReadOnlyList<TimelineEvent> changed, bool bulkLoading)
     {
+        var unsets = changed
+            .SelectMany(c => c.Unsets)
+            .Where(u => u.Query.AtomType == typeof(T))
+            .ToList();
+        // A lookup unset may cover any atom of the type, even one the store no longer holds.
+        bool all = unsets.Exists(u => u.Query is not IdQuery);
         var ids = changed
-            .SelectMany(c => c.Writes.Concat(c.Unsets))
+            .SelectMany(c => c.Writes)
             .OfType<T>()
             .Select(_byId.Of)
+            .Concat(unsets.Where(u => u.Query is IdQuery).Select(u => (I)u.Key))
             .ToHashSet();
-        if (ids.Count == 0)
+        if (all)
+            ids.UnionWith(_atoms.Entries.Keys);
+        else if (ids.Count == 0)
             return;
 
-        // The newest in-effect change of each id decides it: a write is its value, and an unset leaves it out.
+        // Each id holds its newest in-effect write, unless an unset in a newer event matches that write.
         var latest = new Dictionary<I, AtomEntry>();
-        var undecided = new HashSet<I>(ids);
+        var decided = new HashSet<I>();
+        var newer = new List<Unset>();
         foreach (var e in TimelineUndo.InEffect(timeline))
         {
-            // unsets first, since an unset beats a write in the same event
-            foreach (var atom in e.Unsets.OfType<T>())
-                undecided.Remove(_byId.Of(atom));
             for (int j = e.Writes.Length - 1; j >= 0; j--)
-                if (e.Writes[j] is T atom && undecided.Remove(_byId.Of(atom)))
-                    latest[_byId.Of(atom)] = new AtomEntry(atom, e.Id);
-            if (undecided.Count == 0)
+            {
+                if (e.Writes[j] is not T atom)
+                    continue;
+                var id = _byId.Of(atom);
+                if (
+                    (all || ids.Contains(id))
+                    && decided.Add(id)
+                    && !newer.Exists(u => u.Matches(atom))
+                )
+                    latest[id] = new AtomEntry(atom, e.Id);
+            }
+            // after the writes, since a write wins over an unset in the same event
+            newer.AddRange(e.Unsets.Where(u => u.Query.AtomType == typeof(T)));
+            if (!all && decided.Count == ids.Count)
                 break;
         }
+        if (all)
+            ids.UnionWith(decided);
 
         var merged = new Dictionary<I, (AtomEntry Old, AtomEntry New)>();
         foreach (var id in ids)

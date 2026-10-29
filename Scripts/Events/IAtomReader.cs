@@ -167,7 +167,23 @@ public static class AtomReaderExtensions
     /// <summary>
     /// The change that unsets <paramref name="atom"/>, to write like an atom.
     /// </summary>
-    public static Unset Unset(this IAtomReader R, Atom atom) => new(atom);
+    public static Unset Unset(this IAtomReader R, Atom atom)
+    {
+        var byId = IdQuery.For(atom.GetType());
+        return new(byId, byId.Of(atom));
+    }
+
+    /// <summary>
+    /// The change that unsets every atom with <paramref name="key"/> in <paramref name="lookup"/>, to write like an atom.
+    /// </summary>
+    public static Unset UnsetAll<T, K>(this IAtomReader R, Lookup<T, K> lookup, K key)
+        where T : Atom =>
+        typeof(StagedAtom).IsAssignableFrom(typeof(T)) && lookup is not IWritten
+            ? throw new ArgumentException(
+                $"A stage can only unset the {typeof(T).Name}s it wrote itself, so unset them with a Written lookup.",
+                nameof(lookup)
+            )
+            : new(lookup, key);
 
     /// <summary>
     /// A cache key for each <paramref name="atom"/> that changes whenever it changes.

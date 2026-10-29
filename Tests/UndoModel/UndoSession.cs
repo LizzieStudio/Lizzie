@@ -9,7 +9,9 @@ namespace Lizzie.Tests;
 /// <summary>An atom for sessions to write. Faces are unique, so every write can be told apart.</summary>
 public sealed record TestAtom : Atom
 {
-    public required SnowTag Id { get; init; }
+    public static readonly Identity<TestAtom, Ref<TestAtom>> ById = new(r => r.Id);
+
+    public required Ref<TestAtom> Id { get; init; }
 
     public int Face { get; init; }
 }
@@ -43,9 +45,11 @@ public sealed record TestScope(ScopeKind Kind, int Mask)
                 _ => true,
             }
             && events.Any(e =>
-                e.Writes.Concat(e.Unsets)
-                    .Any(atom => Mask == 0 || atom is TestAtom r && (Mask & (1 << (r.Id - 1))) != 0)
+                e.Writes.Any(atom => Mask == 0 || atom is TestAtom r && Masked(r.Id))
+                || e.Unsets.Any(unset => Mask == 0 || unset.Key is Ref<TestAtom> id && Masked(id))
             );
+
+    private bool Masked(Ref<TestAtom> id) => (Mask & (1 << (id.Tag - 1))) != 0;
 
     public override string ToString() => Mask == 0 ? $"{Kind}" : $"{Kind} atoms {Mask}";
 }
@@ -335,7 +339,7 @@ public sealed class UndoSession
     {
         var atoms = new List<Atom>();
         foreach (var atom in new[] { first, second }.Where(r => r != 0))
-            atoms.Add(new TestAtom { Id = atom, Face = (int)(long)e.Id * 10 + atoms.Count });
+            atoms.Add(new TestAtom { Id = new(atom), Face = (int)(long)e.Id * 10 + atoms.Count });
         for (int i = 0; i < values; i++)
             atoms.Add(new TestValue { Text = $"{e.Id}.{atoms.Count}" });
         if (atoms.Count > 0)
