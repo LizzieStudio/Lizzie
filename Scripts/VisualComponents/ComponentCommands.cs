@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -53,7 +54,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.T)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
-        Effects = (R, cs) => Reordered(cs, ZTarget.Top),
+        Effects = (R, cs) => Reordered(cs, SnowRank.AfterAll),
     };
 
     [Command("component.move_to_bottom")]
@@ -64,7 +65,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.B)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = Restackable,
-        Effects = (R, cs) => Reordered(cs, ZTarget.Bottom),
+        Effects = (R, cs) => Reordered(cs, SnowRank.BeforeAll),
     };
 
     [Command("component.delete")]
@@ -128,7 +129,7 @@ public static class ComponentCommands
 
     /// <summary>
     /// The tokens turned over. Tokens stacked in the same place, or in the same deck, turn over together like a pile,
-    /// reversing their order by swapping their ZOrders. Cards in a hand aren't stacked, so each turns over in place.
+    /// reversing their order by swapping their ranks. Cards in a hand aren't stacked, so each turns over in place.
     /// <see cref="VcPrinted"/> animates what Flip writes.
     /// </summary>
     private static IEnumerable<ComponentPosition> Flipped(
@@ -143,10 +144,8 @@ public static class ComponentCommands
             )
             .SelectMany(pile =>
             {
-                var ordered = pile.OrderBy(c => c.ZOrder).ToList();
-                return ordered.Select(
-                    (c, i) => Flipped(c) with { ZOrder = ordered[^(i + 1)].ZOrder }
-                );
+                var ordered = pile.OrderBy(c => c.Rank).ToList();
+                return ordered.Select((c, i) => Flipped(c) with { Rank = ordered[^(i + 1)].Rank });
             });
 
     /// <summary>
@@ -168,15 +167,15 @@ public static class ComponentCommands
         };
 
     /// <summary>
-    /// The components sent to the top or bottom of the ZOrder, keeping their order.
+    /// The components sent to the top or bottom of their stacks, keeping their order.
     /// </summary>
     private static IEnumerable<ComponentPosition> Reordered(
         IEnumerable<ComponentPosition> components,
-        ZTarget target
+        Func<int, IReadOnlyList<SnowRank>> rank
     )
     {
-        var ordered = components.OrderBy(s => s.ZOrder).ToList();
-        var stamp = SnowportId.Create();
-        return ordered.Select((s, i) => s with { ZOrder = new ZOrder(target, i, stamp) });
+        var ordered = components.OrderBy(s => s.Rank).ToList();
+        var ranks = rank(ordered.Count);
+        return ordered.Select((s, i) => s with { Rank = ranks[i] });
     }
 }

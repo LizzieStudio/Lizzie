@@ -41,6 +41,7 @@ public class DeckReconciliationTests
             new Component { Id = Deck, PrototypeRef = Proto },
             new ComponentPosition { Id = Deck, StageRef = Root },
         };
+        var ranks = SnowRank.AfterAll(values.Length);
         for (int i = 0; i < values.Length; i++)
         {
             atoms.Add(
@@ -58,6 +59,7 @@ public class DeckReconciliationTests
                     Id = new(20 + i),
                     StageRef = Root,
                     Container = onTable.Contains(i) ? null : new InComponent(Deck),
+                    Rank = ranks[i],
                 }
             );
         }
@@ -85,17 +87,8 @@ public class DeckReconciliationTests
             ),
         ];
 
-    private static List<IChange> Reconcile(List<Atom> atoms, string values)
-    {
-        int next = 100;
-        return DeckReconciliation.Changes(
-            new ListReader([.. atoms]),
-            Proto,
-            Cards(values),
-            () => new Ref<Component>(next++),
-            new SnowportId(1 << 8)
-        );
-    }
+    private static List<IChange> Reconcile(List<Atom> atoms, string values) =>
+        DeckReconciliation.Changes(new ListReader([.. atoms]), Proto, Cards(values));
 
     [Fact]
     public void ALookChangeChangesNoCards()
@@ -108,17 +101,19 @@ public class DeckReconciliationTests
     [Fact]
     public void ANewValueIsIssuedAtTheBottomOfTheDeck()
     {
-        var changes = Reconcile(Table(["1", "2"]), "1-3");
+        var table = Table(["1", "2"]);
+        var changes = Reconcile(table, "1-3");
 
         var component = Assert.Single(changes.OfType<Component>());
         var position = Assert.Single(changes.OfType<ComponentPosition>());
+        var bottom = table.OfType<ComponentPosition>().Where(p => p.Id != Deck).Min(p => p.Rank);
         Assert.True(
             Equals(component.Item, Card("3"))
                 && component.DeckRef == Deck
                 && position.Id == component.Id
                 && position.Container == new InComponent(Deck)
                 && position.StageRef == Root
-                && position.ZOrder.Target == ZTarget.Bottom,
+                && position.Rank.CompareTo(bottom) < 0,
             $"Adding 3 wrote {Describe(changes)}, expected card 3 at the bottom of the deck in the root."
         );
     }

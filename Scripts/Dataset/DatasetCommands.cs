@@ -217,7 +217,7 @@ public static class DatasetCommands
         var (rows, columns, allRows, allColumns) = Block(R, cells);
         int top = allRows.IndexOf(rows[0]);
         int left = allColumns.IndexOf(columns[0]);
-        var rank = allRows[^1].Rank;
+        var ranks = SnowRank.AfterAll(grid.Count);
 
         var changes = new List<IChange>();
         for (int r = 0; r < grid.Count; r++)
@@ -229,7 +229,7 @@ public static class DatasetCommands
                 {
                     Id = Ref<DataRow>.Create(),
                     DatasetRef = rows[0].DatasetRef,
-                    Rank = rank = rank.After(SnowportId.Create()),
+                    Rank = ranks[r],
                 };
                 changes.Add(row);
             }
@@ -250,7 +250,7 @@ public static class DatasetCommands
             {
                 Id = Ref<DataRow>.Create(),
                 DatasetRef = datasetId,
-                Rank = SnowRank.At(R.Get(DataRow.ByDataset, datasetId), index, SnowportId.Create()),
+                Rank = SnowRank.At(R.Get(DataRow.ByDataset, datasetId), index),
             },
         ];
 
@@ -263,7 +263,7 @@ public static class DatasetCommands
             {
                 Id = Ref<DataColumn>.Create(),
                 DatasetRef = datasetId,
-                Rank = SnowRank.At(columns, index, SnowportId.Create()),
+                Rank = SnowRank.At(columns, index),
                 Name = $"Column {columns.Count + 1}",
             },
         ];

@@ -17,6 +17,9 @@ public class DeckContainmentTests
     private static readonly Ref<Component> Bag = new(21);
     private static readonly Ref<Seat> Hand = new(30);
 
+    // ranks from the bottom of a stack up
+    private static readonly IReadOnlyList<SnowRank> Ranks = SnowRank.AfterAll(4);
+
     private static ComponentPosition State(
         Ref<Component> id,
         Container container = null,
@@ -27,7 +30,7 @@ public class DeckContainmentTests
         {
             Id = id,
             Container = container,
-            ZOrder = new ZOrder(ZTarget.Top, order, new SnowportId(((long)order << 8) | 1)),
+            Rank = Ranks[order],
             Rotation = new Vector3(0, yaw, 0),
         };
 

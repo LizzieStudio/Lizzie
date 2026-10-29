@@ -40,7 +40,7 @@ public static class StageCommands
                 Id = Ref<Stage>.Create(),
                 Name = parent == null ? $"Blueprint {n}" : $"{parent.Name}-{n}",
                 ParentRef = parent?.Id ?? Ref<Stage>.Empty,
-                Rank = SnowRank.At(siblings, siblings.Count, SnowportId.Create()),
+                Rank = SnowRank.At(siblings, siblings.Count),
             };
             return [blueprint];
         },
@@ -119,7 +119,7 @@ public static class StageCommands
                 Id = Ref<Stage>.Create(),
                 Name = $"{original.Name} Copy",
                 ParentRef = original.ParentRef,
-                Rank = SnowRank.At(siblings, siblings.IndexOf(original) + 1, SnowportId.Create()),
+                Rank = SnowRank.At(siblings, siblings.IndexOf(original) + 1),
             };
             return [copy, .. Stage.Union(R, copy.Id, original.Id)];
         },

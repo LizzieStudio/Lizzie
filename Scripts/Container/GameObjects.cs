@@ -103,16 +103,10 @@ public partial class GameObjects : Node3D, ICommandView
     {
         bool overHand = HandRow.Under(GetViewport()) != null;
         var seat = Atoms.R.LocalSeat();
-        var stamp = SnowportId.Create();
-        var atoms = pickup
-            .Select(
-                (s, i) =>
-                    s with
-                    {
-                        Container = new Held(seat, overHand),
-                        ZOrder = new ZOrder(ZTarget.Top, i, stamp),
-                    }
-            )
+        var picked = pickup.ToList();
+        var ranks = SnowRank.AfterAll(picked.Count);
+        var atoms = picked
+            .Select((s, i) => s with { Container = new Held(seat, overHand), Rank = ranks[i] })
             .ToArray();
         // Players without a seat can't drag.
         if (atoms.Length == 0 || seat.IsEmpty)
@@ -139,7 +133,7 @@ public partial class GameObjects : Node3D, ICommandView
         return GetSelection()
             .Select(GetComponent)
             .Where(o => o?.State != null && o.State.Container == place)
-            .OrderBy(o => o.State.ZOrder)
+            .OrderBy(o => o.State.Rank)
             .ToList();
     }
 
@@ -372,8 +366,6 @@ public partial class GameObjects : Node3D, ICommandView
     private void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
         var atoms = new List<Atom>();
-        var stamp = SnowportId.Create();
-        int suborder = 0;
 
         foreach (var component in components)
         {
@@ -383,7 +375,6 @@ public partial class GameObjects : Node3D, ICommandView
                 StageRef = component.Key.StageRef,
                 Position = component.Position,
                 Rotation = component.Rotation,
-                ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
             };
             atoms.Add(
                 new Component
@@ -395,19 +386,15 @@ public partial class GameObjects : Node3D, ICommandView
             );
             atoms.Add(self);
 
-            // The stack goes above the component, bottom first.
-            foreach (var a in component.GetSpawnStack(self))
-            {
-                atoms.Add(
-                    a is ComponentPosition s
-                        ? s with
-                        {
-                            ZOrder = new ZOrder(ZTarget.Top, suborder++, stamp),
-                        }
-                        : a
-                );
-            }
+            atoms.AddRange(component.GetSpawnStack(self));
         }
+
+        // Ranked in the order they were added, so each stack goes above its component, bottom first.
+        var ranks = SnowRank.AfterAll(atoms.Count(a => a is ComponentPosition));
+        int next = 0;
+        for (int i = 0; i < atoms.Count; i++)
+            if (atoms[i] is ComponentPosition s)
+                atoms[i] = s with { Rank = ranks[next++] };
 
         Atoms.R.Write(this, atoms);
     }
@@ -897,7 +884,7 @@ public partial class GameObjects : Node3D, ICommandView
         if (overHand)
         {
             _gameController.HandManager.ShowDragPreview(
-                held.Cards(Atoms.R).OrderBy(s => s.ZOrder).ToList(),
+                held.Cards(Atoms.R).OrderBy(s => s.Rank).ToList(),
                 row,
                 point
             );
@@ -1000,8 +987,7 @@ public partial class GameObjects : Node3D, ICommandView
             PlayerHandService.GetHand(Atoms.R, _view.StageRef, row.Seat),
             held.Cards(Atoms.R).Select(row.AfterEnteringOrLeaving).ToList(),
             index,
-            row.Seat,
-            SnowportId.Create()
+            row.Seat
         );
         var rest = held.Atoms(Atoms.R)
             .Where(s => Atoms.R.Kind(s) != VisualComponentBase.VisualComponentType.Printed);
@@ -1023,14 +1009,14 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private ComponentPosition[] OnTable(List<ComponentPosition> dropped)
     {
-        var ordered = dropped.OrderBy(s => s.ZOrder).ToList();
+        var ordered = dropped.OrderBy(s => s.Rank).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
         var decks = Atoms
             .R.Get(ComponentPosition.ByContainer, ShownTable)
             .Where(s => Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
             .ToList();
 
-        var stamp = SnowportId.Create();
+        var ranks = SnowRank.AfterAll(ordered.Count);
         return ordered
             .Select(
                 (s, i) =>
@@ -1040,13 +1026,13 @@ public partial class GameObjects : Node3D, ICommandView
                         Container = null,
                         X = s.X + snapX,
                         Z = s.Z + snapZ,
-                        ZOrder = new ZOrder(ZTarget.Top, i, stamp),
+                        Rank = ranks[i],
                     };
                     var deck =
                         Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Printed
                             ? decks
                                 .Where(d => d.X == placed.X && d.Z == placed.Z)
-                                .MaxBy(d => d.ZOrder)
+                                .MaxBy(d => d.Rank)
                             : null;
                     return deck == null
                         ? placed

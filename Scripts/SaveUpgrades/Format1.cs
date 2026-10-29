@@ -526,7 +526,8 @@ public sealed class Format1 : IStep
                 c => (string)c["PrototypeRef"]
             );
 
-            foreach (var c in components)
+            // Ranked by their order in the stack, so no two share a rank.
+            foreach (var (order, c) in components.OrderBy(c => (int?)c["ZOrder"] ?? 0).Index())
             {
                 string id = (string)c["ComponentRef"];
                 if (!kept.Contains(id))
@@ -548,12 +549,7 @@ public sealed class Format1 : IStep
                     ["$type"] = "ComponentPosition",
                     ["id"] = Tag("component", id),
                     ["stageRef"] = stage,
-                    ["zOrder"] = new JsonObject
-                    {
-                        ["target"] = 1,
-                        ["suborder"] = Math.Max((int?)c["ZOrder"] ?? 0, 0),
-                        ["stamp"] = Stamp,
-                    },
+                    ["rank"] = Rank(order),
                 };
                 if (container != null)
                     position["container"] = new JsonObject
@@ -668,13 +664,25 @@ public sealed class Format1 : IStep
         private static string Literal(string text) => (text ?? "").Replace("\"", "'");
 
         /// <summary>
-        /// The rank of the item at <paramref name="index"/>, three digits of the ordered characters <c>-</c> through <c>z</c>.
+        /// The rank of the item at <paramref name="index"/>, an end rank with the shared stamp,
+        /// placed by three digits of the ordered characters <c>-</c> through <c>z</c>.
         /// </summary>
-        private static string Rank(int index)
+        private static JsonObject Rank(int index)
         {
             const string digits =
                 "-/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-            return $"{digits[index / 4096 % 64]}{digits[index / 64 % 64]}{digits[index % 64]}";
+            return new JsonObject
+            {
+                ["side"] = 1,
+                ["steps"] = new JsonArray(
+                    new JsonObject
+                    {
+                        ["stamp"] = Stamp,
+                        ["place"] =
+                            $"{digits[index / 4096 % 64]}{digits[index / 64 % 64]}{digits[index % 64]}",
+                    }
+                ),
+            };
         }
     }
 }

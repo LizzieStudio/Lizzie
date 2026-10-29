@@ -774,7 +774,7 @@ public partial class DatasetEditor : Window, ICommandView
         if (others.Count == 0)
             return;
 
-        Atoms.R.Write(this, row with { Rank = SnowRank.At(others, index, SnowportId.Create()) });
+        Atoms.R.Write(this, row with { Rank = SnowRank.At(others, index) });
     }
 
     // The rows' or the columns' controls, for a drag along that axis.
@@ -870,13 +870,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         var column = columns[from];
         columns.RemoveAt(from);
-        Atoms.R.Write(
-            this,
-            column with
-            {
-                Rank = SnowRank.At(columns, to > from ? to - 1 : to, SnowportId.Create()),
-            }
-        );
+        Atoms.R.Write(this, column with { Rank = SnowRank.At(columns, to > from ? to - 1 : to) });
     }
 
     private void OnColumnRenamed(Ref<DataColumn> columnId, string name)

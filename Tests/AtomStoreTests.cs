@@ -22,7 +22,7 @@ public class AtomStoreTests
     // the same lookup, from the bottom of each stack up
     private static readonly Lookup<ComponentPosition, SnowTag> ByStack = new(
         HolderOf,
-        (a, b) => a.ZOrder.CompareTo(b.ZOrder)
+        IRanked.ByRank
     );
 
     // a lookup only components in a container are in
@@ -48,10 +48,13 @@ public class AtomStoreTests
     private static ComponentPosition Component(int id, int container = 0) =>
         new() { Id = new(Tag(id)), Container = container == 0 ? null : In(container) };
 
-    private static ComponentPosition Stacked(int id, int suborder) =>
+    // ranks from the bottom of a stack up
+    private static readonly IReadOnlyList<SnowRank> Ranks = SnowRank.AfterAll(3);
+
+    private static ComponentPosition Stacked(int id, SnowRank rank) =>
         Component(id, container: 5) with
         {
-            ZOrder = new ZOrder(ZTarget.Top, suborder, new SnowportId(1)),
+            Rank = rank,
         };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
@@ -216,17 +219,17 @@ public class AtomStoreTests
     [Fact]
     public void AnOrderedLookupGivesItsAtomsInItsOrder()
     {
-        Write(Stacked(1, suborder: 2), Stacked(2, suborder: 0), Stacked(3, suborder: 1));
+        Write(Stacked(1, Ranks[2]), Stacked(2, Ranks[0]), Stacked(3, Ranks[1]));
         AssertOrder(_store.Get(ByStack, Tag(5)), 2, 3, 1);
 
-        Write(Stacked(1, suborder: -1));
+        Write(Stacked(1, SnowRank.BeforeAll(1)[0]));
         AssertOrder(_store.Get(ByStack, Tag(5)), 1, 2, 3);
     }
 
     [Fact]
     public void AtomsThatTieInAnOrderedLookupComeInIdOrder()
     {
-        Write(Stacked(3, suborder: 0), Stacked(1, suborder: 0), Stacked(2, suborder: 0));
+        Write(Stacked(3, Ranks[0]), Stacked(1, Ranks[0]), Stacked(2, Ranks[0]));
 
         AssertOrder(_store.Get(ByStack, Tag(5)), 1, 2, 3);
     }

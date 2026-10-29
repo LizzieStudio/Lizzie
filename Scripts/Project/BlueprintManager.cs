@@ -301,14 +301,7 @@ public partial class BlueprintManager : Window, ICommandView
     {
         if (Placement(at, data) is not (var moved, var parent, var siblings, var index))
             return;
-        Atoms.R.Write(
-            this,
-            moved with
-            {
-                ParentRef = parent,
-                Rank = SnowRank.At(siblings, index, SnowportId.Create()),
-            }
-        );
+        Atoms.R.Write(this, moved with { ParentRef = parent, Rank = SnowRank.At(siblings, index) });
     }
 
     #endregion

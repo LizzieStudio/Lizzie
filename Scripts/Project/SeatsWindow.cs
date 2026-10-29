@@ -75,7 +75,7 @@ public partial class SeatsWindow : Window, ICommandView
     private void AddSeat()
     {
         var seats = Atoms.R.Get(Seat.Live);
-        Atoms.R.Write(this, Seat.New(SnowRank.At(seats, seats.Count, SnowportId.Create()), seats));
+        Atoms.R.Write(this, Seat.New(SnowRank.At(seats, seats.Count), seats));
     }
 
     public override void _Notification(int what)
@@ -144,7 +144,7 @@ public partial class SeatsWindow : Window, ICommandView
             return;
 
         seats.RemoveAt(from);
-        var rank = SnowRank.At(seats, to > from ? to - 1 : to, SnowportId.Create());
+        var rank = SnowRank.At(seats, to > from ? to - 1 : to);
         Atoms.R.Update(this, Seat.ById, moved, s => s with { Rank = rank });
     }
 }

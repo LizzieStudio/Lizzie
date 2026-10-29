@@ -158,23 +158,20 @@ public class SideParametersTests
             b = new(4),
             c = new(5),
             d = new(6);
-        var rank = default(SnowRank);
-        DataRow Row(Ref<DataRow> id)
-        {
-            rank = rank.After(new SnowportId(id.Tag, Snowport.HostSource));
-            return new DataRow
+        var ranks = SnowRank.AfterAll(4);
+        DataRow Row(Ref<DataRow> id, int order) =>
+            new()
             {
                 Id = id,
                 DatasetRef = dataset,
-                Rank = rank,
+                Rank = ranks[order],
             };
-        }
         var R = new ListReader(
             new DataColumn { Id = quantity, DatasetRef = dataset },
-            Row(a),
-            Row(b),
-            Row(c),
-            Row(d),
+            Row(a, 0),
+            Row(b, 1),
+            Row(c, 2),
+            Row(d, 3),
             new DataCell { Id = new CellId(a, quantity), Value = "2" },
             new DataCell { Id = new CellId(b, quantity), Value = "0" },
             new DataCell { Id = new CellId(c, quantity), Value = "many" }

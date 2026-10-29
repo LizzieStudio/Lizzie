@@ -60,7 +60,7 @@ public sealed record Stage : Atom, IRanked
             Id = Ref<Stage>.Create(),
             Name = NextTableName(R),
             ParentRef = parent,
-            Rank = SnowRank.At(siblings, siblings.Count, SnowportId.Create()),
+            Rank = SnowRank.At(siblings, siblings.Count),
             IsTable = true,
         };
     }
@@ -114,18 +114,18 @@ public sealed record Stage : Atom, IRanked
         var siblings = R.Get(Children, stage.ParentRef);
         int index = siblings.IndexOf(stage);
         siblings.RemoveAt(index);
-        var changes = new List<IChange> { stage with { Deleted = true } };
-        foreach (var child in R.Get(Children, stage.Id))
-        {
-            var moved = child with
+        var children = R.Get(Children, stage.Id);
+        var ranks = SnowRank.At(siblings, index, children.Count);
+        return
+        [
+            stage with
             {
-                ParentRef = stage.ParentRef,
-                Rank = SnowRank.At(siblings, index, SnowportId.Create()),
-            };
-            siblings.Insert(index++, moved);
-            changes.Add(moved);
-        }
-        return changes;
+                Deleted = true,
+            },
+            .. children.Select(
+                (child, i) => child with { ParentRef = stage.ParentRef, Rank = ranks[i] }
+            ),
+        ];
     }
 
     /// <summary>

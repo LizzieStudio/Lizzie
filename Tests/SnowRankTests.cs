@@ -6,110 +6,128 @@ using Xunit;
 
 namespace Lizzie.Tests;
 
+[Collection(ClockSwaps.Name)]
 public class SnowRankTests
 {
-    private static int Compare(SnowRank a, SnowRank b) => a.CompareTo(b);
+    private sealed record Item(SnowRank Rank) : IRanked;
 
-    // A stamp from the hybrid clock, which never repeats.
-    private static long _clock = 1;
+    private static List<IRanked> Sorted(IEnumerable<IRanked> items) =>
+        items.OrderBy(i => i.Rank).ToList();
 
-    private static SnowportId Stamp(byte source = 1) => new(_clock++, source);
+    private static string Saved(SnowRank rank) =>
+        JsonSerializer.Serialize(rank, LizzieJson.EventOptions);
+
+    // Items with ranks made at the end, one at a time.
+    private static List<IRanked> Appended(int count)
+    {
+        var items = new List<IRanked>();
+        for (int i = 0; i < count; i++)
+            items.Add(new Item(SnowRank.At(items, items.Count)));
+        return items;
+    }
 
     [Fact]
-    public void NewRankIsBetweenItsNeighbors()
+    public void NewRanksGoAtTheirIndex()
     {
-        // Inserts at random places, the way rows are inserted above and below each other.
+        // Inserts, batches, deletes and restores at random places, the way rows are edited and undone.
         var random = new Random(7);
-        var ranks = new List<SnowRank> { SnowRank.New(default, default, Stamp()) };
-        for (int i = 0; i < 2000; i++)
+        var items = new List<IRanked>();
+        var hidden = new List<IRanked>();
+        for (int n = 0; n < 3000; n++)
         {
-            int at = random.Next(ranks.Count + 1);
-            var prev = at > 0 ? ranks[at - 1] : default;
-            var next = at < ranks.Count ? ranks[at] : default;
-            ranks.Insert(
-                at,
-                SnowRank.New(prev, next, Stamp((byte)random.Next(Snowport.SourceCount)))
-            );
+            var shown = Sorted(items.Except(hidden));
+            switch (random.Next(4))
+            {
+                case 0 when shown.Count > 0:
+                    hidden.Add(shown[random.Next(shown.Count)]);
+                    break;
+                case 1 when hidden.Count > 0:
+                    hidden.RemoveAt(random.Next(hidden.Count));
+                    break;
+                default:
+                    int at = random.Next(shown.Count + 1);
+                    var batch = SnowRank
+                        .At(shown, at, random.Next(1, 6))
+                        .Select(r => (IRanked)new Item(r))
+                        .ToList();
+                    items.AddRange(batch);
+                    var after = Sorted(items.Except(hidden));
+                    Assert.True(
+                        after.Skip(at).Take(batch.Count).SequenceEqual(batch),
+                        $"""
+                        {batch.Count} ranks made at {at} sorted to {string.Join(
+                            ", ",
+                            batch.Select(i => after.IndexOf(i))
+                        )}.
+                        Before: {(at > 0 ? shown[at - 1].Rank.ToString() : "none")}
+                        After: {(at < shown.Count ? shown[at].Rank.ToString() : "none")}
+                        Made: {string.Join(", ", batch.Select(i => i.Rank))}
+                        """
+                    );
+                    break;
+            }
         }
+        Assert.Equal(items.Count, items.Select(i => i.Rank).Distinct().Count());
+    }
 
-        for (int i = 1; i < ranks.Count; i++)
-            Assert.True(Compare(ranks[i - 1], ranks[i]) < 0, $"{ranks[i - 1]} !< {ranks[i]}");
+    [Fact]
+    public void ARankFitsBetweenARankAndOneThatExtendsIt()
+    {
+        // The middle of a batch is deleted, a row goes where it was, and the deletion is undone.
+        var shown = SnowRank.AfterAll(4).Select(r => (IRanked)new Item(r)).ToList();
+        var restored = shown[2];
+        shown.RemoveAt(2);
+        var inserted = new Item(SnowRank.At(shown, 2));
+        shown = Sorted([.. shown, restored, inserted]);
+
+        var between = new Item(SnowRank.At(shown, 3));
+
+        Assert.True(
+            Sorted([.. shown, between]).IndexOf(between) == 3,
+            $"A rank made between {restored.Rank} and {inserted.Rank} sorted outside them: {between.Rank}"
+        );
     }
 
     [Fact]
     public void PlayersInsertingInTheSamePlaceGetDifferentRanks()
     {
-        var prev = SnowRank.New(default, default, Stamp());
-        var next = SnowRank.New(prev, default, Stamp());
-        long at = _clock++;
+        var items = Appended(2);
+        var local = Snowport.Clock;
+        try
+        {
+            // Every player's clock is where the local one is, as if they all inserted at once.
+            var ranks = Enumerable
+                .Range(0, Snowport.SourceCount)
+                .Select(source =>
+                {
+                    Snowport.Clock = local.WithSource((byte)source);
+                    return SnowRank.At(items, 1);
+                })
+                .ToList();
 
-        var ranks = Enumerable
-            .Range(0, Snowport.SourceCount)
-            .Select(s => SnowRank.New(prev, next, new SnowportId(at, (byte)s)))
-            .ToList();
-
-        Assert.Equal(ranks.Count, ranks.Distinct().Count());
-        Assert.All(ranks, r => Assert.True(Compare(prev, r) < 0 && Compare(r, next) < 0));
+            Assert.Equal(ranks.Count, ranks.Distinct().Count());
+            Assert.All(
+                ranks,
+                r => Assert.True(items[0].Rank.CompareTo(r) < 0 && r.CompareTo(items[1].Rank) < 0)
+            );
+        }
+        finally
+        {
+            Snowport.Clock = local;
+        }
     }
 
     [Fact]
     public void RanksMadeInTheSamePlaceAtDifferentTimesDiffer()
     {
         // A row whose creation is undone, then another inserted where it was, then the first redone.
-        var prev = SnowRank.New(default, default, Stamp());
-        var next = SnowRank.New(prev, default, Stamp());
+        var items = Appended(2);
 
-        var undone = SnowRank.New(prev, next, Stamp());
-        var inserted = SnowRank.New(prev, next, Stamp());
+        var undone = SnowRank.At(items, 1);
+        var inserted = SnowRank.At(items, 1);
 
         Assert.NotEqual(undone, inserted);
     }
-
-    [Fact]
-    public void ARankFitsBetweenRanksMadeInTheSamePlace()
-    {
-        var prev = SnowRank.New(default, default, Stamp());
-        var next = SnowRank.New(prev, default, Stamp());
-        var ranks = Enumerable
-            .Range(0, 100)
-            .Select(_ => SnowRank.New(prev, next, Stamp((byte)(_clock % 64))))
-            .Order()
-            .ToList();
-
-        for (int i = 1; i < ranks.Count; i++)
-        {
-            var between = SnowRank.New(ranks[i - 1], ranks[i], Stamp());
-            Assert.True(Compare(ranks[i - 1], between) < 0 && Compare(between, ranks[i]) < 0);
-        }
-    }
-
-    [Fact]
-    public void RankFitsAfterARankItPrefixes()
-    {
-        // The admin source's stamps start with the lowest stamp character, which leaves room below the next rank.
-        var a = SnowRank.New(default, default, Stamp(0));
-        var b = SnowRank.New(a, default, Stamp(5));
-        var c = SnowRank.New(a, b, Stamp(0));
-        var d = SnowRank.New(c, b, Stamp(0));
-        var e = SnowRank.New(a, c, Stamp(63));
-
-        Assert.True(Compare(a, e) < 0 && Compare(e, c) < 0);
-        Assert.True(Compare(c, d) < 0 && Compare(d, b) < 0);
-    }
-
-    [Fact]
-    public void ARankSavesAsItsString()
-    {
-        var rank = SnowRank.New(default, default, Stamp());
-        var json = JsonSerializer.Serialize(rank, LizzieJson.EventOptions);
-        var back = JsonSerializer.Deserialize<SnowRank>(json, LizzieJson.EventOptions);
-        Assert.True(
-            json == $"\"{rank}\"" && back == rank,
-            $"{rank} saved as {json} and loaded as {back}."
-        );
-    }
-
-    private sealed record Item(SnowRank Rank) : IRanked;
 
     [Theory]
     [InlineData(0)]
@@ -118,14 +136,11 @@ public class SnowRankTests
     [InlineData(3)]
     public void AtPutsANewRankAtItsIndex(int index)
     {
-        var items = new List<IRanked>();
-        SnowRank rank = default;
-        for (int i = 0; i < 3; i++)
-            items.Add(new Item(rank = SnowRank.New(rank, default, Stamp())));
+        var items = Appended(3);
 
-        items.Insert(index, new Item(SnowRank.At(items, index, Stamp())));
+        items.Insert(index, new Item(SnowRank.At(items, index)));
 
-        var sorted = items.OrderBy(i => i.Rank).ToList();
+        var sorted = Sorted(items);
         Assert.True(
             sorted.SequenceEqual(items),
             $"A rank made at {index} sorted to {sorted.IndexOf(items[index])}."
@@ -133,14 +148,91 @@ public class SnowRankTests
     }
 
     [Fact]
-    public void AppendedRanksKeepIncreasing()
+    public void EndsAndStartsStayShort()
     {
-        SnowRank rank = default;
+        var items = new List<IRanked>();
         for (int i = 0; i < 1000; i++)
         {
-            var next = SnowRank.New(rank, default, Stamp(3));
-            Assert.True(rank == default || Compare(rank, next) < 0);
-            rank = next;
+            int at = i % 2 == 0 ? items.Count : 0;
+            var item = new Item(SnowRank.At(items, at));
+            items.Insert(at, item);
+            var saved = Saved(item.Rank);
+            var single = Saved(SnowRank.AfterAll(1)[0]);
+            Assert.True(
+                saved.Length <= single.Length,
+                $"Rank {i} saved as {saved}, longer than a single new end, {single}."
+            );
         }
+        Assert.True(
+            Sorted(items).SequenceEqual(items),
+            "Ranks made at the ends sorted out of place."
+        );
+    }
+
+    [Fact]
+    public void InsertsInOnePlaceStayShort()
+    {
+        // Rows typed in one after another, and rows each inserted above the last.
+        const int inserts = 1000;
+        var below = Appended(2);
+        var above = Appended(2);
+        for (int i = 0; i < inserts; i++)
+        {
+            below.Insert(i + 1, new Item(SnowRank.At(below, i + 1)));
+            above.Insert(1, new Item(SnowRank.At(above, 1)));
+        }
+
+        Assert.True(
+            Sorted(below).SequenceEqual(below),
+            "Rows typed in one after another sorted out of place."
+        );
+        Assert.True(
+            Sorted(above).SequenceEqual(above),
+            "Rows inserted above the last sorted out of place."
+        );
+        var longest = below.Concat(above).Select(i => Saved(i.Rank)).MaxBy(s => s.Length);
+        Assert.True(
+            longest.Length < inserts / 2,
+            $"After {inserts} inserts in one place, a rank saved in {longest.Length} characters, 1 or more for every 2 inserts: {longest}"
+        );
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RanksMadeTogetherKeepTheirOrder(bool end)
+    {
+        // Enough that their places take one, two and three digits.
+        var ranks = end ? SnowRank.AfterAll(4097) : SnowRank.BeforeAll(4097);
+
+        int back = ranks
+            .Zip(ranks.Skip(1))
+            .ToList()
+            .FindIndex(p => p.First.CompareTo(p.Second) >= 0);
+        if (back >= 0)
+            Assert.Fail(
+                $"Rank {back + 1}, {ranks[back + 1]}, sorted before rank {back}, {ranks[back]}."
+            );
+    }
+
+    [Fact]
+    public void TheDefaultRankSortsFirst()
+    {
+        var items = Appended(1);
+        var start = SnowRank.At(items, 0);
+
+        Assert.True(default(SnowRank).CompareTo(start) < 0 && start.CompareTo(items[0].Rank) < 0);
+    }
+
+    [Fact]
+    public void ARankLoadsAsSaved()
+    {
+        var items = Appended(2);
+        var rank = SnowRank.At(items, 1, 4)[3];
+
+        var json = JsonSerializer.Serialize(rank, LizzieJson.EventOptions);
+        var back = JsonSerializer.Deserialize<SnowRank>(json, LizzieJson.EventOptions);
+
+        Assert.True(back == rank, $"{rank} saved as {json} and loaded as {back}.");
     }
 }

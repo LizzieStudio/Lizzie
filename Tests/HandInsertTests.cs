@@ -10,16 +10,19 @@ public class HandInsertTests
     private static readonly Ref<Seat> Seat = new(100);
 
     // Cards 1 to n already in the hand, in order, stacked by older stamps.
-    private static List<ComponentPosition> HandOf(int n) =>
-        Enumerable
+    private static List<ComponentPosition> HandOf(int n)
+    {
+        var ranks = SnowRank.AfterAll(n);
+        return Enumerable
             .Range(1, n)
             .Select(i => new ComponentPosition
             {
                 Id = new(i),
                 Container = new InHand(Seat),
-                ZOrder = new ZOrder(ZTarget.Top, 0, new SnowportId(((long)i << 8) | 1)),
+                Rank = ranks[i - 1],
             })
             .ToList();
+    }
 
     private static ComponentPosition Card(int id) => new() { Id = new(id) };
 
@@ -31,29 +34,27 @@ public class HandInsertTests
             all[c.Id] = c;
         return all
             .Values.Where(c => c.Container == new InHand(Seat))
-            .OrderBy(c => c.ZOrder)
+            .OrderBy(c => c.Rank)
             .Select(c => (int)c.Id.Tag)
             .ToArray();
     }
-
-    private static readonly SnowportId Stamp = new((1000L << 8) | 1);
 
     [Fact]
     public void ACardGoesWhereItsDropped()
     {
         var hand = HandOf(4);
-        var written = PlayerHandService.Inserted(hand, [Card(9)], 2, Seat, Stamp).ToList();
+        var written = PlayerHandService.Inserted(hand, [Card(9)], 2, Seat).ToList();
 
         Assert.Equal(new[] { 1, 2, 9, 3, 4 }, Order(hand, written));
-        // The cards before the drop keep their order without being written.
-        Assert.Equal(new[] { 9, 3, 4 }, written.Select(c => (int)c.Id.Tag));
+        // The other cards keep their order without being written.
+        Assert.Equal(new[] { 9 }, written.Select(c => (int)c.Id.Tag));
     }
 
     [Fact]
     public void ACardMovesWithinItsHand()
     {
         var hand = HandOf(4);
-        var written = PlayerHandService.Inserted(hand, [hand[3]], 0, Seat, Stamp);
+        var written = PlayerHandService.Inserted(hand, [hand[3]], 0, Seat);
 
         Assert.Equal(new[] { 4, 1, 2, 3 }, Order(hand, written));
     }
@@ -62,7 +63,7 @@ public class HandInsertTests
     public void SeveralCardsKeepTheirOrder()
     {
         var hand = HandOf(3);
-        var written = PlayerHandService.Inserted(hand, [Card(8), Card(9)], 1, Seat, Stamp);
+        var written = PlayerHandService.Inserted(hand, [Card(8), Card(9)], 1, Seat);
 
         Assert.Equal(new[] { 1, 8, 9, 2, 3 }, Order(hand, written));
     }
@@ -71,7 +72,7 @@ public class HandInsertTests
     public void AnIndexPastTheEndAppends()
     {
         var hand = HandOf(2);
-        var written = PlayerHandService.Inserted(hand, [Card(9)], 10, Seat, Stamp).ToList();
+        var written = PlayerHandService.Inserted(hand, [Card(9)], 10, Seat).ToList();
 
         Assert.Equal(new[] { 1, 2, 9 }, Order(hand, written));
         Assert.Single(written);
@@ -81,7 +82,7 @@ public class HandInsertTests
     public void ADrawnOrDealtCardArrivesUprightAndFaceUp()
     {
         var faceDown = new ComponentPosition { Id = new(9), Rotation = new(0, 1, Mathf.Pi) };
-        var moved = PlayerHandService.MovedToHand(faceDown, Seat, 0, Stamp);
+        var moved = PlayerHandService.MovedToHand(faceDown, Seat, default);
 
         Assert.Equal(Vector3.Zero, moved.Rotation);
     }

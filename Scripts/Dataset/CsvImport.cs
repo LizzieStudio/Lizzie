@@ -43,15 +43,18 @@ public static class CsvImport
         {
             // TODO: we should do column matching based on string
             changes.AddRange(columns.Select(R.Unset));
-            SnowRank columnRank = default;
+            var columnRanks = SnowRank.AfterAll(header.Length);
             columns = header
-                .Select(h => new DataColumn
-                {
-                    Id = Ref<DataColumn>.Create(),
-                    DatasetRef = dataset.Id,
-                    Rank = columnRank = columnRank.After(SnowportId.Create()),
-                    Name = h,
-                })
+                .Select(
+                    (h, i) =>
+                        new DataColumn
+                        {
+                            Id = Ref<DataColumn>.Create(),
+                            DatasetRef = dataset.Id,
+                            Rank = columnRanks[i],
+                            Name = h,
+                        }
+                )
                 .ToList();
             changes.AddRange(columns);
         }
@@ -59,15 +62,14 @@ public static class CsvImport
         foreach (var existing in R.Get(DataRow.ByDataset, dataset.Id))
             changes.Add(existing with { Deleted = true });
 
-        SnowRank rank = default;
-        foreach (var line in lines.Skip(1))
+        var rowRanks = SnowRank.AfterAll(lines.Count - 1);
+        foreach (var (i, line) in lines.Skip(1).Index())
         {
-            rank = rank.After(SnowportId.Create());
             var row = new DataRow
             {
                 Id = Ref<DataRow>.Create(),
                 DatasetRef = dataset.Id,
-                Rank = rank,
+                Rank = rowRanks[i],
             };
             changes.Add(row);
             for (int c = 0; c < columns.Count && c < line.Length; c++)

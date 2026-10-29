@@ -213,22 +213,29 @@
                 "type": "integer"
               },
               "rotation": true,
-              "zOrder": {
+              "rank": {
                 "type": "object",
                 "properties": {
-                  "target": {
+                  "side": {
                     "type": "integer"
                   },
-                  "suborder": {
-                    "type": "integer"
-                  },
-                  "stamp": true
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "stamp": true,
+                        "place": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
                 },
-                "required": [
-                  "target",
-                  "suborder",
-                  "stamp"
-                ],
                 "additionalProperties": false
               },
               "container": {
@@ -333,7 +340,18 @@
               },
               "id": true,
               "datasetRef": true,
-              "rank": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
               "name": {
                 "type": [
                   "string",
@@ -353,7 +371,18 @@
               },
               "id": true,
               "datasetRef": true,
-              "rank": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
               "deleted": {
                 "type": "boolean"
               }
@@ -856,7 +885,18 @@
                 "const": "Seat"
               },
               "id": true,
-              "rank": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
               "name": {
                 "type": [
                   "string",
@@ -937,7 +977,18 @@
                 ]
               },
               "parentRef": true,
-              "rank": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
               "isTable": {
                 "type": "boolean"
               },

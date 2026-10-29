@@ -18,19 +18,12 @@ public static class DeckReconciliation
     /// The changes that bring every deck of <paramref name="prototype"/> in line with <paramref name="parameters"/>.
     /// </summary>
     /// <param name="parameters">The prototype's parameters, which may be newer than the ones written.</param>
-    /// <param name="newId">Makes the Ids of new cards, for testing.</param>
-    /// <param name="stamp">Orders new cards under the others, for testing.</param>
     public static List<IChange> Changes(
         IAtomReader R,
         Ref<Prototype> prototype,
-        PrintedParameters parameters,
-        Func<Ref<Component>> newId = null,
-        SnowportId? stamp = null
+        PrintedParameters parameters
     )
     {
-        var idCreate = newId ?? Ref<Component>.Create;
-        var snowportStamp = stamp ?? SnowportId.Create();
-
         IEnumerable<Stage> Below(Ref<Stage> parent) =>
             R.Get(Stage.Children, parent).SelectMany(stage => Below(stage.Id).Prepend(stage));
 
@@ -51,7 +44,7 @@ public static class DeckReconciliation
                         )
                     )
             )
-            .SelectMany(deck => Deck(R, deck, prototype, wanted, idCreate, snowportStamp))
+            .SelectMany(deck => Deck(R, deck, prototype, wanted))
             .ToList();
 
         var retiring = changes
@@ -80,11 +73,10 @@ public static class DeckReconciliation
         ComponentPosition deck,
         Ref<Prototype> prototype,
         PrintedItemRef item,
-        Func<Ref<Component>> newId = null,
-        ZOrder order = default
+        SnowRank rank = default
     )
     {
-        var id = (newId ?? Ref<Component>.Create)();
+        var id = Ref<Component>.Create();
         return
         [
             new Component
@@ -100,7 +92,7 @@ public static class DeckReconciliation
                 StageRef = deck.StageRef,
                 Container = new InComponent(deck.Id),
                 Rotation = new Vector3(0, 0, Mathf.Pi),
-                ZOrder = order,
+                Rank = rank,
             },
         ];
     }
@@ -158,9 +150,7 @@ public static class DeckReconciliation
         IAtomReader R,
         ComponentPosition deck,
         Ref<Prototype> prototype,
-        IReadOnlyList<PrintedItemRef> wanted,
-        Func<Ref<Component>> newId,
-        SnowportId stamp
+        IReadOnlyList<PrintedItemRef> wanted
     )
     {
         var held = R.Get(ComponentPosition.ByContainer, deck.Inside).Select(c => c.Id).ToHashSet();
@@ -181,17 +171,9 @@ public static class DeckReconciliation
         foreach (int i in unwanted)
             changes.Add(issued[i] with { Retired = true });
         // new cards go under the deck's current cards
-        int suborder = missing.Count;
-        foreach (int w in missing)
-            changes.AddRange(
-                NewCard(
-                    deck,
-                    prototype,
-                    wanted[w],
-                    newId,
-                    new ZOrder(ZTarget.Bottom, suborder--, stamp)
-                )
-            );
+        var ranks = SnowRank.BeforeAll(missing.Count);
+        for (int k = 0; k < missing.Count; k++)
+            changes.AddRange(NewCard(deck, prototype, wanted[missing[k]], ranks[^(k + 1)]));
         return changes;
     }
 }

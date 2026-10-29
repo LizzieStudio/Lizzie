@@ -92,9 +92,8 @@ public sealed record Seat : Atom, IRanked
     public static List<Seat> Defaults()
     {
         var seats = new List<Seat>();
-        SnowRank rank = default;
-        for (int i = 0; i < 4; i++)
-            seats.Add(New(rank = rank.After(SnowportId.Create()), seats));
+        foreach (var rank in SnowRank.AfterAll(4))
+            seats.Add(New(rank, seats));
         return seats;
     }
 }

@@ -11,16 +11,11 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     /// <summary>
     /// The atoms that move <paramref name="dropped"/> into this container.
     /// </summary>
-    public IEnumerable<Atom> DropObjects(IEnumerable<ComponentPosition> dropped)
+    public IEnumerable<Atom> DropObjects(IReadOnlyList<ComponentPosition> dropped)
     {
-        var stamp = SnowportId.Create();
+        var ranks = SnowRank.AfterAll(dropped.Count);
         return dropped.Select(
-            Atom (s, i) =>
-                s with
-                {
-                    Container = new InComponent(ComponentRef),
-                    ZOrder = new ZOrder(ZTarget.Top, i, stamp),
-                }
+            Atom (s, i) => s with { Container = new InComponent(ComponentRef), Rank = ranks[i] }
         );
     }
 

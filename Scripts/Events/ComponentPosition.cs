@@ -11,7 +11,7 @@ namespace Lizzie;
 /// The <see cref="Component"/> with its shared tag defines the component.
 /// </summary>
 [JsonName("ComponentPosition")]
-public record ComponentPosition : StagedAtom
+public record ComponentPosition : StagedAtom, IRanked
 {
     public static readonly StagedId<ComponentPosition> ById = new(r => r.Id);
 
@@ -32,7 +32,7 @@ public record ComponentPosition : StagedAtom
     /// </summary>
     public static readonly Lookup<ComponentPosition, ContainerKey> ByContainer = new(
         s => new(s.StageRef, s.Container),
-        (a, b) => a.ZOrder.CompareTo(b.ZOrder)
+        IRanked.ByRank
     );
 
     /// <summary>
@@ -117,7 +117,10 @@ public record ComponentPosition : StagedAtom
     [JsonIgnore]
     public bool IsFaceDown => Mathf.Cos(Rotation.Z) < 0;
 
-    public ZOrder ZOrder { get; init; }
+    /// <summary>
+    /// Orders it among the components in the same container.
+    /// </summary>
+    public SnowRank Rank { get; init; }
 
     /// <summary>
     /// What holds this component, or null when it's on the table.

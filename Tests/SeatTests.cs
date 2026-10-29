@@ -10,25 +10,19 @@ namespace Lizzie.Tests;
 /// </summary>
 public class SeatTests
 {
-    private static readonly SnowportId Stamp = new((1000L << 8) | 1);
-
     // Seats 1 to n, in order.
     private static List<Seat> SeatsOf(int n)
     {
-        SnowRank rank = default;
+        var ranks = SnowRank.AfterAll(n);
         return Enumerable
             .Range(1, n)
-            .Select(i => new Seat
-            {
-                Id = new(i),
-                Rank = rank = rank.After(new SnowportId(((long)i << 8) | 1)),
-            })
+            .Select(i => new Seat { Id = new(i), Rank = ranks[i - 1] })
             .ToList();
     }
 
     // A seat put at index among seats.
     private static Seat InsertedAt(List<Seat> seats, int index) =>
-        new() { Id = new(9), Rank = SnowRank.At(seats, index, Stamp) };
+        new() { Id = new(9), Rank = SnowRank.At(seats, index) };
 
     [Fact]
     public void ASeatCanGoBeforeTheOthers()

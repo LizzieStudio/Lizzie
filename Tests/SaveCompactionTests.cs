@@ -347,16 +347,14 @@ public class SaveCompactionTests
     [Fact]
     public void SnowportIdsAreSavedAsTheyAre()
     {
-        var stamp = Id(900, source: 2);
-        var json = SaveCompaction.Serialize(
-            Save(Position(1) with { ZOrder = new ZOrder(ZTarget.Top, 0, stamp) })
-        );
+        var rank = SnowRank.AfterAll(1)[0];
+        var json = SaveCompaction.Serialize(Save(Position(1) with { Rank = rank }));
 
         var back = Load(json);
 
         Assert.True(back.IsAdmin, "The save event should stay an admin event.");
         Assert.Equal(Id(1_000_000, Snowport.AdminSource), back.Id);
-        Assert.Equal(stamp, ((ComponentPosition)back.Writes[0]).ZOrder.Stamp);
+        Assert.Equal(rank, ((ComponentPosition)back.Writes[0]).Rank);
     }
 
     [Fact]
@@ -378,7 +376,7 @@ public class SaveCompactionTests
         var back = (ComponentPosition)Load(json).Writes[0];
 
         Assert.Equal(Ref<Stage>.Empty, back.StageRef);
-        Assert.Equal(SnowportId.Empty, back.ZOrder.Stamp);
+        Assert.Equal(default, back.Rank);
     }
 
     [Fact]
@@ -386,13 +384,7 @@ public class SaveCompactionTests
     {
         var first = SaveCompaction.Serialize(
             SaveCompaction.Event([
-                new AtomEntry(
-                    Position(8) with
-                    {
-                        ZOrder = new ZOrder(ZTarget.Bottom, 1, Id(77)),
-                    },
-                    Id(80)
-                ),
+                new AtomEntry(Position(8) with { Rank = SnowRank.BeforeAll(2)[1] }, Id(80)),
                 new AtomEntry(
                     Component(8) with
                     {

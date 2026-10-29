@@ -74,13 +74,12 @@ public static class DeckCommands
     private static int CardCount(IAtomReader R, ComponentPosition deck) =>
         R.Count(ComponentPosition.ByContainer, deck.Inside);
 
-    /// <summary>The deck's cards with their ZOrders shuffled among them.</summary>
     private static IEnumerable<ComponentPosition> Shuffled(IAtomReader R, ComponentPosition deck)
     {
         var cards = R.TokensOn(deck);
-        var orders = cards.Select(c => c.ZOrder).ToArray();
-        Random.Shared.Shuffle(orders);
-        return cards.Select((c, i) => c with { ZOrder = orders[i] });
+        var ranks = cards.Select(c => c.Rank).ToArray();
+        Random.Shared.Shuffle(ranks);
+        return cards.Select((c, i) => c with { Rank = ranks[i] });
     }
 
     /// <summary>
@@ -94,7 +93,7 @@ public static class DeckCommands
     )
     {
         var cards = R.TokensOn(deck).Take(count).ToList();
-        var stamp = SnowportId.Create();
+        var ranks = SnowRank.AfterAll(cards.Count);
 
         if (R.Get(ProjectGameSettings.Only).EnablePlayerHands)
         {
@@ -102,7 +101,7 @@ public static class DeckCommands
             var seat = R.LocalSeat();
             if (seat.IsEmpty)
                 return [];
-            return cards.Select((c, i) => PlayerHandService.MovedToHand(c, seat, i, stamp));
+            return cards.Select((c, i) => PlayerHandService.MovedToHand(c, seat, ranks[i]));
         }
 
         // Splayed cards land to the right of the deck and on top, in draw order.
@@ -115,7 +114,7 @@ public static class DeckCommands
                     Container = null,
                     Position = frame + new Vector3(width * (1.5f + i), 0, 0),
                     Rotation = c.Rotation with { Y = deck.Rotation.Y + c.Rotation.Y },
-                    ZOrder = new ZOrder(ZTarget.Top, i, stamp),
+                    Rank = ranks[i],
                 }
         );
     }
@@ -136,18 +135,13 @@ public static class DeckCommands
 
         var cards = R.TokensOn(deck);
         int total = (int)Math.Min((long)countPerPlayer * seats.Count, cards.Count);
-        var stamp = SnowportId.Create();
+        var ranks = SnowRank.AfterAll(total);
         // Each seat's cards go into its hand in the order they're dealt.
         return cards
             .Take(total)
             .Select(
                 (card, i) =>
-                    PlayerHandService.MovedToHand(
-                        card,
-                        seats[i % seats.Count].Id,
-                        i / seats.Count,
-                        stamp
-                    )
+                    PlayerHandService.MovedToHand(card, seats[i % seats.Count].Id, ranks[i])
             );
     }
 

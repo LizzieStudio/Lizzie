@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Lizzie;
@@ -10,91 +11,168 @@ namespace Lizzie;
 /// Ordered ranks for indexing atoms.
 ///
 /// <para>
-/// If given two strings, it finds the string that is in-between them in "Ordinal" order:
-/// <code>ABCD + ABEFG = ABD</code>
-/// It then adds a new SpowportId to the end in base64 to guarantee uniqueness.
+/// Unlike with numeric indexes, a SnowRank doesn't require you to update any existing atoms to insert a new one.
 /// </para>
-///
-/// This ensures that you never have to update any existing atoms in order to insert one between them.
 /// </summary>
 /// <remarks>
-/// Currently used by <see cref="DataRow"/> and <see cref="DataColumn"/>.
-/// Ranks sort in that order with <see cref="CompareTo"/>. The default rank is empty and sorts first.
-/// Partly based on LexoRanks.
+/// Ranks sort in that order with <see cref="CompareTo"/>. The default rank has no steps and sorts first.
+/// Places are partly based on LexoRanks.
 /// </remarks>
-[JsonConverter(typeof(Json))]
 public readonly record struct SnowRank : IComparable<SnowRank>
 {
+    private enum RankSide
+    {
+        Start,
+        End,
+    }
+
+    private readonly record struct RankStep(SnowportId Stamp, string Place);
+
     // These are in Ordinal order.
-    // We can never end a rank with the lowest character <c>+</c>, since nothing could go before it.
-    // At the high end, more characters make a rank go higher: <c>z < z+</c>
-    // At the low end, fewer characters would be required to make a rank go lower: <c>V < V+</c>
-    // The problem is that we can't guarentee that that rank won't be taken.
-    // We can always add more characters to make a unique rank, but not necessarily the other way around.
-    // Therefore, we have to never end a rank with the lowest character. We only use it for the occasional middle character.
-    // Stamps use the 64 characters <c>-</c> through <c>z</c>, one per 6 bits.
+    // We can never end a place with the lowest character <c>*</c>, since nothing could go before it.
+    // At the high end, more characters make a place go higher: <c>z < z*</c>
+    // At the low end, fewer characters would be required to make a place go lower: <c>V < V*</c>
+    // The problem is that we can't guarantee that that place won't be taken.
+    // We can always add more characters to make a unique place, but not necessarily the other way around.
+    // Therefore, we have to never end a place with the lowest character. We only use it for the occasional middle character.
+    // Suborders use the 64 characters <c>-</c> through <c>z</c>, one per 6 bits.
     private const string Alphabet =
-        "+-/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        "*-/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private const int Min_Digit = 0;
     private const int Max_Digit = 65;
 
-    // A SnowportId has 53 bits, which takes 9 characters.
-    // Every stamp has the same length, or a short rank plus its stamp could spell a long rank plus a different stamp.
-    private const int StampLength = 9;
+    private readonly ImmutableArray<RankStep> _steps;
 
-    private readonly string _value;
+    [JsonInclude]
+    private RankSide Side { get; init; }
 
-    private SnowRank(string value) => _value = value;
+    [JsonInclude]
+    private ImmutableArray<RankStep> Steps
+    {
+        get => _steps.IsDefault ? [] : _steps;
+        init => _steps = value;
+    }
 
-    private string Value => _value ?? string.Empty;
+    public int CompareTo(SnowRank other)
+    {
+        if (Side != other.Side)
+            return Side.CompareTo(other.Side);
+        for (int k = 0; k < Steps.Length && k < other.Steps.Length; k++)
+        {
+            int stamps = Steps[k].Stamp.CompareTo(other.Steps[k].Stamp);
+            if (stamps != 0)
+                return k == 0 && Side == RankSide.End ? stamps : -stamps;
+            int places = string.CompareOrdinal(Steps[k].Place, other.Steps[k].Place);
+            if (places != 0)
+                return places;
+        }
+        return Steps.Length.CompareTo(other.Steps.Length);
+    }
 
-    public int CompareTo(SnowRank other) => string.CompareOrdinal(Value, other.Value);
+    public bool Equals(SnowRank other) => Side == other.Side && Steps.SequenceEqual(other.Steps);
 
-    public override string ToString() => Value;
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Side);
+        foreach (var step in Steps)
+            hash.Add(step);
+        return hash.ToHashCode();
+    }
+
+    public override string ToString() =>
+        $"{Side}[{string.Join(", ", Steps.Select(s => $"{s.Stamp}:{s.Place}"))}]";
 
     /// <summary>
-    /// A rank right after this one, ending with <paramref name="stamp"/>.
+    /// Gets ranks before all that exist, anywhere.
     /// </summary>
-    public SnowRank After(SnowportId stamp) => New(this, default, stamp);
+    /// <param name="count">How many ranks to get back.</param>
+    public static IReadOnlyList<SnowRank> BeforeAll(int count) => Made(RankSide.Start, [], count);
+
+    /// <summary>
+    /// Gets ranks after all that exist, anywhere.
+    /// </summary>
+    /// <param name="count">How many ranks to get back.</param>
+    public static IReadOnlyList<SnowRank> AfterAll(int count) => Made(RankSide.End, [], count);
 
     /// <summary>
     /// Gets the rank that would put a new item at <paramref name="index"/> among <paramref name="ranked"/>.
     /// </summary>
     /// <param name="ranked">The sorted list of atoms you're inserting into.</param>
     /// <param name="index">The index at which to insert. If it equals the Count, inserts at the end.</param>
-    /// <param name="stamp">The stamp to use in the rank, created with <see cref="SnowportId.Create()"/>.</param>
-    public static SnowRank At(IReadOnlyList<IRanked> ranked, int index, SnowportId stamp) =>
-        New(
-            index > 0 ? ranked[index - 1].Rank : default,
-            index < ranked.Count ? ranked[index].Rank : default,
-            stamp
-        );
+    public static SnowRank At(IReadOnlyList<IRanked> ranked, int index) => At(ranked, index, 1)[0];
+
+    /// <summary>
+    /// Gets <paramref name="count"/> ranks, in order, that would put new items at <paramref name="index"/> among <paramref name="ranked"/>.
+    /// </summary>
+    /// <param name="ranked">The sorted list of atoms you're inserting into.</param>
+    /// <param name="index">The index at which to insert. If it equals the Count, inserts at the end.</param>
+    public static IReadOnlyList<SnowRank> At(IReadOnlyList<IRanked> ranked, int index, int count)
+    {
+        if (index == ranked.Count)
+            return AfterAll(count);
+        var prev = index > 0 ? ranked[index - 1].Rank : default;
+        var next = ranked[index].Rank;
+        // Every rank after prev is before a rank on the other side.
+        var bound = prev.Side == next.Side ? next.Steps : [];
+
+        // Copy the steps the two share, then go above prev's step where they part:
+        // between the places if the bound has the same stamp there, or anywhere above otherwise.
+        // When the bound extends prev, the new stamp alone goes between them, since a new stamp goes first.
+        int shared = 0;
+        while (
+            shared < prev.Steps.Length
+            && shared < bound.Length
+            && prev.Steps[shared] == bound[shared]
+        )
+            shared++;
+        var steps = prev.Steps.Take(shared).ToList();
+        if (shared < prev.Steps.Length)
+        {
+            var parting = prev.Steps[shared];
+            var above =
+                shared < bound.Length && bound[shared].Stamp == parting.Stamp
+                    ? bound[shared].Place
+                    : "";
+            steps.Add(parting with { Place = Between(parting.Place, above) });
+        }
+        return Made(prev.Side, steps, count);
+    }
+
+    private static IReadOnlyList<SnowRank> Made(
+        RankSide side,
+        IReadOnlyList<RankStep> steps,
+        int count
+    )
+    {
+        if (count == 0)
+            return [];
+        var stamp = SnowportId.Create();
+        return
+        [
+            .. Enumerable
+                .Range(0, count)
+                .Select(i => new SnowRank
+                {
+                    Side = side,
+                    Steps = [.. steps, new(stamp, Place(i))],
+                }),
+        ];
+    }
 
     private static int Ord(char c) => Alphabet.IndexOf(c);
 
     private static char Chr(int i) => Alphabet[i];
 
     /// <summary>
-    /// Returns a rank strictly between <paramref name="prev"/> and <paramref name="next"/>, ending with <paramref name="stamp"/>.
-    /// If <paramref name="prev"/> is the default, get a rank below <paramref name="next"/>.
-    /// If <paramref name="next"/> is the default, get a rank above <paramref name="prev"/>.
+    /// Converts a number into an Ordinal string.
     /// </summary>
-    public static SnowRank New(SnowRank prev, SnowRank next, SnowportId stamp) =>
-        // Added characters never change the order.
-        // If ABC < ABD < ABE, then the same is true for any extension of ABD...
-        new(Between(prev.Value, next.Value) + Stamp(stamp));
-
-    /// <summary>
-    /// The stamp's digits in reverse order.
-    /// The lower digits change more often, which keeps ranks made between them short.
-    /// </summary>
-    private static string Stamp(SnowportId stamp)
+    private static string Place(int suborder)
     {
-        long bits = stamp;
-        var result = new StringBuilder(StampLength);
-        for (int i = 0; i < StampLength; i++, bits >>= 6)
-            result.Append(Chr((int)(bits & 63) + 1));
-        return result.ToString();
+        var digits = new StringBuilder();
+        for (; suborder > 0; suborder >>= 6)
+            digits.Insert(0, Chr((suborder & 63) + 1));
+        return digits.Length == 0 ? "" : Chr(digits.Length) + digits.ToString();
     }
 
     private static string Between(string prev, string next)
@@ -130,22 +208,6 @@ public readonly record struct SnowRank : IComparable<SnowRank>
                 return result.ToString();
             }
         }
-    }
-
-    // Saved as its string, so a save reads the same as when ranks were strings.
-    private sealed class Json : JsonConverter<SnowRank>
-    {
-        public override SnowRank Read(
-            ref Utf8JsonReader reader,
-            Type typeToConvert,
-            JsonSerializerOptions options
-        ) => new(reader.GetString());
-
-        public override void Write(
-            Utf8JsonWriter writer,
-            SnowRank rank,
-            JsonSerializerOptions options
-        ) => writer.WriteStringValue(rank.Value);
     }
 }
 

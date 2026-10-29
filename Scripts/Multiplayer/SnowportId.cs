@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Godot;
 
 namespace Lizzie;
@@ -19,8 +20,21 @@ public class Snowport
     /// </summary>
     public const byte HostSource = 1;
 
-    // Different source codes will be used when joining games.
-    public static Snowport Clock = new Snowport(HostSource);
+    private static Snowport _clock;
+
+    /// <summary>
+    /// The local player's clock, which gets a different source when joining games.
+    /// </summary>
+    public static Snowport Clock
+    {
+        get => _clock ??= new Snowport(HostSource);
+        set => _clock = value;
+    }
+
+    private readonly Func<long> _ticksMsec;
+
+    // Tests sometimes use parallel threads.
+    private readonly Lock _lock = new();
 
     // start at 1 since 0 is used to mean Empty
     private long _useLogicClock = 1;
@@ -40,11 +54,12 @@ public class Snowport
     /// </summary>
     public const int TickBits = 6;
 
-    public Snowport(byte source)
+    public Snowport(byte source, Func<long> ticksMsec = null)
     {
         if (source >= SourceCount)
             throw new ArgumentOutOfRangeException(nameof(source), source, "A source takes 6 bits.");
-        _localOffsetMsec = (long)Time.GetTicksMsec();
+        _ticksMsec = ticksMsec ?? (() => (long)Time.GetTicksMsec());
+        _localOffsetMsec = _ticksMsec();
         this.source = source;
     }
 
@@ -55,7 +70,7 @@ public class Snowport
     /// </summary>
     public Snowport WithSource(byte newSource)
     {
-        return new Snowport(newSource)
+        return new Snowport(newSource, _ticksMsec)
         {
             _localOffsetMsec = _localOffsetMsec,
             _globalOffsetMsec = _globalOffsetMsec,
@@ -65,7 +80,7 @@ public class Snowport
     }
 
     /// <summary>The project's shared time, in milliseconds.</summary>
-    private long GameTimeMsec => (long)Time.GetTicksMsec() - _localOffsetMsec + _globalOffsetMsec;
+    private long GameTimeMsec => _ticksMsec() - _localOffsetMsec + _globalOffsetMsec;
 
     /// <summary>
     /// The milliseconds since <paramref name="id"/> was created. Negative when it's in the future.
@@ -89,23 +104,31 @@ public class Snowport
 
     private SnowportId Mint(byte from)
     {
-        // If the game time has advanced, update the hybrid clock to match.
-        _useLogicClock = Math.Max(GameTimeMsec << TickBits, _useLogicClock);
-        return new SnowportId(_useLogicClock++, from);
+        lock (_lock)
+        {
+            // If the game time has advanced, update the hybrid clock to match.
+            _useLogicClock = Math.Max(GameTimeMsec << TickBits, _useLogicClock);
+            return new SnowportId(_useLogicClock++, from);
+        }
     }
 
     /// <summary>
     /// Create a new <see cref="SnowTag"/>. Elsewhere, use <see cref="SnowTag.Create"/>, which calls this on <see cref="Clock"/>.
     /// </summary>
-    public SnowTag CreateTag() => new(source, _tagCounter++);
+    public SnowTag CreateTag()
+    {
+        lock (_lock)
+            return new(source, _tagCounter++);
+    }
 
     /// <summary>
     /// Advance the tag counter past <paramref name="tag"/> when it shares our source.
     /// </summary>
     public void ObserveTag(SnowTag tag)
     {
-        if (tag.source == source && tag.counter >= _tagCounter)
-            _tagCounter = tag.counter + 1;
+        lock (_lock)
+            if (tag.source == source && tag.counter >= _tagCounter)
+                _tagCounter = tag.counter + 1;
     }
 
     /// <summary>
@@ -114,15 +137,18 @@ public class Snowport
     /// <param name="id">The id to consume.</param>
     public void Process(SnowportId id)
     {
-        // If the ID's time appears to be in the future,
-        // adjust the local time to match it.
-        var gameTime = GameTimeMsec;
-        var otherClock = id.logicClock >> TickBits;
-        if (otherClock > gameTime)
-            _globalOffsetMsec += otherClock - gameTime;
+        lock (_lock)
+        {
+            // If the ID's time appears to be in the future,
+            // adjust the local time to match it.
+            var gameTime = GameTimeMsec;
+            var otherClock = id.logicClock >> TickBits;
+            if (otherClock > gameTime)
+                _globalOffsetMsec += otherClock - gameTime;
 
-        // Make sure the next used logic clock is greater than the ID.
-        _useLogicClock = Math.Max(id.logicClock + 1, _useLogicClock);
+            // Make sure the next used logic clock is greater than the ID.
+            _useLogicClock = Math.Max(id.logicClock + 1, _useLogicClock);
+        }
     }
 }
 

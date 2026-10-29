@@ -5,14 +5,14 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// Stacks components on the table by ZOrder. Each component rests on the highest top among the
-/// components below it that it overlaps.
+/// Stacks components on the table in their stack order. Each component rests on the highest top
+/// among the components below it that it overlaps.
 /// </summary>
 /// <remarks>
 /// Components with the same shape in the same place, like the cards of a deck, form a column.
 /// Every member of a column overlaps the same things, so overlaps are found between columns
-/// instead of components. Settling in ZOrder, a column's highest top so far is its top member's,
-/// so a component rests on the highest of those among its own column and the columns it
+/// instead of components. Settling from the bottom up, a column's highest top so far is its top
+/// member's, so a component rests on the highest of those among its own column and the columns it
 /// overlaps.
 /// </remarks>
 internal static class Stacking
@@ -20,24 +20,29 @@ internal static class Stacking
     /// <summary>
     /// The height each component rests at.
     /// </summary>
+    /// <param name="components">
+    /// The components from the bottom of the stack up,
+    /// as <see cref="ComponentPosition.ByContainer"/> lists them.
+    /// </param>
     /// <param name="columns">The columns, highest top first.</param>
     public static float[] Floors(
         IReadOnlyList<VisualComponentBase> components,
         out StackColumns columns
     )
     {
-        // Only components with a shape stack.
+        // Only components with a shape stack, and zones sit below everything else.
         var footprints = new List<Footprint>(components.Count);
-        for (int i = 0; i < components.Count; i++)
-            if (components[i].ShapeProfiles.Count > 0)
-                footprints.Add(new Footprint(i, components[i]));
+        foreach (bool zones in new[] { true, false })
+            for (int i = 0; i < components.Count; i++)
+                if ((components[i] is VcZone) == zones && components[i].ShapeProfiles.Count > 0)
+                    footprints.Add(new Footprint(i, components[i]));
 
         return Floors(components.Count, footprints.ToArray(), out columns);
     }
 
     /// <summary>
     /// The height each of <paramref name="count"/> components rests at, from the footprints of
-    /// those with a shape.
+    /// those with a shape, from the bottom of the stack up.
     /// </summary>
     public static float[] Floors(int count, Footprint[] footprints, out StackColumns columns)
     {
@@ -79,16 +84,6 @@ internal static class Stacking
 
         var neighbors = Neighbors(footprints, leads, columnCount, out var neighborStart);
 
-        // Settle from the bottom up, so every column's top is its highest member's so far.
-        var order = new int[n];
-        var zOrders = new UInt128[n];
-        for (int i = 0; i < n; i++)
-        {
-            order[i] = i;
-            zOrders[i] = footprints[i].ZOrder.SortKey;
-        }
-        Array.Sort(zOrders, order);
-
         var memberStart = new int[columnCount + 1];
         for (int c = 0; c < columnCount; c++)
             memberStart[c + 1] = memberStart[c] + sizes[c];
@@ -98,7 +93,7 @@ internal static class Stacking
         var floors = new float[count];
         var tops = new float[n];
         var running = new float[columnCount];
-        foreach (int i in order)
+        for (int i = 0; i < n; i++)
         {
             int c = columnOf[i];
             float floor = running[c];
@@ -285,7 +280,6 @@ internal readonly struct Footprint
     /// <summary>Each of the component's shapes, placed on the table, with its own bounds.</summary>
     public readonly (Shape2D Shape, Transform2D Transform, Rect2 Rect)[] Shapes;
     public readonly Rect2 Bounds;
-    public readonly ZOrder ZOrder;
     public readonly float YHeight;
 
     /// <summary>
@@ -299,8 +293,6 @@ internal readonly struct Footprint
         Index = index;
         Component = c;
         Key = ComponentPosition.TableKey(position);
-        // Zones always sit below everything else.
-        ZOrder = c is VcZone ? ZOrder.Floor : s.ZOrder;
         YHeight = c.YHeight;
 
         var profiles = c.ShapeProfiles;

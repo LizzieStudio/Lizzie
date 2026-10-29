@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using SaveUpgrades;
 using Xunit;
@@ -45,11 +45,14 @@ public class Format1Tests
     private static List<JsonObject> OfType(List<JsonObject> writes, string type) =>
         writes.Where(w => (string)w["$type"] == type).ToList();
 
+    private static SnowRank Rank(JsonObject write) =>
+        write["rank"].Deserialize<SnowRank>(LizzieJson.EventOptions);
+
     [Fact]
     public void RowNamesBecomeAFirstColumn()
     {
         var writes = Writes();
-        var columns = OfType(writes, "DataColumn").OrderBy(c => (string)c["rank"]).ToList();
+        var columns = OfType(writes, "DataColumn").OrderBy(Rank).ToList();
         Assert.Equal(["Name", "Cost"], columns.Select(c => (string)c["name"]));
         var cells = OfType(writes, "DataCell").Select(c => (string)c["value"]).ToList();
         Assert.Equal(["Axe", "3", "Bow"], cells);
@@ -91,10 +94,39 @@ public class Format1Tests
         Assert.Null(components[(int)deck["id"]]["item"]);
         Assert.Equal((int)deck["id"], (int)components[(int)card["id"]]["deckRef"]);
         var item = components[(int)card["id"]]["item"];
-        var bow = OfType(writes, "DataRow").OrderBy(r => (string)r["rank"]).Last();
+        var bow = OfType(writes, "DataRow").OrderBy(Rank).Last();
         Assert.Equal("RowFace", (string)item["front"]["$type"]);
         Assert.Equal((int)bow["id"], (int)item["front"]["rowRef"]);
         Assert.Null(item["back"]);
+    }
+
+    [Fact]
+    public void CardsThatShareAZOrderGetTheirOwnRanks()
+    {
+        var project = Project
+            .Replace(
+                "\"ContainedComponents\": [ \"card\" ]",
+                "\"ContainedComponents\": [ \"card\", \"axe\" ]"
+            )
+            .Replace(
+                "\"ContainedComponents\": [] } ]",
+                """
+                "ContainedComponents": [] },
+                { "ComponentRef": "axe", "PrototypeRef": "d1", "DatasetRow": "Axe", "Px": 0, "Pz": 0, "ZOrder": 2,
+                  "ContainedComponents": [] } ]
+                """
+            );
+
+        var ranks = OfType(Writes(project), "ComponentPosition")
+            .Where(p => p["container"] != null)
+            .Select(Rank)
+            .ToList();
+
+        Assert.True(
+            ranks.Count == 2 && ranks[0] != ranks[1],
+            $"Two cards with the same ZOrder loaded with the ranks {string.Join(" and ", ranks)}.\n\n"
+                + "Nothing can be put between two equal ranks."
+        );
     }
 
     /// <summary>
@@ -153,9 +185,7 @@ public class Format1Tests
     public void PlayersBecomeSeatsThatZonesReferTo()
     {
         var writes = Writes(SeatProject);
-        var seats = OfType(writes, "Seat")
-            .OrderBy(s => (string)s["rank"], StringComparer.Ordinal)
-            .ToList();
+        var seats = OfType(writes, "Seat").OrderBy(Rank).ToList();
 
         Assert.Equal(2, seats.Count);
         // A default name is dropped, so the seat goes by its number.
