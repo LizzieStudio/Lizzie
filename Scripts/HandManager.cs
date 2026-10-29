@@ -137,7 +137,7 @@ public partial class HandManager : Panel
 
             // A card can be flipped, or its prototype edited, while it's held.
             var prototype = Atoms.R.GetPrototype(s);
-            var shows = (prototype, Atoms.R.GetComponent(s).Item, HandCard.IsFaceDown(s));
+            var shows = (prototype, Atoms.R.GetComponent(s).Item, s.IsFaceDown);
             if (shows != shown)
             {
                 rect.ShowCard(s, shows.Item3, Atoms.R);

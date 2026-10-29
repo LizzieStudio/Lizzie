@@ -35,11 +35,6 @@ public partial class HandCard : PanelContainer
         }
     }
 
-    /// <remarks>
-    /// Used when the card is in an opponent's hand.
-    /// </remarks>
-    public bool AlwaysShowBack { get; set; }
-
     /// <summary>
     /// The card's size in cm.
     /// </summary>
@@ -80,7 +75,11 @@ public partial class HandCard : PanelContainer
         var prototype = state == null ? null : R.GetPrototype(state);
         Yaw = state?.Rotation.Y ?? 0;
         TableSize = HandRow.TableSize(prototype?.Parameters as PrintedParameters);
-        _face.ShowCard(state, state != null && (AlwaysShowBack || IsFaceDown(state)), R);
+        _face.ShowCard(
+            state,
+            state != null && GetParent<HandRow>().FacesAway != state.IsFaceDown,
+            R
+        );
     }
 
     private void SyncSelection(IWatchReader R)
@@ -89,8 +88,6 @@ public partial class HandCard : PanelContainer
         SelectionHighlight.Outline(this, "panel", colors, Reference);
         _paint.Visible = ProjectService.Instance.GameObjects.IsMarkedForReset(R, Reference);
     }
-
-    public static bool IsFaceDown(ComponentPosition s) => Mathf.Cos(s.Rotation.Z) < 0;
 
     public static float ScreenRotation(float yaw) => -yaw;
 

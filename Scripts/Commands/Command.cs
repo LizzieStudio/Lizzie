@@ -246,16 +246,28 @@ public abstract class Command
     public abstract bool Fits(int count);
 
     /// <summary>
+    /// General rules that must be satisfied for the command to run.
+    ///
+    /// <para>
+    /// If a rule is broken, the command is disabled and the reason is shown as a tooltip.
+    /// </para>
+    /// </summary>
+    public IReadOnlyList<(
+        string Reason,
+        Func<IAtomReader, bool> Holds
+    )> AvailableWhen { get; init; } = [];
+
+    /// <summary>
     /// Why it's disabled with <paramref name="count"/> targets, or null for no reason.
     /// </summary>
     public virtual string DisabledReason(IAtomReader R, int count, IReadOnlyList<string> blocked) =>
-        null;
+        AvailableWhen.FirstOrDefault(rule => !rule.Holds(R)).Reason;
 
     /// <summary>
-    /// Whether the Command can run now.
+    /// Whether the Command can run now, with every rule in <see cref="AvailableWhen"/> holding.
     /// When false, it's disabled in menus and keyboard shortcuts won't trigger it.
     /// </summary>
-    public virtual bool IsAvailable(IAtomReader R) => true;
+    public bool IsAvailable(IAtomReader R) => AvailableWhen.All(rule => rule.Holds(R));
 
     /// <summary>
     /// Acts on the targets, or does nothing when it can't act on them or isn't available.
@@ -317,6 +329,7 @@ public abstract class TargetedCommand<T> : Command
     /// <summary>
     /// Define rules a relevant atom must also meet.
     /// Failing targets are left out. When too few are left, the command shows disabled with the reason.
+    /// A rule that doesn't depend on the atom belongs in <see cref="Command.AvailableWhen"/>.
     /// </summary>
     public IReadOnlyList<(string Reason, AppliesToDelegate Holds)> Requires { get; init; } = [];
 
@@ -343,6 +356,8 @@ public abstract class TargetedCommand<T> : Command
 
     public override string DisabledReason(IAtomReader R, int count, IReadOnlyList<string> blocked)
     {
+        if (base.DisabledReason(R, count, blocked) is { } unavailable)
+            return unavailable;
         if (Fits(count))
             return null;
         if (count < MinTargets && blocked.Count > 0)
@@ -370,10 +385,12 @@ public abstract class TargetedCommand<T> : Command
 
     /// <summary>
     /// The atoms it acts on, leaving out any gone since the menu opened,
-    /// or null when too few are left.
+    /// or null when too few are left or it isn't available.
     /// </summary>
     protected List<T> Resolved(IReadOnlyList<IAtomRef> targets)
     {
+        if (!IsAvailable(Atoms.R))
+            return null;
         var atoms = targets.Select(t => Atom(Atoms.R, t)).Where(a => a != null).ToList();
         return Fits(atoms.Count) ? atoms : null;
     }
@@ -506,13 +523,6 @@ public sealed class GlobalCommand : Command
     public override bool Fits(int count) => count == 0;
 
     /// <summary>
-    /// Define rules that must be met.
-    /// Broken rules are displayed in the tooltip when the command is disabled.
-    /// </summary>
-    public IReadOnlyList<(string Reason, Func<IAtomReader, bool> Holds)> Requires { get; init; } =
-    [];
-
-    /// <summary>
     /// Runs whenever the user activates the command.
     /// </summary>
     /// <param name="R">The atom reader to pull data.</param>
@@ -525,14 +535,6 @@ public sealed class GlobalCommand : Command
 
     /// <inheritdoc cref="EffectsDelegate"/>
     public required EffectsDelegate Effects { get; init; }
-
-    public override bool IsAvailable(IAtomReader R) => Requires.All(rule => rule.Holds(R));
-
-    public override string DisabledReason(
-        IAtomReader R,
-        int count,
-        IReadOnlyList<string> blocked
-    ) => Requires.FirstOrDefault(rule => !rule.Holds(R)).Reason;
 
     public override void Run(IReadOnlyList<IAtomRef> targets, ICommandView view)
     {

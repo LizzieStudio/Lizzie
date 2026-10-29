@@ -107,6 +107,16 @@ public record ComponentPosition : StagedAtom
 
     public Vector3 Rotation { get; init; }
 
+    /// <summary>
+    /// True if it shows its back.
+    /// </summary>
+    /// <remarks>
+    /// This works whether or not it's on the table or in a hand.
+    /// In a hand, it's true if it's face down to the holding player.
+    /// </remarks>
+    [JsonIgnore]
+    public bool IsFaceDown => Mathf.Cos(Rotation.Z) < 0;
+
     public ZOrder ZOrder { get; init; }
 
     /// <summary>

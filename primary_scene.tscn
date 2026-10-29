@@ -190,6 +190,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_force_pass_scroll_events = false
 script = ExtResource("3_h6pmi")
 _openIcon = ExtResource("10_up")
 _closeIcon = ExtResource("4_n88ql")
@@ -278,8 +279,9 @@ Drawings = NodePath("../../SheetDrawings")
 [node name="ModalDialogs" type="Node" parent="UI" unique_id=693207545]
 unique_name_in_owner = true
 
-[node name="PlayerHandsPanel" parent="UI" unique_id=416397088 instance=ExtResource("8_sly7x")]
+[node name="PlayerHandsPanel" parent="UI" unique_id=416397088 node_paths=PackedStringArray("_localPlayerHand") instance=ExtResource("8_sly7x")]
 unique_name_in_owner = true
+_localPlayerHand = NodePath("../Hand")
 
 [node name="FileDialog" type="FileDialog" parent="." unique_id=350939739]
 oversampling_override = 1.0

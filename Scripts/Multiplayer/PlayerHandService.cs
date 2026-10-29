@@ -10,7 +10,7 @@ namespace Lizzie;
 public static class PlayerHandService
 {
     /// <summary>
-    /// The card moved into a seat's hand at the top of its order, upright.
+    /// The card moved into a seat's hand face-up and at the top of its order.
     /// Every card that shares a <paramref name="stamp"/> should have a unique <paramref name="suborder"/>.
     /// </summary>
     public static ComponentPosition MovedToHand(
@@ -22,7 +22,7 @@ public static class PlayerHandService
         card with
         {
             Container = new InHand(seat),
-            Rotation = card.Rotation with { Y = 0 },
+            Rotation = card.Rotation with { Y = 0, Z = 0 },
             ZOrder = new ZOrder(ZTarget.Top, suborder, stamp),
         };
 

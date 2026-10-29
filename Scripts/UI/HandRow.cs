@@ -41,8 +41,24 @@ public partial class HandRow : Control
         }
     }
 
+    /// <summary>
+    /// Whether this row should show the opposite side of the cards (for opponent's hands).
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="HandRow"/> is used for the user's hand and to show other user's hands.
+    /// </remarks>
     [Export]
-    public bool AlwaysShowBacks { get; set; }
+    public bool FacesAway { get; set; }
+
+    /// <summary>
+    /// Gets the <see cref="ComponentPosition"/> of a card after it's dragged into or out of this hand.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="HandRow"/> is used for the user's hand and to show other user's hands,
+    /// and you can drag a card into another user's hand, so we need a way to set it to the right orientation.
+    /// </remarks>
+    public ComponentPosition AfterEnteringOrLeaving(ComponentPosition card) =>
+        FacesAway ? ComponentCommands.Flipped(card) : card;
 
     private ChildList<StageKey<ComponentPosition>, HandCard> _cards;
 
@@ -137,7 +153,7 @@ public partial class HandRow : Control
     public override void _DropData(Vector2 at, Variant data) =>
         ProjectService.Instance.GameObjects.DropInHand(
             (HeldDrag)data.AsGodotObject(),
-            Seat,
+            this,
             InsertIndexAt(at)
         );
 
@@ -157,7 +173,6 @@ public partial class HandRow : Control
         var card = _cardScene.Instantiate<HandCard>();
         AddChild(card);
         card.Reference = id;
-        card.AlwaysShowBack = AlwaysShowBacks;
         return card;
     }
 

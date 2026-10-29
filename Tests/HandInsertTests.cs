@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Godot;
 using Xunit;
 
 namespace Lizzie.Tests;
@@ -74,5 +75,14 @@ public class HandInsertTests
 
         Assert.Equal(new[] { 1, 2, 9 }, Order(hand, written));
         Assert.Single(written);
+    }
+
+    [Fact]
+    public void ADrawnOrDealtCardArrivesUprightAndFaceUp()
+    {
+        var faceDown = new ComponentPosition { Id = new(9), Rotation = new(0, 1, Mathf.Pi) };
+        var moved = PlayerHandService.MovedToHand(faceDown, Seat, 0, Stamp);
+
+        Assert.Equal(Vector3.Zero, moved.Rotation);
     }
 }

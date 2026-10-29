@@ -858,7 +858,7 @@ public partial class GameObjects : Node3D, ICommandView
                 {
                     // In the hand's frame, right on screen is +X and down is +Z.
                     var offset = (row.MiddleOf(c.Key) - press) / row.PixelsPerCm;
-                    return ComponentPosition.Of(c) with
+                    return row.AfterEnteringOrLeaving(ComponentPosition.Of(c)) with
                     {
                         Position = new Vector3(offset.X, 0, offset.Y),
                     };
@@ -987,9 +987,9 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// Drops what <paramref name="held"/> holds into a seat's hand.
+    /// Drops what <paramref name="held"/> holds into the hand <paramref name="row"/> shows.
     /// </summary>
-    public void DropInHand(HeldDrag held, Ref<Seat> seat, int index)
+    public void DropInHand(HeldDrag held, HandRow row, int index)
     {
         // Puts the cards in the hold over the hand first, if the mouse got there since the last frame.
         UpdateDrag(held, GetViewport().GetMousePosition());
@@ -997,10 +997,10 @@ public partial class GameObjects : Node3D, ICommandView
             return;
 
         var cards = PlayerHandService.Inserted(
-            PlayerHandService.GetHand(Atoms.R, _view.StageRef, seat),
-            held.Cards(Atoms.R).ToList(),
+            PlayerHandService.GetHand(Atoms.R, _view.StageRef, row.Seat),
+            held.Cards(Atoms.R).Select(row.AfterEnteringOrLeaving).ToList(),
             index,
-            seat,
+            row.Seat,
             SnowportId.Create()
         );
         var rest = held.Atoms(Atoms.R)

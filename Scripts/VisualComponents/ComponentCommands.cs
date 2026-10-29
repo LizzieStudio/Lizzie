@@ -145,27 +145,31 @@ public static class ComponentCommands
             {
                 var ordered = pile.OrderBy(c => c.ZOrder).ToList();
                 return ordered.Select(
-                    (c, i) => TurnedOver(c) with { ZOrder = ordered[^(i + 1)].ZOrder }
+                    (c, i) => Flipped(c) with { ZOrder = ordered[^(i + 1)].ZOrder }
                 );
             });
 
-    private static ComponentPosition TurnedOver(ComponentPosition s)
-    {
-        bool faceUp = Mathf.RadToDeg(s.Rotation.Z) >= 90;
-        return s with
+    /// <summary>
+    /// The component flipped to its opposite side.
+    /// </summary>
+    public static ComponentPosition Flipped(ComponentPosition s) =>
+        s with
         {
-            Rotation = new Vector3(s.Rotation.X, s.Rotation.Y, Mathf.DegToRad(faceUp ? 0f : 180f)),
+            Rotation = s.Rotation with { Z = s.IsFaceDown ? 0 : Mathf.Pi },
         };
-    }
 
-    /// <summary>The component turned about Y by <paramref name="degrees"/>.</summary>
+    /// <summary>
+    /// The component turned about Y by <paramref name="degrees"/>.
+    /// </summary>
     private static ComponentPosition Rotated(ComponentPosition s, float degrees) =>
         s with
         {
             Rotation = s.Rotation + new Vector3(0, Mathf.DegToRad(degrees), 0),
         };
 
-    /// <summary>The components sent to the top or bottom of the ZOrder, keeping their order.</summary>
+    /// <summary>
+    /// The components sent to the top or bottom of the ZOrder, keeping their order.
+    /// </summary>
     private static IEnumerable<ComponentPosition> Reordered(
         IEnumerable<ComponentPosition> components,
         ZTarget target

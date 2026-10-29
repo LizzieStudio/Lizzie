@@ -39,6 +39,13 @@ public static class DeckCommands
     {
         Icon = CommandIcons.Deal,
         Caption = "Deal Cards",
+        AvailableWhen =
+        [
+            (
+                "Enable player hands in Project Settings.",
+                R => R.Get(ProjectGameSettings.Only).EnablePlayerHands
+            ),
+        ],
         AppliesTo = HasCards,
         // As many cards as each seat can get from the fullest deck.
         Choices = (R, decks) =>
