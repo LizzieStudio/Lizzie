@@ -25,9 +25,9 @@ public interface IAtomsMachinery
     void MarkDirty(Watcher watcher);
 
     /// <summary>
-    /// Every atom saved with the project.
+    /// Every atom saved with the project, with the event that last wrote it.
     /// </summary>
-    IEnumerable<Atom> SavedAtoms();
+    IEnumerable<AtomEntry> SavedAtoms();
 }
 
 public static class AtomsMachinery

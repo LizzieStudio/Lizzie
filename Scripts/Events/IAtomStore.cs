@@ -42,9 +42,9 @@ public interface IAtomStore
     AtomEntry Find(object id);
 
     /// <summary>
-    /// Every atom that's saved with the project.
+    /// Every atom that's saved with the project, with the event that last wrote it.
     /// </summary>
-    IEnumerable<Atom> SavedAtoms();
+    IEnumerable<AtomEntry> SavedAtoms();
 }
 
 /// <summary>

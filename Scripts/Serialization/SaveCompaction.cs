@@ -11,11 +11,24 @@ namespace Lizzie;
 /// Makes a save as small as it can be.
 /// <list type="bullet">
 /// <item><see cref="Collect"/> drops the atoms nothing reaches, like garbage collection.</item>
-/// <item><see cref="Serialize"/> renumbers every id from 1 on source number 0 (admin).</item>
+/// <item><see cref="Serialize"/> renumbers every SnowTag from 1 on source number 0 (admin).</item>
 /// </list>
 /// </summary>
 public static class SaveCompaction
 {
+    /// <summary>
+    /// Gets one compacted admin event for the save.
+    /// </summary>
+    public static TimelineEvent Event(IEnumerable<AtomEntry> saved)
+    {
+        var entries = saved.ToList();
+        return new()
+        {
+            Id = new SnowportId(entries.Max(e => e.LastUpdate).logicClock, Snowport.AdminSource),
+            Writes = Collect(entries.Select(e => e.Value)),
+        };
+    }
+
     /// <summary>
     /// Gets the atoms that need to be kept, the ones reachable through their queries, in a fixed order.
     ///
@@ -85,35 +98,23 @@ public static class SaveCompaction
     }
 
     /// <summary>
-    /// The event as one line of JSON, with its SnowTags and SnowportIds renumbered from 1 under the admin source.
-    /// The numbers keep their order, and equal ids stay equal.
+    /// The event as one line of JSON, with its SnowTags renumbered from 1 under the admin source.
+    /// The numbers keep their order, and equal tags stay equal.
     /// </summary>
     public static string Serialize(TimelineEvent save)
     {
-        var tags = Renumber(save, SnowTag.Empty, Tag);
-        var ids = Renumber(save, SnowportId.Empty, Id);
-        return JsonSerializer.Serialize(save, LizzieJson.SaveOptions(tags, ids));
-    }
+        var found = new SortedSet<SnowTag>();
+        JsonWalker.Visit<SnowTag>(save, tag => found.Add(tag));
+        found.Remove(SnowTag.Empty);
 
-    private static SnowTag Tag(int n) =>
-        n <= SnowTag.MaxCounter
-            ? new SnowTag(Snowport.AdminSource, n)
-            : throw new InvalidOperationException(
-                $"A save can't hold more than {SnowTag.MaxCounter} SnowTags."
-            );
-
-    private static SnowportId Id(int n) => new(n, Snowport.AdminSource);
-
-    private static Dictionary<T, T> Renumber<T>(TimelineEvent save, T empty, Func<int, T> number)
-        where T : IComparable<T>
-    {
-        var found = new SortedSet<T>();
-        JsonWalker.Visit<T>(save, value => found.Add(value));
-        found.Remove(empty);
-
-        var map = new Dictionary<T, T>(found.Count);
-        foreach (var value in found)
-            map[value] = number(map.Count + 1);
-        return map;
+        var tags = new Dictionary<SnowTag, SnowTag>(found.Count);
+        foreach (var tag in found)
+            tags[tag] =
+                tags.Count < SnowTag.MaxCounter
+                    ? new SnowTag(Snowport.AdminSource, tags.Count + 1)
+                    : throw new InvalidOperationException(
+                        $"A save can't hold more than {SnowTag.MaxCounter} SnowTags."
+                    );
+        return JsonSerializer.Serialize(save, LizzieJson.SaveOptions(tags));
     }
 }

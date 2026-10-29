@@ -1,21 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Godot;
 
 namespace Lizzie;
 
-/// <param name="renumber">
-/// Replaces each id as it's written.
-/// </param>
-public sealed class SnowportIdJsonConverter(
-    IReadOnlyDictionary<SnowportId, SnowportId> renumber = null
-) : JsonConverter<SnowportId>
+public sealed class SnowportIdJsonConverter : JsonConverter<SnowportId>
 {
     public override void Write(Utf8JsonWriter writer, SnowportId id, JsonSerializerOptions options)
     {
-        writer.WriteNumberValue((long)Renumbered(id));
+        writer.WriteNumberValue((long)id);
     }
 
     public override SnowportId Read(
@@ -38,7 +32,7 @@ public sealed class SnowportIdJsonConverter(
         JsonSerializerOptions options
     )
     {
-        writer.WritePropertyName(Renumbered(id).ToString());
+        writer.WritePropertyName(id.ToString());
     }
 
     public override SnowportId ReadAsPropertyName(
@@ -48,17 +42,5 @@ public sealed class SnowportIdJsonConverter(
     )
     {
         return SnowportId.TryParse(reader.GetString(), out var id) ? id : SnowportId.Empty;
-    }
-
-    private SnowportId Renumbered(SnowportId id)
-    {
-        if (renumber == null || id == SnowportId.Empty)
-            return id;
-        return renumber.TryGetValue(id, out var to)
-            ? to
-            : throw new InvalidOperationException(
-                $"SnowportId {id} was written but JsonWalker never found it, so it has no new number. "
-                    + "A converter probably writes a SnowportId the walker can't see into."
-            );
     }
 }

@@ -31,16 +31,12 @@ public static class LizzieJson
     };
 
     /// <summary>
-    /// Same as for multiplayer, but SnowTags and SnowportIds are rewritten in sequence.
+    /// Same as for multiplayer, but SnowTags are rewritten in sequence.
     /// </summary>
-    public static JsonSerializerOptions SaveOptions(
-        IReadOnlyDictionary<SnowTag, SnowTag> tags,
-        IReadOnlyDictionary<SnowportId, SnowportId> ids
-    )
+    public static JsonSerializerOptions SaveOptions(IReadOnlyDictionary<SnowTag, SnowTag> tags)
     {
         var options = new JsonSerializerOptions(EventOptions);
         options.Converters.Insert(0, new SnowTagJsonConverter(tags));
-        options.Converters.Insert(0, new SnowportIdJsonConverter(ids));
         return options;
     }
 }

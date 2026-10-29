@@ -345,22 +345,30 @@ public class SaveCompactionTests
     }
 
     [Fact]
-    public void SnowportIdsBecomeAdminIdsFromOneAndKeepStackingOrder()
+    public void SnowportIdsAreSavedAsTheyAre()
     {
-        var below = new ZOrder(ZTarget.Top, 0, Id(500, source: 2));
-        var above = new ZOrder(ZTarget.Top, 0, Id(900, source: 1));
+        var stamp = Id(900, source: 2);
         var json = SaveCompaction.Serialize(
-            Save(Position(1) with { ZOrder = above }, Position(2) with { ZOrder = below })
+            Save(Position(1) with { ZOrder = new ZOrder(ZTarget.Top, 0, stamp) })
         );
 
         var back = Load(json);
-        var components = back.Writes.Cast<ComponentPosition>().ToArray();
 
         Assert.True(back.IsAdmin, "The save event should stay an admin event.");
-        Assert.Equal(Id(1, Snowport.AdminSource), components[1].ZOrder.Stamp);
-        Assert.Equal(Id(2, Snowport.AdminSource), components[0].ZOrder.Stamp);
-        Assert.Equal(Id(3, Snowport.AdminSource), back.Id);
-        Assert.True(components[0].ZOrder > components[1].ZOrder, "Stacking order changed.");
+        Assert.Equal(Id(1_000_000, Snowport.AdminSource), back.Id);
+        Assert.Equal(stamp, ((ComponentPosition)back.Writes[0]).ZOrder.Stamp);
+    }
+
+    [Fact]
+    public void TheSaveTakesTheClockOfTheNewestWrite()
+    {
+        var save = SaveCompaction.Event([
+            new AtomEntry(Position(1), Id(700, source: 3)),
+            new AtomEntry(Position(2), Id(900, source: 2)),
+            new AtomEntry(Position(3), Id(800)),
+        ]);
+
+        Assert.Equal(Id(900, Snowport.AdminSource), save.Id);
     }
 
     [Fact]
@@ -377,20 +385,33 @@ public class SaveCompactionTests
     public void SavingALoadedSaveChangesNothing()
     {
         var first = SaveCompaction.Serialize(
-            Save(
-                Position(8) with
-                {
-                    ZOrder = new ZOrder(ZTarget.Bottom, 1, Id(77)),
-                },
-                Component(8) with
-                {
-                    PrototypeRef = Tag<Prototype>(3, source: 2),
-                },
-                new Prototype { Id = Tag<Prototype>(3, source: 2), Name = "Card" }
-            )
+            SaveCompaction.Event([
+                new AtomEntry(
+                    Position(8) with
+                    {
+                        ZOrder = new ZOrder(ZTarget.Bottom, 1, Id(77)),
+                    },
+                    Id(80)
+                ),
+                new AtomEntry(
+                    Component(8) with
+                    {
+                        PrototypeRef = Tag<Prototype>(3, source: 2),
+                    },
+                    Id(90, source: 2)
+                ),
+                new AtomEntry(
+                    new Prototype { Id = Tag<Prototype>(3, source: 2), Name = "Card" },
+                    Id(85, source: 2)
+                ),
+            ])
         );
 
-        var second = SaveCompaction.Serialize(Load(first));
+        // loading writes every atom in the save's event
+        var loaded = Load(first);
+        var second = SaveCompaction.Serialize(
+            SaveCompaction.Event(loaded.Writes.Select(a => new AtomEntry(a, loaded.Id)))
+        );
 
         Assert.Equal(first, second);
     }

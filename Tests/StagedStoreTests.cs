@@ -336,7 +336,7 @@ public class StagedStoreTests
         var written = PieceOf(1, 10, x: 5);
         Write(written);
 
-        Assert.Equal<Atom>([written], _store.SavedAtoms());
+        Assert.Equal<Atom>([written], _store.SavedAtoms().Select(e => e.Value));
     }
 
     [Fact]
@@ -346,7 +346,7 @@ public class StagedStoreTests
         var tombstone = PieceOf(2, 10, removed: true);
         Write(PieceOf(1, 10, x: 5), tombstone);
 
-        Assert.Contains(tombstone, _store.SavedAtoms());
+        Assert.Contains(tombstone, _store.SavedAtoms().Select(e => e.Value));
     }
 
     [Fact]

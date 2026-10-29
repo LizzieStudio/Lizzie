@@ -35,6 +35,11 @@ public class Snowport
     /// <summary>How many sources there are, 0 to 63, since ids give the source 6 bits.</summary>
     public const int SourceCount = 64;
 
+    /// <summary>
+    /// The low bits of <see cref="SnowportId.logicClock"/> that increment for ids made in the same millisecond.
+    /// </summary>
+    public const int TickBits = 6;
+
     public Snowport(byte source)
     {
         if (source >= SourceCount)
@@ -65,7 +70,7 @@ public class Snowport
     /// <summary>
     /// The milliseconds since <paramref name="id"/> was created. Negative when it's in the future.
     /// </summary>
-    public long MsecSince(SnowportId id) => GameTimeMsec - (id.logicClock >> 8);
+    public long MsecSince(SnowportId id) => GameTimeMsec - (id.logicClock >> TickBits);
 
     /// <summary>
     /// Create a new SnowportId. Elsewhere, use <see cref="SnowportId.Create"/>, which calls this on <see cref="Clock"/>.
@@ -85,7 +90,7 @@ public class Snowport
     private SnowportId Mint(byte from)
     {
         // If the game time has advanced, update the hybrid clock to match.
-        _useLogicClock = Math.Max(GameTimeMsec << 8, _useLogicClock);
+        _useLogicClock = Math.Max(GameTimeMsec << TickBits, _useLogicClock);
         return new SnowportId(_useLogicClock++, from);
     }
 
@@ -112,7 +117,7 @@ public class Snowport
         // If the ID's time appears to be in the future,
         // adjust the local time to match it.
         var gameTime = GameTimeMsec;
-        var otherClock = id.logicClock >> 8;
+        var otherClock = id.logicClock >> TickBits;
         if (otherClock > gameTime)
             _globalOffsetMsec += otherClock - gameTime;
 
@@ -154,7 +159,7 @@ public readonly record struct SnowportId : IComparable<SnowportId>, IFormattable
         : this((logicClock << 6) | CheckSource(source)) { }
 
     /// <summary>
-    /// The hybrid clock: the game time in milliseconds then an 8 bit increment for events in the same millisecond.
+    /// The hybrid clock: the game time in milliseconds then a <see cref="Snowport.TickBits"/> bit increment for events in the same millisecond.
     /// </summary>
     public long logicClock => (ID >> 6) & 0x7FFFFFFFFFFFL;
 

@@ -298,7 +298,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     }
 
     /// <inheritdoc/>
-    IEnumerable<Atom> IAtomsMachinery.SavedAtoms() =>
+    IEnumerable<AtomEntry> IAtomsMachinery.SavedAtoms() =>
         _stores.Values.SelectMany(s => s.SavedAtoms());
 
     #endregion

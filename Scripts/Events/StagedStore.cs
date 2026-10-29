@@ -215,10 +215,10 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     /// A Removed atom is left out when its parent stage shows nothing beneath it,
     /// since keeping a removal isn't necessary when it's not overriding anything.
     /// </remarks>
-    public IEnumerable<Atom> SavedAtoms() =>
+    public IEnumerable<AtomEntry> SavedAtoms() =>
         _raw.SavedAtoms()
-            .Where(a =>
-                a is not T { Removed: true } removed
+            .Where(e =>
+                e.Value is not T { Removed: true } removed
                 || _parents.TryGetValue(removed.StageRef, out var parent)
                     && _resolved.Find(_byId.Of(removed) with { StageRef = parent }).Value != null
             );

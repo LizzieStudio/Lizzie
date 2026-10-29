@@ -121,8 +121,7 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
         Notify(removed);
     }
 
-    public IEnumerable<Atom> SavedAtoms() =>
-        Saved ? _atoms.Entries.Values.Select(e => e.Value) : [];
+    public IEnumerable<AtomEntry> SavedAtoms() => Saved ? _atoms.Entries.Values : [];
 }
 
 /// <summary>

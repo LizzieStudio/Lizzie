@@ -318,11 +318,7 @@ public partial class ProjectService : Node
             {
                 saveFile.StoreLine(SaveUpgrade.Header);
                 saveFile.StoreLine(
-                    SaveCompaction.Serialize(
-                        TimelineEvent.Admin(
-                            SaveCompaction.Collect(Atoms.R.Machinery().SavedAtoms())
-                        )
-                    )
+                    SaveCompaction.Serialize(SaveCompaction.Event(Atoms.R.Machinery().SavedAtoms()))
                 );
             }
             catch (Exception ex)
