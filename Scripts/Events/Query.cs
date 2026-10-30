@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -56,16 +57,20 @@ public abstract class Query
     /// </summary>
     internal static IReadOnlyList<Query> DeclaredOn(Type atomType)
     {
-        if (!Declared.TryGetValue(atomType, out var queries))
-            Declared[atomType] = queries = atomType
-                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                .Where(f => typeof(Query).IsAssignableFrom(f.FieldType))
-                .Select(f => (Query)f.GetValue(null))
-                .ToArray();
-        return queries;
+        return Declared.GetOrAdd(
+            atomType,
+            type =>
+                type.GetFields(
+                        BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly
+                    )
+                    .Where(f => typeof(Query).IsAssignableFrom(f.FieldType))
+                    .Select(f => (Query)f.GetValue(null))
+                    .ToArray()
+        );
     }
 
-    private static readonly Dictionary<Type, Query[]> Declared = new();
+    // it's concurrent because tests were failing
+    private static readonly ConcurrentDictionary<Type, Query[]> Declared = new();
 }
 
 /// <summary>
@@ -90,18 +95,14 @@ public abstract class IdQuery : Query
     /// </summary>
     internal abstract int CompareIds(Atom a, Atom b);
 
-    private static readonly Dictionary<Type, IdQuery> Declared = new();
+    // it's concurrent because tests were failing
+    private static readonly ConcurrentDictionary<Type, IdQuery> Declared = new();
 
     /// <summary>
     /// The Id that <paramref name="atomType"/> declares.
     /// Throws if it doesn't declare exactly one.
     /// </summary>
-    public static IdQuery For(Type atomType)
-    {
-        if (!Declared.TryGetValue(atomType, out var id))
-            Declared[atomType] = id = Find(atomType);
-        return id;
-    }
+    public static IdQuery For(Type atomType) => Declared.GetOrAdd(atomType, Find);
 
     private static IdQuery Find(Type atomType)
     {
