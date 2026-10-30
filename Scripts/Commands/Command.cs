@@ -98,15 +98,6 @@ public interface ICommandView
     /// Extra custom commands for this view to add to its context menu.
     /// </summary>
     IReadOnlyList<Command> Commands => [];
-
-    /// <summary>
-    /// <para>The undo group of a gesture the local player has open in this view, or <see cref="SnowportId.Empty"/>.</para>
-    ///
-    /// <para>
-    /// Commands that run on targets join it, so the gesture undoes as one.
-    /// </para>
-    /// </summary>
-    SnowportId Gesture => SnowportId.Empty;
 }
 
 /// <summary>
@@ -277,17 +268,11 @@ public abstract class Command
 
     /// <summary>
     /// Writes the changes as one event made by this command, or nothing when they're null.
-    /// When <paramref name="view"/> has a <see cref="ICommandView.Gesture"/> open, the event joins it.
     /// </summary>
     protected void Submit(IEnumerable<IChange> changes, ICommandView view)
     {
-        if (changes == null)
-            return;
-        var gesture = view?.Gesture ?? SnowportId.Empty;
-        if (gesture == SnowportId.Empty)
+        if (changes != null)
             Atoms.R?.Write((Node)view, Name, changes);
-        else
-            Atoms.R?.Append(gesture, Name, changes);
     }
 
     /// <summary>

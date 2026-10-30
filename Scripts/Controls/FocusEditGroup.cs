@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Lizzie;
@@ -16,7 +18,10 @@ namespace Lizzie;
 public partial class FocusEditGroup : Node
 {
     private Control _focus;
-    private SnowportId _group = SnowportId.Empty;
+    private SnowportId _transition = SnowportId.Empty;
+
+    // the atoms the open transition wrote, which leaving the control keeps
+    private readonly HashSet<IAtomRef> _edited = new();
 
     public override void _Ready()
     {
@@ -34,25 +39,32 @@ public partial class FocusEditGroup : Node
     {
         if (Atoms.R.Get(byId, id) is not { } atom)
             return;
-        if (_group == SnowportId.Empty)
-            _group = Atoms.R.Open(this, change(atom));
+        if (_transition == SnowportId.Empty)
+            _transition = Atoms.R.Open(this, change(atom));
         else
-            Atoms.R.Append(_group, change(atom));
+            Atoms.R.Append(_transition, change(atom));
+        _edited.Add(id);
     }
 
     private void OnGuiInput(InputEvent e)
     {
         if (e.IsActionPressed("ui_cancel"))
         {
-            Atoms.R.CancelIfOpen(_group);
-            _group = SnowportId.Empty;
+            Atoms.R.CancelIfOpen(_transition);
+            _transition = SnowportId.Empty;
+            _edited.Clear();
             _focus.ReleaseFocus();
         }
     }
 
+    // Keeps what the transition wrote, as it is now, unless another player took it away.
     private void Close()
     {
-        Atoms.R.Close(_group);
-        _group = SnowportId.Empty;
+        Atoms.R.Close(
+            _transition,
+            _edited.Select(Atoms.R.Get).Where(a => a?.Transition == _transition)
+        );
+        _transition = SnowportId.Empty;
+        _edited.Clear();
     }
 }

@@ -112,7 +112,7 @@ public class TimelineEvent
 
     /// <summary>
     /// Creates an event that does nothing but closes <paramref name="group"/>,
-    /// for a gesture that ended without its closing event.
+    /// for a transition that ended without its closing event.
     /// This is only really used as a fallback.
     /// </summary>
     public static TimelineEvent Closing(SnowportId group) =>

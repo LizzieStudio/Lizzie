@@ -90,14 +90,9 @@ public partial class GameObjects : Node3D, ICommandView
     private HeldDrag _held;
 
     /// <summary>
-    /// The undo group of the local player's drag, which commands on the table join, or <see cref="SnowportId.Empty"/>.
-    /// </summary>
-    public SnowportId Gesture => _held?.Group ?? SnowportId.Empty;
-
-    /// <summary>
     /// Starts a drag of the atoms in <paramref name="pickup"/>,
     /// which are in stacking order and whose positions are their offsets from the pointer.
-    /// The pickup also writes <paramref name="alongside"/>, so a cancel takes them back too.
+    /// The pickup also writes <paramref name="alongside"/>, which the drop keeps and a cancel takes back.
     /// </summary>
     private void StartDrag(IEnumerable<ComponentPosition> pickup, IEnumerable<Atom> alongside)
     {
@@ -105,17 +100,18 @@ public partial class GameObjects : Node3D, ICommandView
         var seat = Atoms.R.LocalSeat();
         var picked = pickup.ToList();
         var ranks = SnowRank.AfterAll(picked.Count);
-        var atoms = picked
-            .Select((s, i) => s with { Container = new Held(seat, overHand), Rank = ranks[i] })
-            .ToArray();
+        var atoms = picked.Select(
+            (s, i) => s with { Container = new Held(seat, overHand), Rank = ranks[i] }
+        );
         // Players without a seat can't drag.
-        if (atoms.Length == 0 || seat.IsEmpty)
+        if (atoms.Count() == 0 || seat.IsEmpty)
             return;
 
         _held = new HeldDrag
         {
-            Group = Atoms.R.Open(this, DragCommands.Pickup, atoms.Concat(alongside)),
+            Transition = Atoms.R.Open(this, DragCommands.Pickup, atoms.Concat(alongside)),
             Components = atoms.Select(ComponentPosition.ById.Of).ToArray(),
+            Alongside = alongside.Select(IAtomRef.To).ToArray(),
         };
         CursorMode = CursorMode.Drag;
         _heldOverHand = overHand;
@@ -141,7 +137,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// Ends a drag with the atoms in <paramref name="drop"/>.
     /// </summary>
     private static void EndDrag(HeldDrag held, IEnumerable<Atom> drop) =>
-        Atoms.R.Close(held.Group, DragCommands.Drop, drop);
+        Atoms.R.Close(held.Transition, DragCommands.Drop, drop.Concat(held.KeptAlongside(Atoms.R)));
 
     /// <summary>
     /// Called after the local player's drag ends to perform state cleanup.
@@ -149,7 +145,7 @@ public partial class GameObjects : Node3D, ICommandView
     private void CleanupDrag()
     {
         if (_held != null)
-            Atoms.R.CancelIfOpen(_held.Group);
+            Atoms.R.CancelIfOpen(_held.Transition);
         _held = null;
         CursorMode = CursorMode.Normal;
         _heldOverHand = false;
@@ -880,7 +876,7 @@ public partial class GameObjects : Node3D, ICommandView
             var holder = new Held(Atoms.R.LocalSeat(), _heldOverHand);
             float turn = HandTurn(nearest, overHand);
             Atoms.R.Append(
-                held.Group,
+                held.Transition,
                 cards.Select(s => HandCard.Turned(s, turn) with { Container = holder })
             );
         }
@@ -1180,7 +1176,7 @@ public partial class GameObjects : Node3D, ICommandView
         switch (CursorMode)
         {
             case CursorMode.Drag:
-                // Ending Godot's drag runs CleanupDrag, which cancels the gesture.
+                // Ending Godot's drag runs CleanupDrag, which cancels its transition.
                 GetViewport().GuiCancelDrag();
                 break;
             case CursorMode.DragSelect:

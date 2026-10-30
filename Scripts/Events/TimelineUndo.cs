@@ -36,13 +36,7 @@ namespace Lizzie.Replication.Machinery;
 /// I say effectively because the Timeline is never actually altered other than to add new events. These events live in the timeline forever; it's just treated this way.
 /// </para>
 /// <para>
-/// Events can identify themselves as part of a "group", which "opens" with the first event that joins the group and "closes" when an event identifies itself as the last.
-/// Groups are undone or redone together. This is used for gestures with multiple events, like drag and drop.
-/// While groups are open, they're passed over by Undo actions.
-/// </para>
-/// <para>
-/// A gesture can end by canceling its group instead. A canceled group is treated as if it never happened.
-/// The events in the group are reversed and Undo and Redo pass over it as if it weren't in the timeline.
+/// Events can be part of a Transition, which are undone or redone together.
 /// </para>
 /// <para>
 /// Admin events (<see cref="TimelineEvent.IsAdmin"/>), like a loaded save, are never undone or redone.
@@ -222,7 +216,8 @@ public static class TimelineUndo
 
         /// <summary>
         /// Whether the event at index <paramref name="i"/> is something to undo or redo:
-        /// the unit its entry comes down to is closed, and is in scope as done by the entry's author. Call on every event in turn, after <see cref="Ends.Canceled"/>.
+        /// the unit its entry comes down to is closed, commits something, and is in scope as done by the entry's author.
+        /// Call on every event in turn, after <see cref="Ends.Canceled"/>.
         /// </summary>
         public bool Include(TimelineEvent e, int i)
         {
@@ -230,7 +225,9 @@ public static class TimelineUndo
                 _newest.TryAdd(e.Unit, i);
 
             var (unit, author) = Resolve(Entry(e));
-            return ends.Of(unit, i) != GroupEnd.None && InScope(unit, author, i);
+            return ends.Of(unit, i) != GroupEnd.None
+                && Commits(timeline[unit])
+                && InScope(unit, author, i);
         }
 
         /// <summary>
@@ -412,9 +409,10 @@ public static class TimelineUndo
     /// <list type="bullet">
     /// <item>For a reversal, the events older than it of the unit its reversals come down to.</item>
     /// <item>
-    /// For an event that ends a group, or one in a group that was canceled, the group's events up to it,
-    /// since how a group ends decides whether it's canceled.
+    /// For an event that ends a transition, the transition's events up to it, since how a transition ends decides whether it's canceled,
+    /// and every event with a draft of the transition, since its drafts stop counting.
     /// </item>
+    /// <item>For an event in a transition that was canceled, the transition's events up to it.</item>
     /// <item>For any other event, itself.</item>
     /// </list>
     /// </summary>
@@ -426,10 +424,72 @@ public static class TimelineUndo
             return [e];
 
         var group = new List<TimelineEvent>(Members(timeline, e.Group, timeline.IndexOf(e.Id)));
-        return e.End != GroupEnd.None || group.Exists(m => m.End == GroupEnd.Canceled)
-            ? group
-            : [e];
+        if (e.End != GroupEnd.None)
+            return group.Union(Drafting(timeline, e.Group));
+        return group.Exists(m => m.End == GroupEnd.Canceled) ? group : [e];
     }
+
+    /// <summary>
+    /// The events with a draft of <paramref name="transition"/>.
+    /// </summary>
+    private static IEnumerable<TimelineEvent> Drafting(Timeline timeline, SnowportId transition)
+    {
+        int start = timeline.IndexOf(transition);
+        if (start < 0)
+            yield break;
+        for (int j = start; j < timeline.Count; j++)
+        {
+            var e = timeline.GetAt(j).Value;
+            if (Array.Exists(e.Writes, write => write.Transition == transition))
+                yield return e;
+        }
+    }
+
+    /// <summary>
+    /// Whether an event ends <paramref name="transition"/>, wherever it sorts after the transition's first event.
+    /// What happens to that event later doesn't matter.
+    /// </summary>
+    public static bool Ended(Timeline timeline, SnowportId transition)
+    {
+        int start = timeline.IndexOf(transition);
+        if (start < 0)
+            return false;
+        for (int j = start; j < timeline.Count; j++)
+        {
+            var e = timeline.GetAt(j).Value;
+            if (e.Group == transition && e.End != GroupEnd.None)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Whether a write counts toward what its atom holds.
+    ///
+    /// <para>
+    /// A committed write always does, and a draft only until its transition <see cref="Ended"/>.
+    /// The predicate looks each transition up once.
+    /// </para>
+    /// </summary>
+    public static Func<Atom, bool> Counts(Timeline timeline)
+    {
+        var ended = new Dictionary<SnowportId, bool>();
+        return write =>
+            write.Transition == SnowportId.Empty
+            || !(
+                ended.TryGetValue(write.Transition, out bool known)
+                    ? known
+                    : ended[write.Transition] = Ended(timeline, write.Transition)
+            );
+    }
+
+    /// <summary>
+    /// Whether an action commits anything, so there's something to undo.
+    /// </summary>
+    private static bool Commits(TimelineEvent e) =>
+        e.Group != SnowportId.Empty
+        || e.Unsets.Length > 0
+        || Array.Exists(e.Writes, write => write.Transition == SnowportId.Empty);
 
     /// <summary>
     /// The events whose history entry is in effect, newest first. For an action, that's not being

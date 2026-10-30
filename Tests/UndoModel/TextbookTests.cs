@@ -6,7 +6,7 @@ using Xunit;
 namespace Lizzie.Tests;
 
 /// <summary>
-/// One player's actions, gestures and reversals, among another player's actions they can't undo.
+/// One player's actions, transitions and reversals, among another player's actions they can't undo.
 /// <see cref="UndoTestBase.Actual"/> decides what each reversal writes, and after every step the player's
 /// changes in effect must be the ones <see cref="TextbookUndo{TChange}"/> says.
 /// </summary>
@@ -34,7 +34,7 @@ public abstract class TextbookTests : UndoTestBase
                     textbook.Change(recorded[0].Unit);
                     break;
 
-                case Op.Gesture { Source: me }:
+                case Op.Transition { Source: me }:
                     textbook.Change(recorded.First(e => e.Id == e.Group).Id);
                     break;
 

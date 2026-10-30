@@ -66,31 +66,9 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
         else if (ids.Count == 0)
             return;
 
-        // Each id holds its newest in-effect write, unless an unset in a newer event matches that write.
-        var latest = new Dictionary<I, AtomEntry>();
-        var decided = new HashSet<I>();
-        var newer = new List<Unset>();
-        foreach (var e in TimelineUndo.InEffect(timeline))
-        {
-            for (int j = e.Writes.Length - 1; j >= 0; j--)
-            {
-                if (e.Writes[j] is not T atom)
-                    continue;
-                var id = _byId.Of(atom);
-                if (
-                    (all || ids.Contains(id))
-                    && decided.Add(id)
-                    && !newer.Exists(u => u.Matches(atom))
-                )
-                    latest[id] = new AtomEntry(atom, e.Id);
-            }
-            // after the writes, since a write wins over an unset in the same event
-            newer.AddRange(e.Unsets.Where(u => u.Query.AtomType == typeof(T)));
-            if (!all && decided.Count == ids.Count)
-                break;
-        }
+        var latest = Latest(timeline, all ? null : ids, TimelineUndo.Counts(timeline));
         if (all)
-            ids.UnionWith(decided);
+            ids.UnionWith(latest.Keys);
 
         var merged = new Dictionary<I, (AtomEntry Old, AtomEntry New)>();
         foreach (var id in ids)
@@ -117,6 +95,40 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
         Notify(merged);
     }
 
+    /// <summary>
+    /// Gets all atoms of <paramref name="ids"/>, or every id for null, that passes <paramref name="filter"/>.
+    /// </summary>
+    private Dictionary<I, AtomEntry> Latest(
+        Timeline timeline,
+        HashSet<I> ids,
+        Func<Atom, bool> filter
+    )
+    {
+        var latest = new Dictionary<I, AtomEntry>();
+        var decided = new HashSet<I>();
+        var newer = new List<Unset>();
+        foreach (var e in TimelineUndo.InEffect(timeline))
+        {
+            for (int j = e.Writes.Length - 1; j >= 0; j--)
+            {
+                if (e.Writes[j] is not T atom || !filter(atom))
+                    continue;
+                var id = _byId.Of(atom);
+                if (
+                    (ids == null || ids.Contains(id))
+                    && decided.Add(id)
+                    && !newer.Exists(u => u.Matches(atom))
+                )
+                    latest[id] = new AtomEntry(atom, e.Id);
+            }
+            // after the writes, since a write wins over an unset in the same event
+            newer.AddRange(e.Unsets.Where(u => u.Query.AtomType == typeof(T)));
+            if (ids != null && decided.Count == ids.Count)
+                break;
+        }
+        return latest;
+    }
+
     private void Notify(IReadOnlyDictionary<I, (AtomEntry Old, AtomEntry New)> changed) =>
         Changed?.Invoke(
             changed.SelectMany(c => _atoms.Touched(c.Key, c.Value.Old, c.Value.New)).ToArray()
@@ -141,7 +153,19 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
         Notify(removed);
     }
 
-    public IEnumerable<AtomEntry> SavedAtoms() => Saved ? _atoms.Entries.Values : [];
+    public IEnumerable<AtomEntry> SavedAtoms(Timeline timeline)
+    {
+        if (!Saved)
+            return [];
+        var drafts = _atoms
+            .Entries.Where(a => a.Value.Value.Transition != SnowportId.Empty)
+            .Select(a => a.Key)
+            .ToHashSet();
+        var committed = Latest(timeline, drafts, write => write.Transition == SnowportId.Empty);
+        return _atoms
+            .Entries.Values.Where(e => e.Value.Transition == SnowportId.Empty)
+            .Concat(committed.Values);
+    }
 }
 
 /// <summary>

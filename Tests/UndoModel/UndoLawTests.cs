@@ -33,8 +33,8 @@ public abstract class UndoLawTests : UndoTestBase
         + $"{ending.Reversals} reversals";
 
     /// <summary>
-    /// Every event of a gesture is undone together, or none is. Reversals no Undo or Redo would write
-    /// are left out, since one can reverse part of a gesture.
+    /// Every event of a transition is undone together, or none is. Reversals no Undo or Redo would write
+    /// are left out, since one can reverse part of a transition.
     /// </summary>
     [Fact]
     public void GroupsAreAllOrNothing() =>
@@ -55,9 +55,9 @@ public abstract class UndoLawTests : UndoTestBase
             }
         );
 
-    /// <summary>No Undo or Redo lands on a gesture still in progress.</summary>
+    /// <summary>No Undo or Redo lands on a transition still in progress.</summary>
     [Fact]
-    public void ReversalsSkipGesturesInProgress() =>
+    public void ReversalsSkipTransitionsInProgress() =>
         Sample(
             UndoSessions.All,
             ops =>
@@ -76,7 +76,7 @@ public abstract class UndoLawTests : UndoTestBase
                         Fail(
                             session,
                             $"{reversal} by s{me} in {scope} would {session.Describe(flag)}, "
-                                + "a gesture in progress"
+                                + "a transition in progress"
                         );
             }
         );
@@ -197,9 +197,10 @@ public abstract class UndoLawTests : UndoTestBase
             ending =>
             {
                 var session = UndoSession.Play(ending.Ops, Actual);
-                // Finish any gesture of theirs first, so the action stands on its own.
+                // Cancel any transition of theirs first, so the action stands on its own.
                 session.Apply(new Op.End(ending.Me, 0));
-                session.Apply(new Op.Act(ending.Me, 1, 0, 0));
+                // The singleton, which no transition drafts, so the write commits rather than joining someone's transition.
+                session.Apply(new Op.Act(ending.Me, 0, 0, 1));
                 foreach (
                     var scope in new TestScope[]
                     {

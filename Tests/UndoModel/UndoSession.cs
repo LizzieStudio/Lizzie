@@ -11,6 +11,8 @@ public sealed record TestAtom : Atom
 {
     public static readonly Identity<TestAtom, Ref<TestAtom>> ById = new(r => r.Id);
 
+    public static readonly All<TestAtom> All = new();
+
     public required Ref<TestAtom> Id { get; init; }
 
     public int Face { get; init; }
@@ -59,29 +61,33 @@ public abstract record Op
 {
     /// <summary>
     /// An action writing atoms <paramref name="First"/> and <paramref name="Second"/> (0 for none)
-    /// and <paramref name="Values"/> writes to the singleton. It joins the player's gesture, if one is going.
+    /// and <paramref name="Values"/> writes to the singleton.
+    /// An atom's write is a draft of whatever transition the value it replaces is a draft of, as one made with <c>with</c> is.
     /// </summary>
     public sealed record Act(byte Source, int First, int Second, int Values) : Op;
 
-    /// <summary>Starts a gesture, closing one left open first, as the synchronizer does.</summary>
+    /// <summary>Starts a transition, canceling one left open first.</summary>
     public sealed record Start(byte Source, int Atom) : Op;
 
-    /// <summary>Ends the player's gesture with a drop writing <paramref name="Atom"/>, or with a close-only event for 0.</summary>
+    /// <summary>Ends the player's transition with a drop writing <paramref name="Atom"/>, or cancels it for 0.</summary>
     public sealed record End(byte Source, int Atom) : Op;
+
+    /// <summary>Unsets <paramref name="Atom"/>, or every atom for 0.</summary>
+    public sealed record Reset(byte Source, int Atom) : Op;
 
     /// <summary>Reversals Undo or Redo. The expected implementation decides the flag.</summary>
     public sealed record Reversal(byte Source, bool Redo, TestScope Scope) : Op;
 
-    /// <summary>Cancels the player's gesture, if one is going.</summary>
+    /// <summary>Cancels the player's transition, if one is going.</summary>
     public sealed record Cancel(byte Source) : Op;
 
     /// <summary>
-    /// A whole gesture that's canceled: its first event, <paramref name="Moves"/> more, and the cancel,
-    /// all but the cancel writing <paramref name="Atom"/>. Closes a gesture left open first.
+    /// A whole transition that's canceled: its first event, <paramref name="Moves"/> more, and the cancel,
+    /// all but the cancel writing <paramref name="Atom"/>. Cancels a transition left open first.
     /// </summary>
-    public sealed record CanceledGesture(byte Source, int Atom, int Moves) : Op;
+    public sealed record CanceledTransition(byte Source, int Atom, int Moves) : Op;
 
-    /// <summary>The player leaves, and the host cancels their open gestures.</summary>
+    /// <summary>The player leaves, and the host cancels their open transitions.</summary>
     public sealed record Leave(byte Source) : Op;
 
     /// <summary>
@@ -91,12 +97,15 @@ public abstract record Op
     public sealed record RawFlag(byte Source, int Pick, bool ByRedo) : Op;
 
     /// <summary>
-    /// A whole gesture: its first event, <paramref name="Moves"/> more, and the drop that closes it,
-    /// all writing <paramref name="Atom"/>. Closes a gesture left open first.
+    /// A whole transition: its first event, <paramref name="Moves"/> more, and the drop that closes it,
+    /// all writing <paramref name="Atom"/>. Cancels a transition left open first.
     /// </summary>
-    public sealed record Gesture(byte Source, int Atom, int Moves) : Op;
+    public sealed record Transition(byte Source, int Atom, int Moves) : Op;
 
-    /// <summary>An action that arrives late, with an id <paramref name="Back"/> steps older than the newest.</summary>
+    /// <summary>
+    /// An action that arrives late, with an id <paramref name="Back"/> steps older than the newest.
+    /// Its write is made from what the atom held before it, as <see cref="Act"/>'s are.
+    /// </summary>
     public sealed record Late(byte Source, int Atom, int Back) : Op;
 
     /// <summary>
@@ -120,10 +129,10 @@ public sealed class UndoSession
 
     public readonly Timeline Timeline = new();
 
-    // decides undos, redos and which gestures a leaving player left open
+    // decides undos, redos and which transitions a leaving player left open
     private readonly IUndoApi _driver;
 
-    // each player's open gesture
+    // each player's open transition
     private readonly Dictionary<byte, SnowportId> _open = new();
 
     // Events take even clock values, so late events can take the odd ones between.
@@ -160,20 +169,26 @@ public sealed class UndoSession
         switch (op)
         {
             case Op.Act a:
+                Record(new TimelineEvent { Id = NextId(a.Source) }, a.First, a.Second, a.Values);
+                break;
+
+            case Op.Reset r:
                 Record(
                     new TimelineEvent
                     {
-                        Id = NextId(a.Source),
-                        Group = _open.GetValueOrDefault(a.Source),
-                    },
-                    a.First,
-                    a.Second,
-                    a.Values
+                        Id = NextId(r.Source),
+                        Unsets =
+                        [
+                            r.Atom == 0
+                                ? new Unset(TestAtom.All, true)
+                                : new Unset(TestAtom.ById, new Ref<TestAtom>(r.Atom)),
+                        ],
+                    }
                 );
                 break;
 
-            case Op.Gesture g:
-                CloseOpen(g.Source);
+            case Op.Transition g:
+                CancelOpen(g.Source);
                 var head = NextId(g.Source);
                 Record(new TimelineEvent { Id = head, Group = head }, g.Atom);
                 for (int i = 0; i < g.Moves; i++)
@@ -189,8 +204,8 @@ public sealed class UndoSession
                 );
                 break;
 
-            case Op.CanceledGesture c:
-                CloseOpen(c.Source);
+            case Op.CanceledTransition c:
+                CancelOpen(c.Source);
                 var canceledHead = NextId(c.Source);
                 Record(new TimelineEvent { Id = canceledHead, Group = canceledHead }, c.Atom);
                 for (int i = 0; i < c.Moves; i++)
@@ -206,10 +221,14 @@ public sealed class UndoSession
                 break;
 
             case Op.Start s:
-                CloseOpen(s.Source);
+                CancelOpen(s.Source);
                 var first = NextId(s.Source);
                 Record(new TimelineEvent { Id = first, Group = first }, s.Atom);
                 _open[s.Source] = first;
+                break;
+
+            case Op.End { Atom: 0 } e when _open.Remove(e.Source, out var canceledByEnd):
+                Record(CancelOnly(canceledByEnd, e.Source));
                 break;
 
             case Op.End e when _open.Remove(e.Source, out var group):
@@ -284,13 +303,7 @@ public sealed class UndoSession
                 var id = Id(_clock - (2 * l.Back - 1), l.Source);
                 if (Timeline.ContainsKey(id))
                     break;
-                // It joins the player's gesture only if it's newer than the gesture's first event.
-                var joins =
-                    _open.TryGetValue(l.Source, out var gesture) && gesture.CompareTo(id) < 0;
-                Record(
-                    new TimelineEvent { Id = id, Group = joins ? gesture : SnowportId.Empty },
-                    l.Atom
-                );
+                Record(new TimelineEvent { Id = id }, l.Atom);
                 break;
         }
         return _recorded.ToArray();
@@ -301,19 +314,11 @@ public sealed class UndoSession
             ? _driver.Redo(timeline, source, scope.For(source))
             : _driver.Undo(timeline, source, scope.For(source));
 
-    private void CloseOpen(byte source)
+    private void CancelOpen(byte source)
     {
         if (_open.Remove(source, out var group))
-            Record(CloseOnly(group, source));
+            Record(CancelOnly(group, source));
     }
-
-    private TimelineEvent CloseOnly(SnowportId group, byte source) =>
-        new()
-        {
-            Id = NextId(source),
-            Group = group,
-            End = GroupEnd.Closed,
-        };
 
     private TimelineEvent CancelOnly(SnowportId group, byte source) =>
         new()
@@ -331,6 +336,9 @@ public sealed class UndoSession
 
     private static SnowportId Id(long clock, byte source) => new(clock, source);
 
+    /// <summary>Raised for each event as it's recorded.</summary>
+    public event Action<TimelineEvent> Recorded;
+
     /// <summary>
     /// Records the event in id order, with the given atoms and values written.
     /// Every write gets a unique face or value, so the one that wins can be told apart.
@@ -339,7 +347,14 @@ public sealed class UndoSession
     {
         var atoms = new List<Atom>();
         foreach (var atom in new[] { first, second }.Where(r => r != 0))
-            atoms.Add(new TestAtom { Id = new(atom), Face = (int)(long)e.Id * 10 + atoms.Count });
+            atoms.Add(
+                new TestAtom
+                {
+                    Id = new(atom),
+                    Face = (int)(long)e.Id * 10 + atoms.Count,
+                    Transition = DraftOf(e, new(atom)),
+                }
+            );
         for (int i = 0; i < values; i++)
             atoms.Add(new TestValue { Text = $"{e.Id}.{atoms.Count}" });
         if (atoms.Count > 0)
@@ -350,6 +365,24 @@ public sealed class UndoSession
             at--;
         Timeline.Insert(at, e.Id, e);
         _recorded.Add(e);
+        Recorded?.Invoke(e);
+    }
+
+    /// <summary>
+    /// The transition a write of <paramref name="atom"/> in <paramref name="e"/> is a draft of, as the game stamps it:
+    /// a transition's events draft for it, the event that ends it commits,
+    /// and any other write is made from what the atom held before it, keeping its stamp.
+    /// </summary>
+    private SnowportId DraftOf(TimelineEvent e, Ref<TestAtom> atom)
+    {
+        if (e.Group != SnowportId.Empty)
+            return e.End == GroupEnd.None ? e.Group : SnowportId.Empty;
+
+        var before = new Timeline();
+        foreach (var (key, earlier) in Timeline)
+            if (key.CompareTo(e.Id) < 0)
+                before.Add(key, earlier);
+        return NaiveUndo.Holds(before, atom)?.Transition ?? SnowportId.Empty;
     }
 
     #region Descriptions for failures
@@ -368,6 +401,12 @@ public sealed class UndoSession
                         : ""
                 );
 
+    /// <summary>A write of an atom, with its face and the transition it's a draft of.</summary>
+    public string Describe(TestAtom r) =>
+        r == null ? "nothing"
+        : r.Transition == SnowportId.Empty ? $"r{r.Id}={r.Face}"
+        : $"r{r.Id}={r.Face} draft of {Name(r.Transition)}";
+
     /// <summary>The timeline, one event per line, oldest first.</summary>
     public string Dump() =>
         string.Join(
@@ -384,13 +423,18 @@ public sealed class UndoSession
                     : string.Join(
                         " ",
                         e.Writes.Select(atom =>
-                            atom switch
-                            {
-                                TestAtom r => $"r{r.Id}={r.Face}",
-                                TestValue v => $"v={v.Text}",
-                                _ => atom.GetType().Name,
-                            }
-                        )
+                                atom switch
+                                {
+                                    TestAtom r => Describe(r),
+                                    TestValue v => $"v={v.Text}",
+                                    _ => atom.GetType().Name,
+                                }
+                            )
+                            .Concat(
+                                e.Unsets.Select(u =>
+                                    u.Key is Ref<TestAtom> id ? $"unset r{id}" : "unset all"
+                                )
+                            )
                     );
                 return $"  {Name(e.Id)} s{e.Id.source}{group}{close}: {what}";
             })
@@ -441,13 +485,19 @@ public static class UndoSessions
 
     private static readonly Gen<Op> Leaves = Gen.Byte[2, 4].Select(s => (Op)new Op.Leave(s));
 
+    private static readonly Gen<Op> Resets = Gen.Select(
+        Source,
+        MaybeAtom,
+        (s, atom) => (Op)new Op.Reset(s, atom)
+    );
+
     private static readonly Gen<Op> Cancels = Source.Select(s => (Op)new Op.Cancel(s));
 
-    private static readonly Gen<Op> CanceledGestures = Gen.Select(
+    private static readonly Gen<Op> CanceledTransitions = Gen.Select(
         Source,
         Atom,
         Gen.Int[0, 2],
-        (s, atom, moves) => (Op)new Op.CanceledGesture(s, atom, moves)
+        (s, atom, moves) => (Op)new Op.CanceledTransition(s, atom, moves)
     );
 
     private static readonly Gen<Op> RawFlags = Gen.Select(
@@ -457,11 +507,11 @@ public static class UndoSessions
         (s, pick, byRedo) => (Op)new Op.RawFlag(s, pick, byRedo)
     );
 
-    private static readonly Gen<Op> Gestures = Gen.Select(
+    private static readonly Gen<Op> Transitions = Gen.Select(
         Source,
         Atom,
         Gen.Int[0, 2],
-        (s, atom, moves) => (Op)new Op.Gesture(s, atom, moves)
+        (s, atom, moves) => (Op)new Op.Transition(s, atom, moves)
     );
 
     private static readonly Gen<Op> Lates = Gen.Select(
@@ -483,28 +533,30 @@ public static class UndoSessions
     /// <summary>Sessions with everything players can do.</summary>
     public static readonly Gen<Op[]> WellFormed = Gen.Frequency(
         (30, Acts),
-        (5, Gestures),
+        (5, Transitions),
         (10, Starts),
         (10, Ends),
         (4, Cancels),
-        (3, CanceledGestures),
+        (3, CanceledTransitions),
         (30, Reversals),
         (10, Concurrents),
         (3, Leaves),
+        (6, Resets),
         (7, Lates)
     ).Array[0, 30];
 
     /// <summary>Sessions with everything players can do, and reversals no Undo or Redo would write.</summary>
     public static readonly Gen<Op[]> All = Gen.Frequency(
         (30, Acts),
-        (5, Gestures),
+        (5, Transitions),
         (10, Starts),
         (10, Ends),
         (4, Cancels),
-        (3, CanceledGestures),
+        (3, CanceledTransitions),
         (30, Reversals),
         (10, Concurrents),
         (3, Leaves),
+        (6, Resets),
         (5, RawFlags),
         (7, Lates)
     ).Array[0, 30];
@@ -552,7 +604,7 @@ public static class UndoSessions
         (7, Lates)
     ).Array[0, 30];
 
-    /// <summary>Sessions without gestures.</summary>
+    /// <summary>Sessions without transitions.</summary>
     public static readonly Gen<Op[]> Ungrouped = Gen.Frequency(
         (30, Acts),
         (30, Reversals),
@@ -564,15 +616,15 @@ public static class UndoSessions
 
     private static readonly Gen<Op> MyActs = Atom.Select(r => (Op)new Op.Act(Me, r, 0, 0));
     private static readonly Gen<Op> OthersActs = Atom.Select(r => (Op)new Op.Act(2, r, 0, 0));
-    private static readonly Gen<Op> MyGestures = Gen.Select(
+    private static readonly Gen<Op> MyTransitions = Gen.Select(
         Atom,
         Gen.Int[0, 2],
-        (atom, moves) => (Op)new Op.Gesture(Me, atom, moves)
+        (atom, moves) => (Op)new Op.Transition(Me, atom, moves)
     );
-    private static readonly Gen<Op> MyCanceledGestures = Gen.Select(
+    private static readonly Gen<Op> MyCanceledTransitions = Gen.Select(
         Atom,
         Gen.Int[0, 2],
-        (atom, moves) => (Op)new Op.CanceledGesture(Me, atom, moves)
+        (atom, moves) => (Op)new Op.CanceledTransition(Me, atom, moves)
     );
     private static readonly Gen<Op> MyUndos = Gen.Const(
         (Op)new Op.Reversal(Me, false, new TestScope(ScopeKind.Mine, 0))
@@ -582,13 +634,13 @@ public static class UndoSessions
     );
 
     /// <summary>
-    /// One player's actions, gestures (some canceled) and Undo reversals in their own scope,
+    /// One player's actions, transitions (some canceled) and Undo reversals in their own scope,
     /// among another player's actions they can't undo.
     /// </summary>
     public static readonly Gen<Op[]> SinglePlayerUndos = Gen.Frequency(
         (30, MyActs),
-        (10, MyGestures),
-        (5, MyCanceledGestures),
+        (10, MyTransitions),
+        (5, MyCanceledTransitions),
         (10, OthersActs),
         (30, MyUndos)
     ).Array[0, 40];
@@ -596,8 +648,8 @@ public static class UndoSessions
     /// <summary>The same, with Redo reversals too.</summary>
     public static readonly Gen<Op[]> SinglePlayer = Gen.Frequency(
         (30, MyActs),
-        (10, MyGestures),
-        (5, MyCanceledGestures),
+        (10, MyTransitions),
+        (5, MyCanceledTransitions),
         (10, OthersActs),
         (30, MyUndos),
         (25, MyRedos)

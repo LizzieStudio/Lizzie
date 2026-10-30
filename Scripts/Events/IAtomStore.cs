@@ -43,8 +43,9 @@ public interface IAtomStore
 
     /// <summary>
     /// Every atom that's saved with the project, with the event that last wrote it.
+    /// Writes with a transition are not saved.
     /// </summary>
-    IEnumerable<AtomEntry> SavedAtoms();
+    IEnumerable<AtomEntry> SavedAtoms(Timeline timeline);
 }
 
 /// <summary>

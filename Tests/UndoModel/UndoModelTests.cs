@@ -9,7 +9,7 @@ using Xunit;
 namespace Lizzie.Tests;
 
 /// <summary>
-/// Model-based properties. Random sessions of actions, gestures, reversals, departures and odd flags
+/// Model-based properties. Random sessions of actions, transitions, reversals, departures and odd flags
 /// are played out, with <see cref="Expected"/> deciding what each reversal writes,
 /// and <see cref="Actual"/> must give the same answer to every question about the timeline.
 /// </summary>
@@ -100,6 +100,40 @@ public abstract class UndoModelTests : UndoTestBase
     [Fact]
     public void NothingIsUndoneWithoutFlags() =>
         Sample(UndoSessions.WithoutFlags, ops => SameInEffect(UndoSession.Play(ops, Expected)));
+
+    /// <summary>
+    /// A store, told about each event as it's recorded along with what the event changed, holds what the naive model says,
+    /// so no atom ever holds a draft of a transition that has ended.
+    /// </summary>
+    [Fact]
+    public void SameValues() =>
+        Sample(
+            UndoSessions.All,
+            ops =>
+            {
+                var session = new UndoSession(Expected);
+                var store = new AtomStore<TestAtom, Ref<TestAtom>>(TestAtom.ById);
+                session.Recorded += e =>
+                    store.Apply(
+                        session.Timeline,
+                        Actual.Changes(session.Timeline, e).ToList(),
+                        false
+                    );
+                foreach (var op in ops)
+                    session.Apply(op);
+
+                for (int atom = 1; atom <= UndoSession.AtomCount; atom++)
+                {
+                    var id = new Ref<TestAtom>(atom);
+                    Same(
+                        session,
+                        $"What r{atom} holds",
+                        session.Describe(NaiveUndo.Holds(session.Timeline, id)),
+                        session.Describe((TestAtom)store.Find(id).Value)
+                    );
+                }
+            }
+        );
 
     [Fact]
     public void SameChanges() =>

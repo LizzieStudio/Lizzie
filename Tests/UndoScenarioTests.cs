@@ -30,13 +30,15 @@ public class UndoScenarioTests
     /// <summary>
     /// Records an action that writes <paramref name="atom"/>, in <paramref name="group"/> if given,
     /// and closing it if <paramref name="close"/>, made in <paramref name="place"/> if given.
+    /// The write is a draft of <paramref name="transition"/> if given, as one made from a draft is.
     /// </summary>
     private SnowportId Act(
         byte source,
         int atom = 1,
         SnowportId group = default,
         bool close = false,
-        ViewPlace? place = null
+        ViewPlace? place = null,
+        SnowportId transition = default
     )
     {
         var id = NextId(source);
@@ -48,7 +50,7 @@ public class UndoScenarioTests
                 Group = group,
                 End = close ? GroupEnd.Closed : GroupEnd.None,
                 Place = place,
-                Writes = [new Prototype { Id = new(atom) }],
+                Writes = [new Prototype { Id = new(atom), Transition = transition }],
             }
         );
         return id;
@@ -125,7 +127,7 @@ public class UndoScenarioTests
 
     /// <summary>The ids of the events <paramref name="e"/> may have changed, oldest first.</summary>
     private SnowportId[] Changes(TimelineEvent e) =>
-        TimelineUndo.Changes(_timeline, e).Select(c => c.Id).ToArray();
+        TimelineUndo.Changes(_timeline, e).Select(c => c.Id).Order().ToArray();
 
     /// <summary>The unit a reversal changes, which its chain of reversals comes down to.</summary>
     private SnowportId Changed(UndoFlag flag) => NaiveUndo.UnitOf(_timeline, flag.Reverses);
@@ -330,7 +332,7 @@ public class UndoScenarioTests
     [Fact]
     public void FlagCoversOnlyOlderEvents()
     {
-        // A gesture is flagged while it's still going.
+        // A transition is flagged while it's still going.
         var g = StartGroup(Other, atom: 1);
         var before = Act(Other, atom: 2, group: g);
         var flag = AddFlag(g, Admin);
@@ -398,7 +400,7 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void GestureInProgressIsPassedOver()
+    public void TransitionInProgressIsPassedOver()
     {
         var mine = Act(Me);
         Act(Other);
@@ -413,23 +415,23 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void ClosingEventFinishesTheGesture()
+    public void ClosingEventFinishesTheTransition()
     {
         var g = StartGroup(Me, atom: 1);
         Act(Me, atom: 2, group: g);
         Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
 
-        // Closed by someone else, the gesture is still the player's own.
+        // Closed by someone else, the transition is still the player's own.
         CloseGroup(g, Other);
         Assert.Equal(g, Changed(Undo(Mine)));
     }
 
     /// <summary>
-    /// A gesture closed by someone else sits in history where it finished,
+    /// A transition closed by someone else sits in history where it finished,
     /// so Undo Others reaches it before anything older.
     /// </summary>
     [Fact]
-    public void GestureClosedByAnotherIsUndoneFromWhereItFinished()
+    public void TransitionClosedByAnotherIsUndoneFromWhereItFinished()
     {
         var g = StartGroup(Other, atom: 1);
         Act(Other, atom: 2);
@@ -439,7 +441,7 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void FlagOnAGestureInProgressIsPassedOver()
+    public void FlagOnATransitionInProgressIsPassedOver()
     {
         var g = StartGroup(Other);
         AddFlag(g, Admin);
@@ -448,7 +450,7 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void GestureInProgressDoesNotBlockRedo()
+    public void TransitionInProgressDoesNotBlockRedo()
     {
         var a = Act(Me);
         Undo(Mine);
@@ -458,7 +460,7 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void AbandonedGestureIsCanceled()
+    public void AbandonedTransitionIsCanceled()
     {
         var open = StartGroup(Other, atom: 1);
         Act(Other, atom: 2, group: open);
@@ -477,7 +479,7 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void CanceledGestureNeverHappened()
+    public void CanceledTransitionNeverHappened()
     {
         var g = StartGroup(Me, atom: 1);
         var move = Act(Me, atom: 2, group: g);
@@ -489,12 +491,12 @@ public class UndoScenarioTests
         Assert.True(IsUndone(g));
         Assert.True(IsUndone(move));
         Assert.True(IsUndone(cancel.Id));
-        // What the gesture wrote goes back, so its atoms are recomputed.
+        // What the transition wrote goes back, so its atoms are recomputed.
         Assert.Equal([g, move, cancel.Id], Changes(cancel));
     }
 
     [Fact]
-    public void UndoPassesOverACanceledGesture()
+    public void UndoPassesOverACanceledTransition()
     {
         var a = Act(Me);
         var g = StartGroup(Me, atom: 2);
@@ -504,9 +506,9 @@ public class UndoScenarioTests
         Assert.Null(Undo(Mine));
     }
 
-    /// <summary>A canceled gesture isn't a new action, so the undo before it is still there to redo.</summary>
+    /// <summary>A canceled transition isn't a new action, so the undo before it is still there to redo.</summary>
     [Fact]
-    public void CanceledGestureLeavesRedo()
+    public void CanceledTransitionLeavesRedo()
     {
         var a = Act(Me);
         Undo(Mine);
@@ -517,9 +519,9 @@ public class UndoScenarioTests
         Assert.Null(Redo(Mine));
     }
 
-    /// <summary>A canceled gesture isn't a new action either, so undo doesn't start unfolding past it.</summary>
+    /// <summary>A canceled transition isn't a new action either, so undo doesn't start unfolding past it.</summary>
     [Fact]
-    public void CanceledGestureDoesNotUnfold()
+    public void CanceledTransitionDoesNotUnfold()
     {
         var a = Act(Me);
         Undo(Mine);
@@ -550,6 +552,36 @@ public class UndoScenarioTests
 
         Assert.True(IsUndone(g));
         Assert.False(IsUndone(theirs));
+    }
+
+    [Fact]
+    public void AnEndChangesTheWritesMadeFromItsDrafts()
+    {
+        var g = StartGroup(Me, atom: 1);
+        var theirs = Act(Other, atom: 1, transition: g);
+        var close = Act(Me, atom: 1, group: g, close: true);
+
+        Assert.Equal([g, theirs, close], Changes(_timeline[close]));
+    }
+
+    [Fact]
+    public void AWriteMadeFromADraftIsNotUndoneOnItsOwn()
+    {
+        var theirs = Act(Other, atom: 2);
+        var g = StartGroup(Me, atom: 1);
+        Act(Other, atom: 1, transition: g);
+
+        Assert.Equal(theirs, Changed(Undo(Others)));
+    }
+
+    [Fact]
+    public void AnEventThatChangesNothingIsNotUndone()
+    {
+        var a = Act(Me);
+        var nothing = NextId(Me);
+        _timeline.Add(nothing, new TimelineEvent { Id = nothing });
+
+        Assert.Equal(a, Changed(Undo(Mine)));
     }
 
     /// <summary>
@@ -705,9 +737,9 @@ public class UndoScenarioTests
         Assert.Null(Undo(UndoScopes.Mine(Me, Here)));
     }
 
-    /// <summary>A gesture is undone where it started, though only its first event holds the place.</summary>
+    /// <summary>A transition is undone where it started, though only its first event holds the place.</summary>
     [Fact]
-    public void GestureIsUndoneWhereItStarted()
+    public void TransitionIsUndoneWhereItStarted()
     {
         var group = Act(Me, place: Here);
         _timeline[group].Group = group;

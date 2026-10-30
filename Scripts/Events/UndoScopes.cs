@@ -51,5 +51,6 @@ public static class UndoScopes
             .InEffect(timeline)
             .SkipWhile(e => e.Id.CompareTo(before) >= 0)
             .SelectMany(e => Enumerable.Reverse(e.Writes))
+            .Where(TimelineUndo.Counts(timeline))
             .FirstOrDefault(atom => target.Equals(IAtomRef.To(atom)));
 }

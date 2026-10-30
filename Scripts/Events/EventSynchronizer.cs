@@ -40,7 +40,7 @@ public partial class EventSynchronizer : Node
     }
 
     /// <summary>
-    /// Cancels each gesture <paramref name="source"/> left unfinished.
+    /// Cancels each transition <paramref name="source"/> left unfinished.
     /// The host calls this when a player leaves, so it's written once.
     /// </summary>
     public void AbandonGroups(byte source)
@@ -53,7 +53,7 @@ public partial class EventSynchronizer : Node
     /// Publishes the event to all clients, including this one.
     /// </summary>
     /// <remarks>
-    /// Write atoms with <see cref="Atoms.Write(Node, IEnumerable{IChange})"/> and its gesture calls instead.
+    /// Write atoms with <see cref="Atoms.Write(Node, IEnumerable{IChange})"/> and its transition calls instead.
     /// This is for events that aren't plain writes, like undos.
     /// </remarks>
     public void Submit(TimelineEvent e)

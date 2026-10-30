@@ -193,7 +193,8 @@
               "deckRef": true,
               "retired": {
                 "type": "boolean"
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -297,7 +298,8 @@
                   }
                 ]
               },
-              "stageRef": true
+              "stageRef": true,
+              "transition": true
             },
             "required": [
               "id"
@@ -309,7 +311,8 @@
               "$type": {
                 "const": "CurrentTable"
               },
-              "stageRef": true
+              "stageRef": true,
+              "transition": true
             },
             "additionalProperties": false
           },
@@ -331,7 +334,8 @@
                   "string",
                   "null"
                 ]
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -362,7 +366,8 @@
                   "string",
                   "null"
                 ]
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -390,7 +395,8 @@
               },
               "deleted": {
                 "type": "boolean"
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -408,7 +414,8 @@
                   "string",
                   "null"
                 ]
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -450,7 +457,8 @@
                   }
                 },
                 "additionalProperties": false
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -516,7 +524,8 @@
                   "string",
                   "null"
                 ]
-              }
+              },
+              "transition": true
             },
             "additionalProperties": false
           },
@@ -877,7 +886,8 @@
                     "additionalProperties": false
                   }
                 ]
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -914,7 +924,8 @@
               },
               "deleted": {
                 "type": "boolean"
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -931,7 +942,8 @@
                   "object",
                   "null"
                 ]
-              }
+              },
+              "transition": true
             },
             "additionalProperties": false
           },
@@ -962,7 +974,8 @@
                   "array",
                   "null"
                 ]
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -999,7 +1012,8 @@
               },
               "deleted": {
                 "type": "boolean"
-              }
+              },
+              "transition": true
             },
             "required": [
               "id"
@@ -1045,7 +1059,8 @@
                   }
                 }
               },
-              "datasetRef": true
+              "datasetRef": true,
+              "transition": true
             },
             "required": [
               "id"

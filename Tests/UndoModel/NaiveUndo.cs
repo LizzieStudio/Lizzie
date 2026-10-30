@@ -102,7 +102,7 @@ public sealed class NaiveUndo : IUndoApi
 
     /// <summary>
     /// A unit is finished when it's a single ungrouped event, or when its newest event closes it.
-    /// Until then it's a gesture in progress.
+    /// Until then it's a transition in progress.
     /// </summary>
     public static bool IsClosed(Timeline timeline, SnowportId unit)
     {
@@ -112,6 +112,17 @@ public sealed class NaiveUndo : IUndoApi
         if (members[0].Group == SnowportId.Empty)
             return true;
         return members.MaxBy(e => e.Id).End != GroupEnd.None;
+    }
+
+    /// <summary>
+    /// A unit commits something when it's a group, or its event unsets something or writes something that isn't a draft.
+    /// </summary>
+    private static bool Commits(Timeline timeline, SnowportId unit)
+    {
+        var first = Members(timeline, unit)[0];
+        return first.Group != SnowportId.Empty
+            || first.Unsets.Length > 0
+            || first.Writes.Any(w => w.Transition == SnowportId.Empty);
     }
 
     /// <summary>Whether the unit's events are in scope, as done by the author.</summary>
@@ -124,7 +135,7 @@ public sealed class NaiveUndo : IUndoApi
 
     /// <summary>
     /// Whether Undo or Redo may act on the event: it isn't an admin event, the unit its entry
-    /// comes down to is finished, and in scope as done by the entry's author.
+    /// comes down to is finished and commits something, and it's in scope as done by the entry's author.
     /// </summary>
     private static bool IsCandidate(
         Timeline timeline,
@@ -137,6 +148,7 @@ public sealed class NaiveUndo : IUndoApi
             return false;
         var unit = UnitOf(timeline, Entry(e));
         return IsClosed(timeline, unit)
+            && Commits(timeline, unit)
             && InScope(timeline, unit, AuthorOf(timeline, Entry(e), me), scope);
     }
 
@@ -235,8 +247,9 @@ public sealed class NaiveUndo : IUndoApi
             .ToList();
 
     /// <summary>
-    /// What a reversal may change is what it covers. An event that ends a group, or is in a group with a cancel,
-    /// may change the group up to it, since how the group ends decides whether it's canceled.
+    /// What a reversal may change is what it covers. An event that ends a group may change the group up to it,
+    /// since how the group ends decides whether it's canceled, and every event with a draft of the group,
+    /// since its drafts stop counting. An event in a group with a cancel may change the group up to it.
     /// Any other event changes only itself.
     /// </summary>
     public IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e)
@@ -246,11 +259,52 @@ public sealed class NaiveUndo : IUndoApi
         if (e.Group == SnowportId.Empty)
             return [e];
         var upToIt = Members(timeline, e.Group).Where(m => !Newer(m, e)).ToList();
-        return e.End != GroupEnd.None || upToIt.Any(m => m.End == GroupEnd.Canceled) ? upToIt : [e];
+        if (e.End != GroupEnd.None)
+            return upToIt.Union(
+                timeline.Values.Where(d => d.Writes.Any(w => w.Transition == e.Group))
+            );
+        return upToIt.Any(m => m.End == GroupEnd.Canceled) ? upToIt : [e];
     }
 
     public IEnumerable<TimelineEvent> InEffect(Timeline timeline) =>
         NewestFirst(timeline).Where(e => InEffect(timeline, e));
+
+    #endregion
+
+    #region What atoms hold
+
+    /// <summary>
+    /// A write counts while it isn't a draft, or its transition hasn't been ended by any event, whatever became of that event.
+    /// </summary>
+    private static bool Counts(Timeline timeline, Atom write) =>
+        write.Transition == SnowportId.Empty
+        || !timeline.Values.Any(e => e.Group == write.Transition && e.End != GroupEnd.None);
+
+    /// <summary>Whether <paramref name="unset"/> unsets <paramref name="write"/>.</summary>
+    private static bool Takes(Unset unset, TestAtom write) =>
+        unset.Query == TestAtom.All || Equals(unset.Key, write.Id);
+
+    /// <summary>
+    /// What an atom holds: its newest write that counts, among the events in effect,
+    /// unless an event in effect that's newer than it unsets it. Null for nothing.
+    /// </summary>
+    public static TestAtom Holds(Timeline timeline, Ref<TestAtom> atom)
+    {
+        TestAtom Write(TimelineEvent e) =>
+            e
+                .Writes.OfType<TestAtom>()
+                .LastOrDefault(w => w.Id.Equals(atom) && Counts(timeline, w));
+
+        var written = NewestFirst(timeline)
+            .FirstOrDefault(e => InEffect(timeline, e) && Write(e) != null);
+        if (written == null)
+            return null;
+        var write = Write(written);
+        bool unset = timeline.Values.Any(u =>
+            Newer(u, written) && InEffect(timeline, u) && u.Unsets.Any(x => Takes(x, write))
+        );
+        return unset ? null : write;
+    }
 
     #endregion
 }

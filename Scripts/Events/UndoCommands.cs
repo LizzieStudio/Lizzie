@@ -68,7 +68,7 @@ public static class UndoCommands
 
     /// <summary>
     /// Undoes the newest change by anyone to the selected atoms, or to what's in them, like a deck's cards or a row's cells.
-    /// The whole event or gesture is undone, even the parts that changed other atoms.
+    /// The whole event or transition is undone, even the parts that changed other atoms.
     /// </summary>
     [Command("record.undo_changes")]
     public static readonly Command UndoChanges = new AtomCommand<Atom>

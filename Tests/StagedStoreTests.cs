@@ -348,7 +348,7 @@ public class StagedStoreTests
         var written = PieceOf(1, 10, x: 5);
         Write(written);
 
-        Assert.Equal<Atom>([written], _store.SavedAtoms().Select(e => e.Value));
+        Assert.Equal<Atom>([written], _store.SavedAtoms(_timeline).Select(e => e.Value));
     }
 
     [Fact]

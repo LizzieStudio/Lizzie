@@ -272,7 +272,7 @@ public partial class ProjectService : Node
     /// <summary>
     /// Cleans up after a player who is gone.
     /// <list type="bullet">
-    /// <item>cancels their open gestures</item>
+    /// <item>cancels their open transitions</item>
     /// <item>deletes their selection</item>
     /// <item>frees their seat</item>
     /// </list>

@@ -26,7 +26,7 @@ public class TimelineEventJsonTests
     }
 
     [Fact]
-    public void GestureLeavesCommandOut()
+    public void TransitionLeavesCommandOut()
     {
         var e = new TimelineEvent { Id = Id(5, 1) };
 

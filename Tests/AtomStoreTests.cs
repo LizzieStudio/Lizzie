@@ -82,6 +82,43 @@ public class AtomStoreTests
             }
         );
 
+    /// <summary>Records the first event of a transition, drafting <paramref name="atoms"/>, and returns its group.</summary>
+    private SnowportId Open(params ComponentPosition[] atoms)
+    {
+        var group = NextId();
+        Record(
+            new TimelineEvent
+            {
+                Id = group,
+                Group = group,
+                Writes = atoms.Select(a => a with { Transition = group }).ToArray(),
+            }
+        );
+        return group;
+    }
+
+    /// <summary>Records the event that closes <paramref name="group"/>, committing <paramref name="atoms"/>.</summary>
+    private TimelineEvent Close(SnowportId group, params ComponentPosition[] atoms) =>
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Group = group,
+                End = GroupEnd.Closed,
+                Writes = atoms,
+            }
+        );
+
+    private void Cancel(SnowportId group) =>
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Group = group,
+                End = GroupEnd.Canceled,
+            }
+        );
+
     private SnowportId NextId() => new(++_clock, Snowport.HostSource);
 
     private TimelineEvent Record(TimelineEvent e)
@@ -260,6 +297,109 @@ public class AtomStoreTests
         Unset(1);
 
         Assert.Null(_store.Find(Key(1)).Value);
+    }
+
+    [Fact]
+    public void ADraftCountsWhileItsTransitionIsOpen()
+    {
+        Write(Component(1, container: 5));
+        Open(Component(1, container: 6));
+
+        Assert.Equal(In(6), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void ClosingATransitionKeepsOnlyWhatTheCloseWrites()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5));
+        var group = Open(Component(1, container: 6), Component(2, container: 6));
+        Close(group, Component(1, container: 7));
+
+        Assert.Equal(In(7), Value(1)?.Container);
+        Assert.Equal(In(5), Value(2)?.Container);
+    }
+
+    [Fact]
+    public void CancelingATransitionPutsBackWhatItDrafted()
+    {
+        Write(Component(1, container: 5));
+        Cancel(Open(Component(1, container: 6)));
+
+        Assert.Equal(In(5), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void AWriteMadeFromADraftGoesWithItsTransition()
+    {
+        Write(Component(1, container: 5));
+        var group = Open(Component(1, container: 6));
+        Write(Value(1) with { X = 10 });
+        Assert.Equal(10, Value(1)?.X);
+
+        Cancel(group);
+
+        Assert.Equal(0, Value(1)?.X);
+        Assert.Equal(In(5), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void AWriteMadeFromADraftNeverCountsOnceItsTransitionEnded()
+    {
+        Write(Component(1, container: 5));
+        var group = Open(Component(1, container: 6));
+        var made = Value(1) with { X = 10 };
+        Close(group, Component(1, container: 7));
+        Write(made);
+
+        Assert.Equal(In(7), Value(1)?.Container);
+        Assert.Equal(0, Value(1)?.X);
+    }
+
+    [Fact]
+    public void UndoingATransitionLeavesItsDraftsOut()
+    {
+        Write(Component(1, container: 5));
+        var group = Open(Component(1, container: 6));
+        Close(group, Component(1, container: 7));
+        Undo(_timeline[group]);
+
+        Assert.Equal(In(5), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void AnUnsetTakesAnAtomOutOfAnOpenTransition()
+    {
+        Write(Component(1, container: 5));
+        var group = Open(Component(1, container: 6));
+        Unset(1);
+        Assert.Null(Value(1));
+
+        Cancel(group);
+
+        Assert.Null(Value(1));
+    }
+
+    [Fact]
+    public void UndoingTheUnsetPutsTheAtomBackInItsTransition()
+    {
+        Write(Component(1, container: 5));
+        var group = Open(Component(1, container: 6));
+        Undo(Unset(1));
+
+        Assert.Equal(group, Value(1)?.Transition);
+        Assert.Equal(In(6), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void ASaveHoldsWhatAnOpenTransitionReplaced()
+    {
+        Write(Component(1, container: 5));
+        Open(Component(1, container: 6), Component(2, container: 6));
+
+        Assert.Equal<Atom>(
+            [Component(1, container: 5)],
+            _store.SavedAtoms(_timeline).Select(e => e.Value)
+        );
     }
 
     [Fact]

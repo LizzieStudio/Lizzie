@@ -208,5 +208,5 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     /// <summary>
     /// The atoms as written, so a save never holds what a stage only inherits.
     /// </summary>
-    public IEnumerable<AtomEntry> SavedAtoms() => _raw.SavedAtoms();
+    public IEnumerable<AtomEntry> SavedAtoms(Timeline timeline) => _raw.SavedAtoms(timeline);
 }

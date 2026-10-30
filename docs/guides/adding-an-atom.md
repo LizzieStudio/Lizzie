@@ -138,28 +138,23 @@ A common structure for atoms is to have "root" atoms with an `All` query, like t
 
 Atom updates that you `Write` together are undone together, so you should write related changes as one `Write` call: `Atoms.R.Write(this, A, B, C, ...)`. Lizzie finds the `ICommandView` that holds the Node `this` and assigns this event to it. Undo & Redo will only reverse events made in an `ICommandView` when it has focus, so an undo in the Dataset Editor won't reverse moving a card on the table and vice versa.
 
-### Undo Groups
+## Transitions
 
-You can combine multiple writes into one undo group with `Open`, `Append`, and `Close`.
+Most of the time, a `Write` should set atoms to a valid state, but sometimes you need to set atoms to a transitional state that undo/redo shouldn't bring back. This is true for dragging components. Dragging components sets them to a dragged state, which should only be true while the dragging client allows it to be true. For this, we have Transitions.
 
-```C#
-var groupId = Atoms.R.Open(this, myAtom);
-// ...
-Atoms.R.Append(groupId, someOtherAtom);
-// ...
-Atoms.R.Append(groupId, someThirdAtom);
-// ...
-Atoms.R.Close(groupId, someFourthAtom);
-```
-
-While an undo group is "open", it cannot be Undone or Redone. Once it's "closed", Undo and Redo events will reverse or bring back all of the writes as a unit. This is useful for "gestures", like dragging components, or for repeated edits to a focused input like a number picker.
-
-You can also Cancel the group with `CancelIfOpen`. When you cancel a group, all of its writes are reversed as if they never happened.
+Call `Open` to start a transition, `Append` to add to it, and `Close` to end it.
 
 ```C#
-// no writes because the group is going away
-Atoms.R.CancelIfOpen(groupId);
+var transition = Atoms.R.Open(this, myAtom);
+// ...
+Atoms.R.Append(transition, myAtomUpdate);
+// ...
+Atoms.R.Close(transition, myAtomFinal);
 ```
+
+The writes to `Open` or `Append` are "drafts", which Undo and Redo won't reverse or bring back. When you call `Close`, all of the transition's drafts are reversed and the writes to `Close` take their place. Undo/Redo will reverse the `Close` event, but the drafts won't return. This usually returns the atoms to their state before the transition started.
+
+If you call `Close` with no writes it will reverse the transition like it never happened, effectively canceling it. When a client disconnects, the host will use this trick to cancel all of the disconnected client's open transitions.
 
 ## Saving
 
