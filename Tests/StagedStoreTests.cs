@@ -193,6 +193,35 @@ public class StagedStoreTests
         AssertShows(2, 12, 6);
     }
 
+    /// <summary>Resetting a table resets what's being dragged too, until the reset is undone.</summary>
+    [Fact]
+    public void UnsettingWhatAStageWroteTakesItsDraftsOutOfTheirTransition()
+    {
+        Write(StageOf(1), StageOf(2, parent: 1));
+        Write(PieceOf(1, 10, x: 5));
+        var open = NextId();
+        Record(
+            new TimelineEvent
+            {
+                Id = open,
+                Group = open,
+                Writes = [PieceOf(2, 10, x: 7) with { Transition = open }],
+            }
+        );
+        var reset = Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Unsets = [R.UnsetAll(Piece.WrittenIn, Tag<Stage>(2))],
+            }
+        );
+        AssertShows(2, 10, 5);
+
+        Undo(reset);
+
+        AssertShows(2, 10, 7);
+    }
+
     [Fact]
     public void AStagedTypeCanOnlyBeUnsetByWhatAStageWrote() =>
         Assert.Throws<System.ArgumentException>(() => R.UnsetAll(Piece.ByStage, Tag<Stage>(2)));

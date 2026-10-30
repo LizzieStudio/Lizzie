@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -220,12 +219,8 @@ public static class StageCommands
         Requires =
         [
             ("Only a table can be reset.", (R, s) => s.IsTable),
-            ("There are no changes to reset.", (R, s) => Resettable(R, s).Any()),
+            ("There are no changes to reset.", HasChanges),
         ],
-        Effects = (R, tables) => Resettable(R, tables[0]).Select(R.Unset),
+        Effects = (R, tables) => [R.UnsetAll(ComponentPosition.WrittenIn, tables[0].Id)],
     };
-
-    // What the table wrote itself, except what someone is dragging.
-    private static IEnumerable<ComponentPosition> Resettable(IAtomReader R, Stage table) =>
-        R.Get(ComponentPosition.WrittenIn, table.Id).Where(c => !c.IsHeld);
 }
