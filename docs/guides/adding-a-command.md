@@ -11,11 +11,11 @@ A command represents a labeled user action that can edit atoms and trigger side 
 The `AtomCommand<T>` is the most common type of command, which activates when the user has selected an atom of type `T`. You initialize it on a static field with a `[Command("name")]` attribute.
 
 ```C#
-[Command("component.delete")]
-public static readonly Command Delete = new AtomCommand<ComponentPosition>
+[Command("some.delete")]
+public static readonly Command Delete = new AtomCommand<MyAtom>
 {
     Caption = "Delete",
-    Effects = (R, selected) => selected.Select(c => c with { Removed = true }),
+    Effects = (R, selected) => selected.Select(a => a with { Deleted = true }),
 };
 ```
 

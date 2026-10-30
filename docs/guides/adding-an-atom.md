@@ -149,7 +149,7 @@ var transition = Atoms.R.Open(this, myAtom);
 // ...
 Atoms.R.Append(transition, myAtomUpdate);
 // ...
-Atoms.R.Close(transition, myAtomFinal);
+Atoms.R.Close(this, transition, myAtomFinal).
 ```
 
 The writes to `Open` or `Append` are "drafts", which Undo and Redo won't reverse or bring back. When you call `Close`, all of the transition's drafts are reversed and the writes to `Close` take their place. Undo/Redo will reverse the `Close` event, but the drafts won't return. This usually returns the atoms to their state before the transition started.
