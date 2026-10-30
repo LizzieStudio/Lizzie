@@ -76,7 +76,7 @@ public static class ComponentCommands
         Keys = [Shortcuts.Key(Key.Delete)],
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) => !c.IsHeld,
-        Effects = (R, cs) => cs.Select(c => c with { Removed = true }),
+        Effects = (R, cs) => cs.Select(c => c with { Container = new InBox() }),
     };
 
     [Command("component.reset")]
@@ -120,7 +120,6 @@ public static class ComponentCommands
     private static float RotationStep(IAtomReader R) =>
         R.Get(ProjectGameSettings.Only).RotationStep();
 
-    // What's inside a bag isn't on the table to turn. A hand shows its cards turned as they'll lie on the table.
     private static bool Turnable(IAtomReader R, ComponentPosition c) => !R.IsHidden(c);
 
     // Zones stay underneath everything.

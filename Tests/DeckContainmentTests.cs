@@ -15,6 +15,7 @@ public class DeckContainmentTests
     private static readonly Ref<Prototype> BagProto = new(11);
     private static readonly Ref<Component> Deck = new(20);
     private static readonly Ref<Component> Bag = new(21);
+    private static readonly Ref<Component> BoxedDeck = new(22);
     private static readonly Ref<Seat> Hand = new(30);
 
     // ranks from the bottom of a stack up
@@ -43,6 +44,7 @@ public class DeckContainmentTests
         };
 
     // A deck of three cards, a bag with a token in it, a loose token, and a token in a hand.
+    // In the box, a token and a deck with a card in it.
     private static readonly ComponentPosition TheDeck = State(Deck);
     private static readonly ComponentPosition Bottom = State(new(2), new InComponent(Deck), 1);
     private static readonly ComponentPosition Middle = State(new(3), new InComponent(Deck), 2);
@@ -51,18 +53,27 @@ public class DeckContainmentTests
     private static readonly ComponentPosition InBag = State(new(6), new InComponent(Bag));
     private static readonly ComponentPosition Loose = State(new(7));
     private static readonly ComponentPosition InHand = State(new(8), new InHand(Hand));
+    private static readonly ComponentPosition Boxed = State(new(5), new InBox());
+    private static readonly ComponentPosition TheBoxedDeck = State(BoxedDeck, new InBox());
+    private static readonly ComponentPosition InBoxedDeck = State(
+        new(9),
+        new InComponent(BoxedDeck)
+    );
 
     private static readonly ListReader R = new(
         new Prototype { Id = DeckProto, Parameters = new PrintedParameters() },
         new Prototype { Id = BagProto, Parameters = new BagParameters() },
         new Component { Id = Deck, PrototypeRef = DeckProto },
         new Component { Id = Bag, PrototypeRef = BagProto },
+        new Component { Id = BoxedDeck, PrototypeRef = DeckProto },
         Card(Bottom),
         Card(Middle),
         Card(Top),
         Card(InBag),
         Card(Loose),
         Card(InHand),
+        Card(Boxed),
+        Card(InBoxedDeck),
         TheDeck,
         Bottom,
         Middle,
@@ -70,7 +81,10 @@ public class DeckContainmentTests
         TheBag,
         InBag,
         Loose,
-        InHand
+        InHand,
+        Boxed,
+        TheBoxedDeck,
+        InBoxedDeck
     );
 
     [Fact]
@@ -97,5 +111,16 @@ public class DeckContainmentTests
         Assert.False(R.IsInDeck(Loose));
         Assert.False(R.IsInDeck(InBag));
         Assert.False(R.IsInDeck(InHand));
+    }
+
+    [Fact]
+    public void WhatsInTheBoxOrABagIsHidden()
+    {
+        Assert.True(R.IsHidden(InBag));
+        Assert.True(R.IsHidden(Boxed));
+        Assert.True(R.IsHidden(InBoxedDeck));
+        Assert.False(R.IsHidden(Top));
+        Assert.False(R.IsHidden(Loose));
+        Assert.False(R.IsHidden(InHand));
     }
 }

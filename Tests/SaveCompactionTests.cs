@@ -131,7 +131,7 @@ public class SaveCompactionTests
                 Position(3) with
                 {
                     StageRef = Tag<Stage>(1),
-                    Removed = true,
+                    Container = new InBox(),
                 },
             ],
             1,

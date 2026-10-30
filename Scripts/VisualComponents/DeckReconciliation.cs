@@ -10,7 +10,8 @@ namespace Lizzie;
 /// </summary>
 /// <remarks>
 /// Deck contents are marked with the deck they came from, to make them easy to find.
-/// Items that should be kept are updated, removed items are deleted, and new items are added to the VcDeck (if there is one).
+/// Items that should be kept are updated, removed items are unset from every blueprint that wrote them,
+/// and new items are added to the VcDeck (if there is one).
 /// </remarks>
 public static class DeckReconciliation
 {
@@ -58,9 +59,7 @@ public static class DeckReconciliation
                 && component.PrototypeRef == prototype;
         changes.AddRange(
             blueprints.SelectMany(stage =>
-                R.Get(ComponentPosition.WrittenIn, stage.Id)
-                    .Where(c => !c.Removed && IsRetired(c))
-                    .Select(c => c with { Removed = true })
+                R.Get(ComponentPosition.WrittenIn, stage.Id).Where(IsRetired).Select(R.Unset)
             )
         );
         return changes;

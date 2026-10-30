@@ -45,13 +45,12 @@ public class StagedStoreTests
             ParentRef = parent == 0 ? Ref<Stage>.Empty : Tag<Stage>(parent),
         };
 
-    private static Piece PieceOf(int stage, int id, int x = 0, bool removed = false) =>
+    private static Piece PieceOf(int stage, int id, int x = 0) =>
         new()
         {
             StageRef = Tag<Stage>(stage),
             Id = Tag<Component>(id),
             X = x,
-            Removed = removed,
         };
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the stores.</summary>
@@ -162,18 +161,6 @@ public class StagedStoreTests
 
         AssertShows(1, 10, 5);
         AssertShows(2, 10, 7);
-    }
-
-    [Fact]
-    public void ATombstoneHidesTheParentsAtomInTheStageAndBelow()
-    {
-        Write(StageOf(1), StageOf(2, parent: 1), StageOf(3, parent: 2));
-        Write(PieceOf(1, 10, x: 5));
-        Write(PieceOf(2, 10, removed: true));
-
-        AssertShows(1, 10, 5);
-        AssertShows(2, 10, null);
-        AssertShows(3, 10, null);
     }
 
     [Fact]
@@ -362,25 +349,6 @@ public class StagedStoreTests
         Write(written);
 
         Assert.Equal<Atom>([written], _store.SavedAtoms().Select(e => e.Value));
-    }
-
-    [Fact]
-    public void ATombstoneOverItsParentsAtomIsSaved()
-    {
-        Write(StageOf(1), StageOf(2, parent: 1));
-        var tombstone = PieceOf(2, 10, removed: true);
-        Write(PieceOf(1, 10, x: 5), tombstone);
-
-        Assert.Contains(tombstone, _store.SavedAtoms().Select(e => e.Value));
-    }
-
-    [Fact]
-    public void ATombstoneOverNothingIsNotSaved()
-    {
-        Write(StageOf(1), StageOf(2, parent: 1));
-        Write(PieceOf(1, 10, removed: true), PieceOf(2, 11, removed: true));
-
-        Assert.Empty(_store.SavedAtoms());
     }
 
     [Fact]

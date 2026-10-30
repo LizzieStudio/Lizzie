@@ -31,6 +31,16 @@ public sealed record InHand(Ref<Seat> Seat) : Container;
 public sealed record Held(Ref<Seat> Seat, bool OverHand) : Container;
 
 /// <summary>
+/// Removed from the table into the box, where it's out of sight.
+/// </summary>
+/// <remarks>
+/// This is effectively a deletion on a stage like a blueprint or table.
+/// This is important because an Unset works like a reset to the parent stage's state.
+/// </remarks>
+[JsonName("InBox")]
+public sealed record InBox : Container;
+
+/// <summary>
 /// A key for the container as it exists in one stage.
 /// </summary>
 public readonly record struct ContainerKey(Ref<Stage> StageRef, Container Container)

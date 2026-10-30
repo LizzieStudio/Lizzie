@@ -266,6 +266,14 @@
                   {
                     "properties": {
                       "$type": {
+                        "const": "InBox"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
                         "const": "InComponent"
                       },
                       "component": true
@@ -289,10 +297,7 @@
                   }
                 ]
               },
-              "stageRef": true,
-              "removed": {
-                "type": "boolean"
-              }
+              "stageRef": true
             },
             "required": [
               "id"

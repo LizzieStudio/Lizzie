@@ -9,7 +9,6 @@ namespace Lizzie.Replication.Machinery;
 ///
 /// <para>
 /// A stage shows its own write of an atom if it has one, and otherwise what its parent shows.
-/// A write with <see cref="StagedAtom.Removed"/> hides the parent atom.
 /// When you read a staged atom from a stage, its <see cref="StagedAtom.StageRef"/> is set to the stage of the read.
 /// </para>
 ///
@@ -179,9 +178,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
         {
             var written = _raw.Find(key with { StageRef = stage });
             if (written.Value is StagedAtom atom)
-                return atom.Removed
-                    ? default
-                    : new AtomEntry(atom with { StageRef = key.StageRef }, written.LastUpdate);
+                return new AtomEntry(atom with { StageRef = key.StageRef }, written.LastUpdate);
         }
         return default;
     }
@@ -211,15 +208,5 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     /// <summary>
     /// The atoms as written, so a save never holds what a stage only inherits.
     /// </summary>
-    /// <remarks>.
-    /// A Removed atom is left out when its parent stage shows nothing beneath it,
-    /// since keeping a removal isn't necessary when it's not overriding anything.
-    /// </remarks>
-    public IEnumerable<AtomEntry> SavedAtoms() =>
-        _raw.SavedAtoms()
-            .Where(e =>
-                e.Value is not T { Removed: true } removed
-                || _parents.TryGetValue(removed.StageRef, out var parent)
-                    && _resolved.Find(_byId.Of(removed) with { StageRef = parent }).Value != null
-            );
+    public IEnumerable<AtomEntry> SavedAtoms() => _raw.SavedAtoms();
 }

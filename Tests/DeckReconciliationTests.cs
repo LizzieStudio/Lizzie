@@ -123,7 +123,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(Table(["1", "2"]), "1");
 
-        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], unset: [(Root, 21)]);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class DeckReconciliationTests
         // Two 1s: the first is on the table, the second is in the deck.
         var changes = Reconcile(Table(["1", "1"], onTable: 0), "1");
 
-        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], unset: [(Root, 21)]);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(Table(["1", "2"], onTable: 1), "1");
 
-        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], unset: [(Root, 21)]);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(Retired(Table(["1", "2"]), 1), "1");
 
-        AssertWrites(changes, retired: [], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [], unset: [(Root, 21)]);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(MovedIn(Table(["1", "2"]), Child, 1), "1");
 
-        AssertWrites(changes, retired: [21], removed: [(Root, 21), (Child, 21)]);
+        AssertWrites(changes, retired: [21], unset: [(Root, 21), (Child, 21)]);
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class DeckReconciliationTests
     {
         var changes = Reconcile(AsTable(MovedIn(Table(["1", "2"]), Child, 1), Child), "1");
 
-        AssertWrites(changes, retired: [21], removed: [(Root, 21)]);
+        AssertWrites(changes, retired: [21], unset: [(Root, 21)]);
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class DeckReconciliationTests
     private static void AssertWrites(
         List<IChange> changes,
         int[] retired,
-        (Ref<Stage> Stage, int Id)[] removed
+        (Ref<Stage> Stage, int Id)[] unset
     )
     {
         var actualRetired = changes
@@ -265,19 +265,20 @@ public class DeckReconciliationTests
             .Where(c => c.Retired)
             .Select(c => c.Id)
             .Order();
-        var actualRemoved = changes
-            .OfType<ComponentPosition>()
-            .Where(p => p.Removed)
-            .Select(p => (p.StageRef, p.Id))
+        var actualUnset = changes
+            .OfType<Unset>()
+            .Where(u => u.Query == ComponentPosition.ById)
+            .Select(u => (StageKey<ComponentPosition>)u.Key)
+            .Select(k => (k.StageRef, k.ComponentRef))
             .Order();
         Assert.True(
-            changes.Count == retired.Length + removed.Length
+            changes.Count == retired.Length + unset.Length
                 && actualRetired.SequenceEqual(retired.Select(i => new Ref<Component>(i)))
-                && actualRemoved.SequenceEqual(
-                    removed.Select(r => (r.Stage, new Ref<Component>(r.Id))).Order()
+                && actualUnset.SequenceEqual(
+                    unset.Select(r => (r.Stage, new Ref<Component>(r.Id))).Order()
                 ),
             $"Wrote {Describe(changes)}.\n\nExpected only: components [{string.Join(", ", retired)}] retired, "
-                + $"and positions [{string.Join(", ", removed)}] removed, as (stage, position)."
+                + $"and positions [{string.Join(", ", unset)}] unset, as (stage, position)."
         );
     }
 

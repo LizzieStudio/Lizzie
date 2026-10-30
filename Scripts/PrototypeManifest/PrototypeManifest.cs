@@ -182,12 +182,13 @@ public partial class PrototypeManifest : Window, ICommandView
 
         var prototypes = R.Get(Prototype.Live);
 
-        // The Qty column, counted on the stage the view shows.
+        // The Qty column, counted on the stage the view shows, leaving out the boxed components.
         // A prototype that spawns decks counts its decks, not their cards.
         var counts = R.Get(
                 ComponentPosition.ByStage,
                 ProjectService.Instance.GameObjects.ShownStage(R)
             )
+            .Where(s => s.Container is not InBox)
             .Select(R.GetComponent)
             .Where(c =>
                 !(

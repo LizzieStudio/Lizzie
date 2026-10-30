@@ -27,15 +27,6 @@ public abstract record StagedAtom : Atom
     /// The stage this atom was written in or read from.
     /// </summary>
     public Ref<Stage> StageRef { get; init; }
-
-    /// <summary>
-    /// A tombstone. When true, this stage hides the atom the previous stages show.
-    /// </summary>
-    /// <remarks>
-    /// This is a deletion. As in, this atom shouldn't exist in this stage anymore.
-    /// To reset a staged atom to the parent stage, use <see cref="Unset"/>.
-    /// </remarks>
-    public bool Removed { get; init; }
 }
 
 /// <summary>

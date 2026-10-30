@@ -263,11 +263,10 @@ public static class AtomReaderExtensions
         && R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
 
     /// <summary>
-    /// Whether <paramref name="c"/> is out of sight in a container.
+    /// Whether <paramref name="c"/> is out of sight due to its container.
     /// </summary>
-    /// <remarks>
-    /// As of writing this, only bags do this.
-    /// </remarks>
     public static bool IsHidden(this IAtomReader R, ComponentPosition c) =>
-        c.Container is InComponent && !R.IsInDeck(c);
+        c.Container is InBox
+        || c.Container is InComponent { Component: var holder }
+            && (!R.IsInDeck(c) || R.IsHidden(R.Get(ComponentPosition.ById, c.In(holder))));
 }

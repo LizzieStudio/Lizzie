@@ -299,6 +299,9 @@ public partial class GameObjects : Node3D, ICommandView
 
     public ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this, ShownStage(R));
 
+    public bool CanSelect(IAtomReader R, IAtomRef target) =>
+        R.Get(target) is ComponentPosition c && !R.IsHidden(c);
+
     public IEnumerable<IAtomRef> Hovered() =>
         CursorMode is CursorMode.DragSelect or CursorMode.Spawn
         || GetHoveredObject() is not { } hovered
