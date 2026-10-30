@@ -110,35 +110,29 @@ public partial class CommandButton : Button
             return;
 
         var context = CommandContext.Of(CommandViews.Of(this), R);
-        var targets = GetTargets(context, R);
-        Disabled = !Command.Fits(targets.Count) || !Command.IsAvailable(R);
+        var (command, targets, blocked) = CommandResolver.Resolve(Command, context, R, menu: true);
+        Disabled = !command.Fits(targets.Count) || !command.IsAvailable(R);
         if (ShowIcon)
-            Icon = IconOf(Command);
-        if (_sizedFor != Command)
-            ReserveWidth();
+            Icon = IconOf(command);
+        if (_sizedFor != command)
+            ReserveWidth(command);
 
-        var label = Command.Label(targets.Count);
+        var label = command.Label(targets.Count);
         if (ShowCaption)
             Text = label;
 
         // The key shows even while it's disabled, so it doesn't come and go with the selection.
         // The caption is only needed when the button doesn't show it.
         // The command's own tooltip, and why it's disabled, go below on their own lines.
-        var key = Command.ShortcutLabel()?.GetAsText();
+        var key = command.ShortcutLabel()?.GetAsText();
         var heading =
             ShowCaption ? key
             : key == null ? label
             : $"{label} ({key})";
-        var reason = Disabled
-            ? Command.DisabledReason(
-                R,
-                targets.Count,
-                CommandResolver.BlockedFor(Command, context, R, menu: true)
-            )
-            : null;
+        var reason = Disabled ? command.DisabledReason(R, targets.Count, blocked) : null;
         TooltipText = string.Join(
             "\n",
-            new[] { heading, Command.TooltipWith(reason) }.Where(s => s != null)
+            new[] { heading, command.TooltipWith(reason) }.Where(s => s != null)
         );
     }
 
@@ -146,13 +140,13 @@ public partial class CommandButton : Button
     /// Makes it wide enough for a count of up to two digits,
     /// so the layout (usually) doesn't move as the count changes.
     /// </summary>
-    private void ReserveWidth()
+    private void ReserveWidth(Command command)
     {
-        _sizedFor = Command;
-        if (!ShowCaption || !Command.Caption.Contains("{0}"))
+        _sizedFor = command;
+        if (!ShowCaption || !command.Caption.Contains("{0}"))
             return;
 
-        Text = Command.Label(88);
+        Text = command.Label(88);
         CustomMinimumSize = CustomMinimumSize with { X = GetMinimumSize().X };
     }
 
@@ -161,14 +155,14 @@ public partial class CommandButton : Button
         if (Command == null)
             return;
         var view = CommandViews.Of(this);
-        Command.Run(GetTargets(CommandContext.Of(view, Atoms.R), Atoms.R), view);
+        var (command, targets, _) = CommandResolver.Resolve(
+            Command,
+            CommandContext.Of(view, Atoms.R),
+            Atoms.R,
+            menu: true
+        );
+        command.Run(targets, view);
     }
-
-    /// <summary>
-    /// What commands would act on in the context, as its context menu would.
-    /// </summary>
-    private List<IAtomRef> GetTargets(CommandContext context, IAtomReader R) =>
-        CommandResolver.TargetsFor(Command, context, R, menu: true);
 
     // A view's own commands are only known once the button is in it.
     private Command Named(string name) =>
@@ -208,7 +202,7 @@ public partial class CommandButton : Button
     // Set up its placeholder for the Godot Editor.
     private void Preview()
     {
-        var command = Command;
+        var command = Command is FirstOfCommand first ? first.Members[0] : Command;
         if (ShowCaption)
             Text = command?.Label(99) ?? "";
         if (ShowIcon)

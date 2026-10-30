@@ -278,6 +278,8 @@ public partial class BlueprintManager : Window, ICommandView
         // A stage can't build on itself.
         if (Stage.Chain(Atoms.R, parent).Any(s => s.Id == moved.Id))
             return null;
+        if (Atoms.R.Get(Stage.ById, parent) is { IsTable: true })
+            return null;
 
         var others = under.GetChildren().Where(c => c != row).ToList();
         int index = section switch

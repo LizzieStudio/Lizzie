@@ -66,6 +66,23 @@ public sealed record Stage : Atom, IRanked
     }
 
     /// <summary>
+    /// Gets a new empty blueprint, last under <paramref name="parent"/>.
+    /// A root is named "Blueprint N", and one under a "Parent" is named "Parent-N".
+    /// </summary>
+    public static Stage NewBlueprint(IAtomReader R, Ref<Stage> parent)
+    {
+        var siblings = R.Get(Children, parent);
+        int n = siblings.Count(s => !s.IsTable) + 1;
+        return new()
+        {
+            Id = Ref<Stage>.Create(),
+            Name = R.Get(ById, parent) is { } p ? $"{p.Name}-{n}" : $"Blueprint {n}",
+            ParentRef = parent,
+            Rank = SnowRank.At(siblings, siblings.Count),
+        };
+    }
+
+    /// <summary>
     /// "Table N", numbered one past the highest "Table N" anywhere in the tree.
     /// </summary>
     public static string NextTableName(IAtomReader R)

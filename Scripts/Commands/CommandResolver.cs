@@ -44,11 +44,9 @@ public static class CommandResolver
                     items.Add((command, [], []));
                 continue;
             }
-            // A global command applies to no target, so it fits with none and always shows.
-            var targets = TargetsFor(command, context, Atoms.R, menu: true);
-            var blocked = BlockedFor(command, context, Atoms.R, menu: true);
-            if (all || command.Fits(targets.Count) || targets.Count > 0 || blocked.Count > 0)
-                items.Add((command, targets, blocked));
+            var item = Resolve(command, context, Atoms.R, menu: true);
+            if (all || ShouldShowInMenu(item))
+                items.Add(item);
         }
         if (items.Count > 0 && items[^1].Command == Command.Divider)
             items.RemoveAt(items.Count - 1);
@@ -68,7 +66,7 @@ public static class CommandResolver
         var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
         if (ready.Count == 1)
         {
-            var (command, targets) = ready[0];
+            var (command, targets, _) = ready[0];
             if (command is IChoiceCommand choice)
             {
                 // A number key picks that choice, when there is one.
@@ -99,12 +97,39 @@ public static class CommandResolver
     /// Every command that keyboard shortcuts could run in <paramref name="context"/>,
     /// with the targets those shortcuts act on.
     /// </summary>
-    private static IEnumerable<(Command Command, List<IAtomRef> Targets)> ForKeys(
-        CommandContext context
-    ) =>
+    private static IEnumerable<(
+        Command Command,
+        List<IAtomRef> Targets,
+        List<string> Blocked
+    )> ForKeys(CommandContext context) =>
         CommandList
             .All.Concat(context.Local)
-            .Select(c => (c, TargetsFor(c, context, Atoms.R, menu: false)));
+            .Select(c => Resolve(c, context, Atoms.R, menu: false));
+
+    /// <summary>
+    /// The command that runs for <paramref name="command"/> in <paramref name="context"/>,
+    /// with what it acts on and why it left out the rest.
+    /// </summary>
+    public static (Command Command, List<IAtomRef> Targets, List<string> Blocked) Resolve(
+        Command command,
+        CommandContext context,
+        IAtomReader R,
+        bool menu
+    )
+    {
+        if (command is not FirstOfCommand first)
+            return (
+                command,
+                TargetsFor(command, context, R, menu),
+                BlockedFor(command, context, R, menu)
+            );
+        var members = first.Members.Select(m => Resolve(m, context, R, menu)).ToList();
+        return members.FirstOrDefault(ShouldShowInMenu, members[0]);
+    }
+
+    private static bool ShouldShowInMenu(
+        (Command Command, List<IAtomRef> Targets, List<string> Blocked) item
+    ) => item.Command.Fits(item.Targets.Count) || item.Targets.Count > 0 || item.Blocked.Count > 0;
 
     /// <summary>
     /// Whether both commands share a keyboard shortcut.
@@ -135,7 +160,7 @@ public static class CommandResolver
     /// <summary>
     /// Lists the reasons why <see cref="TargetsFor"/> rejected atoms, if any.
     /// </summary>
-    public static List<string> BlockedFor(
+    private static List<string> BlockedFor(
         Command command,
         CommandContext context,
         IAtomReader R,

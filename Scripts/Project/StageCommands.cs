@@ -8,54 +8,62 @@ namespace Lizzie;
 /// </summary>
 public static class StageCommands
 {
-    // There's always a current table, so the commands that take a stage out of the tree leave it be.
-    // It comes before the commands, which read it as they're made.
     private static readonly (string, TargetedCommand<Stage>.AppliesToDelegate) NotTheCurrentTable =
         ("Can't remove the current table.", (R, s) => s.Id != R.Get(CurrentTable.Only).StageRef);
 
-    /// <summary>
-    /// Adds an empty blueprint last under the selected one, or at the root when none are selected.
-    /// A root is named "Blueprint N", and one under a "Parent" is named "Parent-N".
-    /// </summary>
-    /// <remarks>
-    /// This is added as a local command in the blueprint manager to avoid it showing up everywhere.
-    /// A command with a <see cref="AtomCommand{T}.MinTargets"/> of 0 would do that by default.
-    /// </remarks>
-    [Command("blueprint.add")]
-    public static readonly Command AddBlueprint = new AtomCommand<Stage>
+    private static readonly (string, TargetedCommand<Stage>.AppliesToDelegate) NotATable = (
+        "You can't add to a table. Select a blueprint.",
+        (R, s) => !s.IsTable
+    );
+
+    [Command("blueprint.add_child")]
+    private static readonly Command AddChildBlueprint = new AtomCommand<Stage>
     {
         Icon = CommandIcons.AddBlueprint,
         Caption = "Add Blueprint",
         Tooltip = "A blueprint is a saved configuration of components.",
-        MinTargets = 0,
         MaxTargets = 1,
-        Effects = (R, parents) =>
-        {
-            var parent = parents.FirstOrDefault();
-            var siblings = R.Get(Stage.Children, parent?.Id ?? Ref<Stage>.Empty);
-            int n = siblings.Count(s => !s.IsTable) + 1;
-            var blueprint = new Stage
-            {
-                Id = Ref<Stage>.Create(),
-                Name = parent == null ? $"Blueprint {n}" : $"{parent.Name}-{n}",
-                ParentRef = parent?.Id ?? Ref<Stage>.Empty,
-                Rank = SnowRank.At(siblings, siblings.Count),
-            };
-            return [blueprint];
-        },
+        Requires = [NotATable],
+        Effects = (R, parents) => [Stage.NewBlueprint(R, parents[0].Id)],
     };
 
-    [Command("table.add")]
-    public static readonly Command AddTable = new AtomCommand<Stage>
+    [Command("blueprint.add_root")]
+    private static readonly Command AddRootBlueprint = new GlobalCommand
+    {
+        Icon = CommandIcons.AddBlueprint,
+        Caption = "Add Blueprint",
+        Tooltip = "A blueprint is a saved configuration of components.",
+        Effects = (R, _) => [Stage.NewBlueprint(R, Ref<Stage>.Empty)],
+    };
+
+    [Command("blueprint.add")]
+    public static readonly Command AddBlueprint = new FirstOfCommand(
+        AddChildBlueprint,
+        AddRootBlueprint
+    );
+
+    [Command("table.add_child")]
+    private static readonly Command AddChildTable = new AtomCommand<Stage>
     {
         Icon = CommandIcons.AddTable,
         Caption = "Add Table",
         Tooltip = "A table is a surface that multiple people can play on.",
-        MinTargets = 0,
         MaxTargets = 1,
-        Effects = (R, parents) =>
-            [Stage.NewTable(R, parents.FirstOrDefault()?.Id ?? Ref<Stage>.Empty)],
+        Requires = [NotATable],
+        Effects = (R, parents) => [Stage.NewTable(R, parents[0].Id)],
     };
+
+    [Command("table.add_root")]
+    private static readonly Command AddRootTable = new GlobalCommand
+    {
+        Icon = CommandIcons.AddTable,
+        Caption = "Add Table",
+        Tooltip = "A table is a surface that multiple people can play on.",
+        Effects = (R, _) => [Stage.NewTable(R, Ref<Stage>.Empty)],
+    };
+
+    [Command("table.add")]
+    public static readonly Command AddTable = new FirstOfCommand(AddChildTable, AddRootTable);
 
     [Command("stage.show")]
     public static readonly Command Show = new AtomCommand<Stage>
@@ -124,9 +132,6 @@ public static class StageCommands
         },
     };
 
-    /// <summary>
-    /// Moves the changes of the selected stage into its parent, then deletes it and moves its children up into its place.
-    /// </summary>
     [Command("blueprint.merge_into_parent")]
     public static readonly Command MergeIntoParent = new AtomCommand<Stage>
     {
@@ -149,10 +154,6 @@ public static class StageCommands
         },
     };
 
-    /// <summary>
-    /// Moves the changes of the selected stage into each of its children, where they don't have their own,
-    /// then deletes it and moves its children up into its place.
-    /// </summary>
     [Command("blueprint.merge_into_children")]
     public static readonly Command MergeIntoChildren = new AtomCommand<Stage>
     {
@@ -176,10 +177,6 @@ public static class StageCommands
         },
     };
 
-    /// <summary>
-    /// Deletes the selected stage, which has no changes, and moves its children up into its place.
-    /// Either merge would do the same.
-    /// </summary>
     [Command("blueprint.dissolve")]
     public static readonly Command Dissolve = new AtomCommand<Stage>
     {

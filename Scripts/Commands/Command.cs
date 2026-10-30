@@ -528,6 +528,29 @@ public sealed class GlobalCommand : Command
     }
 }
 
+/// <summary>
+/// Combines multiple commands into one. The first relevant command is used.
+/// </summary>
+/// <remarks>
+/// Name each member in a private field, so only this one is in <see cref="CommandList.All"/>.
+/// </remarks>
+public sealed class FirstOfCommand(params Command[] members) : Command
+{
+    public IReadOnlyList<Command> Members { get; } = members;
+
+    internal override Type TargetType => Members[0].TargetType;
+
+    public override bool CanActOn(IAtomReader R, IAtomRef target) => throw Unresolved();
+
+    public override bool Fits(int count) => throw Unresolved();
+
+    public override void Run(IReadOnlyList<IAtomRef> targets, ICommandView view) =>
+        throw Unresolved();
+
+    private NotSupportedException Unresolved() =>
+        new($"Resolve {Name.Value} to one of its members with CommandResolver.Resolve first.");
+}
+
 // This is just a sentinel so that we can put dividers in command lists.
 file sealed class DividerCommand : Command
 {
