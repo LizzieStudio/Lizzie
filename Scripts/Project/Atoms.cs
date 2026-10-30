@@ -151,17 +151,17 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// To bundle multiple discrete events into one undo group, use Open, Append, and Close.
     /// </para>
     /// <para>
-    /// Pass the node making the change as <paramref name="from"/>, like <c>Write(this, atom)</c>.
+    /// Pass the node making the change as <paramref name="source"/>, like <c>Write(this, atom)</c>.
     /// </para>
     /// <para>
     /// Commands return their changes from <see cref="AtomCommand{T}.Effects"/> instead.
     /// </para>
     /// </summary>
-    public void Write(Node from, params IEnumerable<IChange> changes)
+    public void Write(Node source, params IEnumerable<IChange> changes)
     {
         var all = changes.ToArray();
         if (all.Length > 0)
-            Submit(TimelineEvent.Now(all, place: PlaceOf(from)));
+            Submit(TimelineEvent.Now(all, place: PlaceOf(source)));
     }
 
     /// <summary>
@@ -170,20 +170,20 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     ///
     /// <inheritdoc cref="Write(Node, IEnumerable{IChange})"/>
     /// </summary>
-    public void Update<T, I>(Node from, Identity<T, I> byId, I id, Func<T, T> change)
+    public void Update<T, I>(Node source, Identity<T, I> byId, I id, Func<T, T> change)
         where T : Atom
         where I : IAtomRef<T>, IComparable<I>
     {
         if (Get(byId, id) is { } atom)
-            Write(from, change(atom));
+            Write(source, change(atom));
     }
 
     /// <summary>
     /// Writes changes as one event made by <paramref name="command"/>, even if there are none,
     /// so the command's listeners hear it.
     /// </summary>
-    public void Write(Node from, CommandName command, params IEnumerable<IChange> changes) =>
-        Submit(TimelineEvent.Now(changes.ToArray(), command, PlaceOf(from)));
+    public void Write(Node source, CommandName command, params IEnumerable<IChange> changes) =>
+        Submit(TimelineEvent.Now(changes.ToArray(), command, PlaceOf(source)));
 
     /// <summary>
     /// Writes changes as one admin event, which belongs to the project rather than a player,
@@ -220,92 +220,78 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// </list>
     /// </para>
     /// </summary>
-    /// <returns>The transition's undo group to be used in Append and Close.</returns>
-    public SnowportId Open(Node source, params IEnumerable<Atom> drafts) =>
+    /// <returns>The transition, for <see cref="Append"/> and <see cref="Close"/>.</returns>
+    public Transition Open(Node source, params IEnumerable<Atom> drafts) =>
         Open(source, null, drafts);
 
     /// <inheritdoc cref="Open(Node, IEnumerable{Atom})"/>
-    public SnowportId Open(Node source, CommandName command, params IEnumerable<Atom> drafts) =>
+    public Transition Open(Node source, CommandName command, params IEnumerable<Atom> drafts) =>
         Open(source, (CommandName?)command, drafts);
 
-    private SnowportId Open(Node from, CommandName? command, IEnumerable<Atom> drafts)
+    private Transition Open(Node source, CommandName? command, IEnumerable<Atom> drafts)
     {
-        var e = TimelineEvent.Now(drafts.ToArray(), command, PlaceOf(from));
-        e.Group = e.Id;
-        e.Writes = Stamped(e.Writes, e.Id);
+        var e = TimelineEvent.Now(drafts.ToArray(), command, PlaceOf(source));
+        var transition = new Transition(e.Id);
+        e.Writes = Stamped(e.Writes, transition);
         Submit(e);
-        return e.Id;
+        return transition;
     }
 
     /// <summary>
     /// Writes drafts as one event in the open <paramref name="transition"/>. Does nothing without drafts.
     /// </summary>
-    public void Append(SnowportId transition, params IEnumerable<Atom> drafts)
+    public void Append(Transition transition, params IEnumerable<Atom> drafts)
     {
         var e = TimelineEvent.Now(Stamped(drafts, transition));
-        if (e.Writes.Length == 0)
-            return;
-        e.Group = transition;
-        Submit(e);
+        if (e.Writes.Length > 0)
+            Submit(e);
     }
 
     /// <summary>
-    /// Writes the last event of <paramref name="transition"/>, which closes it with its result.
+    /// Ends <paramref name="transition"/> with <paramref name="changes"/>, made from <paramref name="source"/>, which is where undo finds it.
     /// The transition's drafts stop counting, so whatever <paramref name="changes"/> leaves out goes back to how it was before the transition.
     /// Without changes it cancels the transition.
     /// </summary>
-    public void Close(SnowportId transition, params IEnumerable<IChange> changes) =>
-        Close(transition, null, changes);
+    public void Close(Node source, Transition transition, params IEnumerable<IChange> changes) =>
+        Close(source, transition, null, changes);
 
-    /// <inheritdoc cref="Close(SnowportId, IEnumerable{IChange})"/>
-    public void Close(SnowportId group, CommandName command, params IEnumerable<IChange> changes) =>
-        Close(group, (CommandName?)command, changes);
+    /// <inheritdoc cref="Close(Node, Transition, IEnumerable{IChange})"/>
+    public void Close(
+        Node source,
+        Transition transition,
+        CommandName command,
+        params IEnumerable<IChange> changes
+    ) => Close(source, transition, (CommandName?)command, changes);
 
-    private void Close(SnowportId group, CommandName? command, IEnumerable<IChange> changes)
+    private void Close(
+        Node source,
+        Transition transition,
+        CommandName? command,
+        IEnumerable<IChange> changes
+    )
     {
-        var all = changes
-            .Select(c => c is Atom atom ? atom with { Transition = SnowportId.Empty } : c)
-            .ToArray();
-        if (group == SnowportId.Empty)
-        {
-            if (all.Length > 0)
-                Submit(TimelineEvent.Now(all, command));
-            return;
-        }
-        if (all.Length == 0)
-        {
-            CancelIfOpen(group);
-            return;
-        }
-        var e = TimelineEvent.Now(all, command);
-        e.Group = group;
-        e.End = GroupEnd.Closed;
+        var e = TimelineEvent.Now(
+            changes
+                .Select(c => c is Atom atom ? atom with { Transition = Transition.None } : c)
+                .ToArray(),
+            command,
+            PlaceOf(source)
+        );
+        e.Ends = transition;
         Submit(e);
     }
 
-    private static Atom[] Stamped(IEnumerable<Atom> drafts, SnowportId transition) =>
+    private static Atom[] Stamped(IEnumerable<Atom> drafts, Transition transition) =>
         drafts.Select(atom => atom with { Transition = transition }).ToArray();
-
-    /// <summary>
-    /// Ends an open <paramref name="group"/> as if it never happened,
-    /// but does nothing to an already closed or canceled group.
-    /// Its events stop counting, so what they wrote goes back, and undo and redo pass over it.
-    /// </summary>
-    public void CancelIfOpen(SnowportId group)
-    {
-        var sync = EventSynchronizer.Instance;
-        if (sync != null && TimelineUndo.IsOpen(sync.Timeline, group))
-            Submit(TimelineEvent.Canceling(group));
-    }
 
     private static void Submit(TimelineEvent e) => EventSynchronizer.Instance?.Submit(e);
 
-    private ViewPlace? PlaceOf(Node from)
+    private ViewPlace? PlaceOf(Node source)
     {
-        if (from != null && CommandViews.Of(from) is { } view)
+        if (source != null && CommandViews.Of(source) is { } view)
             return view.Place(this);
         GD.PushError(
-            $"{from?.Name ?? "A null node"} isn't in a view, so undo can't reach what it wrote."
+            $"{source?.Name ?? "A null node"} isn't in a view, so undo can't reach what it wrote."
         );
         return null;
     }

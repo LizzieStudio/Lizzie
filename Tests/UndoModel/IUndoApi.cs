@@ -16,7 +16,7 @@ public interface IUndoApi
 
     UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope);
 
-    List<SnowportId> OpenGroups(Timeline timeline, byte source);
+    List<Transition> OpenTransitions(Timeline timeline, byte source);
 
     IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e);
 
@@ -37,8 +37,8 @@ public sealed class CurrentUndo : IUndoApi
     public UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope) =>
         TimelineUndo.Redo(timeline, me, scope);
 
-    public List<SnowportId> OpenGroups(Timeline timeline, byte source) =>
-        TimelineUndo.OpenGroups(timeline, source);
+    public List<Transition> OpenTransitions(Timeline timeline, byte source) =>
+        TimelineUndo.OpenTransitions(timeline, source);
 
     public IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e) =>
         TimelineUndo.Changes(timeline, e);

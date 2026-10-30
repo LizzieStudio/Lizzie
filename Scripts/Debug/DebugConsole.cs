@@ -290,7 +290,7 @@ public partial class DebugConsole : Node
             return u.ByRedo ? "Redo" : "Undo";
 
         if (e.Writes.Length == 0 && e.Unsets.Length == 0)
-            return e.End != GroupEnd.None ? e.End.ToString() : "(empty)";
+            return e.Ends != Transition.None ? "Cancel" : "(empty)";
 
         return string.Join(
             ", ",

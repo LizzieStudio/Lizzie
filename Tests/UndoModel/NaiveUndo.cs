@@ -20,23 +20,6 @@ public sealed class NaiveUndo : IUndoApi
     private static IEnumerable<TimelineEvent> NewestFirst(Timeline timeline) =>
         timeline.Values.Reverse();
 
-    /// <summary>
-    /// The events of a unit. A unit is named by its first event: a group's first event names itself
-    /// as the group, and an ungrouped event is a unit of one. Any other id names nothing.
-    /// </summary>
-    private static List<TimelineEvent> Members(Timeline timeline, SnowportId unit)
-    {
-        var first = timeline.Values.FirstOrDefault(e => e.Id == unit);
-        if (first == null || first.Unit != unit)
-            return [];
-        if (first.Group == SnowportId.Empty)
-            return [first];
-        return timeline.Values.Where(e => e.Group == unit).ToList();
-    }
-
-    /// <summary>An event's history entry: an action's unit, or a reversal's own id.</summary>
-    private static SnowportId Entry(TimelineEvent e) => e.Undo == null ? e.Unit : e.Id;
-
     /// <summary>The reversal with this id, if the entry is one. A reversal only reverses something older than itself.</summary>
     private static TimelineEvent ReversalAt(Timeline timeline, SnowportId entry) =>
         timeline.Values.FirstOrDefault(e =>
@@ -48,33 +31,12 @@ public sealed class NaiveUndo : IUndoApi
         (f.Also ?? []).Prepend(f.Reverses);
 
     /// <summary>
-    /// A group is canceled when its newest event cancels it and no event before that closed it.
-    /// </summary>
-    public static bool IsCanceled(Timeline timeline, SnowportId group)
-    {
-        var members = Members(timeline, group);
-        if (members.Count == 0 || members[0].Group != group)
-            return false;
-        var newest = members.MaxBy(e => e.Id);
-        return newest.End == GroupEnd.Canceled
-            && !members.Any(m => m != newest && m.End != GroupEnd.None);
-    }
-
-    /// <summary>
-    /// The events of a canceled group, its cancel included, never happened, so they aren't history.
-    /// Nor did a reversal that comes down to one.
-    /// </summary>
-    private static bool NeverHappened(Timeline timeline, TimelineEvent e) =>
-        IsCanceled(timeline, e.Undo == null ? e.Unit : UnitOf(timeline, e.Id));
-
-    /// <summary>
-    /// An event's history entry is in effect unless it never happened, or a newer reversal, itself in effect, reverses it.
+    /// An event's history entry is in effect unless a newer reversal, itself in effect, reverses it.
     /// </summary>
     private static bool InEffect(Timeline timeline, TimelineEvent e) =>
-        !NeverHappened(timeline, e)
-        && !timeline.Values.Any(reversal =>
+        !timeline.Values.Any(reversal =>
             reversal.Undo != null
-            && Reversed(reversal.Undo).Contains(Entry(e))
+            && Reversed(reversal.Undo).Contains(e.Id)
             && Newer(reversal, e)
             && InEffect(timeline, reversal)
         );
@@ -85,14 +47,14 @@ public sealed class NaiveUndo : IUndoApi
     /// </summary>
     public bool IsUndone(Timeline timeline, TimelineEvent e) => !InEffect(timeline, e);
 
-    /// <summary>The unit an entry comes down to: an action's own, or for a reversal, that of what it reverses.</summary>
-    public static SnowportId UnitOf(Timeline timeline, SnowportId entry) =>
+    /// <summary>The action an entry comes down to: itself, or for a reversal, that of what it reverses.</summary>
+    public static SnowportId ActionOf(Timeline timeline, SnowportId entry) =>
         ReversalAt(timeline, entry) is { } reversal
-            ? UnitOf(timeline, reversal.Undo.Reverses)
+            ? ActionOf(timeline, reversal.Undo.Reverses)
             : entry;
 
     /// <summary>
-    /// Who an entry counts as done by, for the player <paramref name="me"/>: an action by whoever started it,
+    /// Who an entry counts as done by, for the player <paramref name="me"/>: an action by whoever did it,
     /// another player's reversal by them, and the player's own reversal by whoever did what it reverses.
     /// </summary>
     private static byte AuthorOf(Timeline timeline, SnowportId entry, byte me) =>
@@ -101,64 +63,34 @@ public sealed class NaiveUndo : IUndoApi
         : reversal.Id.source;
 
     /// <summary>
-    /// A unit is finished when it's a single ungrouped event, or when its newest event closes it.
-    /// Until then it's a transition in progress.
+    /// An action commits something when it unsets something or writes something that isn't a draft.
+    /// The rest, like a transition in progress or its cancel, is nothing to undo.
     /// </summary>
-    public static bool IsClosed(Timeline timeline, SnowportId unit)
-    {
-        var members = Members(timeline, unit);
-        if (members.Count == 0)
-            return false;
-        if (members[0].Group == SnowportId.Empty)
-            return true;
-        return members.MaxBy(e => e.Id).End != GroupEnd.None;
-    }
+    public static bool Commits(TimelineEvent action) =>
+        action.Unsets.Length > 0 || action.Writes.Any(w => w.Transition == Transition.None);
 
     /// <summary>
-    /// A unit commits something when it's a group, or its event unsets something or writes something that isn't a draft.
-    /// </summary>
-    private static bool Commits(Timeline timeline, SnowportId unit)
-    {
-        var first = Members(timeline, unit)[0];
-        return first.Group != SnowportId.Empty
-            || first.Unsets.Length > 0
-            || first.Writes.Any(w => w.Transition == SnowportId.Empty);
-    }
-
-    /// <summary>Whether the unit's events are in scope, as done by the author.</summary>
-    private static bool InScope(
-        Timeline timeline,
-        SnowportId unit,
-        byte author,
-        TimelineUndo.Scope scope
-    ) => scope(author, Members(timeline, unit));
-
-    /// <summary>
-    /// Whether Undo or Redo may act on the event: it isn't an admin event, the unit its entry
-    /// comes down to is finished and commits something, and it's in scope as done by the entry's author.
+    /// Whether Undo or Redo may act on the event: it isn't an admin event, the action its entry
+    /// comes down to commits something, and it's in scope as done by the entry's author.
     /// </summary>
     private static bool IsCandidate(
         Timeline timeline,
         TimelineEvent e,
         byte me,
         TimelineUndo.Scope scope
-    )
-    {
-        if (e.IsAdmin)
-            return false;
-        var unit = UnitOf(timeline, Entry(e));
-        return IsClosed(timeline, unit)
-            && Commits(timeline, unit)
-            && InScope(timeline, unit, AuthorOf(timeline, Entry(e), me), scope);
-    }
+    ) =>
+        !e.IsAdmin
+        && timeline.TryGetValue(ActionOf(timeline, e.Id), out var action)
+        && Commits(action)
+        && scope(AuthorOf(timeline, e.Id, me), action);
 
     /// <summary>
-    /// The events a reversal may change: those of the unit its entry comes down to, older than the reversal.
+    /// The events a reversal may change: the action its entry comes down to, if it's older than the reversal.
     /// </summary>
     private static IEnumerable<TimelineEvent> CoveredBy(
         Timeline timeline,
         TimelineEvent reversal
-    ) => Members(timeline, UnitOf(timeline, reversal.Id)).Where(m => Newer(reversal, m));
+    ) => timeline.Values.Where(e => e.Id == ActionOf(timeline, reversal.Id) && Newer(reversal, e));
 
     #endregion
 
@@ -175,8 +107,6 @@ public sealed class NaiveUndo : IUndoApi
         bool pastLatestReversals = false;
         foreach (var e in NewestFirst(timeline))
         {
-            if (NeverHappened(timeline, e))
-                continue;
             if (e.Undo is { ByRedo: true } || !IsCandidate(timeline, e, me, scope))
                 continue;
             if (e.Undo != null && e.Id.source == me && !pastLatestReversals)
@@ -195,11 +125,10 @@ public sealed class NaiveUndo : IUndoApi
     /// </summary>
     private static UndoFlag Reverse(Timeline timeline, TimelineEvent e, bool byRedo = false)
     {
-        var entry = Entry(e);
-        var also = ReversalAt(timeline, entry) is { } target
+        var also = ReversalAt(timeline, e.Id) is { } target
             ? timeline
                 .Values.Where(other =>
-                    other.Id != entry
+                    other.Id != e.Id
                     && ReversalAt(timeline, other.Id) != null
                     && Reversed(other.Undo).Contains(target.Undo.Reverses)
                     && InEffect(timeline, other)
@@ -209,7 +138,7 @@ public sealed class NaiveUndo : IUndoApi
             : [];
         return new()
         {
-            Reverses = entry,
+            Reverses = e.Id,
             ByRedo = byRedo,
             Also = also.Length > 0 ? also : null,
         };
@@ -223,7 +152,7 @@ public sealed class NaiveUndo : IUndoApi
     {
         foreach (var e in NewestFirst(timeline))
         {
-            if (NeverHappened(timeline, e) || !IsCandidate(timeline, e, me, scope))
+            if (!IsCandidate(timeline, e, me, scope))
                 continue;
             if (e.Undo == null || e.Id.source != me)
                 return null;
@@ -235,35 +164,33 @@ public sealed class NaiveUndo : IUndoApi
 
     #endregion
 
-    #region Groups and changes
+    #region Transitions and changes
 
-    /// <summary>The groups a player started whose newest event doesn't close them.</summary>
-    public List<SnowportId> OpenGroups(Timeline timeline, byte source) =>
+    /// <summary>
+    /// The transitions a player started that no event has ended. A transition is started by an event
+    /// with a draft of itself.
+    /// </summary>
+    public List<Transition> OpenTransitions(Timeline timeline, byte source) =>
         timeline
-            .Values.Where(e => e.Group != SnowportId.Empty && e.Group.source == source)
-            .GroupBy(e => e.Group)
-            .Where(group => group.MaxBy(e => e.Id).End == GroupEnd.None)
-            .Select(group => group.Key)
+            .Values.Where(e =>
+                e.Id.source == source && e.Writes.Any(w => w.Transition == new Transition(e.Id))
+            )
+            .Select(e => new Transition(e.Id))
+            .Where(transition => !timeline.Values.Any(e => e.Ends == transition))
             .ToList();
 
     /// <summary>
-    /// What a reversal may change is what it covers. An event that ends a group may change the group up to it,
-    /// since how the group ends decides whether it's canceled, and every event with a draft of the group,
-    /// since its drafts stop counting. An event in a group with a cancel may change the group up to it.
+    /// What a reversal may change is what it covers. An event that ends a transition may change itself and
+    /// every event with a draft of the transition, since its drafts stop counting.
     /// Any other event changes only itself.
     /// </summary>
     public IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e)
     {
         if (e.Undo != null)
             return CoveredBy(timeline, e);
-        if (e.Group == SnowportId.Empty)
-            return [e];
-        var upToIt = Members(timeline, e.Group).Where(m => !Newer(m, e)).ToList();
-        if (e.End != GroupEnd.None)
-            return upToIt.Union(
-                timeline.Values.Where(d => d.Writes.Any(w => w.Transition == e.Group))
-            );
-        return upToIt.Any(m => m.End == GroupEnd.Canceled) ? upToIt : [e];
+        if (e.Ends != Transition.None)
+            return timeline.Values.Where(d => d == e || d.Writes.Any(w => w.Transition == e.Ends));
+        return [e];
     }
 
     public IEnumerable<TimelineEvent> InEffect(Timeline timeline) =>
@@ -277,8 +204,8 @@ public sealed class NaiveUndo : IUndoApi
     /// A write counts while it isn't a draft, or its transition hasn't been ended by any event, whatever became of that event.
     /// </summary>
     private static bool Counts(Timeline timeline, Atom write) =>
-        write.Transition == SnowportId.Empty
-        || !timeline.Values.Any(e => e.Group == write.Transition && e.End != GroupEnd.None);
+        write.Transition == Transition.None
+        || !timeline.Values.Any(e => e.Ends == write.Transition);
 
     /// <summary>Whether <paramref name="unset"/> unsets <paramref name="write"/>.</summary>
     private static bool Takes(Unset unset, TestAtom write) =>

@@ -38,9 +38,9 @@ public abstract record Atom : IChange
     public virtual IEnumerable<IAtomRef> Referenced(IAtomReader R) => [];
 
     /// <summary>
-    /// The Transition this value is a draft of, or <see cref="SnowportId.Empty"/>.
+    /// The Transition this value is a draft of, or <see cref="Transition.None"/>.
     /// </summary>
-    public SnowportId Transition { get; init; }
+    public Transition Transition { get; init; }
 }
 
 /// <summary>

@@ -154,10 +154,10 @@ public abstract class UndoModelTests : UndoTestBase
 
     #endregion
 
-    #region Groups
+    #region Transitions
 
     [Fact]
-    public void SameGroupsAreOpen() =>
+    public void SameTransitionsAreOpen() =>
         Sample(
             UndoSessions.All,
             ops =>
@@ -168,23 +168,23 @@ public abstract class UndoModelTests : UndoTestBase
                     (s, op) =>
                     {
                         if (op is Op.Leave leave)
-                            SameOpenGroups(s, leave.Source);
+                            SameOpenTransitions(s, leave.Source);
                     }
                 );
                 foreach (var source in UndoSession.Sources)
-                    SameOpenGroups(session, source);
+                    SameOpenTransitions(session, source);
             }
         );
 
     [Fact]
-    public void UngroupedSessionsHaveNoOpenGroups() =>
+    public void SessionsWithoutTransitionsHaveNoneOpen() =>
         Sample(
-            UndoSessions.Ungrouped,
+            UndoSessions.WithoutTransitions,
             ops =>
             {
                 var session = UndoSession.Play(ops, Expected);
                 foreach (var source in UndoSession.Sources)
-                    SameOpenGroups(session, source);
+                    SameOpenTransitions(session, source);
             }
         );
 
@@ -216,12 +216,12 @@ public abstract class UndoModelTests : UndoTestBase
             s.Describe(Actual.Redo(s.Timeline, me, scope.For(me)))
         );
 
-    private void SameOpenGroups(UndoSession s, byte source) =>
+    private void SameOpenTransitions(UndoSession s, byte source) =>
         Same(
             s,
-            $"Open groups of s{source}",
-            Show(s, Expected.OpenGroups(s.Timeline, source)),
-            Show(s, Actual.OpenGroups(s.Timeline, source))
+            $"Open transitions of s{source}",
+            Show(s, Expected.OpenTransitions(s.Timeline, source)),
+            Show(s, Actual.OpenTransitions(s.Timeline, source))
         );
 
     private void Same<T>(UndoSession session, string question, T expected, T actual)
@@ -232,8 +232,12 @@ public abstract class UndoModelTests : UndoTestBase
             );
     }
 
-    private static string Show(UndoSession s, List<SnowportId> ids) =>
-        ids == null ? "null" : "[" + string.Join(", ", ids.Order().Select(s.Name)) + "]";
+    private static string Show(UndoSession s, List<Transition> transitions) =>
+        transitions == null
+            ? "null"
+            : "["
+                + string.Join(", ", transitions.Select(t => t.Start).Order().Select(s.Name))
+                + "]";
 
     private static string Show(UndoSession s, IEnumerable<TimelineEvent> events) =>
         events == null ? "null" : "[" + string.Join(", ", events.Select(e => s.Name(e.Id))) + "]";

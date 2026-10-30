@@ -43,10 +43,10 @@ public partial class EventSynchronizer : Node
     /// Cancels each transition <paramref name="source"/> left unfinished.
     /// The host calls this when a player leaves, so it's written once.
     /// </summary>
-    public void AbandonGroups(byte source)
+    public void AbandonTransitions(byte source)
     {
-        foreach (var group in TimelineUndo.OpenGroups(Timeline, source))
-            Submit(TimelineEvent.Canceling(group));
+        foreach (var transition in TimelineUndo.OpenTransitions(Timeline, source))
+            Submit(new TimelineEvent { Id = SnowportId.Create(), Ends = transition });
     }
 
     /// <summary>

@@ -72,6 +72,20 @@ public class StagedStoreTests
             }
         );
 
+    /// <summary>Records the first event of a transition, drafting <paramref name="piece"/>, and returns the transition.</summary>
+    private Transition Open(Piece piece)
+    {
+        var transition = new Transition(NextId());
+        Record(
+            new TimelineEvent
+            {
+                Id = transition.Start,
+                Writes = [piece with { Transition = transition }],
+            }
+        );
+        return transition;
+    }
+
     private Piece Value(int stage, int id) => (Piece)_store.Find(Key(stage, id)).Value;
 
     private SnowportId NextId() => new(++_clock, Snowport.HostSource);
@@ -199,15 +213,7 @@ public class StagedStoreTests
     {
         Write(StageOf(1), StageOf(2, parent: 1));
         Write(PieceOf(1, 10, x: 5));
-        var open = NextId();
-        Record(
-            new TimelineEvent
-            {
-                Id = open,
-                Group = open,
-                Writes = [PieceOf(2, 10, x: 7) with { Transition = open }],
-            }
-        );
+        Open(PieceOf(2, 10, x: 7));
         var reset = Record(
             new TimelineEvent
             {
@@ -452,29 +458,14 @@ public class StagedStoreTests
     }
 
     [Fact]
-    public void CancelingAGroupRevealsTheParents()
+    public void CancelingATransitionRevealsTheParents()
     {
         Write(StageOf(1), StageOf(2, parent: 1));
         Write(PieceOf(1, 10, x: 5));
-        var open = NextId();
-        Record(
-            new TimelineEvent
-            {
-                Id = open,
-                Group = open,
-                Writes = [PieceOf(2, 10, x: 7)],
-            }
-        );
+        var open = Open(PieceOf(2, 10, x: 7));
         AssertShows(2, 10, 7);
 
-        Record(
-            new TimelineEvent
-            {
-                Id = NextId(),
-                Group = open,
-                End = GroupEnd.Canceled,
-            }
-        );
+        Record(new TimelineEvent { Id = NextId(), Ends = open });
 
         AssertShows(2, 10, 5);
     }

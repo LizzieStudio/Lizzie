@@ -37,6 +37,24 @@ public class TimelineEventJsonTests
     }
 
     [Fact]
+    public void AnEndKeepsItsTransitionAndADraftItsStamp()
+    {
+        var transition = new Transition(Id(3, 1));
+        var e = new TimelineEvent
+        {
+            Id = Id(5, 1),
+            Ends = transition,
+            Writes = [new Prototype { Id = new(1), Transition = transition }],
+        };
+
+        var back = RoundTrip(e, out var json);
+
+        Assert.Contains($"\"ends\":{(long)transition.Start}", json);
+        Assert.Equal(transition, back.Ends);
+        Assert.Equal(transition, back.Writes[0].Transition);
+    }
+
+    [Fact]
     public void ReversalKeepsItsCommand()
     {
         var e = new TimelineEvent

@@ -11,7 +11,7 @@ namespace Lizzie;
 /// Where the components are lives in their atoms, which every player sees.
 /// A drop target reads them from there, and accepts the drag by closing <see cref="Transition"/> with the drop,
 /// which is all of the drag that's kept.
-/// A drag that ends with its group still open wasn't accepted, and is canceled.
+/// A drag that ends with its transition still open wasn't accepted, and is canceled.
 /// </para>
 /// </summary>
 public sealed partial class HeldDrag : RefCounted
@@ -19,7 +19,7 @@ public sealed partial class HeldDrag : RefCounted
     /// <summary>
     /// The transition, opened by the pickup.
     /// </summary>
-    public SnowportId Transition { get; init; }
+    public Transition Transition { get; init; }
 
     /// <summary>
     /// Every component the transition picked up.

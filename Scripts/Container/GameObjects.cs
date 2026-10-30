@@ -86,7 +86,7 @@ public partial class GameObjects : Node3D, ICommandView
 
     public CursorMode CursorMode { get; private set; }
 
-    // The local player's drag, from its pickup until Godot's drag ends, or null.
+    // The local player's drag, from its pickup until it's dropped or Godot's drag ends, or null.
     private HeldDrag _held;
 
     /// <summary>
@@ -136,8 +136,16 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// Ends a drag with the atoms in <paramref name="drop"/>.
     /// </summary>
-    private static void EndDrag(HeldDrag held, IEnumerable<Atom> drop) =>
-        Atoms.R.Close(held.Transition, DragCommands.Drop, drop.Concat(held.KeptAlongside(Atoms.R)));
+    private void EndDrag(HeldDrag held, IEnumerable<Atom> drop)
+    {
+        Atoms.R.Close(
+            this,
+            held.Transition,
+            DragCommands.Drop,
+            drop.Concat(held.KeptAlongside(Atoms.R))
+        );
+        _held = null;
+    }
 
     /// <summary>
     /// Called after the local player's drag ends to perform state cleanup.
@@ -145,7 +153,7 @@ public partial class GameObjects : Node3D, ICommandView
     private void CleanupDrag()
     {
         if (_held != null)
-            Atoms.R.CancelIfOpen(_held.Transition);
+            Atoms.R.Close(this, _held.Transition);
         _held = null;
         CursorMode = CursorMode.Normal;
         _heldOverHand = false;

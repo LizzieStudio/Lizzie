@@ -32,32 +32,9 @@ public abstract class UndoLawTests : UndoTestBase
         $"{UndoSessions.Print(ending.Ops)}\n  then s{ending.Me} in {ending.Scope}, "
         + $"{ending.Reversals} reversals";
 
-    /// <summary>
-    /// Every event of a transition is undone together, or none is. Reversals no Undo or Redo would write
-    /// are left out, since one can reverse part of a transition.
-    /// </summary>
+    /// <summary>No Undo or Redo lands on an action that commits nothing, like a transition in progress.</summary>
     [Fact]
-    public void GroupsAreAllOrNothing() =>
-        Sample(
-            UndoSessions.WellFormed,
-            ops =>
-            {
-                var session = UndoSession.Play(ops, Actual);
-                var groups = session
-                    .Timeline.Values.Where(e => e.Undo == null && e.Group != SnowportId.Empty)
-                    .GroupBy(e => e.Group);
-                foreach (var group in groups)
-                    if (
-                        group.Select(e => Actual.IsUndone(session.Timeline, e)).Distinct().Count()
-                        > 1
-                    )
-                        Fail(session, $"{session.Name(group.Key)} is partly undone");
-            }
-        );
-
-    /// <summary>No Undo or Redo lands on a transition still in progress.</summary>
-    [Fact]
-    public void ReversalsSkipTransitionsInProgress() =>
+    public void ReversalsNeverLandOnDrafts() =>
         Sample(
             UndoSessions.All,
             ops =>
@@ -68,15 +45,14 @@ public abstract class UndoLawTests : UndoTestBase
                 foreach (var (reversal, flag) in Reversals(session, me, scope))
                     if (
                         flag != null
-                        && !NaiveUndo.IsClosed(
-                            session.Timeline,
-                            NaiveUndo.UnitOf(session.Timeline, flag.Reverses)
+                        && !NaiveUndo.Commits(
+                            session.Timeline[NaiveUndo.ActionOf(session.Timeline, flag.Reverses)]
                         )
                     )
                         Fail(
                             session,
                             $"{reversal} by s{me} in {scope} would {session.Describe(flag)}, "
-                                + "a transition in progress"
+                                + "which commits nothing"
                         );
             }
         );
@@ -96,7 +72,7 @@ public abstract class UndoLawTests : UndoTestBase
                     foreach (var (reversal, flag) in Reversals(session, me, scope))
                         if (
                             flag != null
-                            && NaiveUndo.UnitOf(session.Timeline, flag.Reverses).source != me
+                            && NaiveUndo.ActionOf(session.Timeline, flag.Reverses).source != me
                         )
                             Fail(
                                 session,
@@ -109,7 +85,7 @@ public abstract class UndoLawTests : UndoTestBase
 
     /// <summary>
     /// After a run of Undo reversals, each Redo puts everything back as it was before the matching Undo,
-    /// outside the units the Undos redone so far changed. Inside those, each Redo may also have retired
+    /// outside the actions the Undos redone so far changed. Inside those, each Redo may also have retired
     /// other reversals on the same entry, perhaps made at the same time as its Undo, so what the Undo
     /// reversed comes back whole (<see cref="ReversingAReversalRestoresWhatItReversed"/>).
     /// </summary>
@@ -120,14 +96,16 @@ public abstract class UndoLawTests : UndoTestBase
             ending =>
             {
                 var session = UndoSession.Play(ending.Ops, Actual);
-                var before = new List<(HashSet<SnowportId> State, SnowportId Unit)>();
+                var before = new List<(HashSet<SnowportId> State, SnowportId Action)>();
                 for (int k = 0; k < ending.Reversals; k++)
                 {
                     var state = InEffect(session);
                     var undo = session.Apply(new Op.Reversal(ending.Me, false, ending.Scope));
                     if (undo.Count == 0)
                         break;
-                    before.Add((state, NaiveUndo.UnitOf(session.Timeline, undo[0].Undo.Reverses)));
+                    before.Add(
+                        (state, NaiveUndo.ActionOf(session.Timeline, undo[0].Undo.Reverses))
+                    );
                 }
 
                 var redone = new HashSet<SnowportId>();
@@ -136,12 +114,9 @@ public abstract class UndoLawTests : UndoTestBase
                     int redo = before.Count - k;
                     if (session.Apply(new Op.Reversal(ending.Me, true, ending.Scope)).Count == 0)
                         Fail(session, $"Redo {redo} of {before.Count} did nothing");
-                    var (state, unit) = before[k];
-                    redone.Add(unit);
-                    if (
-                        !Outside(session, InEffect(session), redone)
-                            .SetEquals(Outside(session, state, redone))
-                    )
+                    var (state, action) = before[k];
+                    redone.Add(action);
+                    if (!Outside(InEffect(session), redone).SetEquals(Outside(state, redone)))
                         Fail(
                             session,
                             $"Redo {redo} of {before.Count} didn't put things back as they were "
@@ -177,7 +152,6 @@ public abstract class UndoLawTests : UndoTestBase
                         && target.Undo is { } reversed
                         && reversed.Reverses.CompareTo(target.Id) < 0
                         && session.Timeline.TryGetValue(reversed.Reverses, out var restored)
-                        && (restored.Undo != null || restored.Unit == restored.Id)
                         && Actual.IsUndone(session.Timeline, restored)
                     )
                         Fail(
@@ -235,12 +209,11 @@ public abstract class UndoLawTests : UndoTestBase
             .Select(e => e.Id)
             .ToHashSet();
 
-    /// <summary>The actions of <paramref name="state"/> outside <paramref name="units"/>.</summary>
+    /// <summary>The actions of <paramref name="state"/> outside <paramref name="actions"/>.</summary>
     private static HashSet<SnowportId> Outside(
-        UndoSession session,
         HashSet<SnowportId> state,
-        HashSet<SnowportId> units
-    ) => state.Where(id => !units.Contains(session.Timeline[id].Unit)).ToHashSet();
+        HashSet<SnowportId> actions
+    ) => state.Where(id => !actions.Contains(id)).ToHashSet();
 
     private static void Fail(UndoSession session, string message) =>
         Assert.Fail($"{message}\nlog:\n{session.Dump()}");

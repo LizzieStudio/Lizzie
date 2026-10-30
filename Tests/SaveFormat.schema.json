@@ -1095,10 +1095,7 @@
       },
       "additionalProperties": false
     },
-    "group": true,
-    "end": {
-      "type": "integer"
-    }
+    "ends": true
   },
   "additionalProperties": false,
   "title": "Lizzie save format 1"

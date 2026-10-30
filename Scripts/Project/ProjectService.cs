@@ -279,7 +279,7 @@ public partial class ProjectService : Node
     /// </summary>
     public void AbandonPlayer(byte source)
     {
-        EventSynchronizer.Instance?.AbandonGroups(source);
+        EventSynchronizer.Instance?.AbandonTransitions(source);
         var seating = Atoms.R.Get(Seating.Only);
         Atoms.R.WriteAdmin(
             Atoms.R.UnsetAll(Selection.ByPlayer, source),

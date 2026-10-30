@@ -39,16 +39,18 @@ public enum ScopeKind
 public sealed record TestScope(ScopeKind Kind, int Mask)
 {
     public TimelineUndo.Scope For(byte me) =>
-        (author, events) =>
+        (author, action) =>
             Kind switch
             {
                 ScopeKind.Mine => author == me,
                 ScopeKind.Others => author != me,
                 _ => true,
             }
-            && events.Any(e =>
-                e.Writes.Any(atom => Mask == 0 || atom is TestAtom r && Masked(r.Id))
-                || e.Unsets.Any(unset => Mask == 0 || unset.Key is Ref<TestAtom> id && Masked(id))
+            && (
+                action.Writes.Any(atom => Mask == 0 || atom is TestAtom r && Masked(r.Id))
+                || action.Unsets.Any(unset =>
+                    Mask == 0 || unset.Key is Ref<TestAtom> id && Masked(id)
+                )
             );
 
     private bool Masked(Ref<TestAtom> id) => (Mask & (1 << (id.Tag - 1))) != 0;
@@ -92,7 +94,7 @@ public abstract record Op
 
     /// <summary>
     /// A reversal no Undo or Redo would write, reversing whatever <paramref name="Pick"/> lands on:
-    /// a unit, an event that isn't one, or a missing id.
+    /// an event, or a missing id.
     /// </summary>
     public sealed record RawFlag(byte Source, int Pick, bool ByRedo) : Op;
 
@@ -133,7 +135,7 @@ public sealed class UndoSession
     private readonly IUndoApi _driver;
 
     // each player's open transition
-    private readonly Dictionary<byte, SnowportId> _open = new();
+    private readonly Dictionary<byte, Transition> _open = new();
 
     // Events take even clock values, so late events can take the odd ones between.
     private long _clock;
@@ -188,32 +190,12 @@ public sealed class UndoSession
                 break;
 
             case Op.Transition g:
-                CancelOpen(g.Source);
-                var head = NextId(g.Source);
-                Record(new TimelineEvent { Id = head, Group = head }, g.Atom);
-                for (int i = 0; i < g.Moves; i++)
-                    Record(new TimelineEvent { Id = NextId(g.Source), Group = head }, g.Atom);
-                Record(
-                    new TimelineEvent
-                    {
-                        Id = NextId(g.Source),
-                        Group = head,
-                        End = GroupEnd.Closed,
-                    },
-                    g.Atom
-                );
+                var head = Start(g.Source, g.Atom, g.Moves);
+                Record(new TimelineEvent { Id = NextId(g.Source), Ends = head }, g.Atom);
                 break;
 
             case Op.CanceledTransition c:
-                CancelOpen(c.Source);
-                var canceledHead = NextId(c.Source);
-                Record(new TimelineEvent { Id = canceledHead, Group = canceledHead }, c.Atom);
-                for (int i = 0; i < c.Moves; i++)
-                    Record(
-                        new TimelineEvent { Id = NextId(c.Source), Group = canceledHead },
-                        c.Atom
-                    );
-                Record(CancelOnly(canceledHead, c.Source));
+                Record(CancelOnly(Start(c.Source, c.Atom, c.Moves), c.Source));
                 break;
 
             case Op.Cancel c when _open.Remove(c.Source, out var canceled):
@@ -221,26 +203,15 @@ public sealed class UndoSession
                 break;
 
             case Op.Start s:
-                CancelOpen(s.Source);
-                var first = NextId(s.Source);
-                Record(new TimelineEvent { Id = first, Group = first }, s.Atom);
-                _open[s.Source] = first;
+                _open[s.Source] = Start(s.Source, s.Atom, 0);
                 break;
 
             case Op.End { Atom: 0 } e when _open.Remove(e.Source, out var canceledByEnd):
                 Record(CancelOnly(canceledByEnd, e.Source));
                 break;
 
-            case Op.End e when _open.Remove(e.Source, out var group):
-                Record(
-                    new TimelineEvent
-                    {
-                        Id = NextId(e.Source),
-                        Group = group,
-                        End = GroupEnd.Closed,
-                    },
-                    e.Atom
-                );
+            case Op.End e when _open.Remove(e.Source, out var ended):
+                Record(new TimelineEvent { Id = NextId(e.Source), Ends = ended }, e.Atom);
                 break;
 
             case Op.Reversal p:
@@ -277,19 +248,17 @@ public sealed class UndoSession
                 break;
 
             case Op.Leave l when l.Source != Host:
-                foreach (var open in _driver.OpenGroups(Timeline, l.Source))
+                foreach (var open in _driver.OpenTransitions(Timeline, l.Source))
                     Record(CancelOnly(open, Host));
                 _open.Remove(l.Source);
                 break;
 
             case Op.RawFlag r when Timeline.Count > 0:
                 var picked = Timeline.GetAt(r.Pick / 4 % Timeline.Count).Value;
-                var reverses = (r.Pick % 4) switch
-                {
-                    0 => picked.Id,
-                    1 => Id(_clock + 1, 7), // never used: sources are 0 to 4
-                    _ => picked.Unit,
-                };
+                var reverses =
+                    r.Pick % 4 == 1
+                        ? Id(_clock + 1, 7) // never used: sources are 0 to 4
+                        : picked.Id;
                 Record(
                     new TimelineEvent
                     {
@@ -316,17 +285,27 @@ public sealed class UndoSession
 
     private void CancelOpen(byte source)
     {
-        if (_open.Remove(source, out var group))
-            Record(CancelOnly(group, source));
+        if (_open.Remove(source, out var open))
+            Record(CancelOnly(open, source));
     }
 
-    private TimelineEvent CancelOnly(SnowportId group, byte source) =>
-        new()
-        {
-            Id = NextId(source),
-            Group = group,
-            End = GroupEnd.Canceled,
-        };
+    /// <summary>
+    /// Records a transition's first event and <paramref name="moves"/> more, all drafting <paramref name="atom"/>,
+    /// after canceling one the player left open.
+    /// </summary>
+    private Transition Start(byte source, int atom, int moves)
+    {
+        CancelOpen(source);
+        var first = NextId(source);
+        var transition = new Transition(first);
+        Record(new TimelineEvent { Id = first }, atom, drafting: transition);
+        for (int i = 0; i < moves; i++)
+            Record(new TimelineEvent { Id = NextId(source) }, atom, drafting: transition);
+        return transition;
+    }
+
+    private TimelineEvent CancelOnly(Transition transition, byte source) =>
+        new() { Id = NextId(source), Ends = transition };
 
     private SnowportId NextId(byte source)
     {
@@ -340,10 +319,17 @@ public sealed class UndoSession
     public event Action<TimelineEvent> Recorded;
 
     /// <summary>
-    /// Records the event in id order, with the given atoms and values written.
+    /// Records the event in id order, with the given atoms and values written,
+    /// as drafts of <paramref name="drafting"/> if given.
     /// Every write gets a unique face or value, so the one that wins can be told apart.
     /// </summary>
-    private void Record(TimelineEvent e, int first = 0, int second = 0, int values = 0)
+    private void Record(
+        TimelineEvent e,
+        int first = 0,
+        int second = 0,
+        int values = 0,
+        Transition drafting = default
+    )
     {
         var atoms = new List<Atom>();
         foreach (var atom in new[] { first, second }.Where(r => r != 0))
@@ -352,7 +338,7 @@ public sealed class UndoSession
                 {
                     Id = new(atom),
                     Face = (int)(long)e.Id * 10 + atoms.Count,
-                    Transition = DraftOf(e, new(atom)),
+                    Transition = drafting != Transition.None ? drafting : DraftOf(e, new(atom)),
                 }
             );
         for (int i = 0; i < values; i++)
@@ -369,20 +355,20 @@ public sealed class UndoSession
     }
 
     /// <summary>
-    /// The transition a write of <paramref name="atom"/> in <paramref name="e"/> is a draft of, as the game stamps it:
-    /// a transition's events draft for it, the event that ends it commits,
+    /// The transition a write of <paramref name="atom"/> in <paramref name="e"/> is a draft of, as the game stamps it
+    /// outside a transition's own events: the event that ends one commits,
     /// and any other write is made from what the atom held before it, keeping its stamp.
     /// </summary>
-    private SnowportId DraftOf(TimelineEvent e, Ref<TestAtom> atom)
+    private Transition DraftOf(TimelineEvent e, Ref<TestAtom> atom)
     {
-        if (e.Group != SnowportId.Empty)
-            return e.End == GroupEnd.None ? e.Group : SnowportId.Empty;
+        if (e.Ends != Transition.None)
+            return Transition.None;
 
         var before = new Timeline();
         foreach (var (key, earlier) in Timeline)
             if (key.CompareTo(e.Id) < 0)
                 before.Add(key, earlier);
-        return NaiveUndo.Holds(before, atom)?.Transition ?? SnowportId.Empty;
+        return NaiveUndo.Holds(before, atom)?.Transition ?? Transition.None;
     }
 
     #region Descriptions for failures
@@ -404,8 +390,8 @@ public sealed class UndoSession
     /// <summary>A write of an atom, with its face and the transition it's a draft of.</summary>
     public string Describe(TestAtom r) =>
         r == null ? "nothing"
-        : r.Transition == SnowportId.Empty ? $"r{r.Id}={r.Face}"
-        : $"r{r.Id}={r.Face} draft of {Name(r.Transition)}";
+        : r.Transition == Transition.None ? $"r{r.Id}={r.Face}"
+        : $"r{r.Id}={r.Face} draft of {Name(r.Transition.Start)}";
 
     /// <summary>The timeline, one event per line, oldest first.</summary>
     public string Dump() =>
@@ -413,11 +399,7 @@ public sealed class UndoSession
             "\n",
             Timeline.Values.Select(e =>
             {
-                string group = e.Group == SnowportId.Empty ? "" : $" in {Name(e.Group)}";
-                string close =
-                    e.End == GroupEnd.Canceled ? " cancel"
-                    : e.End == GroupEnd.Closed ? " close"
-                    : "";
+                string end = e.Ends == Transition.None ? "" : $" ends {Name(e.Ends.Start)}";
                 string what = e.Undo is { } f
                     ? Describe(f)
                     : string.Join(
@@ -436,7 +418,7 @@ public sealed class UndoSession
                                 )
                             )
                     );
-                return $"  {Name(e.Id)} s{e.Id.source}{group}{close}: {what}";
+                return $"  {Name(e.Id)} s{e.Id.source}{end}: {what}";
             })
         );
 
@@ -530,21 +512,6 @@ public static class UndoSessions
         (s, redo, scope, back, after) => (Op)new Op.Concurrent(s, redo, scope, back, after)
     );
 
-    /// <summary>Sessions with everything players can do.</summary>
-    public static readonly Gen<Op[]> WellFormed = Gen.Frequency(
-        (30, Acts),
-        (5, Transitions),
-        (10, Starts),
-        (10, Ends),
-        (4, Cancels),
-        (3, CanceledTransitions),
-        (30, Reversals),
-        (10, Concurrents),
-        (3, Leaves),
-        (6, Resets),
-        (7, Lates)
-    ).Array[0, 30];
-
     /// <summary>Sessions with everything players can do, and reversals no Undo or Redo would write.</summary>
     public static readonly Gen<Op[]> All = Gen.Frequency(
         (30, Acts),
@@ -605,7 +572,7 @@ public static class UndoSessions
     ).Array[0, 30];
 
     /// <summary>Sessions without transitions.</summary>
-    public static readonly Gen<Op[]> Ungrouped = Gen.Frequency(
+    public static readonly Gen<Op[]> WithoutTransitions = Gen.Frequency(
         (30, Acts),
         (30, Reversals),
         (7, Lates)

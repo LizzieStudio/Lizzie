@@ -15,9 +15,9 @@ public class UndoScenarioTests
     private const byte Me = 1;
     private const byte Other = 2;
 
-    private static bool Mine(byte author, IReadOnlyList<TimelineEvent> _) => author == Me;
+    private static bool Mine(byte author, TimelineEvent _) => author == Me;
 
-    private static bool Others(byte author, IReadOnlyList<TimelineEvent> _) => author != Me;
+    private static bool Others(byte author, TimelineEvent _) => author != Me;
 
     private static readonly ViewPlace Here = new("here", null);
     private static readonly ViewPlace There = new("there", null);
@@ -28,17 +28,14 @@ public class UndoScenarioTests
     private SnowportId NextId(byte source) => new(++_clock, source);
 
     /// <summary>
-    /// Records an action that writes <paramref name="atom"/>, in <paramref name="group"/> if given,
-    /// and closing it if <paramref name="close"/>, made in <paramref name="place"/> if given.
+    /// Records an action that writes <paramref name="atom"/>, made in <paramref name="place"/> if given.
     /// The write is a draft of <paramref name="transition"/> if given, as one made from a draft is.
     /// </summary>
     private SnowportId Act(
         byte source,
         int atom = 1,
-        SnowportId group = default,
-        bool close = false,
         ViewPlace? place = null,
-        SnowportId transition = default
+        Transition transition = default
     )
     {
         var id = NextId(source);
@@ -47,8 +44,6 @@ public class UndoScenarioTests
             new TimelineEvent
             {
                 Id = id,
-                Group = group,
-                End = close ? GroupEnd.Closed : GroupEnd.None,
                 Place = place,
                 Writes = [new Prototype { Id = new(atom), Transition = transition }],
             }
@@ -56,31 +51,33 @@ public class UndoScenarioTests
         return id;
     }
 
-    /// <summary>Records an event that only closes <paramref name="group"/>.</summary>
-    private void CloseGroup(SnowportId group, byte source)
+    /// <summary>Records the first event of a transition, which drafts <paramref name="atom"/>.</summary>
+    private Transition Start(byte source, int atom = 1, ViewPlace? place = null)
     {
-        var id = NextId(source);
-        _timeline.Add(
-            id,
-            new TimelineEvent
-            {
-                Id = id,
-                Group = group,
-                End = GroupEnd.Closed,
-            }
-        );
+        var id = Act(source, atom, place);
+        var transition = new Transition(id);
+        _timeline[id].Writes = [new Prototype { Id = new(atom), Transition = transition }];
+        return transition;
     }
 
-    /// <summary>Records an event that cancels <paramref name="group"/>.</summary>
-    private TimelineEvent CancelGroup(SnowportId group, byte source)
+    /// <summary>Records the event that ends <paramref name="transition"/>, committing <paramref name="atom"/>.</summary>
+    private SnowportId Close(
+        Transition transition,
+        byte source,
+        int atom = 1,
+        ViewPlace? place = null
+    )
+    {
+        var id = Act(source, atom, place);
+        _timeline[id].Ends = transition;
+        return id;
+    }
+
+    /// <summary>Records an event that cancels <paramref name="transition"/>.</summary>
+    private TimelineEvent Cancel(Transition transition, byte source)
     {
         var id = NextId(source);
-        var e = new TimelineEvent
-        {
-            Id = id,
-            Group = group,
-            End = GroupEnd.Canceled,
-        };
+        var e = new TimelineEvent { Id = id, Ends = transition };
         _timeline.Add(id, e);
         return e;
     }
@@ -96,14 +93,6 @@ public class UndoScenarioTests
         };
         _timeline.Add(id, e);
         return e;
-    }
-
-    /// <summary>Records the first action of a group, which names it.</summary>
-    private SnowportId StartGroup(byte source, int atom = 1)
-    {
-        var id = Act(source, atom);
-        _timeline[id].Group = id;
-        return id;
     }
 
     private UndoFlag Undo(TimelineUndo.Scope scope, byte source = Me) =>
@@ -129,8 +118,8 @@ public class UndoScenarioTests
     private SnowportId[] Changes(TimelineEvent e) =>
         TimelineUndo.Changes(_timeline, e).Select(c => c.Id).Order().ToArray();
 
-    /// <summary>The unit a reversal changes, which its chain of reversals comes down to.</summary>
-    private SnowportId Changed(UndoFlag flag) => NaiveUndo.UnitOf(_timeline, flag.Reverses);
+    /// <summary>The action a reversal changes, which its chain of reversals comes down to.</summary>
+    private SnowportId Changed(UndoFlag flag) => NaiveUndo.ActionOf(_timeline, flag.Reverses);
 
     [Fact]
     public void UndoWalksBackThroughOwnActions()
@@ -316,32 +305,30 @@ public class UndoScenarioTests
         Assert.Null(Redo(Mine));
     }
 
+    /// <summary>A transition is nothing to undo until it ends, and then its end is.</summary>
     [Fact]
-    public void GroupUndoesTogether()
+    public void ATransitionIsUndoneByItsEnd()
     {
-        var g = StartGroup(Me, atom: 1);
-        var second = Act(Me, atom: 2, group: g);
-        var third = Act(Me, atom: 3, group: g, close: true);
+        var t = Start(Me, atom: 1);
+        Act(Me, atom: 2, transition: t);
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
 
-        Assert.Equal(g, Changed(Undo(Mine)));
-        Assert.True(IsUndone(g));
-        Assert.True(IsUndone(second));
-        Assert.True(IsUndone(third));
+        var end = Close(t, Me, atom: 1);
+
+        Assert.Equal(end, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
     }
 
     [Fact]
-    public void FlagCoversOnlyOlderEvents()
+    public void AReversalChangesTheActionItComesDownTo()
     {
-        // A transition is flagged while it's still going.
-        var g = StartGroup(Other, atom: 1);
-        var before = Act(Other, atom: 2, group: g);
-        var flag = AddFlag(g, Admin);
-        var after = Act(Other, atom: 3, group: g);
+        var a = Act(Other, atom: 1);
+        Act(Other, atom: 2);
+        var undo = AddFlag(a, Admin);
+        var redo = AddFlag(undo.Id, Admin);
 
-        Assert.True(IsUndone(g));
-        Assert.True(IsUndone(before));
-        Assert.False(IsUndone(after));
-        Assert.Equal([g, before], Changes(flag));
+        Assert.Equal([a], Changes(undo));
+        Assert.Equal([a], Changes(redo));
     }
 
     [Fact]
@@ -404,7 +391,7 @@ public class UndoScenarioTests
     {
         var mine = Act(Me);
         Act(Other);
-        StartGroup(Me, atom: 2); // my drag, still going
+        Start(Me, atom: 2); // my drag, still going
 
         // Neither my undo nor another player's lands on the drag.
         Assert.Equal(mine, Changed(TimelineUndo.Undo(_timeline, Me, Mine)));
@@ -415,36 +402,10 @@ public class UndoScenarioTests
     }
 
     [Fact]
-    public void ClosingEventFinishesTheTransition()
-    {
-        var g = StartGroup(Me, atom: 1);
-        Act(Me, atom: 2, group: g);
-        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
-
-        // Closed by someone else, the transition is still the player's own.
-        CloseGroup(g, Other);
-        Assert.Equal(g, Changed(Undo(Mine)));
-    }
-
-    /// <summary>
-    /// A transition closed by someone else sits in history where it finished,
-    /// so Undo Others reaches it before anything older.
-    /// </summary>
-    [Fact]
-    public void TransitionClosedByAnotherIsUndoneFromWhereItFinished()
-    {
-        var g = StartGroup(Other, atom: 1);
-        Act(Other, atom: 2);
-        CloseGroup(g, Me);
-
-        Assert.Equal(g, Changed(Undo(Others)));
-    }
-
-    [Fact]
     public void FlagOnATransitionInProgressIsPassedOver()
     {
-        var g = StartGroup(Other);
-        AddFlag(g, Admin);
+        var t = Start(Other);
+        AddFlag(t.Start, Admin);
 
         Assert.Null(TimelineUndo.Undo(_timeline, Me, Others));
     }
@@ -454,7 +415,7 @@ public class UndoScenarioTests
     {
         var a = Act(Me);
         Undo(Mine);
-        StartGroup(Me, atom: 2);
+        Start(Me, atom: 2);
 
         Assert.Equal(a, Changed(Redo(Mine)));
     }
@@ -462,45 +423,39 @@ public class UndoScenarioTests
     [Fact]
     public void AbandonedTransitionIsCanceled()
     {
-        var open = StartGroup(Other, atom: 1);
-        Act(Other, atom: 2, group: open);
-        var finished = StartGroup(Other, atom: 3);
-        Act(Other, atom: 4, group: finished, close: true);
-        StartGroup(Me, atom: 5);
+        var open = Start(Other, atom: 1);
+        Act(Other, atom: 2, transition: open);
+        var finished = Start(Other, atom: 3);
+        Close(finished, Other, atom: 4);
+        Start(Me, atom: 5);
 
-        Assert.Equal([open], TimelineUndo.OpenGroups(_timeline, Other));
+        Assert.Equal([open], TimelineUndo.OpenTransitions(_timeline, Other));
 
         // What the host, me here, writes when the player leaves.
-        CancelGroup(open, Me);
+        Cancel(open, Me);
 
-        Assert.Empty(TimelineUndo.OpenGroups(_timeline, Other));
-        Assert.True(IsUndone(open));
-        Assert.False(IsUndone(finished));
+        Assert.Empty(TimelineUndo.OpenTransitions(_timeline, Other));
     }
 
     [Fact]
-    public void CanceledTransitionNeverHappened()
+    public void ACancelChangesWhatItsTransitionDrafted()
     {
-        var g = StartGroup(Me, atom: 1);
-        var move = Act(Me, atom: 2, group: g);
-        Assert.True(TimelineUndo.IsOpen(_timeline, g));
+        var t = Start(Me, atom: 1);
+        var move = Act(Me, atom: 2, transition: t);
+        Assert.Equal([t], TimelineUndo.OpenTransitions(_timeline, Me));
 
-        var cancel = CancelGroup(g, Me);
+        var cancel = Cancel(t, Me);
 
-        Assert.False(TimelineUndo.IsOpen(_timeline, g));
-        Assert.True(IsUndone(g));
-        Assert.True(IsUndone(move));
-        Assert.True(IsUndone(cancel.Id));
-        // What the transition wrote goes back, so its atoms are recomputed.
-        Assert.Equal([g, move, cancel.Id], Changes(cancel));
+        Assert.Empty(TimelineUndo.OpenTransitions(_timeline, Me));
+        // What the transition drafted goes back, so its atoms are recomputed.
+        Assert.Equal([t.Start, move, cancel.Id], Changes(cancel));
     }
 
     [Fact]
     public void UndoPassesOverACanceledTransition()
     {
         var a = Act(Me);
-        var g = StartGroup(Me, atom: 2);
-        CancelGroup(g, Me);
+        Cancel(Start(Me, atom: 2), Me);
 
         Assert.Equal(a, Changed(Undo(Mine)));
         Assert.Null(Undo(Mine));
@@ -512,8 +467,7 @@ public class UndoScenarioTests
     {
         var a = Act(Me);
         Undo(Mine);
-        var g = StartGroup(Me, atom: 2);
-        CancelGroup(g, Me);
+        Cancel(Start(Me, atom: 2), Me);
 
         Assert.Equal(a, Changed(Redo(Mine)));
         Assert.Null(Redo(Mine));
@@ -525,8 +479,7 @@ public class UndoScenarioTests
     {
         var a = Act(Me);
         Undo(Mine);
-        var g = StartGroup(Me, atom: 2);
-        CancelGroup(g, Me);
+        Cancel(Start(Me, atom: 2), Me);
 
         Assert.Null(Undo(Mine));
         Assert.True(IsUndone(a));
@@ -535,41 +488,29 @@ public class UndoScenarioTests
     [Fact]
     public void CancelAfterCloseDoesNothing()
     {
-        var g = StartGroup(Me, atom: 1);
-        Act(Me, atom: 2, group: g, close: true);
-        CancelGroup(g, Me);
+        var t = Start(Me, atom: 1);
+        var end = Close(t, Me, atom: 2);
+        Cancel(t, Me);
 
-        Assert.False(IsUndone(g));
-        Assert.Equal(g, Changed(Undo(Mine)));
-    }
-
-    [Fact]
-    public void CancelKeepsOthersLaterWrites()
-    {
-        var g = StartGroup(Me, atom: 1);
-        var theirs = Act(Other, atom: 1);
-        CancelGroup(g, Me);
-
-        Assert.True(IsUndone(g));
-        Assert.False(IsUndone(theirs));
+        Assert.Equal(end, Changed(Undo(Mine)));
     }
 
     [Fact]
     public void AnEndChangesTheWritesMadeFromItsDrafts()
     {
-        var g = StartGroup(Me, atom: 1);
-        var theirs = Act(Other, atom: 1, transition: g);
-        var close = Act(Me, atom: 1, group: g, close: true);
+        var t = Start(Me, atom: 1);
+        var theirs = Act(Other, atom: 1, transition: t);
+        var close = Close(t, Me, atom: 1);
 
-        Assert.Equal([g, theirs, close], Changes(_timeline[close]));
+        Assert.Equal([t.Start, theirs, close], Changes(_timeline[close]));
     }
 
     [Fact]
     public void AWriteMadeFromADraftIsNotUndoneOnItsOwn()
     {
         var theirs = Act(Other, atom: 2);
-        var g = StartGroup(Me, atom: 1);
-        Act(Other, atom: 1, transition: g);
+        var t = Start(Me, atom: 1);
+        Act(Other, atom: 1, transition: t);
 
         Assert.Equal(theirs, Changed(Undo(Others)));
     }
@@ -737,16 +678,15 @@ public class UndoScenarioTests
         Assert.Null(Undo(UndoScopes.Mine(Me, Here)));
     }
 
-    /// <summary>A transition is undone where it started, though only its first event holds the place.</summary>
+    /// <summary>A transition is undone where it ends, as that's where its end is made.</summary>
     [Fact]
-    public void TransitionIsUndoneWhereItStarted()
+    public void TransitionIsUndoneWhereItEnds()
     {
-        var group = Act(Me, place: Here);
-        _timeline[group].Group = group;
-        Act(Me, atom: 2, group: group, close: true);
+        var t = Start(Me, place: There);
+        var end = Close(t, Me, place: Here);
 
         Assert.Null(Undo(UndoScopes.Mine(Me, There)));
-        Assert.Equal(group, Changed(Undo(UndoScopes.Mine(Me, Here))));
+        Assert.Equal(end, Changed(Undo(UndoScopes.Mine(Me, Here))));
     }
 
     /// <summary>Undo Others passes over another player's selection, but not their other changes.</summary>

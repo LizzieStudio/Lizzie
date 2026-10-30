@@ -34,31 +34,11 @@ public class TimelineEvent
     public UndoFlag Undo { get; set; }
 
     /// <summary>
-    /// The undo group this event belongs to.
-    /// Uses the SnowportId of the first event in the group.
-    /// Uses <see cref="SnowportId.Empty"/> if it belongs to no group.
+    /// The transition this event ends, or <see cref="Transition.None"/>.
+    /// The transition's drafts stop counting, so what this event writes is all of it that's kept.
+    /// Ending it with no writes cancels it.
     /// </summary>
-    public SnowportId Group { get; set; }
-
-    /// <summary>
-    /// How this event ends its <see cref="Group"/>, if it does.
-    /// <list type="bullet">
-    /// <item>Before an event that ends it, the group is "open" and undo/redo ignore it.</item>
-    /// <item>After a <see cref="GroupEnd.Closed"/> event the group is "closed" and undo/redo remove or reapply the whole group together.</item>
-    /// <item>
-    /// A <see cref="GroupEnd.Canceled"/> group is effectively undone, and undo and redo pass over it.
-    /// Only an open group can be canceled: a cancel after the group's close does nothing.
-    /// </item>
-    /// </list>
-    /// </summary>
-    /// <remarks>
-    /// We cancel because using Undo would put a history event for Redo to reverse, which is the wrong UX.
-    /// </remarks>
-    public GroupEnd End { get; set; }
-
-    /// <summary>What an undo of this event targets: its group, or itself.</summary>
-    [JsonIgnore]
-    public SnowportId Unit => Group == SnowportId.Empty ? Id : Group;
+    public Transition Ends { get; set; }
 
     /// <summary>
     /// Whether this is an admin event, which belongs to the project rather than a player.
@@ -109,51 +89,6 @@ public class TimelineEvent
             Command = command,
             Undo = flag,
         };
-
-    /// <summary>
-    /// Creates an event that does nothing but closes <paramref name="group"/>,
-    /// for a transition that ended without its closing event.
-    /// This is only really used as a fallback.
-    /// </summary>
-    public static TimelineEvent Closing(SnowportId group) =>
-        new()
-        {
-            Id = SnowportId.Create(),
-            Group = group,
-            End = GroupEnd.Closed,
-        };
-
-    /// <summary>
-    /// Creates an event that cancels the open <paramref name="group"/>, so it never happened.
-    /// </summary>
-    public static TimelineEvent Canceling(SnowportId group) =>
-        new()
-        {
-            Id = SnowportId.Create(),
-            Group = group,
-            End = GroupEnd.Canceled,
-        };
-}
-
-/// <summary>
-/// How an event ends its undo group, in <see cref="TimelineEvent.End"/>.
-/// </summary>
-public enum GroupEnd
-{
-    /// <summary>
-    /// The default value, which does nothing.
-    /// </summary>
-    None,
-
-    /// <summary>
-    /// It completes its group, which are Undone or Redone together.
-    /// </summary>
-    Closed,
-
-    /// <summary>
-    /// It cancels its open group, making it as if it never happened.
-    /// </summary>
-    Canceled,
 }
 
 /// <summary>
@@ -161,13 +96,12 @@ public enum GroupEnd
 /// <list type="bullet">
 /// <item>another undo/redo, by its Id</item>
 /// <item>a regular event, by its Id</item>
-/// <item>a group of events, by their group id (the id of the first event in the group)</item>
 /// </list>
 /// </summary>
 public class UndoFlag
 {
     /// <summary>
-    /// The id of the event or group that this event reverses.
+    /// The id of the event that this event reverses.
     /// It must be older than this event.
     /// </summary>
     public SnowportId Reverses { get; init; }

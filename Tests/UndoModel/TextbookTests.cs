@@ -31,11 +31,11 @@ public abstract class TextbookTests : UndoTestBase
             switch (op)
             {
                 case Op.Act { Source: me }:
-                    textbook.Change(recorded[0].Unit);
+                    textbook.Change(recorded[0].Id);
                     break;
 
                 case Op.Transition { Source: me }:
-                    textbook.Change(recorded.First(e => e.Id == e.Group).Id);
+                    textbook.Change(recorded[^1].Id);
                     break;
 
                 case Op.Reversal reversal:
@@ -54,9 +54,12 @@ public abstract class TextbookTests : UndoTestBase
 
             var inEffect = session
                 .Timeline.Values.Where(e =>
-                    e.Undo == null && e.Unit.source == me && !Actual.IsUndone(session.Timeline, e)
+                    e.Undo == null
+                    && e.Id.source == me
+                    && NaiveUndo.Commits(e)
+                    && !Actual.IsUndone(session.Timeline, e)
                 )
-                .Select(e => e.Unit)
+                .Select(e => e.Id)
                 .ToHashSet();
             if (!inEffect.SetEquals(textbook.State))
                 Fail(
@@ -69,8 +72,8 @@ public abstract class TextbookTests : UndoTestBase
         }
     }
 
-    private static string Show(UndoSession session, IEnumerable<SnowportId> units) =>
-        string.Join(", ", units.Order().Select(session.Name));
+    private static string Show(UndoSession session, IEnumerable<SnowportId> actions) =>
+        string.Join(", ", actions.Order().Select(session.Name));
 
     private static void Fail(UndoSession session, int step, Op op, string message) =>
         Assert.Fail($"step {step}, {op}: {message}\nlog:\n{session.Dump()}");

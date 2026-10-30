@@ -82,42 +82,33 @@ public class AtomStoreTests
             }
         );
 
-    /// <summary>Records the first event of a transition, drafting <paramref name="atoms"/>, and returns its group.</summary>
-    private SnowportId Open(params ComponentPosition[] atoms)
+    /// <summary>Records the first event of a transition, drafting <paramref name="atoms"/>, and returns the transition.</summary>
+    private Transition Open(params ComponentPosition[] atoms)
     {
-        var group = NextId();
+        var transition = new Transition(NextId());
         Record(
             new TimelineEvent
             {
-                Id = group,
-                Group = group,
-                Writes = atoms.Select(a => a with { Transition = group }).ToArray(),
+                Id = transition.Start,
+                Writes = atoms.Select(a => a with { Transition = transition }).ToArray(),
             }
         );
-        return group;
+        return transition;
     }
 
-    /// <summary>Records the event that closes <paramref name="group"/>, committing <paramref name="atoms"/>.</summary>
-    private TimelineEvent Close(SnowportId group, params ComponentPosition[] atoms) =>
+    /// <summary>Records the event that ends <paramref name="transition"/>, committing <paramref name="atoms"/>.</summary>
+    private TimelineEvent Close(Transition transition, params ComponentPosition[] atoms) =>
         Record(
             new TimelineEvent
             {
                 Id = NextId(),
-                Group = group,
-                End = GroupEnd.Closed,
+                Ends = transition,
                 Writes = atoms,
             }
         );
 
-    private void Cancel(SnowportId group) =>
-        Record(
-            new TimelineEvent
-            {
-                Id = NextId(),
-                Group = group,
-                End = GroupEnd.Canceled,
-            }
-        );
+    private void Cancel(Transition transition) =>
+        Record(new TimelineEvent { Id = NextId(), Ends = transition });
 
     private SnowportId NextId() => new(++_clock, Snowport.HostSource);
 
@@ -312,8 +303,8 @@ public class AtomStoreTests
     public void ClosingATransitionKeepsOnlyWhatTheCloseWrites()
     {
         Write(Component(1, container: 5), Component(2, container: 5));
-        var group = Open(Component(1, container: 6), Component(2, container: 6));
-        Close(group, Component(1, container: 7));
+        var transition = Open(Component(1, container: 6), Component(2, container: 6));
+        Close(transition, Component(1, container: 7));
 
         Assert.Equal(In(7), Value(1)?.Container);
         Assert.Equal(In(5), Value(2)?.Container);
@@ -332,11 +323,11 @@ public class AtomStoreTests
     public void AWriteMadeFromADraftGoesWithItsTransition()
     {
         Write(Component(1, container: 5));
-        var group = Open(Component(1, container: 6));
+        var transition = Open(Component(1, container: 6));
         Write(Value(1) with { X = 10 });
         Assert.Equal(10, Value(1)?.X);
 
-        Cancel(group);
+        Cancel(transition);
 
         Assert.Equal(0, Value(1)?.X);
         Assert.Equal(In(5), Value(1)?.Container);
@@ -346,9 +337,9 @@ public class AtomStoreTests
     public void AWriteMadeFromADraftNeverCountsOnceItsTransitionEnded()
     {
         Write(Component(1, container: 5));
-        var group = Open(Component(1, container: 6));
+        var transition = Open(Component(1, container: 6));
         var made = Value(1) with { X = 10 };
-        Close(group, Component(1, container: 7));
+        Close(transition, Component(1, container: 7));
         Write(made);
 
         Assert.Equal(In(7), Value(1)?.Container);
@@ -359,9 +350,7 @@ public class AtomStoreTests
     public void UndoingATransitionLeavesItsDraftsOut()
     {
         Write(Component(1, container: 5));
-        var group = Open(Component(1, container: 6));
-        Close(group, Component(1, container: 7));
-        Undo(_timeline[group]);
+        Undo(Close(Open(Component(1, container: 6)), Component(1, container: 7)));
 
         Assert.Equal(In(5), Value(1)?.Container);
     }
@@ -370,11 +359,11 @@ public class AtomStoreTests
     public void AnUnsetTakesAnAtomOutOfAnOpenTransition()
     {
         Write(Component(1, container: 5));
-        var group = Open(Component(1, container: 6));
+        var transition = Open(Component(1, container: 6));
         Unset(1);
         Assert.Null(Value(1));
 
-        Cancel(group);
+        Cancel(transition);
 
         Assert.Null(Value(1));
     }
@@ -383,10 +372,10 @@ public class AtomStoreTests
     public void UndoingTheUnsetPutsTheAtomBackInItsTransition()
     {
         Write(Component(1, container: 5));
-        var group = Open(Component(1, container: 6));
+        var transition = Open(Component(1, container: 6));
         Undo(Unset(1));
 
-        Assert.Equal(group, Value(1)?.Transition);
+        Assert.Equal(transition, Value(1)?.Transition);
         Assert.Equal(In(6), Value(1)?.Container);
     }
 
