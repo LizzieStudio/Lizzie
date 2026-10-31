@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
@@ -37,8 +38,9 @@ public readonly record struct StageKey<T>(Ref<Stage> StageRef, Ref<Component> Co
         IComparable<StageKey<T>>
     where T : StagedAtom
 {
+    [JsonIgnore]
+    public bool IsEmpty => StageRef.IsEmpty || ComponentRef.IsEmpty;
+
     public int CompareTo(StageKey<T> other) =>
-        StageRef.CompareTo(other.StageRef) is var c and not 0
-            ? c
-            : ComponentRef.CompareTo(other.ComponentRef);
+        (StageRef, ComponentRef).CompareTo((other.StageRef, other.ComponentRef));
 }

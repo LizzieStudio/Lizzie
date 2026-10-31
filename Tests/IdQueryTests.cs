@@ -47,4 +47,19 @@ public class IdQueryTests
         Assert.False(DataCell.InGrid(R, new CellId(Tag<DataRow>(3), Tag<DataColumn>(2))));
         Assert.False(DataCell.InGrid(R, new CellId(Tag<DataRow>(1), Tag<DataColumn>(3))));
     }
+
+    // A cell nobody wrote has a stand-in, but an empty one must not, or commands would act on a cell in no row.
+    [Fact]
+    public void AnEmptyRefResolvesToNothingEvenWhenItsTypeHasAStandIn()
+    {
+        var R = new ListReader();
+        Assert.True(
+            R.Resolve(new CellId(Tag<DataRow>(1), Tag<DataColumn>(2))) is DataCell,
+            "A cell nobody wrote didn't resolve to its stand-in."
+        );
+        Assert.True(
+            R.Resolve(new CellId(Ref<DataRow>.Empty, Tag<DataColumn>(2))) == null,
+            "A cell with an empty row resolved to a stand-in."
+        );
+    }
 }

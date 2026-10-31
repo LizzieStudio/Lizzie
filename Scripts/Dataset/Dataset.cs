@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace Lizzie;
 
@@ -158,8 +159,9 @@ public readonly record struct CellId(Ref<DataRow> RowRef, Ref<DataColumn> Column
     : IAtomRef<DataCell>,
         IComparable<CellId>
 {
+    [JsonIgnore]
+    public bool IsEmpty => RowRef.IsEmpty || ColumnRef.IsEmpty;
+
     public int CompareTo(CellId other) =>
-        RowRef.CompareTo(other.RowRef) is var c and not 0
-            ? c
-            : ColumnRef.CompareTo(other.ColumnRef);
+        (RowRef, ColumnRef).CompareTo((other.RowRef, other.ColumnRef));
 }

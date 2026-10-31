@@ -8,7 +8,7 @@ namespace Lizzie.Tests;
 /// <summary>Reads from a fixed list of atoms.</summary>
 public sealed class ListReader(params Atom[] atoms) : IAtomReader
 {
-    public Atom Get(IAtomRef atomRef) => throw new NotSupportedException();
+    public Atom Get(IAtomRef atomRef) => atoms.FirstOrDefault(a => IAtomRef.To(a).Equals(atomRef));
 
     public SnowportId Version(Atom atom) => SnowportId.Empty;
 

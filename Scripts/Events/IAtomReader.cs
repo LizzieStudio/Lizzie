@@ -111,13 +111,13 @@ public static class AtomReaderExtensions
     /// <summary>
     /// The atom <paramref name="atomRef"/> points at,
     /// or what stands in for it before it's written.
-    /// Null if it's missing and its type has no stand-in.
+    /// Null if it's empty, or missing and its type has no stand-in.
     /// </summary>
     /// <remarks>
     /// Commands and relations act on what this gives.
     /// </remarks>
     public static Atom Resolve(this IAtomReader R, IAtomRef atomRef) =>
-        R.Get(atomRef) ?? IdQuery.For(atomRef.AtomType).Unwritten(atomRef);
+        atomRef.IsEmpty ? null : R.Get(atomRef) ?? IdQuery.For(atomRef.AtomType).Unwritten(atomRef);
 
     /// <summary>
     /// The atoms <paramref name="all"/> lists.

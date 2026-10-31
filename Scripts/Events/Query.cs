@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 namespace Lizzie;
 
@@ -198,6 +199,9 @@ public sealed class Singleton<T>() : Identity<T, SingletonId<T>>(_ => default)
 public readonly record struct SingletonId<T> : IAtomRef<T>, IComparable<SingletonId<T>>
     where T : Atom
 {
+    [JsonIgnore]
+    public bool IsEmpty => false;
+
     public int CompareTo(SingletonId<T> other) => 0;
 }
 
