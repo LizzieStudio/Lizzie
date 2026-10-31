@@ -8,6 +8,7 @@ title = "Choose Your Player Position"
 initial_position = 1
 size = Vector2i(370, 317)
 visible = true
+exclusive = false
 ok_button_text = "Confirm"
 script = ExtResource("1_gr3lj")
 

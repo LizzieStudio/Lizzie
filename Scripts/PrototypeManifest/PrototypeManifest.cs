@@ -125,22 +125,7 @@ public partial class PrototypeManifest : Window, ICommandView
         if (_selectedPrototype == null)
             return;
 
-        var dialog = new ConfirmationDialog
-        {
-            Title = "Delete Component",
-            DialogText = $"Delete \"{_selectedPrototype.Name}\"?",
-            OkButtonText = "Delete",
-        };
-
-        dialog.Confirmed += () =>
-        {
-            Atoms.R.Write(this, _selectedPrototype with { Deleted = true });
-            dialog.QueueFree();
-        };
-        dialog.Canceled += dialog.QueueFree;
-
-        AddChild(dialog);
-        dialog.PopupCentered();
+        Atoms.R.Write(this, _selectedPrototype with { Deleted = true });
     }
 
     private void DuplicatePrototype()

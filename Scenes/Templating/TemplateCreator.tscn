@@ -594,4 +594,5 @@ layout_mode = 2
 text = "Cancel"
 
 [node name="ConfirmationDialog" type="ConfirmationDialog" parent="." unique_id=1991483538]
+oversampling_override = 1.0
 initial_position = 2

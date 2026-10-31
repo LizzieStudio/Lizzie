@@ -587,7 +587,7 @@ public partial class TemplateCreator : Window, ICommandView
         _acceptDialog.DialogText =
             $"Are you sure you want to delete element {_selectedElement.ElementName}?";
         _acceptDialog.Confirmed += DeleteCurrentElement;
-        _acceptDialog.Show();
+        _acceptDialog.PopupCentered();
     }
 
     private void DeleteCurrentElement()

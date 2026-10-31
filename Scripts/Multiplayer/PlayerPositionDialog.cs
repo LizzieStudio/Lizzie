@@ -4,7 +4,7 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// Modal dialog that lets the local player pick a seat, or none.
+/// Dialog that lets the local player pick a seat, or none.
 /// Instantiate, add to the scene tree, then call Show().
 /// The dialog frees itself when the player confirms or cancels.
 /// </summary>
@@ -22,7 +22,6 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         OkButtonText = "Confirm";
         CancelButtonText = "Cancel";
         MinSize = new Vector2I(360, 300);
-        Exclusive = true;
 
         _seatList = GetNode<ItemList>("%SeatList");
         _seatList.CustomMinimumSize = new Vector2(340, 180);
