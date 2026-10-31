@@ -149,8 +149,7 @@ public partial class DatasetEditor : Window, ICommandView
     /// </summary>
     public WatchableValue<Ref<Dataset>> ShownDatasetRef { get; } = new();
 
-    public ViewPlace Place(IAtomReader R) =>
-        ViewPlace.Of(this, R.Get(ShownDatasetRef) is var shown && !shown.IsEmpty ? shown : null);
+    public ViewPlace Place(IAtomReader R) => ViewPlace.Of(this, R.Get(ShownDatasetRef));
 
     public bool CanSelect(IAtomReader R, IAtomRef target) =>
         target is CellId cell
