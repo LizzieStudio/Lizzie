@@ -176,8 +176,6 @@ public partial class GameController : Node
 
         component.PrototypeRef = prototype.Id;
         component.Item = item;
-
-        component.TextureFactory = _gameObjects.TextureFactory;
         return component;
     }
 

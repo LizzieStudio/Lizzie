@@ -9,6 +9,16 @@ namespace Lizzie;
 
 public partial class TextureFactory : SubViewport
 {
+    public static TextureFactory Instance { get; private set; }
+
+    public override void _EnterTree() => Instance = this;
+
+    public override void _ExitTree()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
     private IconLibrary _iconLibrary = new();
 
     /// <summary>

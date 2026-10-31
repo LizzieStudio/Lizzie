@@ -307,7 +307,7 @@ public partial class PrintedPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        _preview.Build(GetParams(), TextureFactory);
+        _preview.Build(GetParams());
     }
 
     public override void DisplayPrototype(Prototype prototype)

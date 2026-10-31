@@ -35,11 +35,7 @@ public sealed class FaceSet
     /// Faces come from <see cref="Face(SnowTag)"/>.
     /// </summary>
     /// <param name="source">Reads what the faces show. A face redraws when what it read changes.</param>
-    public static FaceSet Acquire(
-        string key,
-        TextureFactory factory,
-        Func<IAtomReader, Drawing> source
-    ) =>
+    public static FaceSet Acquire(string key, Func<IAtomReader, Drawing> source) =>
         Hold(
             key,
             () =>
@@ -48,11 +44,10 @@ public sealed class FaceSet
                 set._drawing = new FaceDrawing
                 {
                     FaceSet = set,
-                    Factory = factory,
                     Source = source,
                     Token = set._cancel.Token,
                 };
-                factory.Drawings.AddChild(set._drawing);
+                TextureFactory.Instance.Drawings.AddChild(set._drawing);
                 return set;
             }
         );

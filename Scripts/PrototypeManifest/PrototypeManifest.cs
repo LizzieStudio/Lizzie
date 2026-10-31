@@ -276,8 +276,6 @@ public partial class PrototypeManifest : Window, ICommandView
         //update the preview
         _preview.ClearComponent();
 
-        _preview.Build(SelectedPrototype, TextureFactory);
+        _preview.Build(SelectedPrototype);
     }
-
-    public TextureFactory TextureFactory { get; set; }
 }

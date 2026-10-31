@@ -30,12 +30,7 @@ public partial class CardFace : TextureRect
         if (p == null)
             _faces.Clear();
         else
-            _faces.Load(
-                prototype,
-                R.GetComponent(s).Item,
-                ProjectService.Instance.GameObjects.TextureFactory,
-                R
-            );
+            _faces.Load(prototype, R.GetComponent(s).Item, R);
     }
 
     private void ShowFace() => _card.Texture = (_back ? _faces.Back : _faces.Front).Texture;

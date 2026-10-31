@@ -104,7 +104,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        _preview.Build(p, TextureFactory);
+        _preview.Build(p);
     }
 
     public override void DisplayPrototype(Prototype prototype)

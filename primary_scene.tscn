@@ -9,7 +9,6 @@
 [ext_resource type="PackedScene" uid="uid://s4e3sjhq6cm1" path="res://Scenes/Controls/player_hands_panel.tscn" id="8_sly7x"]
 [ext_resource type="PackedScene" uid="uid://g1hurherohq0" path="res://Scenes/Controls/hand_row.tscn" id="9_hand"]
 [ext_resource type="Texture2D" uid="uid://cx5dv08dde75e" path="res://Textures/UI/arrowup16.png" id="10_up"]
-[ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="25_461bj"]
 [ext_resource type="Script" uid="uid://csl5hqjqm38wh" path="res://Scripts/Commands/CommandMenuBar.cs" id="cmd_bar"]
 [ext_resource type="Script" uid="uid://bux026a2v4f2b" path="res://Scripts/Commands/CommandMenuDivider.cs" id="cmd_divider"]
 [ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandMenuItem.cs" id="cmd_item"]
@@ -268,13 +267,6 @@ offset_right = 40.0
 grow_vertical = 0
 horizontal_alignment = 2
 
-[node name="TextureFactory" type="SubViewport" parent="UI" unique_id=1184539869 node_paths=PackedStringArray("Drawings")]
-unique_name_in_owner = true
-handle_input_locally = false
-render_target_update_mode = 4
-script = ExtResource("25_461bj")
-Drawings = NodePath("../../SheetDrawings")
-
 [node name="ModalDialogs" type="Node" parent="UI" unique_id=693207545]
 unique_name_in_owner = true
 
@@ -282,11 +274,8 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 _localPlayerHand = NodePath("../Hand")
 
-[node name="3DSceneNoPhysics" parent="." unique_id=325671090 node_paths=PackedStringArray("_textureFactory", "_handManager") instance=ExtResource("3_6khan")]
-_textureFactory = NodePath("../UI/TextureFactory")
+[node name="3DSceneNoPhysics" parent="." unique_id=325671090 node_paths=PackedStringArray("_handManager") instance=ExtResource("3_6khan")]
 _handManager = NodePath("../UI/Hand")
-
-[node name="SheetDrawings" type="Node" parent="." unique_id=148382881]
 
 [connection signal="pressed" from="UI/Mode/Play2D" to="UI" method="_on_play_2d_pressed"]
 [connection signal="pressed" from="UI/Mode/Play3D" to="UI" method="_on_play_3d_pressed"]

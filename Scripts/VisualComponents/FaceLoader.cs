@@ -39,15 +39,10 @@ public sealed class FaceLoader(Action shown)
     /// Shows <paramref name="item"/> of <paramref name="prototype"/> once its faces load.
     /// A die shows its net on the front.
     /// </summary>
-    public void Load(
-        Prototype prototype,
-        PrototypeItemRef item,
-        TextureFactory factory,
-        IAtomReader R
-    )
+    public void Load(Prototype prototype, PrototypeItemRef item, IAtomReader R)
     {
         Face View(SideParameters side, string key, FaceKey face) =>
-            SideView(side, key, face, prototype, factory, R);
+            SideView(side, key, face, prototype, R);
         switch (prototype.Parameters)
         {
             case PrintedParameters p:
@@ -99,7 +94,6 @@ public sealed class FaceLoader(Action shown)
         string key,
         FaceKey face,
         Prototype prototype,
-        TextureFactory factory,
         IAtomReader R
     )
     {
@@ -114,7 +108,6 @@ public sealed class FaceLoader(Action shown)
                     return FaceSet
                         .Acquire(
                             $"quick:{R.VersionKey(prototype)}:{key}",
-                            factory,
                             _ => QuickTemplate.Drawing(p, quick.Cards())
                         )
                         .Face(row);
@@ -125,7 +118,6 @@ public sealed class FaceLoader(Action shown)
                 return FaceSet
                     .Acquire(
                         $"quick:{R.VersionKey(prototype)}:{key}:{quickFace.SuitRef}:{quickFace.Value}",
-                        factory,
                         _ => QuickTemplate.Drawing(p, [(suit, quickFace.Value)])
                     )
                     .Face(new SnowTag(1));
@@ -137,7 +129,6 @@ public sealed class FaceLoader(Action shown)
                 return FaceSet
                     .Acquire(
                         $"quick:{R.VersionKey(prototype)}:{key}",
-                        factory,
                         _ => DieTemplate.Drawing(die, quick, sides)
                     )
                     .Face(DieTemplate.NetRow);
@@ -160,7 +151,6 @@ public sealed class FaceLoader(Action shown)
                 FaceSet Set(string key, Func<IAtomReader, IEnumerable<DataRow>> rows) =>
                     FaceSet.Acquire(
                         $"tpl:{templateSide.TemplateRef}:{templateSide.DatasetRef}{key}",
-                        factory,
                         R => new Drawing(
                             R.Get(Template.ById, templateSide.TemplateRef),
                             rows(R).ToDictionary(r => r.Id.Tag, R.Values)

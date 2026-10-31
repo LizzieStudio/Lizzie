@@ -324,7 +324,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
             Grid = GetImmutableGridState(),
         };
 
-        _preview.Build(p, TextureFactory);
+        _preview.Build(p);
     }
 
     public override void DisplayPrototype(Prototype prototype)

@@ -27,7 +27,6 @@ public partial class FaceDrawing : Node
     private const float PixelsPerInch = 100;
 
     public FaceSet FaceSet { get; init; }
-    public TextureFactory Factory { get; init; }
 
     /// <summary>
     /// Reads what the faces show. It reruns whenever an atom it read changes.
@@ -113,7 +112,7 @@ public partial class FaceDrawing : Node
             if (wanted.Draw != null)
                 try
                 {
-                    image = await Factory.Render(wanted.Draw(), Token);
+                    image = await TextureFactory.Instance.Render(wanted.Draw(), Token);
                 }
                 catch (Exception e)
                 {

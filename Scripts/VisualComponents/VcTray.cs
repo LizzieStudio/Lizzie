@@ -118,11 +118,7 @@ public partial class VcTray : VisualComponentGroup
         if (_prototype == null)
             return;
 
-        var c = ProjectService.Instance.SpawnDisconnectedVisualComponent(
-            _prototype,
-            _item,
-            TextureFactory
-        );
+        var c = ProjectService.Instance.SpawnDisconnectedVisualComponent(_prototype, _item);
         c.Built += () => c.Position = new Vector3(0, c.YHeight, 0);
         _prototypeSpawnPoint.AddChild(c);
     }

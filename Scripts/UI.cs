@@ -16,8 +16,6 @@ public partial class UI : CanvasLayer
 
     private Label _componentName;
 
-    private TextureFactory _textureFactory;
-
     private DatasetEditor _datasetEditor;
     private PrototypeManifest _prototypeManifest;
     private MultiplayerDialog _multiplayerDialog;
@@ -151,8 +149,6 @@ public partial class UI : CanvasLayer
 
         _componentName = GetNode<Label>("%ComponentName");
 
-        _textureFactory = GetNode<TextureFactory>("%TextureFactory");
-
         _modalDialogs = GetNode("%ModalDialogs");
 
         _handManager = GetNode<HandManager>("%Hand");
@@ -237,7 +233,7 @@ public partial class UI : CanvasLayer
         var popup = GD.Load<PackedScene>(s).Instantiate<ComponentPreviewPopup>();
         _modalDialogs.AddChild(popup);
 
-        popup.ShowComponent(obj.Component, _textureFactory);
+        popup.ShowComponent(obj.Component);
     }
 
     private void RotationStepSelected(long index)
@@ -264,7 +260,6 @@ public partial class UI : CanvasLayer
         _componentDefinition = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
         _modalDialogs.AddChild(_componentDefinition);
 
-        _componentDefinition.SetTextureFactory(_textureFactory);
         _componentDefinition.Initialize(ProjectService.Instance.CurrentProject);
     }
 
@@ -274,8 +269,6 @@ public partial class UI : CanvasLayer
             return;
         var s = "res://Scenes/Prototypes/PrototypeManifest.tscn";
         _prototypeManifest = GD.Load<PackedScene>(s).Instantiate<PrototypeManifest>();
-        _prototypeManifest.TextureFactory = _textureFactory;
-
         _modalDialogs.AddChild(_prototypeManifest);
     }
 
@@ -290,7 +283,6 @@ public partial class UI : CanvasLayer
         {
             string s = "res://Scenes/Templating/TemplateCreator.tscn";
             _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
-            _templateCreator.TextureFactory = _textureFactory;
             _modalDialogs.AddChild(_templateCreator);
         }
         _templateCreator.SetTemplateById(e.TemplateRef);
@@ -510,7 +502,6 @@ public partial class UI : CanvasLayer
         _modalDialogs.AddChild(editPanel);
 
         editPanel.SetEditMode();
-        editPanel.SetTextureFactory(_textureFactory);
         editPanel.Initialize(ProjectService.Instance.CurrentProject);
         editPanel.DisplayPrototype(p);
     }

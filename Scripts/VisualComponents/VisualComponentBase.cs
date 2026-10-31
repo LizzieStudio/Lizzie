@@ -142,7 +142,7 @@ public abstract partial class VisualComponentBase : Area3D
     private void Sync(IWatchReader R)
     {
         var proto = GetPrototype(R);
-        if (proto == null || TextureFactory == null)
+        if (proto == null)
             return;
 
         ComponentName = proto.Name;
@@ -252,8 +252,6 @@ public abstract partial class VisualComponentBase : Area3D
         CommandName? writtenBy,
         long MsecSinceStart
     ) => false;
-
-    public TextureFactory TextureFactory { get; set; }
 
     public virtual string ComponentName { get; set; }
 

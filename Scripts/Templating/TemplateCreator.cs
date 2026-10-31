@@ -925,14 +925,12 @@ public partial class TemplateCreator : Window, ICommandView
         _previewDrawing.Cancel();
         _previewDrawing = new();
         var token = _previewDrawing.Token;
-        var image = await TextureFactory.Render(definition, token);
+        var image = await TextureFactory.Instance.Render(definition, token);
         if (!token.IsCancellationRequested)
             _preview.Texture = ImageTexture.CreateFromImage(image);
     }
 
     public override void _ExitTree() => _previewDrawing.Cancel();
-
-    public TextureFactory TextureFactory { get; set; }
 
     #region Sizes
 

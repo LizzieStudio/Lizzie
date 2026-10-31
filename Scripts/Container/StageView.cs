@@ -11,8 +11,6 @@ namespace Lizzie;
 /// </summary>
 public partial class StageView : Node3D
 {
-    public TextureFactory TextureFactory { get; set; }
-
     /// <summary>
     /// The stage whose components it shows.
     /// </summary>
@@ -122,7 +120,6 @@ public partial class StageView : Node3D
         }
 
         component.ComponentRef = id;
-        component.TextureFactory = TextureFactory;
         AddChild(component);
         _components[id] = component;
         _nodes.Add(component);

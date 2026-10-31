@@ -105,7 +105,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             Color = _colorPicker.Color,
             DispenseRef = _selectedPrototypeRef.Value,
         };
-        _preview.Build(p, TextureFactory);
+        _preview.Build(p);
     }
 
     public override void DisplayPrototype(Prototype prototype)

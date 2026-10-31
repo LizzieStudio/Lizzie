@@ -85,7 +85,7 @@ public partial class DiscPanelDialogResult : ComponentPanelDialogResult
             Color = _colorPicker.Color,
         };
 
-        _preview.Build(p, TextureFactory);
+        _preview.Build(p);
     }
 
     public override void DisplayPrototype(Prototype prototype)

@@ -26,8 +26,6 @@ public partial class ComponentDefinition : Window, ICommandView
     private Button _cancelButton;
     private Button _updateButton;
 
-    private TextureFactory _textureFactory;
-
     public Project CurrentProject { get; set; }
 
     private AcceptDialog _errorDialog;
@@ -71,7 +69,6 @@ public partial class ComponentDefinition : Window, ICommandView
 
             if (ci is ComponentPanelDialogResult cpdr)
             {
-                cpdr.TextureFactory = _textureFactory;
                 cpdr.CurrentProject = CurrentProject;
                 cpdr.SubmittableChanged += ShowSubmittable;
             }
@@ -210,18 +207,6 @@ public partial class ComponentDefinition : Window, ICommandView
             }
         }
         ShowSubmittable();
-    }
-
-    public void SetTextureFactory(TextureFactory tf)
-    {
-        _textureFactory = tf;
-        foreach (var kv in _panelDictionary)
-        {
-            if (kv.Value is ComponentPanelDialogResult cpdr)
-            {
-                cpdr.TextureFactory = tf;
-            }
-        }
     }
 
     private Button CreateButton(string name, Texture2D icon, ButtonGroup bg)

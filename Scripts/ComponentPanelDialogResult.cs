@@ -25,8 +25,6 @@ public abstract partial class ComponentPanelDialogResult : Control
         return 0;
     }
 
-    public TextureFactory TextureFactory { get; set; }
-
     public virtual Project CurrentProject { get; set; }
 
     public virtual void DisplayPrototype(Prototype prototype) { }

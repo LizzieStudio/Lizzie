@@ -113,7 +113,7 @@ public partial class VcPrinted : VisualComponentBase
         Shape = (TokenShape)p.Shape;
 
         BuildToken();
-        _faces.Load(GetPrototype(R), Item, TextureFactory, R);
+        _faces.Load(GetPrototype(R), Item, R);
     }
 
     public static float ThicknessOf(PrintedParameters p) => Math.Max(p.Thickness / 10f, 0.03f);

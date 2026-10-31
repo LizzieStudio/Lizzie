@@ -19,13 +19,13 @@ public partial class ComponentPreviewPopup : Window
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta) { }
 
-    public void ShowComponent(VisualComponentBase component, TextureFactory textureFactory)
+    public void ShowComponent(VisualComponentBase component)
     {
         var prototype = Atoms.R.Get(Prototype.ById, component.PrototypeRef);
         if (prototype == null)
             return;
 
-        _preview.Build(prototype, component.Item, textureFactory);
+        _preview.Build(prototype, component.Item);
         _preview.SpinStop();
         Show();
     }

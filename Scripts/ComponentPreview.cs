@@ -277,12 +277,10 @@ public partial class ComponentPreview : Panel
     /// <summary>
     /// Shows unsaved <paramref name="parameters"/> on the component set with <see cref="SetComponent"/>.
     /// </summary>
-    public void Build(ComponentParameters parameters, TextureFactory textureFactory)
+    public void Build(ComponentParameters parameters)
     {
         if (_component == null)
             return;
-
-        _component.TextureFactory = textureFactory;
 
         var json = JsonSerializer.Serialize(parameters, LizzieJson.EventOptions);
         // A new id for each change keeps the faces from showing an older draft.
@@ -301,20 +299,14 @@ public partial class ComponentPreview : Panel
     /// <summary>
     /// Shows <paramref name="prototype"/>, starting on its first item.
     /// </summary>
-    public void Build(Prototype prototype, TextureFactory textureFactory) =>
-        Spawn(prototype, null, textureFactory);
+    public void Build(Prototype prototype) => Spawn(prototype, null);
 
     /// <summary>
     /// Shows only <paramref name="item"/> of <paramref name="prototype"/>.
     /// </summary>
-    public void Build(Prototype prototype, PrototypeItemRef item, TextureFactory textureFactory) =>
-        Spawn(prototype, [item], textureFactory);
+    public void Build(Prototype prototype, PrototypeItemRef item) => Spawn(prototype, [item]);
 
-    private void Spawn(
-        Prototype prototype,
-        IReadOnlyList<PrototypeItemRef> fixedItems,
-        TextureFactory textureFactory
-    )
+    private void Spawn(Prototype prototype, IReadOnlyList<PrototypeItemRef> fixedItems)
     {
         var s = Utility.ComponentTypeToScenePath(
             prototype.Type,
@@ -324,7 +316,6 @@ public partial class ComponentPreview : Panel
         );
         var c = GD.Load<PackedScene>(s).Instantiate<VisualComponentBase>();
         c.PrototypeRef = prototype.Id;
-        c.TextureFactory = textureFactory;
         _fixedItems = fixedItems;
         _pageControl.CurrentItem = 0;
         SetComponent(c, GetRotationVector(prototype.Type));

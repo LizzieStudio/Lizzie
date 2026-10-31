@@ -220,12 +220,7 @@ public partial class GameObjects : Node3D, ICommandView
 
     private StageView CreateStageView()
     {
-        var view = new StageView
-        {
-            Name = "StageView",
-            TextureFactory = TextureFactory,
-            StageRef = ShownStage(Atoms.R),
-        };
+        var view = new StageView { Name = "StageView", StageRef = ShownStage(Atoms.R) };
         view.Changed += QueueViewUpdate;
         view.ComponentRemoved += OnComponentRemoved;
         AddChild(view);
@@ -773,11 +768,6 @@ public partial class GameObjects : Node3D, ICommandView
             c.Position = new Vector3(p.X, c.YHeight / 2f, p.Z) + delta;
         }
     }
-
-    [Export]
-    private TextureFactory _textureFactory;
-
-    public TextureFactory TextureFactory => _textureFactory;
 
     private void ExitSpawnMode()
     {
