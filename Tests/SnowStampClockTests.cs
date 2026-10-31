@@ -4,20 +4,28 @@ using Xunit;
 
 namespace Lizzie.Tests;
 
-public class SnowportTests
+[Collection(ClockSwaps.Name)]
+public class SnowStampClockTests
 {
     [Fact]
     public void IdsKeepIncreasing()
     {
         // More ids than fit in a millisecond, then time moves on.
         long now = 0;
-        var clock = new Snowport(() => now);
+        SnowStamp.TicksMsec = () => now;
         var ids = new List<SnowStamp>();
-        for (int i = 0; i < 500; i++)
+        try
         {
-            ids.Add(clock.Create());
-            if (i % 100 == 99)
-                now += 1;
+            for (int i = 0; i < 500; i++)
+            {
+                ids.Add(SnowStamp.Create());
+                if (i % 100 == 99)
+                    now += 1;
+            }
+        }
+        finally
+        {
+            TestClock.Use();
         }
 
         int back = ids.Zip(ids.Skip(1)).ToList().FindIndex(p => p.First.CompareTo(p.Second) >= 0);
@@ -30,11 +38,10 @@ public class SnowportTests
     [Fact]
     public void AnIdMadeAfterANewerOneArrivesIsNewer()
     {
-        var clock = new Snowport(() => 0);
-        var remote = new SnowStamp(1_000_000, new Source(2));
+        var remote = new SnowStamp(SnowStamp.Create().LogicClock + 1_000_000, new Source(2));
 
-        clock.Process(remote);
-        var next = clock.Create();
+        SnowStamp.Observe(remote);
+        var next = SnowStamp.Create();
 
         Assert.True(next.CompareTo(remote) > 0, $"After {remote} arrived, the clock made {next}.");
     }

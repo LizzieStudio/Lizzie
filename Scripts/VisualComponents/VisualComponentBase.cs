@@ -186,7 +186,7 @@ public abstract partial class VisualComponentBase : Area3D
             _slide.Kill();
 
         // Only a recent write animates. Anything older jumps into place, to catch up.
-        long age = Snowport.Clock.MsecSince(R.Version(s));
+        long age = R.Version(s).GetAgeMsec();
         var cutoff = ProjectService.Instance.GameObjects.AnimationCutoff;
         var writtenBy = _placed && age <= cutoff ? R.WrittenBy(s) : null;
 

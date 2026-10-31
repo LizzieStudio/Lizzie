@@ -368,7 +368,7 @@ public partial class ProjectService : Node
             return;
 
         foreach (var e in timeline.Values)
-            JsonWalker.Visit<SnowTag>(e, Snowport.Clock.ObserveTag);
+            JsonWalker.Visit<SnowTag>(e, SnowTag.Observe);
     }
 
     /// <summary>

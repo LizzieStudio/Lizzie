@@ -4,17 +4,17 @@ using Xunit;
 namespace Lizzie.Tests;
 
 /// <summary>
-/// Gives the tests a clock that doesn't need the engine, before any test runs.
-/// Its time stands still, so the ids it makes just count up.
+/// Gives the stamps a time that doesn't need the engine, before any test runs.
+/// It stands still, so the stamps made just count up.
 /// </summary>
 internal static class TestClock
 {
     [ModuleInitializer]
-    internal static void Use() => Snowport.Clock = new Snowport(() => 0);
+    internal static void Use() => SnowStamp.TicksMsec = () => 0;
 }
 
 /// <summary>
-/// The tests that set <see cref="Snowport.Clock"/> or <see cref="Source.Me"/>, which run alone, since every other test mints from them.
+/// The tests that set <see cref="SnowStamp.TicksMsec"/> or <see cref="Source.Me"/>, which run alone, since every other test mints with them.
 /// </summary>
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class ClockSwaps

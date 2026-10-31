@@ -37,7 +37,7 @@ public partial class EventSynchronizer : Node
     public void Clear()
     {
         Timeline.Clear();
-        Snowport.Clock = new Snowport();
+        SnowStamp.Restart();
     }
 
     /// <summary>
@@ -158,7 +158,7 @@ public partial class EventSynchronizer : Node
             return;
 
         // Advance the hybrid clock
-        Snowport.Clock.Process(e.Id);
+        SnowStamp.Observe(e.Id);
 
         if (!TryRecord(e))
             return;
