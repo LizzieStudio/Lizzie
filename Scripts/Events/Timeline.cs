@@ -8,4 +8,4 @@ namespace Lizzie.Replication.Machinery;
 /// <remarks>
 /// A project has one timeline. Its <see cref="Stage"/>s branch the project's state, not the timeline.
 /// </remarks>
-public sealed class Timeline : OrderedDictionary<SnowportId, TimelineEvent>;
+public sealed class Timeline : OrderedDictionary<SnowStamp, TimelineEvent>;

@@ -53,7 +53,7 @@ public interface IAtomStore
 /// </summary>
 /// <param name="Value">The newest value written. Null for an atom the store doesn't hold, like an unset one.</param>
 /// <param name="LastUpdate">The event that last wrote the atom.</param>
-public readonly record struct AtomEntry(Atom Value, SnowportId LastUpdate);
+public readonly record struct AtomEntry(Atom Value, SnowStamp LastUpdate);
 
 /// <summary>
 /// The store of <typeparamref name="T"/>, read without knowing the type of its ids.

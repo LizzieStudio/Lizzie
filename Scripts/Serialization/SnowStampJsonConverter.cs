@@ -5,14 +5,14 @@ using Godot;
 
 namespace Lizzie;
 
-public sealed class SnowportIdJsonConverter : JsonConverter<SnowportId>
+public sealed class SnowStampJsonConverter : JsonConverter<SnowStamp>
 {
-    public override void Write(Utf8JsonWriter writer, SnowportId id, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, SnowStamp id, JsonSerializerOptions options)
     {
         writer.WriteNumberValue((long)id);
     }
 
-    public override SnowportId Read(
+    public override SnowStamp Read(
         ref Utf8JsonReader reader,
         Type typeToConvert,
         JsonSerializerOptions options
@@ -20,27 +20,27 @@ public sealed class SnowportIdJsonConverter : JsonConverter<SnowportId>
     {
         if (!reader.TryGetInt64(out var value))
         {
-            GD.PrintErr("SnowportId from json could not be parsed");
-            return SnowportId.Empty;
+            GD.PrintErr("SnowStamp from json could not be parsed");
+            return SnowStamp.Empty;
         }
-        return new SnowportId(value);
+        return new SnowStamp(value);
     }
 
     public override void WriteAsPropertyName(
         Utf8JsonWriter writer,
-        SnowportId id,
+        SnowStamp id,
         JsonSerializerOptions options
     )
     {
         writer.WritePropertyName(id.ToString());
     }
 
-    public override SnowportId ReadAsPropertyName(
+    public override SnowStamp ReadAsPropertyName(
         ref Utf8JsonReader reader,
         Type typeToConvert,
         JsonSerializerOptions options
     )
     {
-        return SnowportId.TryParse(reader.GetString(), out var id) ? id : SnowportId.Empty;
+        return SnowStamp.TryParse(reader.GetString(), out var id) ? id : SnowStamp.Empty;
     }
 }

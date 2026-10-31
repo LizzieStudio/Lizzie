@@ -88,7 +88,7 @@ public class StagedStoreTests
 
     private Piece Value(int stage, int id) => (Piece)_store.Find(Key(stage, id)).Value;
 
-    private SnowportId NextId() => new(++_clock, Snowport.HostSource);
+    private SnowStamp NextId() => new(++_clock, Snowport.HostSource);
 
     private TimelineEvent Record(TimelineEvent e)
     {

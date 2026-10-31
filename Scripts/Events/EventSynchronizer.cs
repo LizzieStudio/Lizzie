@@ -46,7 +46,7 @@ public partial class EventSynchronizer : Node
     public void AbandonTransitions(byte source)
     {
         foreach (var transition in TimelineUndo.OpenTransitions(Timeline, source))
-            Submit(new TimelineEvent { Id = SnowportId.Create(), Ends = transition });
+            Submit(new TimelineEvent { Id = SnowStamp.Create(), Ends = transition });
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public partial class EventSynchronizer : Node
         if (Timeline.ContainsKey(e.Id))
             return false;
 
-        // insert to maintain SnowportId order
+        // insert to maintain SnowStamp order
         // most events arrive in order, so search from the end
         int i = Timeline.Count - 1;
         while (i >= 0 && Timeline.GetAt(i).Key.CompareTo(e.Id) > 0)

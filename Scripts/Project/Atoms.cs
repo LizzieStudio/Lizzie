@@ -41,7 +41,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     {
         /// <summary>Whether the local player made <paramref name="e"/> with this listener's command.</summary>
         public bool ShouldHearEvent(TimelineEvent e) =>
-            e.Command == Name && e.Id.source == Snowport.Clock.source;
+            e.Command == Name && e.Id.Source == Snowport.Clock.source;
     }
 
     public override void _EnterTree()
@@ -430,7 +430,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
 
     public Atom Get(IAtomRef atom) => StoreOf(atom.AtomType).Find(atom).Value;
 
-    public SnowportId Version(Atom atom) =>
+    public SnowStamp Version(Atom atom) =>
         StoreOf(atom.GetType()).Find(IdQuery.For(atom.GetType()).Of(atom)).LastUpdate;
 
     public T Get<T, I>(Identity<T, I> byId, I id)

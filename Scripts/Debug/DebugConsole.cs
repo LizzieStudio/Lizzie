@@ -252,7 +252,7 @@ public partial class DebugConsole : Node
                         if (colored)
                             ImGui.PushStyleColor(ImGuiCol.Text, amber);
 
-                        string line = $"{i, 5}  s{e.Id.source, -3} {Describe(e)}";
+                        string line = $"{i, 5}  s{e.Id.Source, -3} {Describe(e)}";
                         if (e.Undo is { } u)
                         {
                             int target = timeline.IndexOf(u.Reverses);

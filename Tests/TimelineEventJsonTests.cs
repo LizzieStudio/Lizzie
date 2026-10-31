@@ -6,7 +6,7 @@ namespace Lizzie.Tests;
 
 public class TimelineEventJsonTests
 {
-    private static SnowportId Id(long clock, byte source) => new(clock, source);
+    private static SnowStamp Id(long clock, byte source) => new(clock, source);
 
     private static TimelineEvent RoundTrip(TimelineEvent e, out string json)
     {

@@ -105,10 +105,11 @@ public record MyAtom : Atom, IRanked
 }
 ```
 
-To insert a new atom, use `SnowRank.At(atoms, index, SnowportId)`.
+To insert new atoms, use `SnowRank.At(atoms, index, count)`, where count is how many you have to insert.
 
 ```C#
-var last = SnowRank.At(atoms, 5, SnowportId.Create());
+// gets 5 ranks at index 1 of myList
+var ranks = SnowRank.At(myList, 1, 5);
 ```
 
 The advantage of using SnowRank instead of integers is that they're always unique and you don't need to edit the surrounding atoms to insert a new one.

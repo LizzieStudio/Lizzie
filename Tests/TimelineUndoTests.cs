@@ -15,18 +15,14 @@ public class TimelineUndoTests
 
     private const byte Local = 1;
 
-    private static SnowportId GetId(int clock, byte source) => new(clock, source);
+    private static SnowStamp GetId(int clock, byte source) => new(clock, source);
 
-    private static TimelineEvent GetTableEvent(SnowportId id)
+    private static TimelineEvent GetTableEvent(SnowStamp id)
     {
         return new TimelineEvent { Id = id, Writes = [new Prototype { Id = new(1) }] };
     }
 
-    private static TimelineEvent GetUndoRedoEvent(
-        SnowportId id,
-        SnowportId target,
-        bool redo = false
-    )
+    private static TimelineEvent GetUndoRedoEvent(SnowStamp id, SnowStamp target, bool redo = false)
     {
         return new TimelineEvent
         {
@@ -59,7 +55,7 @@ public class TimelineUndoTests
             .Array[0, 20]
             .Sample(p =>
             {
-                var events = new List<SnowportId>();
+                var events = new List<SnowStamp>();
                 int idIndex = 0;
                 var timeline = new Timeline();
                 foreach (var item in p)

@@ -12,7 +12,7 @@ public class SnowportTests
         // More ids than fit in a millisecond, then time moves on.
         long now = 0;
         var clock = new Snowport(Snowport.HostSource, () => now);
-        var ids = new List<SnowportId>();
+        var ids = new List<SnowStamp>();
         for (int i = 0; i < 500; i++)
         {
             ids.Add(clock.Create());
@@ -31,7 +31,7 @@ public class SnowportTests
     public void AnIdMadeAfterANewerOneArrivesIsNewer()
     {
         var clock = new Snowport(Snowport.HostSource, () => 0);
-        var remote = new SnowportId(1_000_000, 2);
+        var remote = new SnowStamp(1_000_000, 2);
 
         clock.Process(remote);
         var next = clock.Create();

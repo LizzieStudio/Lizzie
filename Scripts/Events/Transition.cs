@@ -10,7 +10,7 @@ namespace Lizzie;
 /// </summary>
 /// <param name="Start">The id of the transition's first event.</param>
 [JsonConverter(typeof(Json))]
-public readonly record struct Transition(SnowportId Start)
+public readonly record struct Transition(SnowStamp Start)
 {
     /// <summary>
     /// A placeholder meaning no transition.
@@ -31,6 +31,6 @@ public readonly record struct Transition(SnowportId Start)
             ref Utf8JsonReader reader,
             Type typeToConvert,
             JsonSerializerOptions options
-        ) => new(JsonSerializer.Deserialize<SnowportId>(ref reader, options));
+        ) => new(JsonSerializer.Deserialize<SnowStamp>(ref reader, options));
     }
 }

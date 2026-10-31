@@ -265,7 +265,7 @@ public partial class MultiplayerManager : Node
     }
 
     /// <summary>
-    /// Get the lowest unclaimed source number for a SnowportId and SnowTag.
+    /// Get the lowest unclaimed source number for a SnowStamp and SnowTag.
     /// </summary>
     private byte GetSnowportSource()
     {

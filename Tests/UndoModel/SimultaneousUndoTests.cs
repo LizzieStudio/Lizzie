@@ -53,7 +53,7 @@ public class SimultaneousUndoTests
         AssertLive(session, api, false, "both undos should have taken A away");
 
         var redo = Assert.Single(session.Apply(new Op.Reversal(Me, true, Mine))).Undo;
-        var theirs = session.Timeline.Values.Single(e => e.Id.source == 2).Id;
+        var theirs = session.Timeline.Values.Single(e => e.Id.Source == 2).Id;
         Assert.Equal([theirs], redo.Also);
         AssertLive(session, api, true, "one Redo should bring A back");
     }

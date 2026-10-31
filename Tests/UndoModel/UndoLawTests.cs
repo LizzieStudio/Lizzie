@@ -72,7 +72,7 @@ public abstract class UndoLawTests : UndoTestBase
                     foreach (var (reversal, flag) in Reversals(session, me, scope))
                         if (
                             flag != null
-                            && NaiveUndo.ActionOf(session.Timeline, flag.Reverses).source != me
+                            && NaiveUndo.ActionOf(session.Timeline, flag.Reverses).Source != me
                         )
                             Fail(
                                 session,
@@ -96,7 +96,7 @@ public abstract class UndoLawTests : UndoTestBase
             ending =>
             {
                 var session = UndoSession.Play(ending.Ops, Actual);
-                var before = new List<(HashSet<SnowportId> State, SnowportId Action)>();
+                var before = new List<(HashSet<SnowStamp> State, SnowStamp Action)>();
                 for (int k = 0; k < ending.Reversals; k++)
                 {
                     var state = InEffect(session);
@@ -108,7 +108,7 @@ public abstract class UndoLawTests : UndoTestBase
                     );
                 }
 
-                var redone = new HashSet<SnowportId>();
+                var redone = new HashSet<SnowStamp>();
                 for (int k = before.Count - 1; k >= 0; k--)
                 {
                     int redo = before.Count - k;
@@ -203,16 +203,16 @@ public abstract class UndoLawTests : UndoTestBase
         ];
 
     /// <summary>The actions in effect.</summary>
-    private HashSet<SnowportId> InEffect(UndoSession session) =>
+    private HashSet<SnowStamp> InEffect(UndoSession session) =>
         session
             .Timeline.Values.Where(e => e.Undo == null && !Actual.IsUndone(session.Timeline, e))
             .Select(e => e.Id)
             .ToHashSet();
 
     /// <summary>The actions of <paramref name="state"/> outside <paramref name="actions"/>.</summary>
-    private static HashSet<SnowportId> Outside(
-        HashSet<SnowportId> state,
-        HashSet<SnowportId> actions
+    private static HashSet<SnowStamp> Outside(
+        HashSet<SnowStamp> state,
+        HashSet<SnowStamp> actions
     ) => state.Where(id => !actions.Contains(id)).ToHashSet();
 
     private static void Fail(UndoSession session, string message) =>

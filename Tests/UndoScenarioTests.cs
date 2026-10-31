@@ -25,13 +25,13 @@ public class UndoScenarioTests
     private readonly Timeline _timeline = new();
     private long _clock;
 
-    private SnowportId NextId(byte source) => new(++_clock, source);
+    private SnowStamp NextId(byte source) => new(++_clock, source);
 
     /// <summary>
     /// Records an action that writes <paramref name="atom"/>, made in <paramref name="place"/> if given.
     /// The write is a draft of <paramref name="transition"/> if given, as one made from a draft is.
     /// </summary>
-    private SnowportId Act(
+    private SnowStamp Act(
         byte source,
         int atom = 1,
         ViewPlace? place = null,
@@ -61,7 +61,7 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records the event that ends <paramref name="transition"/>, committing <paramref name="atom"/>.</summary>
-    private SnowportId Close(
+    private SnowStamp Close(
         Transition transition,
         byte source,
         int atom = 1,
@@ -83,7 +83,7 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records a reversal directly, as the host does, as an admin event, for a player who left.</summary>
-    private TimelineEvent AddFlag(SnowportId reverses, byte source)
+    private TimelineEvent AddFlag(SnowStamp reverses, byte source)
     {
         var id = NextId(source);
         var e = new TimelineEvent
@@ -111,15 +111,15 @@ public class UndoScenarioTests
         return flag;
     }
 
-    private bool IsUndone(SnowportId id) =>
+    private bool IsUndone(SnowStamp id) =>
         !TimelineUndo.InEffect(_timeline).Contains(_timeline[id]);
 
     /// <summary>The ids of the events <paramref name="e"/> may have changed, oldest first.</summary>
-    private SnowportId[] Changes(TimelineEvent e) =>
+    private SnowStamp[] Changes(TimelineEvent e) =>
         TimelineUndo.Changes(_timeline, e).Select(c => c.Id).Order().ToArray();
 
     /// <summary>The action a reversal changes, which its chain of reversals comes down to.</summary>
-    private SnowportId Changed(UndoFlag flag) => NaiveUndo.ActionOf(_timeline, flag.Reverses);
+    private SnowStamp Changed(UndoFlag flag) => NaiveUndo.ActionOf(_timeline, flag.Reverses);
 
     [Fact]
     public void UndoWalksBackThroughOwnActions()
@@ -261,7 +261,7 @@ public class UndoScenarioTests
         Undo(Mine);
         Assert.Equal(a, Position());
         Undo(Mine);
-        Assert.Equal(SnowportId.Empty, Position());
+        Assert.Equal(SnowStamp.Empty, Position());
         Assert.Null(Undo(Mine));
     }
 
@@ -286,14 +286,14 @@ public class UndoScenarioTests
         Undo(Mine);
         Assert.Equal(a, Position());
         Undo(Mine);
-        Assert.Equal(SnowportId.Empty, Position());
+        Assert.Equal(SnowStamp.Empty, Position());
         Assert.Null(Undo(Mine));
     }
 
     /// <summary>Where the component is: the newest action still in effect, or Empty if none is.</summary>
-    private SnowportId Position() =>
+    private SnowStamp Position() =>
         _timeline.Values.LastOrDefault(e => e.Undo == null && !IsUndone(e.Id))?.Id
-        ?? SnowportId.Empty;
+        ?? SnowStamp.Empty;
 
     [Fact]
     public void NewActionClearsRedo()
@@ -370,7 +370,7 @@ public class UndoScenarioTests
     public void FlagOnAnUnknownTargetDoesNothing()
     {
         var a = Act(Me);
-        var missing = new SnowportId(999, Me);
+        var missing = new SnowStamp(999, Me);
         var id = NextId(Me);
         _timeline.Add(
             id,
@@ -641,7 +641,7 @@ public class UndoScenarioTests
         );
 
     /// <summary>Records my event that makes <paramref name="unset"/>.</summary>
-    private SnowportId Unsetting(Unset unset)
+    private SnowStamp Unsetting(Unset unset)
     {
         var id = NextId(Me);
         _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [unset] });

@@ -45,7 +45,7 @@ public static class UndoScopes
                     )
             );
 
-    private static Atom WriteBefore(Timeline timeline, SnowportId before, IAtomRef target) =>
+    private static Atom WriteBefore(Timeline timeline, SnowStamp before, IAtomRef target) =>
         TimelineUndo
             .InEffect(timeline)
             .SkipWhile(e => e.Id.CompareTo(before) >= 0)

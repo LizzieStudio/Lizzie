@@ -223,7 +223,7 @@ public sealed class UndoSession
             case Op.Concurrent c:
                 var unseen = Timeline
                     .Keys.Skip(Math.Max(0, Timeline.Count - c.Back))
-                    .Where(key => key.source != c.Source)
+                    .Where(key => key.Source != c.Source)
                     .ToList();
                 var seen = new Timeline();
                 foreach (var (key, known) in Timeline)
@@ -234,16 +234,16 @@ public sealed class UndoSession
                 if (concurrent == null)
                     break;
                 // HLC: newer than everything the player has seen, and than the oldest After they haven't.
-                var after = seen.Count > 0 ? seen.GetAt(seen.Count - 1).Key : SnowportId.Empty;
+                var after = seen.Count > 0 ? seen.GetAt(seen.Count - 1).Key : SnowStamp.Empty;
                 foreach (var key in unseen.Take(c.After))
                     if (key.CompareTo(after) > 0)
                         after = key;
-                var reversalId = Id(after.logicClock + 1, c.Source);
+                var reversalId = Id(after.LogicClock + 1, c.Source);
                 if (Timeline.ContainsKey(reversalId))
                     break;
                 Record(new TimelineEvent { Id = reversalId, Undo = concurrent });
                 // Everything after is newer, as the player's clock has moved on too.
-                while (_clock < reversalId.logicClock)
+                while (_clock < reversalId.LogicClock)
                     _clock += 2;
                 break;
 
@@ -307,13 +307,13 @@ public sealed class UndoSession
     private TimelineEvent CancelOnly(Transition transition, byte source) =>
         new() { Id = NextId(source), Ends = transition };
 
-    private SnowportId NextId(byte source)
+    private SnowStamp NextId(byte source)
     {
         _clock += 2;
         return Id(_clock, source);
     }
 
-    private static SnowportId Id(long clock, byte source) => new(clock, source);
+    private static SnowStamp Id(long clock, byte source) => new(clock, source);
 
     /// <summary>Raised for each event as it's recorded.</summary>
     public event Action<TimelineEvent> Recorded;
@@ -374,8 +374,7 @@ public sealed class UndoSession
     #region Descriptions for failures
 
     /// <summary>An event's name in <see cref="Dump"/>: its place in the timeline.</summary>
-    public string Name(SnowportId id) =>
-        Timeline.IndexOf(id) is var i and >= 0 ? $"#{i}" : $"?{id}";
+    public string Name(SnowStamp id) => Timeline.IndexOf(id) is var i and >= 0 ? $"#{i}" : $"?{id}";
 
     public string Describe(UndoFlag flag) =>
         flag == null
@@ -418,7 +417,7 @@ public sealed class UndoSession
                                 )
                             )
                     );
-                return $"  {Name(e.Id)} s{e.Id.source}{end}: {what}";
+                return $"  {Name(e.Id)} s{e.Id.Source}{end}: {what}";
             })
         );
 

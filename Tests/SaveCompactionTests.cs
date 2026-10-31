@@ -17,7 +17,7 @@ public class SaveCompactionTests
     private static Ref<T> Tag<T>(int counter, byte source = Snowport.HostSource)
         where T : Atom => new(Tag(counter, source));
 
-    private static SnowportId Id(long clock, byte source = Snowport.HostSource) =>
+    private static SnowStamp Id(long clock, byte source = Snowport.HostSource) =>
         new(clock, source);
 
     private static ComponentPosition Position(int id) => new() { Id = Tag<Component>(id) };
@@ -322,7 +322,7 @@ public class SaveCompactionTests
         Assert.Equal(new InComponent(new(new SnowTag(3))), back[0].Container);
         Assert.Equal(new SnowTag(1), back[1].Id.Tag);
         Assert.Equal(new InComponent(new(new SnowTag(2))), back[1].Container);
-        Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.Tag.source));
+        Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.Tag.Source));
     }
 
     [Fact]
@@ -345,7 +345,7 @@ public class SaveCompactionTests
     }
 
     [Fact]
-    public void SnowportIdsAreSavedAsTheyAre()
+    public void SnowStampsAreSavedAsTheyAre()
     {
         var rank = SnowRank.AfterAll(1)[0];
         var json = SaveCompaction.Serialize(Save(Position(1) with { Rank = rank }));

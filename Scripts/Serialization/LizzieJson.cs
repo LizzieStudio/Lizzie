@@ -23,7 +23,7 @@ public static class LizzieJson
             new GodotNativeJsonConverter<Color>(),
             new GodotNativeJsonConverter<Vector2>(),
             new CompactVector3JsonConverter(),
-            new SnowportIdJsonConverter(),
+            new SnowStampJsonConverter(),
             new SnowTagJsonConverter(),
             new RefJsonConverter(),
             new CommandNameJsonConverter(),

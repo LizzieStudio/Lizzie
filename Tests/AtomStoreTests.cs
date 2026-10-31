@@ -110,7 +110,7 @@ public class AtomStoreTests
     private void Cancel(Transition transition) =>
         Record(new TimelineEvent { Id = NextId(), Ends = transition });
 
-    private SnowportId NextId() => new(++_clock, Snowport.HostSource);
+    private SnowStamp NextId() => new(++_clock, Snowport.HostSource);
 
     private TimelineEvent Record(TimelineEvent e)
     {

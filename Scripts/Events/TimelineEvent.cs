@@ -6,7 +6,7 @@ namespace Lizzie.Replication.Machinery;
 
 public class TimelineEvent
 {
-    public SnowportId Id { get; set; }
+    public SnowStamp Id { get; set; }
 
     /// <summary>
     /// The command that made this event, or null if there wasn't one.
@@ -44,23 +44,23 @@ public class TimelineEvent
     /// Whether this is an admin event, which belongs to the project rather than a player.
     /// </summary>
     [JsonIgnore]
-    public bool IsAdmin => Id.source == Snowport.AdminSource;
+    public bool IsAdmin => Id.Source == Snowport.AdminSource;
 
-    /// <summary>Creates an event with a new SnowportId.</summary>
+    /// <summary>Creates an event with a new SnowStamp.</summary>
     public static TimelineEvent Now(
         IChange[] changes,
         CommandName? command = null,
         ViewPlace? place = null
-    ) => Of(SnowportId.Create(), changes, command, place);
+    ) => Of(SnowStamp.Create(), changes, command, place);
 
     /// <summary>
     /// Creates an admin event, which don't belong to any player.
     /// </summary>
     public static TimelineEvent Admin(IChange[] changes) =>
-        Of(SnowportId.CreateAdmin(), changes, null, null);
+        Of(SnowStamp.CreateAdmin(), changes, null, null);
 
     private static TimelineEvent Of(
-        SnowportId id,
+        SnowStamp id,
         IChange[] changes,
         CommandName? command,
         ViewPlace? place
@@ -85,7 +85,7 @@ public class TimelineEvent
     ) =>
         new()
         {
-            Id = admin ? SnowportId.CreateAdmin() : SnowportId.Create(),
+            Id = admin ? SnowStamp.CreateAdmin() : SnowStamp.Create(),
             Command = command,
             Undo = flag,
         };
@@ -104,7 +104,7 @@ public class UndoFlag
     /// The id of the event that this event reverses.
     /// It must be older than this event.
     /// </summary>
-    public SnowportId Reverses { get; init; }
+    public SnowStamp Reverses { get; init; }
 
     /// <summary>
     /// True when triggered by a Redo action.
@@ -118,5 +118,5 @@ public class UndoFlag
     /// which should only happen when two players trigger an undo at nearly the same time.
     /// That works fine, at first, but a Redo event then needs to target both those Undo events to work, giving us <see cref="Also"/>.
     /// </summary>
-    public SnowportId[] Also { get; init; }
+    public SnowStamp[] Also { get; init; }
 }

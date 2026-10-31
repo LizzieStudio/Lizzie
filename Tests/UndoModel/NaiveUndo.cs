@@ -21,13 +21,13 @@ public sealed class NaiveUndo : IUndoApi
         timeline.Values.Reverse();
 
     /// <summary>The reversal with this id, if the entry is one. A reversal only reverses something older than itself.</summary>
-    private static TimelineEvent ReversalAt(Timeline timeline, SnowportId entry) =>
+    private static TimelineEvent ReversalAt(Timeline timeline, SnowStamp entry) =>
         timeline.Values.FirstOrDefault(e =>
             e.Id == entry && e.Undo != null && e.Undo.Reverses.CompareTo(e.Id) < 0
         );
 
     /// <summary>Every entry a reversal reverses: its own, and the other reversals it retires with it.</summary>
-    private static IEnumerable<SnowportId> Reversed(UndoFlag f) =>
+    private static IEnumerable<SnowStamp> Reversed(UndoFlag f) =>
         (f.Also ?? []).Prepend(f.Reverses);
 
     /// <summary>
@@ -48,7 +48,7 @@ public sealed class NaiveUndo : IUndoApi
     public bool IsUndone(Timeline timeline, TimelineEvent e) => !InEffect(timeline, e);
 
     /// <summary>The action an entry comes down to: itself, or for a reversal, that of what it reverses.</summary>
-    public static SnowportId ActionOf(Timeline timeline, SnowportId entry) =>
+    public static SnowStamp ActionOf(Timeline timeline, SnowStamp entry) =>
         ReversalAt(timeline, entry) is { } reversal
             ? ActionOf(timeline, reversal.Undo.Reverses)
             : entry;
@@ -57,10 +57,10 @@ public sealed class NaiveUndo : IUndoApi
     /// Who an entry counts as done by, for the player <paramref name="me"/>: an action by whoever did it,
     /// another player's reversal by them, and the player's own reversal by whoever did what it reverses.
     /// </summary>
-    private static byte AuthorOf(Timeline timeline, SnowportId entry, byte me) =>
-        ReversalAt(timeline, entry) is not { } reversal ? entry.source
-        : reversal.Id.source == me ? AuthorOf(timeline, reversal.Undo.Reverses, me)
-        : reversal.Id.source;
+    private static byte AuthorOf(Timeline timeline, SnowStamp entry, byte me) =>
+        ReversalAt(timeline, entry) is not { } reversal ? entry.Source
+        : reversal.Id.Source == me ? AuthorOf(timeline, reversal.Undo.Reverses, me)
+        : reversal.Id.Source;
 
     /// <summary>
     /// An action commits something when it unsets something or writes something that isn't a draft.
@@ -109,7 +109,7 @@ public sealed class NaiveUndo : IUndoApi
         {
             if (e.Undo is { ByRedo: true } || !IsCandidate(timeline, e, me, scope))
                 continue;
-            if (e.Undo != null && e.Id.source == me && !pastLatestReversals)
+            if (e.Undo != null && e.Id.Source == me && !pastLatestReversals)
                 continue;
             pastLatestReversals = true;
             if (InEffect(timeline, e))
@@ -154,7 +154,7 @@ public sealed class NaiveUndo : IUndoApi
         {
             if (!IsCandidate(timeline, e, me, scope))
                 continue;
-            if (e.Undo == null || e.Id.source != me)
+            if (e.Undo == null || e.Id.Source != me)
                 return null;
             if (!e.Undo.ByRedo && InEffect(timeline, e))
                 return Reverse(timeline, e, byRedo: true);
@@ -173,7 +173,7 @@ public sealed class NaiveUndo : IUndoApi
     public List<Transition> OpenTransitions(Timeline timeline, byte source) =>
         timeline
             .Values.Where(e =>
-                e.Id.source == source && e.Writes.Any(w => w.Transition == new Transition(e.Id))
+                e.Id.Source == source && e.Writes.Any(w => w.Transition == new Transition(e.Id))
             )
             .Select(e => new Transition(e.Id))
             .Where(transition => !timeline.Values.Any(e => e.Ends == transition))

@@ -24,7 +24,7 @@ public static class SaveCompaction
         var entries = saved.ToList();
         return new()
         {
-            Id = new SnowportId(entries.Max(e => e.LastUpdate).logicClock, Snowport.AdminSource),
+            Id = new SnowStamp(entries.Max(e => e.LastUpdate).LogicClock, Snowport.AdminSource),
             Writes = Collect(entries.Select(e => e.Value)),
         };
     }

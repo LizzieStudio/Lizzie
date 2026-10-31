@@ -22,7 +22,7 @@ public abstract class TextbookTests : UndoTestBase
     {
         const byte me = UndoSessions.Me;
         var session = new UndoSession(Actual);
-        var textbook = new TextbookUndo<SnowportId>();
+        var textbook = new TextbookUndo<SnowStamp>();
 
         for (int step = 0; step < ops.Length; step++)
         {
@@ -55,7 +55,7 @@ public abstract class TextbookTests : UndoTestBase
             var inEffect = session
                 .Timeline.Values.Where(e =>
                     e.Undo == null
-                    && e.Id.source == me
+                    && e.Id.Source == me
                     && NaiveUndo.Commits(e)
                     && !Actual.IsUndone(session.Timeline, e)
                 )
@@ -72,7 +72,7 @@ public abstract class TextbookTests : UndoTestBase
         }
     }
 
-    private static string Show(UndoSession session, IEnumerable<SnowportId> actions) =>
+    private static string Show(UndoSession session, IEnumerable<SnowStamp> actions) =>
         string.Join(", ", actions.Order().Select(session.Name));
 
     private static void Fail(UndoSession session, int step, Op op, string message) =>

@@ -17,9 +17,9 @@ public interface IAtomReader
 
     /// <summary>
     /// The id of the event that last updated <paramref name="atom"/>,
-    /// or <see cref="SnowportId.Empty"/> if it was never written.
+    /// or <see cref="SnowStamp.Empty"/> if it was never written.
     /// </summary>
-    SnowportId Version(Atom atom);
+    SnowStamp Version(Atom atom);
 
     /// <summary>
     /// Gets the atom with <paramref name="id"/>, or null if it is missing or unset.

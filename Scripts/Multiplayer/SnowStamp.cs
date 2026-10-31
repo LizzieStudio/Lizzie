@@ -50,7 +50,7 @@ public class Snowport
     public const int SourceCount = 64;
 
     /// <summary>
-    /// The low bits of <see cref="SnowportId.logicClock"/> that increment for ids made in the same millisecond.
+    /// The low bits of <see cref="SnowStamp.LogicClock"/> that increment for ids made in the same millisecond.
     /// </summary>
     public const int TickBits = 6;
 
@@ -85,30 +85,30 @@ public class Snowport
     /// <summary>
     /// The milliseconds since <paramref name="id"/> was created. Negative when it's in the future.
     /// </summary>
-    public long MsecSince(SnowportId id) => GameTimeMsec - (id.logicClock >> TickBits);
+    public long MsecSince(SnowStamp id) => GameTimeMsec - (id.LogicClock >> TickBits);
 
     /// <summary>
-    /// Create a new SnowportId. Elsewhere, use <see cref="SnowportId.Create"/>, which calls this on <see cref="Clock"/>.
+    /// Create a new SnowStamp. Elsewhere, use <see cref="SnowStamp.Create"/>, which calls this on <see cref="Clock"/>.
     /// </summary>
-    public SnowportId Create() => Mint(source);
+    public SnowStamp Create() => Mint(source);
 
     /// <summary>
-    /// The clock behind <see cref="SnowportId.CreateAdmin"/>.
+    /// The clock behind <see cref="SnowStamp.CreateAdmin"/>.
     /// </summary>
-    public SnowportId CreateAdmin()
+    public SnowStamp CreateAdmin()
     {
         if (source != HostSource)
             throw new Exception("Only the host can make admin events");
         return Mint(AdminSource);
     }
 
-    private SnowportId Mint(byte from)
+    private SnowStamp Mint(byte from)
     {
         lock (_lock)
         {
             // If the game time has advanced, update the hybrid clock to match.
             _useLogicClock = Math.Max(GameTimeMsec << TickBits, _useLogicClock);
-            return new SnowportId(_useLogicClock++, from);
+            return new SnowStamp(_useLogicClock++, from);
         }
     }
 
@@ -127,27 +127,27 @@ public class Snowport
     public void ObserveTag(SnowTag tag)
     {
         lock (_lock)
-            if (tag.source == source && tag.counter >= _tagCounter)
-                _tagCounter = tag.counter + 1;
+            if (tag.Source == source && tag.Counter >= _tagCounter)
+                _tagCounter = tag.Counter + 1;
     }
 
     /// <summary>
     /// Advance the hybrid clock past <paramref name="id"/> so the next minted id is greater.
     /// </summary>
     /// <param name="id">The id to consume.</param>
-    public void Process(SnowportId id)
+    public void Process(SnowStamp id)
     {
         lock (_lock)
         {
             // If the ID's time appears to be in the future,
             // adjust the local time to match it.
             var gameTime = GameTimeMsec;
-            var otherClock = id.logicClock >> TickBits;
+            var otherClock = id.LogicClock >> TickBits;
             if (otherClock > gameTime)
                 _globalOffsetMsec += otherClock - gameTime;
 
             // Make sure the next used logic clock is greater than the ID.
-            _useLogicClock = Math.Max(id.logicClock + 1, _useLogicClock);
+            _useLogicClock = Math.Max(id.LogicClock + 1, _useLogicClock);
         }
     }
 }
@@ -158,74 +158,74 @@ public class Snowport
 /// Stores a timestamp with a guarenteed order and which source made it.
 /// </para>
 /// </summary>
-/// <remarks>Laid out as <c>[ logicClock:47 | source:6 ]</c>.</remarks>
-public readonly record struct SnowportId : IComparable<SnowportId>, IFormattable
+/// <remarks>Laid out as <c>[ LogicClock:47 | Source:6 ]</c>.</remarks>
+public readonly record struct SnowStamp : IComparable<SnowStamp>, IFormattable
 {
     private readonly long ID;
 
-    public static readonly SnowportId Empty = new(0);
+    public static readonly SnowStamp Empty = new(0);
 
     /// <summary>
-    /// Create a new SnowportId from the local player's clock.
+    /// Create a new SnowStamp from the local player's clock.
     /// </summary>
-    public static SnowportId Create() => Snowport.Clock.Create();
+    public static SnowStamp Create() => Snowport.Clock.Create();
 
     /// <summary>
-    /// Create a new SnowportId for an admin event.
+    /// Create a new SnowStamp for an admin event.
     /// Only the host or a solo player can make them.
     /// </summary>
-    public static SnowportId CreateAdmin() => Snowport.Clock.CreateAdmin();
+    public static SnowStamp CreateAdmin() => Snowport.Clock.CreateAdmin();
 
-    public SnowportId(long id)
+    public SnowStamp(long id)
     {
         ID = id;
     }
 
-    public SnowportId(long logicClock, byte source)
+    public SnowStamp(long logicClock, byte source)
         : this((logicClock << 6) | CheckSource(source)) { }
 
     /// <summary>
     /// The hybrid clock: the game time in milliseconds then a <see cref="Snowport.TickBits"/> bit increment for events in the same millisecond.
     /// </summary>
-    public long logicClock => (ID >> 6) & 0x7FFFFFFFFFFFL;
+    public long LogicClock => (ID >> 6) & 0x7FFFFFFFFFFFL;
 
     /// <summary>
-    /// The source that made this SnowportId.
+    /// The source that made this SnowStamp.
     /// </summary>
-    public byte source => (byte)(ID & 0x3F);
+    public byte Source => (byte)(ID & 0x3F);
 
-    public int CompareTo(SnowportId other) => ID.CompareTo(other.ID);
+    public int CompareTo(SnowStamp other) => ID.CompareTo(other.ID);
 
     // Declared because comparisons were having to choose between long and ulong conversion.
-    public static bool operator <(SnowportId left, SnowportId right) => left.ID < right.ID;
+    public static bool operator <(SnowStamp left, SnowStamp right) => left.ID < right.ID;
 
-    public static bool operator >(SnowportId left, SnowportId right) => left.ID > right.ID;
+    public static bool operator >(SnowStamp left, SnowStamp right) => left.ID > right.ID;
 
-    public static bool operator <=(SnowportId left, SnowportId right) => left.ID <= right.ID;
+    public static bool operator <=(SnowStamp left, SnowStamp right) => left.ID <= right.ID;
 
-    public static bool operator >=(SnowportId left, SnowportId right) => left.ID >= right.ID;
+    public static bool operator >=(SnowStamp left, SnowStamp right) => left.ID >= right.ID;
 
-    public static implicit operator long(SnowportId id) => id.ID;
+    public static implicit operator long(SnowStamp id) => id.ID;
 
     // An id only uses 53 bits, so it's never negative.
-    public static implicit operator ulong(SnowportId id) => (ulong)id.ID;
+    public static implicit operator ulong(SnowStamp id) => (ulong)id.ID;
 
-    public static implicit operator Variant(SnowportId id) => id.ID;
+    public static implicit operator Variant(SnowStamp id) => id.ID;
 
-    public static explicit operator SnowportId(Variant v) => new(v.AsInt64());
+    public static explicit operator SnowStamp(Variant v) => new(v.AsInt64());
 
     public override string ToString() => ID.ToString();
 
     public string ToString(string format, IFormatProvider provider) =>
         ID.ToString(format, provider);
 
-    public static SnowportId Parse(string s) => new(long.Parse(s));
+    public static SnowStamp Parse(string s) => new(long.Parse(s));
 
-    public static bool TryParse(string s, out SnowportId id)
+    public static bool TryParse(string s, out SnowStamp id)
     {
         if (long.TryParse(s, out var value))
         {
-            id = new SnowportId(value);
+            id = new SnowStamp(value);
             return true;
         }
         id = Empty;
@@ -246,7 +246,7 @@ public readonly record struct SnowportId : IComparable<SnowportId>, IFormattable
 /// A compact, timestamp-free unique ID for an <see cref="Atom"/>.
 /// </summary>
 /// <remarks>
-/// <para>Laid out as <c>[ source:6 | counter:26 ]</c>.</para>
+/// <para>Laid out as <c>[ Source:6 | Counter:26 ]</c>.</para>
 /// <para>
 /// Atoms should refer to atoms with a SnowTag, never its value in an int or string.
 /// The save file uses a form of garbage collection to keep atoms alive.
@@ -274,7 +274,7 @@ public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
     }
 
     public SnowTag(byte source, int counter)
-        : this((SnowportId.CheckSource(source) << 26) | CheckCounter(counter)) { }
+        : this((SnowStamp.CheckSource(source) << 26) | CheckCounter(counter)) { }
 
     private static int CheckCounter(int counter) =>
         counter is >= 0 and <= MaxCounter
@@ -288,12 +288,12 @@ public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
     /// <summary>
     /// The source that minted this tag.
     /// </summary>
-    public byte source => (byte)((ID >> 26) & 0x3F);
+    public byte Source => (byte)((ID >> 26) & 0x3F);
 
     /// <summary>
     /// The ID without the source number.
     /// </summary>
-    public int counter => ID & MaxCounter;
+    public int Counter => ID & MaxCounter;
 
     public int CompareTo(SnowTag other) => ID.CompareTo(other.ID);
 

@@ -10,7 +10,7 @@ public sealed class ListReader(params Atom[] atoms) : IAtomReader
 {
     public Atom Get(IAtomRef atomRef) => atoms.FirstOrDefault(a => IAtomRef.To(a).Equals(atomRef));
 
-    public SnowportId Version(Atom atom) => SnowportId.Empty;
+    public SnowStamp Version(Atom atom) => SnowStamp.Empty;
 
     public T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom

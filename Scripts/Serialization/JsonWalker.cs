@@ -65,7 +65,7 @@ public static class JsonWalker
                 }
                 break;
 
-            // At this point a converter owns the type, like with SnowportId, Godot vectors, etc.
+            // At this point a converter owns the type, like with SnowStamp, Godot vectors, etc.
         }
     }
 

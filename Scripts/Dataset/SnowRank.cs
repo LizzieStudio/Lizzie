@@ -26,7 +26,7 @@ public readonly record struct SnowRank : IComparable<SnowRank>
         End,
     }
 
-    private readonly record struct RankStep(SnowportId Stamp, string Place);
+    private readonly record struct RankStep(SnowStamp Stamp, string Place);
 
     // These are in Ordinal order.
     // We can never end a place with the lowest character <c>*</c>, since nothing could go before it.
@@ -147,7 +147,7 @@ public readonly record struct SnowRank : IComparable<SnowRank>
     {
         if (count == 0)
             return [];
-        var stamp = SnowportId.Create();
+        var stamp = SnowStamp.Create();
         return
         [
             .. Enumerable

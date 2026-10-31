@@ -23,7 +23,7 @@ namespace Lizzie.Replication.Machinery;
 /// </para>
 /// <para>
 /// This system has very few requirements. You can undo an event older than the most recent one, and multiple undos can target the same event.
-/// The only major requirement is that undo/redo events should be newer than their target, but with <see cref="SnowportId"/> that should be hard to screw up.
+/// The only major requirement is that undo/redo events should be newer than their target, but with <see cref="SnowStamp"/> that should be hard to screw up.
 /// </para>
 /// <para>
 /// An Undo can reverse an Undo, but a Redo can only reverse an Undo. These are different things, and it has to do with "unfolding" a user's history.
@@ -66,7 +66,7 @@ public static class TimelineUndo
     /// </summary>
     public static UndoFlag Undo(Timeline timeline, byte me, Scope scope)
     {
-        var reversed = new HashSet<SnowportId>();
+        var reversed = new HashSet<SnowStamp>();
         var targets = new Targets(timeline, me, scope);
         bool unfolding = false;
 
@@ -76,7 +76,7 @@ public static class TimelineUndo
             bool inEffect = InEffect(reversed, e);
             if (e.Undo is { ByRedo: true } || !targets.Include(e) || e.IsAdmin)
                 continue;
-            if (e.Undo != null && e.Id.source == me && !unfolding)
+            if (e.Undo != null && e.Id.Source == me && !unfolding)
                 continue;
 
             unfolding = true;
@@ -92,7 +92,7 @@ public static class TimelineUndo
     /// </summary>
     public static UndoFlag Redo(Timeline timeline, byte me, Scope scope)
     {
-        var reversed = new HashSet<SnowportId>();
+        var reversed = new HashSet<SnowStamp>();
         var targets = new Targets(timeline, me, scope);
 
         for (int i = timeline.Count - 1; i >= 0; i--)
@@ -102,7 +102,7 @@ public static class TimelineUndo
             if (!targets.Include(e) || e.IsAdmin)
                 continue;
 
-            if (e.Undo is not { } f || e.Id.source != me)
+            if (e.Undo is not { } f || e.Id.Source != me)
                 return null;
             if (inEffect && !f.ByRedo)
                 return Reverse(timeline, e, byRedo: true);
@@ -116,10 +116,10 @@ public static class TimelineUndo
     /// </summary>
     private static UndoFlag Reverse(Timeline timeline, TimelineEvent e, bool byRedo)
     {
-        List<SnowportId> also = null;
+        List<SnowStamp> also = null;
         if (IsReversal(timeline, e.Id, out var target))
         {
-            var reversed = new HashSet<SnowportId>();
+            var reversed = new HashSet<SnowStamp>();
             for (int i = timeline.Count - 1; i >= 0; i--)
             {
                 var other = timeline.GetAt(i).Value;
@@ -148,7 +148,7 @@ public static class TimelineUndo
     /// <summary>
     /// Whether <paramref name="reversal"/> reverses <paramref name="entry"/>.
     /// </summary>
-    private static bool Reverses(UndoFlag reversal, SnowportId entry) =>
+    private static bool Reverses(UndoFlag reversal, SnowStamp entry) =>
         reversal.Reverses == entry
         || (reversal.Also != null && Array.IndexOf(reversal.Also, entry) >= 0);
 
@@ -157,7 +157,7 @@ public static class TimelineUndo
     /// Returns true when the event is "in effect" and false when it was reversed.
     /// Uses <paramref name="reversed"/> to avoid needing to use any nested loops.
     /// </summary>
-    private static bool InEffect(HashSet<SnowportId> reversed, TimelineEvent e)
+    private static bool InEffect(HashSet<SnowStamp> reversed, TimelineEvent e)
     {
         if (reversed.Contains(e.Id))
             return false;
@@ -174,14 +174,14 @@ public static class TimelineUndo
     /// The reversal with id <paramref name="entry"/>, if that's what the id is,
     /// and only if it reverses something older than itself, to avoid infinite loops.
     /// </summary>
-    private static bool IsReversal(Timeline timeline, SnowportId entry, out UndoFlag reversal) =>
+    private static bool IsReversal(Timeline timeline, SnowStamp entry, out UndoFlag reversal) =>
         (reversal = timeline.TryGetValue(entry, out var e) ? e.Undo : null) != null
         && reversal.Reverses.CompareTo(entry) < 0;
 
     /// <summary>
     /// The event an entry's chain of reversals comes down to.
     /// </summary>
-    private static SnowportId ActionOf(Timeline timeline, SnowportId entry)
+    private static SnowStamp ActionOf(Timeline timeline, SnowStamp entry)
     {
         while (IsReversal(timeline, entry, out var reversal))
             entry = reversal.Reverses;
@@ -194,10 +194,10 @@ public static class TimelineUndo
     private sealed class Targets(Timeline timeline, byte me, Scope scope)
     {
         // whether each action, as done by an author, is in scope
-        private readonly Dictionary<(SnowportId, byte), bool> _inScope = new();
+        private readonly Dictionary<(SnowStamp, byte), bool> _inScope = new();
 
         // each entry's action, and who it counts as done by
-        private readonly Dictionary<SnowportId, (SnowportId Action, byte Author)> _resolved = new();
+        private readonly Dictionary<SnowStamp, (SnowStamp Action, byte Author)> _resolved = new();
 
         /// <summary>
         /// Whether <paramref name="e"/> is something to undo or redo:
@@ -216,9 +216,9 @@ public static class TimelineUndo
         /// did it, another player's reversal by them, and the player's own reversal by whoever did
         /// what it reverses.
         /// </summary>
-        private (SnowportId Action, byte Author) Resolve(SnowportId entry)
+        private (SnowStamp Action, byte Author) Resolve(SnowStamp entry)
         {
-            var chain = new List<(SnowportId Id, UndoFlag Reversal)>();
+            var chain = new List<(SnowStamp Id, UndoFlag Reversal)>();
             var at = entry;
             while (!_resolved.ContainsKey(at) && IsReversal(timeline, at, out var reversal))
             {
@@ -227,12 +227,12 @@ public static class TimelineUndo
             }
 
             if (!_resolved.TryGetValue(at, out var resolved))
-                _resolved[at] = resolved = (at, at.source);
+                _resolved[at] = resolved = (at, at.Source);
 
             for (int k = chain.Count - 1; k >= 0; k--)
             {
                 var id = chain[k].Id;
-                resolved = (resolved.Action, id.source == me ? resolved.Author : id.source);
+                resolved = (resolved.Action, id.Source == me ? resolved.Author : id.Source);
                 _resolved[id] = resolved;
             }
             return resolved;
@@ -257,7 +257,7 @@ public static class TimelineUndo
         var ended = timeline.Values.Select(e => e.Ends).ToHashSet();
         return timeline
             .Values.Where(e =>
-                e.Id.source == source
+                e.Id.Source == source
                 && Array.Exists(e.Writes, write => write.Transition.Start == e.Id)
             )
             .Select(e => new Transition(e.Id))
@@ -351,7 +351,7 @@ public static class TimelineUndo
     /// </summary>
     public static IEnumerable<TimelineEvent> InEffect(Timeline timeline)
     {
-        var reversed = new HashSet<SnowportId>();
+        var reversed = new HashSet<SnowStamp>();
         for (int i = timeline.Count - 1; i >= 0; i--)
         {
             var e = timeline.GetAt(i).Value;

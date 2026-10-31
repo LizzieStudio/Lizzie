@@ -71,7 +71,7 @@ public sealed class Watcher : IWatchReader
         return _source.Get(atom);
     }
 
-    public SnowportId Version(Atom atom)
+    public SnowStamp Version(Atom atom)
     {
         var byId = IdQuery.For(atom.GetType());
         Depend(byId, byId.Of(atom));
