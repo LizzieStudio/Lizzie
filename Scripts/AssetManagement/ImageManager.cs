@@ -75,7 +75,7 @@ public partial class ImageManager : Window, ICommandView
         _nameInput = GetNode<LineEdit>("%NameInput");
 
         _columns = GetNode<SpinBox>("%Columns");
-        var columnsEdits = _columns.GetNode<FocusEditGroup>("FocusEditGroup");
+        var columnsEdits = _columns.GetNode<FocusEditTransition>("FocusEditTransition");
         _columns.ValueChanged += value =>
             columnsEdits.Update(
                 ImageAsset.ById,
@@ -84,7 +84,7 @@ public partial class ImageManager : Window, ICommandView
             );
 
         _rows = GetNode<SpinBox>("%Rows");
-        var rowsEdits = _rows.GetNode<FocusEditGroup>("FocusEditGroup");
+        var rowsEdits = _rows.GetNode<FocusEditTransition>("FocusEditTransition");
         _rows.ValueChanged += value =>
             rowsEdits.Update(
                 ImageAsset.ById,
@@ -109,7 +109,7 @@ public partial class ImageManager : Window, ICommandView
             );
 
         _count = GetNode<SpinBox>("%Count");
-        var countEdits = _count.GetNode<FocusEditGroup>("FocusEditGroup");
+        var countEdits = _count.GetNode<FocusEditTransition>("FocusEditTransition");
         _count.ValueChanged += value =>
             countEdits.Update(
                 ImageAsset.ById,

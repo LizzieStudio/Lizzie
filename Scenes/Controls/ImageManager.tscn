@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bjsykaoceokhe" path="res://Scripts/AssetManagement/ImageManager.cs" id="1_oe4yn"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="3_rcwif"]
-[ext_resource type="Script" uid="uid://bs7yopf4sckdw" path="res://Scripts/Controls/FocusEditGroup.cs" id="4_fcsgr"]
+[ext_resource type="Script" uid="uid://2vg6bnfhlkre" path="res://Scripts/Controls/FocusEditTransition.cs" id="4_fcsgr"]
 [ext_resource type="Shader" uid="uid://cxy0bv3yujydo" path="res://Shaders/frame_grid.gdshader" id="5_frgrd"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_frgrd"]
@@ -155,7 +155,7 @@ value = 1.0
 allow_greater = true
 update_on_text_changed = true
 
-[node name="FocusEditGroup" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/ColumnsField/Columns" unique_id=574073253]
+[node name="FocusEditTransition" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/ColumnsField/Columns" unique_id=574073253]
 script = ExtResource("4_fcsgr")
 
 [node name="RowsField" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar" unique_id=1292537069]
@@ -175,7 +175,7 @@ value = 1.0
 allow_greater = true
 update_on_text_changed = true
 
-[node name="FocusEditGroup" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/RowsField/Rows" unique_id=1662995125]
+[node name="FocusEditTransition" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/RowsField/Rows" unique_id=1662995125]
 script = ExtResource("4_fcsgr")
 
 [node name="CountField" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar" unique_id=234966159]
@@ -201,5 +201,5 @@ allow_greater = true
 editable = false
 update_on_text_changed = true
 
-[node name="FocusEditGroup" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/CountField/Count" unique_id=1272030034]
+[node name="FocusEditTransition" type="Node" parent="MarginContainer/VBoxContainer/ImageView/LayoutBar/CountField/Count" unique_id=1272030034]
 script = ExtResource("4_fcsgr")

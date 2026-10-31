@@ -15,7 +15,7 @@ namespace Lizzie;
 /// If the user cancels the edit (Esc), all changes will be reversed without an Undo target.
 /// A SpinBox needs <c>update_on_text_changed</c> for this to make any sense.
 /// </remarks>
-public partial class FocusEditGroup : Node
+public partial class FocusEditTransition : Node
 {
     private Control _focus;
     private Transition _transition;
