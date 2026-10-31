@@ -6,7 +6,7 @@ namespace Lizzie;
 
 public partial class ComponentDefinition : Window, ICommandView
 {
-    public ViewPlace? Place(IAtomReader R) =>
+    public ViewPlace Place(IAtomReader R) =>
         ViewPlace.Of(this, _mapPrototype == null ? null : _mapPrototype.Id);
 
     // Called when the node enters the scene tree for the first time.

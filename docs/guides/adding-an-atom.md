@@ -136,7 +136,7 @@ A common structure for atoms is to have "root" atoms with an `All` query, like t
 
 ## Undo/Redo
 
-Atom updates that you `Write` together are undone together, so you should write related changes as one `Write` call: `Atoms.R.Write(this, A, B, C, ...)`. Lizzie finds the `ICommandView` that holds the Node `this` and assigns this event to it. Undo & Redo will only reverse events made in an `ICommandView` when it has focus, so an undo in the Dataset Editor won't reverse moving a card on the table and vice versa.
+Atom updates that you `Write` together are undone together, so you should write related changes as one `Write` call: `Atoms.R.Write(this, A, B, C, ...)`. Lizzie finds the `ICommandView` that is an ascestor to the Node `this` and assigns the event to it. Undo & Redo will only reverse events made in an `ICommandView` when it has focus, so an undo in the Dataset Editor won't reverse moving a card on the table and vice versa. See [Adding a View](./adding-a-view.md) for more details.
 
 ## Transitions
 

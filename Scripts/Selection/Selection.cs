@@ -83,15 +83,15 @@ public static class LocalSelection
 
     /// <summary>
     /// The local player's selection in <paramref name="view"/>, holding only the targets it <see cref="ICommandView.CanSelect"/>.
-    /// Null if the view has no selection, or they have not yet selected anything there.
+    /// Null if they have not yet selected anything there.
     /// </summary>
     /// <remarks>
     /// A target the view no longer shows stays in the written selection, so undoing its delete selects it again,
     /// but it's left out here, so changing the selection around it never writes an event that shows nothing.
     /// </remarks>
     public static Selection GetSelection(this IAtomReader R, ICommandView view) =>
-        view.Place(R) is { } place
-        && R.Get(Selection.ByPlace, place).FirstOrDefault(s => s.Player == Snowport.Clock.source)
+        R.Get(Selection.ByPlace, view.Place(R))
+            .FirstOrDefault(s => s.Player == Snowport.Clock.source)
             is { } selection
             ? selection with
             {
@@ -158,7 +158,7 @@ public static class LocalSelection
 
     /// <summary>
     /// The atom that will set the selection to <paramref name="targets"/>,
-    /// or none when the selection wouldn't change or the view has no selection.
+    /// or none when the selection wouldn't change.
     /// </summary>
     private static Selection[] NewSelection(
         this IAtomReader R,
@@ -166,8 +166,6 @@ public static class LocalSelection
         ICommandView view
     )
     {
-        if (view.Place(R) is not { } place)
-            return [];
         var current = R.GetSelection(view);
         var next = targets.ToImmutableHashSet();
         if (next.SetEquals(current?.Targets ?? ImmutableHashSet<IAtomRef>.Empty))
@@ -179,7 +177,7 @@ public static class LocalSelection
             {
                 Id = Ref<Selection>.Create(),
                 Player = Snowport.Clock.source,
-                Place = place,
+                Place = view.Place(R),
             };
         return [atom with { Targets = next }];
     }

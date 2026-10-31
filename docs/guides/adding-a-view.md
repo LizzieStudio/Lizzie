@@ -17,7 +17,7 @@ public partial class BlueprintManager : Window, ICommandView
 }
 ```
 
-Every Node under the view belongs to it (except Windows and their children). When one of them calls `Atoms.R.Write(this, ...)`, the write is undone and redone in that view, and when one of them has focus, keyboard shortcuts and the context menu act on that view's selection.
+Every Node under the view belongs to it (except Windows and their children). When one of them calls `Atoms.R.Write(this, ...)`, the write is undone and redone in that view, and when one of them has focus, keyboard shortcuts and the context menu act on that view's selection. If the node of a write does not have a view, `Write` throws an error.
 
 To open your view, make a `GlobalCommand` that instantiates its scene and adds it to the UI. See `UI.Commands.cs` for examples. Generally, you'll add this as a `CommandMenuItem` in one of the `CommandMenuButton`s of the primary scene.
 
@@ -56,10 +56,8 @@ public bool CanSelect(IAtomReader R, IAtomRef target) => Stage.Reachable(R, (Ref
 Some views show one atom at a time, like the Dataset Editor showing one dataset. Give these views a `Place`.
 
 ```C#
-public ViewPlace? Place(IAtomReader R) =>
-    R.Get(ShownDatasetRef) is var shown && !shown.IsEmpty
-        ? ViewPlace.Of(this, shown)
-        : null;
+public ViewPlace Place(IAtomReader R) =>
+    ViewPlace.Of(this, R.Get(ShownDatasetRef));
 ```
 
 The `Place` is where the user is in the view. Each place keeps its own selection and its own undo history, so an undo in one dataset won't reverse edits to another dataset.

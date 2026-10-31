@@ -152,6 +152,8 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// </para>
     /// <para>
     /// Pass the node making the change as <paramref name="source"/>, like <c>Write(this, atom)</c>.
+    /// An Undo will reverse the event if made from the same <see cref="ICommandView"/> with the same open atom.
+    /// If the <c>this</c> doesn't have a view, <c>Write</c> throws.
     /// </para>
     /// <para>
     /// Commands return their changes from <see cref="AtomCommand{T}.Effects"/> instead.
@@ -286,15 +288,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
 
     private static void Submit(TimelineEvent e) => EventSynchronizer.Instance?.Submit(e);
 
-    private ViewPlace? PlaceOf(Node source)
-    {
-        if (source != null && CommandViews.Of(source) is { } view)
-            return view.Place(this);
-        GD.PushError(
-            $"{source?.Name ?? "A null node"} isn't in a view, so undo can't reach what it wrote."
-        );
-        return null;
-    }
+    private ViewPlace PlaceOf(Node source) => CommandViews.Require(source).Place(this);
 
     /// <inheritdoc/>
     IEnumerable<AtomEntry> IAtomsMachinery.SavedAtoms() =>

@@ -303,7 +303,7 @@ public partial class GameObjects : Node3D, ICommandView
 
     #region ICommandView
 
-    public ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this, ShownStage(R));
+    public ViewPlace Place(IAtomReader R) => ViewPlace.Of(this, ShownStage(R));
 
     public bool CanSelect(IAtomReader R, IAtomRef target) =>
         R.Get(target) is ComponentPosition c && !R.IsHidden(c);

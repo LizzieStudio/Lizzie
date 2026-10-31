@@ -65,6 +65,7 @@ public enum Context
 
 /// <summary>
 /// A window or panel that commands run in, named by its class name.
+/// Only nodes implement it, since commands write as their view.
 /// </summary>
 public interface ICommandView
 {
@@ -73,12 +74,12 @@ public interface ICommandView
     ///
     /// <para>
     /// By default, the view as a whole. A view that shows one atom at a time is open on that atom,
-    /// its <see cref="ViewPlace.Subject"/>, or gives null while it shows none.
+    /// its <see cref="ViewPlace.Subject"/>, and has no subject while it shows none.
     /// Commands that act on <see cref="Context.Subject"/> act on the subject.
     /// A Watch that reads it through <paramref name="R"/> runs again when it changes.
     /// </para>
     /// </summary>
-    ViewPlace? Place(IAtomReader R) => ViewPlace.Of(this);
+    ViewPlace Place(IAtomReader R) => ViewPlace.Of(this);
 
     /// <summary>
     /// Checks whether <paramref name="target"/> can be selected in this view, so a selection of it is still valid.
@@ -271,8 +272,13 @@ public abstract class Command
     /// </summary>
     protected void Submit(IEnumerable<IChange> changes, ICommandView view)
     {
-        if (changes != null)
-            Atoms.R?.Write((Node)view, Name, changes);
+        if (changes == null)
+            return;
+        if (view == null)
+            throw new InvalidOperationException(
+                $"{Name.Value} ran outside any view. Commands that write need a view."
+            );
+        Atoms.R?.Write((Node)view, Name, changes);
     }
 
     /// <summary>
@@ -559,67 +565,4 @@ file sealed class DividerCommand : Command
     public override bool Fits(int count) => count == 0;
 
     public override void Run(IReadOnlyList<IAtomRef> targets, ICommandView view) { }
-}
-
-/// <summary>
-/// Utilities to attach <see cref="ICommandView"/> to a <see cref="Node"/>.
-/// </summary>
-public static class CommandViews
-{
-    private static readonly Dictionary<Node, ICommandView> Attached = new();
-
-    /// <summary>
-    /// Makes <paramref name="view"/> take the <see cref="Command"/>s
-    /// for everything under <paramref name="node"/> until either leaves the tree.
-    /// </summary>
-    public static void Attach(Node node, ICommandView view)
-    {
-        Attached[node] = view;
-        DetachOnExit(node, node, view);
-        if (view is Node owner && owner != node)
-            DetachOnExit(owner, node, view);
-    }
-
-    private static void DetachOnExit(Node leaving, Node node, ICommandView view) =>
-        leaving.Connect(
-            Node.SignalName.TreeExiting,
-            Callable.From(() =>
-            {
-                // Don't remove it if it was Attached to a new view.
-                if (Attached.GetValueOrDefault(node) == view)
-                    Attached.Remove(node);
-            }),
-            (uint)GodotObject.ConnectFlags.OneShot // our callback is only called once
-        );
-
-    /// <summary>The view for the viewport's focused control, or null if it has none.</summary>
-    public static ICommandView Find(Viewport viewport) =>
-        Of(viewport.GuiGetFocusOwner() ?? (Node)viewport);
-
-    /// <summary>
-    /// The focused embedded window, or <paramref name="root"/>.
-    /// </summary>
-    public static Window FocusedWindow(Window root) =>
-        root.GetEmbeddedSubwindows()
-            .FirstOrDefault(w => w.Visible && w.HasFocus() && w is not Popup)
-        ?? root;
-
-    /// <summary>
-    /// The view that <paramref name="node"/> is in.
-    /// </summary>
-    public static ICommandView Of(Node node)
-    {
-        var viewport = node.GetViewport();
-        for (Node n = node; n != null; n = n.GetParent())
-        {
-            if (n is ICommandView view)
-                return view;
-            if (Attached.TryGetValue(n, out var attached))
-                return attached;
-            // A window only takes its own views, not the ones of the windows it's inside.
-            if (n == viewport)
-                break;
-        }
-        return null;
-    }
 }
