@@ -2,22 +2,16 @@ using Godot;
 
 namespace Lizzie;
 
-public partial class ComponentPreviewPopup : Window
+public partial class ComponentPreviewPopup : PopupPanel
 {
     private ComponentPreview _preview;
-    private Button _closeButton;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         _preview = GetNode<ComponentPreview>("%ComponentPreview");
-        _closeButton = GetNode<Button>("%CloseButton");
-        _closeButton.Pressed += QueueFree;
-        CloseRequested += QueueFree;
+        PopupHide += QueueFree;
     }
-
-    // Called every frame. 'delta' is the elapsed time since the previous frame.
-    public override void _Process(double delta) { }
 
     public void ShowComponent(VisualComponentBase component)
     {
@@ -27,6 +21,6 @@ public partial class ComponentPreviewPopup : Window
 
         _preview.Build(prototype, component.Item);
         _preview.SpinStop();
-        Show();
+        PopupCentered();
     }
 }
