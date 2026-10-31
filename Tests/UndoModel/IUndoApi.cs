@@ -12,11 +12,11 @@ public interface IUndoApi
 {
     string Name { get; }
 
-    UndoFlag Undo(Timeline timeline, byte me, TimelineUndo.Scope scope);
+    UndoFlag Undo(Timeline timeline, Source me, TimelineUndo.Scope scope);
 
-    UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope);
+    UndoFlag Redo(Timeline timeline, Source me, TimelineUndo.Scope scope);
 
-    List<Transition> OpenTransitions(Timeline timeline, byte source);
+    List<Transition> OpenTransitions(Timeline timeline, Source source);
 
     IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e);
 
@@ -31,13 +31,13 @@ public sealed class CurrentUndo : IUndoApi
 {
     public string Name => "current";
 
-    public UndoFlag Undo(Timeline timeline, byte me, TimelineUndo.Scope scope) =>
+    public UndoFlag Undo(Timeline timeline, Source me, TimelineUndo.Scope scope) =>
         TimelineUndo.Undo(timeline, me, scope);
 
-    public UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope) =>
+    public UndoFlag Redo(Timeline timeline, Source me, TimelineUndo.Scope scope) =>
         TimelineUndo.Redo(timeline, me, scope);
 
-    public List<Transition> OpenTransitions(Timeline timeline, byte source) =>
+    public List<Transition> OpenTransitions(Timeline timeline, Source source) =>
         TimelineUndo.OpenTransitions(timeline, source);
 
     public IEnumerable<TimelineEvent> Changes(Timeline timeline, TimelineEvent e) =>

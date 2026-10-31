@@ -65,17 +65,16 @@ public abstract partial class VisualComponentBase : Area3D
     private void SyncSelection(IWatchReader R)
     {
         var key = Key;
-        var local = Snowport.Clock.source;
         var place = ViewPlace.Of<GameObjects>(key.StageRef);
         var selections = R.Get(Selection.ByPlace, place);
-        var mine = selections.FirstOrDefault(s => s.Player == local)?.Targets;
+        var mine = selections.FirstOrDefault(s => s.Player.IsMe())?.Targets;
         _isMine = mine?.Contains(key) == true;
-        _localColor = R.SeatColor(local);
+        _localColor = R.SeatColor(Source.Me);
         // We're avoiding using GetSelection here, which would watch every selected component.
         ICommandView table = ProjectService.Instance.GameObjects;
         _nothingSelected = !_isMine && mine?.Any(t => table.CanSelect(R, t)) != true;
         var other = selections
-            .Where(s => s.Player != local && s.Targets.Contains(key))
+            .Where(s => !s.Player.IsMe() && s.Targets.Contains(key))
             .MaxBy(R.Version);
         _othersColor = other == null ? null : R.SeatColor(other.Player);
         UpdateHighlight();

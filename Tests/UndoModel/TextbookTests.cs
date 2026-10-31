@@ -20,7 +20,7 @@ public abstract class TextbookTests : UndoTestBase
 
     private void MatchesTextbook(Op[] ops)
     {
-        const byte me = UndoSessions.Me;
+        var me = UndoSessions.Me;
         var session = new UndoSession(Actual);
         var textbook = new TextbookUndo<SnowStamp>();
 
@@ -30,11 +30,11 @@ public abstract class TextbookTests : UndoTestBase
             var recorded = session.Apply(op);
             switch (op)
             {
-                case Op.Act { Source: me }:
+                case Op.Act act when act.Source == me:
                     textbook.Change(recorded[0].Id);
                     break;
 
-                case Op.Transition { Source: me }:
+                case Op.Transition transition when transition.Source == me:
                     textbook.Change(recorded[^1].Id);
                     break;
 

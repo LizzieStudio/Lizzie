@@ -25,10 +25,10 @@ public abstract class UndoLawTests : UndoTestBase
     ];
 
     /// <summary>A session, then who presses at the end, in what scope, and how many times.</summary>
-    private static readonly Gen<(Op[] Ops, byte Me, TestScope Scope, int Reversals)> Endings =
-        Gen.Select(UndoSessions.All, Gen.Byte[1, 4], UndoSessions.Scope, Gen.Int[1, 5]);
+    private static readonly Gen<(Op[] Ops, Source Me, TestScope Scope, int Reversals)> Endings =
+        Gen.Select(UndoSessions.All, UndoSessions.AnySource, UndoSessions.Scope, Gen.Int[1, 5]);
 
-    private static string Print((Op[] Ops, byte Me, TestScope Scope, int Reversals) ending) =>
+    private static string Print((Op[] Ops, Source Me, TestScope Scope, int Reversals) ending) =>
         $"{UndoSessions.Print(ending.Ops)}\n  then s{ending.Me} in {ending.Scope}, "
         + $"{ending.Reversals} reversals";
 
@@ -194,7 +194,7 @@ public abstract class UndoLawTests : UndoTestBase
     /// <summary>What Undo and Redo would each write now.</summary>
     private (string Reversal, UndoFlag Flag)[] Reversals(
         UndoSession session,
-        byte me,
+        Source me,
         TestScope scope
     ) =>
         [

@@ -82,14 +82,12 @@ public partial class MultiplayerManager : Node
         _isNetworked = true;
         _localPlayerId = Multiplayer.GetUniqueId();
 
-        Snowport.Clock = Snowport.Clock.WithSource(Snowport.HostSource);
-
         // Add server as first player
         _players[_localPlayerId] = new PlayerInfo
         {
             PlayerId = _localPlayerId,
             IsLocal = true,
-            Source = Snowport.HostSource,
+            Source = Source.Host,
         };
 
         GD.Print($"Server started on port {port}. Server ID: {_localPlayerId}");
@@ -150,8 +148,9 @@ public partial class MultiplayerManager : Node
         var wasGuest = _isNetworked && !_isServer;
         // We effectively need to "disconnect" all peers, even though we're the ones disconnecting.
         var guests = _players
-            .Values.Where(p => !p.IsLocal && p.Source != Snowport.AdminSource)
+            .Values.Where(p => !p.IsLocal)
             .Select(p => p.Source)
+            .OfType<Source>()
             .ToList();
 
         if (_peer != null)
@@ -171,7 +170,7 @@ public partial class MultiplayerManager : Node
         {
             // Leaving someone else's game clears the project.
             EventSynchronizer.Instance?.CancelJoin();
-            Snowport.Clock = new Snowport(Snowport.HostSource);
+            Source.Me = Source.Host;
             ProjectService.Instance?.ReplaceWithNewGame();
         }
         else if (wasHost)
@@ -202,10 +201,12 @@ public partial class MultiplayerManager : Node
         var playerId = (int)id;
         _players.Remove(playerId, out var player);
 
-        if (player != null)
-            PresenceSynchronizer.Instance?.RemoveCursor(player.Source);
-        if (IsServer && player != null)
-            ProjectService.Instance?.AbandonPlayer(player.Source);
+        if (player?.Source is { } source)
+        {
+            PresenceSynchronizer.Instance?.RemoveCursor(source);
+            if (IsServer)
+                ProjectService.Instance?.AbandonPlayer(source);
+        }
 
         EmitSignal("PlayerDisconnected", playerId);
     }
@@ -217,7 +218,7 @@ public partial class MultiplayerManager : Node
 
         _players[_localPlayerId] = new PlayerInfo { PlayerId = _localPlayerId, IsLocal = true };
 
-        // Register with the server so it can assign us a Snowport source.
+        // Register with the server so it can assign us a source.
         RpcId(1, nameof(RegisterPlayer), _localPlayerId);
 
         EmitSignal(SignalName.PlayersChanged);
@@ -246,41 +247,43 @@ public partial class MultiplayerManager : Node
         if (!IsServer)
             return;
 
-        var source = GetSnowportSource();
+        if (GetFreeSource() is not { } source)
+        {
+            // This should never actually happen.
+            // Godot's server that we're using only allows 32 peers.
+            GD.PrintErr(
+                $"Turned away peer {playerId}: no free sources remain, so the game is full."
+            );
+            _peer.DisconnectPeer(playerId);
+            return;
+        }
         if (_players.TryGetValue(playerId, out var player))
             player.Source = source;
 
         GD.Print($"Player registered: peer {playerId} -> source {source}");
 
-        // Give the newcomer its Snowport source.
+        // Give the newcomer its source.
         RpcId(playerId, nameof(AssignSource), source);
 
         // Give the newcomer the peer to source map of everyone already here.
         foreach (var kv in _players)
-            if (kv.Key != playerId)
-                RpcId(playerId, nameof(ReceivePlayerPresence), kv.Key, (int)kv.Value.Source);
+            if (kv.Key != playerId && kv.Value.Source is { } other)
+                RpcId(playerId, nameof(ReceivePlayerPresence), kv.Key, other);
 
         // Announce the newcomer to everyone.
-        Rpc(nameof(ReceivePlayerPresence), playerId, (int)source);
+        Rpc(nameof(ReceivePlayerPresence), playerId, source);
     }
 
     /// <summary>
-    /// Get the lowest unclaimed source number for a SnowStamp and SnowTag.
+    /// The lowest source no player has, or null when the game is full.
     /// </summary>
-    private byte GetSnowportSource()
+    private Source? GetFreeSource()
     {
-        var used = new HashSet<byte>();
-        foreach (var p in _players.Values)
-            used.Add(p.Source);
-
-        for (int candidate = Snowport.HostSource + 1; candidate < Snowport.SourceCount; candidate++)
-        {
-            if (!used.Contains((byte)candidate))
-                return (byte)candidate;
-        }
-
-        GD.PrintErr("No free Snowport source ids remain; the game is full.");
-        return 1;
+        var used = _players.Values.Select(p => p.Source).ToHashSet();
+        for (int candidate = Source.Host.Value + 1; candidate < Source.Count; candidate++)
+            if (!used.Contains(new Source(candidate)))
+                return new Source(candidate);
+        return null;
     }
 
     [Rpc(
@@ -290,14 +293,13 @@ public partial class MultiplayerManager : Node
     )]
     private void AssignSource(int source)
     {
-        var assigned = (byte)source;
-        Snowport.Clock = new Snowport(assigned);
+        Source.Me = new Source(source);
         PresenceSynchronizer.Instance?.ClearCursors();
 
         if (_players.TryGetValue(_localPlayerId, out var self))
-            self.Source = assigned;
+            self.Source = Source.Me;
 
-        GD.Print($"Assigned Snowport source {assigned}");
+        GD.Print($"Assigned source {Source.Me}");
     }
 
     [Rpc(
@@ -313,7 +315,7 @@ public partial class MultiplayerManager : Node
             _players[playerId] = player;
         }
 
-        player.Source = (byte)source;
+        player.Source = new Source(source);
 
         EmitSignal(SignalName.PlayersChanged);
     }
@@ -332,6 +334,8 @@ public class PlayerInfo
     public int PlayerId { get; set; }
     public bool IsLocal { get; set; }
 
-    /// <summary>The Snowport source id assigned to this player by the server.</summary>
-    public byte Source { get; set; }
+    /// <summary>
+    /// The source the host assigned this player, or null until it has.
+    /// </summary>
+    public Source? Source { get; set; }
 }

@@ -91,19 +91,17 @@ public static class UndoCommands
         },
     };
 
-    private static byte Me => Snowport.Clock.source;
-
     private static TimelineUndo.Scope MyScopeIn(IAtomReader R, ICommandView view) =>
-        view?.Place(R) is { } place ? UndoScopes.Mine(Me, place) : null;
+        view?.Place(R) is { } place ? UndoScopes.Mine(Source.Me, place) : null;
 
     private static TimelineUndo.Scope OthersScopeIn(IAtomReader R, ICommandView view) =>
-        view?.Place(R) is { } place ? UndoScopes.Others(Me, place) : null;
+        view?.Place(R) is { } place ? UndoScopes.Others(Source.Me, place) : null;
 
     /// <summary>
     /// <see cref="TimelineUndo.Undo"/> or <see cref="TimelineUndo.Redo"/>.
     /// This is used to make it easier to set which one.
     /// </summary>
-    private delegate UndoFlag Pick(Timeline timeline, byte me, TimelineUndo.Scope scope);
+    private delegate UndoFlag Pick(Timeline timeline, Source me, TimelineUndo.Scope scope);
 
     /// <summary>
     /// Submits the flag that <paramref name="pick"/> finds in <paramref name="scope"/>, if any,
@@ -116,7 +114,7 @@ public static class UndoCommands
 
         // this creates a performance timeline in the debug console
         using var _ = DebugTimings.Measure(pick.Method.Name);
-        if (pick(EventSynchronizer.Instance.Timeline, Me, scope) is { } flag)
+        if (pick(EventSynchronizer.Instance.Timeline, Source.Me, scope) is { } flag)
             EventSynchronizer.Instance.Submit(TimelineEvent.Undoing(flag, command.Name));
     }
 }

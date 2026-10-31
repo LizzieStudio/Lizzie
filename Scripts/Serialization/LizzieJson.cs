@@ -25,6 +25,7 @@ public static class LizzieJson
             new CompactVector3JsonConverter(),
             new SnowStampJsonConverter(),
             new SnowTagJsonConverter(),
+            new SourceJsonConverter(),
             new RefJsonConverter(),
             new CommandNameJsonConverter(),
         },

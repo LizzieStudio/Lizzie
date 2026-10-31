@@ -5,7 +5,7 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// Which <see cref="Seat"/> each player is sitting in, by their Snowport source.
+/// Which <see cref="Seat"/> each player is sitting in, by their <see cref="Source"/>.
 ///
 /// <para>
 /// Only the host or a solo player writes it, as admin events, so no one can undo a seat change.
@@ -22,8 +22,8 @@ public sealed record Seating : Atom
     /// <summary>
     /// The seat of each seated player. Players without a seat are missing.
     /// </summary>
-    public ImmutableDictionary<byte, Ref<Seat>> Seats { get; init; } =
-        ImmutableDictionary<byte, Ref<Seat>>.Empty;
+    public ImmutableDictionary<Source, Ref<Seat>> Seats { get; init; } =
+        ImmutableDictionary<Source, Ref<Seat>>.Empty;
 }
 
 /// <summary>
@@ -36,16 +36,22 @@ public static class SeatingReader
     /// The seat a player is sitting in, or <see cref="Ref{T}.Empty"/> when they have none.
     /// A player whose seat was removed has none until it's back.
     /// </summary>
-    public static Ref<Seat> SeatOf(this IAtomReader R, byte source) =>
-        R.Get(Seating.Only).Seats.TryGetValue(source, out var seat)
-        && R.Get(Seat.ById, seat) is { Deleted: false }
-            ? seat
-            : Ref<Seat>.Empty;
+    public static Ref<Seat> SeatOf(this IAtomReader R, Source? source)
+    {
+        if (source is { } assigned)
+        {
+            var hasSeat = R.Get(Seating.Only).Seats.TryGetValue(assigned, out var seat);
+            var notDeleted = R.Get(Seat.ById, seat) is { Deleted: false };
+            return hasSeat && notDeleted ? seat : Ref<Seat>.Empty;
+        }
+
+        return Ref<Seat>.Empty;
+    }
 
     /// <summary>
     /// The seat the local player is sitting in, or <see cref="Ref{T}.Empty"/>.
     /// </summary>
-    public static Ref<Seat> LocalSeat(this IAtomReader R) => R.SeatOf(Snowport.Clock.source);
+    public static Ref<Seat> LocalSeat(this IAtomReader R) => R.SeatOf(Source.Me);
 
     /// <summary>
     /// Whether a player is sitting in <paramref name="seat"/>.
@@ -56,6 +62,6 @@ public static class SeatingReader
     /// <summary>
     /// The color of the seat a player sits in, or gray when they have none.
     /// </summary>
-    public static Color SeatColor(this IAtomReader R, byte source) =>
+    public static Color SeatColor(this IAtomReader R, Source source) =>
         R.Get(Seat.ById, R.SeatOf(source))?.Color ?? new Color(0.8f, 0.8f, 0.8f);
 }

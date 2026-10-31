@@ -34,7 +34,7 @@ public class IdQueryTests
     }
 
     private static Ref<T> Tag<T>(int counter)
-        where T : Atom => new(new SnowTag(Snowport.HostSource, counter));
+        where T : Atom => new(new SnowTag(Source.Host, counter));
 
     [Fact]
     public void AnEmptyCellIsInTheGridWhileItsRowAndColumnAre()

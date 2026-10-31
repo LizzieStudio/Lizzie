@@ -64,13 +64,13 @@ public class SeatTests
             seats[1],
             new Seating
             {
-                Seats = ImmutableDictionary<byte, Ref<Seat>>
-                    .Empty.Add(2, seats[0].Id)
-                    .Add(3, seats[1].Id),
+                Seats = ImmutableDictionary<Source, Ref<Seat>>
+                    .Empty.Add(new Source(2), seats[0].Id)
+                    .Add(new Source(3), seats[1].Id),
             }
         );
 
-        Assert.Equal(Ref<Seat>.Empty, R.SeatOf(2));
-        Assert.Equal(seats[1].Id, R.SeatOf(3));
+        Assert.Equal(Ref<Seat>.Empty, R.SeatOf(new Source(2)));
+        Assert.Equal(seats[1].Id, R.SeatOf(new Source(3)));
     }
 }

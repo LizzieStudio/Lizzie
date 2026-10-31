@@ -30,10 +30,10 @@ public record Selection : Atom
     /// <summary>
     /// Each player's selections, by <see cref="Player"/>.
     /// </summary>
-    public static readonly Lookup<Selection, byte> ByPlayer = new(s => s.Player);
+    public static readonly Lookup<Selection, Source> ByPlayer = new(s => s.Player);
 
     /// <summary>The source of the player who owns this selection.</summary>
-    public byte Player { get; init; }
+    public Source Player { get; init; }
 
     /// <summary>
     /// Where this selection lives.
@@ -67,10 +67,9 @@ public static class LocalSelection
         ViewPlace place
     )
     {
-        var local = Snowport.Clock.source;
         var colors = new Dictionary<IAtomRef, Color>();
         var newestFirst = R.Get(Selection.ByPlace, place)
-            .OrderByDescending(s => s.Player == local)
+            .OrderByDescending(s => s.Player.IsMe())
             .ThenByDescending(R.Version);
         foreach (var selection in newestFirst)
         {
@@ -90,8 +89,7 @@ public static class LocalSelection
     /// but it's left out here, so changing the selection around it never writes an event that shows nothing.
     /// </remarks>
     public static Selection GetSelection(this IAtomReader R, ICommandView view) =>
-        R.Get(Selection.ByPlace, view.Place(R))
-            .FirstOrDefault(s => s.Player == Snowport.Clock.source)
+        R.Get(Selection.ByPlace, view.Place(R)).FirstOrDefault(s => s.Player.IsMe())
             is { } selection
             ? selection with
             {
@@ -176,7 +174,7 @@ public static class LocalSelection
             ?? new Selection
             {
                 Id = Ref<Selection>.Create(),
-                Player = Snowport.Clock.source,
+                Player = Source.Me,
                 Place = view.Place(R),
             };
         return [atom with { Targets = next }];

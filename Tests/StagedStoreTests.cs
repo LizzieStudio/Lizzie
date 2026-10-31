@@ -30,7 +30,7 @@ public class StagedStoreTests
 
     public StagedStoreTests() => _store = new(Piece.ById, _stages);
 
-    private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
+    private static SnowTag Tag(int counter) => new(Source.Host, counter);
 
     private static Ref<T> Tag<T>(int counter)
         where T : Atom => new(Tag(counter));
@@ -88,7 +88,7 @@ public class StagedStoreTests
 
     private Piece Value(int stage, int id) => (Piece)_store.Find(Key(stage, id)).Value;
 
-    private SnowStamp NextId() => new(++_clock, Snowport.HostSource);
+    private SnowStamp NextId() => new(++_clock, Source.Host);
 
     private TimelineEvent Record(TimelineEvent e)
     {

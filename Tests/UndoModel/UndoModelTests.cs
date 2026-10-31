@@ -79,7 +79,7 @@ public abstract class UndoModelTests : UndoTestBase
     [Fact]
     public void EmptyLogHasNothingToUndo()
     {
-        Gen.Select(Gen.Byte[1, 4], UndoSessions.Scope)
+        Gen.Select(UndoSessions.AnySource, UndoSessions.Scope)
             .Sample(query =>
             {
                 var (me, scope) = query;
@@ -200,7 +200,7 @@ public abstract class UndoModelTests : UndoTestBase
             Show(s, Actual.InEffect(s.Timeline))
         );
 
-    private void SameUndo(UndoSession s, byte me, TestScope scope) =>
+    private void SameUndo(UndoSession s, Source me, TestScope scope) =>
         Same(
             s,
             $"Undo by s{me} in {scope}",
@@ -208,7 +208,7 @@ public abstract class UndoModelTests : UndoTestBase
             s.Describe(Actual.Undo(s.Timeline, me, scope.For(me)))
         );
 
-    private void SameRedo(UndoSession s, byte me, TestScope scope) =>
+    private void SameRedo(UndoSession s, Source me, TestScope scope) =>
         Same(
             s,
             $"Redo by s{me} in {scope}",
@@ -216,7 +216,7 @@ public abstract class UndoModelTests : UndoTestBase
             s.Describe(Actual.Redo(s.Timeline, me, scope.For(me)))
         );
 
-    private void SameOpenTransitions(UndoSession s, byte source) =>
+    private void SameOpenTransitions(UndoSession s, Source source) =>
         Same(
             s,
             $"Open transitions of s{source}",

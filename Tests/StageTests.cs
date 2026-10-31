@@ -9,7 +9,7 @@ namespace Lizzie.Tests;
 /// </summary>
 public class StageTests
 {
-    private static Ref<Stage> Tag(int counter) => new(new SnowTag(Snowport.HostSource, counter));
+    private static Ref<Stage> Tag(int counter) => new(new SnowTag(Source.Host, counter));
 
     private static Stage Blueprint(int id, int parent = 0, bool deleted = false) =>
         new()

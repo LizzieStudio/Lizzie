@@ -44,7 +44,7 @@ public class TimelineEvent
     /// Whether this is an admin event, which belongs to the project rather than a player.
     /// </summary>
     [JsonIgnore]
-    public bool IsAdmin => Id.Source == Snowport.AdminSource;
+    public bool IsAdmin => Id.Source == Source.Admin;
 
     /// <summary>Creates an event with a new SnowStamp.</summary>
     public static TimelineEvent Now(

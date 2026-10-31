@@ -11,14 +11,14 @@ namespace Lizzie.Tests;
 
 public class SaveCompactionTests
 {
-    private static SnowTag Tag(int counter, byte source = Snowport.HostSource) =>
-        new(source, counter);
+    private static SnowTag Tag(int counter, Source? source = null) =>
+        new(source ?? Source.Host, counter);
 
-    private static Ref<T> Tag<T>(int counter, byte source = Snowport.HostSource)
+    private static Ref<T> Tag<T>(int counter, Source? source = null)
         where T : Atom => new(Tag(counter, source));
 
-    private static SnowStamp Id(long clock, byte source = Snowport.HostSource) =>
-        new(clock, source);
+    private static SnowStamp Id(long clock, Source? source = null) =>
+        new(clock, source ?? Source.Host);
 
     private static ComponentPosition Position(int id) => new() { Id = Tag<Component>(id) };
 
@@ -28,7 +28,7 @@ public class SaveCompactionTests
         new() { Id = Tag<Prototype>(id), Deleted = true };
 
     private static TimelineEvent Save(params Atom[] atoms) =>
-        new() { Id = Id(1_000_000, Snowport.AdminSource), Writes = atoms };
+        new() { Id = Id(1_000_000, Source.Admin), Writes = atoms };
 
     private static TimelineEvent Load(string json) =>
         JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
@@ -306,7 +306,7 @@ public class SaveCompactionTests
             Save(
                 Position(9) with
                 {
-                    Container = new InComponent(Tag<Component>(5, source: 3)),
+                    Container = new InComponent(Tag<Component>(5, source: new Source(3))),
                 },
                 Position(7) with
                 {
@@ -322,7 +322,7 @@ public class SaveCompactionTests
         Assert.Equal(new InComponent(new(new SnowTag(3))), back[0].Container);
         Assert.Equal(new SnowTag(1), back[1].Id.Tag);
         Assert.Equal(new InComponent(new(new SnowTag(2))), back[1].Container);
-        Assert.All(back, c => Assert.Equal(Snowport.AdminSource, c.Id.Tag.Source));
+        Assert.All(back, c => Assert.Equal(Source.Admin, c.Id.Tag.Source));
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public class SaveCompactionTests
         var back = Load(json);
 
         Assert.True(back.IsAdmin, "The save event should stay an admin event.");
-        Assert.Equal(Id(1_000_000, Snowport.AdminSource), back.Id);
+        Assert.Equal(Id(1_000_000, Source.Admin), back.Id);
         Assert.Equal(rank, ((ComponentPosition)back.Writes[0]).Rank);
     }
 
@@ -361,12 +361,12 @@ public class SaveCompactionTests
     public void TheSaveTakesTheClockOfTheNewestWrite()
     {
         var save = SaveCompaction.Event([
-            new AtomEntry(Position(1), Id(700, source: 3)),
-            new AtomEntry(Position(2), Id(900, source: 2)),
+            new AtomEntry(Position(1), Id(700, source: new Source(3))),
+            new AtomEntry(Position(2), Id(900, source: new Source(2))),
             new AtomEntry(Position(3), Id(800)),
         ]);
 
-        Assert.Equal(Id(900, Snowport.AdminSource), save.Id);
+        Assert.Equal(Id(900, Source.Admin), save.Id);
     }
 
     [Fact]
@@ -388,13 +388,13 @@ public class SaveCompactionTests
                 new AtomEntry(
                     Component(8) with
                     {
-                        PrototypeRef = Tag<Prototype>(3, source: 2),
+                        PrototypeRef = Tag<Prototype>(3, source: new Source(2)),
                     },
-                    Id(90, source: 2)
+                    Id(90, source: new Source(2))
                 ),
                 new AtomEntry(
-                    new Prototype { Id = Tag<Prototype>(3, source: 2), Name = "Card" },
-                    Id(85, source: 2)
+                    new Prototype { Id = Tag<Prototype>(3, source: new Source(2)), Name = "Card" },
+                    Id(85, source: new Source(2))
                 ),
             ])
         );

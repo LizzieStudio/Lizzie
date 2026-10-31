@@ -11,13 +11,13 @@ namespace Lizzie.Tests;
 /// </summary>
 public class UndoScenarioTests
 {
-    private const byte Admin = Snowport.AdminSource;
-    private const byte Me = 1;
-    private const byte Other = 2;
+    private static readonly Source Admin = Source.Admin;
+    private static readonly Source Me = new(1);
+    private static readonly Source Other = new(2);
 
-    private static bool Mine(byte author, TimelineEvent _) => author == Me;
+    private static bool Mine(Source author, TimelineEvent _) => author == Me;
 
-    private static bool Others(byte author, TimelineEvent _) => author != Me;
+    private static bool Others(Source author, TimelineEvent _) => author != Me;
 
     private static readonly ViewPlace Here = new("here", null);
     private static readonly ViewPlace There = new("there", null);
@@ -25,14 +25,14 @@ public class UndoScenarioTests
     private readonly Timeline _timeline = new();
     private long _clock;
 
-    private SnowStamp NextId(byte source) => new(++_clock, source);
+    private SnowStamp NextId(Source source) => new(++_clock, source);
 
     /// <summary>
     /// Records an action that writes <paramref name="atom"/>, made in <paramref name="place"/> if given.
     /// The write is a draft of <paramref name="transition"/> if given, as one made from a draft is.
     /// </summary>
     private SnowStamp Act(
-        byte source,
+        Source source,
         int atom = 1,
         ViewPlace? place = null,
         Transition transition = default
@@ -52,7 +52,7 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records the first event of a transition, which drafts <paramref name="atom"/>.</summary>
-    private Transition Start(byte source, int atom = 1, ViewPlace? place = null)
+    private Transition Start(Source source, int atom = 1, ViewPlace? place = null)
     {
         var id = Act(source, atom, place);
         var transition = new Transition(id);
@@ -63,7 +63,7 @@ public class UndoScenarioTests
     /// <summary>Records the event that ends <paramref name="transition"/>, committing <paramref name="atom"/>.</summary>
     private SnowStamp Close(
         Transition transition,
-        byte source,
+        Source source,
         int atom = 1,
         ViewPlace? place = null
     )
@@ -74,7 +74,7 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records an event that cancels <paramref name="transition"/>.</summary>
-    private TimelineEvent Cancel(Transition transition, byte source)
+    private TimelineEvent Cancel(Transition transition, Source source)
     {
         var id = NextId(source);
         var e = new TimelineEvent { Id = id, Ends = transition };
@@ -83,7 +83,7 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records a reversal directly, as the host does, as an admin event, for a player who left.</summary>
-    private TimelineEvent AddFlag(SnowStamp reverses, byte source)
+    private TimelineEvent AddFlag(SnowStamp reverses, Source source)
     {
         var id = NextId(source);
         var e = new TimelineEvent
@@ -95,13 +95,13 @@ public class UndoScenarioTests
         return e;
     }
 
-    private UndoFlag Undo(TimelineUndo.Scope scope, byte source = Me) =>
-        Reversal(TimelineUndo.Undo(_timeline, source, scope), source);
+    private UndoFlag Undo(TimelineUndo.Scope scope, Source? source = null) =>
+        Reversal(TimelineUndo.Undo(_timeline, source ?? Me, scope), source ?? Me);
 
-    private UndoFlag Redo(TimelineUndo.Scope scope, byte source = Me) =>
-        Reversal(TimelineUndo.Redo(_timeline, source, scope), source);
+    private UndoFlag Redo(TimelineUndo.Scope scope, Source? source = null) =>
+        Reversal(TimelineUndo.Redo(_timeline, source ?? Me, scope), source ?? Me);
 
-    private UndoFlag Reversal(UndoFlag flag, byte source)
+    private UndoFlag Reversal(UndoFlag flag, Source source)
     {
         if (flag != null)
         {
@@ -649,7 +649,7 @@ public class UndoScenarioTests
     }
 
     /// <summary>Records an event that writes <paramref name="atom"/>.</summary>
-    private void Write(byte source, Atom atom)
+    private void Write(Source source, Atom atom)
     {
         var id = NextId(source);
         _timeline.Add(id, new TimelineEvent { Id = id, Writes = [atom] });

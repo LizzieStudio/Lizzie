@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json;
 using Lizzie.Replication.Machinery;
 using Xunit;
@@ -6,7 +7,7 @@ namespace Lizzie.Tests;
 
 public class TimelineEventJsonTests
 {
-    private static SnowStamp Id(long clock, byte source) => new(clock, source);
+    private static SnowStamp Id(long clock, int source) => new(clock, new Source(source));
 
     private static TimelineEvent RoundTrip(TimelineEvent e, out string json)
     {
@@ -74,10 +75,10 @@ public class TimelineEventJsonTests
     public void UnsetKeepsItsQueryAndKey()
     {
         var position = new StageKey<ComponentPosition>(
-            new Ref<Stage>(new SnowTag(1, 4)),
-            new Ref<Component>(new SnowTag(1, 5))
+            new Ref<Stage>(new SnowTag(Source.Host, 4)),
+            new Ref<Component>(new SnowTag(Source.Host, 5))
         );
-        var dataset = new Ref<Dataset>(new SnowTag(2, 6));
+        var dataset = new Ref<Dataset>(new SnowTag(new Source(2), 6));
         var e = new TimelineEvent
         {
             Id = Id(5, 1),
@@ -91,6 +92,34 @@ public class TimelineEventJsonTests
         var back = RoundTrip(e, out var json);
 
         Assert.Contains("{\"type\":\"DataColumn\",\"query\":\"ByDataset\",\"key\":", json);
+        Assert.Equal(e.Unsets, back.Unsets);
+    }
+
+    [Fact]
+    public void SourcesAreWrittenAsNumbers()
+    {
+        var player = new Source(3);
+        var seat = new Ref<Seat>(new SnowTag(Source.Host, 7));
+        var e = new TimelineEvent
+        {
+            Id = Id(5, 1),
+            Writes =
+            [
+                new Seating
+                {
+                    Seats = ImmutableDictionary<Source, Ref<Seat>>.Empty.Add(player, seat),
+                },
+                new Selection { Id = new(8), Player = player },
+            ],
+            Unsets = [new Unset(Selection.ByPlayer, player)],
+        };
+
+        var back = RoundTrip(e, out var json);
+
+        Assert.Contains("\"seats\":{\"3\":", json);
+        Assert.Contains("\"player\":3", json);
+        Assert.Equal(seat, Assert.IsType<Seating>(back.Writes[0]).Seats[player]);
+        Assert.Equal(player, Assert.IsType<Selection>(back.Writes[1]).Player);
         Assert.Equal(e.Unsets, back.Unsets);
     }
 }

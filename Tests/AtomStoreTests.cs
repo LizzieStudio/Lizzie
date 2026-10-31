@@ -38,7 +38,7 @@ public class AtomStoreTests
     private readonly AtomStore<ComponentPosition, StageKey<ComponentPosition>> _store = new(ById);
     private long _clock;
 
-    private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
+    private static SnowTag Tag(int counter) => new(Source.Host, counter);
 
     private static StageKey<ComponentPosition> Key(int counter) =>
         new(Ref<Stage>.Empty, new(Tag(counter)));
@@ -110,7 +110,7 @@ public class AtomStoreTests
     private void Cancel(Transition transition) =>
         Record(new TimelineEvent { Id = NextId(), Ends = transition });
 
-    private SnowStamp NextId() => new(++_clock, Snowport.HostSource);
+    private SnowStamp NextId() => new(++_clock, Source.Host);
 
     private TimelineEvent Record(TimelineEvent e)
     {

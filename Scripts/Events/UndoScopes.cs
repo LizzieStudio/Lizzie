@@ -13,14 +13,14 @@ public static class UndoScopes
     /// <summary>
     /// The player's own actions made in <paramref name="place"/>.
     /// </summary>
-    public static TimelineUndo.Scope Mine(byte me, ViewPlace place) =>
+    public static TimelineUndo.Scope Mine(Source me, ViewPlace place) =>
         (author, action) => author == me && action.Place == place;
 
     /// <summary>
     /// Other players' actions made in <paramref name="place"/>.
     /// Ones that only change selections are passed over. That's too far.
     /// </summary>
-    public static TimelineUndo.Scope Others(byte me, ViewPlace place) =>
+    public static TimelineUndo.Scope Others(Source me, ViewPlace place) =>
         (author, action) =>
             author != me
             && action.Place == place

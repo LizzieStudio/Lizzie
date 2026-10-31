@@ -953,9 +953,7 @@
                 "const": "Selection"
               },
               "id": true,
-              "player": {
-                "type": "integer"
-              },
+              "player": true,
               "place": {
                 "type": "object",
                 "properties": {

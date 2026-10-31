@@ -7,7 +7,7 @@ namespace Lizzie.Tests;
 /// <summary>Reversals as they're saved and sent, with the game's JSON options.</summary>
 public class UndoFlagJsonTests
 {
-    private static SnowStamp Id(long clock, byte source) => new(clock, source);
+    private static SnowStamp Id(long clock, int source) => new(clock, new Source(source));
 
     [Fact]
     public void RetiredReversalsSurviveTheRoundTrip()

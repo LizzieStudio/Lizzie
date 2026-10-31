@@ -40,8 +40,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     private sealed record Listener(Node Owner, CommandName Name, Action<TimelineEvent> Handler)
     {
         /// <summary>Whether the local player made <paramref name="e"/> with this listener's command.</summary>
-        public bool ShouldHearEvent(TimelineEvent e) =>
-            e.Command == Name && e.Id.Source == Snowport.Clock.source;
+        public bool ShouldHearEvent(TimelineEvent e) => e.Command == Name && e.Id.Source.IsMe();
     }
 
     public override void _EnterTree()

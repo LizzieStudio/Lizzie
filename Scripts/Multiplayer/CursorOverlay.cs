@@ -27,7 +27,7 @@ public partial class CursorOverlay : Control
         foreach (var (source, pos) in cursors.Cursors)
         {
             // The local player has the mouse pointer.
-            if (source == Snowport.Clock.source || camera.IsPositionBehind(pos))
+            if (source.IsMe() || camera.IsPositionBehind(pos))
                 continue;
             var tip = camera.UnprojectPosition(pos);
             DrawTextureRect(Texture, new Rect2(tip, size), false, Atoms.R.SeatColor(source));

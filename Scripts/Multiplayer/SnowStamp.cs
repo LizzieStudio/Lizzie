@@ -5,29 +5,18 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// A hybrid timestamp and logic clock with a source ID to make it unique to the project.
+/// A hybrid timestamp and logic clock.
 /// </summary>
 public class Snowport
 {
-    /// <summary>
-    /// The source of admin events, which belong to the project rather than a player.
-    /// The host or a solo player writes them, and no one can undo them.
-    /// </summary>
-    public const byte AdminSource = 0;
-
-    /// <summary>
-    /// The host's source, which a solo player uses too. Joining players get the next ones.
-    /// </summary>
-    public const byte HostSource = 1;
-
     private static Snowport _clock;
 
     /// <summary>
-    /// The local player's clock, which gets a different source when joining games.
+    /// The local player's clock, which restarts with each new timeline.
     /// </summary>
     public static Snowport Clock
     {
-        get => _clock ??= new Snowport(HostSource);
+        get => _clock ??= new Snowport();
         set => _clock = value;
     }
 
@@ -44,39 +33,15 @@ public class Snowport
     // A counter for SnowTag identities.
     private int _tagCounter = 1;
 
-    public readonly byte source;
-
-    /// <summary>How many sources there are, 0 to 63, since ids give the source 6 bits.</summary>
-    public const int SourceCount = 64;
-
     /// <summary>
     /// The low bits of <see cref="SnowStamp.LogicClock"/> that increment for ids made in the same millisecond.
     /// </summary>
     public const int TickBits = 6;
 
-    public Snowport(byte source, Func<long> ticksMsec = null)
+    public Snowport(Func<long> ticksMsec = null)
     {
-        if (source >= SourceCount)
-            throw new ArgumentOutOfRangeException(nameof(source), source, "A source takes 6 bits.");
         _ticksMsec = ticksMsec ?? (() => (long)Time.GetTicksMsec());
         _localOffsetMsec = _ticksMsec();
-        this.source = source;
-    }
-
-    /// <summary>
-    /// Returns a clock under a new source that keeps the game time, hybrid clock, and tag counter.
-    /// Use this instead of <c>new Snowport(source)</c> when the local player switches source
-    /// while keeping the current project (hosting).
-    /// </summary>
-    public Snowport WithSource(byte newSource)
-    {
-        return new Snowport(newSource, _ticksMsec)
-        {
-            _localOffsetMsec = _localOffsetMsec,
-            _globalOffsetMsec = _globalOffsetMsec,
-            _useLogicClock = _useLogicClock,
-            _tagCounter = _tagCounter,
-        };
     }
 
     /// <summary>The project's shared time, in milliseconds.</summary>
@@ -90,19 +55,19 @@ public class Snowport
     /// <summary>
     /// Create a new SnowStamp. Elsewhere, use <see cref="SnowStamp.Create"/>, which calls this on <see cref="Clock"/>.
     /// </summary>
-    public SnowStamp Create() => Mint(source);
+    public SnowStamp Create() => Mint(Source.Me);
 
     /// <summary>
     /// The clock behind <see cref="SnowStamp.CreateAdmin"/>.
     /// </summary>
     public SnowStamp CreateAdmin()
     {
-        if (source != HostSource)
+        if (!Source.Host.IsMe())
             throw new Exception("Only the host can make admin events");
-        return Mint(AdminSource);
+        return Mint(Source.Admin);
     }
 
-    private SnowStamp Mint(byte from)
+    private SnowStamp Mint(Source from)
     {
         lock (_lock)
         {
@@ -118,16 +83,16 @@ public class Snowport
     public SnowTag CreateTag()
     {
         lock (_lock)
-            return new(source, _tagCounter++);
+            return new(Source.Me, _tagCounter++);
     }
 
     /// <summary>
-    /// Advance the tag counter past <paramref name="tag"/> when it shares our source.
+    /// Advance the tag counter past <paramref name="tag"/> when it's the local player's.
     /// </summary>
     public void ObserveTag(SnowTag tag)
     {
         lock (_lock)
-            if (tag.Source == source && tag.Counter >= _tagCounter)
+            if (tag.Source.IsMe() && tag.Counter >= _tagCounter)
                 _tagCounter = tag.Counter + 1;
     }
 
@@ -181,8 +146,8 @@ public readonly record struct SnowStamp : IComparable<SnowStamp>, IFormattable
         ID = id;
     }
 
-    public SnowStamp(long logicClock, byte source)
-        : this((logicClock << 6) | CheckSource(source)) { }
+    public SnowStamp(long logicClock, Source source)
+        : this((logicClock << 6) | source.Value) { }
 
     /// <summary>
     /// The hybrid clock: the game time in milliseconds then a <see cref="Snowport.TickBits"/> bit increment for events in the same millisecond.
@@ -192,11 +157,10 @@ public readonly record struct SnowStamp : IComparable<SnowStamp>, IFormattable
     /// <summary>
     /// The source that made this SnowStamp.
     /// </summary>
-    public byte Source => (byte)(ID & 0x3F);
+    public Source Source => new((int)(ID & 0x3F));
 
     public int CompareTo(SnowStamp other) => ID.CompareTo(other.ID);
 
-    // Declared because comparisons were having to choose between long and ulong conversion.
     public static bool operator <(SnowStamp left, SnowStamp right) => left.ID < right.ID;
 
     public static bool operator >(SnowStamp left, SnowStamp right) => left.ID > right.ID;
@@ -206,13 +170,6 @@ public readonly record struct SnowStamp : IComparable<SnowStamp>, IFormattable
     public static bool operator >=(SnowStamp left, SnowStamp right) => left.ID >= right.ID;
 
     public static implicit operator long(SnowStamp id) => id.ID;
-
-    // An id only uses 53 bits, so it's never negative.
-    public static implicit operator ulong(SnowStamp id) => (ulong)id.ID;
-
-    public static implicit operator Variant(SnowStamp id) => id.ID;
-
-    public static explicit operator SnowStamp(Variant v) => new(v.AsInt64());
 
     public override string ToString() => ID.ToString();
 
@@ -231,15 +188,6 @@ public readonly record struct SnowStamp : IComparable<SnowStamp>, IFormattable
         id = Empty;
         return false;
     }
-
-    internal static byte CheckSource(byte source) =>
-        source < Snowport.SourceCount
-            ? source
-            : throw new ArgumentOutOfRangeException(
-                nameof(source),
-                source,
-                "A source takes 6 bits."
-            );
 }
 
 /// <summary>
@@ -273,8 +221,8 @@ public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
         ID = id;
     }
 
-    public SnowTag(byte source, int counter)
-        : this((SnowStamp.CheckSource(source) << 26) | CheckCounter(counter)) { }
+    public SnowTag(Source source, int counter)
+        : this((source.Value << 26) | CheckCounter(counter)) { }
 
     private static int CheckCounter(int counter) =>
         counter is >= 0 and <= MaxCounter
@@ -288,7 +236,7 @@ public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
     /// <summary>
     /// The source that minted this tag.
     /// </summary>
-    public byte Source => (byte)((ID >> 26) & 0x3F);
+    public Source Source => new((ID >> 26) & 0x3F);
 
     /// <summary>
     /// The ID without the source number.

@@ -277,7 +277,7 @@ public partial class ProjectService : Node
     /// <item>frees their seat</item>
     /// </list>
     /// </summary>
-    public void AbandonPlayer(byte source)
+    public void AbandonPlayer(Source source)
     {
         EventSynchronizer.Instance?.AbandonTransitions(source);
         var seating = Atoms.R.Get(Seating.Only);

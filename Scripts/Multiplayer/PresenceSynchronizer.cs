@@ -24,12 +24,12 @@ public partial class PresenceSynchronizer : Node
     private double _sendAccumulator;
 
     // Every player's cursor, by source. The local player's is the one this machine updates.
-    private readonly Dictionary<byte, Vector3> _positions = new();
+    private readonly Dictionary<Source, Vector3> _positions = new();
 
     /// <summary>
     /// Every player's cursor position in the view, by source.
     /// </summary>
-    public IReadOnlyDictionary<byte, Vector3> Cursors => _positions;
+    public IReadOnlyDictionary<Source, Vector3> Cursors => _positions;
 
     public override void _EnterTree()
     {
@@ -65,7 +65,7 @@ public partial class PresenceSynchronizer : Node
         if (mm?.IsMultiplayerActive == true && !mm.IsServer)
             RpcId(1, nameof(ServerRequestSeat), seat);
         else
-            TryAssignSeat(Snowport.Clock.source, seat, 1);
+            TryAssignSeat(Source.Me, seat, 1);
     }
 
     /// <summary>
@@ -76,16 +76,15 @@ public partial class PresenceSynchronizer : Node
         if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
             return;
 
-        var source = Snowport.Clock.source;
         var seats = Atoms.R.Get(Seating.Only).Seats;
-        var seated = seats.TryGetValue(source, out var current);
+        var seated = seats.TryGetValue(Source.Me, out var current);
         if (seated && seats.Count == 1)
             return;
         var seat = seated
             ? current
             : Atoms.R.Get(Seat.Live).FirstOrDefault()?.Id ?? Ref<Seat>.Empty;
-        var solo = ImmutableDictionary<byte, Ref<Seat>>.Empty;
-        WriteSeats(seat.IsEmpty ? solo : solo.Add(source, seat));
+        var solo = ImmutableDictionary<Source, Ref<Seat>>.Empty;
+        WriteSeats(seat.IsEmpty ? solo : solo.Add(Source.Me, seat));
     }
 
     [Rpc(
@@ -99,16 +98,16 @@ public partial class PresenceSynchronizer : Node
             return;
 
         var peer = Multiplayer.GetRemoteSenderId();
-        if (MultiplayerManager.Instance.Players.TryGetValue(peer, out var pi) != true)
+        if (MultiplayerManager.Instance.Players.GetValueOrDefault(peer)?.Source is not { } source)
             return;
 
-        TryAssignSeat(pi.Source, new Ref<Seat>(seat), peer);
+        TryAssignSeat(source, new Ref<Seat>(seat), peer);
     }
 
     /// <summary>
     /// The host's decision: a seat goes to whoever asks first, and anyone later asks again.
     /// </summary>
-    private void TryAssignSeat(byte source, Ref<Seat> seat, int requesterPeerId)
+    private void TryAssignSeat(Source source, Ref<Seat> seat, int requesterPeerId)
     {
         if (Atoms.R.IsSeatTaken(seat) && Atoms.R.SeatOf(source) != seat)
         {
@@ -122,13 +121,13 @@ public partial class PresenceSynchronizer : Node
         Assign(source, seat);
     }
 
-    private static void Assign(byte source, Ref<Seat> seat)
+    private static void Assign(Source source, Ref<Seat> seat)
     {
         var seats = Atoms.R.Get(Seating.Only).Seats;
         WriteSeats(seat.IsEmpty ? seats.Remove(source) : seats.SetItem(source, seat));
     }
 
-    private static void WriteSeats(ImmutableDictionary<byte, Ref<Seat>> seats) =>
+    private static void WriteSeats(ImmutableDictionary<Source, Ref<Seat>> seats) =>
         Atoms.R.WriteAdmin(Atoms.R.Get(Seating.Only) with { Seats = seats });
 
     [Rpc(
@@ -152,7 +151,7 @@ public partial class PresenceSynchronizer : Node
     {
         if (_dragPlane?.GetCursorProjection() is not { } pos)
             return;
-        _positions[Snowport.Clock.source] = pos;
+        _positions[Source.Me] = pos;
 
         _sendAccumulator += delta;
         if (_sendAccumulator < SendInterval)
@@ -173,14 +172,9 @@ public partial class PresenceSynchronizer : Node
     )]
     private void ReceiveCursor(Vector3 pos)
     {
-        if (
-            MultiplayerManager.Instance.Players.TryGetValue(
-                Multiplayer.GetRemoteSenderId(),
-                out var player
-            )
-            && player.Source != Snowport.AdminSource
-        )
-            _positions[player.Source] = pos;
+        var sender = Multiplayer.GetRemoteSenderId();
+        if (MultiplayerManager.Instance.Players.GetValueOrDefault(sender)?.Source is { } source)
+            _positions[source] = pos;
     }
 
     /// <summary>
@@ -197,7 +191,7 @@ public partial class PresenceSynchronizer : Node
     /// <summary>
     /// Forgets the cursor of <paramref name="source"/>, a player who left.
     /// </summary>
-    public void RemoveCursor(byte source) => _positions.Remove(source);
+    public void RemoveCursor(Source source) => _positions.Remove(source);
 
     /// <summary>
     /// Forgets every cursor.

@@ -59,12 +59,12 @@ public static class TimelineUndo
     /// <summary>
     /// Whether an action, as done by <paramref name="author"/>, is something to undo or redo.
     /// </summary>
-    public delegate bool Scope(byte author, TimelineEvent action);
+    public delegate bool Scope(Source author, TimelineEvent action);
 
     /// <summary>
     /// Selects the target that Undo should submit, or null if there's nothing in scope to undo.
     /// </summary>
-    public static UndoFlag Undo(Timeline timeline, byte me, Scope scope)
+    public static UndoFlag Undo(Timeline timeline, Source me, Scope scope)
     {
         var reversed = new HashSet<SnowStamp>();
         var targets = new Targets(timeline, me, scope);
@@ -90,7 +90,7 @@ public static class TimelineUndo
     /// <summary>
     /// Selects the target that Redo should submit, or null if there's nothing in scope to redo.
     /// </summary>
-    public static UndoFlag Redo(Timeline timeline, byte me, Scope scope)
+    public static UndoFlag Redo(Timeline timeline, Source me, Scope scope)
     {
         var reversed = new HashSet<SnowStamp>();
         var targets = new Targets(timeline, me, scope);
@@ -191,13 +191,13 @@ public static class TimelineUndo
     /// <summary>
     /// What Undo and Redo may target, judged once per entry over a walk from newest to oldest.
     /// </summary>
-    private sealed class Targets(Timeline timeline, byte me, Scope scope)
+    private sealed class Targets(Timeline timeline, Source me, Scope scope)
     {
         // whether each action, as done by an author, is in scope
-        private readonly Dictionary<(SnowStamp, byte), bool> _inScope = new();
+        private readonly Dictionary<(SnowStamp, Source), bool> _inScope = new();
 
         // each entry's action, and who it counts as done by
-        private readonly Dictionary<SnowStamp, (SnowStamp Action, byte Author)> _resolved = new();
+        private readonly Dictionary<SnowStamp, (SnowStamp Action, Source Author)> _resolved = new();
 
         /// <summary>
         /// Whether <paramref name="e"/> is something to undo or redo:
@@ -216,7 +216,7 @@ public static class TimelineUndo
         /// did it, another player's reversal by them, and the player's own reversal by whoever did
         /// what it reverses.
         /// </summary>
-        private (SnowStamp Action, byte Author) Resolve(SnowStamp entry)
+        private (SnowStamp Action, Source Author) Resolve(SnowStamp entry)
         {
             var chain = new List<(SnowStamp Id, UndoFlag Reversal)>();
             var at = entry;
@@ -241,7 +241,7 @@ public static class TimelineUndo
         /// <summary>
         /// Whether the action is in scope, as done by the author.
         /// </summary>
-        private bool InScope(TimelineEvent action, byte author)
+        private bool InScope(TimelineEvent action, Source author)
         {
             if (!_inScope.TryGetValue((action.Id, author), out bool inScope))
                 _inScope[(action.Id, author)] = inScope = scope(author, action);
@@ -252,7 +252,7 @@ public static class TimelineUndo
     /// <summary>
     /// The transitions started by <paramref name="source"/> that no event has ended yet.
     /// </summary>
-    public static List<Transition> OpenTransitions(Timeline timeline, byte source)
+    public static List<Transition> OpenTransitions(Timeline timeline, Source source)
     {
         var ended = timeline.Values.Select(e => e.Ends).ToHashSet();
         return timeline

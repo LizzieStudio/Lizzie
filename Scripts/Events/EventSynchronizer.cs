@@ -32,18 +32,19 @@ public partial class EventSynchronizer : Node
     }
 
     /// <summary>
-    /// Clears the timeline.
+    /// Clears the timeline and restarts the game clock.
     /// </summary>
     public void Clear()
     {
         Timeline.Clear();
+        Snowport.Clock = new Snowport();
     }
 
     /// <summary>
     /// Cancels each transition <paramref name="source"/> left unfinished.
     /// The host calls this when a player leaves, so it's written once.
     /// </summary>
-    public void AbandonTransitions(byte source)
+    public void AbandonTransitions(Source source)
     {
         foreach (var transition in TimelineUndo.OpenTransitions(Timeline, source))
             Submit(new TimelineEvent { Id = SnowStamp.Create(), Ends = transition });

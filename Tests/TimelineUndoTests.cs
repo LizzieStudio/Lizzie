@@ -13,9 +13,9 @@ public class TimelineUndoTests
 
     public TimelineUndoTests(ITestOutputHelper output) => _output = output;
 
-    private const byte Local = 1;
+    private static readonly Source Local = new(1);
 
-    private static SnowStamp GetId(int clock, byte source) => new(clock, source);
+    private static SnowStamp GetId(int clock, Source source) => new(clock, source);
 
     private static TimelineEvent GetTableEvent(SnowStamp id)
     {
@@ -31,27 +31,14 @@ public class TimelineUndoTests
         };
     }
 
-    private static Timeline GetTimeline(byte[] sources, int count = 1)
-    {
-        var timeline = new Timeline();
-        for (int i = 0; i < sources.Length; i++)
-        {
-            for (int l = 0; l < count; l++)
-            {
-                var id = GetId(i + 1, sources[i]);
-                timeline.Add(
-                    id,
-                    new TimelineEvent { Id = id, Writes = [new Selection { Id = new(i + 1) }] }
-                );
-            }
-        }
-        return timeline;
-    }
-
     [Fact]
     public void UndoTargetsNewestOwnEvent()
     {
-        Gen.Select(Gen.Byte[1, 3], Gen.OneOfConst("event", "undo", "redo"), Gen.Int[0, 100])
+        Gen.Select(
+                Gen.Int[1, 3].Select(s => new Source(s)),
+                Gen.OneOfConst("event", "undo", "redo"),
+                Gen.Int[0, 100]
+            )
             .Array[0, 20]
             .Sample(p =>
             {
@@ -96,13 +83,5 @@ public class TimelineUndoTests
                     TimelineUndo.Undo(timeline, Local, (author, _) => author == Local)?.Reverses
                 );
             });
-    }
-
-    [Fact]
-    public void FirstTest()
-    {
-        Timeline timeline = new();
-        TimelineUndo.Undo(timeline, 0, (_, _) => true);
-        Assert.Equal("Hello, world!", "Hello, " + "world!");
     }
 }

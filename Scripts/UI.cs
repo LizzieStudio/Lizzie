@@ -86,7 +86,7 @@ public partial class UI : CanvasLayer
 
     private void PromptIfSeatRemoved(IWatchReader R)
     {
-        var seat = R.Get(Seating.Only).Seats.GetValueOrDefault(Snowport.Clock.source);
+        var seat = R.Get(Seating.Only).Seats.GetValueOrDefault(Source.Me);
         var wasRemoved = R.Get(Seat.ById, seat) is { Deleted: true };
         if (wasRemoved && seat != _currentSeat)
             ShowPlayerSeatingDialog();

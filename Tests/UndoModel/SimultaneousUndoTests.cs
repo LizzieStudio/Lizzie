@@ -10,7 +10,7 @@ namespace Lizzie.Tests;
 /// </summary>
 public class SimultaneousUndoTests
 {
-    private const byte Me = 1;
+    private static readonly Source Me = new(1);
     private static readonly TestScope Mine = new(ScopeKind.Mine, 0);
     private static readonly TestScope Others = new(ScopeKind.Others, 0);
 
@@ -45,7 +45,7 @@ public class SimultaneousUndoTests
             [
                 new Op.Act(Me, 1, 0, 0),
                 new Op.Reversal(Me, false, Mine),
-                new Op.Concurrent(2, false, Others, Back: 1, After: after),
+                new Op.Concurrent(new Source(2), false, Others, Back: 1, After: after),
             ],
             api
         );
@@ -53,7 +53,7 @@ public class SimultaneousUndoTests
         AssertLive(session, api, false, "both undos should have taken A away");
 
         var redo = Assert.Single(session.Apply(new Op.Reversal(Me, true, Mine))).Undo;
-        var theirs = session.Timeline.Values.Single(e => e.Id.Source == 2).Id;
+        var theirs = session.Timeline.Values.Single(e => e.Id.Source == new Source(2)).Id;
         Assert.Equal([theirs], redo.Also);
         AssertLive(session, api, true, "one Redo should bring A back");
     }
@@ -72,7 +72,7 @@ public class SimultaneousUndoTests
                 new Op.Act(Me, 1, 0, 0),
                 new Op.Reversal(Me, false, Mine),
                 new Op.Reversal(Me, true, Mine),
-                new Op.Concurrent(2, false, Others, Back: 2, After: 0),
+                new Op.Concurrent(new Source(2), false, Others, Back: 2, After: 0),
             ],
             api
         );
@@ -92,8 +92,8 @@ public class SimultaneousUndoTests
         var session = UndoSession.Play(
             [
                 new Op.Act(Me, 1, 0, 0),
-                new Op.Reversal(2, false, Others),
-                new Op.Concurrent(3, false, Others, Back: 1, After: 1),
+                new Op.Reversal(new Source(2), false, Others),
+                new Op.Concurrent(new Source(3), false, Others, Back: 1, After: 1),
             ],
             api
         );

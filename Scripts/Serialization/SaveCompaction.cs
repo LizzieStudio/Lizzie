@@ -24,7 +24,7 @@ public static class SaveCompaction
         var entries = saved.ToList();
         return new()
         {
-            Id = new SnowStamp(entries.Max(e => e.LastUpdate).LogicClock, Snowport.AdminSource),
+            Id = new SnowStamp(entries.Max(e => e.LastUpdate).LogicClock, Source.Admin),
             Writes = Collect(entries.Select(e => e.Value)),
         };
     }
@@ -111,7 +111,7 @@ public static class SaveCompaction
         foreach (var tag in found)
             tags[tag] =
                 tags.Count < SnowTag.MaxCounter
-                    ? new SnowTag(Snowport.AdminSource, tags.Count + 1)
+                    ? new SnowTag(Source.Admin, tags.Count + 1)
                     : throw new InvalidOperationException(
                         $"A save can't hold more than {SnowTag.MaxCounter} SnowTags."
                     );

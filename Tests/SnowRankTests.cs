@@ -92,15 +92,13 @@ public class SnowRankTests
     public void PlayersInsertingInTheSamePlaceGetDifferentRanks()
     {
         var items = Appended(2);
-        var local = Snowport.Clock;
         try
         {
-            // Every player's clock is where the local one is, as if they all inserted at once.
             var ranks = Enumerable
-                .Range(0, Snowport.SourceCount)
+                .Range(0, Source.Count)
                 .Select(source =>
                 {
-                    Snowport.Clock = local.WithSource((byte)source);
+                    Source.Me = new Source(source);
                     return SnowRank.At(items, 1);
                 })
                 .ToList();
@@ -113,7 +111,7 @@ public class SnowRankTests
         }
         finally
         {
-            Snowport.Clock = local;
+            Source.Me = Source.Host;
         }
     }
 

@@ -57,7 +57,7 @@ public sealed class NaiveUndo : IUndoApi
     /// Who an entry counts as done by, for the player <paramref name="me"/>: an action by whoever did it,
     /// another player's reversal by them, and the player's own reversal by whoever did what it reverses.
     /// </summary>
-    private static byte AuthorOf(Timeline timeline, SnowStamp entry, byte me) =>
+    private static Source AuthorOf(Timeline timeline, SnowStamp entry, Source me) =>
         ReversalAt(timeline, entry) is not { } reversal ? entry.Source
         : reversal.Id.Source == me ? AuthorOf(timeline, reversal.Undo.Reverses, me)
         : reversal.Id.Source;
@@ -76,7 +76,7 @@ public sealed class NaiveUndo : IUndoApi
     private static bool IsCandidate(
         Timeline timeline,
         TimelineEvent e,
-        byte me,
+        Source me,
         TimelineUndo.Scope scope
     ) =>
         !e.IsAdmin
@@ -102,7 +102,7 @@ public sealed class NaiveUndo : IUndoApi
     /// older undo reversals included, and the newest entry still in effect is reversed.
     /// A Redo reversal is never history: it cancels out with the Undo reversal it reversed.
     /// </summary>
-    public UndoFlag Undo(Timeline timeline, byte me, TimelineUndo.Scope scope)
+    public UndoFlag Undo(Timeline timeline, Source me, TimelineUndo.Scope scope)
     {
         bool pastLatestReversals = false;
         foreach (var e in NewestFirst(timeline))
@@ -148,7 +148,7 @@ public sealed class NaiveUndo : IUndoApi
     /// Redo reverses the player's newest Undo reversal still in effect, among their latest reversals.
     /// Anything else that has happened since leaves nothing to redo.
     /// </summary>
-    public UndoFlag Redo(Timeline timeline, byte me, TimelineUndo.Scope scope)
+    public UndoFlag Redo(Timeline timeline, Source me, TimelineUndo.Scope scope)
     {
         foreach (var e in NewestFirst(timeline))
         {
@@ -170,7 +170,7 @@ public sealed class NaiveUndo : IUndoApi
     /// The transitions a player started that no event has ended. A transition is started by an event
     /// with a draft of itself.
     /// </summary>
-    public List<Transition> OpenTransitions(Timeline timeline, byte source) =>
+    public List<Transition> OpenTransitions(Timeline timeline, Source source) =>
         timeline
             .Values.Where(e =>
                 e.Id.Source == source && e.Writes.Any(w => w.Transition == new Transition(e.Id))

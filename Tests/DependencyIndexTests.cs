@@ -16,7 +16,7 @@ public class DependencyIndexTests
 
     private readonly DependencyIndex<string> _index = new();
 
-    private static SnowTag Tag(int counter) => new(Snowport.HostSource, counter);
+    private static SnowTag Tag(int counter) => new(Source.Host, counter);
 
     [StackTraceHidden]
     private void AssertAffected(Touch[] touches, params string[] expected)
