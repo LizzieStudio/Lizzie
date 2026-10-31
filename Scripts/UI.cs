@@ -519,7 +519,6 @@ public partial class UI : CanvasLayer
 
     private void SetSceneMode(SceneMode mode)
     {
-        GD.Print($"Set Master Mode {mode}");
         var buttons = modeButtons.GetChildren();
         foreach (var i in buttons)
         {

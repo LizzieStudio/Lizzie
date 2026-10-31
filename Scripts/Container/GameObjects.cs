@@ -36,7 +36,8 @@ public partial class GameObjects : Node3D, ICommandView
     // set when a component changes, and handled once the frame's updates are in, before it's drawn
     private bool _viewChanged;
 
-    private GameController _gameController;
+    [Export]
+    private HandManager _handManager;
 
     /// <summary>
     /// The stage the local player picked to show, or <see cref="Ref{T}.Empty"/> for the current table.
@@ -157,7 +158,7 @@ public partial class GameObjects : Node3D, ICommandView
         _held = null;
         CursorMode = CursorMode.Normal;
         _heldOverHand = false;
-        _gameController.HandManager.HideDragPreview();
+        _handManager.HideDragPreview();
         SetDropTarget(null);
     }
 
@@ -240,11 +241,6 @@ public partial class GameObjects : Node3D, ICommandView
             _currentDragDropTarget = null;
         if (_hover.Component == c)
             UpdateHover();
-    }
-
-    public void SetGameController(GameController gameController)
-    {
-        _gameController = gameController;
     }
 
     public VisualComponentBase GetComponent(Ref<Component> component) =>
@@ -893,7 +889,7 @@ public partial class GameObjects : Node3D, ICommandView
         }
         if (overHand)
         {
-            _gameController.HandManager.ShowDragPreview(
+            _handManager.ShowDragPreview(
                 held.Cards(Atoms.R).OrderBy(s => s.Rank).ToList(),
                 row,
                 point
@@ -901,7 +897,7 @@ public partial class GameObjects : Node3D, ICommandView
             SetDropTarget(null);
             return;
         }
-        _gameController.HandManager.HideDragPreview();
+        _handManager.HideDragPreview();
 
         var target =
             GetViewport().GuiGetHoveredControl() == _tableMouseControl ? DropTargetAt(point) : null;

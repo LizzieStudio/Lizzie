@@ -11,15 +11,11 @@ public partial class GameController : Node
 
     private UI _uiController;
 
-    [Export]
-    private TextureFactory _textureFactory;
-
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         _gameObjects = GetNode<GameObjects>("3DSceneNoPhysics");
-        _gameObjects.HoveredComponentChange += MainSceneOnHoveredNameChange;
-        _gameObjects.SetGameController(this);
+        _gameObjects.HoveredComponentChange += OnHoveredComponentChange;
 
         _uiController = GetNode<UI>("UI");
         _uiController.SceneModeChange += OnSceneModeChange;
@@ -54,7 +50,7 @@ public partial class GameController : Node
             ProjectService.Instance.NewGame();
     }
 
-    private void MainSceneOnHoveredNameChange(object sender, HoveredComponentChangeEventArgs e)
+    private void OnHoveredComponentChange(object sender, HoveredComponentChangeEventArgs e)
     {
         _uiController.UpdateHoveredName(e.Component);
     }
@@ -181,7 +177,7 @@ public partial class GameController : Node
         component.PrototypeRef = prototype.Id;
         component.Item = item;
 
-        component.TextureFactory = _textureFactory;
+        component.TextureFactory = _gameObjects.TextureFactory;
         return component;
     }
 
@@ -192,6 +188,4 @@ public partial class GameController : Node
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta) { }
-
-    public HandManager HandManager => _uiController.HandManager;
 }

@@ -15,9 +15,8 @@
 [ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandMenuItem.cs" id="cmd_item"]
 [ext_resource type="Script" uid="uid://b5mdnpo6px318" path="res://Scripts/Commands/CommandMenuButton.cs" id="cmd_menu"]
 
-[node name="PrimaryScene" type="Node" unique_id=410470090 node_paths=PackedStringArray("_textureFactory")]
+[node name="PrimaryScene" type="Node" unique_id=410470090]
 script = ExtResource("1_hibmt")
-_textureFactory = NodePath("UI/TextureFactory")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=309296479]
 script = ExtResource("2_a0mv7")
@@ -283,20 +282,11 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 _localPlayerHand = NodePath("../Hand")
 
-[node name="FileDialog" type="FileDialog" parent="." unique_id=350939739]
-oversampling_override = 1.0
-title = "Open a File"
-initial_position = 2
-size = Vector2i(496, 500)
-ok_button_text = "Open"
-file_mode = 0
-access = 2
-
-[node name="3DSceneNoPhysics" parent="." unique_id=325671090 node_paths=PackedStringArray("_textureFactory") instance=ExtResource("3_6khan")]
+[node name="3DSceneNoPhysics" parent="." unique_id=325671090 node_paths=PackedStringArray("_textureFactory", "_handManager") instance=ExtResource("3_6khan")]
 _textureFactory = NodePath("../UI/TextureFactory")
+_handManager = NodePath("../UI/Hand")
 
 [node name="SheetDrawings" type="Node" parent="." unique_id=148382881]
 
 [connection signal="pressed" from="UI/Mode/Play2D" to="UI" method="_on_play_2d_pressed"]
 [connection signal="pressed" from="UI/Mode/Play3D" to="UI" method="_on_play_3d_pressed"]
-[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
