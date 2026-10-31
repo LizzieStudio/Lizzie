@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://c10pvpfntkay3"]
 
-[ext_resource type="Script" uid="uid://cyrwek4kgv62y" path="res://Scripts/SceneController.cs" id="1_4ynb0"]
 [ext_resource type="PackedScene" uid="uid://8ts0q3rup6h6" path="res://Scenes/table.tscn" id="1_7yafe"]
 [ext_resource type="Script" uid="uid://cp63nf8hymlkj" path="res://Scripts/Camera/CameraManager.cs" id="3_v37dv"]
 [ext_resource type="Script" uid="uid://bwj2ex8wvqg82" path="res://Scripts/Camera/PerspectiveViewCamera.cs" id="4_42he8"]
@@ -13,8 +12,11 @@
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_d3epo"]
 
-[node name="3DSceneNoPhysics" type="Node3D" unique_id=425149799]
-script = ExtResource("1_4ynb0")
+[node name="3DSceneNoPhysics" type="Node3D" unique_id=425149799 node_paths=PackedStringArray("_dragPlane", "_selectionRectangle", "_tableMouseControl")]
+script = ExtResource("6_7g6ti")
+_dragPlane = NodePath("DragPlane")
+_selectionRectangle = NodePath("TableOverlay/DragSelectRectangle")
+_tableMouseControl = NodePath("TableOverlay/TableMouseControl")
 
 [node name="Table" parent="." unique_id=947048340 instance=ExtResource("1_7yafe")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
@@ -32,7 +34,7 @@ script = ExtResource("3_v37dv")
 
 [node name="PerspectiveViewCamera" type="Node3D" parent="Cameras" unique_id=1548609550 node_paths=PackedStringArray("_gameObjects")]
 script = ExtResource("4_42he8")
-_gameObjects = NodePath("../../GameObjects")
+_gameObjects = NodePath("../..")
 RotationSpeed = 0.1
 ContinuousZoomSpeed = 30.0
 PanSpeed = 20.0
@@ -46,7 +48,7 @@ fov = 73.6372
 
 [node name="TopViewCamera" type="Node3D" parent="Cameras" unique_id=1071968852 node_paths=PackedStringArray("_gameObjects")]
 script = ExtResource("5_he01h")
-_gameObjects = NodePath("../../GameObjects")
+_gameObjects = NodePath("../..")
 RotationSpeed = 0.1
 ContinuousZoomSpeed = 50.0
 PanSpeed = 20.0
@@ -58,12 +60,6 @@ attributes = SubResource("CameraAttributesPractical_d3epo")
 projection = 1
 current = true
 size = 110.0
-
-[node name="GameObjects" type="Node3D" parent="." unique_id=1908248094 node_paths=PackedStringArray("_dragPlane", "_selectionRectangle", "_tableMouseControl")]
-script = ExtResource("6_7g6ti")
-_dragPlane = NodePath("../DragPlane")
-_selectionRectangle = NodePath("../TableOverlay/DragSelectRectangle")
-_tableMouseControl = NodePath("../TableOverlay/TableMouseControl")
 
 [node name="DragPlane" type="Node3D" parent="." unique_id=1141716743]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)

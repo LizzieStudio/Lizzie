@@ -7,7 +7,7 @@ namespace Lizzie;
 
 public partial class GameController : Node
 {
-    private SceneController _mainScene;
+    private GameObjects _gameObjects;
 
     private UI _uiController;
 
@@ -17,17 +17,16 @@ public partial class GameController : Node
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        _mainScene = GetNode<SceneController>("3DSceneNoPhysics");
-        _mainScene.GameObjects.HoveredComponentChange += MainSceneOnHoveredNameChange;
-        _mainScene.GameObjects.TextureFactory = _textureFactory;
-        _mainScene.GameObjects.SetGameController(this);
+        _gameObjects = GetNode<GameObjects>("3DSceneNoPhysics");
+        _gameObjects.HoveredComponentChange += MainSceneOnHoveredNameChange;
+        _gameObjects.SetGameController(this);
 
         _uiController = GetNode<UI>("UI");
         _uiController.SceneModeChange += OnSceneModeChange;
 
         EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawnPrototype);
 
-        ProjectService.Instance.GameObjects = _mainScene.GameObjects;
+        ProjectService.Instance.GameObjects = _gameObjects;
 
         var args = OS.GetCmdlineUserArgs();
         // a launch argument used to skip having to open a project manually
@@ -99,7 +98,7 @@ public partial class GameController : Node
         }
 
         if (components.Count > 0)
-            _mainScene.EnterSpawnMode(components);
+            _gameObjects.EnterSpawnMode(components);
     }
 
     private void SpawnRows(
@@ -188,18 +187,7 @@ public partial class GameController : Node
 
     private void OnSceneModeChange(object sender, SceneModeChangeArgs e)
     {
-        switch (e.NewMode)
-        {
-            case SceneMode.TwoD:
-                _mainScene.SetMode(SceneMode.TwoD);
-                break;
-            case SceneMode.ThreeDFixed:
-                _mainScene.SetMode(SceneMode.ThreeDFixed);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-        Config.Registry.Set("SceneMode", e.NewMode);
+        CameraManager.Instance.SetMode(e.NewMode);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.

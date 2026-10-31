@@ -534,7 +534,7 @@ public partial class UI : CanvasLayer
             case SceneMode.TwoD:
                 buttonNum = 0;
                 break;
-            case SceneMode.ThreeDFixed:
+            case SceneMode.ThreeD:
                 buttonNum = 1;
                 break;
             default:
@@ -555,7 +555,7 @@ public partial class UI : CanvasLayer
 
     private void _on_play_3d_pressed()
     {
-        SetSceneMode(SceneMode.ThreeDFixed);
+        SetSceneMode(SceneMode.ThreeD);
     }
 
     public void UpdateHoveredName(VisualComponentBase component)

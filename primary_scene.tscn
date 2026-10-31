@@ -292,7 +292,8 @@ ok_button_text = "Open"
 file_mode = 0
 access = 2
 
-[node name="3DSceneNoPhysics" parent="." unique_id=325671090 instance=ExtResource("3_6khan")]
+[node name="3DSceneNoPhysics" parent="." unique_id=325671090 node_paths=PackedStringArray("_textureFactory") instance=ExtResource("3_6khan")]
+_textureFactory = NodePath("../UI/TextureFactory")
 
 [node name="SheetDrawings" type="Node" parent="." unique_id=148382881]
 

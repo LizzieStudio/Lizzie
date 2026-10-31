@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 namespace Lizzie;
@@ -22,17 +23,18 @@ public partial class CameraManager : Node3D
         base._Ready();
         _perspectiveViewCamera = GetNode<ICamera>("PerspectiveViewCamera");
         _topViewCamera = GetNode<ICamera>("TopViewCamera");
-        SetTopView();
+        SetMode(Config.Registry.Get<SceneMode>("SceneMode"));
     }
 
-    public void SetPerspectiveView()
+    public void SetMode(SceneMode mode)
     {
-        _perspectiveViewCamera.Current = true;
-    }
-
-    public void SetTopView()
-    {
-        _topViewCamera.Current = true;
+        var camera = mode switch
+        {
+            SceneMode.TwoD => _topViewCamera,
+            SceneMode.ThreeD => _perspectiveViewCamera,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
+        };
+        camera.Current = true;
     }
 
     /// <summary>Moves the current camera to frame the component.</summary>

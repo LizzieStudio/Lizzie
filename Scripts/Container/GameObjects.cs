@@ -182,6 +182,17 @@ public partial class GameObjects : Node3D, ICommandView
         _tableMouseControl.GuiInput += OnTableInput;
 
         Atoms.R.Watch(this, SyncShownStage);
+
+        PresenceSynchronizer.Instance?.SetContext(_dragPlane);
+        CommandList.RegisterKeys();
+        ShortcutRelay.Install(GetTree());
+        ClickRouting.Install(GetTree().Root);
+        CommandViews.Attach(GetTree().Root, this);
+    }
+
+    public override void _ExitTree()
+    {
+        PresenceSynchronizer.Instance?.ClearContext();
     }
 
     /// <summary>
@@ -767,18 +778,10 @@ public partial class GameObjects : Node3D, ICommandView
         }
     }
 
+    [Export]
     private TextureFactory _textureFactory;
 
-    public TextureFactory TextureFactory
-    {
-        get => _textureFactory;
-        set
-        {
-            _textureFactory = value;
-            if (_view != null)
-                _view.TextureFactory = value;
-        }
-    }
+    public TextureFactory TextureFactory => _textureFactory;
 
     private void ExitSpawnMode()
     {

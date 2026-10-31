@@ -3,9 +3,7 @@ namespace Lizzie;
 public enum SceneMode
 {
     TwoD,
-    ThreeDFixed,
-    ThreeDPhysics,
-    Creator,
+    ThreeD,
 }
 
 public enum CursorMode
