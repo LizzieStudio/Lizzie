@@ -63,7 +63,7 @@ public partial class FocusEditTransition : Node
         Atoms.R.Close(
             this,
             _transition,
-            _edited.Select(Atoms.R.Get).Where(a => a?.Transition == _transition)
+            _edited.Select(Atoms.R.Get).Where(a => a?.Transitions.Contains(_transition) == true)
         );
         _transition = Transition.None;
         _edited.Clear();

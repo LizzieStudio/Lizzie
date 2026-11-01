@@ -141,7 +141,7 @@ Atom updates that you `Write` together are undone together, so you should write 
 
 ## Transitions
 
-Most of the time, a `Write` should set atoms to a valid state, but sometimes you need to set atoms to a transitional state that undo/redo shouldn't bring back. This is true for dragging components. Dragging components sets them to a dragged state, which should only be true while the dragging client allows it to be true. For this, we have Transitions.
+Most of the time, a `Write` should set atoms to a valid state, but sometimes you need to set atoms to a transitional state that undo/redo shouldn't bring back. For example, when you drag components, they're set to a dragged state, which should only be true while the dragging client allows it to be true. For this, we have Transitions. A transition allows you to write temporary drafts of atoms that other clients see, but that stop counting later, and won't return.
 
 Call `Open` to start a transition, `Append` to add to it, and `Close` to end it.
 
@@ -153,9 +153,9 @@ Atoms.R.Append(transition, myAtomUpdate);
 Atoms.R.Close(this, transition, myAtomFinal).
 ```
 
-The writes to `Open` or `Append` are "drafts", which Undo and Redo won't reverse or bring back. When you call `Close`, all of the transition's drafts are reversed and the writes to `Close` take their place. Undo/Redo will reverse the `Close` event, but the drafts won't return. This usually returns the atoms to their state before the transition started.
+The writes to `Open` or `Append` are drafts which Undo and Redo won't reverse or bring back. When you call `Close`, all of the transition's drafts stop counting and the writes to `Close` take their place. Undo can reverse the `Close` event, but the drafts won't return. This usually returns the atoms to their state before the transition started.
 
-If you call `Close` with no writes it will reverse the transition like it never happened, effectively canceling it. When a client disconnects, the host will use this trick to cancel all of the disconnected client's open transitions.
+If you call `Close` with no writes it will reverse the transition like it never happened, effectively canceling it. When a client disconnects, the host will cancel all of the disconnected client's open transitions.
 
 ## Saving
 

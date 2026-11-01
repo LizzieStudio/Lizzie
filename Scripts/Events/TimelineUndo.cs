@@ -36,6 +36,7 @@ namespace Lizzie.Replication.Machinery;
 /// </para>
 /// <para>
 /// A <see cref="Transition"/>'s writes are drafts, which only count until a closing event <see cref="TimelineEvent.Ends"/> it.
+/// A write can be a draft of several transitions, and stops counting when any of them ends.
 /// The closing event holds all of it that's kept, and undoing the transition means undoing its closing event.
 /// An event that writes nothing except drafts is skipped by undo/redo.
 /// </para>
@@ -258,7 +259,7 @@ public static class TimelineUndo
         return timeline
             .Values.Where(e =>
                 e.Id.Source == source
-                && Array.Exists(e.Writes, write => write.Transition.Start == e.Id)
+                && Array.Exists(e.Writes, write => write.Transitions.Contains(new Transition(e.Id)))
             )
             .Select(e => new Transition(e.Id))
             .Where(transition => !ended.Contains(transition))
@@ -298,7 +299,7 @@ public static class TimelineUndo
         for (int j = start; j < timeline.Count; j++)
         {
             var e = timeline.GetAt(j).Value;
-            if (Array.Exists(e.Writes, write => write.Transition == transition))
+            if (Array.Exists(e.Writes, write => write.Transitions.Contains(transition)))
                 yield return e;
         }
     }
@@ -322,20 +323,28 @@ public static class TimelineUndo
     /// Whether a write counts toward what its atom holds.
     ///
     /// <para>
-    /// A committed write always does, and a draft only until its transition <see cref="Ended"/>.
+    /// A committed write always does, and a draft only until any of its transitions <see cref="Ended"/>.
     /// The predicate looks each transition up once.
     /// </para>
     /// </summary>
     public static Func<Atom, bool> Counts(Timeline timeline)
     {
-        var ended = new Dictionary<Transition, bool>();
+        var endings = new Dictionary<Transition, bool>();
         return write =>
-            write.Transition == Transition.None
-            || !(
-                ended.TryGetValue(write.Transition, out bool known)
-                    ? known
-                    : ended[write.Transition] = Ended(timeline, write.Transition)
-            );
+        {
+            foreach (var transition in write.Transitions)
+            {
+                if (!endings.TryGetValue(transition, out bool ended))
+                {
+                    ended = endings[transition] = Ended(timeline, transition);
+                }
+
+                if (ended)
+                    return false;
+            }
+
+            return true;
+        };
     }
 
     /// <summary>
@@ -343,7 +352,7 @@ public static class TimelineUndo
     /// it unsets something, or writes something that isn't a draft.
     /// </summary>
     private static bool Commits(TimelineEvent e) =>
-        e.Unsets.Length > 0 || Array.Exists(e.Writes, write => write.Transition == Transition.None);
+        e.Unsets.Length > 0 || Array.Exists(e.Writes, write => write.Transitions.IsEmpty);
 
     /// <summary>
     /// The events whose history entry is in effect, newest first. For an action, that's not being

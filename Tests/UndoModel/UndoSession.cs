@@ -64,15 +64,18 @@ public abstract record Op
     /// <summary>
     /// An action writing atoms <paramref name="First"/> and <paramref name="Second"/> (0 for none)
     /// and <paramref name="Values"/> writes to the singleton.
-    /// An atom's write is a draft of whatever transition the value it replaces is a draft of, as one made with <c>with</c> is.
+    /// An atom's write is a draft of whatever transitions the value it replaces is a draft of, as one made with <c>with</c> is.
     /// </summary>
     public sealed record Act(Source Source, int First, int Second, int Values) : Op;
 
-    /// <summary>Starts a transition, canceling one left open first.</summary>
+    /// <summary>Starts a transition, inside any the player has open.</summary>
     public sealed record Start(Source Source, int Atom) : Op;
 
-    /// <summary>Ends the player's transition with a drop writing <paramref name="Atom"/>, or cancels it for 0.</summary>
-    public sealed record End(Source Source, int Atom) : Op;
+    /// <summary>
+    /// Ends the player's newest open transition, or their oldest for <paramref name="Outer"/>,
+    /// with a drop writing <paramref name="Atom"/>, or cancels it for 0.
+    /// </summary>
+    public sealed record End(Source Source, int Atom, bool Outer = false) : Op;
 
     /// <summary>Unsets <paramref name="Atom"/>, or every atom for 0.</summary>
     public sealed record Reset(Source Source, int Atom) : Op;
@@ -80,12 +83,12 @@ public abstract record Op
     /// <summary>Reversals Undo or Redo. The expected implementation decides the flag.</summary>
     public sealed record Reversal(Source Source, bool Redo, TestScope Scope) : Op;
 
-    /// <summary>Cancels the player's transition, if one is going.</summary>
+    /// <summary>Cancels the player's newest open transition, if one is going.</summary>
     public sealed record Cancel(Source Source) : Op;
 
     /// <summary>
     /// A whole transition that's canceled: its first event, <paramref name="Moves"/> more, and the cancel,
-    /// all but the cancel writing <paramref name="Atom"/>. Cancels a transition left open first.
+    /// all but the cancel writing <paramref name="Atom"/>. It's inside any the player has open.
     /// </summary>
     public sealed record CanceledTransition(Source Source, int Atom, int Moves) : Op;
 
@@ -100,7 +103,7 @@ public abstract record Op
 
     /// <summary>
     /// A whole transition: its first event, <paramref name="Moves"/> more, and the drop that closes it,
-    /// all writing <paramref name="Atom"/>. Cancels a transition left open first.
+    /// all writing <paramref name="Atom"/>. It's inside any the player has open.
     /// </summary>
     public sealed record Transition(Source Source, int Atom, int Moves) : Op;
 
@@ -133,8 +136,8 @@ public sealed class UndoSession
     // decides undos, redos and which transitions a leaving player left open
     private readonly IUndoApi _driver;
 
-    // each player's open transition
-    private readonly Dictionary<Source, Transition> _open = new();
+    // each player's open transitions, oldest first
+    private readonly Dictionary<Source, List<Transition>> _open = new();
 
     // Events take even clock values, so late events can take the odd ones between.
     private long _clock;
@@ -197,19 +200,22 @@ public sealed class UndoSession
                 Record(CancelOnly(Start(c.Source, c.Atom, c.Moves), c.Source));
                 break;
 
-            case Op.Cancel c when _open.Remove(c.Source, out var canceled):
+            case Op.Cancel c when Take(c.Source, outer: false) is { } canceled:
                 Record(CancelOnly(canceled, c.Source));
                 break;
 
             case Op.Start s:
-                _open[s.Source] = Start(s.Source, s.Atom, 0);
+                var started = Start(s.Source, s.Atom, 0);
+                if (!_open.TryGetValue(s.Source, out var open))
+                    _open[s.Source] = open = new();
+                open.Add(started);
                 break;
 
-            case Op.End { Atom: 0 } e when _open.Remove(e.Source, out var canceledByEnd):
+            case Op.End { Atom: 0 } e when Take(e.Source, e.Outer) is { } canceledByEnd:
                 Record(CancelOnly(canceledByEnd, e.Source));
                 break;
 
-            case Op.End e when _open.Remove(e.Source, out var ended):
+            case Op.End e when Take(e.Source, e.Outer) is { } ended:
                 Record(new TimelineEvent { Id = NextId(e.Source), Ends = ended }, e.Atom);
                 break;
 
@@ -247,8 +253,8 @@ public sealed class UndoSession
                 break;
 
             case Op.Leave l when l.Source != Source.Host:
-                foreach (var open in _driver.OpenTransitions(Timeline, l.Source))
-                    Record(CancelOnly(open, Source.Host));
+                foreach (var left in _driver.OpenTransitions(Timeline, l.Source))
+                    Record(CancelOnly(left, Source.Host));
                 _open.Remove(l.Source);
                 break;
 
@@ -282,19 +288,22 @@ public sealed class UndoSession
             ? _driver.Redo(timeline, source, scope.For(source))
             : _driver.Undo(timeline, source, scope.For(source));
 
-    private void CancelOpen(Source source)
+    /// <summary>Takes the player's newest open transition, or their oldest for <paramref name="outer"/>, if they have one.</summary>
+    private Transition? Take(Source source, bool outer)
     {
-        if (_open.Remove(source, out var open))
-            Record(CancelOnly(open, source));
+        if (!_open.TryGetValue(source, out var open) || open.Count == 0)
+            return null;
+        int at = outer ? 0 : open.Count - 1;
+        var transition = open[at];
+        open.RemoveAt(at);
+        return transition;
     }
 
     /// <summary>
-    /// Records a transition's first event and <paramref name="moves"/> more, all drafting <paramref name="atom"/>,
-    /// after canceling one the player left open.
+    /// Records a transition's first event and <paramref name="moves"/> more, all drafting <paramref name="atom"/>.
     /// </summary>
     private Transition Start(Source source, int atom, int moves)
     {
-        CancelOpen(source);
         var first = NextId(source);
         var transition = new Transition(first);
         Record(new TimelineEvent { Id = first }, atom, drafting: transition);
@@ -318,8 +327,10 @@ public sealed class UndoSession
     public event Action<TimelineEvent> Recorded;
 
     /// <summary>
-    /// Records the event in id order, with the given atoms and values written,
-    /// as drafts of <paramref name="drafting"/> if given.
+    /// Records the event in id order, with the given atoms and values written.
+    /// An atom's write is made from what the atom held before, as the game makes it:
+    /// it's a draft of the same transitions, and of <paramref name="drafting"/> if given,
+    /// except for the one the event ends.
     /// Every write gets a unique face or value, so the one that wins can be told apart.
     /// </summary>
     private void Record(
@@ -332,14 +343,18 @@ public sealed class UndoSession
     {
         var atoms = new List<Atom>();
         foreach (var atom in new[] { first, second }.Where(r => r != 0))
+        {
+            var held = HeldTransitions(e, new(atom));
             atoms.Add(
                 new TestAtom
                 {
                     Id = new(atom),
                     Face = (int)(long)e.Id * 10 + atoms.Count,
-                    Transition = drafting != Transition.None ? drafting : DraftOf(e, new(atom)),
+                    Transitions =
+                        drafting != Transition.None ? held.With(drafting) : held.Without(e.Ends),
                 }
             );
+        }
         for (int i = 0; i < values; i++)
             atoms.Add(new TestValue { Text = $"{e.Id}.{atoms.Count}" });
         if (atoms.Count > 0)
@@ -354,20 +369,16 @@ public sealed class UndoSession
     }
 
     /// <summary>
-    /// The transition a write of <paramref name="atom"/> in <paramref name="e"/> is a draft of, as the game stamps it
-    /// outside a transition's own events: the event that ends one commits,
-    /// and any other write is made from what the atom held before it, keeping its stamp.
+    /// The transitions that what <paramref name="atom"/> held before <paramref name="e"/> is a draft of,
+    /// which a write made from it with <c>with</c> keeps.
     /// </summary>
-    private Transition DraftOf(TimelineEvent e, Ref<TestAtom> atom)
+    private TransitionSet HeldTransitions(TimelineEvent e, Ref<TestAtom> atom)
     {
-        if (e.Ends != Transition.None)
-            return Transition.None;
-
         var before = new Timeline();
         foreach (var (key, earlier) in Timeline)
             if (key.CompareTo(e.Id) < 0)
                 before.Add(key, earlier);
-        return NaiveUndo.Holds(before, atom)?.Transition ?? Transition.None;
+        return NaiveUndo.Holds(before, atom)?.Transitions ?? default;
     }
 
     #region Descriptions for failures
@@ -385,11 +396,11 @@ public sealed class UndoSession
                         : ""
                 );
 
-    /// <summary>A write of an atom, with its face and the transition it's a draft of.</summary>
+    /// <summary>A write of an atom, with its face and the transitions it's a draft of.</summary>
     public string Describe(TestAtom r) =>
         r == null ? "nothing"
-        : r.Transition == Transition.None ? $"r{r.Id}={r.Face}"
-        : $"r{r.Id}={r.Face} draft of {Name(r.Transition.Start)}";
+        : r.Transitions.IsEmpty ? $"r{r.Id}={r.Face}"
+        : $"r{r.Id}={r.Face} draft of {string.Join(", ", r.Transitions.Select(t => Name(t.Start)))}";
 
     /// <summary>The timeline, one event per line, oldest first.</summary>
     public string Dump() =>
@@ -454,7 +465,8 @@ public static class UndoSessions
     private static readonly Gen<Op> Ends = Gen.Select(
         AnySource,
         MaybeAtom,
-        (s, atom) => (Op)new Op.End(s, atom)
+        Gen.Bool,
+        (s, atom, outer) => (Op)new Op.End(s, atom, outer)
     );
 
     private static readonly Gen<Op> Reversals = Gen.Select(

@@ -201,7 +201,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// Starts a transition, like a drag, by writing its first event from <paramref name="source"/>.
     ///
     /// <list type="number">
-    /// <item><paramref name="drafts"/> are seen by everyone but stamped with <see cref="Atom.Transition"/>.</item>
+    /// <item><paramref name="drafts"/> are seen by everyone but stamped with the transition in <see cref="Atom.Transitions"/>.</item>
     /// <item>Call <see cref="Append"/> to add to <paramref name="drafts"/>.</item>
     /// <item>When you call <see cref="Close"/>, all <paramref name="drafts"/> go away, and writes passed to the Close event are shown.</item>
     /// </list>
@@ -217,8 +217,15 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// <item>If a client disconnects with an open transition, the host closes it with no writes (cancels).</item>
     /// <item>Undo/Redo during a transition skips <paramref name="drafts"/>.</item>
     /// <item>Undo/Redo after a transition is closed jumps from the closed writes to before the open.</item>
-    /// <item>Other clients that update a transitioning atom should join it due to copying <see cref="Atom.Transition"/>.</item>
+    /// <item>Other clients that update a transitioning atom should join it due to copying <see cref="Atom.Transitions"/>.</item>
     /// </list>
+    /// </para>
+    ///
+    /// <para>
+    /// An Atom can have multiple transitions.
+    /// If any of them close, it stops counting.
+    /// One transition closing would still leave it as a draft of another.
+    /// This means that all transitions must close for a write to stay.
     /// </para>
     /// </summary>
     /// <returns>The transition, for <see cref="Append"/> and <see cref="Close"/>.</returns>
@@ -252,6 +259,7 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     /// Ends <paramref name="transition"/> with <paramref name="changes"/>, made from <paramref name="source"/>, which is where undo finds it.
     /// The transition's drafts stop counting, so whatever <paramref name="changes"/> leaves out goes back to how it was before the transition.
     /// Without changes it cancels the transition.
+    /// The atoms in <paramref name="changes"/> leave this transition but stay in others.
     /// </summary>
     public void Close(Node source, Transition transition, params IEnumerable<IChange> changes) =>
         Close(source, transition, null, changes);
@@ -273,7 +281,12 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     {
         var e = TimelineEvent.Now(
             changes
-                .Select(c => c is Atom atom ? atom with { Transition = Transition.None } : c)
+                .Select(c =>
+                {
+                    if (c is Atom atom)
+                        return atom with { Transitions = atom.Transitions.Without(transition) };
+                    return c;
+                })
                 .ToArray(),
             command,
             PlaceOf(source)
@@ -283,7 +296,9 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     }
 
     private static Atom[] Stamped(IEnumerable<Atom> drafts, Transition transition) =>
-        drafts.Select(atom => atom with { Transition = transition }).ToArray();
+        drafts
+            .Select(atom => atom with { Transitions = atom.Transitions.With(transition) })
+            .ToArray();
 
     private static void Submit(TimelineEvent e) => EventSynchronizer.Instance?.Submit(e);
 

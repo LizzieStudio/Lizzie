@@ -38,13 +38,13 @@ public sealed partial class HeldDrag : RefCounted
     public IEnumerable<ComponentPosition> Atoms(IAtomReader R) =>
         Components
             .Select(key => R.Get(ComponentPosition.ById, key))
-            .Where(s => s?.Transition == Transition);
+            .Where(s => s?.Transitions.Contains(Transition) == true);
 
     /// <summary>
     /// The atoms the pickup wrote alongside the components, as they are now, for the drop to keep.
     /// </summary>
     public IEnumerable<Atom> KeptAlongside(IAtomReader R) =>
-        Alongside.Select(R.Get).Where(a => a?.Transition == Transition);
+        Alongside.Select(R.Get).Where(a => a?.Transitions.Contains(Transition) == true);
 
     /// <summary>
     /// The atoms of the held VcPrinteds, which can go into a hand.

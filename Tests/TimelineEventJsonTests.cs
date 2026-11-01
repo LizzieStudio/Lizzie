@@ -38,21 +38,38 @@ public class TimelineEventJsonTests
     }
 
     [Fact]
-    public void AnEndKeepsItsTransitionAndADraftItsStamp()
+    public void AnEndKeepsItsTransitionAndADraftItsStamps()
     {
-        var transition = new Transition(Id(3, 1));
+        var outer = new Transition(Id(2, 1));
+        var inner = new Transition(Id(3, 1));
         var e = new TimelineEvent
         {
             Id = Id(5, 1),
-            Ends = transition,
-            Writes = [new Prototype { Id = new(1), Transition = transition }],
+            Ends = inner,
+            Writes = [new Prototype { Id = new(1), Transitions = [inner, outer] }],
         };
 
         var back = RoundTrip(e, out var json);
 
-        Assert.Contains($"\"ends\":{(long)transition.Start}", json);
-        Assert.Equal(transition, back.Ends);
-        Assert.Equal(transition, back.Writes[0].Transition);
+        Assert.Contains($"\"ends\":{(long)inner.Start}", json);
+        Assert.Contains($"\"transitions\":[{(long)outer.Start},{(long)inner.Start}]", json);
+        Assert.Equal(inner, back.Ends);
+        Assert.Equal([outer, inner], back.Writes[0].Transitions);
+    }
+
+    [Fact]
+    public void ACommittedWriteLeavesItsTransitionsOut()
+    {
+        var e = new TimelineEvent
+        {
+            Id = Id(5, 1),
+            Writes = [new Prototype { Id = new(1), Transitions = [] }],
+        };
+
+        var back = RoundTrip(e, out var json);
+
+        Assert.DoesNotContain("\"transitions\"", json);
+        Assert.True(back.Writes[0].Transitions.IsEmpty);
     }
 
     [Fact]

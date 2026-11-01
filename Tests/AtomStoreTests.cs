@@ -82,7 +82,10 @@ public class AtomStoreTests
             }
         );
 
-    /// <summary>Records the first event of a transition, drafting <paramref name="atoms"/>, and returns the transition.</summary>
+    /// <summary>
+    /// Records the first event of a transition, drafting <paramref name="atoms"/>, and returns the transition.
+    /// Like <see cref="Atoms.Open(Godot.Node, IEnumerable{Atom})"/>, the drafts stay in any transitions they're in.
+    /// </summary>
     private Transition Open(params ComponentPosition[] atoms)
     {
         var transition = new Transition(NextId());
@@ -90,20 +93,27 @@ public class AtomStoreTests
             new TimelineEvent
             {
                 Id = transition.Start,
-                Writes = atoms.Select(a => a with { Transition = transition }).ToArray(),
+                Writes = atoms
+                    .Select(a => a with { Transitions = a.Transitions.With(transition) })
+                    .ToArray(),
             }
         );
         return transition;
     }
 
-    /// <summary>Records the event that ends <paramref name="transition"/>, committing <paramref name="atoms"/>.</summary>
+    /// <summary>
+    /// Records the event that ends <paramref name="transition"/>, writing <paramref name="atoms"/>.
+    /// Like <see cref="Atoms.Close(Godot.Node, Transition, IEnumerable{IChange})"/>, they leave only this transition.
+    /// </summary>
     private TimelineEvent Close(Transition transition, params ComponentPosition[] atoms) =>
         Record(
             new TimelineEvent
             {
                 Id = NextId(),
                 Ends = transition,
-                Writes = atoms,
+                Writes = atoms
+                    .Select(a => a with { Transitions = a.Transitions.Without(transition) })
+                    .ToArray(),
             }
         );
 
@@ -375,8 +385,88 @@ public class AtomStoreTests
         var transition = Open(Component(1, container: 6));
         Undo(Unset(1));
 
-        Assert.Equal(transition, Value(1)?.Transition);
+        Assert.Equal<TransitionSet>([transition], Value(1).Transitions);
         Assert.Equal(In(6), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void ATransitionOpenedOnADraftIsInsideItsTransition()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        var inner = Open(Value(1) with { X = 10 });
+
+        Assert.Equal<TransitionSet>([outer, inner], Value(1).Transitions);
+    }
+
+    [Fact]
+    public void ClosingAnInnerTransitionLeavesItsWritesDraftsOfTheOuter()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        Close(Open(Value(1) with { X = 10 }), Value(1));
+        Assert.Equal<TransitionSet>([outer], Value(1).Transitions);
+        Assert.Equal(10, Value(1).X);
+
+        Cancel(outer);
+
+        Assert.Equal(0, Value(1)?.X);
+        Assert.Equal(In(5), Value(1)?.Container);
+    }
+
+    [Fact]
+    public void CancelingAnInnerTransitionGoesBackToTheOutersDraft()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        Cancel(Open(Value(1) with { X = 10 }));
+
+        Assert.Equal<TransitionSet>([outer], Value(1).Transitions);
+        Assert.Equal(0, Value(1).X);
+        Assert.Equal(In(6), Value(1).Container);
+    }
+
+    [Fact]
+    public void ClosingNestedTransitionsInnerFirstCommitsBoth()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        Close(Open(Value(1) with { X = 10 }), Value(1));
+        Close(outer, Value(1));
+
+        Assert.True(Value(1).Transitions.IsEmpty);
+        Assert.Equal(10, Value(1).X);
+        Assert.Equal(In(6), Value(1).Container);
+    }
+
+    [Fact]
+    public void ClosingTheOuterTransitionFirstLeavesItsWritesDraftsOfTheInner()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        var inner = Open(Value(1) with { X = 10 });
+        Close(outer, Value(1));
+        Assert.Equal<TransitionSet>([inner], Value(1).Transitions);
+
+        Close(inner, Value(1));
+
+        Assert.True(Value(1).Transitions.IsEmpty);
+        Assert.Equal(10, Value(1).X);
+        Assert.Equal(In(6), Value(1).Container);
+    }
+
+    [Fact]
+    public void CancelingTheInnerTransitionAfterTheOuterClosedLosesBoth()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        var inner = Open(Value(1) with { X = 10 });
+        Close(outer, Value(1));
+
+        Cancel(inner);
+
+        Assert.Equal(0, Value(1)?.X);
+        Assert.Equal(In(5), Value(1)?.Container);
     }
 
     [Fact]

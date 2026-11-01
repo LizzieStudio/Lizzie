@@ -158,12 +158,12 @@ public sealed class AtomStore<T, I> : IAtomStore<T, I>
         if (!Saved)
             return [];
         var drafts = _atoms
-            .Entries.Where(a => a.Value.Value.Transition != Transition.None)
+            .Entries.Where(a => !a.Value.Value.Transitions.IsEmpty)
             .Select(a => a.Key)
             .ToHashSet();
-        var committed = Latest(timeline, drafts, write => write.Transition == Transition.None);
+        var committed = Latest(timeline, drafts, write => write.Transitions.IsEmpty);
         return _atoms
-            .Entries.Values.Where(e => e.Value.Transition == Transition.None)
+            .Entries.Values.Where(e => e.Value.Transitions.IsEmpty)
             .Concat(committed.Values);
     }
 }

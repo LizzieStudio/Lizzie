@@ -194,7 +194,7 @@
               "retired": {
                 "type": "boolean"
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -299,7 +299,7 @@
                 ]
               },
               "stageRef": true,
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -312,7 +312,7 @@
                 "const": "CurrentTable"
               },
               "stageRef": true,
-              "transition": true
+              "transitions": true
             },
             "additionalProperties": false
           },
@@ -335,7 +335,7 @@
                   "null"
                 ]
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -367,7 +367,7 @@
                   "null"
                 ]
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -396,7 +396,7 @@
               "deleted": {
                 "type": "boolean"
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -415,7 +415,7 @@
                   "null"
                 ]
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -458,7 +458,7 @@
                 },
                 "additionalProperties": false
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -525,7 +525,7 @@
                   "null"
                 ]
               },
-              "transition": true
+              "transitions": true
             },
             "additionalProperties": false
           },
@@ -887,7 +887,7 @@
                   }
                 ]
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -925,7 +925,7 @@
               "deleted": {
                 "type": "boolean"
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -943,7 +943,7 @@
                   "null"
                 ]
               },
-              "transition": true
+              "transitions": true
             },
             "additionalProperties": false
           },
@@ -973,7 +973,7 @@
                   "null"
                 ]
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -1011,7 +1011,7 @@
               "deleted": {
                 "type": "boolean"
               },
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"
@@ -1058,7 +1058,7 @@
                 }
               },
               "datasetRef": true,
-              "transition": true
+              "transitions": true
             },
             "required": [
               "id"

@@ -29,13 +29,13 @@ public class UndoScenarioTests
 
     /// <summary>
     /// Records an action that writes <paramref name="atom"/>, made in <paramref name="place"/> if given.
-    /// The write is a draft of <paramref name="transition"/> if given, as one made from a draft is.
+    /// The write is a draft of <paramref name="transitions"/> if given, as one made from a draft is.
     /// </summary>
     private SnowStamp Act(
         Source source,
         int atom = 1,
         ViewPlace? place = null,
-        Transition transition = default
+        TransitionSet transitions = default
     )
     {
         var id = NextId(source);
@@ -45,30 +45,45 @@ public class UndoScenarioTests
             {
                 Id = id,
                 Place = place,
-                Writes = [new Prototype { Id = new(atom), Transition = transition }],
+                Writes = [new Prototype { Id = new(atom), Transitions = transitions }],
             }
         );
         return id;
     }
 
-    /// <summary>Records the first event of a transition, which drafts <paramref name="atom"/>.</summary>
-    private Transition Start(Source source, int atom = 1, ViewPlace? place = null)
+    /// <summary>
+    /// Records the first event of a transition, which drafts <paramref name="atom"/>,
+    /// inside the transitions <paramref name="inside"/> if given.
+    /// </summary>
+    private Transition Start(
+        Source source,
+        int atom = 1,
+        ViewPlace? place = null,
+        TransitionSet inside = default
+    )
     {
         var id = Act(source, atom, place);
         var transition = new Transition(id);
-        _timeline[id].Writes = [new Prototype { Id = new(atom), Transition = transition }];
+        _timeline[id].Writes =
+        [
+            new Prototype { Id = new(atom), Transitions = inside.With(transition) },
+        ];
         return transition;
     }
 
-    /// <summary>Records the event that ends <paramref name="transition"/>, committing <paramref name="atom"/>.</summary>
+    /// <summary>
+    /// Records the event that ends <paramref name="transition"/>, writing <paramref name="atom"/>,
+    /// which commits unless it's still a draft of <paramref name="transitions"/>.
+    /// </summary>
     private SnowStamp Close(
         Transition transition,
         Source source,
         int atom = 1,
-        ViewPlace? place = null
+        ViewPlace? place = null,
+        TransitionSet transitions = default
     )
     {
-        var id = Act(source, atom, place);
+        var id = Act(source, atom, place, transitions);
         _timeline[id].Ends = transition;
         return id;
     }
@@ -310,7 +325,7 @@ public class UndoScenarioTests
     public void ATransitionIsUndoneByItsEnd()
     {
         var t = Start(Me, atom: 1);
-        Act(Me, atom: 2, transition: t);
+        Act(Me, atom: 2, transitions: [t]);
         Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
 
         var end = Close(t, Me, atom: 1);
@@ -424,7 +439,7 @@ public class UndoScenarioTests
     public void AbandonedTransitionIsCanceled()
     {
         var open = Start(Other, atom: 1);
-        Act(Other, atom: 2, transition: open);
+        Act(Other, atom: 2, transitions: [open]);
         var finished = Start(Other, atom: 3);
         Close(finished, Other, atom: 4);
         Start(Me, atom: 5);
@@ -438,10 +453,61 @@ public class UndoScenarioTests
     }
 
     [Fact]
+    public void ATransitionInsideAnotherIsOpenToo()
+    {
+        var outer = Start(Other);
+        var inner = Start(Other, inside: [outer]);
+
+        Assert.Equal([outer, inner], TimelineUndo.OpenTransitions(_timeline, Other));
+    }
+
+    /// <summary>A transition inside another is nothing to undo until the outer one ends, and then the outer end is.</summary>
+    [Fact]
+    public void NestedTransitionsAreUndoneByTheOuterEnd()
+    {
+        var outer = Start(Me);
+        var inner = Start(Me, inside: [outer]);
+        Close(inner, Me, transitions: [outer]);
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
+
+        var end = Close(outer, Me);
+
+        Assert.Equal(end, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+    }
+
+    /// <summary>When the outer transition ends first, its end is a draft of the inner one, so the inner end is undone.</summary>
+    [Fact]
+    public void NestedTransitionsAreUndoneByTheLastEnd()
+    {
+        var outer = Start(Me);
+        var inner = Start(Me, inside: [outer]);
+        Close(outer, Me, transitions: [inner]);
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
+
+        var end = Close(inner, Me);
+
+        Assert.Equal(end, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+    }
+
+    [Fact]
+    public void ACancelChangesTheDraftsOfTransitionsInsideIt()
+    {
+        var outer = Start(Me);
+        var inner = Start(Me, inside: [outer]);
+        var innerEnd = Close(inner, Me, transitions: [outer]);
+
+        var cancel = Cancel(outer, Me);
+
+        Assert.Equal([outer.Start, inner.Start, innerEnd, cancel.Id], Changes(cancel));
+    }
+
+    [Fact]
     public void ACancelChangesWhatItsTransitionDrafted()
     {
         var t = Start(Me, atom: 1);
-        var move = Act(Me, atom: 2, transition: t);
+        var move = Act(Me, atom: 2, transitions: [t]);
         Assert.Equal([t], TimelineUndo.OpenTransitions(_timeline, Me));
 
         var cancel = Cancel(t, Me);
@@ -499,7 +565,7 @@ public class UndoScenarioTests
     public void AnEndChangesTheWritesMadeFromItsDrafts()
     {
         var t = Start(Me, atom: 1);
-        var theirs = Act(Other, atom: 1, transition: t);
+        var theirs = Act(Other, atom: 1, transitions: [t]);
         var close = Close(t, Me, atom: 1);
 
         Assert.Equal([t.Start, theirs, close], Changes(_timeline[close]));
@@ -510,7 +576,7 @@ public class UndoScenarioTests
     {
         var theirs = Act(Other, atom: 2);
         var t = Start(Me, atom: 1);
-        Act(Other, atom: 1, transition: t);
+        Act(Other, atom: 1, transitions: [t]);
 
         Assert.Equal(theirs, Changed(Undo(Others)));
     }

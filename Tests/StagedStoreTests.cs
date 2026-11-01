@@ -80,7 +80,7 @@ public class StagedStoreTests
             new TimelineEvent
             {
                 Id = transition.Start,
-                Writes = [piece with { Transition = transition }],
+                Writes = [piece with { Transitions = [transition] }],
             }
         );
         return transition;

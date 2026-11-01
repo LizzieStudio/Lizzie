@@ -67,7 +67,7 @@ public sealed class NaiveUndo : IUndoApi
     /// The rest, like a transition in progress or its cancel, is nothing to undo.
     /// </summary>
     public static bool Commits(TimelineEvent action) =>
-        action.Unsets.Length > 0 || action.Writes.Any(w => w.Transition == Transition.None);
+        action.Unsets.Length > 0 || action.Writes.Any(w => w.Transitions.IsEmpty);
 
     /// <summary>
     /// Whether Undo or Redo may act on the event: it isn't an admin event, the action its entry
@@ -173,7 +173,8 @@ public sealed class NaiveUndo : IUndoApi
     public List<Transition> OpenTransitions(Timeline timeline, Source source) =>
         timeline
             .Values.Where(e =>
-                e.Id.Source == source && e.Writes.Any(w => w.Transition == new Transition(e.Id))
+                e.Id.Source == source
+                && e.Writes.Any(w => w.Transitions.Contains(new Transition(e.Id)))
             )
             .Select(e => new Transition(e.Id))
             .Where(transition => !timeline.Values.Any(e => e.Ends == transition))
@@ -189,7 +190,9 @@ public sealed class NaiveUndo : IUndoApi
         if (e.Undo != null)
             return CoveredBy(timeline, e);
         if (e.Ends != Transition.None)
-            return timeline.Values.Where(d => d == e || d.Writes.Any(w => w.Transition == e.Ends));
+            return timeline.Values.Where(d =>
+                d == e || d.Writes.Any(w => w.Transitions.Contains(e.Ends))
+            );
         return [e];
     }
 
@@ -201,11 +204,10 @@ public sealed class NaiveUndo : IUndoApi
     #region What atoms hold
 
     /// <summary>
-    /// A write counts while it isn't a draft, or its transition hasn't been ended by any event, whatever became of that event.
+    /// A write counts while none of the transitions it's a draft of has been ended by any event, whatever became of that event.
     /// </summary>
     private static bool Counts(Timeline timeline, Atom write) =>
-        write.Transition == Transition.None
-        || !timeline.Values.Any(e => e.Ends == write.Transition);
+        !write.Transitions.Any(transition => timeline.Values.Any(e => e.Ends == transition));
 
     /// <summary>Whether <paramref name="unset"/> unsets <paramref name="write"/>.</summary>
     private static bool Takes(Unset unset, TestAtom write) =>
