@@ -84,11 +84,11 @@ public class Format1Tests
         );
 
         var positions = OfType(writes, "ComponentPosition");
-        var deck = positions.Single(p => p["container"] == null);
-        var card = positions.Single(p => p["container"] != null);
+        var deck = positions.Single(p => p["location"] == null);
+        var card = positions.Single(p => p["location"] != null);
         Assert.Equal(150, (int)deck["x"]);
-        Assert.Equal("InComponent", (string)card["container"]["$type"]);
-        Assert.Equal((int)deck["id"], (int)card["container"]["component"]);
+        Assert.Equal("InComponent", (string)card["location"]["$type"]);
+        Assert.Equal((int)deck["id"], (int)card["location"]["component"]);
 
         var components = OfType(writes, "Component").ToDictionary(c => (int)c["id"]);
         Assert.Null(components[(int)deck["id"]]["item"]);
@@ -118,7 +118,7 @@ public class Format1Tests
             );
 
         var ranks = OfType(Writes(project), "ComponentPosition")
-            .Where(p => p["container"] != null)
+            .Where(p => p["location"] != null)
             .Select(Rank)
             .ToList();
 

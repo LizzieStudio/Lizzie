@@ -38,11 +38,27 @@ public static class SaveCompaction
     /// and a kept atom's own id reaches the atoms grouped under it, like a dataset's rows.
     /// An atom no query lists, like a deleted <see cref="Prototype"/>, stays only while a kept atom refers to it.
     /// </para>
+    ///
+    /// <para>
+    /// A <see cref="ComponentPosition"/> is kept only while its stage is kept.
+    /// Then, unless it's a removal, it's kept whole when either:
+    /// <list type="bullet">
+    /// <item>It isn't in a container, like one on the table or in a hand.</item>
+    /// <item>Its container has a position kept whole in some stage.</item>
+    /// </list>
+    /// Anything else, removals included, is kept as a bare removal while its own component has a position kept whole in some stage,
+    /// since it may be hiding a blueprint's copy of the component. Otherwise it's dropped.
+    /// </para>
     /// </summary>
     public static Atom[] Collect(IEnumerable<Atom> atoms)
     {
-        var waiting = atoms.Select(a => (Atom: a, Keys: Keys(a))).ToList();
-        var found = new HashSet<SnowTag>();
+        var waiting = atoms
+            .Select(a => (Atom: a, Keys: a is ComponentPosition ? [] : Keys(a)))
+            .ToList();
+        // the SnowTags in kept atoms, and Empty for no stage
+        var found = new HashSet<SnowTag> { SnowTag.Empty };
+        // the components with a position kept whole, and Empty for the table
+        var placed = new HashSet<SnowTag> { SnowTag.Empty };
         var kept = new List<Atom>();
 
         // Each pass keeps what the last one's atoms reached.
@@ -53,14 +69,31 @@ public static class SaveCompaction
             for (int i = waiting.Count - 1; i >= 0; i--)
             {
                 var (atom, keys) = waiting[i];
-                if (!keys.Exists(k => k.IsSubsetOf(found)))
+                if (atom is ComponentPosition p)
+                {
+                    if (p.Removed || !found.Contains(p.StageRef.Tag))
+                        continue;
+                    if (!placed.Contains(p.ContainerRef.Tag))
+                        continue;
+                }
+                else if (!keys.Exists(k => k.IsSubsetOf(found)))
                     continue;
                 kept.Add(atom);
                 JsonWalker.Visit<SnowTag>(atom, tag => found.Add(tag));
+                if (atom is ComponentPosition whole)
+                    placed.Add(whole.Id.Tag);
                 waiting.RemoveAt(i);
                 grew = true;
             }
         }
+
+        kept.AddRange(
+            waiting
+                .Select(w => w.Atom)
+                .OfType<ComponentPosition>()
+                .Where(p => found.Contains(p.StageRef.Tag) && placed.Contains(p.Id.Tag))
+                .Select(p => p.Removal())
+        );
 
         return kept.OrderBy(a => a.GetType().Name, StringComparer.Ordinal)
             .ThenBy(

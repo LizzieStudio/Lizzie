@@ -22,6 +22,12 @@ public interface IAtomReader
     SnowStamp Version(Atom atom);
 
     /// <summary>
+    /// Whether <paramref name="position"/> was removed or is inside a container that was removed.
+    /// See <see cref="Atoms.ShowsRemoved"/>.
+    /// </summary>
+    bool IsRemoved(ComponentPosition position);
+
+    /// <summary>
     /// Gets the atom with <paramref name="id"/>, or null if it is missing or unset.
     /// </summary>
     T Get<T, I>(Identity<T, I> byId, I id)
@@ -177,13 +183,17 @@ public static class AtomReaderExtensions
     /// The change that unsets every atom with <paramref name="key"/> in <paramref name="lookup"/>, to write like an atom.
     /// </summary>
     public static Unset UnsetAll<T, K>(this IAtomReader R, Lookup<T, K> lookup, K key)
-        where T : Atom =>
-        typeof(StagedAtom).IsAssignableFrom(typeof(T)) && lookup is not IWritten
-            ? throw new ArgumentException(
+        where T : Atom
+    {
+        if (typeof(T) == typeof(ComponentPosition) && lookup is not Written)
+        {
+            throw new ArgumentException(
                 $"A stage can only unset the {typeof(T).Name}s it wrote itself, so unset them with a Written lookup.",
                 nameof(lookup)
-            )
-            : new(lookup, key);
+            );
+        }
+        return new(lookup, key);
+    }
 
     /// <summary>
     /// A cache key for each <paramref name="atom"/> that changes whenever it changes.
@@ -249,7 +259,7 @@ public static class AtomReaderExtensions
     /// </summary>
     public static List<ComponentPosition> TokensOn(this IAtomReader R, ComponentPosition deck)
     {
-        var cards = R.Get(ComponentPosition.ByContainer, deck.Inside);
+        var cards = R.Get(ComponentPosition.ByLocation, deck.ContentsKey);
         cards.Reverse();
         return cards;
     }
@@ -257,16 +267,24 @@ public static class AtomReaderExtensions
     /// <summary>
     /// Whether <paramref name="c"/> is a card in a deck.
     /// </summary>
-    public static bool IsInDeck(this IAtomReader R, ComponentPosition c) =>
-        c.Container is InComponent { Component: var holder }
-        && R.Get(ComponentPosition.ById, c.In(holder)) is { } container
-        && R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
+    public static bool IsInDeck(this IAtomReader R, ComponentPosition c)
+    {
+        if (R.Get(ComponentPosition.ById, c.KeyOf(c.ContainerRef)) is { } container)
+        {
+            return R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
+        }
+        return false;
+    }
 
     /// <summary>
-    /// Whether <paramref name="c"/> is out of sight due to its container.
+    /// Whether <paramref name="c"/> is out of sight in a bag.
     /// </summary>
-    public static bool IsHidden(this IAtomReader R, ComponentPosition c) =>
-        c.Container is InBox
-        || c.Container is InComponent { Component: var holder }
-            && (!R.IsInDeck(c) || R.IsHidden(R.Get(ComponentPosition.ById, c.In(holder))));
+    public static bool IsHidden(this IAtomReader R, ComponentPosition c)
+    {
+        // we recurse in case the container is in a bag
+        if (R.Get(ComponentPosition.ById, c.KeyOf(c.ContainerRef)) is { } container)
+            return !R.IsInDeck(c) || R.IsHidden(container);
+
+        return false;
+    }
 }

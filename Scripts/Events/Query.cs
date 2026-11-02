@@ -14,6 +14,7 @@ namespace Lizzie;
 /// Currently, there are only two types of <see cref="Query"/>: <see cref="Identity{T, I}"/> and <see cref="Lookup{T, K}"/>.
 /// A <see cref="Atoms.Watch"/> action that reads a <see cref="Query"/> will then update if the results of that <see cref="Query"/> change.
 /// The <see cref="Query"/>s are also used to determine which atoms survive a save. An atom is kept if it is accessible from a chain of <see cref="Query"/>s.
+/// A <see cref="ComponentPosition"/> has special rules based on staging (see <see cref="SaveCompaction.Collect"/>).
 /// </para>
 /// </summary>
 /// <remarks>
@@ -113,11 +114,6 @@ public abstract class IdQuery : Query
                 $"{atomType.Name} needs exactly one Id, declared as a public static readonly Identity<{atomType.Name}, I> field, "
                     + $"which says what makes two writes the same atom, like `public static readonly Identity<{atomType.Name}, Ref<{atomType.Name}>> ById = new(r => r.Id);`, "
                     + $"or as `public static readonly Singleton<{atomType.Name}> Only = new();` if it has only one atom."
-            );
-        if (typeof(StagedAtom).IsAssignableFrom(atomType) != ids[0] is IStagedId)
-            throw new InvalidOperationException(
-                $"{atomType.Name} must declare a StagedId when it's a StagedAtom, "
-                    + $"like `public static readonly StagedId<{atomType.Name}> ById = new(c => c.Id);`."
             );
         return ids[0];
     }
@@ -251,36 +247,12 @@ public class Lookup<T, K> : Query
 }
 
 /// <summary>
-/// The Id of a <see cref="StagedAtom"/> type.
+/// Lists the <see cref="ComponentPosition"/>s each stage wrote itself, rather than inherited, removals included.
+/// A <see cref="StagedStore"/> answers it from the writes, where other lookups list what each stage shows.
 ///
-/// <code>public static readonly StagedId&lt;ComponentPosition&gt; ById = new(c => c.Id);</code>
+/// <code>public static readonly Written WrittenIn = new();</code>
 /// </summary>
-public sealed class StagedId<T>(Func<T, Ref<Component>> of)
-    : Identity<T, StageKey<T>>(atom => new(atom.StageRef, of(atom))),
-        IStagedId
-    where T : StagedAtom;
-
-/// <summary>
-/// Marks a <see cref="StagedId{T}"/> for code that doesn't know <c>T</c>.
-/// </summary>
-internal interface IStagedId;
-
-/// <summary>
-/// For a staged atom type, lists its updates in each stage.
-///
-/// <code>public static readonly Written&lt;ComponentPosition&gt; WrittenIn = new();</code>
-/// </summary>
-/// <remarks>
-/// This is used internally to differentiate between a component that was inherited from a blueprint
-/// and a component that was actually updated in a stage.
-/// </remarks>
-public sealed class Written<T>() : Lookup<T, Ref<Stage>>(atom => atom.StageRef), IWritten
-    where T : StagedAtom;
-
-/// <summary>
-/// Marks a <see cref="Written{T}"/> for code that doesn't know <c>T</c>.
-/// </summary>
-internal interface IWritten;
+public sealed class Written() : Lookup<ComponentPosition, Ref<Stage>>(c => c.StageRef);
 
 /// <summary>
 /// Lists every atom of <typeparamref name="T"/>, read with <see cref="AtomReaderExtensions.Get{T}(IAtomReader, All{T})"/>.

@@ -179,7 +179,10 @@ public abstract partial class VisualComponentBase : Area3D
         if (s == null)
             return;
 
-        LogicalVisible = s.IsOnTable || R.IsInDeck(s) || s.Container is Held { OverHand: false };
+        LogicalVisible = s.IsOnTable || R.IsInDeck(s) || s.Location is Dragged { OverHand: false };
+
+        _removed = R.IsRemoved(s);
+        UpdateHighlight();
 
         // A new state ends any slide toward the old one.
         if (IsInstanceValid(_slide))
@@ -190,8 +193,8 @@ public abstract partial class VisualComponentBase : Area3D
         var cutoff = ProjectService.Instance.GameObjects.AnimationCutoff;
         var writtenBy = _placed && age <= cutoff ? R.WrittenBy(s) : null;
 
-        // A held node is placed by its holder's cursor.
-        if (!s.IsHeld)
+        // A dragged node is placed by the cursor dragging it.
+        if (!s.IsDragged)
         {
             var target = s.PositionAt(_placed || _stackedAtLeastOnce ? Position.Y : YHeight / 2f);
             if (writtenBy != DragCommands.Drop || !Slide(target, age))
@@ -281,8 +284,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// The id of the component atom this node shows, in the stage its table shows.
     /// </summary>
-    public StageKey<ComponentPosition> Key =>
-        new(OwningView?.StageRef ?? Ref<Stage>.Empty, ComponentRef);
+    public PositionKey Key => new(OwningView?.StageRef ?? Ref<Stage>.Empty, ComponentRef);
 
     /// <summary>
     /// Which of its prototype's items this is, or null.
@@ -356,6 +358,9 @@ public abstract partial class VisualComponentBase : Area3D
     // whether it's marked because a reset would delete it
     private bool _markedForReset;
 
+    // whether it's shown only because removed components are, since it or one it's in was removed
+    private bool _removed;
+
     private bool? _previewSelected;
 
     /// <summary>
@@ -406,7 +411,7 @@ public abstract partial class VisualComponentBase : Area3D
 
     /// <summary>
     /// Outlines the component when it's a drop target, hovered, or selected by anyone,
-    /// and paints it when a reset would delete it.
+    /// paints it when a reset would delete it, and hatches it while it's removed.
     /// </summary>
     protected virtual void UpdateHighlight()
     {
@@ -421,13 +426,14 @@ public abstract partial class VisualComponentBase : Area3D
                 : IsHovered && hover != null ? hover
                 : mine ? _localColor
                 : _othersColor,
-            !NeverHighlight && _markedForReset
+            !NeverHighlight && _markedForReset,
+            !NeverHighlight && _removed
         );
     }
 
     // Flat copies of the component's meshes that draw it into the highlight mask.
     private readonly List<MeshInstance3D> _maskCopies = new();
-    private (Color? Outline, bool Painted) _highlight;
+    private (Color? Outline, bool Painted, bool Hatched) _highlight;
 
     // The outline color reserved with ComponentHighlight.
     private Color? _reservedColor;
@@ -445,12 +451,15 @@ public abstract partial class VisualComponentBase : Area3D
         _reservedColor = null;
     }
 
-    private void SetHighlight(Color? outline, bool painted)
+    private void SetHighlight(Color? outline, bool painted, bool hatched)
     {
-        if ((outline, painted) == _highlight && (_highlight == default || _maskCopies.Count > 0))
+        if (
+            (outline, painted, hatched) == _highlight
+            && (_highlight == default || _maskCopies.Count > 0)
+        )
             return;
 
-        _highlight = (outline, painted);
+        _highlight = (outline, painted, hatched);
         if (_highlight == default)
         {
             ClearMaskCopies();
@@ -461,7 +470,7 @@ public abstract partial class VisualComponentBase : Area3D
             BuildMaskCopies();
 
         ReleaseOutlineColor();
-        var material = ComponentHighlight.Reserve(outline, painted);
+        var material = ComponentHighlight.Reserve(outline, painted, hatched);
         _reservedColor = outline;
         foreach (var copy in _maskCopies)
             copy.MaterialOverride = material;
@@ -473,9 +482,9 @@ public abstract partial class VisualComponentBase : Area3D
     private void RebuildHighlight()
     {
         ClearMaskCopies();
-        var (outline, painted) = _highlight;
+        var (outline, painted, hatched) = _highlight;
         _highlight = default;
-        SetHighlight(outline, painted);
+        SetHighlight(outline, painted, hatched);
     }
 
     private void ClearMaskCopies()
@@ -597,7 +606,7 @@ public abstract partial class VisualComponentBase : Area3D
     public float DragFloor { get; set; }
 
     /// <summary>True while this component is being dragged by any player's cursor.</summary>
-    public bool IsDragging => State is { IsHeld: true };
+    public bool IsDragging => State is { IsDragged: true };
 
     private bool _logicalVisible = true;
 

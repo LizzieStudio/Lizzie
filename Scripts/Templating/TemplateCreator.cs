@@ -261,9 +261,6 @@ public partial class TemplateCreator : Window, ICommandView
 
     public void SetTemplateById(Ref<Template> id)
     {
-        if (id.IsEmpty)
-            return;
-
         var idx = _templateNameSelector.GetItemIndex(id.Tag);
         if (idx >= 0)
         {

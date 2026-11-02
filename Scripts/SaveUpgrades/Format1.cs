@@ -552,11 +552,13 @@ public sealed class Format1 : IStep
                     ["rank"] = Rank(order),
                 };
                 if (container != null)
-                    position["container"] = new JsonObject
+                {
+                    position["location"] = new JsonObject
                     {
                         ["$type"] = "InComponent",
                         ["component"] = Tag("component", container),
                     };
+                }
                 else
                 {
                     position["x"] = (int)Math.Round(((double?)c["Px"] ?? 0) * 100);

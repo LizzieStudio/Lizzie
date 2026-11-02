@@ -91,7 +91,7 @@ public class SaveCompactionTests
             [
                 Position(1) with
                 {
-                    Container = new InHand(Tag<Seat>(2)),
+                    Location = new InHand(Tag<Seat>(2)),
                 },
                 new Seat { Id = Tag<Seat>(2), Deleted = true },
             ],
@@ -122,6 +122,14 @@ public class SaveCompactionTests
     [Fact]
     public void ABlueprintKeepsItsComponents() =>
         AssertKept(
+            [new Stage { Id = Tag<Stage>(1) }, Position(2) with { StageRef = Tag<Stage>(1) }],
+            1,
+            2
+        );
+
+    [Fact]
+    public void WhatsInAKeptComponentIsKept() =>
+        AssertKept(
             [
                 new Stage { Id = Tag<Stage>(1) },
                 Position(2) with
@@ -131,13 +139,156 @@ public class SaveCompactionTests
                 Position(3) with
                 {
                     StageRef = Tag<Stage>(1),
-                    Container = new InBox(),
+                    Location = new InComponent(Tag<Component>(2)),
                 },
             ],
             1,
             2,
             3
         );
+
+    [Fact]
+    public void WhatsInADroppedComponentIsDroppedThoughItRefersToIt() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag<Stage>(1) },
+                Position(2) with
+                {
+                    StageRef = Tag<Stage>(1),
+                    Removed = true,
+                },
+                Component(2),
+                Position(3) with
+                {
+                    StageRef = Tag<Stage>(1),
+                    Location = new InComponent(Tag<Component>(2)),
+                },
+                Component(3) with
+                {
+                    DeckRef = Tag<Component>(2),
+                },
+            ],
+            1
+        );
+
+    [Fact]
+    public void ARemovalOfAComponentPlacedAboveIsKept() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag<Stage>(1) },
+                new Stage { Id = Tag<Stage>(2), ParentRef = Tag<Stage>(1) },
+                Position(3) with
+                {
+                    StageRef = Tag<Stage>(1),
+                },
+                Removal(2, 3),
+            ],
+            1,
+            2,
+            3,
+            3
+        );
+
+    [Fact]
+    public void AWriteInADeletedBlueprintIsDroppedThoughItsComponentIsPlacedElsewhere() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag<Stage>(1) },
+                new Stage
+                {
+                    Id = Tag<Stage>(2),
+                    ParentRef = Tag<Stage>(1),
+                    Deleted = true,
+                },
+                Position(3) with
+                {
+                    StageRef = Tag<Stage>(1),
+                },
+                Position(3) with
+                {
+                    StageRef = Tag<Stage>(2),
+                    X = 5,
+                },
+            ],
+            1,
+            3
+        );
+
+    [Fact]
+    public void ARemovalOfAComponentPlacedNowhereIsDropped() =>
+        AssertKept([new Stage { Id = Tag<Stage>(1) }, Removal(1, 3)], 1);
+
+    [Fact]
+    public void ARemovalOfACardItsDeckStillKeepsIsDropped() =>
+        AssertKept(
+            [
+                new Stage { Id = Tag<Stage>(1) },
+                Position(2) with
+                {
+                    StageRef = Tag<Stage>(1),
+                },
+                Component(3) with
+                {
+                    DeckRef = Tag<Component>(2),
+                },
+                Removal(1, 3),
+            ],
+            1,
+            2,
+            3
+        );
+
+    /// <summary>
+    /// A table moved a blueprint's card into a deck it made, then deleted the deck.
+    /// The card still hides the blueprint's copy, but nothing keeps the deck.
+    /// </summary>
+    [Fact]
+    public void WhatsInADroppedComponentIsKeptAsARemovalWhenItHidesACopyAbove()
+    {
+        var hidden = Position(3) with
+        {
+            StageRef = Tag<Stage>(2),
+            Location = new InComponent(Tag<Component>(4)),
+            X = 7,
+        };
+        var kept = SaveCompaction.Collect([
+            new Stage { Id = Tag<Stage>(1) },
+            new Stage { Id = Tag<Stage>(2), ParentRef = Tag<Stage>(1) },
+            Position(3) with
+            {
+                StageRef = Tag<Stage>(1),
+            },
+            hidden,
+            Removal(2, 4),
+            Component(4),
+            Position(5) with
+            {
+                StageRef = Tag<Stage>(2),
+                Location = new InComponent(Tag<Component>(4)),
+            },
+        ]);
+
+        Assert.Equal(
+            new[]
+            {
+                Position(3) with
+                {
+                    StageRef = Tag<Stage>(1),
+                },
+                new ComponentPosition
+                {
+                    Id = Tag<Component>(3),
+                    StageRef = Tag<Stage>(2),
+                    Removed = true,
+                },
+            },
+            kept.OfType<ComponentPosition>().OrderBy(p => p.StageRef.Tag)
+        );
+        Assert.Empty(kept.OfType<Component>());
+    }
+
+    private static ComponentPosition Removal(int stage, int id) =>
+        (Position(id) with { StageRef = Tag<Stage>(stage) }).Removal();
 
     [Fact]
     public void ADeletedBlueprintIsDroppedWithItsComponents() =>
@@ -306,11 +457,11 @@ public class SaveCompactionTests
             Save(
                 Position(9) with
                 {
-                    Container = new InComponent(Tag<Component>(5, source: new Source(3))),
+                    Location = new InComponent(Tag<Component>(5, source: new Source(3))),
                 },
                 Position(7) with
                 {
-                    Container = new InComponent(Tag<Component>(9)),
+                    Location = new InComponent(Tag<Component>(9)),
                 }
             )
         );
@@ -319,9 +470,9 @@ public class SaveCompactionTests
 
         // in order: 7 < 9 < (source 3, 5)
         Assert.Equal(new SnowTag(2), back[0].Id.Tag);
-        Assert.Equal(new InComponent(new(new SnowTag(3))), back[0].Container);
+        Assert.Equal(new InComponent(new(new SnowTag(3))), back[0].Location);
         Assert.Equal(new SnowTag(1), back[1].Id.Tag);
-        Assert.Equal(new InComponent(new(new SnowTag(2))), back[1].Container);
+        Assert.Equal(new InComponent(new(new SnowTag(2))), back[1].Location);
         Assert.All(back, c => Assert.Equal(Source.Admin, c.Id.Tag.Source));
     }
 

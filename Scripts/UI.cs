@@ -144,8 +144,20 @@ public partial class UI : CanvasLayer
 
         _stages = GetNode<HBoxContainer>("%Stages");
 
-        GetNode<CheckButton>("%MarkReset").Toggled += on =>
-            ProjectService.Instance.GameObjects.MarksTemporary.Value = on;
+        var viewOptions = GetNode<MenuButton>("%ViewOptions").GetPopup();
+        viewOptions.HideOnCheckableItemSelection = false;
+        viewOptions.SetItemTooltip(0, "Shows components from parent blueprints that were removed.");
+        viewOptions.SetItemTooltip(1, "Marks the components that would be deleted by a reset.");
+        viewOptions.IndexPressed += index =>
+        {
+            int i = (int)index;
+            viewOptions.ToggleItemChecked(i);
+            bool on = viewOptions.IsItemChecked(i);
+            if (i == 0)
+                Atoms.R.ShowsRemoved = on;
+            else
+                ProjectService.Instance.GameObjects.MarksTemporary.Value = on;
+        };
 
         _componentName = GetNode<Label>("%ComponentName");
 

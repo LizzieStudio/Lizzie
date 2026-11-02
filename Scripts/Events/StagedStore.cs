@@ -5,11 +5,17 @@ using System.Linq;
 namespace Lizzie.Replication.Machinery;
 
 /// <summary>
-/// Holds all <see cref="StagedAtom"/> of type <typeparamref name="T"/> as each <see cref="Stage"/> shows them.
+/// Holds the <see cref="ComponentPosition"/>s as each <see cref="Stage"/> shows them.
 ///
 /// <para>
-/// A stage shows its own write of an atom if it has one, and otherwise what its parent shows.
-/// When you read a staged atom from a stage, its <see cref="StagedAtom.StageRef"/> is set to the stage of the read.
+/// A stage shows its own write of a position if it has one, and otherwise what its parent shows.
+/// When you read a position from a stage, its <see cref="ComponentPosition.StageRef"/> is set to the stage of the read.
+/// </para>
+///
+/// <para>
+/// A removed position hides the component and its child components, but the user can toggle this off.
+/// While removed components are shown, a removed position shows as the nearest write above the removal instead,
+/// marked <see cref="AtomEntry.Removed"/> along with what's inside it.
 /// </para>
 ///
 /// <para>
@@ -17,22 +23,21 @@ namespace Lizzie.Replication.Machinery;
 /// <see cref="Settle"/> works out what each stage shows once the <see cref="Stage"/> atoms have merged the same event.
 /// </para>
 /// </summary>
-public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
-    where T : StagedAtom
+public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
 {
-    private readonly StagedId<T> _byId;
-
     private readonly AtomStore<Stage, Ref<Stage>> _stages;
 
     /// <summary>
-    /// The atoms as written, by the stage they were written in.
+    /// The positions as written, by the stage they were written in.
     /// </summary>
-    private readonly AtomStore<T, StageKey<T>> _raw;
+    private readonly AtomStore<ComponentPosition, PositionKey> _raw = new(ComponentPosition.ById);
 
     /// <summary>
-    /// The atoms as each stage shows them.
+    /// The positions as each stage shows them.
     /// </summary>
-    private readonly IndexedAtoms<T, StageKey<T>> _resolved;
+    private readonly IndexedAtoms<ComponentPosition, PositionKey> _resolved = new(
+        ComponentPosition.ById
+    );
 
     // each stage's written parent, unless it's deleted
     private readonly Dictionary<Ref<Stage>, Ref<Stage>> _written = new();
@@ -40,60 +45,67 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     // the parent of each stage that's Stage.Reachable
     private Dictionary<Ref<Stage>, Ref<Stage>> _parents = new();
 
+    // the written positions by the component they're inside, so a change to a component reaches its contents
+    private readonly Lookup<ComponentPosition, Ref<Component>> _byContainer = new(c =>
+        c.ContainerRef
+    );
+
+    // whether reads show removed positions
+    private readonly Func<bool> _showsRemoved;
+
     // what changed since the last Settle
-    private readonly HashSet<StageKey<T>> _dirty = new();
+    private readonly HashSet<PositionKey> _dirty = new();
     private readonly HashSet<Ref<Stage>> _changedStages = new();
 
     // touches to report in the next Settle
     private List<Touch> _touches = new();
 
-    /// <param name="byId">The type's Id.</param>
     /// <param name="stages">The store of <see cref="Stage"/> atoms, which says each stage's parent.</param>
-    public StagedStore(StagedId<T> byId, AtomStore<Stage, Ref<Stage>> stages)
+    /// <param name="showsRemoved">Whether reads show removed positions. Call <see cref="ShowsRemovedChanged"/> when it changes.</param>
+    public StagedStore(AtomStore<Stage, Ref<Stage>> stages, Func<bool> showsRemoved)
     {
-        _byId = byId;
         _stages = stages;
-        _raw = new(byId);
-        _resolved = new(byId);
+        _showsRemoved = showsRemoved;
         _raw.Changed += OnRawChanged;
         stages.Changed += OnStagesChanged;
         _changedStages.UnionWith(stages.Ids);
     }
 
-    public Type AtomType => typeof(T);
+    public Type AtomType => typeof(ComponentPosition);
 
     public event Action<IReadOnlyList<Touch>> Changed;
 
     /// <summary>
-    /// What the stage in <paramref name="id"/> shows for its atom, or an entry with a null value if nothing.
+    /// What the stage in <paramref name="id"/> shows for its position, or an entry with a null value if nothing.
     /// </summary>
-    public AtomEntry Find(StageKey<T> id) => _resolved.Find(id);
+    public AtomEntry Find(PositionKey id) => _resolved.Find(id);
 
-    AtomEntry IAtomStore.Find(object id) => id is StageKey<T> typed ? Find(typed) : default;
+    AtomEntry IAtomStore.Find(object id) => id is PositionKey typed ? Find(typed) : default;
 
     /// <summary>
-    /// The atoms with <paramref name="key"/> in <paramref name="lookup"/> as written for a <see cref="Written{T}"/>,
+    /// The positions with <paramref name="key"/> in <paramref name="lookup"/> as written for a <see cref="Written"/>,
     /// and as each stage shows them otherwise.
     /// </summary>
-    public List<T> Get<K>(Lookup<T, K> lookup, K key) =>
-        lookup is Written<T> ? _raw.Get(lookup, key) : _resolved.Get(lookup, key);
+    public List<ComponentPosition> Get<K>(Lookup<ComponentPosition, K> lookup, K key) =>
+        lookup is Written ? _raw.Get(lookup, key) : _resolved.Get(lookup, key);
 
-    public int Count<K>(Lookup<T, K> lookup, K key) =>
-        lookup is Written<T> ? _raw.Count(lookup, key) : _resolved.Count(lookup, key);
+    public int Count<K>(Lookup<ComponentPosition, K> lookup, K key) =>
+        lookup is Written ? _raw.Count(lookup, key) : _resolved.Count(lookup, key);
 
     public void Apply(Timeline timeline, IReadOnlyList<TimelineEvent> changed, bool bulkLoading) =>
         _raw.Apply(timeline, changed, bulkLoading);
 
     public void FlushBulkLoad() => _raw.FlushBulkLoad();
 
-    // The written atoms' id touches say what to resolve again; the rest are Written lookup touches to pass on.
     private void OnRawChanged(IReadOnlyList<Touch> touches)
     {
         foreach (var touch in touches)
-            if (touch.Query == _byId)
-                _dirty.Add((StageKey<T>)touch.Key);
-            else
+        {
+            if (touch.Query == ComponentPosition.ById)
+                _dirty.Add((PositionKey)touch.Key);
+            else if (touch.Query is Written)
                 _touches.Add(touch);
+        }
     }
 
     private void OnStagesChanged(IReadOnlyList<Touch> touches)
@@ -130,14 +142,26 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
             ? Everything()
             : _dirty.SelectMany(k => Below(k.StageRef).Select(s => k with { StageRef = s }));
 
-        foreach (var key in keys.ToHashSet())
+        var queue = new Queue<PositionKey>(keys.ToHashSet());
+        while (queue.TryDequeue(out var key))
         {
             var old = _resolved.Find(key);
             var now = Resolve(key);
+            if (now.Value is ComponentPosition { ContainerRef: { IsEmpty: false } container })
+            {
+                var shown = _resolved.Find(key with { ComponentRef = container });
+                var removed = now.Removed || shown.Removed;
+                now = shown.Value == null ? default : now with { Removed = removed };
+            }
             if (old == now)
                 continue;
             _resolved.Replace(key, now);
             _touches.AddRange(_resolved.Touched(key, old, now));
+            if ((old.Value == null) != (now.Value == null) || old.Removed != now.Removed)
+            {
+                foreach (var inside in _raw.Get(_byContainer, key.ComponentRef))
+                    queue.Enqueue(key with { ComponentRef = inside.Id });
+            }
         }
         _dirty.Clear();
         _changedStages.Clear();
@@ -145,14 +169,22 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     }
 
     /// <summary>
-    /// Every stage, and every stage something is resolved in, with every atom written or resolved.
+    /// Updates "Show Removed Components", which takes effect at the next <see cref="Settle"/>.
     /// </summary>
-    private IEnumerable<StageKey<T>> Everything()
+    public void ShowsRemovedChanged() =>
+        _dirty.UnionWith(
+            _raw.Ids.Where(id => _raw.Find(id).Value is ComponentPosition { Removed: true })
+        );
+
+    /// <summary>
+    /// Every stage, and every stage something is resolved in, with every component written or resolved.
+    /// </summary>
+    private IEnumerable<PositionKey> Everything()
     {
         var resolved = _resolved.Entries.Keys;
         var stages = _parents.Keys.Concat(resolved.Select(k => k.StageRef)).ToHashSet();
         var atoms = _raw.Ids.Concat(resolved).Select(k => k.ComponentRef).ToHashSet();
-        return stages.SelectMany(s => atoms.Select(c => new StageKey<T>(s, c)));
+        return stages.SelectMany(s => atoms.Select(c => new PositionKey(s, c)));
     }
 
     /// <summary>
@@ -170,15 +202,32 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     }
 
     /// <summary>
-    /// What the stage in <paramref name="key"/> shows for its atom.
+    /// What the stage in <paramref name="key"/> shows for its position, wherever the position is.
     /// </summary>
-    private AtomEntry Resolve(StageKey<T> key)
+    private AtomEntry Resolve(PositionKey key)
     {
+        bool removed = false;
         for (var stage = key.StageRef; _parents.TryGetValue(stage, out var parent); stage = parent)
         {
-            var written = _raw.Find(key with { StageRef = stage });
-            if (written.Value is StagedAtom atom)
-                return new AtomEntry(atom with { StageRef = key.StageRef }, written.LastUpdate);
+            if (
+                _raw.Find(key with { StageRef = stage })
+                is not { Value: ComponentPosition atom } written
+            )
+                continue;
+            if (!atom.Removed)
+            {
+                return new AtomEntry(
+                    atom with
+                    {
+                        StageRef = key.StageRef,
+                    },
+                    written.LastUpdate,
+                    removed
+                );
+            }
+            if (!_showsRemoved())
+                return default;
+            removed = true;
         }
         return default;
     }
@@ -206,7 +255,7 @@ public sealed class StagedStore<T> : IAtomStore<T, StageKey<T>>
     }
 
     /// <summary>
-    /// The atoms as written, so a save never holds what a stage only inherits.
+    /// The positions as written, so a save never holds what a stage only inherits.
     /// </summary>
     public IEnumerable<AtomEntry> SavedAtoms(Timeline timeline) => _raw.SavedAtoms(timeline);
 }

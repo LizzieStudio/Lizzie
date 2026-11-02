@@ -18,7 +18,7 @@ public class HandInsertTests
             .Select(i => new ComponentPosition
             {
                 Id = new(i),
-                Container = new InHand(Seat),
+                Location = new InHand(Seat),
                 Rank = ranks[i - 1],
             })
             .ToList();
@@ -33,7 +33,7 @@ public class HandInsertTests
         foreach (var c in written)
             all[c.Id] = c;
         return all
-            .Values.Where(c => c.Container == new InHand(Seat))
+            .Values.Where(c => c.Location == new InHand(Seat))
             .OrderBy(c => c.Rank)
             .Select(c => (int)c.Id.Tag)
             .ToArray();

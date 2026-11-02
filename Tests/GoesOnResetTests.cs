@@ -42,6 +42,16 @@ public class GoesOnResetTests
         );
 
     [Fact]
+    public void WhatTheBlueprintRemovedGoesWhileRemovedComponentsAreShown() =>
+        Assert.True(
+            ComponentPosition.GoesOnReset(
+                new ListReader([.. Stages, In(Blueprint), In(Table)]) { Removed = [In(Blueprint)] },
+                new(Table, Card)
+            ),
+            "A card the blueprint shows only as removed stays on reset, expected it to go."
+        );
+
+    [Fact]
     public void NothingInARootGoes() =>
         Assert.False(
             ComponentPosition.GoesOnReset(

@@ -28,11 +28,11 @@ public partial class VcBag : VisualComponentGroup
     }
 
     private void SyncCount(IWatchReader R) =>
-        _componentCount.Text = R.Count(ComponentPosition.ByContainer, ContainerKey.Of(Key))
+        _componentCount.Text = R.Count(ComponentPosition.ByLocation, LocationKey.Inside(Key))
             .ToString();
 
     private IEnumerable<ComponentPosition> Contents(IAtomReader R) =>
-        R.Get(ComponentPosition.ByContainer, ContainerKey.Of(Key));
+        R.Get(ComponentPosition.ByLocation, LocationKey.Inside(Key));
 
     protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {

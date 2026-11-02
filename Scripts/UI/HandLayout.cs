@@ -8,7 +8,7 @@ namespace Lizzie;
 /// Cards that fit sit side by side, centered.
 /// When there are too many to fit, each card covers part of the one before it.
 /// When a card is hovered, however, the cards shift to uncover it.
-/// When dragged cards are held over the hand, a gap opens to show where they will drop.
+/// When cards are dragged over the hand, a gap opens to show where they will drop.
 /// </summary>
 public sealed class HandLayout
 {

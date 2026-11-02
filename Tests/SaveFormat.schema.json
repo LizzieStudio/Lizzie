@@ -207,6 +207,10 @@
                 "const": "ComponentPosition"
               },
               "id": true,
+              "stageRef": true,
+              "removed": {
+                "type": "boolean"
+              },
               "x": {
                 "type": "integer"
               },
@@ -239,7 +243,7 @@
                 },
                 "additionalProperties": false
               },
-              "container": {
+              "location": {
                 "type": [
                   "object",
                   "null"
@@ -251,7 +255,7 @@
                   {
                     "properties": {
                       "$type": {
-                        "const": "Held"
+                        "const": "Dragged"
                       },
                       "seat": true,
                       "overHand": {
@@ -262,14 +266,6 @@
                       "seat",
                       "overHand"
                     ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "properties": {
-                      "$type": {
-                        "const": "InBox"
-                      }
-                    },
                     "additionalProperties": false
                   },
                   {
@@ -298,7 +294,6 @@
                   }
                 ]
               },
-              "stageRef": true,
               "transitions": true
             },
             "required": [

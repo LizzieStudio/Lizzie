@@ -73,9 +73,21 @@ public sealed class Watcher : IWatchReader
 
     public SnowStamp Version(Atom atom)
     {
+        DependOn(atom);
+        return _source.Version(atom);
+    }
+
+    public bool IsRemoved(ComponentPosition position)
+    {
+        DependOn(position);
+        return _source.IsRemoved(position);
+    }
+
+    // Reruns when the store's entry for atom changes.
+    private void DependOn(Atom atom)
+    {
         var byId = IdQuery.For(atom.GetType());
         Depend(byId, byId.Of(atom));
-        return _source.Version(atom);
     }
 
     public T Get<T, I>(Identity<T, I> byId, I id)

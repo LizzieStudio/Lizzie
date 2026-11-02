@@ -15,7 +15,7 @@ public abstract partial class VisualComponentGroup : VisualComponentBase
     {
         var ranks = SnowRank.AfterAll(dropped.Count);
         return dropped.Select(
-            Atom (s, i) => s with { Container = new InComponent(ComponentRef), Rank = ranks[i] }
+            Atom (s, i) => s with { Location = new InComponent(ComponentRef), Rank = ranks[i] }
         );
     }
 

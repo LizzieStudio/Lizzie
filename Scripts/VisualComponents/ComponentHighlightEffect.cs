@@ -112,14 +112,14 @@ public partial class ComponentHighlightEffect : CompositorEffect
             .. Column(inverse.Y),
             .. Column(inverse.Z),
             .. Column(inverse.W),
-            0,
-            0,
-            0,
-            0.75f, // rim_color
             ComponentHighlight.PaintColor.R,
             ComponentHighlight.PaintColor.G,
             ComponentHighlight.PaintColor.B,
             ComponentHighlight.PaintColor.A, // paint_color
+            ComponentHighlight.HatchColor.R,
+            ComponentHighlight.HatchColor.G,
+            ComponentHighlight.HatchColor.B,
+            ComponentHighlight.HatchColor.A, // hatch_color
             BitConverter.Int32BitsToSingle(size.X),
             BitConverter.Int32BitsToSingle(size.Y),
             Math.Min(Width, MaxWidth),

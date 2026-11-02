@@ -33,19 +33,19 @@ public class AtomRefTests
         );
 
     [Fact]
-    public void ARefToAStagedAtomKeepsItsStage() =>
+    public void ARefToAPositionKeepsItsStage() =>
         AssertRoundTrips(
-            new StageKey<ComponentPosition>(new(5), new(6)),
+            new PositionKey(new(5), new(6)),
             """{"type":"ComponentPosition","id":{"stageRef":5,"componentRef":6}}"""
         );
 
     [Fact]
-    public void ARefCantPointAtAStagedAtom()
+    public void ARefCantPointAtAPosition()
     {
         var error = Record.Exception(() => new Ref<ComponentPosition>(1));
         Assert.True(
             error is TypeInitializationException { InnerException: InvalidOperationException },
-            $"A Ref<ComponentPosition> was made, but a tag alone doesn't find a staged atom. It threw {error?.GetType().Name ?? "nothing"}."
+            $"A Ref<ComponentPosition> was made, but a tag alone doesn't find a position. It threw {error?.GetType().Name ?? "nothing"}."
         );
     }
 
@@ -53,7 +53,7 @@ public class AtomRefTests
     public void ASelectionKeepsItsRefs()
     {
         var targets = ImmutableHashSet.Create<IAtomRef>(
-            new StageKey<ComponentPosition>(new(2), new(1)),
+            new PositionKey(new(2), new(1)),
             new Ref<DataColumn>(1)
         );
         var json = JsonSerializer.Serialize<Atom>(

@@ -13,40 +13,38 @@ namespace Lizzie.Tests;
 public class AtomStoreTests
 {
     // components by their key, all in the empty stage
-    private static readonly Identity<ComponentPosition, StageKey<ComponentPosition>> ById = new(s =>
+    private static readonly Identity<ComponentPosition, PositionKey> ById = new(s =>
         new(s.StageRef, s.Id)
     );
 
-    private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(HolderOf);
+    private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(ContainerOf);
 
     // the same lookup, from the bottom of each stack up
     private static readonly Lookup<ComponentPosition, SnowTag> ByStack = new(
-        HolderOf,
+        ContainerOf,
         IRanked.ByRank
     );
 
     // a lookup only components in a container are in
     private static readonly Lookup<ComponentPosition, SnowTag?> InContainer = new(s =>
-        s.IsOnTable ? null : HolderOf(s)
+        s.IsOnTable ? null : ContainerOf(s)
     );
 
-    // the tag of the component holding s, or Empty on the table
-    private static SnowTag HolderOf(ComponentPosition s) =>
-        s.Container is InComponent c ? c.Component.Tag : SnowTag.Empty;
+    // the tag of the container s is in, or Empty
+    private static SnowTag ContainerOf(ComponentPosition s) => s.ContainerRef.Tag;
 
     private readonly Timeline _timeline = new();
-    private readonly AtomStore<ComponentPosition, StageKey<ComponentPosition>> _store = new(ById);
+    private readonly AtomStore<ComponentPosition, PositionKey> _store = new(ById);
     private long _clock;
 
     private static SnowTag Tag(int counter) => new(Source.Host, counter);
 
-    private static StageKey<ComponentPosition> Key(int counter) =>
-        new(Ref<Stage>.Empty, new(Tag(counter)));
+    private static PositionKey Key(int counter) => new(Ref<Stage>.Empty, new(Tag(counter)));
 
     private static InComponent In(int container) => new(new(Tag(container)));
 
     private static ComponentPosition Component(int id, int container = 0) =>
-        new() { Id = new(Tag(id)), Container = container == 0 ? null : In(container) };
+        new() { Id = new(Tag(id)), Location = container == 0 ? null : In(container) };
 
     // ranks from the bottom of a stack up
     private static readonly IReadOnlyList<SnowRank> Ranks = SnowRank.AfterAll(3);
@@ -169,7 +167,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Write(Component(1, container: 6));
 
-        Assert.Equal(In(6), Value(1).Container);
+        Assert.Equal(In(6), Value(1).Location);
     }
 
     [Fact]
@@ -179,7 +177,7 @@ public class AtomStoreTests
         var newer = Write(Component(1, container: 6));
         Undo(newer);
 
-        Assert.Equal(In(5), Value(1).Container);
+        Assert.Equal(In(5), Value(1).Location);
     }
 
     [Fact]
@@ -204,7 +202,7 @@ public class AtomStoreTests
             }
         );
 
-        Assert.Equal(In(6), Value(1)?.Container);
+        Assert.Equal(In(6), Value(1)?.Location);
     }
 
     [Fact]
@@ -215,7 +213,7 @@ public class AtomStoreTests
 
         Assert.Null(Value(1));
         Assert.Null(Value(2));
-        Assert.Equal(In(6), Value(3)?.Container);
+        Assert.Equal(In(6), Value(3)?.Location);
     }
 
     [Fact]
@@ -235,7 +233,7 @@ public class AtomStoreTests
         UnsetAllIn(5);
         Write(Component(1, container: 5));
 
-        Assert.Equal(In(5), Value(1)?.Container);
+        Assert.Equal(In(5), Value(1)?.Location);
     }
 
     [Fact]
@@ -245,7 +243,7 @@ public class AtomStoreTests
         Write(Component(1, container: 6));
         UnsetAllIn(5);
 
-        Assert.Equal(In(6), Value(1)?.Container);
+        Assert.Equal(In(6), Value(1)?.Location);
     }
 
     [Fact]
@@ -280,7 +278,7 @@ public class AtomStoreTests
         Unset(1);
         Write(Component(1, container: 6));
 
-        Assert.Equal(In(6), Value(1)?.Container);
+        Assert.Equal(In(6), Value(1)?.Location);
     }
 
     [Fact]
@@ -289,7 +287,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Undo(Unset(1));
 
-        Assert.Equal(In(5), Value(1)?.Container);
+        Assert.Equal(In(5), Value(1)?.Location);
     }
 
     [Fact]
@@ -306,7 +304,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Open(Component(1, container: 6));
 
-        Assert.Equal(In(6), Value(1)?.Container);
+        Assert.Equal(In(6), Value(1)?.Location);
     }
 
     [Fact]
@@ -316,8 +314,8 @@ public class AtomStoreTests
         var transition = Open(Component(1, container: 6), Component(2, container: 6));
         Close(transition, Component(1, container: 7));
 
-        Assert.Equal(In(7), Value(1)?.Container);
-        Assert.Equal(In(5), Value(2)?.Container);
+        Assert.Equal(In(7), Value(1)?.Location);
+        Assert.Equal(In(5), Value(2)?.Location);
     }
 
     [Fact]
@@ -326,7 +324,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Cancel(Open(Component(1, container: 6)));
 
-        Assert.Equal(In(5), Value(1)?.Container);
+        Assert.Equal(In(5), Value(1)?.Location);
     }
 
     [Fact]
@@ -340,7 +338,7 @@ public class AtomStoreTests
         Cancel(transition);
 
         Assert.Equal(0, Value(1)?.X);
-        Assert.Equal(In(5), Value(1)?.Container);
+        Assert.Equal(In(5), Value(1)?.Location);
     }
 
     [Fact]
@@ -352,7 +350,7 @@ public class AtomStoreTests
         Close(transition, Component(1, container: 7));
         Write(made);
 
-        Assert.Equal(In(7), Value(1)?.Container);
+        Assert.Equal(In(7), Value(1)?.Location);
         Assert.Equal(0, Value(1)?.X);
     }
 
@@ -362,7 +360,7 @@ public class AtomStoreTests
         Write(Component(1, container: 5));
         Undo(Close(Open(Component(1, container: 6)), Component(1, container: 7)));
 
-        Assert.Equal(In(5), Value(1)?.Container);
+        Assert.Equal(In(5), Value(1)?.Location);
     }
 
     [Fact]
@@ -386,7 +384,7 @@ public class AtomStoreTests
         Undo(Unset(1));
 
         Assert.Equal<TransitionSet>([transition], Value(1).Transitions);
-        Assert.Equal(In(6), Value(1)?.Container);
+        Assert.Equal(In(6), Value(1)?.Location);
     }
 
     [Fact]
@@ -411,7 +409,7 @@ public class AtomStoreTests
         Cancel(outer);
 
         Assert.Equal(0, Value(1)?.X);
-        Assert.Equal(In(5), Value(1)?.Container);
+        Assert.Equal(In(5), Value(1)?.Location);
     }
 
     [Fact]
@@ -423,7 +421,7 @@ public class AtomStoreTests
 
         Assert.Equal<TransitionSet>([outer], Value(1).Transitions);
         Assert.Equal(0, Value(1).X);
-        Assert.Equal(In(6), Value(1).Container);
+        Assert.Equal(In(6), Value(1).Location);
     }
 
     [Fact]
@@ -436,7 +434,7 @@ public class AtomStoreTests
 
         Assert.True(Value(1).Transitions.IsEmpty);
         Assert.Equal(10, Value(1).X);
-        Assert.Equal(In(6), Value(1).Container);
+        Assert.Equal(In(6), Value(1).Location);
     }
 
     [Fact]
@@ -452,7 +450,7 @@ public class AtomStoreTests
 
         Assert.True(Value(1).Transitions.IsEmpty);
         Assert.Equal(10, Value(1).X);
-        Assert.Equal(In(6), Value(1).Container);
+        Assert.Equal(In(6), Value(1).Location);
     }
 
     [Fact]
@@ -466,7 +464,7 @@ public class AtomStoreTests
         Cancel(inner);
 
         Assert.Equal(0, Value(1)?.X);
-        Assert.Equal(In(5), Value(1)?.Container);
+        Assert.Equal(In(5), Value(1)?.Location);
     }
 
     [Fact]

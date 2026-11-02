@@ -91,7 +91,7 @@ public class TimelineEventJsonTests
     [Fact]
     public void UnsetKeepsItsQueryAndKey()
     {
-        var position = new StageKey<ComponentPosition>(
+        var position = new PositionKey(
             new Ref<Stage>(new SnowTag(Source.Host, 4)),
             new Ref<Component>(new SnowTag(Source.Host, 5))
         );

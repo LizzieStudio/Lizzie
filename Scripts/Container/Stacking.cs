@@ -22,7 +22,7 @@ internal static class Stacking
     /// </summary>
     /// <param name="components">
     /// The components from the bottom of the stack up,
-    /// as <see cref="ComponentPosition.ByContainer"/> lists them.
+    /// as <see cref="ComponentPosition.ByLocation"/> lists them.
     /// </param>
     /// <param name="columns">The columns, highest top first.</param>
     public static float[] Floors(

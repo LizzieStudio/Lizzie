@@ -64,7 +64,7 @@ public partial class PlayerHandsPanel : PanelContainer
         {
             var seat = others[i];
             var label = rows[i].GetNode<Label>("Label");
-            int cards = R.Count(ComponentPosition.ByContainer, new(stage, new InHand(seat.Id)));
+            int cards = R.Count(ComponentPosition.ByLocation, new(stage, new InHand(seat.Id)));
             label.Text = $"{seat.Label(seats.IndexOf(seat))}  ({cards})";
             label.AddThemeColorOverride("font_color", seat.Color);
         }

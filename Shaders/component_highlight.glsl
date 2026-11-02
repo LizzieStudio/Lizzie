@@ -3,6 +3,7 @@
 
 // Draws component highlights in one compute pass, into the table's color after its transparent objects:
 // opaque stripes of paint and black over the visible pixels of painted components,
+// see-through stripes of white and black over two fifths of the visible pixels of hatched ones,
 // and a constant-width outline around the visible pixels of outlined ones.
 // Each workgroup draws one tile, loading the mask under it and around it into shared memory once,
 // with each row of that also kept as bits, one per pixel.
@@ -21,13 +22,22 @@
 #define PALETTE 32
 // Added to a code to paint the component. ComponentHighlight.Painted matches it.
 #define PAINTED 64
-// The width of the paint's stripes and of the black ones between them, in pixels. component_paint.gdshader matches it.
+// Added to a code to hatch the component. ComponentHighlight.Hatched matches it.
+#define HATCHED 128
+// The width of each stripe, in pixels. component_paint.gdshader matches it.
 #define STRIPE 4
+// The stripes in each repeat of the paint and of the hatching: one of color, one of black, and the rest gaps.
+// The hand card's Paint and Hatch materials match them.
+#define PAINT_PERIOD 2
+#define HATCH_PERIOD 5
+// The outline's dark rim, and its opacity.
+const vec4 RIM_COLOR = vec4(0.0, 0.0, 0.0, 0.75);
 
 layout(local_size_x = TILE, local_size_y = TILE, local_size_z = 1) in;
 
 // Highlighted components: their code in red, their view depth split across green and blue, and alpha where they are.
-// The code is their outline color's palette slot, or PALETTE for none, plus PAINTED when they're painted.
+// The code is their outline color's palette slot, or PALETTE for none,
+// plus PAINTED when they're painted and HATCHED when they're hatched.
 layout(set = 0, binding = 0) uniform sampler2D mask;
 layout(set = 0, binding = 1) uniform sampler2D depth_buffer;
 layout(rgba16f, set = 0, binding = 2) uniform restrict image2D color_image;
@@ -36,12 +46,14 @@ layout(set = 0, binding = 3, std140) uniform Palette {
 	vec4 colors[PALETTE];
 } palette;
 
+// Godot allows at most 128 bytes.
 layout(push_constant, std430) uniform Params {
 	// The table camera's, as drawn, to read view depths from its depth buffer.
 	mat4 inv_projection;
-	vec4 rim_color;
 	// The paint's color, in stripes with black.
 	vec4 paint_color;
+	// The hatching's color, in stripes with black, and the opacity of both.
+	vec4 hatch_color;
 	ivec2 size;
 	// The outline's width in pixels, rims included, up to REACH.
 	float width;
@@ -49,7 +61,7 @@ layout(push_constant, std430) uniform Params {
 	float rim;
 	// How far behind the scene a mask pixel can be and still count as visible, in node units.
 	float bias;
-	// How far the paint's stripes have moved, in pixels.
+	// How far the stripes have moved, in pixels.
 	int shift;
 } params;
 
@@ -70,6 +82,16 @@ float scene_depth(ivec2 p) {
 bool shows(float depth, ivec2 p) {
 	float scene = scene_depth(p);
 	return depth <= scene + params.bias + scene * 0.0001;
+}
+
+// Diagonal stripes of color and then black, followed by gaps, repeating every period stripes,
+// drawn over under with color's opacity.
+vec3 stripes(vec3 under, ivec2 p, vec4 color, int period) {
+	int band = (p.x + p.y + params.shift) / STRIPE % period;
+	if (band >= 2) {
+		return under;
+	}
+	return mix(under, band == 0 ? color.rgb : vec3(0.0), color.a);
 }
 
 void main() {
@@ -107,10 +129,21 @@ void main() {
 	vec4 screen = imageLoad(color_image, p);
 	vec3 result = screen.rgb;
 
-	// Opaque diagonal stripes of paint and black, which stand out on any component.
+	// An empty mask pixel has code 0, so it's neither painted nor hatched.
 	vec2 own = around[local.y + REACH][x];
-	if (own.x > 0.0 && int(round(own.y)) >= PAINTED && shows(own.x, p)) {
-		result = (p.x + p.y + params.shift) / STRIPE % 2 == 0 ? params.paint_color.rgb : vec3(0.0);
+	int code = int(round(own.y));
+	bool painted = (code & PAINTED) != 0;
+	bool hatched = (code & HATCHED) != 0;
+	bool striped = painted || hatched;
+	if (striped && shows(own.x, p)) {
+		// Opaque stripes of paint and black, which stand out on any component.
+		if (painted) {
+			result = stripes(result, p, params.paint_color, PAINT_PERIOD);
+		}
+		// Sparser see-through stripes of white and black, which leave the component showing.
+		if (hatched) {
+			result = stripes(result, p, params.hatch_color, HATCH_PERIOD);
+		}
 	}
 
 	// Outlines never cover the components they outline.
@@ -147,9 +180,9 @@ void main() {
 		// A dark rim on both sides of the color keeps any color readable on any surface,
 		// like a white outline around a white card.
 		bool on_rim = nearest <= params.rim + 0.5 || nearest > params.width - params.rim;
-		vec3 color = on_rim ? params.rim_color.rgb : palette.colors[clamp(index, 0, PALETTE - 1)].rgb;
+		vec3 color = on_rim ? RIM_COLOR.rgb : palette.colors[clamp(index, 0, PALETTE - 1)].rgb;
 		// Fades the outer pixel for a softer edge.
-		float alpha = clamp(params.width + 0.5 - nearest, 0.0, 1.0) * (on_rim ? params.rim_color.a : 1.0);
+		float alpha = clamp(params.width + 0.5 - nearest, 0.0, 1.0) * (on_rim ? RIM_COLOR.a : 1.0);
 		result = mix(result, color, alpha);
 	}
 	if (result != screen.rgb) {

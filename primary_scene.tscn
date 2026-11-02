@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://s4e3sjhq6cm1" path="res://Scenes/Controls/player_hands_panel.tscn" id="8_sly7x"]
 [ext_resource type="PackedScene" uid="uid://g1hurherohq0" path="res://Scenes/Controls/hand_row.tscn" id="9_hand"]
 [ext_resource type="Texture2D" uid="uid://cx5dv08dde75e" path="res://Textures/UI/arrowup16.png" id="10_up"]
+[ext_resource type="Texture2D" uid="uid://di022i8h2k7m6" path="res://Textures/UI/component_venn.svg" id="11_venn"]
 [ext_resource type="Script" uid="uid://csl5hqjqm38wh" path="res://Scripts/Commands/CommandMenuBar.cs" id="cmd_bar"]
 [ext_resource type="Script" uid="uid://bux026a2v4f2b" path="res://Scripts/Commands/CommandMenuDivider.cs" id="cmd_divider"]
 [ext_resource type="Script" uid="uid://5wf7fweo2fe4" path="res://Scripts/Commands/CommandMenuItem.cs" id="cmd_item"]
@@ -145,23 +146,35 @@ size_flags_horizontal = 3
 
 [node name="HBoxContainer" type="HBoxContainer" parent="UI/MarginContainer/Panel/HBoxContainer" unique_id=1628889017]
 layout_mode = 2
-size_flags_horizontal = 8
+theme_override_constants/separation = 16
 
 [node name="Stages" type="HBoxContainer" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=1536737745]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="MarkReset" type="CheckButton" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=398484416]
+[node name="ViewOptions" type="MenuButton" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=210117436]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Marks the components that would be deleted by a reset."
-text = "Mark Temporary"
+tooltip_text = "View options"
+theme_type_variation = &"MenuBar"
+icon = ExtResource("11_venn")
+flat = false
+item_count = 2
+popup/item_0/text = "Show Removed Components"
+popup/item_0/checkable = 1
+popup/item_0/id = 0
+popup/item_1/text = "Mark Temporary Components"
+popup/item_1/checkable = 1
+popup/item_1/id = 1
 
-[node name="Label" type="Label" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=126657012]
+[node name="RotationStepGroup" type="HBoxContainer" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=1604062237]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer/RotationStepGroup" unique_id=126657012]
 layout_mode = 2
 text = "Rotation Step"
 
-[node name="RotationStep" type="OptionButton" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer" unique_id=515238741]
+[node name="RotationStep" type="OptionButton" parent="UI/MarginContainer/Panel/HBoxContainer/HBoxContainer/RotationStepGroup" unique_id=515238741]
 unique_name_in_owner = true
 layout_mode = 2
 selected = 0

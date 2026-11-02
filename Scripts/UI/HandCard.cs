@@ -20,12 +20,12 @@ public partial class HandCard : PanelContainer
         return theme;
     }
 
-    private StageKey<ComponentPosition> _reference;
+    private PositionKey _reference;
 
     /// <summary>
     /// The card's component atom.
     /// </summary>
-    public StageKey<ComponentPosition> Reference
+    public PositionKey Reference
     {
         get => _reference;
         set
@@ -47,6 +47,10 @@ public partial class HandCard : PanelContainer
 
     private CardFace _face;
 
+    // Hatches the card while it's removed, like ComponentHighlight does on the table.
+    [Export]
+    private ColorRect _hatch;
+
     // Paints the card when a reset would delete it, like ComponentHighlight does on the table.
     [Export]
     private ColorRect _paint;
@@ -57,10 +61,14 @@ public partial class HandCard : PanelContainer
         Theme = OutlineRoom;
         _face = GetNode<CardFace>("Face");
         _paint.Color = ComponentHighlight.PaintColor;
-        ((ShaderMaterial)_paint.Material).SetShaderParameter(
-            "speed",
-            ComponentHighlight.StripeSpeed
-        );
+        _hatch.Color = ComponentHighlight.HatchColor;
+        foreach (var stripes in new[] { _paint, _hatch })
+        {
+            ((ShaderMaterial)stripes.Material).SetShaderParameter(
+                "speed",
+                ComponentHighlight.StripeSpeed
+            );
+        }
     }
 
     public override void _EnterTree()
@@ -80,6 +88,7 @@ public partial class HandCard : PanelContainer
             state != null && GetParent<HandRow>().FacesAway != state.IsFaceDown,
             R
         );
+        _hatch.Visible = state != null && R.IsRemoved(state);
     }
 
     private void SyncSelection(IWatchReader R)
@@ -98,7 +107,7 @@ public partial class HandCard : PanelContainer
     }
 
     /// <summary>
-    /// A held card's atom turned <paramref name="angle"/> about Y, along with its offset from what holds it.
+    /// A dragged card's atom turned <paramref name="angle"/> about Y, along with its offset in the drag.
     /// </summary>
     public static ComponentPosition Turned(ComponentPosition s, float angle) =>
         s with

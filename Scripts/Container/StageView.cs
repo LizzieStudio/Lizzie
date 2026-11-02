@@ -84,11 +84,11 @@ public partial class StageView : Node3D
         {
             if (!_components.TryGetValue(s.Id, out var node))
                 continue;
-            var parent =
-                s.Container is InComponent { Component: var holder }
-                && _components.TryGetValue(holder, out var container)
-                    ? container
-                    : (Node)this;
+
+            Node parent = this;
+            if (_components.TryGetValue(s.ContainerRef, out var containerNode))
+                parent = containerNode;
+
             if (node.GetParent() != parent)
                 node.Reparent(parent);
         }

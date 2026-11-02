@@ -25,10 +25,10 @@ public partial class HandManager : Panel
     [Export]
     private Texture2D _closeIcon;
 
-    // The scene's drag preview, which is duplicated when creating previews of held cards.
+    // The scene's drag preview, which is duplicated when creating previews of dragged cards.
     private CardFace _dragPreview;
 
-    // A preview for each card held over a hand, with what it shows, or null when it's hidden.
+    // A preview for each card dragged over a hand, with what it shows, or null when it's hidden.
     private readonly List<(
         CardFace Rect,
         (Prototype Prototype, PrototypeItemRef Item, bool Back)? Shown
@@ -117,7 +117,7 @@ public partial class HandManager : Panel
     #region Drag-over preview (called from GameObjects during 3D drag)
 
     /// <summary>
-    /// Shows <paramref name="cards"/> as they would be in <paramref name="row"/>, held around <paramref name="point"/>.
+    /// Shows <paramref name="cards"/> as they would be in <paramref name="row"/>, dragged around <paramref name="point"/>.
     /// </summary>
     /// <param name="row">The hand under the mouse, which gives the cards their scale.</param>
     /// <param name="point">The mouse point.</param>
@@ -135,7 +135,7 @@ public partial class HandManager : Panel
             var s = cards[i];
             var (rect, shown) = _previews[i];
 
-            // A card can be flipped, or its prototype edited, while it's held.
+            // A card can be flipped, or its prototype edited, while it's dragged.
             var prototype = Atoms.R.GetPrototype(s);
             var shows = (prototype, Atoms.R.GetComponent(s).Item, s.IsFaceDown);
             if (shows != shown)

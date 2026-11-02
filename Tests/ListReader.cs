@@ -12,6 +12,13 @@ public sealed class ListReader(params Atom[] atoms) : IAtomReader
 
     public SnowStamp Version(Atom atom) => SnowStamp.Empty;
 
+    /// <summary>
+    /// The positions, of those listed, that read only because removed positions are shown.
+    /// </summary>
+    public ComponentPosition[] Removed { get; init; } = [];
+
+    public bool IsRemoved(ComponentPosition position) => Removed.Contains(position);
+
     public T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom
         where I : IAtomRef<T>, IComparable<I> =>

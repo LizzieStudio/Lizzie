@@ -80,23 +80,23 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
 
     /// <summary>
     /// Creates a new, empty store for atoms of <paramref name="type"/>, held by the type's <see cref="IdQuery"/>.
-    /// If the type has a <see cref="StagedId{T}"/>, returns a <see cref="StagedStore{T}"/>.
+    /// <see cref="ComponentPosition"/>s get a <see cref="StagedStore"/>.
     /// </summary>
     private IAtomStore NewStore(Type type)
     {
+        if (type == typeof(ComponentPosition))
+        {
+            return new StagedStore(
+                (AtomStore<Stage, Ref<Stage>>)StoreOf<Stage>(),
+                () => ShowsRemoved
+            );
+        }
         var byId = IdQuery.For(type);
-        return (IAtomStore)(
-            byId is IStagedId
-                ? Activator.CreateInstance(
-                    typeof(StagedStore<>).MakeGenericType(type),
-                    byId,
-                    StoreOf<Stage>()
-                )
-                : Activator.CreateInstance(
-                    typeof(AtomStore<,>).MakeGenericType(type, byId.KeyType),
-                    byId
-                )
-        );
+        return (IAtomStore)
+            Activator.CreateInstance(
+                typeof(AtomStore<,>).MakeGenericType(type, byId.KeyType),
+                byId
+            );
     }
 
     /// <inheritdoc cref="IAtomStore.Settle"/>
@@ -111,6 +111,20 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
         _stores.Add(store.AtomType, store);
         store.Changed += OnAtomsChanged;
         return store;
+    }
+
+    /// <summary>
+    /// Whether "Show Removed Components" is active.
+    /// </summary>
+    public bool ShowsRemoved
+    {
+        get;
+        set
+        {
+            field = value;
+            ((StagedStore)StoreOf<ComponentPosition>()).ShowsRemovedChanged();
+            Settle();
+        }
     }
 
     private IAtomStore<T> StoreOf<T>()
@@ -444,8 +458,12 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
 
     public Atom Get(IAtomRef atom) => StoreOf(atom.AtomType).Find(atom).Value;
 
-    public SnowStamp Version(Atom atom) =>
-        StoreOf(atom.GetType()).Find(IdQuery.For(atom.GetType()).Of(atom)).LastUpdate;
+    public SnowStamp Version(Atom atom) => EntryOf(atom).LastUpdate;
+
+    public bool IsRemoved(ComponentPosition position) => EntryOf(position).Removed;
+
+    private AtomEntry EntryOf(Atom atom) =>
+        StoreOf(atom.GetType()).Find(IdQuery.For(atom.GetType()).Of(atom));
 
     public T Get<T, I>(Identity<T, I> byId, I id)
         where T : Atom

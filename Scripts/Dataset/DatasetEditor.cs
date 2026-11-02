@@ -283,17 +283,14 @@ public partial class DatasetEditor : Window, ICommandView
         ReconcileRows(R, R.Get(DataRow.ByDataset, ds.Id));
         SyncSelection(R, ds.Id);
 
-        if (!_revealRowRef.IsEmpty)
+        if (ViewOf(_revealRowRef) is { } view)
         {
-            if (_views.FirstOrDefault(v => v.Row.Id == _revealRowRef) is { } view)
-            {
-                // defer so the grid has time to complete its layout
-                Callable
-                    .From(() => _dataScrollContainer.EnsureControlVisible(view.Box))
-                    .CallDeferred();
-            }
-            _revealRowRef = Ref<DataRow>.Empty;
+            // defer so the grid has time to complete its layout
+            Callable
+                .From(() => _dataScrollContainer.EnsureControlVisible(view.Box))
+                .CallDeferred();
         }
+        _revealRowRef = Ref<DataRow>.Empty;
     }
 
     private void InitializeSpreadsheet()

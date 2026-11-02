@@ -16,11 +16,13 @@ public readonly record struct Ref<T>(SnowTag Tag) : IAtomRef<T>, IRef, IComparab
 
     static Ref()
     {
-        if (typeof(StagedAtom).IsAssignableFrom(typeof(T)))
+        if (typeof(T) == typeof(ComponentPosition))
+        {
             throw new InvalidOperationException(
-                $"Ref<{typeof(T).Name}> can't refer to a staged atom, since a tag alone doesn't find one. "
-                    + $"Use a StageKey<{typeof(T).Name}>, which adds the stage."
+                "Ref<ComponentPosition> can't refer to a position, since a tag alone doesn't find one. "
+                    + "Use a PositionKey, which adds the stage."
             );
+        }
     }
 
     public static Ref<T> Create() => new(SnowTag.Create());

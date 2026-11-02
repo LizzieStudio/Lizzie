@@ -28,22 +28,35 @@ public static class DeckReconciliation
         IEnumerable<Stage> Below(Ref<Stage> parent) =>
             R.Get(Stage.Children, parent).SelectMany(stage => Below(stage.Id).Prepend(stage));
 
+        // Removed components count as missing, so showing them doesn't change which stage a deck first shows in.
+        bool Shows(ComponentPosition c) => c != null && !R.IsRemoved(c);
+
         var blueprints = Below(Ref<Stage>.Empty).Where(stage => !stage.IsTable).ToList();
         var wanted = parameters.Items(R);
+        // Each deck is updated in the topmost stage that shows it, and the stages below get its cards from there.
         var changes = blueprints
             .SelectMany(stage =>
                 R.Get(ComponentPosition.ByStage, stage.Id)
                     .Where(c =>
-                        R.GetComponent(c) is { IsItem: false } component
-                        && component.PrototypeRef == prototype
-                        && (
-                            stage.ParentRef.IsEmpty
-                            || R.Get(
-                                ComponentPosition.ById,
-                                new StageKey<ComponentPosition>(stage.ParentRef, c.Id)
-                            ) == null
-                        )
-                    )
+                    {
+                        var component = R.GetComponent(c);
+                        var notItem = !component.IsItem;
+                        var ofPrototype = component.PrototypeRef == prototype;
+                        if (notItem && ofPrototype && Shows(c))
+                        {
+                            return !Stage
+                                .Chain(R, stage.ParentRef)
+                                .Any(above =>
+                                    Shows(
+                                        R.Get(
+                                            ComponentPosition.ById,
+                                            new PositionKey(above.Id, c.Id)
+                                        )
+                                    )
+                                );
+                        }
+                        return false;
+                    })
             )
             .SelectMany(deck => Deck(R, deck, prototype, wanted))
             .ToList();
@@ -89,7 +102,7 @@ public static class DeckReconciliation
             {
                 Id = id,
                 StageRef = deck.StageRef,
-                Container = new InComponent(deck.Id),
+                Location = new InComponent(deck.Id),
                 Rotation = new Vector3(0, 0, Mathf.Pi),
                 Rank = rank,
             },
@@ -152,11 +165,14 @@ public static class DeckReconciliation
         IReadOnlyList<PrintedItemRef> wanted
     )
     {
-        var held = R.Get(ComponentPosition.ByContainer, deck.Inside).Select(c => c.Id).ToHashSet();
+        var inDeck = R.Get(ComponentPosition.ByLocation, deck.ContentsKey)
+            .Where(c => !R.IsRemoved(c))
+            .Select(c => c.Id)
+            .ToHashSet();
 
         // The cards out of the deck pair first, so the deck retires the cards it holds.
         var issued = R.Get(Component.ByDeck, deck.Id)
-            .OrderBy(card => held.Contains(card.Id))
+            .OrderBy(card => inDeck.Contains(card.Id))
             .ToList();
         var (pairs, unwanted, missing) = Match(
             issued.Select(card => (PrintedItemRef)card.Item).ToList(),

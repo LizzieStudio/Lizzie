@@ -19,7 +19,7 @@ public static class PlayerHandService
     ) =>
         card with
         {
-            Container = new InHand(seat),
+            Location = new InHand(seat),
             Rotation = card.Rotation with { Y = 0, Z = 0 },
             Rank = rank,
         };
@@ -39,7 +39,7 @@ public static class PlayerHandService
         var moving = cards.Select(c => c.Id).ToHashSet();
         var rest = hand.Where(c => !moving.Contains(c.Id)).ToList();
         var ranks = SnowRank.At(rest, Math.Clamp(index, 0, rest.Count), cards.Count);
-        return cards.Select((c, i) => c with { Container = new InHand(seat), Rank = ranks[i] });
+        return cards.Select((c, i) => c with { Location = new InHand(seat), Rank = ranks[i] });
     }
 
     /// <summary>
@@ -49,5 +49,5 @@ public static class PlayerHandService
         IAtomReader R,
         Ref<Stage> stage,
         Ref<Seat> seat
-    ) => R.Get(ComponentPosition.ByContainer, new(stage, new InHand(seat)));
+    ) => R.Get(ComponentPosition.ByLocation, new(stage, new InHand(seat)));
 }

@@ -52,7 +52,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// Whether the component in <paramref name="key"/> is marked as temporary.
     /// </summary>
-    public bool IsMarkedForReset(IAtomReader R, StageKey<ComponentPosition> key) =>
+    public bool IsMarkedForReset(IAtomReader R, PositionKey key) =>
         R.Get(MarksTemporary) && ComponentPosition.GoesOnReset(R, key);
 
     /// <summary>
@@ -88,7 +88,7 @@ public partial class GameObjects : Node3D, ICommandView
     public CursorMode CursorMode { get; private set; }
 
     // The local player's drag, from its pickup until it's dropped or Godot's drag ends, or null.
-    private HeldDrag _held;
+    private ComponentDrag _drag;
 
     /// <summary>
     /// Starts a drag of the atoms in <paramref name="pickup"/>,
@@ -102,20 +102,20 @@ public partial class GameObjects : Node3D, ICommandView
         var picked = pickup.ToList();
         var ranks = SnowRank.AfterAll(picked.Count);
         var atoms = picked.Select(
-            (s, i) => s with { Container = new Held(seat, overHand), Rank = ranks[i] }
+            (s, i) => s with { Location = new Dragged(seat, overHand), Rank = ranks[i] }
         );
         // Players without a seat can't drag.
         if (atoms.Count() == 0 || seat.IsEmpty)
             return;
 
-        _held = new HeldDrag
+        _drag = new ComponentDrag
         {
             Transition = Atoms.R.Open(this, DragCommands.Pickup, atoms.Concat(alongside)),
             Components = atoms.Select(ComponentPosition.ById.Of).ToArray(),
             Alongside = alongside.Select(IAtomRef.To).ToArray(),
         };
         CursorMode = CursorMode.Drag;
-        _heldOverHand = overHand;
+        _dragOverHand = overHand;
     }
 
     /// <summary>
@@ -126,10 +126,10 @@ public partial class GameObjects : Node3D, ICommandView
         // Its atom may have been unset this frame, before the view removes it.
         if (pressed.State is not { } state)
             return [];
-        var place = state.Container;
+        var place = state.Location;
         return GetSelection()
             .Select(GetComponent)
-            .Where(o => o?.State != null && o.State.Container == place)
+            .Where(o => o?.State != null && o.State.Location == place)
             .OrderBy(o => o.State.Rank)
             .ToList();
     }
@@ -137,15 +137,15 @@ public partial class GameObjects : Node3D, ICommandView
     /// <summary>
     /// Ends a drag with the atoms in <paramref name="drop"/>.
     /// </summary>
-    private void EndDrag(HeldDrag held, IEnumerable<Atom> drop)
+    private void EndDrag(ComponentDrag drag, IEnumerable<Atom> drop)
     {
         Atoms.R.Close(
             this,
-            held.Transition,
+            drag.Transition,
             DragCommands.Drop,
-            drop.Concat(held.KeptAlongside(Atoms.R))
+            drop.Concat(drag.KeptAlongside(Atoms.R))
         );
-        _held = null;
+        _drag = null;
     }
 
     /// <summary>
@@ -153,11 +153,11 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private void CleanupDrag()
     {
-        if (_held != null)
-            Atoms.R.Close(this, _held.Transition);
-        _held = null;
+        if (_drag != null)
+            Atoms.R.Close(this, _drag.Transition);
+        _drag = null;
         CursorMode = CursorMode.Normal;
-        _heldOverHand = false;
+        _dragOverHand = false;
         _handManager.HideDragPreview();
         SetDropTarget(null);
     }
@@ -175,9 +175,11 @@ public partial class GameObjects : Node3D, ICommandView
 
         _tableMouseControl.SetDragForwarding(
             Callable.From<Vector2, Variant>(GetDragData),
-            Callable.From<Vector2, Variant, bool>((_, data) => data.As<GodotObject>() is HeldDrag),
+            Callable.From<Vector2, Variant, bool>(
+                (_, data) => data.As<GodotObject>() is ComponentDrag
+            ),
             Callable.From<Vector2, Variant>(
-                (at, data) => DropOnTable((HeldDrag)data.AsGodotObject(), ViewportPoint(at))
+                (at, data) => DropOnTable((ComponentDrag)data.AsGodotObject(), ViewportPoint(at))
             )
         );
         _tableMouseControl.GuiInput += OnTableInput;
@@ -210,7 +212,7 @@ public partial class GameObjects : Node3D, ICommandView
         if (notification == NotificationDragEnd && CursorMode == CursorMode.Drag)
             CleanupDrag();
         // Godot's drag outlives the window losing focus, potentially causing bugs.
-        else if (notification == NotificationApplicationFocusOut && _held != null)
+        else if (notification == NotificationApplicationFocusOut && _drag != null)
             GetViewport().GuiCancelDrag();
     }
 
@@ -258,7 +260,7 @@ public partial class GameObjects : Node3D, ICommandView
                 HandleSpawnMode();
                 break;
             case CursorMode.Drag:
-                UpdateDrag(_held, GetViewport().GetMousePosition());
+                UpdateDrag(_drag, GetViewport().GetMousePosition());
                 break;
             case CursorMode.DragSelect:
                 PreviewSelection(_selectionRectangle.CurRectangle);
@@ -346,7 +348,7 @@ public partial class GameObjects : Node3D, ICommandView
         Keys = [Shortcuts.Key(Key.Z)],
         MaxTargets = 1,
         // Cards in a hand or a bag aren't on the table to zoom to.
-        AppliesTo = (R, c) => c.Container is null or Held || R.IsInDeck(c),
+        AppliesTo = (R, c) => c.Location is null or Dragged || R.IsInDeck(c),
         Effects = (_, cs) =>
         {
             if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)
@@ -550,7 +552,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private void UpdateStackingHeights()
     {
-        var table = Nodes(Atoms.R.Get(ComponentPosition.ByContainer, ShownTable)).ToArray();
+        var table = Nodes(Atoms.R.Get(ComponentPosition.ByLocation, ShownTable)).ToArray();
         var floors = Stacking.Floors(table, out _tableTops);
 
         for (int i = 0; i < table.Length; i++)
@@ -562,7 +564,7 @@ public partial class GameObjects : Node3D, ICommandView
     /// </summary>
     private void UpdateDragFloors()
     {
-        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Container))
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Location))
         {
             var dragged = group.ToArray();
             var floors = Stacking.Floors(dragged, out _);
@@ -692,9 +694,9 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// The Godot-style data of what the local player holds, or nothing if they hold nothing.
+    /// The Godot-style data of what the local player drags, or nothing if they drag nothing.
     /// </summary>
-    private Variant DragData() => _held != null ? _held : default(Variant);
+    private Variant DragData() => _drag != null ? _drag : default(Variant);
 
     private void OnTableInput(InputEvent e)
     {
@@ -855,32 +857,32 @@ public partial class GameObjects : Node3D, ICommandView
     private VisualComponentGroup _currentDragDropTarget;
 
     // Whether the local player's dragged cards are hovering over the hand.
-    private bool _heldOverHand;
+    private bool _dragOverHand;
 
-    private void UpdateDrag(HeldDrag held, Vector2 point)
+    private void UpdateDrag(ComponentDrag drag, Vector2 point)
     {
-        var cards = held.Cards(Atoms.R).ToList();
+        var cards = drag.Cards(Atoms.R).ToList();
         // Only cards go into a hand, which opens a gap for them itself.
         var row = cards.Count > 0 ? HandRow.Under(GetViewport()) : null;
         bool overHand = row != null;
-        // The card held nearest the pointer, which a turn into the hand snaps.
+        // The dragged card nearest the pointer, which a turn into the hand snaps.
         var nearest = cards.MinBy(s => s.PositionAt(0).LengthSquared());
 
-        // Over a hand, the held cards move to the hold over the hand, where only the 2D preview shows them.
-        if (overHand != _heldOverHand)
+        // Over a hand, the dragged cards move over the hand, where only the 2D preview shows them.
+        if (overHand != _dragOverHand)
         {
-            _heldOverHand = overHand;
-            var holder = new Held(Atoms.R.LocalSeat(), _heldOverHand);
+            _dragOverHand = overHand;
+            var location = new Dragged(Atoms.R.LocalSeat(), _dragOverHand);
             float turn = HandTurn(nearest, overHand);
             Atoms.R.Append(
-                held.Transition,
-                cards.Select(s => HandCard.Turned(s, turn) with { Container = holder })
+                drag.Transition,
+                cards.Select(s => HandCard.Turned(s, turn) with { Location = location })
             );
         }
         if (overHand)
         {
             _handManager.ShowDragPreview(
-                held.Cards(Atoms.R).OrderBy(s => s.Rank).ToList(),
+                drag.Cards(Atoms.R).OrderBy(s => s.Rank).ToList(),
                 row,
                 point
             );
@@ -895,7 +897,7 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// The rotation held cards should have when entering or leaving a hand based on the camera rotation and rotation step.
+    /// The rotation dragged cards should have when entering or leaving a hand based on the camera rotation and rotation step.
     /// </summary>
     private float HandTurn(ComponentPosition nearest, bool intoHand)
     {
@@ -935,63 +937,65 @@ public partial class GameObjects : Node3D, ICommandView
         Nodes(
             Atoms
                 .R.Get(Seat.Live)
-                .SelectMany(seat => new[] { new Held(seat.Id, false), new Held(seat.Id, true) })
-                .SelectMany(held =>
-                    Atoms.R.Get(ComponentPosition.ByContainer, new(_view.StageRef, held))
+                .SelectMany(seat =>
+                    new[] { new Dragged(seat.Id, false), new Dragged(seat.Id, true) }
+                )
+                .SelectMany(dragged =>
+                    Atoms.R.Get(ComponentPosition.ByLocation, new(_view.StageRef, dragged))
                 )
         );
 
     /// <summary>
     /// The key of <paramref name="id"/> in the shown stage.
     /// </summary>
-    private StageKey<ComponentPosition> ShownKey(Ref<Component> id) => new(_view.StageRef, id);
+    private PositionKey ShownKey(Ref<Component> id) => new(_view.StageRef, id);
 
     /// <summary>
-    /// The table of the shown stage, as <see cref="ComponentPosition.ByContainer"/> lists it.
+    /// The table of the shown stage, as <see cref="ComponentPosition.ByLocation"/> lists it.
     /// </summary>
-    private ContainerKey ShownTable => new(_view.StageRef, null);
+    private LocationKey ShownTable => new(_view.StageRef, null);
 
     /// <summary>
-    /// Drops what <paramref name="held"/> holds on the table at <paramref name="point"/> or into the container there.
+    /// Drops what <paramref name="drag"/> drags on the table at <paramref name="point"/> or into the container there.
     /// </summary>
-    private void DropOnTable(HeldDrag held, Vector2 point)
+    private void DropOnTable(ComponentDrag drag, Vector2 point)
     {
         // The camera may have moved since the mouse did.
-        UpdateDrag(held, point);
+        UpdateDrag(drag, point);
         // Pointing above the horizon sets nothing down, so the drag is canceled.
         if (_dragPlane.Project(point) is not { } cursor)
             return;
 
-        var dropped = At(cursor, held.Atoms(Atoms.R));
+        var dropped = At(cursor, drag.Atoms(Atoms.R));
         if (_currentDragDropTarget is { } bag)
-            EndDrag(held, bag.DropObjects(dropped));
+            EndDrag(drag, bag.DropObjects(dropped));
         else
-            EndDrag(held, OnTable(dropped));
+            EndDrag(drag, OnTable(dropped));
     }
 
     /// <summary>
-    /// Drops what <paramref name="held"/> holds into the hand <paramref name="row"/> shows.
+    /// Drops what <paramref name="drag"/> drags into the hand <paramref name="row"/> shows.
     /// </summary>
-    public void DropInHand(HeldDrag held, HandRow row, int index)
+    public void DropInHand(ComponentDrag drag, HandRow row, int index)
     {
-        // Puts the cards in the hold over the hand first, if the mouse got there since the last frame.
-        UpdateDrag(held, GetViewport().GetMousePosition());
+        // Moves the cards over the hand first, if the mouse got there since the last frame.
+        UpdateDrag(drag, GetViewport().GetMousePosition());
         if (_dragPlane.GetCursorProjection() is not { } cursor)
             return;
 
         var cards = PlayerHandService.Inserted(
             PlayerHandService.GetHand(Atoms.R, _view.StageRef, row.Seat),
-            held.Cards(Atoms.R).Select(row.AfterEnteringOrLeaving).ToList(),
+            drag.Cards(Atoms.R).Select(row.AfterEnteringOrLeaving).ToList(),
             index,
             row.Seat
         );
-        var rest = held.Atoms(Atoms.R)
+        var rest = drag.Atoms(Atoms.R)
             .Where(s => Atoms.R.Kind(s) != VisualComponentBase.VisualComponentType.Printed);
-        EndDrag(held, cards.Concat(OnTable(At(cursor, rest))));
+        EndDrag(drag, cards.Concat(OnTable(At(cursor, rest))));
     }
 
     /// <summary>
-    /// The held <paramref name="atoms"/> placed where they are on the table, at their offsets from <paramref name="cursor"/>.
+    /// The dragged <paramref name="atoms"/> placed where they are on the table, at their offsets from <paramref name="cursor"/>.
     /// </summary>
     private static List<ComponentPosition> At(
         Vector3 cursor,
@@ -1008,7 +1012,7 @@ public partial class GameObjects : Node3D, ICommandView
         var ordered = dropped.OrderBy(s => s.Rank).ToList();
         var (snapX, snapZ) = SnapDelta(ordered);
         var decks = Atoms
-            .R.Get(ComponentPosition.ByContainer, ShownTable)
+            .R.Get(ComponentPosition.ByLocation, ShownTable)
             .Where(s => Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
             .ToList();
 
@@ -1019,7 +1023,7 @@ public partial class GameObjects : Node3D, ICommandView
                 {
                     var placed = s with
                     {
-                        Container = null,
+                        Location = null,
                         X = s.X + snapX,
                         Z = s.Z + snapZ,
                         Rank = ranks[i],
@@ -1034,7 +1038,7 @@ public partial class GameObjects : Node3D, ICommandView
                         ? placed
                         : placed with
                         {
-                            Container = new InComponent(deck.Id),
+                            Location = new InComponent(deck.Id),
                             X = 0,
                             Z = 0,
                             Rotation = placed.Rotation with
@@ -1055,7 +1059,7 @@ public partial class GameObjects : Node3D, ICommandView
     private (int X, int Z) SnapDelta(List<ComponentPosition> dropped)
     {
         var targets = Atoms
-            .R.Get(ComponentPosition.ByContainer, ShownTable)
+            .R.Get(ComponentPosition.ByLocation, ShownTable)
             .Where(s =>
                 Atoms.R.Kind(s)
                     is VisualComponentBase.VisualComponentType.Printed
@@ -1160,7 +1164,7 @@ public partial class GameObjects : Node3D, ICommandView
         _view = CreateStageView();
 
         // The gesture went with the view, so there's nothing to cancel.
-        _held = null;
+        _drag = null;
         AbandonMode();
         _hover = default;
     }
@@ -1189,7 +1193,7 @@ public partial class GameObjects : Node3D, ICommandView
     }
 
     /// <summary>
-    /// Moves what each player holds with their cursor.
+    /// Moves what each player drags with their cursor.
     /// </summary>
     private void ProcessActiveDrags()
     {
@@ -1197,7 +1201,7 @@ public partial class GameObjects : Node3D, ICommandView
         if (cursors == null)
             return;
 
-        foreach (var group in GetDraggingObjects().GroupBy(c => (Held)c.State.Container))
+        foreach (var group in GetDraggingObjects().GroupBy(c => (Dragged)c.State.Location))
         {
             if (cursors.CursorOf(group.Key.Seat) is not { } cursor)
                 continue;

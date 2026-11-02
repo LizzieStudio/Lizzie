@@ -72,7 +72,7 @@ public static class DeckCommands
         IsDeck(R, c) && CardCount(R, c) > 0;
 
     private static int CardCount(IAtomReader R, ComponentPosition deck) =>
-        R.Count(ComponentPosition.ByContainer, deck.Inside);
+        R.Count(ComponentPosition.ByLocation, deck.ContentsKey);
 
     private static IEnumerable<ComponentPosition> Shuffled(IAtomReader R, ComponentPosition deck)
     {
@@ -111,7 +111,7 @@ public static class DeckCommands
             (c, i) =>
                 c with
                 {
-                    Container = null,
+                    Location = null,
                     Position = frame + new Vector3(width * (1.5f + i), 0, 0),
                     Rotation = c.Rotation with { Y = deck.Rotation.Y + c.Rotation.Y },
                     Rank = ranks[i],

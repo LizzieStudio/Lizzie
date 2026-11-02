@@ -4,13 +4,13 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// <para>Draws screen-space outlines around components, and paints components with stripes.</para>
+/// <para>Draws screen-space outlines around components, and paints or hatches components with stripes.</para>
 ///
 /// <para>
 /// Components put copies of their meshes on <see cref="MaskLayer"/>,
 /// which a second camera renders into a mask of codes and depths.
 /// <see cref="ComponentHighlightEffect"/> then draws a constant-width outline around the mask's visible pixels
-/// and paints the visible pixels marked for paint, in a compute pass on the table camera,
+/// and paints or hatches the visible pixels marked for it, in a compute pass on the table camera,
 /// so overlapping components share one outline around their union,
 /// and outlines and paint hide behind other objects.
 /// </para>
@@ -52,6 +52,12 @@ public partial class ComponentHighlight : Node
     public static readonly Color PaintColor = Colors.Red;
 
     /// <summary>
+    /// The hatching's color and opacity, in see-through stripes with black over two fifths of the component,
+    /// so it stands out while still showing.
+    /// </summary>
+    public static readonly Color HatchColor = new(1, 1, 1, 0.5f);
+
+    /// <summary>
     /// How fast the paint's stripes move, in pixels per second.
     /// </summary>
     public const float StripeSpeed = 10;
@@ -61,6 +67,9 @@ public partial class ComponentHighlight : Node
 
     // Added to a mask code to paint the component. The shader reads the same flag.
     private const int Painted = 64;
+
+    // Added to a mask code to hatch the component. The shader reads the same flag.
+    private const int Hatched = 128;
 
     // Each mask code's material, made the first time the code is used.
     private static readonly Dictionary<int, ShaderMaterial> Materials = new();
@@ -78,12 +87,15 @@ public partial class ComponentHighlight : Node
 
     /// <summary>
     /// The material that draws a component into the mask with the given <paramref name="outline"/> color,
-    /// or none, and <paramref name="painted"/> or not.
+    /// or none, <paramref name="painted"/> or not, and <paramref name="hatched"/> or not.
     /// The outline color keeps its palette slot until every holder calls <see cref="Release"/>.
     /// </summary>
-    public static Material Reserve(Color? outline, bool painted)
+    public static Material Reserve(Color? outline, bool painted, bool hatched)
     {
-        int code = (outline is Color color ? Hold(color) : NoOutline) + (painted ? Painted : 0);
+        var colorNumber = outline is Color color ? Hold(color) : NoOutline;
+        var paintedFlag = painted ? Painted : 0;
+        var hatchedFlag = hatched ? Hatched : 0;
+        int code = colorNumber + paintedFlag + hatchedFlag;
         if (!Materials.TryGetValue(code, out var material))
         {
             Materials[code] = material = new ShaderMaterial { Shader = MaskShader };

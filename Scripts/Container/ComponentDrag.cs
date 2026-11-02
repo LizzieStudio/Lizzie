@@ -5,7 +5,7 @@ using Godot;
 namespace Lizzie;
 
 /// <summary>
-/// The Godot drag-and-drop data of a gesture that holds components.
+/// The Godot drag-and-drop data of a gesture that drags components.
 ///
 /// <para>
 /// Where the components are lives in their atoms, which every player sees.
@@ -14,7 +14,7 @@ namespace Lizzie;
 /// A drag that ends with its transition still open wasn't accepted, and is canceled.
 /// </para>
 /// </summary>
-public sealed partial class HeldDrag : RefCounted
+public sealed partial class ComponentDrag : RefCounted
 {
     /// <summary>
     /// The transition, opened by the pickup.
@@ -24,7 +24,7 @@ public sealed partial class HeldDrag : RefCounted
     /// <summary>
     /// Every component the transition picked up.
     /// </summary>
-    public IReadOnlyList<StageKey<ComponentPosition>> Components { get; init; } = [];
+    public IReadOnlyList<PositionKey> Components { get; init; } = [];
 
     /// <summary>
     /// The other atoms the pickup wrote, like a tray's new component.
@@ -32,7 +32,7 @@ public sealed partial class HeldDrag : RefCounted
     public IReadOnlyList<IAtomRef> Alongside { get; init; } = [];
 
     /// <summary>
-    /// The atoms of the components it still holds.
+    /// The atoms of the components it still drags.
     /// Another player can take one away, by unsetting it, say.
     /// </summary>
     public IEnumerable<ComponentPosition> Atoms(IAtomReader R) =>
@@ -47,7 +47,7 @@ public sealed partial class HeldDrag : RefCounted
         Alongside.Select(R.Get).Where(a => a?.Transitions.Contains(Transition) == true);
 
     /// <summary>
-    /// The atoms of the held VcPrinteds, which can go into a hand.
+    /// The atoms of the dragged VcPrinteds, which can go into a hand.
     /// </summary>
     public IEnumerable<ComponentPosition> Cards(IAtomReader R) =>
         Atoms(R).Where(s => R.Kind(s) == VisualComponentBase.VisualComponentType.Printed);

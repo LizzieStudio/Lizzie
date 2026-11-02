@@ -60,7 +60,7 @@ public partial class HandRow : Control
     public ComponentPosition AfterEnteringOrLeaving(ComponentPosition card) =>
         FacesAway ? ComponentCommands.Flipped(card) : card;
 
-    private ChildList<StageKey<ComponentPosition>, HandCard> _cards;
+    private ChildList<PositionKey, HandCard> _cards;
 
     private IReadOnlyList<HandCard> _order = [];
 
@@ -125,7 +125,7 @@ public partial class HandRow : Control
         var mouse = GetLocalMousePosition();
         bool hovered = Under(GetViewport()) == this;
         // The widths of the cards being dragged, which the row opens a gap for, side by side.
-        List<float> held = GetViewport().GuiGetDragData().As<GodotObject>() is HeldDrag drag
+        List<float> dragged = GetViewport().GuiGetDragData().As<GodotObject>() is ComponentDrag drag
             ? drag.Cards(Atoms.R)
                 .Select(s =>
                     CardSize(
@@ -139,20 +139,20 @@ public partial class HandRow : Control
         // Found without the spread or the gap, like CardAt.
         var plain = Layout(-1, -1);
         _hovered = hovered && !GetViewport().GuiIsDragging() ? plain.CardAt(mouse.X) : -1;
-        _gapAt = hovered && held.Count > 0 ? plain.InsertIndexAt(mouse.X) : -1;
-        _gapWidth = held.Sum() + Separation * Math.Max(held.Count - 1, 0);
+        _gapAt = hovered && dragged.Count > 0 ? plain.InsertIndexAt(mouse.X) : -1;
+        _gapWidth = dragged.Sum() + Separation * Math.Max(dragged.Count - 1, 0);
 
         // The spread and the gap follow the mouse, so the cards are placed every frame.
         Place();
     }
 
-    // Held cards drop in where they're let go.
+    // Dragged cards drop in where they're let go.
     public override bool _CanDropData(Vector2 at, Variant data) =>
-        data.As<GodotObject>() is HeldDrag held && held.Cards(Atoms.R).Any();
+        data.As<GodotObject>() is ComponentDrag drag && drag.Cards(Atoms.R).Any();
 
     public override void _DropData(Vector2 at, Variant data) =>
         ProjectService.Instance.GameObjects.DropInHand(
-            (HeldDrag)data.AsGodotObject(),
+            (ComponentDrag)data.AsGodotObject(),
             this,
             InsertIndexAt(at)
         );
@@ -168,7 +168,7 @@ public partial class HandRow : Control
         _order = _cards.Show(hand, ComponentPosition.ById.Of);
     }
 
-    private HandCard AddCard(StageKey<ComponentPosition> id)
+    private HandCard AddCard(PositionKey id)
     {
         var card = _cardScene.Instantiate<HandCard>();
         AddChild(card);
@@ -235,7 +235,7 @@ public partial class HandRow : Control
     /// <summary>
     /// The middle of the card showing <paramref name="id"/> as a point on the viewport.
     /// </summary>
-    public Vector2 MiddleOf(StageKey<ComponentPosition> id)
+    public Vector2 MiddleOf(PositionKey id)
     {
         var card = _cards[id];
         return card.GetGlobalTransformWithCanvas() * (card.Size / 2);
