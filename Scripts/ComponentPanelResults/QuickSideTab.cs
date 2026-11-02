@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
@@ -23,6 +22,9 @@ public partial class QuickSideTab : SideTab
 
     private bool _dice;
 
+    // the side last loaded, which keeps the looks of its removed suits
+    private QuickSide _loaded = new();
+
     /// <summary>
     /// Whether or not this is for a die, which hides some settings.
     /// </summary>
@@ -44,15 +46,16 @@ public partial class QuickSideTab : SideTab
         _add.Pressed += () =>
         {
             var last = Rows.Last().Suit;
-            AddRow(last with { Id = SnowTag.Create(), Background = NextColor(last.Background) });
+            AddRow(SnowTag.Create(), last with { Background = NextColor(last.Background) });
             RaiseChanged();
         };
     }
 
-    private void AddRow(QuickSuit suit)
+    private void AddRow(SnowTag id, QuickSuit suit)
     {
         var row = _suitRow.Instantiate<QuickSuitRow>();
         _suits.AddChild(row);
+        row.Id = id;
         row.Suit = suit;
         row.Dice = _dice;
         Connect(row);
@@ -95,20 +98,19 @@ public partial class QuickSideTab : SideTab
         Color.FromOkHsl(above.OkHslH + (13f / 34f), above.OkHslS, above.OkHslL);
 
     public override SideParameters Side =>
-        new QuickSide { Suits = Rows.Select(row => row.Suit).ToImmutableArray() };
+        Rows.Aggregate(_loaded with { Order = [] }, (side, row) => side.Add(row.Id, row.Suit));
 
     public override bool TryLoad(SideParameters side)
     {
         if (side is not QuickSide quick)
             return false;
+        _loaded = quick;
         foreach (var row in Rows.ToList())
             RemoveRow(row);
-        foreach (
-            var suit in quick.Suits.IsEmpty
-                ? [new QuickSuit { Id = SnowTag.Create() }]
-                : quick.Suits
-        )
-            AddRow(suit);
+        if (quick.Order.IsEmpty)
+            AddRow(SnowTag.Create(), new QuickSuit());
+        foreach (var id in quick.Order)
+            AddRow(id, quick.Suits[id]);
         return true;
     }
 }

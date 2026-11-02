@@ -10,7 +10,9 @@ namespace Lizzie.Tests;
 public class SideParametersTests
 {
     private static QuickSide Quick(params string[] values) =>
-        new() { Suits = [.. Array.ConvertAll(values, v => new QuickSuit { Values = v })] };
+        values
+            .Select((v, i) => (Id: new SnowTag(i + 1), Suit: new QuickSuit { Values = v }))
+            .Aggregate(new QuickSide(), (side, s) => side.Add(s.Id, s.Suit));
 
     private static T RoundTrip<T>(T atom)
         where T : Atom =>
@@ -49,7 +51,7 @@ public class SideParametersTests
     {
         var cards = Quick("1-3", "J, Q").Cards();
 
-        var values = string.Join(", ", cards.ConvertAll(c => c.Value));
+        var values = string.Join(", ", cards.ConvertAll(c => c.Face.Value));
         Assert.True(values == "1, 2, 3, J, Q", $"The cards are {values}, expected 1, 2, 3, J, Q.");
     }
 
@@ -59,7 +61,7 @@ public class SideParametersTests
         var cards = Quick(" ").Cards();
 
         Assert.True(
-            cards.Count == 1 && cards[0].Value == "",
+            cards.Count == 1 && cards[0].Face.Value == "",
             $"A blank suit makes {cards.Count} cards, expected one blank card."
         );
     }
@@ -78,10 +80,7 @@ public class SideParametersTests
     [Fact]
     public void ARepeatedValueIsOneFace()
     {
-        var side = new QuickSide
-        {
-            Suits = [new QuickSuit { Id = new SnowTag(1), Values = "A*3" }],
-        };
+        var side = new QuickSide().Add(new SnowTag(1), new QuickSuit { Values = "A*3" });
 
         var faces = side.Faces(null);
 
@@ -96,11 +95,8 @@ public class SideParametersTests
     {
         var parameters = new PrintedParameters
         {
-            Front = new QuickSide
-            {
-                Suits = [new QuickSuit { Id = new SnowTag(1), Values = "1-3" }],
-            },
-            Back = new QuickSide { Suits = [new QuickSuit { Id = new SnowTag(2), Values = "B" }] },
+            Front = new QuickSide().Add(new SnowTag(1), new QuickSuit { Values = "1-3" }),
+            Back = new QuickSide().Add(new SnowTag(2), new QuickSuit { Values = "B" }),
         };
 
         var items = parameters.Items(null);
@@ -243,13 +239,13 @@ public class SideParametersTests
             Id = new(1),
             Parameters = new PrintedParameters
             {
-                Front = new QuickSide { Suits = [new QuickSuit { ShowText = false }] },
+                Front = new QuickSide().Add(new SnowTag(2), new QuickSuit { ShowText = false }),
             },
         };
 
         var back = RoundTrip(prototype);
 
-        var suit = ((QuickSide)((PrintedParameters)back.Parameters).Front).Suits[0];
+        var suit = ((QuickSide)((PrintedParameters)back.Parameters).Front).Suits[new SnowTag(2)];
         Assert.False(suit.ShowText, "A suit with its text hidden loaded with its text shown.");
     }
 }

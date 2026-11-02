@@ -101,7 +101,7 @@ public class QuickTemplateTests
     [Fact]
     public void RepeatedCardsAreDrawnOnce()
     {
-        var side = new QuickSide { Suits = [Suit with { Values = "A, A, 2" }] };
+        var side = new QuickSide().Add(new SnowTag(1), Suit with { Values = "A, A, 2" });
         var p = new PrintedParameters { Width = 63.5f, Height = 88.9f };
 
         var drawing = QuickTemplate.Drawing(p, side.Cards());
@@ -119,10 +119,9 @@ public class QuickTemplateTests
     [Fact]
     public void AValueTheSideNoLongerHasHasNoRow()
     {
-        var suit = Suit with { Id = new SnowTag(1), Values = "A, 2" };
-        var side = new QuickSide { Suits = [suit] };
+        var side = new QuickSide().Add(new SnowTag(1), Suit with { Values = "A, 2" });
 
-        var row = QuickTemplate.Row(side, new QuickFace(suit.Id, "3"));
+        var row = QuickTemplate.Row(side, new QuickFace(new SnowTag(1), "3"));
 
         Assert.True(
             row == SnowTag.Empty,

@@ -151,17 +151,17 @@ public class Format1Tests
     {
         var writes = Writes(QuickProject);
 
-        var suits = (
-            (JsonArray)Assert.Single(OfType(writes, "Prototype"))["parameters"]["front"]["suits"]
-        )
-            .Cast<JsonObject>()
-            .ToList();
-        Assert.Equal(["\"Ace\"", "\"1-3\""], suits.Select(s => (string)s["values"]));
-        Assert.NotEqual((int)suits[0]["id"], (int)suits[1]["id"]);
+        var side = Assert.Single(OfType(writes, "Prototype"))["parameters"]["front"];
+        var order = ((JsonArray)side["order"]).Select(id => (int)id).ToList();
+        Assert.Equal(2, order.Distinct().Count());
+        Assert.Equal(
+            ["\"Ace\"", "\"1-3\""],
+            order.Select(id => (string)side["suits"][id.ToString()]["values"])
+        );
 
         var front = Assert.Single(OfType(writes, "Component"))["item"]["front"];
         Assert.Equal("QuickFace", (string)front["$type"]);
-        Assert.Equal((int)suits[1]["id"], (int)front["suitRef"]);
+        Assert.Equal(order[1], (int)front["suitRef"]);
         Assert.Equal("1-3", (string)front["value"]);
     }
 
@@ -193,6 +193,7 @@ public class Format1Tests
         Assert.Equal("North", (string)seats[1]["name"]);
         Assert.True((bool)seats[1]["isAdmin"]);
         var zone = Assert.Single(OfType(writes, "Prototype"))["parameters"];
-        Assert.Equal([(int)seats[1]["id"]], ((JsonArray)zone["includedSeats"]).Select(s => (int)s));
+        var rules = ((JsonObject)zone["seats"]).Select(r => (r.Key, (int)r.Value));
+        Assert.Equal([($"{(int)seats[1]["id"]}", (int)ZoneAccess.Allowed)], rules);
     }
 }

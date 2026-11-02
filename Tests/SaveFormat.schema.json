@@ -625,15 +625,20 @@
                               "$type": {
                                 "const": "QuickSide"
                               },
+                              "order": {
+                                "type": "array"
+                              },
                               "suits": {
-                                "type": "array",
-                                "items": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "additionalProperties": {
                                   "type": [
                                     "object",
                                     "null"
                                   ],
                                   "properties": {
-                                    "id": true,
                                     "background": true,
                                     "foreground": true,
                                     "values": {
@@ -759,8 +764,40 @@
                               "$type": {
                                 "const": "QuickSide"
                               },
+                              "order": {
+                                "$ref": "#/properties/writes/items/anyOf/9/properties/parameters/anyOf/2/properties/faces/anyOf/1/properties/order"
+                              },
                               "suits": {
-                                "$ref": "#/properties/writes/items/anyOf/9/properties/parameters/anyOf/2/properties/faces/anyOf/1/properties/suits"
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "additionalProperties": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "background": true,
+                                    "foreground": true,
+                                    "values": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "icon": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "showText": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
                               }
                             },
                             "additionalProperties": false
@@ -807,8 +844,40 @@
                               "$type": {
                                 "const": "QuickSide"
                               },
+                              "order": {
+                                "$ref": "#/properties/writes/items/anyOf/9/properties/parameters/anyOf/2/properties/faces/anyOf/1/properties/order"
+                              },
                               "suits": {
-                                "$ref": "#/properties/writes/items/anyOf/9/properties/parameters/anyOf/2/properties/faces/anyOf/1/properties/suits"
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "additionalProperties": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "background": true,
+                                    "foreground": true,
+                                    "values": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "icon": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "showText": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
                               }
                             },
                             "additionalProperties": false
@@ -871,11 +940,14 @@
                       "hiddenWhenExcluded": {
                         "type": "boolean"
                       },
-                      "includedSeats": {
-                        "type": "array"
-                      },
-                      "excludedSeats": {
-                        "type": "array"
+                      "seats": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "additionalProperties": {
+                          "type": "integer"
+                        }
                       }
                     },
                     "additionalProperties": false

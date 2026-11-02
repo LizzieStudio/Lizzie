@@ -48,21 +48,31 @@ public class SaveFormatTests
     /// </summary>
     private static string Schema()
     {
-        var schema = LizzieJson.EventOptions.GetJsonSchemaAsNode(
-            typeof(TimelineEvent),
-            new JsonSchemaExporterOptions
-            {
-                TransformSchemaNode = (_, node) =>
-                {
-                    if (node is JsonObject obj && obj.ContainsKey("properties"))
-                        obj["additionalProperties"] = false;
-                    return node;
-                },
-            }
-        );
+        var schema = LizzieJson.EventOptions.GetJsonSchemaAsNode(typeof(TimelineEvent), Exporter);
         schema["title"] = Title(SaveUpgrade.Current);
         return schema.ToJsonString(Indented) + "\n";
     }
+
+    /// <summary>
+    /// A WeakMap's converter hides its entries from the exporter, so it's described as the dictionary it writes.
+    /// </summary>
+    private static readonly JsonSchemaExporterOptions Exporter = new()
+    {
+        TransformSchemaNode = (context, node) =>
+        {
+            var type = context.TypeInfo.Type;
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(WeakMap<,>))
+            {
+                return LizzieJson.EventOptions.GetJsonSchemaAsNode(
+                    typeof(Dictionary<,>).MakeGenericType(type.GetGenericArguments()),
+                    Exporter
+                );
+            }
+            if (node is JsonObject obj && obj.ContainsKey("properties"))
+                obj["additionalProperties"] = false;
+            return node;
+        },
+    };
 
     private static string Title(int format) => $"Lizzie save format {format}";
 

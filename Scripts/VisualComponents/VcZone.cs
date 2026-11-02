@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
@@ -19,8 +16,7 @@ public partial class VcZone : VisualComponentBase
 
     private bool _defaultIncluded;
     private bool _hiddenWhenExcluded;
-    private HashSet<Ref<Seat>> _includedSeats = new();
-    private HashSet<Ref<Seat>> _excludedSeats = new();
+    private WeakMap<Ref<Seat>, ZoneAccess> _seats = WeakMap<Ref<Seat>, ZoneAccess>.Empty;
 
     private const float HandleLift = 0.08f;
 
@@ -64,8 +60,7 @@ public partial class VcZone : VisualComponentBase
 
         _defaultIncluded = p.DefaultIncluded;
         _hiddenWhenExcluded = p.HiddenWhenExcluded;
-        _includedSeats = p.IncludedSeats.ToHashSet();
-        _excludedSeats = p.ExcludedSeats.ToHashSet();
+        _seats = p.Seats;
 
         if (MainMesh != null)
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
@@ -92,14 +87,26 @@ public partial class VcZone : VisualComponentBase
     /// <summary>
     /// Whether the given seat is considered "included" by this zone's rules.
     /// </summary>
-    public bool SeatIncluded(Ref<Seat> seat)
-    {
-        if (_excludedSeats.Contains(seat))
-            return false;
-        if (_includedSeats.Contains(seat))
-            return true;
-        return DefaultIncluded;
-    }
+    public bool SeatIncluded(Ref<Seat> seat) =>
+        _seats.GetValueOrDefault(seat) switch
+        {
+            ZoneAccess.Allowed => true,
+            ZoneAccess.Blocked => false,
+            _ => DefaultIncluded,
+        };
+}
+
+/// <summary>
+/// What a zone's rule for one seat says.
+/// </summary>
+public enum ZoneAccess
+{
+    /// <summary>
+    /// Follows <see cref="ZoneParameters.DefaultIncluded"/>, like a seat with no rule.
+    /// </summary>
+    Default,
+    Allowed,
+    Blocked,
 }
 
 [JsonName("ZoneParameters")]
@@ -113,6 +120,10 @@ public sealed record ZoneParameters : ComponentParameters
     public float Depth { get; init; } = 2f;
     public bool DefaultIncluded { get; init; }
     public bool HiddenWhenExcluded { get; init; }
-    public ImmutableArray<Ref<Seat>> IncludedSeats { get; init; } = [];
-    public ImmutableArray<Ref<Seat>> ExcludedSeats { get; init; } = [];
+
+    /// <summary>
+    /// Each seat's rule. A removed seat's rule stays while the seat could come back.
+    /// </summary>
+    public WeakMap<Ref<Seat>, ZoneAccess> Seats { get; init; } =
+        WeakMap<Ref<Seat>, ZoneAccess>.Empty;
 }

@@ -34,7 +34,7 @@ public partial class DiePanelDialogResult : ComponentPanelDialogResult
 
         _faces = GetNode<SideEditor>("%Faces");
         _faces.Changed += Refresh;
-        _faces.Side = new QuickSide { Suits = [new QuickSuit { Values = "1-6" }] };
+        _faces.Side = new QuickSide().Add(SnowTag.Create(), new QuickSuit { Values = "1-6" });
         ShowTemplates();
 
         _preview = GetNode<ComponentPreview>("%Preview");

@@ -23,15 +23,21 @@ public class ZonePanelTests
             new Prototype
             {
                 Id = Ref<Prototype>.Create(),
-                Parameters = new ZoneParameters { ExcludedSeats = [removed.Id] },
+                Parameters = new ZoneParameters
+                {
+                    Seats = WeakMap<Ref<Seat>, ZoneAccess>.Empty.With(
+                        removed.Id,
+                        ZoneAccess.Blocked
+                    ),
+                },
             }
         );
         await runner.AwaitIdleFrame();
 
-        var saved = (ZoneParameters)panel.GetParams();
-        AssertThat(saved.ExcludedSeats.Contains(removed.Id))
+        var saved = ((ZoneParameters)panel.GetParams()).Seats.GetValueOrDefault(removed.Id);
+        AssertThat(saved == ZoneAccess.Blocked)
             .OverrideFailureMessage(
-                $"Saving the zone dropped the removed seat's rule: blocked seats are [{string.Join(", ", saved.ExcludedSeats)}]."
+                $"Saving the zone changed the removed seat's rule to {saved}, expected Blocked."
             )
             .IsTrue();
     }

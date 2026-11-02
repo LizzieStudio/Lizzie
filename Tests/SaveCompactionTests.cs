@@ -44,6 +44,7 @@ public class SaveCompactionTests
             Seat s => s.Id.Tag,
             DataRow r => r.Id.Tag,
             DataColumn c => c.Id.Tag,
+            Notes n => n.Id.Tag,
             _ => throw new ArgumentException($"No id for a {atom.GetType().Name}."),
         };
 
@@ -102,6 +103,26 @@ public class SaveCompactionTests
     [Fact]
     public void AnUnreferencedDeletedSeatIsDropped() =>
         AssertKept([Position(1), new Seat { Id = Tag<Seat>(2), Deleted = true }], 1);
+
+    [Fact]
+    public void AZoneRuleKeepsNoDeletedSeat() =>
+        AssertKept(
+            [
+                new Prototype
+                {
+                    Id = Tag<Prototype>(1),
+                    Parameters = new ZoneParameters
+                    {
+                        Seats = WeakMap<Ref<Seat>, ZoneAccess>.Empty.With(
+                            Tag<Seat>(2),
+                            ZoneAccess.Blocked
+                        ),
+                    },
+                },
+                new Seat { Id = Tag<Seat>(2), Deleted = true },
+            ],
+            1
+        );
 
     [Fact]
     public void ADeletedPrototypeAComponentUsesIsKept() =>
@@ -528,6 +549,112 @@ public class SaveCompactionTests
 
         Assert.Equal(Ref<Stage>.Empty, back.StageRef);
         Assert.Equal(default, back.Rank);
+    }
+
+    [Fact]
+    public void AWeakMapKeyKeepsNothing()
+    {
+        var side = new QuickSide { Suits = WeakMap<SnowTag, QuickSuit>.Empty.With(Tag(2), new()) };
+        AssertKept(
+            [
+                new Prototype
+                {
+                    Id = Tag<Prototype>(1),
+                    Parameters = new PrintedParameters { Front = side },
+                },
+                DeletedPrototype(2),
+            ],
+            1
+        );
+    }
+
+    /// <summary>A listed atom with notes about prototypes, each naming another prototype.</summary>
+    public sealed record Notes : Atom
+    {
+        public static readonly Identity<Notes, Ref<Notes>> ById = new(n => n.Id);
+
+        public static readonly All<Notes> All = new();
+
+        public required Ref<Notes> Id { get; init; }
+
+        public WeakMap<Ref<Prototype>, Ref<Prototype>> About { get; init; } =
+            WeakMap<Ref<Prototype>, Ref<Prototype>>.Empty;
+    }
+
+    /// <summary>Notes, kept as atom 1, saying each prototype in a pair names the other.</summary>
+    private static Notes NotesOn(params (int About, int Names)[] notes) =>
+        new()
+        {
+            Id = Tag<Notes>(1),
+            About = notes.Aggregate(
+                WeakMap<Ref<Prototype>, Ref<Prototype>>.Empty,
+                (map, n) => map.With(Tag<Prototype>(n.About), Tag<Prototype>(n.Names))
+            ),
+        };
+
+    [Fact]
+    public void AWeakValueKeepsWhatItNamesOnceItsKeyIsKept() =>
+        AssertKept(
+            [NotesOn((2, 3)), new Prototype { Id = Tag<Prototype>(2) }, DeletedPrototype(3)],
+            1,
+            2,
+            3
+        );
+
+    [Fact]
+    public void AWeakValueKeepsNothingWhileItsKeyIsDropped() =>
+        AssertKept([NotesOn((2, 3)), DeletedPrototype(2), DeletedPrototype(3)], 1);
+
+    /// <summary>
+    /// The note about 2 keeps 3, which keeps the note about 3, which keeps 4.
+    /// Nothing reaches 5, so its note keeps nothing.
+    /// </summary>
+    [Fact]
+    public void AWeakValueCanKeepAnotherEntrysKey() =>
+        AssertKept(
+            [
+                NotesOn((2, 3), (3, 4), (5, 6)),
+                new Prototype { Id = Tag<Prototype>(2) },
+                DeletedPrototype(3),
+                DeletedPrototype(4),
+                DeletedPrototype(5),
+                DeletedPrototype(6),
+            ],
+            1,
+            2,
+            3,
+            4
+        );
+
+    private static WeakMap<SnowTag, string> Weak(params int[] keys) =>
+        keys.Aggregate(WeakMap<SnowTag, string>.Empty, (map, key) => map.With(Tag(key), $"{key}"));
+
+    [Fact]
+    public void ASaveWritesOnlyTheWeakEntriesWhoseKeysItKeeps()
+    {
+        var renumber = new Dictionary<SnowTag, SnowTag> { [Tag(2)] = new(Source.Admin, 1) };
+
+        var json = JsonSerializer.Serialize(Weak(1, 2, 3), LizzieJson.SaveOptions(renumber));
+
+        Assert.True(
+            json == $"{{\"{new SnowTag(Source.Admin, 1)}\":\"2\"}}",
+            $"Wrote the weak map as {json}, expected only the entry for the kept key, renumbered."
+        );
+    }
+
+    [Fact]
+    public void AMessageWritesEveryWeakEntry()
+    {
+        var json = JsonSerializer.Serialize(Weak(1, 2), LizzieJson.EventOptions);
+        var back = JsonSerializer.Deserialize<WeakMap<SnowTag, string>>(
+            json,
+            LizzieJson.EventOptions
+        );
+
+        Assert.True(
+            back.TryGetValue(Tag(1), out var one) && one == "1" && back[Tag(2)] == "2",
+            $"Sent the weak map as {json}, expected both entries."
+        );
     }
 
     [Fact]

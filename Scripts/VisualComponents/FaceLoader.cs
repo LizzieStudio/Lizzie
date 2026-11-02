@@ -111,14 +111,15 @@ public sealed class FaceLoader(Action shown)
                             _ => QuickTemplate.Drawing(p, quick.Cards())
                         )
                         .Face(row);
-                // A retired card whose value the side no longer has still draws, alone, in a placeholder if its suit is gone.
-                var suit =
-                    quick.Suits.FirstOrDefault(s => s.Id == quickFace.SuitRef)
-                    ?? QuickSuit.Placeholder(quickFace.SuitRef);
+                // A retired card whose value the side no longer has still draws, alone,
+                // in a placeholder if its suit was never on this side, like after the side changed kind.
+                var suit = quick.Suits.TryGetValue(quickFace.SuitRef, out var kept)
+                    ? kept
+                    : QuickSuit.Placeholder(quickFace.SuitRef);
                 return FaceSet
                     .Acquire(
                         $"quick:{R.VersionKey(prototype)}:{key}:{quickFace.SuitRef}:{quickFace.Value}",
-                        _ => QuickTemplate.Drawing(p, [(suit, quickFace.Value)])
+                        _ => QuickTemplate.Drawing(p, [(quickFace, suit)])
                     )
                     .Face(new SnowTag(1));
             }

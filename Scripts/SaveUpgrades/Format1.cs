@@ -134,10 +134,19 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>
-        /// The Seats of the old seat numbers in <paramref name="numbers"/>.
+        /// A zone's rule for each seat, keyed by the Seat's tag: 1 for Allowed, 2 for Blocked.
+        /// A seat the old zone both included and excluded is blocked, as it was.
         /// </summary>
-        private JsonArray Seats(JsonNode numbers) =>
-            [.. ((JsonArray)numbers ?? []).Select(n => (JsonNode)Tag("seat", ((int)n).ToString()))];
+        private JsonObject ZoneSeats(JsonObject p)
+        {
+            var seats = new JsonObject();
+            foreach (var (list, access) in new[] { ("IncludedSeats", 1), ("ExcludedSeats", 2) })
+            {
+                foreach (var n in (JsonArray)p[list] ?? [])
+                    seats[Tag("seat", ((int)n).ToString()).ToString()] = access;
+            }
+            return seats;
+        }
 
         /// <summary>
         /// A dataset, with each row's name in a first column called Name.
@@ -240,11 +249,9 @@ public sealed class Format1 : IStep
                             : QuickSide(
                                 ((JsonArray)p["Sides"] ?? []).Select(
                                     (side, i) =>
-                                        Suit(
-                                            p,
-                                            "Color",
-                                            (JsonObject)side,
-                                            Tag("suit", $"{key}/{i}")
+                                        (
+                                            Tag("suit", $"{key}/{i}"),
+                                            Suit(p, "Color", (JsonObject)side)
                                         )
                                 )
                             );
@@ -273,8 +280,7 @@ public sealed class Format1 : IStep
                         "DefaultIncluded",
                         "HiddenWhenExcluded"
                     );
-                    parameters["includedSeats"] = Seats(p["IncludedSeats"]);
-                    parameters["excludedSeats"] = Seats(p["ExcludedSeats"]);
+                    parameters["seats"] = ZoneSeats(p);
                     break;
                 default:
                     return;
@@ -313,13 +319,13 @@ public sealed class Format1 : IStep
                 case 0:
                     var quickFront = (JsonObject)p["QuickFront"];
                     int frontSuit = Tag("suit", $"{key}/front");
-                    front = QuickSide([Suit(p, "FrontBgColor", quickFront, frontSuit)]);
+                    front = QuickSide([(frontSuit, Suit(p, "FrontBgColor", quickFront))]);
                     var frontFace = QuickFace(frontSuit, (string)quickFront?["Caption"]);
                     if (differentBack && p["QuickBack"] is JsonObject quickBack)
                     {
                         int backSuit = Tag("suit", $"{key}/back");
                         back = QuickSide([
-                            Suit(p, "BackBgColor", quickBack, backSuit, quantity: false),
+                            (backSuit, Suit(p, "BackBgColor", quickBack, quantity: false)),
                         ]);
                         backFace = QuickFace(backSuit, (string)quickBack["Caption"]);
                     }
@@ -331,12 +337,14 @@ public sealed class Format1 : IStep
                     front = QuickSide(
                         cards.Select(
                             (card, i) =>
-                                new JsonObject
-                                {
-                                    ["id"] = suits[i],
-                                    ["background"] = Color(card, "BackgroundColor"),
-                                    ["values"] = Quote((string)card["Caption"]),
-                                }
+                                (
+                                    suits[i],
+                                    new JsonObject
+                                    {
+                                        ["background"] = Color(card, "BackgroundColor"),
+                                        ["values"] = Quote((string)card["Caption"]),
+                                    }
+                                )
                         )
                     );
                     var fronts = cards
@@ -347,12 +355,14 @@ public sealed class Format1 : IStep
                         int backSuit = Tag("suit", $"{key}/back");
                         var backValue = (string)cards[0]["CardBackValue"];
                         back = QuickSide([
-                            new JsonObject
-                            {
-                                ["id"] = backSuit,
-                                ["background"] = Color(cards[0], "CardBackColor"),
-                                ["values"] = Quote(backValue),
-                            },
+                            (
+                                backSuit,
+                                new JsonObject
+                                {
+                                    ["background"] = Color(cards[0], "CardBackColor"),
+                                    ["values"] = Quote(backValue),
+                                }
+                            ),
                         ]);
                         backFace = QuickFace(backSuit, backValue);
                     }
@@ -400,8 +410,18 @@ public sealed class Format1 : IStep
             return parameters;
         }
 
-        private static JsonObject QuickSide(IEnumerable<JsonObject> suits) =>
-            new() { ["$type"] = "QuickSide", ["suits"] = new JsonArray([.. suits]) };
+        private static JsonObject QuickSide(IEnumerable<(int Id, JsonObject Suit)> suits)
+        {
+            var list = suits.ToList();
+            return new()
+            {
+                ["$type"] = "QuickSide",
+                ["order"] = new JsonArray([.. list.Select(s => JsonValue.Create(s.Id))]),
+                ["suits"] = new JsonObject(
+                    list.Select(s => KeyValuePair.Create(s.Id.ToString(), (JsonNode)s.Suit))
+                ),
+            };
+        }
 
         /// <summary>
         /// The key of the card showing the <see cref="Quote"/>d <paramref name="text"/> in <paramref name="suit"/>.
@@ -428,7 +448,6 @@ public sealed class Format1 : IStep
             JsonObject p,
             string background,
             JsonObject face,
-            int id,
             bool quantity = true
         )
         {
@@ -436,7 +455,6 @@ public sealed class Format1 : IStep
             var values = Quote((string)face["Caption"]);
             return new JsonObject
             {
-                ["id"] = id,
                 ["background"] = Color(p, background),
                 ["foreground"] = Color(face, "ForegroundColor"),
                 ["values"] = count > 1 ? $"{values}*{count}" : values,

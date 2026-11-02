@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 
@@ -11,10 +10,6 @@ namespace Lizzie;
 /// </summary>
 public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 {
-    private const int OptDefault = 0;
-    private const int OptIncluded = 1;
-    private const int OptExcluded = 2;
-
     private LineEdit _nameInput;
     private LineEdit _widthInput;
     private LineEdit _depthInput;
@@ -27,7 +22,8 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
     // The seat each row shows, in order.
     private readonly List<Ref<Seat>> _seats = new();
 
-    private readonly Dictionary<Ref<Seat>, int> _seatChoices = new();
+    // Every seat's rule, removed seats included, so undoing a seat's removal brings back its rule.
+    private WeakMap<Ref<Seat>, ZoneAccess> _access = WeakMap<Ref<Seat>, ZoneAccess>.Empty;
 
     public override void _Ready()
     {
@@ -78,19 +74,26 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         row.AddChild(label);
 
         var option = new OptionButton { TooltipText = "Sets the permissions for this seat." };
-        option.AddItem("Default", OptDefault);
-        option.SetItemTooltip(OptDefault, "Follow the zone's 'Allow by default' setting.");
-        option.AddItem("Allowed", OptIncluded);
-        option.SetItemTooltip(OptIncluded, "This player can see and move the zone's contents.");
-        option.AddItem("Block", OptExcluded);
+        option.AddItem("Default", (int)ZoneAccess.Default);
         option.SetItemTooltip(
-            OptExcluded,
+            (int)ZoneAccess.Default,
+            "Follow the zone's 'Allow by default' setting."
+        );
+        option.AddItem("Allowed", (int)ZoneAccess.Allowed);
+        option.SetItemTooltip(
+            (int)ZoneAccess.Allowed,
+            "This player can see and move the zone's contents."
+        );
+        option.AddItem("Block", (int)ZoneAccess.Blocked);
+        option.SetItemTooltip(
+            (int)ZoneAccess.Blocked,
             "This player cannot move the zone's contents.\nThey can still see the contents unless 'Hide contents' is checked."
         );
         row.AddChild(option);
 
         _seatList.AddChild(row);
-        option.ItemSelected += item => _seatChoices[_seats[index]] = option.GetItemId((int)item);
+        option.ItemSelected += item =>
+            _access = _access.With(_seats[index], (ZoneAccess)option.GetItemId((int)item));
 
         return (label, option);
     }
@@ -98,27 +101,20 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
     private void ShowSeatChoices()
     {
         for (int i = 0; i < _seatRows.Count; i++)
-            _seatRows[i].Option.Select(_seatChoices.GetValueOrDefault(_seats[i], OptDefault));
+            _seatRows[i].Option.Select((int)_access.GetValueOrDefault(_seats[i]));
     }
 
     public override string PrototypeName => _nameInput.Text;
 
     public override ComponentParameters GetParams()
     {
-        // Includes the rules for removed seats, which have no row.
-        // This makes it where Undoing a delete of a seat brings back its zone rules.
-        // The downside is that this will keep the rules in the save forever. We should fix that.
-        ImmutableArray<Ref<Seat>> Chose(int choice) =>
-            [.. _seatChoices.Where(c => c.Value == choice).Select(c => c.Key)];
-
         return new ZoneParameters
         {
             Width = ParamToFloat(_widthInput.Text),
             Depth = ParamToFloat(_depthInput.Text),
             DefaultIncluded = _defaultIncluded.ButtonPressed,
             HiddenWhenExcluded = _hiddenWhenExcluded.ButtonPressed,
-            IncludedSeats = Chose(OptIncluded),
-            ExcludedSeats = Chose(OptExcluded),
+            Seats = _access,
         };
     }
 
@@ -131,11 +127,7 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         _defaultIncluded.ButtonPressed = p.DefaultIncluded;
         _hiddenWhenExcluded.ButtonPressed = p.HiddenWhenExcluded;
 
-        _seatChoices.Clear();
-        foreach (var seat in p.IncludedSeats)
-            _seatChoices[seat] = OptIncluded;
-        foreach (var seat in p.ExcludedSeats)
-            _seatChoices[seat] = OptExcluded;
+        _access = p.Seats;
 
         ShowSeatChoices();
     }

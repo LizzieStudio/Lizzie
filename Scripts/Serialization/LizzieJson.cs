@@ -27,6 +27,7 @@ public static class LizzieJson
             new SnowTagJsonConverter(),
             new SourceJsonConverter(),
             new RefJsonConverter(),
+            new WeakMapJsonConverter(),
             new CommandNameJsonConverter(),
         },
     };

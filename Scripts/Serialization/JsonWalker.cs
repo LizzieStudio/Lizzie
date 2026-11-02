@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Text.Json.Serialization.Metadata;
+using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
@@ -10,7 +11,11 @@ namespace Lizzie;
 /// </summary>
 public static class JsonWalker
 {
-    public static void Visit<T>(object value, Action<T> visit)
+    /// <param name="weak">
+    /// Gets each <see cref="WeakMap{TKey, TValue}"/> instead of looking inside it,
+    /// for a save, which decides on its own which entries to keep. Null looks inside.
+    /// </param>
+    public static void Visit<T>(object value, Action<T> visit, Action<IWeakMap> weak = null)
     {
         if (value == null)
             return;
@@ -24,14 +29,24 @@ public static class JsonWalker
         // A Ref's converter writes its SnowTag.
         if (value is IRef atom)
         {
-            Visit(atom.Tag, visit);
+            Visit(atom.Tag, visit, weak);
             return;
         }
 
         // An Unset's converter writes its key.
         if (value is Unset unset)
         {
-            Visit(unset.Key, visit);
+            Visit(unset.Key, visit, weak);
+            return;
+        }
+
+        // A WeakMap's converter writes its entries.
+        if (value is IWeakMap map)
+        {
+            if (weak == null)
+                Visit(map.Entries, visit);
+            else
+                weak(map);
             return;
         }
 
@@ -42,13 +57,13 @@ public static class JsonWalker
             case JsonTypeInfoKind.Object:
                 foreach (var prop in info.Properties)
                     if (prop.Get != null && MayHold(prop.PropertyType))
-                        Visit(prop.Get(value), visit);
+                        Visit(prop.Get(value), visit, weak);
                 break;
 
             case JsonTypeInfoKind.Enumerable:
                 if (MayHold(info.ElementType))
                     foreach (var item in (IEnumerable)value)
-                        Visit(item, visit);
+                        Visit(item, visit, weak);
                 break;
 
             case JsonTypeInfoKind.Dictionary:
@@ -59,9 +74,9 @@ public static class JsonWalker
                 foreach (DictionaryEntry entry in dict)
                 {
                     if (keys)
-                        Visit(entry.Key, visit);
+                        Visit(entry.Key, visit, weak);
                     if (values)
-                        Visit(entry.Value, visit);
+                        Visit(entry.Value, visit, weak);
                 }
                 break;
 

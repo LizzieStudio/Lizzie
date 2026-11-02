@@ -165,6 +165,18 @@ When the user saves the project, Lizzie spiders through the atoms checking to se
 * Keep atoms out of `Lookup` by returning null.
 * Don't create a `Lookup` with primitive keys unless you want to keep those atoms.
 
+### WeakMap
+
+To store data about other atoms without keeping them alive in saves forever, use a `WeakMap`. A `WeakMap` won't keep its keys alive, so you can store data about other atoms using their `Ref<>` which will disappear with the atoms they refer to. For example, a zone's rule for each seat is a `WeakMap<Ref<Seat>, ZoneAccess>`:
+
+```C#
+public WeakMap<Ref<Seat>, ZoneAccess> Seats { get; init; } = WeakMap<Ref<Seat>, ZoneAccess>.Empty;
+```
+
+When the last reference to a removed seat goes, its `ZoneAccess` rule goes with it. Once an entry is kept, its value keeps what it refers to alive like any other saved data.
+
+Nothing is dropped during a session, so undoing a removal brings back the entries with it. A `WeakMap` can't be enumerated itself, so you must have the reference already to look up its entry.
+
 ### NotSaved
 
 To prevent an atom from being saved, give it the `NotSaved` attribute. Even if it is accessible, it will not be saved.

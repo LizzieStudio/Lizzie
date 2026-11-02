@@ -28,8 +28,8 @@ public class DeckReconciliationTests
     private static PrintedParameters Cards(string values) =>
         new()
         {
-            Front = new QuickSide { Suits = [new QuickSuit { Id = Numbers, Values = values }] },
-            Back = new QuickSide { Suits = [new QuickSuit { Id = Backs, Values = "B" }] },
+            Front = new QuickSide().Add(Numbers, new QuickSuit { Values = values }),
+            Back = new QuickSide().Add(Backs, new QuickSuit { Values = "B" }),
         };
 
     /// <summary>The stages, the deck in the root, and a card per value, each in the deck unless it's in <paramref name="onTable"/>.</summary>

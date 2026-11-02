@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Godot;
 using Xunit;
@@ -13,13 +12,10 @@ public class DieTests
         new()
         {
             SideCount = sideCount,
-            Faces = new QuickSide
-            {
-                Suits = values
-                    .Split('|')
-                    .Select(v => new QuickSuit { Values = v })
-                    .ToImmutableArray(),
-            },
+            Faces = values
+                .Split('|')
+                .Select((v, i) => (Id: new SnowTag(i + 1), Suit: new QuickSuit { Values = v }))
+                .Aggregate(new QuickSide(), (side, s) => side.Add(s.Id, s.Suit)),
         };
 
     [Theory]
@@ -96,7 +92,7 @@ public class DieTests
 
     /// <summary>A side with one suit, <paramref name="suit"/> showing <paramref name="values"/>.</summary>
     private static QuickSide Side(QuickSuit suit, string values) =>
-        new() { Suits = [suit with { Values = values }] };
+        new QuickSide().Add(new SnowTag(1), suit with { Values = values });
 
     /// <summary>The objects the die template draws, in drawing order.</summary>
     private static List<TextureFactory.TextureObject> Draw(int sides, QuickSide side)

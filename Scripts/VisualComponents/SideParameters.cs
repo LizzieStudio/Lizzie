@@ -26,31 +26,50 @@ public abstract record SideParameters
 [JsonName("QuickSide")]
 public sealed record QuickSide : SideParameters
 {
-    public ImmutableArray<QuickSuit> Suits { get; init; } = [];
+    /// <summary>
+    /// The side's suits, in order, as keys of <see cref="Suits"/>.
+    /// </summary>
+    public ImmutableArray<SnowTag> Order { get; init; } = [];
+
+    /// <summary>
+    /// Every suit the side has had, removed ones included, so a card showing a removed suit keeps its look.
+    /// </summary>
+    public WeakMap<SnowTag, QuickSuit> Suits { get; init; } = WeakMap<SnowTag, QuickSuit>.Empty;
+
+    /// <summary>
+    /// The side with <paramref name="suit"/> added after its others.
+    /// </summary>
+    public QuickSide Add(SnowTag id, QuickSuit suit) =>
+        this with
+        {
+            Order = Order.Add(id),
+            Suits = Suits.With(id, suit),
+        };
 
     /// <summary>
     /// Each suit's values as a Sequence Expression. Blank values make one blank card or face.
     /// </summary>
     public string[] Expressions() =>
-        Suits
-            .Select(suit => string.IsNullOrWhiteSpace(suit.Values) ? "\"\"" : suit.Values)
+        Order
+            .Select(id => Suits[id].Values)
+            .Select(values => string.IsNullOrWhiteSpace(values) ? "\"\"" : values)
             .ToArray();
 
     /// <summary>
-    /// Each card's suit and value, in order.
+    /// Each card's face and suit, in order.
     /// </summary>
-    public List<(QuickSuit Suit, string Value)> Cards() =>
-        Suits
+    public List<(QuickFace Face, QuickSuit Suit)> Cards() =>
+        Order
             .Zip(Expressions())
             .SelectMany(s =>
             {
                 SequenceExpressions.TryParseStrings(s.Second, out var values);
-                return values.Select(value => (s.First, value));
+                return values.Select(value => (new QuickFace(s.First, value), Suits[s.First]));
             })
             .ToList();
 
     public override IReadOnlyList<FaceKey> Faces(IAtomReader R, int? count = null) =>
-        Cards().Select(card => new QuickFace(card.Suit.Id, card.Value)).ToList();
+        Cards().Select(card => card.Face).ToList();
 }
 
 /// <summary>
@@ -58,11 +77,6 @@ public sealed record QuickSide : SideParameters
 /// </summary>
 public sealed record QuickSuit
 {
-    /// <summary>
-    /// Used to identify the suit apart from the others of its side, even when they look the same.
-    /// </summary>
-    public SnowTag Id { get; init; }
-
     public Color Background { get; init; } = Colors.White;
 
     /// <summary>
@@ -84,12 +98,11 @@ public sealed record QuickSuit
     public bool ShowText { get; init; } = true;
 
     /// <summary>
-    /// A plain stand-in for a deleted suit.
+    /// A plain stand-in for a suit the side doesn't have.
     /// </summary>
     public static QuickSuit Placeholder(SnowTag id) =>
         new()
         {
-            Id = id,
             Background = Color.FromHsv(
                 // 2 / 1 + Sqrt(5) is the golden angle
                 // it's basically just an irrational number to use the id as a seed

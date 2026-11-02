@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -37,6 +38,7 @@ public static class SaveCompaction
     /// An <see cref="All{T}"/> key holds no SnowTags, so it keeps every atom it lists,
     /// and a kept atom's own id reaches the atoms grouped under it, like a dataset's rows.
     /// An atom no query lists, like a deleted <see cref="Prototype"/>, stays only while a kept atom refers to it.
+    /// A <see cref="WeakMap{TKey, TValue}"/>'s keys keep nothing, but once a key is reached its value counts.
     /// </para>
     ///
     /// <para>
@@ -55,8 +57,7 @@ public static class SaveCompaction
         var waiting = atoms
             .Select(a => (Atom: a, Keys: a is ComponentPosition ? [] : Keys(a)))
             .ToList();
-        // the SnowTags in kept atoms, and Empty for no stage
-        var found = new HashSet<SnowTag> { SnowTag.Empty };
+        var reach = new Reach();
         // the components with a position kept whole, and Empty for the table
         var placed = new HashSet<SnowTag> { SnowTag.Empty };
         var kept = new List<Atom>();
@@ -71,27 +72,29 @@ public static class SaveCompaction
                 var (atom, keys) = waiting[i];
                 if (atom is ComponentPosition p)
                 {
-                    if (p.Removed || !found.Contains(p.StageRef.Tag))
+                    if (p.Removed || !reach.Tags.Contains(p.StageRef.Tag))
                         continue;
                     if (!placed.Contains(p.ContainerRef.Tag))
                         continue;
                 }
-                else if (!keys.Exists(k => k.IsSubsetOf(found)))
+                else if (!keys.Exists(k => k.IsSubsetOf(reach.Tags)))
                     continue;
                 kept.Add(atom);
-                JsonWalker.Visit<SnowTag>(atom, tag => found.Add(tag));
+                reach.Visit(atom);
                 if (atom is ComponentPosition whole)
                     placed.Add(whole.Id.Tag);
                 waiting.RemoveAt(i);
                 grew = true;
             }
+            if (reach.Grow())
+                grew = true;
         }
 
         kept.AddRange(
             waiting
                 .Select(w => w.Atom)
                 .OfType<ComponentPosition>()
-                .Where(p => found.Contains(p.StageRef.Tag) && placed.Contains(p.Id.Tag))
+                .Where(p => reach.Tags.Contains(p.StageRef.Tag) && placed.Contains(p.Id.Tag))
                 .Select(p => p.Removal())
         );
 
@@ -133,11 +136,15 @@ public static class SaveCompaction
     /// <summary>
     /// The event as one line of JSON, with its SnowTags renumbered from 1 under the admin source.
     /// The numbers keep their order, and equal tags stay equal.
+    /// Only the tags the save reaches get numbers,
+    /// so a <see cref="WeakMap{TKey, TValue}"/> entry isn't saved unless something else keeps its key.
     /// </summary>
     public static string Serialize(TimelineEvent save)
     {
-        var found = new SortedSet<SnowTag>();
-        JsonWalker.Visit<SnowTag>(save, tag => found.Add(tag));
+        var reach = new Reach();
+        reach.Visit(save);
+        reach.Grow();
+        var found = new SortedSet<SnowTag>(reach.Tags);
         found.Remove(SnowTag.Empty);
 
         var tags = new Dictionary<SnowTag, SnowTag>(found.Count);
@@ -149,5 +156,55 @@ public static class SaveCompaction
                         $"A save can't hold more than {SnowTag.MaxCounter} SnowTags."
                     );
         return JsonSerializer.Serialize(save, LizzieJson.SaveOptions(tags));
+    }
+
+    /// <summary>
+    /// The SnowTags reached from what's been visited.
+    /// A <see cref="WeakMap{TKey, TValue}"/>'s entry is reached only once its key is.
+    /// </summary>
+    private sealed class Reach
+    {
+        // Empty stands for no stage, and for keys that hold no SnowTags.
+        public HashSet<SnowTag> Tags { get; } = [SnowTag.Empty];
+
+        // the entries of visited WeakMaps whose keys haven't been reached
+        private readonly List<DictionaryEntry> _waiting = [];
+
+        public void Visit(object value) =>
+            JsonWalker.Visit<SnowTag>(
+                value,
+                tag => Tags.Add(tag),
+                map =>
+                {
+                    foreach (DictionaryEntry entry in map.Entries)
+                        _waiting.Add(entry);
+                }
+            );
+
+        /// <summary>
+        /// Visits the value of every waiting entry whose key is reached, including those its values reach.
+        /// </summary>
+        /// <returns>Whether any entry was reached.</returns>
+        public bool Grow()
+        {
+            bool any = false;
+            bool grew = true;
+            while (grew)
+            {
+                grew = false;
+                for (int i = _waiting.Count - 1; i >= 0; i--)
+                {
+                    var entry = _waiting[i];
+                    bool reached = true;
+                    JsonWalker.Visit<SnowTag>(entry.Key, tag => reached &= Tags.Contains(tag));
+                    if (!reached)
+                        continue;
+                    _waiting.RemoveAt(i);
+                    Visit(entry.Value);
+                    grew = any = true;
+                }
+            }
+            return any;
+        }
     }
 }

@@ -49,6 +49,12 @@ public sealed class SnowTagJsonConverter(IReadOnlyDictionary<SnowTag, SnowTag> r
         return SnowTag.TryParse(reader.GetString(), out var tag) ? tag : SnowTag.Empty;
     }
 
+    /// <summary>
+    /// Whether <paramref name="tag"/> can be written, which in a save means the save reaches it.
+    /// </summary>
+    public bool Writes(SnowTag tag) =>
+        renumber == null || tag == SnowTag.Empty || renumber.ContainsKey(tag);
+
     private SnowTag Renumbered(SnowTag tag)
     {
         if (renumber == null || tag == SnowTag.Empty)

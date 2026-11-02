@@ -230,7 +230,7 @@ public static class DieTemplate
         var data = new Dictionary<string, string> { [Background] = color.ToHtml() };
         for (int n = 0; n < faces.Length; n++)
         {
-            var suit = side.Suits[faces[n].Input];
+            var suit = side.Suits[side.Order[faces[n].Input]];
             var value = faces[n].Value;
             bool hasIcon = suit.Icon != "";
             int icons = QuickTemplate.Icons(value);

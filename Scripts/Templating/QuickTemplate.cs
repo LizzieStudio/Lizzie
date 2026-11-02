@@ -74,7 +74,7 @@ public static class QuickTemplate
     /// </remarks>
     public static Drawing Drawing(
         PrintedParameters p,
-        IEnumerable<(QuickSuit Suit, string Value)> items
+        IEnumerable<(QuickFace Face, QuickSuit Suit)> items
     ) =>
         new(
             Template with
@@ -83,8 +83,8 @@ public static class QuickTemplate
                 Height = p.Height / 10f / CmPerInch,
             },
             items
-                .DistinctBy(c => (c.Suit.Id, c.Value))
-                .Select((c, i) => (Row: new SnowTag(i + 1), Values: Values(c.Suit, c.Value)))
+                .DistinctBy(c => c.Face)
+                .Select((c, i) => (Row: new SnowTag(i + 1), Values: Values(c.Suit, c.Face.Value)))
                 .ToDictionary(r => r.Row, r => r.Values)
         );
 
@@ -94,11 +94,7 @@ public static class QuickTemplate
     /// </summary>
     public static SnowTag Row(QuickSide side, QuickFace face)
     {
-        int index = side.Cards()
-            .Select(c => (c.Suit.Id, c.Value))
-            .Distinct()
-            .ToList()
-            .IndexOf((face.SuitRef, face.Value));
+        int index = side.Cards().Select(c => c.Face).Distinct().ToList().IndexOf(face);
         return index < 0 ? SnowTag.Empty : new SnowTag(index + 1);
     }
 
