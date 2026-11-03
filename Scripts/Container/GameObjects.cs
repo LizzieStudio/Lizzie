@@ -40,7 +40,7 @@ public partial class GameObjects : Node3D, ICommandView
     private HandManager _handManager;
 
     /// <summary>
-    /// The stage the local player picked to show, or <see cref="Ref{T}.Empty"/> for the current table.
+    /// The stage the local player picked to show, or <see cref="Ref{T}.None"/> for the current table.
     /// </summary>
     public WatchableValue<Ref<Stage>> PickedStageRef { get; } = new();
 
@@ -105,7 +105,7 @@ public partial class GameObjects : Node3D, ICommandView
             (s, i) => s with { Location = new Dragged(seat, overHand), Rank = ranks[i] }
         );
         // Players without a seat can't drag.
-        if (atoms.Count() == 0 || seat.IsEmpty)
+        if (atoms.Count() == 0 || seat.IsNone)
             return;
 
         _drag = new ComponentDrag
@@ -363,7 +363,7 @@ public partial class GameObjects : Node3D, ICommandView
 
     private void AddComponentToScene(VisualComponentBase component)
     {
-        if (component.ComponentRef.IsEmpty)
+        if (component.ComponentRef.IsNone)
         {
             GD.PrintErr("component somehow lost its ComponentRef");
             return;

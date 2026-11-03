@@ -23,7 +23,7 @@ public static class QuickTemplate
     public static Template Template { get; } =
         new()
         {
-            Id = Ref<Template>.Empty,
+            Id = Ref<Template>.None,
             Name = "Quick",
             Elements =
             [
@@ -90,12 +90,12 @@ public static class QuickTemplate
 
     /// <summary>
     /// The row of <paramref name="side"/>'s <see cref="Drawing"/> that shows <paramref name="face"/>,
-    /// or <see cref="SnowTag.Empty"/> when the side no longer has it.
+    /// or <see cref="SnowTag.None"/> when the side no longer has it.
     /// </summary>
     public static SnowTag Row(QuickSide side, QuickFace face)
     {
         int index = side.Cards().Select(c => c.Face).Distinct().ToList().IndexOf(face);
-        return index < 0 ? SnowTag.Empty : new SnowTag(index + 1);
+        return index < 0 ? SnowTag.None : new SnowTag(index + 1);
     }
 
     /// <summary>

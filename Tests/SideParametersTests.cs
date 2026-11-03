@@ -226,7 +226,7 @@ public class SideParametersTests
             new PrintedItemRef(null, null),
             new PrintedItemRef(new RowFace(new(3)), new RowFace(new(4))),
             new PrintedItemRef(new QuickFace(new SnowTag(3), "A"), new FrameFace(2)),
-            new DieItemRef(Ref<DataRow>.Empty),
+            new DieItemRef(Ref<DataRow>.None),
             new DieItemRef(new(5)),
             null,
         ];

@@ -26,7 +26,7 @@ public sealed class SnowTagJsonConverter(IReadOnlyDictionary<SnowTag, SnowTag> r
         if (!reader.TryGetInt32(out var value))
         {
             GD.PrintErr("SnowTag from json could not be parsed");
-            return SnowTag.Empty;
+            return SnowTag.None;
         }
         return new SnowTag(value);
     }
@@ -46,18 +46,18 @@ public sealed class SnowTagJsonConverter(IReadOnlyDictionary<SnowTag, SnowTag> r
         JsonSerializerOptions options
     )
     {
-        return SnowTag.TryParse(reader.GetString(), out var tag) ? tag : SnowTag.Empty;
+        return SnowTag.TryParse(reader.GetString(), out var tag) ? tag : SnowTag.None;
     }
 
     /// <summary>
     /// Whether <paramref name="tag"/> can be written, which in a save means the save reaches it.
     /// </summary>
     public bool Writes(SnowTag tag) =>
-        renumber == null || tag == SnowTag.Empty || renumber.ContainsKey(tag);
+        renumber == null || tag == SnowTag.None || renumber.ContainsKey(tag);
 
     private SnowTag Renumbered(SnowTag tag)
     {
-        if (renumber == null || tag == SnowTag.Empty)
+        if (renumber == null || tag == SnowTag.None)
             return tag;
         return renumber.TryGetValue(tag, out var to)
             ? to

@@ -31,7 +31,7 @@ public static class DeckReconciliation
         // Removed components count as missing, so showing them doesn't change which stage a deck first shows in.
         bool Shows(ComponentPosition c) => c != null && !R.IsRemoved(c);
 
-        var blueprints = Below(Ref<Stage>.Empty).Where(stage => !stage.IsTable).ToList();
+        var blueprints = Below(Ref<Stage>.None).Where(stage => !stage.IsTable).ToList();
         var wanted = parameters.Items(R);
         // Each deck is updated in the topmost stage that shows it, and the stages below get its cards from there.
         var changes = blueprints

@@ -33,7 +33,7 @@ public static class StageCommands
         Icon = CommandIcons.AddBlueprint,
         Caption = "Add Blueprint",
         Tooltip = "A blueprint is a saved configuration of components.",
-        Effects = (R, _) => [Stage.NewBlueprint(R, Ref<Stage>.Empty)],
+        Effects = (R, _) => [Stage.NewBlueprint(R, Ref<Stage>.None)],
     };
 
     [Command("blueprint.add")]
@@ -59,7 +59,7 @@ public static class StageCommands
         Icon = CommandIcons.AddTable,
         Caption = "Add Table",
         Tooltip = "A table is a surface that multiple people can play on.",
-        Effects = (R, _) => [Stage.NewTable(R, Ref<Stage>.Empty)],
+        Effects = (R, _) => [Stage.NewTable(R, Ref<Stage>.None)],
     };
 
     [Command("table.add")]
@@ -140,7 +140,7 @@ public static class StageCommands
         Tooltip = "Merges its changes into its parent.",
         Noun = ("Blueprint", "Blueprints"),
         MaxTargets = 1,
-        AppliesTo = (R, s) => !s.ParentRef.IsEmpty && HasChanges(R, s),
+        AppliesTo = (R, s) => !s.ParentRef.IsNone && HasChanges(R, s),
         Requires = [NotTheCurrentTable],
         Effects = (R, stages) =>
         {

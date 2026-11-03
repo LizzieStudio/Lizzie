@@ -27,7 +27,7 @@ public record Component : Atom
     /// A deck keeps these in saves, even after the cards are deleted from every stage, so it doesn't issue them again.
     /// </remarks>
     public static readonly Lookup<Component, Ref<Component>?> ByDeck = new(c =>
-        c.DeckRef.IsEmpty || c.Retired ? null : c.DeckRef
+        c.DeckRef.IsNone || c.Retired ? null : c.DeckRef
     );
 
     public Ref<Prototype> PrototypeRef { get; init; }
@@ -49,7 +49,7 @@ public record Component : Atom
     public bool IsItem => Item != null;
 
     /// <summary>
-    /// The deck that issued this card, or <see cref="Ref{T}.Empty"/> when it didn't come from a deck.
+    /// The deck that issued this card, or <see cref="Ref{T}.None"/> when it didn't come from a deck.
     /// </summary>
     public Ref<Component> DeckRef { get; init; }
 
@@ -67,7 +67,7 @@ public record Component : Atom
     /// </remarks>
     public override IEnumerable<IAtomRef> Referenced(IAtomReader R) =>
         new[] { PrototypeRef }
-            .Where(p => !p.IsEmpty)
+            .Where(p => !p.IsNone)
             .Cast<IAtomRef>()
-            .Concat((Item?.Rows() ?? []).Where(r => !r.IsEmpty).Cast<IAtomRef>());
+            .Concat((Item?.Rows() ?? []).Where(r => !r.IsNone).Cast<IAtomRef>());
 }

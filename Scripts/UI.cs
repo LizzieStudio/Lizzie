@@ -90,7 +90,7 @@ public partial class UI : CanvasLayer
         var wasRemoved = R.Get(Seat.ById, seat) is { Deleted: true };
         if (wasRemoved && seat != _currentSeat)
             ShowPlayerSeatingDialog();
-        _currentSeat = wasRemoved ? seat : Ref<Seat>.Empty;
+        _currentSeat = wasRemoved ? seat : Ref<Seat>.None;
     }
 
     private void SyncStages(IWatchReader R)
@@ -106,7 +106,7 @@ public partial class UI : CanvasLayer
         foreach (var stage in ProjectService.Instance.GameObjects.PickableStages(R))
         {
             // Picking the current table follows it, even when another becomes current.
-            var pick = stage.Id == current ? Ref<Stage>.Empty : stage.Id;
+            var pick = stage.Id == current ? Ref<Stage>.None : stage.Id;
             var button = new Button
             {
                 Text = stage.Name,
@@ -286,7 +286,7 @@ public partial class UI : CanvasLayer
 
     private void ShowTemplateEditor()
     {
-        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = Ref<Template>.Empty });
+        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = Ref<Template>.None });
     }
 
     private void ShowTemplateEditorFromEvent(ShowTemplateEditor e)
@@ -302,7 +302,7 @@ public partial class UI : CanvasLayer
 
     private void ShowDatasetEditor()
     {
-        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = Ref<Dataset>.Empty });
+        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = Ref<Dataset>.None });
     }
 
     private void ShowDatasetEditorFromEvent(ShowDatasetEditor e)
@@ -313,9 +313,9 @@ public partial class UI : CanvasLayer
             _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
             _modalDialogs.AddChild(_datasetEditor);
         }
-        if (!e.DatasetRef.IsEmpty)
+        if (!e.DatasetRef.IsNone)
             _datasetEditor.ShownDatasetRef.Value = e.DatasetRef;
-        if (!e.SelectedRowRef.IsEmpty)
+        if (!e.SelectedRowRef.IsNone)
             _datasetEditor.RevealRow(e.SelectedRowRef);
     }
 
@@ -359,7 +359,7 @@ public partial class UI : CanvasLayer
             _imageManager = GD.Load<PackedScene>(s).Instantiate<ImageManager>();
             _modalDialogs.AddChild(_imageManager);
         }
-        if (!e.ImageRef.IsEmpty)
+        if (!e.ImageRef.IsNone)
             _imageManager.Open(e.ImageRef);
     }
 

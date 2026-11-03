@@ -67,7 +67,7 @@ public class TemplateElement : ITemplateElement
         );
     }
 
-    public SnowTag Id { get; set; } = SnowTag.Empty;
+    public SnowTag Id { get; set; } = SnowTag.None;
 
     public void SetParameterValue(string name, string value)
     {

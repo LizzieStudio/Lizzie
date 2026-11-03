@@ -284,7 +284,7 @@ public abstract partial class VisualComponentBase : Area3D
     /// <summary>
     /// The id of the component atom this node shows, in the stage its table shows.
     /// </summary>
-    public PositionKey Key => new(OwningView?.StageRef ?? Ref<Stage>.Empty, ComponentRef);
+    public PositionKey Key => new(OwningView?.StageRef ?? Ref<Stage>.None, ComponentRef);
 
     /// <summary>
     /// Which of its prototype's items this is, or null.

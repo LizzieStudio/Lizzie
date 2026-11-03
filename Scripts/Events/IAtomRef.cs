@@ -20,7 +20,7 @@ namespace Lizzie;
 /// <para>
 /// Read it with <see cref="IAtomReader.Get(IAtomRef)"/> to get null when the atom does not exist,
 /// or with <see cref="AtomReaderExtensions.Resolve"/> to get a default when the atom does not exist.
-/// Neither gives an atom for an empty ref.
+/// Neither gives an atom for a None ref.
 /// </para>
 /// </remarks>
 [JsonConverter(typeof(Json))]
@@ -32,12 +32,12 @@ public interface IAtomRef
     Type AtomType { get; }
 
     /// <summary>
-    /// Whether this is a placeholder that will never point at an atom, like <see cref="Ref{T}.Empty"/>.
+    /// Whether this is a placeholder that will never point at an atom, like <see cref="Ref{T}.None"/>.
     /// </summary>
     /// <remarks>
     /// Make sure to put <c>[JsonIgnore]</c> on this.
     /// </remarks>
-    bool IsEmpty { get; }
+    bool IsNone { get; }
 
     /// <summary>
     /// The ref to <paramref name="atom"/>.

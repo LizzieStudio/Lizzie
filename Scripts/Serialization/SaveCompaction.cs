@@ -58,8 +58,8 @@ public static class SaveCompaction
             .Select(a => (Atom: a, Keys: a is ComponentPosition ? [] : Keys(a)))
             .ToList();
         var reach = new Reach();
-        // the components with a position kept whole, and Empty for the table
-        var placed = new HashSet<SnowTag> { SnowTag.Empty };
+        // the components with a position kept whole, and None for the table
+        var placed = new HashSet<SnowTag> { SnowTag.None };
         var kept = new List<Atom>();
 
         // Each pass keeps what the last one's atoms reached.
@@ -127,7 +127,7 @@ public static class SaveCompaction
                 continue;
             var tags = new HashSet<SnowTag>();
             JsonWalker.Visit<SnowTag>(key, tag => tags.Add(tag));
-            tags.Remove(SnowTag.Empty);
+            tags.Remove(SnowTag.None);
             keys.Add(tags);
         }
         return keys;
@@ -145,7 +145,7 @@ public static class SaveCompaction
         reach.Visit(save);
         reach.Grow();
         var found = new SortedSet<SnowTag>(reach.Tags);
-        found.Remove(SnowTag.Empty);
+        found.Remove(SnowTag.None);
 
         var tags = new Dictionary<SnowTag, SnowTag>(found.Count);
         foreach (var tag in found)
@@ -164,8 +164,8 @@ public static class SaveCompaction
     /// </summary>
     private sealed class Reach
     {
-        // Empty stands for no stage, and for keys that hold no SnowTags.
-        public HashSet<SnowTag> Tags { get; } = [SnowTag.Empty];
+        // None stands for no stage, and for keys that hold no SnowTags.
+        public HashSet<SnowTag> Tags { get; } = [SnowTag.None];
 
         // the entries of visited WeakMaps whose keys haven't been reached
         private readonly List<DictionaryEntry> _waiting = [];

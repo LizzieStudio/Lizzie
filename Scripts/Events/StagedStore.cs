@@ -147,7 +147,7 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
         {
             var old = _resolved.Find(key);
             var now = Resolve(key);
-            if (now.Value is ComponentPosition { ContainerRef: { IsEmpty: false } container })
+            if (now.Value is ComponentPosition { ContainerRef: { IsNone: false } container })
             {
                 var shown = _resolved.Find(key with { ComponentRef = container });
                 var removed = now.Removed || shown.Removed;

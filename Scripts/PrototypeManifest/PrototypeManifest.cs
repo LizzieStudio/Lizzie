@@ -185,7 +185,7 @@ public partial class PrototypeManifest : Window, ICommandView
             .GroupBy(c => c.PrototypeRef)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var selectedRef = _selectedPrototype?.Id ?? Ref<Prototype>.Empty;
+        var selectedRef = _selectedPrototype?.Id ?? Ref<Prototype>.None;
         _selectedPrototype = prototypes.FirstOrDefault(p => p.Id == selectedRef);
         if (_selectedPrototype == null)
         {

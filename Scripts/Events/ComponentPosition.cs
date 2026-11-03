@@ -94,7 +94,7 @@ public record ComponentPosition : Atom, IRanked
     /// </summary>
     public static bool GoesOnReset(IAtomReader R, PositionKey key)
     {
-        if (R.Get(Stage.ById, key.StageRef) is { ParentRef: { IsEmpty: false } parent })
+        if (R.Get(Stage.ById, key.StageRef) is { ParentRef: { IsNone: false } parent })
         {
             var inParent = R.Get(ById, key with { StageRef = parent });
             return inParent == null || R.IsRemoved(inParent);
@@ -187,11 +187,11 @@ public record ComponentPosition : Atom, IRanked
     public bool IsDragged => Location is Dragged;
 
     /// <summary>
-    /// The container it's inside, like a deck or a bag, or Empty.
+    /// The container it's inside, like a deck or a bag, or None.
     /// </summary>
     [JsonIgnore]
     public Ref<Component> ContainerRef =>
-        Location is InComponent { Component: var container } ? container : Ref<Component>.Empty;
+        Location is InComponent { Component: var container } ? container : Ref<Component>.None;
 
     /// <summary>
     /// The key used with <see cref="ByLocation"/> to list this component's contents.
@@ -236,7 +236,7 @@ public readonly record struct PositionKey(Ref<Stage> StageRef, Ref<Component> Co
         IComparable<PositionKey>
 {
     [JsonIgnore]
-    public bool IsEmpty => StageRef.IsEmpty || ComponentRef.IsEmpty;
+    public bool IsNone => StageRef.IsNone || ComponentRef.IsNone;
 
     public int CompareTo(PositionKey other) =>
         (StageRef, ComponentRef).CompareTo((other.StageRef, other.ComponentRef));

@@ -47,7 +47,7 @@ public partial class DatasetEditor : Window, ICommandView
     private Label _newDatasetErrorLabel;
 
     // The grid is built for one dataset's column layout and rebuilt when either changes.
-    private Ref<Dataset> _shownDatasetRef = Ref<Dataset>.Empty;
+    private Ref<Dataset> _shownDatasetRef = Ref<Dataset>.None;
     private List<Ref<DataColumn>> _columnRefs = new();
     private readonly List<HeaderCell> _headerCells = new();
     private readonly Dictionary<Ref<DataColumn>, float> _columnWidths = new();
@@ -58,7 +58,7 @@ public partial class DatasetEditor : Window, ICommandView
     // The line under the last row, holding only a button that adds a row.
     private HBoxContainer _addRowLine;
 
-    private Ref<DataRow> _revealRowRef = Ref<DataRow>.Empty;
+    private Ref<DataRow> _revealRowRef = Ref<DataRow>.None;
 
     // The columns the last grid rebuild added to the shown dataset, for an insert's listener to rename.
     private List<Ref<DataColumn>> _addedColumnRefs = [];
@@ -144,7 +144,7 @@ public partial class DatasetEditor : Window, ICommandView
     #region ICommandView
 
     /// <summary>
-    /// The shown dataset, or <see cref="Ref{T}.Empty"/> for none. It opens on the first one.
+    /// The shown dataset, or <see cref="Ref{T}.None"/> for none. It opens on the first one.
     /// A shown one that's gone was undone, so the editor stays on it, where redo brings it back.
     /// </summary>
     public WatchableValue<Ref<Dataset>> ShownDatasetRef { get; } = new();
@@ -290,7 +290,7 @@ public partial class DatasetEditor : Window, ICommandView
                 .From(() => _dataScrollContainer.EnsureControlVisible(view.Box))
                 .CallDeferred();
         }
-        _revealRowRef = Ref<DataRow>.Empty;
+        _revealRowRef = Ref<DataRow>.None;
     }
 
     private void InitializeSpreadsheet()
@@ -350,7 +350,7 @@ public partial class DatasetEditor : Window, ICommandView
 
         _datasetList = GetNode<AtomSelector>("%DatasetList");
         _datasetList.List(R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)), ShownDatasetRef);
-        ShownDatasetRef.Value = Atoms.R.Get(Dataset.All).FirstOrDefault()?.Id ?? Ref<Dataset>.Empty;
+        ShownDatasetRef.Value = Atoms.R.Get(Dataset.All).FirstOrDefault()?.Id ?? Ref<Dataset>.None;
 
         InitializeNewDatasetDialog();
     }
@@ -487,7 +487,7 @@ public partial class DatasetEditor : Window, ICommandView
         }
         _headerCells.Clear();
 
-        _shownDatasetRef = Ref<Dataset>.Empty;
+        _shownDatasetRef = Ref<Dataset>.None;
         _columnRefs = new List<Ref<DataColumn>>();
     }
 
@@ -650,9 +650,9 @@ public partial class DatasetEditor : Window, ICommandView
         var row = _views.FirstOrDefault(v => cells.Any(c => c.RowRef == v.Row.Id));
         var column = _columnRefs.FirstOrDefault(
             id => cells.Any(c => c.ColumnRef == id),
-            Ref<DataColumn>.Empty
+            Ref<DataColumn>.None
         );
-        return row != null && !column.IsEmpty ? new CellId(row.Row.Id, column) : null;
+        return row != null && !column.IsNone ? new CellId(row.Row.Id, column) : null;
     }
 
     private RowView Neighbor(RowView view, int step)

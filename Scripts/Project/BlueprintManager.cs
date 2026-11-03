@@ -92,7 +92,7 @@ public partial class BlueprintManager : Window, ICommandView
         var listed = new HashSet<Ref<Stage>>();
         int indent = _tree.GetThemeConstant("item_margin");
 
-        AddChildren(_tree.GetRoot(), Ref<Stage>.Empty, 0);
+        AddChildren(_tree.GetRoot(), Ref<Stage>.None, 0);
 
         // Freeing a row frees the rows under it, so every dead row comes off the tree before any is freed.
         var dead = _rows.Where(r => !listed.Contains(r.Key)).ToList();
@@ -246,7 +246,7 @@ public partial class BlueprintManager : Window, ICommandView
     /// A Tuple of:
     /// <list type="number">
     /// <item>The dragged blueprint</item>
-    /// <item>The new parent, or <see cref="Ref{T}.Empty"/> for the root.</item>
+    /// <item>The new parent, or <see cref="Ref{T}.None"/> for the root.</item>
     /// <item>The new siblings</item>
     /// <item>The position among the siblings</item>
     /// </list>
@@ -274,7 +274,7 @@ public partial class BlueprintManager : Window, ICommandView
             item == null ? _tree.GetRoot()
             : section is 0 or 2 ? item
             : item.GetParent();
-        var parent = under == _tree.GetRoot() ? Ref<Stage>.Empty : IdOf(under);
+        var parent = under == _tree.GetRoot() ? Ref<Stage>.None : IdOf(under);
         // A stage can't build on itself.
         if (Stage.Chain(Atoms.R, parent).Any(s => s.Id == moved.Id))
             return null;

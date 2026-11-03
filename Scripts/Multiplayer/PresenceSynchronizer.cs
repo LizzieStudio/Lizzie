@@ -56,7 +56,7 @@ public partial class PresenceSynchronizer : Node
     #region Seats
 
     /// <summary>
-    /// Asks for a seat for the local player, or <see cref="Ref{T}.Empty"/> for none.
+    /// Asks for a seat for the local player, or <see cref="Ref{T}.None"/> for none.
     /// The host or a solo player takes it at once; a client asks the host.
     /// </summary>
     public void RequestSeat(Ref<Seat> seat)
@@ -80,11 +80,9 @@ public partial class PresenceSynchronizer : Node
         var seated = seats.TryGetValue(Source.Me, out var current);
         if (seated && seats.Count == 1)
             return;
-        var seat = seated
-            ? current
-            : Atoms.R.Get(Seat.Live).FirstOrDefault()?.Id ?? Ref<Seat>.Empty;
+        var seat = seated ? current : Atoms.R.Get(Seat.Live).FirstOrDefault()?.Id ?? Ref<Seat>.None;
         var solo = ImmutableDictionary<Source, Ref<Seat>>.Empty;
-        WriteSeats(seat.IsEmpty ? solo : solo.Add(Source.Me, seat));
+        WriteSeats(seat.IsNone ? solo : solo.Add(Source.Me, seat));
     }
 
     [Rpc(
@@ -124,7 +122,7 @@ public partial class PresenceSynchronizer : Node
     private static void Assign(Source source, Ref<Seat> seat)
     {
         var seats = Atoms.R.Get(Seating.Only).Seats;
-        WriteSeats(seat.IsEmpty ? seats.Remove(source) : seats.SetItem(source, seat));
+        WriteSeats(seat.IsNone ? seats.Remove(source) : seats.SetItem(source, seat));
     }
 
     private static void WriteSeats(ImmutableDictionary<Source, Ref<Seat>> seats) =>

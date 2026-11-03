@@ -33,7 +33,7 @@ public sealed record Seating : Atom
 public static class SeatingReader
 {
     /// <summary>
-    /// The seat a player is sitting in, or <see cref="Ref{T}.Empty"/> when they have none.
+    /// The seat a player is sitting in, or <see cref="Ref{T}.None"/> when they have none.
     /// A player whose seat was removed has none until it's back.
     /// </summary>
     public static Ref<Seat> SeatOf(this IAtomReader R, Source? source)
@@ -42,14 +42,14 @@ public static class SeatingReader
         {
             var hasSeat = R.Get(Seating.Only).Seats.TryGetValue(assigned, out var seat);
             var notDeleted = R.Get(Seat.ById, seat) is { Deleted: false };
-            return hasSeat && notDeleted ? seat : Ref<Seat>.Empty;
+            return hasSeat && notDeleted ? seat : Ref<Seat>.None;
         }
 
-        return Ref<Seat>.Empty;
+        return Ref<Seat>.None;
     }
 
     /// <summary>
-    /// The seat the local player is sitting in, or <see cref="Ref{T}.Empty"/>.
+    /// The seat the local player is sitting in, or <see cref="Ref{T}.None"/>.
     /// </summary>
     public static Ref<Seat> LocalSeat(this IAtomReader R) => R.SeatOf(Source.Me);
 

@@ -13,7 +13,7 @@ public sealed record Stage : Atom, IRanked
     public static readonly Identity<Stage, Ref<Stage>> ById = new(s => s.Id);
 
     /// <summary>
-    /// Stages that are not deleted, by the stage they build on, with <see cref="Ref{T}.Empty"/> for the roots,
+    /// Stages that are not deleted, by the stage they build on, with <see cref="Ref{T}.None"/> for the roots,
     /// in the order the blueprint manager shows them.
     /// </summary>
     public static readonly Lookup<Stage, Ref<Stage>?> Children = new(
@@ -29,7 +29,7 @@ public sealed record Stage : Atom, IRanked
     public string Name { get; init; }
 
     /// <summary>
-    /// The stage this one builds on, or <see cref="Ref{T}.Empty"/> for a root.
+    /// The stage this one builds on, or <see cref="Ref{T}.None"/> for a root.
     /// </summary>
     public Ref<Stage> ParentRef { get; init; }
 
@@ -99,7 +99,7 @@ public sealed record Stage : Atom, IRanked
                 )
                 .DefaultIfEmpty()
                 .Max();
-        return $"Table {Highest(Ref<Stage>.Empty) + 1}";
+        return $"Table {Highest(Ref<Stage>.None) + 1}";
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public sealed record Stage : Atom, IRanked
         {
             if (parentOf(stage) is not { } parent)
                 return false;
-            if (parent.IsEmpty)
+            if (parent.IsNone)
                 return true;
             stage = parent;
         }

@@ -97,7 +97,7 @@ public partial class TemplateCreator : Window, ICommandView
     {
         LoadTemplateNameSelector(R);
         _templateNameSelector.Select(
-            _templateNameSelector.GetItemIndex(CurrentTemplate?.Id.Tag ?? SnowTag.Empty)
+            _templateNameSelector.GetItemIndex(CurrentTemplate?.Id.Tag ?? SnowTag.None)
         );
 
         SyncDataset(R);
@@ -169,7 +169,7 @@ public partial class TemplateCreator : Window, ICommandView
         _datasetSelector = GetNode<AtomSelector>("%Dataset");
         _datasetSelector.List(
             R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)),
-            new(R => R.Get(_currentTemplate)?.DatasetRef ?? Ref<Dataset>.Empty, OnDatasetChanged)
+            new(R => R.Get(_currentTemplate)?.DatasetRef ?? Ref<Dataset>.None, OnDatasetChanged)
         );
 
         _pageControl = GetNode<PageControl>("%PageControl");
@@ -1610,7 +1610,7 @@ public partial class TemplateCreator : Window, ICommandView
     {
         _updateRequired = true;
 
-        var datasetRef = CurrentTemplate?.DatasetRef ?? Ref<Dataset>.Empty;
+        var datasetRef = CurrentTemplate?.DatasetRef ?? Ref<Dataset>.None;
         var dataset = R.Get(Dataset.ById, datasetRef);
         if (dataset == null)
         {

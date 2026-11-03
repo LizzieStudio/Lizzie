@@ -27,7 +27,7 @@ public partial class HandRow : Control
     private Ref<Seat> _seat;
 
     /// <summary>
-    /// The seat whose hand this row shows. <see cref="Ref{T}.Empty"/>, no seat, shows no cards.
+    /// The seat whose hand this row shows. <see cref="Ref{T}.None"/>, no seat, shows no cards.
     /// </summary>
     public Ref<Seat> Seat
     {

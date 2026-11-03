@@ -13,7 +13,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     private ItemList _seatList;
     private Label _statusLabel;
 
-    // Maps list index -> seat, or Empty for no seat
+    // Maps list index -> seat, or None for no seat
     private readonly List<Ref<Seat>> _seatIndexMap = new();
 
     public override void _Ready()
@@ -64,7 +64,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         var selected = _seatList.GetSelectedItems();
         var selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : R.LocalSeat();
         // A player without a seat starts on the first free one, unless they picked No Seat.
-        bool keep = selected.Length > 0 || !selectedSeat.IsEmpty;
+        bool keep = selected.Length > 0 || !selectedSeat.IsNone;
 
         _seatList.Clear();
         _seatIndexMap.Clear();
@@ -92,7 +92,7 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         }
 
         _seatList.AddItem("No Seat");
-        _seatIndexMap.Add(Ref<Seat>.Empty);
+        _seatIndexMap.Add(Ref<Seat>.None);
 
         // Keep the player's choice selected while it's still available
         var kept = keep ? _seatIndexMap.IndexOf(selectedSeat) : -1;

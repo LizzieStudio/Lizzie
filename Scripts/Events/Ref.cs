@@ -12,7 +12,7 @@ public readonly record struct Ref<T>(SnowTag Tag) : IAtomRef<T>, IRef, IComparab
     /// <summary>
     /// Refers to nothing.
     /// </summary>
-    public static readonly Ref<T> Empty = default;
+    public static readonly Ref<T> None = default;
 
     static Ref()
     {
@@ -27,7 +27,7 @@ public readonly record struct Ref<T>(SnowTag Tag) : IAtomRef<T>, IRef, IComparab
 
     public static Ref<T> Create() => new(SnowTag.Create());
 
-    public bool IsEmpty => Tag == SnowTag.Empty;
+    public bool IsNone => Tag == SnowTag.None;
 
     public static implicit operator Variant(Ref<T> atom) => atom.Tag;
 

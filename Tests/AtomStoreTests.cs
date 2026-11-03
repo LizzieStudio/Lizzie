@@ -12,7 +12,7 @@ namespace Lizzie.Tests;
 /// </summary>
 public class AtomStoreTests
 {
-    // components by their key, all in the empty stage
+    // components by their key, all in stage None
     private static readonly Identity<ComponentPosition, PositionKey> ById = new(s =>
         new(s.StageRef, s.Id)
     );
@@ -30,7 +30,7 @@ public class AtomStoreTests
         s.IsOnTable ? null : ContainerOf(s)
     );
 
-    // the tag of the container s is in, or Empty
+    // the tag of the container s is in, or None
     private static SnowTag ContainerOf(ComponentPosition s) => s.ContainerRef.Tag;
 
     private readonly Timeline _timeline = new();
@@ -39,7 +39,7 @@ public class AtomStoreTests
 
     private static SnowTag Tag(int counter) => new(Source.Host, counter);
 
-    private static PositionKey Key(int counter) => new(Ref<Stage>.Empty, new(Tag(counter)));
+    private static PositionKey Key(int counter) => new(Ref<Stage>.None, new(Tag(counter)));
 
     private static InComponent In(int container) => new(new(Tag(container)));
 

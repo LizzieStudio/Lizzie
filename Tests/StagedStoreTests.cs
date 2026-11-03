@@ -34,7 +34,7 @@ public class StagedStoreTests
         new()
         {
             Id = Tag<Stage>(id),
-            ParentRef = parent == 0 ? Ref<Stage>.Empty : Tag<Stage>(parent),
+            ParentRef = parent == 0 ? Ref<Stage>.None : Tag<Stage>(parent),
         };
 
     private static ComponentPosition PositionOf(int stage, int id, int x = 0, int inside = 0) =>

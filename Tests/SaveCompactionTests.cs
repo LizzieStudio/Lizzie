@@ -547,7 +547,7 @@ public class SaveCompactionTests
         var json = SaveCompaction.Serialize(Save(Position(1)));
         var back = (ComponentPosition)Load(json).Writes[0];
 
-        Assert.Equal(Ref<Stage>.Empty, back.StageRef);
+        Assert.Equal(Ref<Stage>.None, back.StageRef);
         Assert.Equal(default, back.Rank);
     }
 

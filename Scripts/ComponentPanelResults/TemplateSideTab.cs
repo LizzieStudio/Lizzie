@@ -40,7 +40,7 @@ public partial class TemplateSideTab : SideTab
             R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)),
             new(
                 R => R.Get(_side).DatasetRef,
-                id => Edit(s => s with { DatasetRef = id, QuantityRef = Ref<DataColumn>.Empty })
+                id => Edit(s => s with { DatasetRef = id, QuantityRef = Ref<DataColumn>.None })
             )
         );
         _quantity.List(
@@ -76,7 +76,7 @@ public partial class TemplateSideTab : SideTab
                 Atoms.R.Get(Template.ById, _side.Value.TemplateRef) is { } template
                 && !value(template)
             )
-                _side.Value = _side.Value with { TemplateRef = Ref<Template>.Empty };
+                _side.Value = _side.Value with { TemplateRef = Ref<Template>.None };
         }
     }
 

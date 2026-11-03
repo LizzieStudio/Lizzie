@@ -55,7 +55,7 @@ public sealed class FaceLoader(Action shown)
                 Queue(front ?? Face.Blank, back ?? Face.Blank);
                 break;
             case DieParameters p:
-                var row = (item as DieItemRef)?.RowRef ?? Ref<DataRow>.Empty;
+                var row = (item as DieItemRef)?.RowRef ?? Ref<DataRow>.None;
                 Queue(View(p.Faces, "f", new RowFace(row)) ?? Face.Blank, Face.Blank);
                 break;
         }
@@ -104,7 +104,7 @@ public sealed class FaceLoader(Action shown)
                 if (face is not QuickFace quickFace)
                     return null;
                 var row = QuickTemplate.Row(quick, quickFace);
-                if (row != SnowTag.Empty)
+                if (row != SnowTag.None)
                     return FaceSet
                         .Acquire(
                             $"quick:{R.VersionKey(prototype)}:{key}",
@@ -148,7 +148,7 @@ public sealed class FaceLoader(Action shown)
 
             case TemplateSide templateSide:
             {
-                var row = (face as RowFace)?.RowRef ?? Ref<DataRow>.Empty;
+                var row = (face as RowFace)?.RowRef ?? Ref<DataRow>.None;
                 FaceSet Set(string key, Func<IAtomReader, IEnumerable<DataRow>> rows) =>
                     FaceSet.Acquire(
                         $"tpl:{templateSide.TemplateRef}:{templateSide.DatasetRef}{key}",

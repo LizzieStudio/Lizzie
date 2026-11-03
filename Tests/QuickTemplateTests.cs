@@ -124,7 +124,7 @@ public class QuickTemplateTests
         var row = QuickTemplate.Row(side, new QuickFace(new SnowTag(1), "3"));
 
         Assert.True(
-            row == SnowTag.Empty,
+            row == SnowTag.None,
             $"A card showing 3 has row {row} in a side of A and 2, expected none, so it draws on its own."
         );
     }

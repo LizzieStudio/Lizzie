@@ -133,7 +133,7 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
             ret.Add("Width must be > 0");
         if ((p?.Length ?? 0) <= 0)
             ret.Add("Length must be > 0");
-        if (p?.DispenseRef.IsEmpty ?? true)
+        if (p?.DispenseRef.IsNone ?? true)
             ret.Add("Component must be specified");
 
         return ret;

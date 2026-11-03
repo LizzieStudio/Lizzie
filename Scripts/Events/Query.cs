@@ -196,7 +196,7 @@ public readonly record struct SingletonId<T> : IAtomRef<T>, IComparable<Singleto
     where T : Atom
 {
     [JsonIgnore]
-    public bool IsEmpty => false;
+    public bool IsNone => false;
 
     public int CompareTo(SingletonId<T> other) => 0;
 }

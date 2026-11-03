@@ -99,7 +99,7 @@ public static class DeckCommands
         {
             // A player without a seat has no hand to draw into.
             var seat = R.LocalSeat();
-            if (seat.IsEmpty)
+            if (seat.IsNone)
                 return [];
             return cards.Select((c, i) => PlayerHandService.MovedToHand(c, seat, ranks[i]));
         }

@@ -31,14 +31,14 @@ public partial class ImageManager : Window, ICommandView
     private readonly Dictionary<Ref<ImageAsset>, ImageTile> _tiles = new();
 
     /// <summary>
-    /// The image open in the view, or <see cref="Ref{T}.Empty">.
+    /// The image open in the view, or <see cref="Ref{T}.None">.
     /// </summary>
-    private Ref<ImageAsset> _openRef = Ref<ImageAsset>.Empty;
+    private Ref<ImageAsset> _openRef = Ref<ImageAsset>.None;
 
     /// <summary>
     /// The ImageAsset that <see cref="_image"/> was loaded for.
     /// </summary>
-    private Ref<ImageAsset> _loadedRef = Ref<ImageAsset>.Empty;
+    private Ref<ImageAsset> _loadedRef = Ref<ImageAsset>.None;
 
     private const string _tileScenePath = "res://Scenes/Controls/image_tile.tscn";
 
@@ -51,7 +51,7 @@ public partial class ImageManager : Window, ICommandView
     public override void _Ready()
     {
         _backButton = GetNode<Button>("%BackButton");
-        _backButton.Pressed += () => Open(Ref<ImageAsset>.Empty);
+        _backButton.Pressed += () => Open(Ref<ImageAsset>.None);
         _addNewButton = GetNode<Button>("%AddNewButton");
         _removeButton = GetNode<Button>("%RemoveButton");
         _addNewButton.Pressed += OnAddNewPressed;
@@ -129,7 +129,7 @@ public partial class ImageManager : Window, ICommandView
 
     /// <summary>
     /// For when the user clicks an image to see it,
-    /// or <see cref="Ref{T}.Empty"/> when they go back to the thumbnails.
+    /// or <see cref="Ref{T}.None"/> when they go back to the thumbnails.
     /// An image's edit button opens the manager on it with this too.
     /// </summary>
     public void Open(Ref<ImageAsset> image)
@@ -236,6 +236,6 @@ public partial class ImageManager : Window, ICommandView
         tile.QueueFree();
 
         if (_openRef == id)
-            _openRef = Ref<ImageAsset>.Empty;
+            _openRef = Ref<ImageAsset>.None;
     }
 }

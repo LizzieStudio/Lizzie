@@ -18,7 +18,7 @@ public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
 {
     private readonly int ID;
 
-    public static readonly SnowTag Empty = new(0);
+    public static readonly SnowTag None = new(0);
 
     // Tests sometimes use parallel threads.
     private static readonly Lock Lock = new();
@@ -101,7 +101,7 @@ public readonly record struct SnowTag : IComparable<SnowTag>, IFormattable
             tag = new SnowTag(value);
             return true;
         }
-        tag = Empty;
+        tag = None;
         return false;
     }
 }

@@ -160,7 +160,7 @@ public readonly record struct CellId(Ref<DataRow> RowRef, Ref<DataColumn> Column
         IComparable<CellId>
 {
     [JsonIgnore]
-    public bool IsEmpty => RowRef.IsEmpty || ColumnRef.IsEmpty;
+    public bool IsNone => RowRef.IsNone || ColumnRef.IsNone;
 
     public int CompareTo(CellId other) =>
         (RowRef, ColumnRef).CompareTo((other.RowRef, other.ColumnRef));

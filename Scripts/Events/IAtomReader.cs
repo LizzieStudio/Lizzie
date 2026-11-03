@@ -123,7 +123,7 @@ public static class AtomReaderExtensions
     /// Commands and relations act on what this gives.
     /// </remarks>
     public static Atom Resolve(this IAtomReader R, IAtomRef atomRef) =>
-        atomRef.IsEmpty ? null : R.Get(atomRef) ?? IdQuery.For(atomRef.AtomType).Unwritten(atomRef);
+        atomRef.IsNone ? null : R.Get(atomRef) ?? IdQuery.For(atomRef.AtomType).Unwritten(atomRef);
 
     /// <summary>
     /// The atoms <paramref name="all"/> lists.

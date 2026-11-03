@@ -107,7 +107,7 @@ public static class ComponentCommands
         Tooltip = "Moves this component, in its current position, into the parent blueprint.",
         ActsOn = Context.Selected | Context.Contents,
         AppliesTo = (R, c) =>
-            !c.IsDragged && R.Get(Stage.ById, c.StageRef)?.ParentRef is { } p && !p.IsEmpty,
+            !c.IsDragged && R.Get(Stage.ById, c.StageRef)?.ParentRef is { } p && !p.IsNone,
         Requires = [("These components have no changes to merge.", WrittenHere)],
         Effects = (R, cs) =>
             cs.SelectMany(c =>
@@ -147,7 +147,7 @@ public static class ComponentCommands
             .GroupBy(c =>
                 c.Location is InHand
                     ? (c.Location, 0, 0, c.Id)
-                    : (c.Location, c.X, c.Z, Ref<Component>.Empty)
+                    : (c.Location, c.X, c.Z, Ref<Component>.None)
             )
             .SelectMany(pile =>
             {

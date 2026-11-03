@@ -70,7 +70,7 @@ public class SeatTests
             }
         );
 
-        Assert.Equal(Ref<Seat>.Empty, R.SeatOf(new Source(2)));
+        Assert.Equal(Ref<Seat>.None, R.SeatOf(new Source(2)));
         Assert.Equal(seats[1].Id, R.SeatOf(new Source(3)));
     }
 }

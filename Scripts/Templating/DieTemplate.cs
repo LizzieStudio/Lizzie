@@ -151,7 +151,7 @@ public static class DieTemplate
         var net = Nets[sides];
         var template = new Template
         {
-            Id = Ref<Template>.Empty,
+            Id = Ref<Template>.None,
             Name = $"Quick D{sides}",
             SizeTemplate = $"D{sides}",
         };
@@ -205,7 +205,7 @@ public static class DieTemplate
     /// <summary>
     /// The id of the one row a Quick die draws.
     /// </summary>
-    public static SnowTag NetRow => SnowTag.Empty;
+    public static SnowTag NetRow => SnowTag.None;
 
     /// <summary>
     /// What a Quick die with <paramref name="sideCount"/> draws.

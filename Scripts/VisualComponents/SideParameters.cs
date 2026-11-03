@@ -146,7 +146,7 @@ public sealed record TemplateSide : SideParameters
     public Ref<Dataset> DatasetRef { get; init; }
 
     /// <summary>
-    /// The column holding how many cards each row makes, or empty for one card per row.
+    /// The column holding how many cards each row makes, or None for one card per row.
     /// A row whose cell isn't a whole number makes one card.
     /// </summary>
     public Ref<DataColumn> QuantityRef { get; init; }
