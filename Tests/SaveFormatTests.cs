@@ -20,7 +20,7 @@ namespace Lizzie.Tests;
 ///
 /// <para>
 /// Any change to a type's or property's name, or to a property's type, fails here until
-/// a step is added to <c>SaveUpgrade.Steps</c> and that file is updated.
+/// a draft is added to the release in the works in <c>SaveUpgrade.Releases</c> and that file is updated.
 /// A change that only adds something can use an <see cref="Addition"/>.
 /// </para>
 /// </summary>
@@ -74,7 +74,7 @@ public class SaveFormatTests
         },
     };
 
-    private static string Title(int format) => $"Lizzie save format {format}";
+    private static string Title(SaveFormat format) => $"Lizzie save format {format}";
 
     [Fact]
     public void SaveFormatIsUnchanged()
@@ -101,7 +101,7 @@ public class SaveFormatTests
         Assert.Fail(
             (string)JsonNode.Parse(pinned)["title"] == Title(SaveUpgrade.Current)
                 ? changes
-                    + "If the change is intended, add a step to SaveUpgrade.Steps.\n"
+                    + "If the change is intended, add a draft to the release in the works in SaveUpgrade.Releases.\n"
                     + "Then run this test again."
                 : changes
                     + $"If the change is intended, replace {Path.GetFileName(Pinned)} with {Path.GetFileName(Received)}."

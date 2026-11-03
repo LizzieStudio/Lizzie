@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using Godot;
 using Lizzie.Replication.Machinery;
 using SaveUpgrades;
@@ -130,11 +128,6 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Gets the save file name with version number.
-    /// </summary>
-    private static string SaveFile(string name, int format) => $"{name}.v{format}.proj";
-
-    /// <summary>
     /// Loads the highest version save that this version of Lizzie can read.
     /// Returns null when the project has no save.
     /// </summary>
@@ -145,28 +138,15 @@ public partial class ProjectService : Node
     {
         var formats = DirAccess
             .GetFilesAt("user://")
-            .SelectMany<string, int?>(file =>
-            {
-                if (Regex.Match(file, @"^(.+)\.v(\d+)\.proj$") is { Success: true } match)
-                {
-                    var filename = match.Groups[1].Value;
-                    var success = int.TryParse(match.Groups[2].Value, out var version);
-                    return filename == name && success ? [version] : [];
-                }
-                else if (Regex.Match(file, @"^(.+)\.proj$") is { Success: true } original)
-                {
-                    var filename = original.Groups[1].Value;
-                    return filename == name ? [0] : [];
-                }
-                return [];
-            })
+            .Select(file => SaveFormat.FromFileName(file, name))
+            .Where(f => f != null)
             .ToList();
-        int? newer = formats.Where(f => f > SaveUpgrade.Current).Max();
-        int? readable = formats.Where(f => f <= SaveUpgrade.Current).Max();
-        var file = readable is int format and > 0 ? SaveFile(name, format) : $"{name}.proj";
+        var newer = formats.Where(f => !SaveUpgrade.CanRead(f.Value)).Max();
+        var readable = formats.Where(f => SaveUpgrade.CanRead(f.Value)).Max();
+        var file = (readable ?? new SaveFormat(0)).FileName(name);
         var path = $"user://{file}";
-        var newerFile = newer is int n ? SaveFile(name, n) : null;
-        var currentFile = SaveFile(name, SaveUpgrade.Current);
+        var newerFile = newer?.FileName(name);
+        var currentFile = SaveUpgrade.Current.FileName(name);
 
         warning = null;
         if (!FileAccess.FileExists(path))
@@ -198,16 +178,40 @@ public partial class ProjectService : Node
                         lines.Add(JsonNode.Parse(line).AsObject());
                 }
 
-            if (SaveUpgrade.Run(lines) < SaveUpgrade.Current)
+            var checkpoints = new List<(SaveFormat Format, string[] Lines)>();
+            bool upgraded = SaveUpgrade.Run(
+                lines,
+                format => checkpoints.Add((format, [.. lines.Select(l => l.ToJsonString())]))
+            );
+            if (upgraded)
+            {
                 warnings.Add(
                     $"\"{file}\" was saved by an older version of Lizzie, so it was migrated. "
                         + "Some features may have changed. "
                         + $"Saving will not overwrite \"{file}\". "
-                        + $"The new file will be \"{currentFile}\" instead."
+                        + (
+                            checkpoints.Count > 0
+                                ? $"The migrated save was written to \"{currentFile}\", which saving overwrites."
+                                : $"The new file will be \"{currentFile}\" instead."
+                        )
                 );
+            }
             events = lines
                 .Select(l => l.Deserialize<TimelineEvent>(LizzieJson.EventOptions))
                 .ToArray();
+
+            foreach (var (format, saved) in checkpoints)
+            {
+                WriteSave(
+                    format.FileName(name),
+                    save =>
+                    {
+                        save.StoreLine(format.Header);
+                        foreach (var line in saved)
+                            save.StoreLine(line);
+                    }
+                );
+            }
         }
         catch (Exception ex)
         {
@@ -301,8 +305,28 @@ public partial class ProjectService : Node
         if (sync == null)
             return false;
 
-        var finalVirtual = $"user://{SaveFile(project.Filename, SaveUpgrade.Current)}";
-        var tempVirtual = $"user://{project.Filename}.{OS.GetProcessId()}.proj.tmp";
+        var saved = WriteSave(
+            SaveUpgrade.Current.FileName(project.Filename),
+            save =>
+            {
+                save.StoreLine(SaveUpgrade.Current.Header);
+                save.StoreLine(
+                    SaveCompaction.Serialize(SaveCompaction.Event(Atoms.R.Machinery().SavedAtoms()))
+                );
+            }
+        );
+        if (saved)
+            HasUnsavedChanges = false;
+        return saved;
+    }
+
+    /// <summary>
+    /// Writes a save file through a temporary file, so a failed write leaves the old file as it was.
+    /// </summary>
+    private static bool WriteSave(string file, Action<FileAccess> write)
+    {
+        var finalVirtual = $"user://{file}";
+        var tempVirtual = $"user://{file}.{OS.GetProcessId()}.tmp";
 
         var tempReal = ProjectSettings.GlobalizePath(tempVirtual);
         using (var saveFile = FileAccess.Open(tempVirtual, FileAccess.ModeFlags.Write))
@@ -317,10 +341,7 @@ public partial class ProjectService : Node
 
             try
             {
-                saveFile.StoreLine(SaveUpgrade.Header);
-                saveFile.StoreLine(
-                    SaveCompaction.Serialize(SaveCompaction.Event(Atoms.R.Machinery().SavedAtoms()))
-                );
+                write(saveFile);
             }
             catch (Exception ex)
             {
@@ -346,8 +367,6 @@ public partial class ProjectService : Node
             catch { }
             return false;
         }
-
-        HasUnsavedChanges = false;
         return true;
     }
 

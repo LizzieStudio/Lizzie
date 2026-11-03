@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json.Nodes;
 
 namespace SaveUpgrades;
@@ -13,7 +12,5 @@ namespace SaveUpgrades;
 /// </remarks>
 public sealed class Addition : IStep
 {
-    public required int Format { get; init; }
-
-    public void Run(List<JsonObject> lines) { }
+    public JsonObject Run(JsonObject save) => save;
 }

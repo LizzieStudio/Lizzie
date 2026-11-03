@@ -11,9 +11,7 @@ namespace SaveUpgrades;
 /// </summary>
 public sealed class Format1 : IStep
 {
-    public int Format => 1;
-
-    public void Run(List<JsonObject> lines) => lines[0] = new Conversion().Run(lines.Single());
+    public JsonObject Run(JsonObject save) => new Conversion().Run(save);
 
     private sealed class Conversion
     {
@@ -24,18 +22,9 @@ public sealed class Format1 : IStep
         private readonly Dictionary<string, JsonObject> _images = [];
         private readonly Dictionary<string, Kind> _prototypes = [];
         private readonly Dictionary<string, List<string>> _rows = [];
-        private readonly HashSet<string> _components = [];
 
-        /// <summary>How a prototype's components become Components.</summary>
-        /// <param name="Faces">
-        /// A printed card's front and back keys, from its old number and its row's tag.
-        /// </param>
-        private sealed record Kind(
-            int Type,
-            int Mode,
-            string Dataset,
-            Func<int, int?, (JsonObject Front, JsonObject Back)> Faces
-        );
+        /// <summary>How a prototype's components become variants.</summary>
+        private sealed record Kind(int Type, int Mode, string Dataset);
 
         /// <summary>The SnowTag of something in the old save, made the first time it's asked for.</summary>
         private int Tag(string kind, string key) =>
@@ -45,7 +34,7 @@ public sealed class Format1 : IStep
 
         public JsonObject Run(JsonObject project)
         {
-            Settings((JsonObject)project["GameSettings"]);
+            var settings = Settings((JsonObject)project["GameSettings"]);
 
             foreach (var (key, image) in (JsonObject)project["Images"])
                 _writes.Add(
@@ -59,7 +48,7 @@ public sealed class Format1 : IStep
                 );
 
             foreach (var (name, dataset) in (JsonObject)project["Datasets"])
-                Dataset(name, (JsonObject)dataset);
+                DataSet(name, (JsonObject)dataset);
 
             foreach (var (name, template) in (JsonObject)project["Templates"])
             {
@@ -72,7 +61,7 @@ public sealed class Format1 : IStep
                 };
                 Copy((JsonObject)template, atom, "SizeTemplate", "Width", "Height");
                 if ((string)template["DataSet"] is { Length: > 0 } dataset)
-                    atom["datasetRef"] = Tag("dataset", dataset);
+                    atom["dataSet"] = Tag("dataset", dataset);
                 _writes.Add(atom);
             }
 
@@ -86,12 +75,12 @@ public sealed class Format1 : IStep
             for (int i = 0; i < snapshots.Count; i++)
                 Blueprint(snapshots[i], i);
             if (snapshots.Count > 0)
-                Table(Tag("snapshot", (string)snapshots[^1]["Name"]));
+                settings["blueprintRef"] = Tag("snapshot", (string)snapshots[^1]["Name"]);
 
             return new JsonObject { ["id"] = Stamp * 2, ["writes"] = new JsonArray([.. _writes]) };
         }
 
-        private void Settings(JsonObject old)
+        private JsonObject Settings(JsonObject old)
         {
             var settings = new JsonObject { ["$type"] = "ProjectGameSettings" };
             Copy(
@@ -103,6 +92,8 @@ public sealed class Format1 : IStep
                 "TableHeight",
                 "TableUnits",
                 "RotationStepIndex",
+                "AllowObservers",
+                "MaxPlayers",
                 "GameTitle",
                 "Designers",
                 "GraphicDesign",
@@ -111,53 +102,29 @@ public sealed class Format1 : IStep
                 "VisionStatement"
             );
             settings["tableColor"] = Color(old, "TableColor");
+            if (old["Players"] is JsonArray players)
+                settings["players"] = new JsonArray([
+                    .. players.Select(p => new JsonObject
+                    {
+                        ["name"] = (string)p["Name"],
+                        ["color"] = Color((JsonObject)p, "Color"),
+                        ["isAdmin"] = (bool?)p["IsAdmin"] ?? false,
+                    }),
+                ]);
             _writes.Add(settings);
-
-            var players = (JsonArray)old["Players"] ?? [];
-            for (int i = 0; i < players.Count; i++)
-            {
-                var player = (JsonObject)players[i];
-                var seat = new JsonObject
-                {
-                    ["$type"] = "Seat",
-                    ["id"] = Tag("seat", i.ToString()),
-                    ["rank"] = Rank(i),
-                    ["color"] = Color(player, "Color"),
-                    ["isAdmin"] = (bool?)player["IsAdmin"] ?? false,
-                };
-                // A seat with its default name goes by its number instead.
-                var name = (string)player["Name"];
-                if (name != $"Seat {i + 1}" && name != $"Player {i + 1}")
-                    seat["name"] = name;
-                _writes.Add(seat);
-            }
-        }
-
-        /// <summary>
-        /// A zone's rule for each seat, keyed by the Seat's tag: 1 for Allowed, 2 for Blocked.
-        /// A seat the old zone both included and excluded is blocked, as it was.
-        /// </summary>
-        private JsonObject ZoneSeats(JsonObject p)
-        {
-            var seats = new JsonObject();
-            foreach (var (list, access) in new[] { ("IncludedSeats", 1), ("ExcludedSeats", 2) })
-            {
-                foreach (var n in (JsonArray)p[list] ?? [])
-                    seats[Tag("seat", ((int)n).ToString()).ToString()] = access;
-            }
-            return seats;
+            return settings;
         }
 
         /// <summary>
         /// A dataset, with each row's name in a first column called Name.
         /// </summary>
-        private void Dataset(string name, JsonObject old)
+        private void DataSet(string name, JsonObject old)
         {
             int dataset = Tag("dataset", name);
             _writes.Add(
                 new JsonObject
                 {
-                    ["$type"] = "Dataset",
+                    ["$type"] = "DataSet",
                     ["id"] = dataset,
                     ["name"] = name,
                 }
@@ -175,7 +142,7 @@ public sealed class Format1 : IStep
                             {
                                 ["$type"] = "DataColumn",
                                 ["id"] = tag,
-                                ["datasetRef"] = dataset,
+                                ["dataSetId"] = dataset,
                                 ["rank"] = Rank(i),
                                 ["name"] = column,
                             }
@@ -194,7 +161,7 @@ public sealed class Format1 : IStep
                     {
                         ["$type"] = "DataRow",
                         ["id"] = tag,
-                        ["datasetRef"] = dataset,
+                        ["dataSetId"] = dataset,
                         ["rank"] = Rank(rows.Count),
                     }
                 );
@@ -210,8 +177,8 @@ public sealed class Format1 : IStep
                                 ["$type"] = "DataCell",
                                 ["id"] = new JsonObject
                                 {
-                                    ["rowRef"] = tag,
-                                    ["columnRef"] = columnTags[i],
+                                    ["row"] = tag,
+                                    ["column"] = columnTags[i],
                                 },
                                 ["value"] = values[i],
                             }
@@ -226,7 +193,6 @@ public sealed class Format1 : IStep
             int mode = (int?)p["Mode"] ?? 0;
 
             JsonObject parameters;
-            Func<int, int?, (JsonObject, JsonObject)> faces = null;
             switch (type)
             {
                 case 0:
@@ -237,7 +203,7 @@ public sealed class Format1 : IStep
                     parameters = Parameters(p, "DiscParameters", "Height", "Diameter");
                     parameters["color"] = Color(p, "Color");
                     break;
-                case 3 or 6 when Printed(key, p, type, mode, out faces) is { } printed:
+                case 3 or 6 when Printed(p, type, mode) is { } printed:
                     parameters = printed;
                     break;
                 case 7:
@@ -247,12 +213,8 @@ public sealed class Format1 : IStep
                         mode == 3
                             ? TemplateSide(p, "FrontTemplate")
                             : QuickSide(
-                                ((JsonArray)p["Sides"] ?? []).Select(
-                                    (side, i) =>
-                                        (
-                                            Tag("suit", $"{key}/{i}"),
-                                            Suit(p, "Color", (JsonObject)side)
-                                        )
+                                ((JsonArray)p["Sides"] ?? []).Select(side =>
+                                    Suit(p, "Color", (JsonObject)side)
                                 )
                             );
                     break;
@@ -265,7 +227,7 @@ public sealed class Format1 : IStep
                     parameters = Parameters(p, "TrayParameters", "Height", "Width", "Length");
                     parameters["color"] = Color(p, "Color");
                     if ((string)p["Prototype"] is { Length: > 0 } contents)
-                        parameters["dispenseRef"] = Tag("prototype", contents);
+                        parameters["prototype"] = Tag("prototype", contents);
                     break;
                 case 11:
                     parameters = Parameters(p, "BagParameters", "Height", "Diameter", "ShowCount");
@@ -278,15 +240,16 @@ public sealed class Format1 : IStep
                         "Width",
                         "Depth",
                         "DefaultIncluded",
-                        "HiddenWhenExcluded"
+                        "HiddenWhenExcluded",
+                        "IncludedSeats",
+                        "ExcludedSeats"
                     );
-                    parameters["seats"] = ZoneSeats(p);
                     break;
                 default:
                     return;
             }
 
-            _prototypes[key] = new Kind(type, mode, (string)p["Dataset"], faces);
+            _prototypes[key] = new Kind(type, mode, (string)p["Dataset"]);
             _writes.Add(
                 new JsonObject
                 {
@@ -301,95 +264,51 @@ public sealed class Format1 : IStep
         /// <summary>
         /// A token's or deck's parameters, or null for a kind there's no longer any way to make.
         /// </summary>
-        /// <param name="faces">Gets a card's face keys, as <see cref="Kind.Faces"/>.</param>
-        private JsonObject Printed(
-            string key,
-            JsonObject p,
-            int type,
-            int mode,
-            out Func<int, int?, (JsonObject, JsonObject)> faces
-        )
+        private JsonObject Printed(JsonObject p, int type, int mode)
         {
             bool differentBack = (bool?)p["DifferentBack"] ?? false;
             JsonObject front,
-                back = null,
-                backFace = null;
+                back = null;
             switch (mode)
             {
                 case 0:
-                    var quickFront = (JsonObject)p["QuickFront"];
-                    int frontSuit = Tag("suit", $"{key}/front");
-                    front = QuickSide([(frontSuit, Suit(p, "FrontBgColor", quickFront))]);
-                    var frontFace = QuickFace(frontSuit, (string)quickFront?["Caption"]);
+                    front = QuickSide([Suit(p, "FrontBgColor", (JsonObject)p["QuickFront"])]);
                     if (differentBack && p["QuickBack"] is JsonObject quickBack)
-                    {
-                        int backSuit = Tag("suit", $"{key}/back");
-                        back = QuickSide([
-                            (backSuit, Suit(p, "BackBgColor", quickBack, quantity: false)),
-                        ]);
-                        backFace = QuickFace(backSuit, (string)quickBack["Caption"]);
-                    }
-                    faces = (_, _) => (frontFace, backFace);
+                        back = QuickSide([Suit(p, "BackBgColor", quickBack, quantity: false)]);
                     break;
                 case 5:
                     var cards = ((JsonArray)p["QuickCardData"] ?? []).Cast<JsonObject>().ToList();
-                    var suits = cards.Select((_, i) => Tag("suit", $"{key}/front/{i}")).ToList();
                     front = QuickSide(
-                        cards.Select(
-                            (card, i) =>
-                                (
-                                    suits[i],
-                                    new JsonObject
-                                    {
-                                        ["background"] = Color(card, "BackgroundColor"),
-                                        ["values"] = Quote((string)card["Caption"]),
-                                    }
-                                )
-                        )
+                        cards.Select(card => new JsonObject
+                        {
+                            ["background"] = Color(card, "BackgroundColor"),
+                            ["values"] = Quote((string)card["Caption"]),
+                        })
                     );
-                    var fronts = cards
-                        .Select((card, i) => QuickFace(suits[i], (string)card["Caption"]))
-                        .ToList();
                     if (differentBack && cards.Count > 0)
-                    {
-                        int backSuit = Tag("suit", $"{key}/back");
-                        var backValue = (string)cards[0]["CardBackValue"];
                         back = QuickSide([
-                            (
-                                backSuit,
-                                new JsonObject
-                                {
-                                    ["background"] = Color(cards[0], "CardBackColor"),
-                                    ["values"] = Quote(backValue),
-                                }
-                            ),
+                            new JsonObject
+                            {
+                                ["background"] = Color(cards[0], "CardBackColor"),
+                                ["values"] = Quote((string)cards[0]["CardBackValue"]),
+                            },
                         ]);
-                        backFace = QuickFace(backSuit, backValue);
-                    }
-                    faces = (n, _) => (fronts.ElementAtOrDefault(n), backFace);
                     break;
                 case 2:
                     front = ImageSide((string)p["FrontGridImageKey"], "", p);
-                    bool singleBack = (bool?)p["GridSingleBack"] ?? false;
-                    bool imageBack =
-                        differentBack && (string)p["BackGridImageKey"] is { Length: > 0 };
-                    if (imageBack)
-                        back = ImageSide((string)p["BackGridImageKey"], singleBack ? "1" : "", p);
-                    faces = (n, _) =>
-                        (FrameFace(n + 1), imageBack ? FrameFace(singleBack ? 1 : n + 1) : null);
+                    if (differentBack && (string)p["BackGridImageKey"] is { Length: > 0 } backImage)
+                        back = ImageSide(
+                            backImage,
+                            (bool?)p["GridSingleBack"] ?? false ? "1" : "",
+                            p
+                        );
                     break;
                 case 3:
                     front = TemplateSide(p, "FrontTemplate");
-                    bool templateBack = (string)p["BackTemplate"] is { Length: > 0 };
-                    if (templateBack)
+                    if ((string)p["BackTemplate"] is { Length: > 0 })
                         back = TemplateSide(p, "BackTemplate");
-                    faces = (_, row) =>
-                        row is int r
-                            ? (RowFace(r), templateBack ? RowFace(r) : null)
-                            : (null, null);
                     break;
                 default:
-                    faces = null;
                     return null;
             }
 
@@ -410,35 +329,8 @@ public sealed class Format1 : IStep
             return parameters;
         }
 
-        private static JsonObject QuickSide(IEnumerable<(int Id, JsonObject Suit)> suits)
-        {
-            var list = suits.ToList();
-            return new()
-            {
-                ["$type"] = "QuickSide",
-                ["order"] = new JsonArray([.. list.Select(s => JsonValue.Create(s.Id))]),
-                ["suits"] = new JsonObject(
-                    list.Select(s => KeyValuePair.Create(s.Id.ToString(), (JsonNode)s.Suit))
-                ),
-            };
-        }
-
-        /// <summary>
-        /// The key of the card showing the <see cref="Quote"/>d <paramref name="text"/> in <paramref name="suit"/>.
-        /// </summary>
-        private static JsonObject QuickFace(int suit, string text) =>
-            new()
-            {
-                ["$type"] = "QuickFace",
-                ["suitRef"] = suit,
-                ["value"] = Literal(text),
-            };
-
-        private static JsonObject FrameFace(int frame) =>
-            new() { ["$type"] = "FrameFace", ["frame"] = frame };
-
-        private static JsonObject RowFace(int row) =>
-            new() { ["$type"] = "RowFace", ["rowRef"] = row };
+        private static JsonObject QuickSide(IEnumerable<JsonObject> suits) =>
+            new() { ["$type"] = "QuickSide", ["suits"] = new JsonArray([.. suits]) };
 
         /// <summary>
         /// A quick suit from an old face: its text, repeated by its quantity, in its color,
@@ -476,7 +368,7 @@ public sealed class Format1 : IStep
             return new JsonObject
             {
                 ["$type"] = "ImageSide",
-                ["imageRef"] = Tag("image", image),
+                ["image"] = Tag("image", image),
                 ["frames"] = frames,
             };
         }
@@ -486,35 +378,15 @@ public sealed class Format1 : IStep
             var side = new JsonObject
             {
                 ["$type"] = "TemplateSide",
-                ["templateRef"] = Tag("template", (string)p[template] ?? ""),
+                ["template"] = Tag("template", (string)p[template] ?? ""),
             };
             if ((string)p["Dataset"] is { Length: > 0 } dataset)
-                side["datasetRef"] = Tag("dataset", dataset);
+                side["dataset"] = Tag("dataset", dataset);
             return side;
         }
 
         /// <summary>
-        /// The current table, started empty on <paramref name="blueprint"/>.
-        /// </summary>
-        private void Table(int blueprint)
-        {
-            int table = Tag("table", "");
-            _writes.Add(
-                new JsonObject
-                {
-                    ["$type"] = "Stage",
-                    ["id"] = table,
-                    ["name"] = "Table 1",
-                    ["parentRef"] = blueprint,
-                    ["rank"] = Rank(0),
-                    ["isTable"] = true,
-                }
-            );
-            _writes.Add(new JsonObject { ["$type"] = "CurrentTable", ["stageRef"] = table });
-        }
-
-        /// <summary>
-        /// A snapshot as a root blueprint, holding a position for each component.
+        /// A snapshot as a root blueprint, holding a position and a variant for each component.
         /// </summary>
         private void Blueprint(JsonObject snapshot, int index)
         {
@@ -539,13 +411,8 @@ public sealed class Format1 : IStep
                 .Where(c => _prototypes.ContainsKey((string)c["PrototypeRef"]))
                 .Select(c => (string)c["ComponentRef"])
                 .ToHashSet();
-            var prototypes = components.ToDictionary(
-                c => (string)c["ComponentRef"],
-                c => (string)c["PrototypeRef"]
-            );
 
-            // Ranked by their order in the stack, so no two share a rank.
-            foreach (var (order, c) in components.OrderBy(c => (int?)c["ZOrder"] ?? 0).Index())
+            foreach (var c in components)
             {
                 string id = (string)c["ComponentRef"];
                 if (!kept.Contains(id))
@@ -554,29 +421,24 @@ public sealed class Format1 : IStep
                 if (container != null && !kept.Contains(container))
                     continue;
 
-                Component(
-                    id,
-                    (string)c["PrototypeRef"],
-                    (string)c["DatasetRow"] ?? "",
-                    container != null && _prototypes[prototypes[container]].Type == 6
-                        ? Tag("component", container)
-                        : null
-                );
                 var position = new JsonObject
                 {
                     ["$type"] = "ComponentPosition",
                     ["id"] = Tag("component", id),
-                    ["stageRef"] = stage,
-                    ["rank"] = Rank(order),
+                    ["stage"] = stage,
+                    ["variantRef"] = Variant(
+                        (string)c["PrototypeRef"],
+                        (string)c["DataSetRow"] ?? ""
+                    ),
+                    ["zOrder"] = new JsonObject
+                    {
+                        ["target"] = 1,
+                        ["suborder"] = Math.Max((int?)c["ZOrder"] ?? 0, 0),
+                        ["stamp"] = Stamp,
+                    },
                 };
                 if (container != null)
-                {
-                    position["location"] = new JsonObject
-                    {
-                        ["$type"] = "InComponent",
-                        ["component"] = Tag("component", container),
-                    };
-                }
+                    position["containerRef"] = Tag("component", container);
                 else
                 {
                     position["x"] = (int)Math.Round(((double?)c["Px"] ?? 0) * 100);
@@ -595,23 +457,21 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>
-        /// Writes what <paramref name="component"/> is, the first time it appears,
-        /// since a component in several snapshots is one component.
+        /// The variant of a prototype's item, shared by every component of the same item.
         /// </summary>
-        /// <param name="issuer">The tag of the deck holding the component, if any, which issued it.</param>
-        private void Component(string component, string prototype, string row, int? issuer)
+        private int Variant(string prototype, string row)
         {
-            if (!_components.Add(component))
-                return;
+            string key = $"{prototype}/{row}";
+            if (_tags.ContainsKey($"variant:{key}"))
+                return Tag("variant", key);
 
-            var written = new JsonObject
+            int tag = Tag("variant", key);
+            var variant = new JsonObject
             {
-                ["$type"] = "Component",
-                ["id"] = Tag("component", component),
+                ["$type"] = "ComponentVariant",
+                ["id"] = tag,
                 ["prototypeRef"] = Tag("prototype", prototype),
             };
-            if (issuer != null)
-                written["deckRef"] = issuer;
             var kind = _prototypes[prototype];
             var rows = kind.Dataset is { } dataset ? _rows.GetValueOrDefault(dataset) ?? [] : [];
             int index = rows.IndexOf(row);
@@ -622,30 +482,33 @@ public sealed class Format1 : IStep
             if (kind.Type is 3 or 6 && !deck)
             {
                 int.TryParse(row, out int number);
-                var (front, back) = kind.Faces(
-                    kind.Mode == 5 ? Math.Max(number - 1, 0) : number,
-                    rowTag
-                );
-                var item = new JsonObject { ["$type"] = "PrintedItem" };
-                if (front != null)
-                    item["front"] = front.DeepClone();
-                if (back != null)
-                    item["back"] = back.DeepClone();
-                written["item"] = item;
+                variant["item"] = new JsonObject
+                {
+                    ["$type"] = "PrintedItem",
+                    ["number"] = kind.Mode switch
+                    {
+                        5 => Math.Max(number - 1, 0),
+                        3 => Math.Max(index, 0),
+                        _ => number,
+                    },
+                    ["frontRow"] = rowTag ?? 0,
+                    ["backRow"] = rowTag ?? 0,
+                };
             }
             else if (kind.Type == 7 && rowTag != null)
-                written["item"] = new JsonObject { ["$type"] = "DieItem", ["rowRef"] = rowTag };
+                variant["item"] = new JsonObject { ["$type"] = "DieItem", ["row"] = rowTag };
 
-            _writes.Add(written);
+            _writes.Add(variant);
+            return tag;
         }
 
         /// <summary>
-        /// Parameters of <paramref name="type"/> with the listed properties copied.
+        /// Parameters of <paramref name="type"/> with their name and the listed properties copied.
         /// </summary>
         private static JsonObject Parameters(JsonObject p, string type, params string[] names)
         {
             var parameters = new JsonObject { ["$type"] = type };
-            Copy(p, parameters, names);
+            Copy(p, parameters, ["ComponentName", "BaseName", .. names]);
             return parameters;
         }
 
@@ -676,33 +539,16 @@ public sealed class Format1 : IStep
         }
 
         /// <summary>A sequence expression that's exactly <paramref name="text"/>.</summary>
-        private static string Quote(string text) => $"\"{Literal(text)}\"";
+        private static string Quote(string text) => $"\"{(text ?? "").Replace("\"", "'")}\"";
 
         /// <summary>
-        /// The value a <see cref="Quote"/>d <paramref name="text"/> makes.
+        /// The rank of the item at <paramref name="index"/>, three digits of the ordered characters <c>-</c> through <c>z</c>.
         /// </summary>
-        private static string Literal(string text) => (text ?? "").Replace("\"", "'");
-
-        /// <summary>
-        /// The rank of the item at <paramref name="index"/>, an end rank with the shared stamp,
-        /// placed by three digits of the ordered characters <c>-</c> through <c>z</c>.
-        /// </summary>
-        private static JsonObject Rank(int index)
+        private static string Rank(int index)
         {
             const string digits =
                 "-/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-            return new JsonObject
-            {
-                ["side"] = 1,
-                ["steps"] = new JsonArray(
-                    new JsonObject
-                    {
-                        ["stamp"] = Stamp,
-                        ["place"] =
-                            $"{digits[index / 4096 % 64]}{digits[index / 64 % 64]}{digits[index % 64]}",
-                    }
-                ),
-            };
+            return $"{digits[index / 4096 % 64]}{digits[index / 64 % 64]}{digits[index % 64]}";
         }
     }
 }

@@ -1,0 +1,6460 @@
+[
+  {
+    "id": 128,
+    "writes": [
+      {
+        "$type": "ProjectGameSettings",
+        "startIn2D": false,
+        "enablePlayerHands": false,
+        "tableWidth": 3,
+        "tableHeight": 3,
+        "tableUnits": 0,
+        "rotationStepIndex": 0,
+        "gameTitle": "",
+        "designers": "",
+        "graphicDesign": "",
+        "artists": "",
+        "contactInfo": "",
+        "visionStatement": "",
+        "tableColor": {
+          "args": [
+            0.28,
+            0.6,
+            0.41,
+            1
+          ],
+          "type": "Color"
+        }
+      },
+      {
+        "$type": "Seat",
+        "id": 197,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        },
+        "color": {
+          "args": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "type": "Color"
+        },
+        "isAdmin": false
+      },
+      {
+        "$type": "Seat",
+        "id": 198,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--/"
+            }
+          ]
+        },
+        "color": {
+          "args": [
+            1,
+            0,
+            0,
+            1
+          ],
+          "type": "Color"
+        },
+        "isAdmin": false
+      },
+      {
+        "$type": "Seat",
+        "id": 199,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--0"
+            }
+          ]
+        },
+        "color": {
+          "args": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "type": "Color"
+        },
+        "isAdmin": false
+      },
+      {
+        "$type": "Seat",
+        "id": 200,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--1"
+            }
+          ]
+        },
+        "color": {
+          "args": [
+            1,
+            1,
+            0,
+            1
+          ],
+          "type": "Color"
+        },
+        "isAdmin": false
+      },
+      {
+        "$type": "ImageAsset",
+        "id": 1,
+        "name": "Notro",
+        "cloudPath": "https://example.com/notro.png",
+        "layout": {
+          "columns": 8,
+          "rows": 8,
+          "count": 58
+        }
+      },
+      {
+        "$type": "Dataset",
+        "id": 2,
+        "name": "data"
+      },
+      {
+        "$type": "DataColumn",
+        "id": 3,
+        "datasetRef": 2,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        },
+        "name": "Name"
+      },
+      {
+        "$type": "Dataset",
+        "id": 4,
+        "name": "What"
+      },
+      {
+        "$type": "DataColumn",
+        "id": 5,
+        "datasetRef": 4,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        },
+        "name": "Name"
+      },
+      {
+        "$type": "Prototype",
+        "id": 6,
+        "name": "cube",
+        "parameters": {
+          "$type": "CubeParameters",
+          "height": 10,
+          "width": 10,
+          "length": 10,
+          "color": {
+            "args": [
+              1,
+              0,
+              0,
+              1
+            ],
+            "type": "Color"
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 7,
+        "name": "disc",
+        "parameters": {
+          "$type": "DiscParameters",
+          "height": 6,
+          "diameter": 12,
+          "color": {
+            "args": [
+              1,
+              0,
+              0,
+              1
+            ],
+            "type": "Color"
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 8,
+        "name": "colored disc",
+        "parameters": {
+          "$type": "DiscParameters",
+          "height": 6,
+          "diameter": 12,
+          "color": {
+            "args": [
+              0,
+              0.8588235294117647,
+              1,
+              1
+            ],
+            "type": "Color"
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 9,
+        "name": "quick card",
+        "parameters": {
+          "$type": "PrintedParameters",
+          "height": 88.9,
+          "width": 63.5,
+          "thickness": 0.2,
+          "shape": 0,
+          "type": 0,
+          "front": {
+            "$type": "QuickSide",
+            "order": [
+              185
+            ],
+            "suits": {
+              "185": {
+                "background": {
+                  "args": [
+                    0.30980392156862746,
+                    0.16470588235294117,
+                    0.16470588235294117,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0.0196078431372549,
+                    0.027450980392156862,
+                    0.40784313725490196,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u0022Word\u0022"
+              }
+            }
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 10,
+        "name": "icon token",
+        "parameters": {
+          "$type": "PrintedParameters",
+          "height": 25.4,
+          "width": 25.4,
+          "thickness": 1,
+          "shape": 3,
+          "type": 1,
+          "front": {
+            "$type": "QuickSide",
+            "order": [
+              186
+            ],
+            "suits": {
+              "186": {
+                "background": {
+                  "args": [
+                    0.4549019607843137,
+                    0.16862745098039217,
+                    0.4980392156862745,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0.8117647058823529,
+                    0.6627450980392157,
+                    0.14901960784313725,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u0022Bomb 2\u0022*3"
+              }
+            }
+          },
+          "back": {
+            "$type": "QuickSide",
+            "order": [
+              187
+            ],
+            "suits": {
+              "187": {
+                "background": {
+                  "args": [
+                    0.24705882352941178,
+                    0.7568627450980392,
+                    0.12549019607843137,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0.26666666666666666,
+                    0.22745098039215686,
+                    0.22745098039215686,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u0022Who\u0022"
+              }
+            }
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 11,
+        "name": "Quick deck",
+        "parameters": {
+          "$type": "PrintedParameters",
+          "height": 88.9,
+          "width": 63.5,
+          "shape": 0,
+          "front": {
+            "$type": "QuickSide",
+            "order": [
+              188,
+              189
+            ],
+            "suits": {
+              "188": {
+                "background": {
+                  "args": [
+                    1,
+                    0,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u00221-2,Skip\u0022"
+              },
+              "189": {
+                "background": {
+                  "args": [
+                    0,
+                    1,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u0022A-B,D\u0022"
+              }
+            }
+          },
+          "back": {
+            "$type": "QuickSide",
+            "order": [
+              190
+            ],
+            "suits": {
+              "190": {
+                "background": {
+                  "args": [
+                    0.8980392156862745,
+                    0.5294117647058824,
+                    0.011764705882352941,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u0022Deck Back\u0022"
+              }
+            }
+          },
+          "spawnDeck": true
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 12,
+        "name": "Notro deck",
+        "parameters": {
+          "$type": "PrintedParameters",
+          "height": 88.9,
+          "width": 63.5,
+          "shape": 0,
+          "front": {
+            "$type": "ImageSide",
+            "imageRef": 1,
+            "frames": ""
+          },
+          "back": {
+            "$type": "ImageSide",
+            "imageRef": 1,
+            "frames": ""
+          },
+          "spawnDeck": true
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 13,
+        "name": "quick die",
+        "parameters": {
+          "$type": "DieParameters",
+          "size": 16,
+          "color": {
+            "args": [
+              0.5568627450980392,
+              0.1607843137254902,
+              0.1607843137254902,
+              1
+            ],
+            "type": "Color"
+          },
+          "faces": {
+            "$type": "QuickSide",
+            "order": [
+              191,
+              192,
+              193,
+              194,
+              195,
+              196
+            ],
+            "suits": {
+              "191": {
+                "background": {
+                  "args": [
+                    0.5568627450980392,
+                    0.1607843137254902,
+                    0.1607843137254902,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u00221\u0022"
+              },
+              "192": {
+                "background": {
+                  "args": [
+                    0.5568627450980392,
+                    0.1607843137254902,
+                    0.1607843137254902,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u00222\u0022"
+              },
+              "193": {
+                "background": {
+                  "args": [
+                    0.5568627450980392,
+                    0.1607843137254902,
+                    0.1607843137254902,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u00223\u0022"
+              },
+              "194": {
+                "background": {
+                  "args": [
+                    0.5568627450980392,
+                    0.1607843137254902,
+                    0.1607843137254902,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u00224\u0022"
+              },
+              "195": {
+                "background": {
+                  "args": [
+                    0.5568627450980392,
+                    0.1607843137254902,
+                    0.1607843137254902,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u00225\u0022"
+              },
+              "196": {
+                "background": {
+                  "args": [
+                    0.5568627450980392,
+                    0.1607843137254902,
+                    0.1607843137254902,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "foreground": {
+                  "args": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "type": "Color"
+                },
+                "values": "\u00226\u0022"
+              }
+            }
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 14,
+        "name": "hat",
+        "parameters": {
+          "$type": "MeepleParameters",
+          "height": 20,
+          "thickness": 10,
+          "color": {
+            "args": [
+              0.2980392156862745,
+              0.18823529411764706,
+              0.03529411764705882,
+              1
+            ],
+            "type": "Color"
+          },
+          "grid": [
+            [
+              false,
+              false,
+              true,
+              true,
+              true,
+              true,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              true,
+              true,
+              true,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              true,
+              true,
+              true,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              true,
+              true,
+              true,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              true,
+              true,
+              true,
+              false,
+              false
+            ],
+            [
+              false,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ]
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 15,
+        "name": "bag",
+        "parameters": {
+          "$type": "BagParameters",
+          "height": 50,
+          "diameter": 50,
+          "showCount": true,
+          "color": {
+            "args": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "type": "Color"
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 16,
+        "name": "a zone",
+        "parameters": {
+          "$type": "ZoneParameters",
+          "width": 10,
+          "depth": 10,
+          "defaultIncluded": false,
+          "hiddenWhenExcluded": true,
+          "seats": {
+            "197": 1
+          }
+        }
+      },
+      {
+        "$type": "Prototype",
+        "id": 17,
+        "name": "bag",
+        "parameters": {
+          "$type": "BagParameters",
+          "height": 50,
+          "diameter": 50,
+          "showCount": true,
+          "color": {
+            "args": [
+              1,
+              0,
+              0,
+              1
+            ],
+            "type": "Color"
+          }
+        }
+      },
+      {
+        "$type": "Stage",
+        "id": 18,
+        "name": "main",
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 19,
+        "prototypeRef": 6
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 19,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--/"
+            }
+          ]
+        },
+        "x": -2969,
+        "z": -3265
+      },
+      {
+        "$type": "Component",
+        "id": 21,
+        "prototypeRef": 6
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 21,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--0"
+            }
+          ]
+        },
+        "x": -2725,
+        "z": -3359
+      },
+      {
+        "$type": "Component",
+        "id": 22,
+        "prototypeRef": 6
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 22,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--1"
+            }
+          ]
+        },
+        "x": -2767,
+        "z": -2857
+      },
+      {
+        "$type": "Component",
+        "id": 23,
+        "prototypeRef": 7
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 23,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--2"
+            }
+          ]
+        },
+        "x": -2020,
+        "z": -3173
+      },
+      {
+        "$type": "Component",
+        "id": 25,
+        "prototypeRef": 7
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 25,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--3"
+            }
+          ]
+        },
+        "x": -1575,
+        "z": -3127
+      },
+      {
+        "$type": "Component",
+        "id": 26,
+        "prototypeRef": 8
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 26,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--4"
+            }
+          ]
+        },
+        "x": -1837,
+        "z": -2726
+      },
+      {
+        "$type": "Component",
+        "id": 28,
+        "prototypeRef": 8
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 28,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--5"
+            }
+          ]
+        },
+        "x": -1422,
+        "z": -2597
+      },
+      {
+        "$type": "Component",
+        "id": 29,
+        "prototypeRef": 9,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "QuickFace",
+            "suitRef": 185,
+            "value": "Word"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 29,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--6"
+            }
+          ]
+        },
+        "x": -248,
+        "z": -2512
+      },
+      {
+        "$type": "Component",
+        "id": 31,
+        "prototypeRef": 10,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "QuickFace",
+            "suitRef": 186,
+            "value": "Bomb 2"
+          },
+          "back": {
+            "$type": "QuickFace",
+            "suitRef": 187,
+            "value": "Who"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 31,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--7"
+            }
+          ]
+        },
+        "x": 524,
+        "z": -2597
+      },
+      {
+        "$type": "Component",
+        "id": 33,
+        "prototypeRef": 11,
+        "deckRef": 35,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "QuickFace",
+            "suitRef": 188,
+            "value": "1-2,Skip"
+          },
+          "back": {
+            "$type": "QuickFace",
+            "suitRef": 190,
+            "value": "Deck Back"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 33,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--8"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 36,
+        "prototypeRef": 11,
+        "deckRef": 35,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "QuickFace",
+            "suitRef": 189,
+            "value": "A-B,D"
+          },
+          "back": {
+            "$type": "QuickFace",
+            "suitRef": 190,
+            "value": "Deck Back"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 36,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--9"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 38,
+        "prototypeRef": 11,
+        "deckRef": 35,
+        "item": {
+          "$type": "PrintedItem",
+          "back": {
+            "$type": "QuickFace",
+            "suitRef": 190,
+            "value": "Deck Back"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 38,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--A"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 40,
+        "prototypeRef": 11,
+        "deckRef": 35,
+        "item": {
+          "$type": "PrintedItem",
+          "back": {
+            "$type": "QuickFace",
+            "suitRef": 190,
+            "value": "Deck Back"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 40,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--B"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 42,
+        "prototypeRef": 11,
+        "deckRef": 35,
+        "item": {
+          "$type": "PrintedItem",
+          "back": {
+            "$type": "QuickFace",
+            "suitRef": 190,
+            "value": "Deck Back"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 42,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--C"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 44,
+        "prototypeRef": 11,
+        "deckRef": 35,
+        "item": {
+          "$type": "PrintedItem",
+          "back": {
+            "$type": "QuickFace",
+            "suitRef": 190,
+            "value": "Deck Back"
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 44,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--D"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 35,
+        "prototypeRef": 11
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 35,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--E"
+            }
+          ]
+        },
+        "x": 1830,
+        "z": -2061
+      },
+      {
+        "$type": "Component",
+        "id": 47,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 1
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 1
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 47,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--F"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 50,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 2
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 2
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 50,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--G"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 52,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 3
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 3
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 52,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--H"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 54,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 4
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 4
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 54,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--I"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 56,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 5
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 5
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 56,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--J"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 58,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 6
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 6
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 58,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--K"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 60,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 7
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 7
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 60,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--L"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 62,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 8
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 8
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 62,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--M"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 64,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 9
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 9
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 64,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--N"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 66,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 10
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 10
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 66,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--O"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 68,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 11
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 11
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 68,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--P"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 70,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 12
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 12
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 70,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Q"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 72,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 13
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 13
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 72,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--R"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 74,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 14
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 14
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 74,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--S"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 76,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 15
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 15
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 76,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--T"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 78,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 16
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 16
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 78,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--U"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 80,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 17
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 17
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 80,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--V"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 82,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 18
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 18
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 82,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--W"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 84,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 19
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 19
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 84,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--X"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 86,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 20
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 20
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 86,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Y"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 88,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 21
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 21
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 88,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Z"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 90,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 22
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 22
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 90,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--a"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 92,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 23
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 23
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 92,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--b"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 94,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 24
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 24
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 94,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--c"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 96,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 25
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 25
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 96,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--d"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 98,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 26
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 26
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 98,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--e"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 100,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 27
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 27
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 100,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--f"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 102,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 28
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 28
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 102,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--g"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 104,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 29
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 29
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 104,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--h"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 106,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 30
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 30
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 106,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--i"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 108,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 31
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 31
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 108,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--j"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 110,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 32
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 32
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 110,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--k"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 112,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 33
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 33
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 112,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--l"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 114,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 34
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 34
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 114,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--m"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 116,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 35
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 35
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 116,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--n"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 118,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 36
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 36
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 118,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--o"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 120,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 37
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 37
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 120,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--p"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 122,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 38
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 38
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 122,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--q"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 124,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 39
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 39
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 124,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--r"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 126,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 40
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 40
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 126,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--s"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 128,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 41
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 41
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 128,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--t"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 130,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 42
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 42
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 130,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--u"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 132,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 43
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 43
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 132,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--v"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 134,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 44
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 44
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 134,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--w"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 136,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 45
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 45
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 136,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--x"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 138,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 46
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 46
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 138,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--y"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 140,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 47
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 47
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 140,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--z"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 142,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 48
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 48
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 142,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/-"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 144,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 49
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 49
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 144,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-//"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 146,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 50
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 50
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 146,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/0"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 148,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 51
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 51
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 148,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/1"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 150,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 52
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 52
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 150,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/2"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 152,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 53
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 53
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 152,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/3"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 154,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 54
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 54
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 154,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/4"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 156,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 55
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 55
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 156,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/5"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 158,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 56
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 56
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 158,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/6"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 160,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 57
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 57
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 160,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/7"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 162,
+        "prototypeRef": 12,
+        "deckRef": 49,
+        "item": {
+          "$type": "PrintedItem",
+          "front": {
+            "$type": "FrameFace",
+            "frame": 58
+          },
+          "back": {
+            "$type": "FrameFace",
+            "frame": 58
+          }
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 162,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/8"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 49,
+        "prototypeRef": 12
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 49,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/9"
+            }
+          ]
+        },
+        "x": -1352,
+        "z": -890
+      },
+      {
+        "$type": "Component",
+        "id": 165,
+        "prototypeRef": 13
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 165,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/A"
+            }
+          ]
+        },
+        "x": -2474,
+        "z": 661,
+        "rotation": [
+          -1.5707964,
+          0,
+          0
+        ]
+      },
+      {
+        "$type": "Component",
+        "id": 167,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 167,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/B"
+            }
+          ]
+        },
+        "x": -1410,
+        "z": 687
+      },
+      {
+        "$type": "Component",
+        "id": 169,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 169,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/C"
+            }
+          ]
+        },
+        "x": -774,
+        "z": 527
+      },
+      {
+        "$type": "Component",
+        "id": 170,
+        "prototypeRef": 15
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 170,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/D"
+            }
+          ]
+        },
+        "x": 1962,
+        "z": -98
+      },
+      {
+        "$type": "Component",
+        "id": 172,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 172,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/E"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 173,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 173,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/F"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 174,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 174,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/G"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 175,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 175,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/H"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 176,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 176,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/I"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 177,
+        "prototypeRef": 16
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 177,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        },
+        "x": -1279,
+        "z": 1957
+      },
+      {
+        "$type": "Component",
+        "id": 179,
+        "prototypeRef": 14
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 179,
+        "stageRef": 18,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/J"
+            }
+          ]
+        },
+        "x": -1301,
+        "z": 2061
+      },
+      {
+        "$type": "Stage",
+        "id": 180,
+        "name": "slightly less",
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--/"
+            }
+          ]
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 19,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--/"
+            }
+          ]
+        },
+        "x": -2969,
+        "z": -3265
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 21,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--0"
+            }
+          ]
+        },
+        "x": -2725,
+        "z": -3359
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 22,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/J"
+            }
+          ]
+        },
+        "x": -2992,
+        "z": -1197
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 23,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--1"
+            }
+          ]
+        },
+        "x": -2020,
+        "z": -3173
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 25,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--2"
+            }
+          ]
+        },
+        "x": -1575,
+        "z": -3127
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 26,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--3"
+            }
+          ]
+        },
+        "x": -1837,
+        "z": -2726
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 28,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--4"
+            }
+          ]
+        },
+        "x": -1422,
+        "z": -2597
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 29,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--5"
+            }
+          ]
+        },
+        "x": -248,
+        "z": -2512
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 31,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--6"
+            }
+          ]
+        },
+        "x": 524,
+        "z": -2597
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 33,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--7"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 36,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--8"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 38,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--9"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 40,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--A"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 42,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--B"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 44,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--C"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 35,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--D"
+            }
+          ]
+        },
+        "x": 1830,
+        "z": -2061
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 47,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--E"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 50,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--F"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 52,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--G"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 54,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--H"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 56,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--I"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 58,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--J"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 60,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--K"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 62,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--L"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 64,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--M"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 66,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--N"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 68,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--O"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 70,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--P"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 72,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Q"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 74,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--R"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 76,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--S"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 78,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--T"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 80,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--U"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 82,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--V"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 84,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--W"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 86,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--X"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 88,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Y"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 90,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Z"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 92,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--a"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 94,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--b"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 96,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--c"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 98,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--d"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 100,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--e"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 102,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--f"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 104,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--g"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 106,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--h"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 108,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--i"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 110,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--j"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 112,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--k"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 114,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--l"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 116,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--m"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 118,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--n"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 120,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--o"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 122,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--p"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 124,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--q"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 126,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--r"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 128,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--s"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 130,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--t"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 132,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--u"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 134,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--v"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 136,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--w"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 138,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--x"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 140,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--y"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 142,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--z"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 144,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/-"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 146,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-//"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 148,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/0"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 150,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/1"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 152,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/2"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 154,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/3"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 156,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/4"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 158,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/5"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 160,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/6"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 162,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/7"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 49,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/8"
+            }
+          ]
+        },
+        "x": -1352,
+        "z": -890
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 165,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/9"
+            }
+          ]
+        },
+        "x": -2474,
+        "z": 661,
+        "rotation": [
+          -1.5707964,
+          0,
+          0
+        ]
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 167,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/I"
+            }
+          ]
+        },
+        "x": -1478,
+        "z": 630
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 169,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/A"
+            }
+          ]
+        },
+        "x": -774,
+        "z": 527
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 170,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/B"
+            }
+          ]
+        },
+        "x": 1962,
+        "z": -98
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 172,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/C"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 173,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/D"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 174,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/E"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 175,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/F"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 176,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/G"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 170
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 177,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        },
+        "x": -1279,
+        "z": 1957
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 179,
+        "stageRef": 180,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/H"
+            }
+          ]
+        },
+        "x": -1301,
+        "z": 2061
+      },
+      {
+        "$type": "Stage",
+        "id": 181,
+        "name": "with bag",
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--0"
+            }
+          ]
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 19,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        },
+        "x": -2969,
+        "z": -3265
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 21,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--/"
+            }
+          ]
+        },
+        "x": -2725,
+        "z": -3359
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 22,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--A"
+            }
+          ]
+        },
+        "x": -2992,
+        "z": -1197
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 23,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--0"
+            }
+          ]
+        },
+        "x": -2020,
+        "z": -3173
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 25,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--1"
+            }
+          ]
+        },
+        "x": -1575,
+        "z": -3127
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 26,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--2"
+            }
+          ]
+        },
+        "x": -1837,
+        "z": -2726
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 28,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--3"
+            }
+          ]
+        },
+        "x": -1422,
+        "z": -2597
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 29,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--4"
+            }
+          ]
+        },
+        "x": -248,
+        "z": -2512
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 31,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--5"
+            }
+          ]
+        },
+        "x": 524,
+        "z": -2597
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 35,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--6"
+            }
+          ]
+        },
+        "x": 1830,
+        "z": -2061
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 49,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--7"
+            }
+          ]
+        },
+        "x": -1352,
+        "z": -890
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 165,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--8"
+            }
+          ]
+        },
+        "x": -2474,
+        "z": 661,
+        "rotation": [
+          -1.5707964,
+          0,
+          0
+        ]
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 167,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--9"
+            }
+          ]
+        },
+        "x": -1478,
+        "z": 630
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 169,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/C"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 182
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 33,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--B"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 36,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--C"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 38,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--D"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 40,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--E"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 42,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--F"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 44,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--G"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 35
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 47,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--H"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 50,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--I"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 52,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--J"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 54,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--K"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 56,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--L"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 58,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--M"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 60,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--N"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 62,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--O"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 64,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--P"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 66,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Q"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 68,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--R"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 70,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--S"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 72,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--T"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 74,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--U"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 76,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--V"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 78,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--W"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 80,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--X"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 82,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Y"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 84,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--Z"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 86,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--a"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 88,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--b"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 90,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--c"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 92,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--d"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 94,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--e"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 96,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--f"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 98,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--g"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 100,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--h"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 102,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--i"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 104,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--j"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 106,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--k"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 108,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--l"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 110,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--m"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 112,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--n"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 114,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--o"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 116,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--p"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 118,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--q"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 120,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--r"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 122,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--s"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 124,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--t"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 126,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--u"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 128,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--v"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 130,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--w"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 132,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--x"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 134,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--y"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 136,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "--z"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 138,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/-"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 140,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-//"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 142,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/0"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 144,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/1"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 146,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/2"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 148,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/3"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 150,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/4"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 152,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/5"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 154,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/6"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 156,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/7"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 158,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/8"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 160,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/9"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 162,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/A"
+            }
+          ]
+        },
+        "location": {
+          "$type": "InComponent",
+          "component": 49
+        }
+      },
+      {
+        "$type": "Component",
+        "id": 182,
+        "prototypeRef": 17
+      },
+      {
+        "$type": "ComponentPosition",
+        "id": 182,
+        "stageRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "-/B"
+            }
+          ]
+        },
+        "x": 1071,
+        "z": 307
+      },
+      {
+        "$type": "Stage",
+        "id": 184,
+        "name": "Table 1",
+        "parentRef": 181,
+        "rank": {
+          "side": 1,
+          "steps": [
+            {
+              "stamp": 64,
+              "place": "---"
+            }
+          ]
+        },
+        "isTable": true
+      },
+      {
+        "$type": "CurrentTable",
+        "stageRef": 184
+      }
+    ]
+  }
+]
