@@ -60,10 +60,15 @@ public partial class EventSynchronizer : Node
     public void Submit(TimelineEvent e)
     {
         foreach (var atom in e.Writes)
-            if (IdQuery.For(atom.GetType()).Of(atom) is IRef { Tag: var id } && id == SnowTag.None)
+        {
+            if (IdQuery.For(atom.GetType()).Of(atom) is IAtomRef { IsNone: true } id)
+            {
                 throw new ArgumentException(
-                    $"A {atom.GetType().Name} was written without an Id. Give it Ref<{atom.GetType().Name}>.Create() when it's made."
+                    $"A {atom.GetType().Name} was written with an Id that refers to nothing ({id}). "
+                        + "Every Ref in an Id needs a tag: make it with Create(), or take it from an existing atom."
                 );
+            }
+        }
 
         // The timeline is about to be replaced by the host's, so a change now would be lost.
         if (Joining)
