@@ -2,7 +2,7 @@
 // like component_highlight.glsl paints and hatches components on the table.
 shader_type canvas_item;
 
-// Matches component_highlight.glsl's STRIPE.
+// Matches component_highlight.glsl's STRIPE_WIDTH.
 uniform float stripe = 4.0;
 // The stripes in each repeat: one of the color, one of black, and the rest gaps.
 // Matches component_highlight.glsl's PAINT_PERIOD or HATCH_PERIOD.

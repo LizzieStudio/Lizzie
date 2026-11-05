@@ -97,5 +97,4 @@ script = ExtResource("10_769er")
 
 [node name="ComponentHighlight" type="Node" parent="." unique_id=597922359]
 script = ExtResource("9_5tlkv")
-Width = 3.8
 metadata/_custom_type_script = "uid://brlvv6ecrxrum"

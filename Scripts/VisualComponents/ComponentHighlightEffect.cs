@@ -17,9 +17,6 @@ namespace Lizzie;
 /// </summary>
 public partial class ComponentHighlightEffect : CompositorEffect
 {
-    /// <summary>The widest outline the shader can reach, in pixels.</summary>
-    public const float MaxWidth = 8;
-
     // The shader's tile size on each side.
     private const uint Tile = 16;
 
@@ -31,9 +28,6 @@ public partial class ComponentHighlightEffect : CompositorEffect
 
     /// <summary>The outline colors, indexed by the mask.</summary>
     public Color[] Palette = new Color[PaletteSize];
-
-    /// <summary>The outline's width in pixels, including the dark rim on each side.</summary>
-    public float Width = 5;
 
     /// <summary>How far the paint's stripes have moved, in pixels.</summary>
     public int Shift;
@@ -87,8 +81,7 @@ public partial class ComponentHighlightEffect : CompositorEffect
         )
             return;
         var size = buffers.GetInternalSize();
-        // The camera as drawn, to read its depth buffer.
-        var inverse = renderData.GetRenderSceneData().GetCamProjection().Inverse();
+        var projection = renderData.GetRenderSceneData().GetCamProjection();
         var mask = RenderingServer.TextureGetRdTexture(Mask);
         if (size.X == 0 || size.Y == 0 || !mask.IsValid)
             return;
@@ -108,23 +101,13 @@ public partial class ComponentHighlightEffect : CompositorEffect
         // The shader's Params, in order.
         float[] values =
         [
-            .. Column(inverse.X),
-            .. Column(inverse.Y),
-            .. Column(inverse.Z),
-            .. Column(inverse.W),
-            ComponentHighlight.PaintColor.R,
-            ComponentHighlight.PaintColor.G,
-            ComponentHighlight.PaintColor.B,
-            ComponentHighlight.PaintColor.A, // paint_color
-            ComponentHighlight.HatchColor.R,
-            ComponentHighlight.HatchColor.G,
-            ComponentHighlight.HatchColor.B,
-            ComponentHighlight.HatchColor.A, // hatch_color
+            // depth_terms
+            projection.Z.Z,
+            projection.W.Z,
+            projection.Z.W,
+            projection.W.W,
             BitConverter.Int32BitsToSingle(size.X),
             BitConverter.Int32BitsToSingle(size.Y),
-            Math.Min(Width, MaxWidth),
-            1, // rim
-            0.01f, // bias
             BitConverter.Int32BitsToSingle(Shift),
         ];
         var pushConstant = new byte[values.Length * sizeof(float)];
@@ -159,8 +142,6 @@ public partial class ComponentHighlightEffect : CompositorEffect
             _rd.ComputeListEnd();
         }
     }
-
-    private static float[] Column(Vector4 column) => [column.X, column.Y, column.Z, column.W];
 
     private static RDUniform Uniform(
         int binding,

@@ -12,7 +12,7 @@ namespace Lizzie;
 /// <see cref="ComponentHighlightEffect"/> then draws a constant-width outline around the mask's visible pixels
 /// and paints or hatches the visible pixels marked for it, in a compute pass on the table camera,
 /// so overlapping components share one outline around their union,
-/// and outlines and paint hide behind other objects.
+/// and outlines and paint fade behind other objects.
 /// </para>
 /// </summary>
 [GlobalClass]
@@ -31,14 +31,6 @@ public partial class ComponentHighlight : Node
     /// </summary>
     public const uint MaskLayer = 1u << 19;
 
-    /// <summary>
-    /// The outline's width in pixels, including the dark rim on each side,
-    /// up to <see cref="ComponentHighlightEffect.MaxWidth"/>.
-    /// </summary>
-    // The range's maximum is ComponentHighlightEffect.MaxWidth.
-    [Export(PropertyHint.Range, "3,8,0.2,suffix:px")]
-    public float Width = 5f;
-
     private static readonly Shader MaskShader = GD.Load<Shader>(
         "res://Shaders/component_highlight_mask.gdshader"
     );
@@ -47,13 +39,15 @@ public partial class ComponentHighlight : Node
     private static readonly Color?[] Palette = new Color?[ComponentHighlightEffect.PaletteSize];
 
     /// <summary>
-    /// The paint's color, in opaque stripes with black that hide the component, so it's easy to find.
+    /// The paint's color on hand cards, in opaque stripes with black that hide the card, so it's easy to find.
+    /// component_highlight.glsl's PAINT_COLOR matches it on the table.
     /// </summary>
     public static readonly Color PaintColor = Colors.Red;
 
     /// <summary>
-    /// The hatching's color and opacity, in see-through stripes with black over two fifths of the component,
+    /// The hatching's color and opacity on hand cards, in see-through stripes with black over two fifths of the card,
     /// so it stands out while still showing.
+    /// component_highlight.glsl's HATCH_COLOR and HATCH_OPACITY match it on the table.
     /// </summary>
     public static readonly Color HatchColor = new(1, 1, 1, 0.5f);
 
@@ -223,7 +217,6 @@ public partial class ComponentHighlight : Node
         for (var i = 0; i < Palette.Length; i++)
             palette[i] = Palette[i] ?? default;
         _effect.Palette = palette;
-        _effect.Width = Width;
         _effect.Shift = (int)(Time.GetTicksMsec() * StripeSpeed / 1000);
     }
 }

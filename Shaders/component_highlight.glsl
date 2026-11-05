@@ -1,191 +1,216 @@
 #[compute]
 #version 450
 
-// Draws component highlights in one compute pass, into the table's color after its transparent objects:
-// opaque stripes of paint and black over the visible pixels of painted components,
-// see-through stripes of white and black over two fifths of the visible pixels of hatched ones,
-// and a constant-width outline around the visible pixels of outlined ones.
-// Each workgroup draws one tile, loading the mask under it and around it into shared memory once,
-// with each row of that also kept as bits, one per pixel.
-// For each pixel, the bits give the nearest outlined mask pixel in each row within reach with two instructions,
-// and the nearest of those that shows, with nothing in the scene in front of it, sets the outline.
-// That's the nearest visible mask pixel overall,
-// except where something unoutlined hides a row's nearest and a farther one in the same row shows.
+// Draws ComponentHighlight's highlights over the table, after its transparent objects:
+// an outline around outlined components, opaque stripes over painted ones, and see-through stripes over hatched ones.
+//
+// ComponentHighlight first draws the highlighted components into a mask, from the table camera's view.
+// Each mask pixel says which highlights the component drawn there has, and its depth: how far it is in front of the camera.
+// Comparing that depth with the table's depth buffer tells whether something on the table hides the component there.
+// Where something does, its highlights fade instead of disappearing, so they show through.
+//
+// Each workgroup draws one square tile of pixels. Outlines are drawn on pixels near their components,
+// so the workgroup starts by copying the mask under its tile, plus a margin around it, into shared memory.
 
+// The side of each tile, in pixels.
 #define TILE 16
-// The widest outline in pixels, so a tile's surroundings fit in shared memory.
-// ComponentHighlightEffect.MaxWidth matches it.
-#define REACH 8
-// The tile and its surroundings on each side, which must fit a row's bits in a uint.
+// The margin around each tile, in pixels: how far the outline reaches along a row or column, from OUTLINE_END.
+#define REACH 4
+// The side of a tile plus its margins.
 #define SPAN (TILE + 2 * REACH)
-// The palette's size. A code's slot past it means no outline. ComponentHighlightEffect.PaletteSize matches it.
-#define PALETTE 32
-// Added to a code to paint the component. ComponentHighlight.Painted matches it.
+
+// A mask pixel's code: its outline color's slot in the palette, or NO_OUTLINE for none,
+// plus PAINTED when it's painted and HATCHED when it's hatched.
+// ComponentHighlight builds the same codes, and ComponentHighlightEffect.PaletteSize matches PALETTE_SIZE.
+#define PALETTE_SIZE 32
+#define NO_OUTLINE PALETTE_SIZE
 #define PAINTED 64
-// Added to a code to hatch the component. ComponentHighlight.Hatched matches it.
 #define HATCHED 128
-// The width of each stripe, in pixels. component_paint.gdshader matches it.
-#define STRIPE 4
-// The stripes in each repeat of the paint and of the hatching: one of color, one of black, and the rest gaps.
-// The hand card's Paint and Hatch materials match them.
-#define PAINT_PERIOD 2
-#define HATCH_PERIOD 5
-// The outline's dark rim, and its opacity.
-const vec4 RIM_COLOR = vec4(0.0, 0.0, 0.0, 0.75);
+// The code of a pixel where no highlighted component was drawn.
+#define EMPTY -1
+
+const vec3 BLACK = vec3(0.0);
+
+// The outline, by distance in pixels from the nearest pixel of its component:
+// a dark rim out to INNER_RIM_END, the outline's color out to COLOR_END, and another dark rim out to OUTLINE_END,
+// whose last pixel fades out for a softer edge.
+const float INNER_RIM_END = 1.5;
+const float COLOR_END = 2.8;
+const float OUTLINE_END = 4.3;
+// The rims darken whatever's under them this much, which keeps any color readable on any surface,
+// like a white outline around a white card.
+const float RIM_OPACITY = 0.75;
+
+// Paint and hatching are diagonal stripes, in repeats of one stripe of their color, one of black, and the rest gaps.
+// component_paint.gdshader draws the same stripes on hand cards, so hand_card.tscn's materials
+// and ComponentHighlight's PaintColor and HatchColor match these.
+const int STRIPE_WIDTH = 4;
+// Paint: opaque red and black with no gaps, so painted components are easy to find.
+const vec3 PAINT_COLOR = vec3(1.0, 0.0, 0.0);
+const int PAINT_PERIOD = 2;
+// Hatching: half-opaque white and black over two fifths of the component, so it still shows.
+const vec3 HATCH_COLOR = vec3(1.0);
+const float HATCH_OPACITY = 0.5;
+const int HATCH_PERIOD = 5;
+
+// How opaque highlights are where something on the table hides them.
+const float HIDDEN_OPACITY = 0.4;
 
 layout(local_size_x = TILE, local_size_y = TILE, local_size_z = 1) in;
 
-// Highlighted components: their code in red, their view depth split across green and blue, and alpha where they are.
-// The code is their outline color's palette slot, or PALETTE for none,
-// plus PAINTED when they're painted and HATCHED when they're hatched.
+// The highlighted components, as ComponentHighlight draws them:
+// their code in red, their depth split into whole and fractional parts across green and blue,
+// since a half float can't hold it all precisely, and alpha 1 where they were drawn and 0 elsewhere.
 layout(set = 0, binding = 0) uniform sampler2D mask;
 layout(set = 0, binding = 1) uniform sampler2D depth_buffer;
+// The table as drawn so far, which this pass draws over.
 layout(rgba16f, set = 0, binding = 2) uniform restrict image2D color_image;
-// The outline colors, indexed by the mask, as given: Godot converts them for display.
+// The outline colors, by palette slot.
 layout(set = 0, binding = 3, std140) uniform Palette {
-	vec4 colors[PALETTE];
+	vec4 colors[PALETTE_SIZE];
 } palette;
 
-// Godot allows at most 128 bytes.
 layout(push_constant, std430) uniform Params {
-	// The table camera's, as drawn, to read view depths from its depth buffer.
-	mat4 inv_projection;
-	// The paint's color, in stripes with black.
-	vec4 paint_color;
-	// The hatching's color, in stripes with black, and the opacity of both.
-	vec4 hatch_color;
+	// The table camera's projection, reduced to what turns its depth buffer into depths:
+	// clip z is x * view z + y, and clip w is z * view z + w.
+	vec4 depth_terms;
+	// The size of the view, in pixels.
 	ivec2 size;
-	// The outline's width in pixels, rims included, up to REACH.
-	float width;
-	// The dark rim's width in pixels, on each side of the color.
-	float rim;
-	// How far behind the scene a mask pixel can be and still count as visible, in node units.
-	float bias;
-	// How far the stripes have moved, in pixels.
+	// How far the stripes have slid, in pixels, so they move over time.
 	int shift;
 } params;
 
-// The mask around the tile: each pixel's view depth, or 0 where it's empty, and its code.
-shared vec2 around[SPAN][SPAN];
-// Each row of the mask around the tile as bits, set where there's an outlined mask pixel.
-shared uint occupied[SPAN];
+// The mask under the tile and its margins.
+shared int codes[SPAN][SPAN];
+shared float depths[SPAN][SPAN];
+// How many of those pixels have a highlighted component.
+shared uint highlighted;
 
-// The scene's view depth at a pixel.
-float scene_depth(ivec2 p) {
-	float depth = texelFetch(depth_buffer, p, 0).r;
-	vec2 ndc = (vec2(p) + 0.5) / vec2(params.size) * 2.0 - 1.0;
-	vec4 view = params.inv_projection * vec4(ndc, depth, 1.0);
-	return -view.z / view.w;
+bool on_screen(ivec2 p) {
+	return all(greaterThanEqual(p, ivec2(0))) && all(lessThan(p, params.size));
 }
 
-// Whether a mask pixel at a view depth shows at a pixel, with nothing in the scene in front of it.
+// A code's outline palette slot, or NO_OUTLINE, without its PAINTED and HATCHED flags.
+int outline_slot(int code) {
+	return code & ~(PAINTED | HATCHED);
+}
+
+bool has_outline(int code) {
+	return code != EMPTY && outline_slot(code) != NO_OUTLINE;
+}
+
+// The depth of whatever the table drew at a pixel, read from its depth buffer.
+float scene_depth(ivec2 p) {
+	float d = texelFetch(depth_buffer, p, 0).r;
+	vec4 t = params.depth_terms;
+	// The depth buffer holds clip z / clip w, so this solves that for view z,
+	// negated since the camera looks down -z.
+	return (t.y - d * t.w) / (t.x - d * t.z);
+}
+
+// Whether a highlighted component at a depth shows at a pixel, with nothing on the table in front of it.
+// The table drew the component too, so where it shows, the two depths match up to rounding.
 bool shows(float depth, ivec2 p) {
 	float scene = scene_depth(p);
-	return depth <= scene + params.bias + scene * 0.0001;
+	return depth <= scene + 0.01 + scene * 0.0001;
 }
 
-// Diagonal stripes of color and then black, followed by gaps, repeating every period stripes,
-// drawn over under with color's opacity.
-vec3 stripes(vec3 under, ivec2 p, vec4 color, int period) {
-	int band = (p.x + p.y + params.shift) / STRIPE % period;
-	if (band >= 2) {
-		return under;
+// Draws a pixel's part of diagonal stripes over under, at opacity.
+vec3 stripes(vec3 under, ivec2 p, vec3 color, int period, float opacity) {
+	int stripe = (p.x + p.y + params.shift) / STRIPE_WIDTH % period;
+	if (stripe == 0) {
+		return mix(under, color, opacity);
 	}
-	return mix(under, band == 0 ? color.rgb : vec3(0.0), color.a);
+	if (stripe == 1) {
+		return mix(under, BLACK, opacity);
+	}
+	return under;
 }
 
 void main() {
 	ivec2 local = ivec2(gl_LocalInvocationID.xy);
-	int thread = local.y * TILE + local.x;
-	ivec2 corner = ivec2(gl_WorkGroupID.xy) * TILE - REACH;
+	ivec2 tile_corner = ivec2(gl_WorkGroupID.xy) * TILE;
 
-	if (thread < SPAN) {
-		occupied[thread] = 0u;
+	// The tile's threads copy the mask under the tile and its margins together, each taking every TILE * TILE-th pixel.
+	int thread = local.y * TILE + local.x;
+	if (thread == 0) {
+		highlighted = 0u;
+	}
+	barrier();
+	for (int i = thread; i < SPAN * SPAN; i += TILE * TILE) {
+		ivec2 at = ivec2(i % SPAN, i / SPAN);
+		ivec2 p = tile_corner - REACH + at;
+		int code = EMPTY;
+		float depth = 0.0;
+		if (on_screen(p)) {
+			vec4 m = texelFetch(mask, p, 0);
+			if (m.a >= 0.5) {
+				code = int(round(m.r));
+				depth = m.g + m.b;
+				atomicAdd(highlighted, 1u);
+			}
+		}
+		codes[at.y][at.x] = code;
+		depths[at.y][at.x] = depth;
 	}
 	barrier();
 
-	for (int i = thread; i < SPAN * SPAN; i += TILE * TILE) {
-		ivec2 at = ivec2(i % SPAN, i / SPAN);
-		ivec2 p = corner + at;
-		vec2 value = vec2(0.0);
-		if (all(greaterThanEqual(p, ivec2(0))) && all(lessThan(p, params.size))) {
-			vec4 m = texelFetch(mask, p, 0);
-			if (m.a >= 0.5) {
-				value = vec2(m.g + m.b, m.r);
-				if (int(round(m.r)) % PAINTED < PALETTE) {
-					atomicOr(occupied[at.y], 1u << uint(at.x));
+	// Most tiles have nothing highlighted near them.
+	if (highlighted == 0u) {
+		return;
+	}
+	ivec2 p = tile_corner + local;
+	if (!on_screen(p)) {
+		return;
+	}
+	vec4 table = imageLoad(color_image, p);
+	vec3 result = table.rgb;
+
+	// This pixel's place in codes and depths.
+	ivec2 here = local + REACH;
+	int code = codes[here.y][here.x];
+
+	// Paint and hatching, over the component itself.
+	if (code != EMPTY && (code & (PAINTED | HATCHED)) != 0) {
+		float opacity = shows(depths[here.y][here.x], p) ? 1.0 : HIDDEN_OPACITY;
+		if ((code & PAINTED) != 0) {
+			result = stripes(result, p, PAINT_COLOR, PAINT_PERIOD, opacity);
+		}
+		if ((code & HATCHED) != 0) {
+			result = stripes(result, p, HATCH_COLOR, HATCH_PERIOD, HATCH_OPACITY * opacity);
+		}
+	}
+
+	// The outline goes around its component, never over it,
+	// so it's drawn on pixels without one, from the nearest outlined pixel within reach.
+	// On a tie, the first found wins: the topmost, then the leftmost.
+	if (!has_outline(code)) {
+		float nearest = OUTLINE_END + 1.0;
+		ivec2 nearest_offset = ivec2(0);
+		for (int y = -REACH; y <= REACH; y++) {
+			for (int x = -REACH; x <= REACH; x++) {
+				float d = length(vec2(x, y));
+				if (d < nearest && has_outline(codes[here.y + y][here.x + x])) {
+					nearest = d;
+					nearest_offset = ivec2(x, y);
 				}
 			}
 		}
-		around[at.y][at.x] = value;
-	}
-	barrier();
 
-	ivec2 p = corner + REACH + local;
-	int x = local.x + REACH;
-	if (any(greaterThanEqual(p, params.size))) {
-		return;
-	}
-	vec4 screen = imageLoad(color_image, p);
-	vec3 result = screen.rgb;
-
-	// An empty mask pixel has code 0, so it's neither painted nor hatched.
-	vec2 own = around[local.y + REACH][x];
-	int code = int(round(own.y));
-	bool painted = (code & PAINTED) != 0;
-	bool hatched = (code & HATCHED) != 0;
-	bool striped = painted || hatched;
-	if (striped && shows(own.x, p)) {
-		// Opaque stripes of paint and black, which stand out on any component.
-		if (painted) {
-			result = stripes(result, p, params.paint_color, PAINT_PERIOD);
-		}
-		// Sparser see-through stripes of white and black, which leave the component showing.
-		if (hatched) {
-			result = stripes(result, p, params.hatch_color, HATCH_PERIOD);
+		if (nearest <= OUTLINE_END) {
+			ivec2 source = here + nearest_offset;
+			bool on_rim = nearest <= INNER_RIM_END || nearest > COLOR_END;
+			vec3 color = on_rim ? BLACK : palette.colors[outline_slot(codes[source.y][source.x])].rgb;
+			float opacity = (on_rim ? RIM_OPACITY : 1.0) * clamp(OUTLINE_END - nearest, 0.0, 1.0);
+			// Fades where the outlined pixel it comes from is hidden.
+			if (!shows(depths[source.y][source.x], p + nearest_offset)) {
+				opacity *= HIDDEN_OPACITY;
+			}
+			result = mix(result, color, opacity);
 		}
 	}
 
-	// Outlines never cover the components they outline.
-	int r = min(int(ceil(params.width)), REACH);
-	float nearest = 1e9;
-	int index = 0;
-	if (((occupied[local.y + REACH] >> x) & 1u) == 0u) {
-		// The bits within reach of the pixel's column, and those at or before it.
-		uint reach = ((2u << (2 * r)) - 1u) << (x - r);
-		uint before = (2u << x) - 1u;
-		for (int y = -r; y <= r; y++) {
-			uint bits = occupied[local.y + REACH + y] & reach;
-			if (bits == 0u) {
-				continue;
-			}
-			// The nearest mask pixel in the row, preferring the left on a tie, like the row pass.
-			uint left = bits & before;
-			uint right = bits & ~before;
-			int toLeft = left != 0u ? x - findMSB(left) : 1000;
-			int toRight = right != 0u ? findLSB(right) - x : 1000;
-			int dx = toRight < toLeft ? toRight : -toLeft;
-			float d = length(vec2(float(dx), float(y)));
-			if (d >= nearest || d > params.width + 0.5) {
-				continue;
-			}
-			vec2 source = around[local.y + REACH + y][x + dx];
-			if (shows(source.x, p + ivec2(dx, y))) {
-				nearest = d;
-				index = int(round(source.y)) % PAINTED;
-			}
-		}
-	}
-	if (nearest <= params.width + 0.5) {
-		// A dark rim on both sides of the color keeps any color readable on any surface,
-		// like a white outline around a white card.
-		bool on_rim = nearest <= params.rim + 0.5 || nearest > params.width - params.rim;
-		vec3 color = on_rim ? RIM_COLOR.rgb : palette.colors[clamp(index, 0, PALETTE - 1)].rgb;
-		// Fades the outer pixel for a softer edge.
-		float alpha = clamp(params.width + 0.5 - nearest, 0.0, 1.0) * (on_rim ? RIM_COLOR.a : 1.0);
-		result = mix(result, color, alpha);
-	}
-	if (result != screen.rgb) {
-		imageStore(color_image, p, vec4(result, screen.a));
+	if (result != table.rgb) {
+		imageStore(color_image, p, vec4(result, table.a));
 	}
 }
