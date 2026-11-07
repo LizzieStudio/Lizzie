@@ -24,3 +24,7 @@ addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll~*.TMP
 # Generated DocFX output
 /docs/_site/
 /docs/api/
+
+# Per-user IDE settings
+*.user
+Properties/launchSettings.json
