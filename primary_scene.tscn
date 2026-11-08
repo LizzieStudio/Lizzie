@@ -56,6 +56,10 @@ CommandName = "project.manager"
 script = ExtResource("cmd_item")
 CommandName = "project.save"
 
+[node name="ProjectSaveAs" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=359765920]
+script = ExtResource("cmd_item")
+CommandName = "project.save_as"
+
 [node name="Divider1" type="Node" parent="UI/MarginContainer/Panel/HBoxContainer/MenuBar/File" unique_id=1451458939]
 script = ExtResource("cmd_divider")
 

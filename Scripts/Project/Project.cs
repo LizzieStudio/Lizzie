@@ -2,5 +2,7 @@ namespace Lizzie;
 
 public class Project
 {
-    public string Filename { get; set; }
+    public string Folder { get; set; }
+
+    public string Name => Folder == null ? null : ProjectFolder.NameOf(Folder);
 }

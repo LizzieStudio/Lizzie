@@ -74,6 +74,11 @@ public partial class ProjectService : Node
 
     private Project _currentProject;
 
+    /// <summary>
+    /// Invoked after another project replaces the open one, like by opening or joining one.
+    /// </summary>
+    public event Action ProjectReplaced;
+
     public Project CurrentProject
     {
         get => _currentProject;
@@ -86,6 +91,7 @@ public partial class ProjectService : Node
             {
                 FaceSet.Clear();
                 Atoms.R.Machinery().Clear();
+                ProjectReplaced?.Invoke();
             }
 
             UpdateWindowTitle();
@@ -99,64 +105,116 @@ public partial class ProjectService : Node
     {
         if (!IsInsideTree())
             return;
-        var filename = string.IsNullOrWhiteSpace(CurrentProject?.Filename)
-            ? "Untitled"
-            : CurrentProject.Filename;
+        var name = CurrentProject?.Name ?? "Untitled";
         var marker = HasUnsavedChanges ? "*" : "";
-        GetWindow().Title = $"{filename}{marker}: {AppName}";
+        GetWindow().Title = $"{name}{marker}: {AppName}";
     }
 
     /// <summary>
-    /// Starts a fresh, unnamed game.
+    /// Starts a fresh, empty game.
     /// </summary>
-    public void NewGame()
+    /// <param name="folder">The project folder it saves to, or null for an Untitled game.</param>
+    public void NewGame(string folder = null)
     {
-        CurrentProject = new Project();
-        HasUnsavedChanges = false;
+        CurrentProject = new Project { Folder = folder };
         Atoms.R.WriteAdmin(Seat.Defaults());
         EnsureTable();
         PresenceSynchronizer.Instance?.SeatSoloPlayer();
+        HasUnsavedChanges = false;
     }
 
     /// <summary>
-    /// Replaces everything with a fresh, unnamed game, like before joining a game.
+    /// Replaces everything with a fresh, empty game, like before joining a game.
     /// </summary>
-    public void ReplaceWithNewGame()
+    /// <param name="folder">The project folder it saves to, or null for an Untitled game.</param>
+    public void ReplaceWithNewGame(string folder = null)
     {
         GameObjects?.ResetForLoad();
-        NewGame();
+        NewGame(folder);
     }
 
     /// <summary>
-    /// Loads the highest version save that this version of Lizzie can read.
-    /// Returns null when the project has no save.
+    /// Opens the project in <paramref name="folder"/> or starts it empty when it has no saves yet.
     /// </summary>
-    /// <param name="name">The name of the file to attempt to load</param>
+    /// <param name="warning">A warning to give the player when it opens with an important issue.</param>
+    /// <exception cref="ProjectLoadException" />
+    public void OpenProject(string folder, out string warning)
+    {
+        if (!LoadProject(folder, out warning))
+            ReplaceWithNewGame(folder);
+        ProjectLibrary.Opened(folder);
+    }
+
+    /// <summary>
+    /// Saves the project into <paramref name="folder"/> and makes that the save location from now on.
+    /// False when it couldn't save, which keeps the old save location.
+    /// </summary>
+    public bool SaveProjectAs(string folder)
+    {
+        if (CurrentProject == null)
+            return false;
+        var was = CurrentProject.Folder;
+        CurrentProject.Folder = folder;
+        if (!SaveProject(CurrentProject))
+        {
+            CurrentProject.Folder = was;
+            return false;
+        }
+        ProjectLibrary.Opened(folder);
+        UpdateWindowTitle();
+        return true;
+    }
+
+    /// <summary>
+    /// Switches the project to "Untitled", which doesn't have a save location.
+    /// </summary>
+    public void MakeUntitled()
+    {
+        if (CurrentProject == null)
+            return;
+        CurrentProject.Folder = null;
+        HasUnsavedChanges = true;
+        UpdateWindowTitle();
+    }
+
+    public void FolderRenamed(string folder, string renamed)
+    {
+        if (CurrentProject?.Folder != folder)
+            return;
+        CurrentProject.Folder = renamed;
+        UpdateWindowTitle();
+    }
+
+    /// <summary>
+    /// Loads the highest version save in <paramref name="folder"/> that this version of Lizzie can read.
+    /// False when the project has no save.
+    /// </summary>
+    /// <param name="folder">The project's folder.</param>
     /// <param name="warning">A warning to give the player when the load succeeds with an important issue.</param>
     /// <exception cref="ProjectLoadException" />
-    public Project LoadProject(string name, out string warning)
+    private bool LoadProject(string folder, out string warning)
     {
-        var formats = DirAccess
-            .GetFilesAt("user://")
-            .Select(file => SaveFormat.FromFileName(file, name))
-            .Where(f => f != null)
-            .ToList();
-        var newer = formats.Where(f => !SaveUpgrade.CanRead(f.Value)).Max();
-        var readable = formats.Where(f => SaveUpgrade.CanRead(f.Value)).Max();
-        var file = (readable ?? new SaveFormat(0)).FileName(name);
-        var path = $"user://{file}";
-        var newerFile = newer?.FileName(name);
+        // The same reading of the folder the project manager shows.
+        var status = ProjectStatus.Of(folder);
+        if (!status.Found)
+            throw new ProjectLoadException(
+                $"The folder \"{folder}\" can't be found. It may have been moved, renamed or deleted."
+            );
+        var name = ProjectFolder.SaveName;
+        var newerFile = status.Newer?.FileName(name);
         var currentFile = SaveUpgrade.Current.FileName(name);
 
         warning = null;
-        if (!FileAccess.FileExists(path))
+        if (status.Readable is not { } readable)
         {
             if (newerFile != null)
                 throw new ProjectLoadException(
                     $"\"{newerFile}\" was saved by a newer version of Lizzie. Update Lizzie to open it."
                 );
-            return null;
+            return false;
         }
+        var file = readable.FileName(name);
+        var path = ProjectFolder.SavePath(folder, readable);
 
         var warnings = new List<string>();
         if (newerFile != null)
@@ -203,7 +261,7 @@ public partial class ProjectService : Node
             foreach (var (format, saved) in checkpoints)
             {
                 WriteSave(
-                    format.FileName(name),
+                    ProjectFolder.SavePath(folder, format),
                     save =>
                     {
                         save.StoreLine(format.Header);
@@ -221,9 +279,7 @@ public partial class ProjectService : Node
         }
 
         GameObjects?.ResetForLoad();
-
-        var project = new Project { Filename = name };
-        CurrentProject = project;
+        CurrentProject = new Project { Folder = folder };
 
         if (EventSynchronizer.Instance != null)
             EventSynchronizer.Instance.BulkLoading = true;
@@ -232,7 +288,7 @@ public partial class ProjectService : Node
 
         SettleAfterIngest();
         warning = warnings.Count > 0 ? string.Join("\n\n", warnings) : null;
-        return project;
+        return true;
     }
 
     /// <summary>
@@ -294,11 +350,16 @@ public partial class ProjectService : Node
         );
     }
 
+    /// <summary>
+    /// Saves <paramref name="project"/> into its folder.
+    /// </summary>
+    /// <returns>
+    /// False when it has no folder, or the save failed.
+    /// </returns>
     public bool SaveProject(Project project)
     {
-        // an unnamed project will not autosave
-        // this happens after joining a game
-        if (string.IsNullOrWhiteSpace(project.Filename))
+        // an Untitled project has nowhere to save, like after joining a game
+        if (project.Folder == null)
             return false;
 
         var sync = EventSynchronizer.Instance;
@@ -306,7 +367,7 @@ public partial class ProjectService : Node
             return false;
 
         var saved = WriteSave(
-            SaveUpgrade.Current.FileName(project.Filename),
+            ProjectFolder.SavePath(project.Folder, SaveUpgrade.Current),
             save =>
             {
                 save.StoreLine(SaveUpgrade.Current.Header);
@@ -321,21 +382,17 @@ public partial class ProjectService : Node
     }
 
     /// <summary>
-    /// Writes a save file through a temporary file, so a failed write leaves the old file as it was.
+    /// Writes the save file at <paramref name="path"/> through a temporary file, so a failed write leaves the old file as it was.
     /// </summary>
-    private static bool WriteSave(string file, Action<FileAccess> write)
+    private static bool WriteSave(string path, Action<FileAccess> write)
     {
-        var finalVirtual = $"user://{file}";
-        var tempVirtual = $"user://{file}.{OS.GetProcessId()}.tmp";
+        var temp = $"{path}.{OS.GetProcessId()}.tmp";
 
-        var tempReal = ProjectSettings.GlobalizePath(tempVirtual);
-        using (var saveFile = FileAccess.Open(tempVirtual, FileAccess.ModeFlags.Write))
+        using (var saveFile = FileAccess.Open(temp, FileAccess.ModeFlags.Write))
         {
             if (saveFile == null)
             {
-                GD.PrintErr(
-                    $"Could not open temp save file '{tempVirtual}': {FileAccess.GetOpenError()}"
-                );
+                GD.PrintErr($"Could not open temp save file '{temp}': {FileAccess.GetOpenError()}");
                 return false;
             }
 
@@ -346,23 +403,23 @@ public partial class ProjectService : Node
             catch (Exception ex)
             {
                 // the old save is left as it was
-                GD.PrintErr($"Could not save '{finalVirtual}': {ex.Message}");
+                GD.PrintErr($"Could not save '{path}': {ex.Message}");
                 saveFile.Close();
-                System.IO.File.Delete(tempReal);
+                System.IO.File.Delete(temp);
                 return false;
             }
         }
 
         try
         {
-            System.IO.File.Move(tempReal, ProjectSettings.GlobalizePath(finalVirtual), true);
+            System.IO.File.Move(temp, path, true);
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"Could not finalize save '{finalVirtual}': {ex.Message}");
+            GD.PrintErr($"Could not finalize save '{path}': {ex.Message}");
             try
             {
-                System.IO.File.Delete(tempReal);
+                System.IO.File.Delete(temp);
             }
             catch { }
             return false;

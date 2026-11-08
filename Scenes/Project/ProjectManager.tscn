@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://bqbaakftpue7u"]
+
+[ext_resource type="Script" uid="uid://bg3sdxxjlsnvw" path="res://Scripts/Project/ProjectManager.cs" id="1_81lru"]
+
+[node name="ProjectManager" type="Window" unique_id=1517240523]
+oversampling_override = 1.0
+title = "Project Manager"
+initial_position = 2
+size = Vector2i(620, 380)
+script = ExtResource("1_81lru")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=815952863]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=181305920]
+layout_mode = 2
+
+[node name="Toolbar" type="HFlowContainer" parent="MarginContainer/VBoxContainer" unique_id=1635172431]
+layout_mode = 2
+
+[node name="New" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1256757032]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Make a new, empty project."
+text = "New"
+
+[node name="Open" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1190998335]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Open"
+
+[node name="Rename" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1858920832]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Rename the project and its folder. (F2)"
+text = "Rename"
+
+[node name="Delete" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=738709113]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Delete"
+
+[node name="AddExisting" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=1141417916]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "List a project folder that's already on this computer."
+text = "Add Existing"
+
+[node name="ShowInFolder" type="Button" parent="MarginContainer/VBoxContainer/Toolbar" unique_id=869695082]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Show the project's folder in your file manager."
+text = "Show in Folder"
+
+[node name="Projects" type="ItemList" parent="MarginContainer/VBoxContainer" unique_id=2099367974]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3

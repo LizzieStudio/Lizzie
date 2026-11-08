@@ -176,6 +176,21 @@ public partial class UI : CanvasLayer
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
         EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
         EventBus.Instance.Subscribe<RequestPlayerPositionEvent>(OnRequestPlayerPosition);
+        ProjectService.Instance.ProjectReplaced += CloseProjectWindows;
+    }
+
+    /// <summary>
+    /// Closes the windows open on the project, like the editors, which would still show the one replaced.
+    /// </summary>
+    /// <remarks>
+    /// This is a stopgap and could be replaced at some point.
+    /// In the future I want to reload the whole scene to catch everything.
+    /// </remarks>
+    private void CloseProjectWindows()
+    {
+        foreach (var window in _modalDialogs.GetChildren().OfType<Window>())
+            if (window is not (ProjectManager or MultiplayerDialog or AcceptDialog))
+                window.QueueFree();
     }
 
     private void InitOpponentHandsPositions()
@@ -364,9 +379,10 @@ public partial class UI : CanvasLayer
     }
 
     /// <summary>
-    /// Tells the player about a problem opening a project.
+    /// Tells the player about a problem, like one opening or saving a project.
     /// </summary>
-    public void ShowLoadMessage(string title, string message)
+    /// <param name="host">What the message opens over.</param>
+    public static void ShowMessage(Node host, string title, string message)
     {
         var dialog = new AcceptDialog
         {
@@ -378,51 +394,212 @@ public partial class UI : CanvasLayer
         dialog.GetLabel().CustomMinimumSize = new Vector2(480, 0);
         dialog.Confirmed += dialog.QueueFree;
         dialog.Canceled += dialog.QueueFree;
-        _modalDialogs.AddChild(dialog);
+        host.AddChild(dialog);
         dialog.PopupCentered();
+    }
+
+    /// <summary>
+    /// Opens the project opened last, or the project manager when there's none or it can't open.
+    /// </summary>
+    public void OpenLastProject()
+    {
+        var last = ProjectLibrary.LastOpened;
+        string error = null;
+        if (System.IO.Directory.Exists(last) && TryOpenProject(last, out error))
+            return;
+        ProjectService.Instance.NewGame();
+        ShowProjectManager();
+        // Over the manager, or the manager would hide it.
+        if (error != null)
+            ShowMessage(_projectManager, "Can't Open Project", error);
+    }
+
+    private bool TryOpenProject(string folder, out string error)
+    {
+        error = null;
+        try
+        {
+            ProjectService.Instance.OpenProject(folder, out var warning);
+            if (warning != null)
+                ShowMessage(_modalDialogs, "Older Save Opened", warning);
+            return true;
+        }
+        catch (ProjectLoadException e)
+        {
+            error = e.Message;
+            return false;
+        }
+    }
+
+    private void OpenFromProjectManager(string folder)
+    {
+        bool managerOpen =
+            IsInstanceValid(_projectManager) && !_projectManager.IsQueuedForDeletion();
+        PromptToCloseProject(
+            $"Opening \"{ProjectFolder.NameOf(folder)}\"",
+            "Open",
+            leavesGame: true,
+            managerOpen ? _projectManager : _modalDialogs,
+            () =>
+            {
+                if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+                    MultiplayerManager.Instance.Disconnect();
+                if (!TryOpenProject(folder, out var error))
+                    ShowMessage(_modalDialogs, "Can't Open Project", error);
+                else if (IsInstanceValid(_projectManager))
+                    _projectManager.QueueFree();
+            }
+        );
     }
 
     private void Save()
     {
         var current = ProjectService.Instance.CurrentProject;
-        if (current != null && string.IsNullOrWhiteSpace(current.Filename))
+        if (current != null && current.Folder == null)
             ShowSaveAsDialog();
         else
-            ProjectService.Instance.SaveProject();
+            TrySaveProject(_modalDialogs);
     }
 
-    private void ShowSaveAsDialog(Action onSaved = null)
+    private static bool TrySaveProject(Node host)
     {
-        var dialog = new ConfirmationDialog { Title = "Save Project As", OkButtonText = "Save" };
+        if (ProjectService.Instance?.SaveProject() == true)
+            return true;
+        var folder = ProjectService.Instance?.CurrentProject?.Folder;
+        ShowMessage(
+            host,
+            "Can't Save Project",
+            $"Lizzie couldn't save to \"{folder}\". The folder may have been moved or deleted, "
+                + "or something else may be using it. Use Save Project As to save it somewhere else."
+        );
+        return false;
+    }
 
-        var vbox = new VBoxContainer { CustomMinimumSize = new Vector2(300, 0) };
+    /// <summary>
+    /// Asks for a name and location, then saves the project into a new folder there and keeps saving to it.
+    /// </summary>
+    /// <param name="onSaved">Runs once it's saved.</param>
+    /// <param name="host">What the dialogs open over.</param>
+    private void ShowSaveAsDialog(Action onSaved = null, Node host = null)
+    {
+        host ??= _modalDialogs;
+        var dialog = ProjectNameDialog.CreateForNew(
+            "Save Project As",
+            "Save",
+            ProjectLibrary.Location
+        );
+        dialog.OnChosen += (location, name) =>
+        {
+            string folder;
+            try
+            {
+                folder = ProjectFolder.Create(location, name);
+            }
+            catch (Exception e) when (ProjectFolder.IsFileError(e))
+            {
+                ShowMessage(
+                    host,
+                    "Can't Save Project",
+                    $"Lizzie couldn't make a folder for \"{name}\".\n\n{e.Message}"
+                );
+                return;
+            }
+            ProjectLibrary.Location = location;
+            if (!ProjectService.Instance.SaveProjectAs(folder))
+            {
+                // Nothing was saved, so the folder it made goes too.
+                try
+                {
+                    System.IO.Directory.Delete(folder);
+                }
+                catch (Exception e) when (ProjectFolder.IsFileError(e)) { }
+                ShowMessage(host, "Can't Save Project", $"Lizzie couldn't save into \"{folder}\".");
+                return;
+            }
+            onSaved?.Invoke();
+        };
+        host.AddChild(dialog);
+        dialog.Open();
+    }
 
-        var nameLabel = new Label { Text = "Project name:" };
-        vbox.AddChild(nameLabel);
+    /// <summary>
+    /// On closing the project, prompt the user if necessary, then call <paramref name="done"/>.
+    /// </summary>
+    /// <param name="reason">What closes it, like "Opening \"My Game\"", for the questions.</param>
+    /// <param name="okText">The button that goes ahead when there's nothing to save, like "Open".</param>
+    /// <param name="leavesGame">True when <paramref name="done"/> leaves or ends the multiplayer game.</param>
+    /// <param name="host">What the dialogs open over.</param>
+    private void PromptToCloseProject(
+        string reason,
+        string okText,
+        bool leavesGame,
+        Node host,
+        Action done
+    )
+    {
+        var unsaved = ProjectService.Instance?.HasUnsavedChanges == true;
+        var game = leavesGame ? LeavingGameWarning(reason) : null;
+        if (!unsaved && game == null)
+        {
+            done();
+            return;
+        }
 
-        var input = new LineEdit { PlaceholderText = "Enter project name..." };
-        vbox.AddChild(input);
-
-        dialog.AddChild(vbox);
+        var lines = new List<string>();
+        if (game != null)
+            lines.Add(game);
+        if (unsaved)
+            lines.Add(
+                $"This project has unsaved changes. Save before {char.ToLowerInvariant(reason[0])}{reason[1..]}?"
+            );
+        var dialog = new ConfirmationDialog
+        {
+            Title = unsaved ? "Unsaved Changes" : "Leave Game",
+            DialogText = string.Join("\n\n", lines),
+            DialogAutowrap = true,
+            OkButtonText = unsaved ? "Save" : okText,
+        };
+        dialog.GetLabel().CustomMinimumSize = new Vector2(380, 0);
+        if (unsaved)
+            dialog.AddButton("Don't Save", true, "discard");
 
         dialog.Confirmed += () =>
         {
-            var name = input.Text.Trim();
-            var project = ProjectService.Instance.CurrentProject;
-            var saved = false;
-            if (!string.IsNullOrEmpty(name) && project != null)
-            {
-                project.Filename = name;
-                saved = ProjectService.Instance.SaveProject();
-            }
             dialog.QueueFree();
-            if (saved)
-                onSaved?.Invoke();
+            if (unsaved)
+                SaveThen(done, host);
+            else
+                PromptToCloseProject(reason, okText, leavesGame: false, host, done);
         };
-        dialog.Canceled += () => dialog.QueueFree();
+        dialog.CustomAction += action =>
+        {
+            if (action != "discard")
+                return;
+            dialog.QueueFree();
+            done();
+        };
+        dialog.Canceled += dialog.QueueFree;
 
-        _modalDialogs.AddChild(dialog);
+        host.AddChild(dialog);
         dialog.PopupCentered();
+    }
+
+    private static string LeavingGameWarning(string doing)
+    {
+        var multiplayer = MultiplayerManager.Instance;
+        if (multiplayer?.IsMultiplayerActive != true)
+            return null;
+        return multiplayer.IsServer
+            ? $"{doing} will end the game you're hosting."
+            : $"{doing} will leave the game you joined.";
+    }
+
+    private void SaveThen(Action then, Node host)
+    {
+        if (ProjectService.Instance?.CurrentProject is { Folder: null })
+            ShowSaveAsDialog(then, host);
+        else if (TrySaveProject(host))
+            then();
     }
 
     public override void _Notification(int what)
@@ -431,63 +608,25 @@ public partial class UI : CanvasLayer
             HandleCloseRequest();
     }
 
-    /// <summary>
-    /// On window close, confirm before discarding unsaved changes.
-    /// </summary>
-    private void HandleCloseRequest()
+    private void HandleCloseRequest() =>
+        PromptToCloseProject(
+            "Closing",
+            "Quit",
+            leavesGame: false,
+            _modalDialogs,
+            () => GetTree().Quit()
+        );
+
+    private ProjectManager _projectManager;
+
+    public void ShowProjectManager()
     {
-        if (ProjectService.Instance?.HasUnsavedChanges != true)
-        {
-            GetTree().Quit();
+        if (BroughtForward(_projectManager))
             return;
-        }
-
-        var dialog = new ConfirmationDialog
-        {
-            Title = "Unsaved Changes",
-            DialogText = "This project has unsaved changes. Save before closing?",
-            OkButtonText = "Save",
-            CancelButtonText = "Cancel",
-        };
-        dialog.AddButton("Don't Save", true, "discard");
-
-        dialog.Confirmed += () =>
-        {
-            dialog.QueueFree();
-            SaveThenQuit();
-        };
-        dialog.CustomAction += action =>
-        {
-            if (action == "discard")
-            {
-                dialog.QueueFree();
-                GetTree().Quit();
-            }
-        };
-        dialog.Canceled += () => dialog.QueueFree();
-
-        _modalDialogs.AddChild(dialog);
-        dialog.PopupCentered();
-    }
-
-    private void SaveThenQuit()
-    {
-        var project = ProjectService.Instance?.CurrentProject;
-        if (project != null && string.IsNullOrWhiteSpace(project.Filename))
-        {
-            // don't quit unless the save succeeds
-            ShowSaveAsDialog(onSaved: () => GetTree().Quit());
-            return;
-        }
-
-        if (ProjectService.Instance?.SaveProject() == true)
-            GetTree().Quit();
-    }
-
-    private void ShowProjectManager()
-    {
-        var s = "res://Scenes/Project/project_manager.tscn";
-        _modalDialogs.AddChild(GD.Load<PackedScene>(s).Instantiate<ProjectManager>());
+        var s = "res://Scenes/Project/ProjectManager.tscn";
+        _projectManager = GD.Load<PackedScene>(s).Instantiate<ProjectManager>();
+        _projectManager.OpenRequested += OpenFromProjectManager;
+        _modalDialogs.AddChild(_projectManager);
     }
 
     private void ShowMultiplayerDialog()

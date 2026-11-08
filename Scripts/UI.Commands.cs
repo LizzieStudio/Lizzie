@@ -14,6 +14,7 @@ public partial class UI
     {
         if (_instance == this)
             _instance = null;
+        ProjectService.Instance.ProjectReplaced -= CloseProjectWindows;
     }
 
     [Command("project.manager")]
@@ -38,6 +39,19 @@ public partial class UI
         Effects = (_, _) =>
         {
             _instance?.Save();
+            return null;
+        },
+    };
+
+    [Command("project.save_as")]
+    public static readonly GlobalCommand SaveProjectAs = new()
+    {
+        Icon = CommandIcons.SaveAs,
+        Caption = "Save Project As...",
+        Keys = [Shortcuts.Ctrl(Key.S, shift: true)],
+        Effects = (_, _) =>
+        {
+            _instance?.ShowSaveAsDialog();
             return null;
         },
     };

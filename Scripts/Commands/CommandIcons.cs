@@ -51,6 +51,7 @@ public static class CommandIcons
     public const string Dissolve = Folder + "transition_fade.svg";
     public const string ProjectManager = Folder + "bookmark_manager.svg";
     public const string Save = Folder + "save.svg";
+    public const string SaveAs = Folder + "save_as.svg";
     public const string Multiplayer = Folder + "group.svg";
     public const string ChangeSeat = Folder + "seating.svg";
     public const string Templates = Folder + "design_services.svg";
@@ -59,4 +60,5 @@ public static class CommandIcons
     public const string Images = Folder + "image.svg";
     public const string Settings = Folder + "settings.svg";
     public const string Seats = Folder + "seating.svg";
+    public const string Warning = Folder + "warning.svg";
 }
