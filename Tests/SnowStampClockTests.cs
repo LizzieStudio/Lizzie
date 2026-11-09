@@ -45,4 +45,21 @@ public class SnowStampClockTests
 
         Assert.True(next.CompareTo(remote) > 0, $"After {remote} arrived, the clock made {next}.");
     }
+
+    [Fact]
+    public void AnIdMadeAfterAnotherPlayersClockArrivesIsNewer()
+    {
+        long host = SnowStamp.Clock + 1_000_000;
+
+        SnowStamp.Observe(host);
+        var next = SnowStamp.Create();
+
+        Assert.True(
+            next.LogicClock > host,
+            $"After the clock {host} arrived, the clock made a stamp at {next.LogicClock}."
+        );
+    }
+
+    [Fact]
+    public void ReadingTheClockDoesNotAdvanceIt() => Assert.Equal(SnowStamp.Clock, SnowStamp.Clock);
 }

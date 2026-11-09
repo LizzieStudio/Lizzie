@@ -142,7 +142,7 @@ public partial class EventSynchronizer : Node
     private void Reject(int senderId, TimelineEvent e)
     {
         if (e != null)
-            RpcId(senderId, nameof(ClientEventRejected), (long)e.Id);
+            RpcId(senderId, nameof(ClientEventRejected), (long)e.Id, SnowStamp.Clock);
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public partial class EventSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void ClientEventRejected(long id)
+    private void ClientEventRejected(long id, long hostClock)
     {
         var rejected = new SnowStamp(id);
         // While joining, the timeline is about to be replaced by the host's anyway.
@@ -167,6 +167,7 @@ public partial class EventSynchronizer : Node
         );
         var kept = Timeline.Values.Where(e => e.Id != rejected).ToList();
         ProjectService.Instance?.LoadJoinedTimeline(kept);
+        SnowStamp.Observe(hostClock);
     }
 
     /// <summary>
@@ -293,7 +294,7 @@ public partial class EventSynchronizer : Node
 
         var senderId = Multiplayer.GetRemoteSenderId();
         SendStateTo(senderId);
-        RpcId(senderId, nameof(ClientCatchupComplete));
+        RpcId(senderId, nameof(ClientCatchupComplete), SnowStamp.Clock);
     }
 
     /// <summary>
@@ -304,12 +305,13 @@ public partial class EventSynchronizer : Node
         CallLocal = false,
         TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
     )]
-    private void ClientCatchupComplete()
+    private void ClientCatchupComplete(long hostClock)
     {
         GD.Print("[EventSynchronizer] Catchup complete - replacing the timeline.");
         var events = _joinBuffer ?? [];
         _joinBuffer = null;
         ProjectService.Instance?.LoadJoinedTimeline(events);
+        SnowStamp.Observe(hostClock);
         EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
     }
 

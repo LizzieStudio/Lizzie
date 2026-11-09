@@ -71,19 +71,38 @@ public readonly record struct SnowStamp : IComparable<SnowStamp>, IFormattable
     /// <summary>
     /// Advance the clock past <paramref name="stamp"/>, from another player or a load, so the next stamp made is newer.
     /// </summary>
-    public static void Observe(SnowStamp stamp)
+    public static void Observe(SnowStamp stamp) => Observe(stamp.LogicClock);
+
+    /// <summary>
+    /// Advance the clock past another player's <see cref="Clock"/>, so the next stamp made is newer.
+    /// A client does this with the host's clock after loading the host's timeline,
+    /// since the newest event in it may be much older than the host's time.
+    /// </summary>
+    public static void Observe(long logicClock)
     {
         lock (Lock)
         {
-            // If the stamp's time appears to be in the future,
+            // If the clock's time appears to be in the future,
             // adjust the game time to match it.
             var gameTime = GetGameTimeMsec();
-            var otherClock = stamp.LogicClock >> TickBits;
-            if (otherClock > gameTime)
-                _offsetMsec += otherClock - gameTime;
+            var otherTime = logicClock >> TickBits;
+            if (otherTime > gameTime)
+                _offsetMsec += otherTime - gameTime;
 
-            // Make sure the next stamp's hybrid clock is greater than this one's.
-            _next = Math.Max(stamp.LogicClock + 1, _next);
+            // Make sure the next stamp's hybrid clock is greater than this one.
+            _next = Math.Max(logicClock + 1, _next);
+        }
+    }
+
+    /// <summary>
+    /// The hybrid clock the next stamp would have, without making one. See <see cref="LogicClock"/>.
+    /// </summary>
+    public static long Clock
+    {
+        get
+        {
+            lock (Lock)
+                return Math.Max(GetGameTimeMsec() << TickBits, _next);
         }
     }
 
