@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Godot;
 
@@ -126,11 +127,46 @@ public partial class EventSynchronizer : Node
             GD.PushWarning(
                 $"Dropped an event from peer {senderId} (source {sender?.ToString() ?? "none"}) stamped with source {e?.Id.Source.ToString() ?? "none"}."
             );
+            Reject(senderId, e);
             return;
         }
 
         Receive(e);
         BroadcastEvent(json, senderId);
+    }
+
+    /// <summary>
+    /// Server-only: tells the peer that sent <paramref name="e"/> that it was rejected.
+    /// That peer then needs to remove that event to stay in-sync.
+    /// </summary>
+    private void Reject(int senderId, TimelineEvent e)
+    {
+        if (e != null)
+            RpcId(senderId, nameof(ClientEventRejected), (long)e.Id);
+    }
+
+    /// <summary>
+    /// The host calls this on the client whose event it refused.
+    /// Drops the event and works everything out again from the rest of the timeline, like joining does.
+    /// This should only happen for a bug, a version mismatch, or someone messing with the code.
+    /// </summary>
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
+    )]
+    private void ClientEventRejected(long id)
+    {
+        var rejected = new SnowStamp(id);
+        // While joining, the timeline is about to be replaced by the host's anyway.
+        if (Joining || !Timeline.ContainsKey(rejected))
+            return;
+
+        GD.PushWarning(
+            $"The host refused event {rejected}, so it was dropped and the project reloaded."
+        );
+        var kept = Timeline.Values.Where(e => e.Id != rejected).ToList();
+        ProjectService.Instance?.LoadJoinedTimeline(kept);
     }
 
     /// <summary>

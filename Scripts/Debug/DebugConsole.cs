@@ -145,8 +145,11 @@ public partial class DebugConsole : Node
                         : "Highlights off: the mask render and the compute pass are stopped."
                 );
                 break;
+            case "/reject":
+                SendRejectedEvent();
+                break;
             case "/help":
-                Log("Commands: /events, /highlights, /spam [count], /help");
+                Log("Commands: /events, /highlights, /reject, /spam [count], /help");
                 break;
             default:
                 Log($"Unknown command: {cmd}");
@@ -188,6 +191,41 @@ public partial class DebugConsole : Node
 
         Log(
             $"Added {count} events in {watch.ElapsedMilliseconds} ms ({EventSynchronizer.Instance.Timeline.Count} total)."
+        );
+    }
+
+    /// <summary>
+    /// Sends an event the host will refuse, to test that this client drops it and stays in sync.
+    /// It moves a component on the table 5 cm, stamped as an admin event, which only the host may send.
+    /// The component should jump, then jump back when the host's refusal arrives.
+    /// </summary>
+    private void SendRejectedEvent()
+    {
+        var multiplayer = MultiplayerManager.Instance;
+        if (multiplayer?.IsMultiplayerActive != true || multiplayer.IsServer)
+        {
+            Log("Only a guest's events can be refused. Join another instance's game first.");
+            return;
+        }
+
+        var moved = Atoms
+            .R.Get(
+                ComponentPosition.ByStage,
+                ProjectService.Instance.GameObjects.ShownStage(Atoms.R)
+            )
+            .FirstOrDefault(c => c.IsOnTable);
+        if (moved == null)
+        {
+            Log("Reject needs at least one component on the table.");
+            return;
+        }
+
+        var id = new SnowStamp(SnowStamp.Create().LogicClock, Source.Admin);
+        EventSynchronizer.Instance.Submit(
+            new TimelineEvent { Id = id, Writes = [moved with { X = moved.X + 500 }] }
+        );
+        Log(
+            $"Sent event {id} as admin. The host should refuse it, and the component should jump back."
         );
     }
 
