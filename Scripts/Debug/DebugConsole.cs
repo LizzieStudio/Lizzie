@@ -131,6 +131,12 @@ public partial class DebugConsole : Node
             return;
         }
 
+        if (cmd.StartsWith("/reject"))
+        {
+            SendRejectedEvent(cmd["/reject".Length..].Trim());
+            return;
+        }
+
         switch (cmd)
         {
             case "/events":
@@ -145,11 +151,8 @@ public partial class DebugConsole : Node
                         : "Highlights off: the mask render and the compute pass are stopped."
                 );
                 break;
-            case "/reject":
-                SendRejectedEvent();
-                break;
             case "/help":
-                Log("Commands: /events, /highlights, /reject, /spam [count], /help");
+                Log("Commands: /events, /highlights, /reject [future|past], /spam [count], /help");
                 break;
             default:
                 Log($"Unknown command: {cmd}");
@@ -196,10 +199,15 @@ public partial class DebugConsole : Node
 
     /// <summary>
     /// Sends an event the host will refuse, to test that this client drops it and stays in sync.
-    /// It moves a component on the table 5 cm, stamped as an admin event, which only the host may send.
+    /// It moves a component on the table 5 cm, stamped in a way the host refuses:
+    /// <list type="bullet">
+    /// <item>by default, as an admin event, which only the host may send</item>
+    /// <item>"future", an hour ahead of the clock</item>
+    /// <item>"past", two minutes behind the clock</item>
+    /// </list>
     /// The component should jump, then jump back when the host's refusal arrives.
     /// </summary>
-    private void SendRejectedEvent()
+    private void SendRejectedEvent(string how)
     {
         var multiplayer = MultiplayerManager.Instance;
         if (multiplayer?.IsMultiplayerActive != true || multiplayer.IsServer)
@@ -220,12 +228,38 @@ public partial class DebugConsole : Node
             return;
         }
 
-        var id = new SnowStamp(SnowStamp.Create().LogicClock, Source.Admin);
+        long clock = SnowStamp.Clock;
+        long Minutes(int n) => (n * 60_000L) << SnowStamp.TickBits;
+        SnowStamp id;
+        string stamped;
+        switch (how)
+        {
+            case "":
+                id = new SnowStamp(clock, Source.Admin);
+                stamped = "as admin";
+                break;
+            case "future":
+                id = new SnowStamp(clock + Minutes(60), Source.Me);
+                stamped = "an hour ahead";
+                break;
+            case "past" when clock > Minutes(2):
+                id = new SnowStamp(clock - Minutes(2), Source.Me);
+                // an older write loses to a newer one, so the jump only shows on a component left alone that long
+                stamped = "two minutes behind (it only jumps if it hasn't changed since then)";
+                break;
+            case "past":
+                Log("The game has to be two minutes old before an event can be that far behind.");
+                return;
+            default:
+                Log("Usage: /reject [future|past]");
+                return;
+        }
+
         EventSynchronizer.Instance.Submit(
             new TimelineEvent { Id = id, Writes = [moved with { X = moved.X + 500 }] }
         );
         Log(
-            $"Sent event {id} as admin. The host should refuse it, and the component should jump back."
+            $"Sent event {id} {stamped}. The host should refuse it, and the component should jump back."
         );
     }
 

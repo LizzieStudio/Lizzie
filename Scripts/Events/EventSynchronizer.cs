@@ -92,6 +92,16 @@ public partial class EventSynchronizer : Node
             RpcId(1, nameof(ServerSubmitEvent), json);
     }
 
+    /// <summary>
+    /// How far ahead of the host's time a player's event may be stamped.
+    /// </summary>
+    private const long MaxAheadMsec = 10_000;
+
+    /// <summary>
+    /// How far behind the host's time a player's event may be stamped.
+    /// </summary>
+    private const long MaxBehindMsec = 60_000;
+
     private bool TryRecord(TimelineEvent e)
     {
         if (Timeline.ContainsKey(e.Id))
@@ -126,6 +136,19 @@ public partial class EventSynchronizer : Node
         {
             GD.PushWarning(
                 $"Dropped an event from peer {senderId} (source {sender?.ToString() ?? "none"}) stamped with source {e?.Id.Source.ToString() ?? "none"}."
+            );
+            Reject(senderId, e);
+            return;
+        }
+
+        // Block events stamped too far from the host's time.
+        // One far ahead would drag every player's clock forward for good.
+        // One far behind would change history.
+        long age = e.Id.GetAgeMsec();
+        if (age < -MaxAheadMsec || age > MaxBehindMsec)
+        {
+            GD.PushWarning(
+                $"Dropped an event from peer {senderId} stamped {(age < 0 ? $"{-age} ms ahead of" : $"{age} ms behind")} the host's time."
             );
             Reject(senderId, e);
             return;
