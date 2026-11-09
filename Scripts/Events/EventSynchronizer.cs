@@ -116,7 +116,20 @@ public partial class EventSynchronizer : Node
             return;
 
         var senderId = Multiplayer.GetRemoteSenderId();
-        ReceiveEvent(json);
+        var e = JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
+
+        // Block events that sent a source ID the host didn't assign to them (this should never happen).
+        // I'm considering auto-booting the player when this happens.
+        var sender = MultiplayerManager.Instance.Players.GetValueOrDefault(senderId)?.Source;
+        if (e == null || e.Id.Source != sender)
+        {
+            GD.PushWarning(
+                $"Dropped an event from peer {senderId} (source {sender?.ToString() ?? "none"}) stamped with source {e?.Id.Source.ToString() ?? "none"}."
+            );
+            return;
+        }
+
+        Receive(e);
         BroadcastEvent(json, senderId);
     }
 
@@ -145,9 +158,11 @@ public partial class EventSynchronizer : Node
         ReceiveEvent(json);
     }
 
-    private void ReceiveEvent(string json)
+    private void ReceiveEvent(string json) =>
+        Receive(JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions));
+
+    private void Receive(TimelineEvent e)
     {
-        var e = JsonSerializer.Deserialize<TimelineEvent>(json, LizzieJson.EventOptions);
         if (Joining)
             _joinBuffer.Add(e);
         else
