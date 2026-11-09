@@ -50,9 +50,6 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
         c.ContainerRef
     );
 
-    // whether reads show removed positions
-    private readonly Func<bool> _showsRemoved;
-
     // what changed since the last Settle
     private readonly HashSet<PositionKey> _dirty = new();
     private readonly HashSet<Ref<Stage>> _changedStages = new();
@@ -61,11 +58,9 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
     private List<Touch> _touches = new();
 
     /// <param name="stages">The store of <see cref="Stage"/> atoms, which says each stage's parent.</param>
-    /// <param name="showsRemoved">Whether reads show removed positions. Call <see cref="ShowsRemovedChanged"/> when it changes.</param>
-    public StagedStore(AtomStore<Stage, Ref<Stage>> stages, Func<bool> showsRemoved)
+    public StagedStore(AtomStore<Stage, Ref<Stage>> stages)
     {
         _stages = stages;
-        _showsRemoved = showsRemoved;
         _raw.Changed += OnRawChanged;
         stages.Changed += OnStagesChanged;
         _changedStages.UnionWith(stages.Ids);
@@ -169,12 +164,21 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
     }
 
     /// <summary>
-    /// Updates "Show Removed Components", which takes effect at the next <see cref="Settle"/>.
+    /// Whether reads show removed positions, which is "Show Removed Components".
+    /// Setting it settles the store.
     /// </summary>
-    public void ShowsRemovedChanged() =>
-        _dirty.UnionWith(
-            _raw.Ids.Where(id => _raw.Find(id).Value is ComponentPosition { Removed: true })
-        );
+    public bool ShowsRemoved
+    {
+        get;
+        set
+        {
+            field = value;
+            _dirty.UnionWith(
+                _raw.Ids.Where(id => _raw.Find(id).Value is ComponentPosition { Removed: true })
+            );
+            Settle();
+        }
+    }
 
     /// <summary>
     /// Every stage, and every stage something is resolved in, with every component written or resolved.
@@ -225,7 +229,7 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
                     removed
                 );
             }
-            if (!_showsRemoved())
+            if (!ShowsRemoved)
                 return default;
             removed = true;
         }

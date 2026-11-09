@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Lizzie.Replication.Machinery;
@@ -18,6 +19,11 @@ public interface IAtomsMachinery
     /// Sends each store's one notification for everything it merged during a bulk load.
     /// </summary>
     void FlushBulkLoad();
+
+    /// <summary>
+    /// The store of an atom type, made on first use.
+    /// </summary>
+    IAtomStore StoreOf(Type type);
 
     /// <summary>
     /// Reruns the watcher at the end of the frame, if it's still watching.

@@ -79,25 +79,9 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
     }
 
     /// <summary>
-    /// Creates a new, empty store for atoms of <paramref name="type"/>, held by the type's <see cref="IdQuery"/>.
-    /// <see cref="ComponentPosition"/>s get a <see cref="StagedStore"/>.
+    /// Creates a new, empty store for atoms of <paramref name="type"/>, made by the type's <see cref="IdQuery"/>.
     /// </summary>
-    private IAtomStore NewStore(Type type)
-    {
-        if (type == typeof(ComponentPosition))
-        {
-            return new StagedStore(
-                (AtomStore<Stage, Ref<Stage>>)StoreOf<Stage>(),
-                () => ShowsRemoved
-            );
-        }
-        var byId = IdQuery.For(type);
-        return (IAtomStore)
-            Activator.CreateInstance(
-                typeof(AtomStore<,>).MakeGenericType(type, byId.KeyType),
-                byId
-            );
-    }
+    private IAtomStore NewStore(Type type) => IdQuery.For(type).NewStore(StoreOf);
 
     /// <inheritdoc cref="IAtomStore.Settle"/>
     private void Settle()
@@ -113,19 +97,8 @@ public partial class Atoms : Node, IAtomReader, IAtomsMachinery
         return store;
     }
 
-    /// <summary>
-    /// Whether "Show Removed Components" is active.
-    /// </summary>
-    public bool ShowsRemoved
-    {
-        get;
-        set
-        {
-            field = value;
-            ((StagedStore)StoreOf<ComponentPosition>()).ShowsRemovedChanged();
-            Settle();
-        }
-    }
+    /// <inheritdoc/>
+    IAtomStore IAtomsMachinery.StoreOf(Type type) => StoreOf(type);
 
     private IAtomStore<T> StoreOf<T>()
         where T : Atom => (IAtomStore<T>)StoreOf(typeof(T));

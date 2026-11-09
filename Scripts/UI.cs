@@ -154,7 +154,7 @@ public partial class UI : CanvasLayer
             viewOptions.ToggleItemChecked(i);
             bool on = viewOptions.IsItemChecked(i);
             if (i == 0)
-                Atoms.R.ShowsRemoved = on;
+                ComponentPosition.ShowRemoved(on);
             else
                 ProjectService.Instance.GameObjects.MarksTemporary.Value = on;
         };

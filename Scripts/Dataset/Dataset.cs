@@ -165,3 +165,24 @@ public readonly record struct CellId(Ref<DataRow> RowRef, Ref<DataColumn> Column
     public int CompareTo(CellId other) =>
         (RowRef, ColumnRef).CompareTo((other.RowRef, other.ColumnRef));
 }
+
+/// <summary>
+/// Reads the datasets.
+/// </summary>
+public static class DatasetReader
+{
+    /// <summary>
+    /// What <paramref name="row"/> holds in each of its dataset's columns, by column name, for a template to show.
+    /// If two columns share a name, the first one is used.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> Values(this IAtomReader R, DataRow row)
+    {
+        var values = new Dictionary<string, string>();
+        foreach (var column in R.Get(DataColumn.ByDataset, row.DatasetRef))
+            values.TryAdd(
+                column.Name,
+                R.Get(DataCell.ById, new CellId(row.Id, column.Id))?.Value ?? string.Empty
+            );
+        return values;
+    }
+}

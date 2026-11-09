@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
+using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
@@ -26,9 +27,13 @@ namespace Lizzie;
 [JsonName("ComponentPosition")]
 public record ComponentPosition : Atom, IRanked
 {
-    public static readonly Identity<ComponentPosition, PositionKey> ById = new(r =>
-        new(r.StageRef, r.Id)
-    );
+    public static readonly Identity<ComponentPosition, PositionKey> ById = new StagedIdentity();
+
+    /// <summary>
+    /// Sets whether reads show removed positions, which is "Show Removed Components".
+    /// </summary>
+    public static void ShowRemoved(bool shown) =>
+        ((StagedStore)Atoms.R.Machinery().StoreOf(typeof(ComponentPosition))).ShowsRemoved = shown;
 
     /// <summary>
     /// The <see cref="Component"/> this is the position of, which is the same in every stage.
@@ -240,4 +245,90 @@ public readonly record struct PositionKey(Ref<Stage> StageRef, Ref<Component> Co
 
     public int CompareTo(PositionKey other) =>
         (StageRef, ComponentRef).CompareTo((other.StageRef, other.ComponentRef));
+}
+
+/// <summary>
+/// The id of <see cref="ComponentPosition"/>, which holds its atoms in a <see cref="StagedStore"/>.
+/// </summary>
+public sealed class StagedIdentity()
+    : Identity<ComponentPosition, PositionKey>(r => new(r.StageRef, r.Id))
+{
+    internal override IAtomStore NewStore(Func<Type, IAtomStore> storeOf) =>
+        new StagedStore((AtomStore<Stage, Ref<Stage>>)storeOf(typeof(Stage)));
+}
+
+/// <summary>
+/// Lists the <see cref="ComponentPosition"/>s each stage wrote itself, rather than inherited, removals included.
+/// A <see cref="StagedStore"/> answers it from the writes, where other lookups list what each stage shows.
+///
+/// <code>public static readonly Written WrittenIn = new();</code>
+/// </summary>
+public sealed class Written() : Lookup<ComponentPosition, Ref<Stage>>(c => c.StageRef);
+
+/// <summary>
+/// Reads <see cref="ComponentPosition"/>s and what they place.
+/// </summary>
+public static class ComponentPositionReader
+{
+    /// <summary>
+    /// Gets the <see cref="Component"/> that <paramref name="s"/> places.
+    /// </summary>
+    public static Component GetComponent(this IAtomReader R, ComponentPosition s) =>
+        R.Get(Component.ById, s.Id);
+
+    /// <summary>
+    /// Gets the <see cref="Prototype"/> for <paramref name="s"/>, or null.
+    /// </summary>
+    public static Prototype GetPrototype(this IAtomReader R, ComponentPosition s) =>
+        R.Get(Prototype.ById, R.GetComponent(s).PrototypeRef);
+
+    /// <summary>
+    /// What a component shows as. A printed prototype's decks share its prototype with its cards,
+    /// but aren't one of its items, so they show as decks,
+    /// as the StageView does when it picks a component's scene.
+    /// </summary>
+    public static VisualComponentBase.VisualComponentType Kind(
+        this IAtomReader R,
+        ComponentPosition s
+    )
+    {
+        var type = R.GetPrototype(s)?.Type ?? VisualComponentBase.VisualComponentType.Unset;
+        return type == VisualComponentBase.VisualComponentType.Printed && !R.GetComponent(s).IsItem
+            ? VisualComponentBase.VisualComponentType.Deck
+            : type;
+    }
+
+    /// <summary>
+    /// The cards in a deck, top first.
+    /// </summary>
+    public static List<ComponentPosition> TokensOn(this IAtomReader R, ComponentPosition deck)
+    {
+        var cards = R.Get(ComponentPosition.ByLocation, deck.ContentsKey);
+        cards.Reverse();
+        return cards;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="c"/> is a card in a deck.
+    /// </summary>
+    public static bool IsInDeck(this IAtomReader R, ComponentPosition c)
+    {
+        if (R.Get(ComponentPosition.ById, c.KeyOf(c.ContainerRef)) is { } container)
+        {
+            return R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="c"/> is out of sight in a bag.
+    /// </summary>
+    public static bool IsHidden(this IAtomReader R, ComponentPosition c)
+    {
+        // we recurse in case the container is in a bag
+        if (R.Get(ComponentPosition.ById, c.KeyOf(c.ContainerRef)) is { } container)
+            return !R.IsInDeck(c) || R.IsHidden(container);
+
+        return false;
+    }
 }

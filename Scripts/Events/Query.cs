@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Lizzie.Replication.Machinery;
 
 namespace Lizzie;
 
@@ -97,6 +98,12 @@ public abstract class IdQuery : Query
     /// </summary>
     internal abstract int CompareIds(Atom a, Atom b);
 
+    /// <summary>
+    /// Makes the empty store that holds the atoms of its type.
+    /// </summary>
+    /// <param name="storeOf">The store of another atom type, for a store that reads one.</param>
+    internal abstract IAtomStore NewStore(Func<Type, IAtomStore> storeOf);
+
     // it's concurrent because tests were failing
     private static readonly ConcurrentDictionary<Type, IdQuery> Declared = new();
 
@@ -164,6 +171,9 @@ public class Identity<T, I> : IdQuery
     internal override Atom Unwritten(object id) => Unwritten((I)id);
 
     internal override int CompareIds(Atom a, Atom b) => _of((T)a).CompareTo(_of((T)b));
+
+    internal override IAtomStore NewStore(Func<Type, IAtomStore> storeOf) =>
+        new AtomStore<T, I>(this);
 
     internal override Type AtomType => typeof(T);
 
@@ -245,14 +255,6 @@ public class Lookup<T, K> : Query
 
     internal override Type KeyType => typeof(K);
 }
-
-/// <summary>
-/// Lists the <see cref="ComponentPosition"/>s each stage wrote itself, rather than inherited, removals included.
-/// A <see cref="StagedStore"/> answers it from the writes, where other lookups list what each stage shows.
-///
-/// <code>public static readonly Written WrittenIn = new();</code>
-/// </summary>
-public sealed class Written() : Lookup<ComponentPosition, Ref<Stage>>(c => c.StageRef);
 
 /// <summary>
 /// Lists every atom of <typeparamref name="T"/>, read with <see cref="AtomReaderExtensions.Get{T}(IAtomReader, All{T})"/>.

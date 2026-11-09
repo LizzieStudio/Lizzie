@@ -18,10 +18,7 @@ public class StagedStoreTests
     private bool _bulkLoading;
     private long _clock;
 
-    // whether the stores show removed positions
-    private bool _showsRemoved;
-
-    public StagedStoreTests() => _store = new(_stages, () => _showsRemoved);
+    public StagedStoreTests() => _store = new(_stages);
 
     private static SnowTag Tag(int counter) => new(Source.Host, counter);
 
@@ -49,12 +46,7 @@ public class StagedStoreTests
     private static ComponentPosition RemovalOf(int stage, int id) =>
         PositionOf(stage, id).Removal();
 
-    private void ShowRemoved(bool shown)
-    {
-        _showsRemoved = shown;
-        _store.ShowsRemovedChanged();
-        _store.Settle();
-    }
+    private void ShowRemoved(bool shown) => _store.ShowsRemoved = shown;
 
     /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the stores.</summary>
     private TimelineEvent Write(params Atom[] atoms) =>
@@ -240,12 +232,6 @@ public class StagedStoreTests
     }
 
     [Fact]
-    public void AStagedTypeCanOnlyBeUnsetByWhatAStageWrote() =>
-        Assert.Throws<System.ArgumentException>(() =>
-            R.UnsetAll(ComponentPosition.ByStage, Tag<Stage>(2))
-        );
-
-    [Fact]
     public void AGrandparentsWriteReachesTheGrandchild()
     {
         Write(StageOf(1), StageOf(2, parent: 1), StageOf(3, parent: 2));
@@ -258,7 +244,7 @@ public class StagedStoreTests
     public void AStoreMadeAfterItsStagesShowsThem()
     {
         Write(StageOf(1), StageOf(2, parent: 1));
-        var late = new StagedStore(_stages, () => _showsRemoved);
+        var late = new StagedStore(_stages) { ShowsRemoved = _store.ShowsRemoved };
 
         var e = new TimelineEvent { Id = NextId(), Writes = [PositionOf(1, 10, x: 5)] };
         _timeline.Add(e.Id, e);

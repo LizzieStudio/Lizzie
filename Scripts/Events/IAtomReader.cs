@@ -23,7 +23,7 @@ public interface IAtomReader
 
     /// <summary>
     /// Whether <paramref name="position"/> was removed or is inside a container that was removed.
-    /// See <see cref="Atoms.ShowsRemoved"/>.
+    /// See <see cref="StagedStore.ShowsRemoved"/>.
     /// </summary>
     bool IsRemoved(ComponentPosition position);
 
@@ -183,17 +183,7 @@ public static class AtomReaderExtensions
     /// The change that unsets every atom with <paramref name="key"/> in <paramref name="lookup"/>, to write like an atom.
     /// </summary>
     public static Unset UnsetAll<T, K>(this IAtomReader R, Lookup<T, K> lookup, K key)
-        where T : Atom
-    {
-        if (typeof(T) == typeof(ComponentPosition) && lookup is not Written)
-        {
-            throw new ArgumentException(
-                $"A stage can only unset the {typeof(T).Name}s it wrote itself, so unset them with a Written lookup.",
-                nameof(lookup)
-            );
-        }
-        return new(lookup, key);
-    }
+        where T : Atom => new(lookup, key);
 
     /// <summary>
     /// A cache key for each <paramref name="atom"/> that changes whenever it changes.
@@ -210,81 +200,4 @@ public static class AtomReaderExtensions
         && sync.Timeline.TryGetValue(R.Version(atom), out var writer)
             ? writer.Command
             : null;
-
-    /// <summary>
-    /// What <paramref name="row"/> holds in each of its dataset's columns, by column name, for a template to show.
-    /// If two columns share a name, the first one is used.
-    /// </summary>
-    public static IReadOnlyDictionary<string, string> Values(this IAtomReader R, DataRow row)
-    {
-        var values = new Dictionary<string, string>();
-        foreach (var column in R.Get(DataColumn.ByDataset, row.DatasetRef))
-            values.TryAdd(
-                column.Name,
-                R.Get(DataCell.ById, new CellId(row.Id, column.Id))?.Value ?? string.Empty
-            );
-        return values;
-    }
-
-    /// <summary>
-    /// Gets the <see cref="Component"/> that <paramref name="s"/> places.
-    /// </summary>
-    public static Component GetComponent(this IAtomReader R, ComponentPosition s) =>
-        R.Get(Component.ById, s.Id);
-
-    /// <summary>
-    /// Gets the <see cref="Prototype"/> for <paramref name="s"/>, or null.
-    /// </summary>
-    public static Prototype GetPrototype(this IAtomReader R, ComponentPosition s) =>
-        R.Get(Prototype.ById, R.GetComponent(s).PrototypeRef);
-
-    /// <summary>
-    /// What a component shows as. A printed prototype's decks share its prototype with its cards,
-    /// but aren't one of its items, so they show as decks,
-    /// as the StageView does when it picks a component's scene.
-    /// </summary>
-    public static VisualComponentBase.VisualComponentType Kind(
-        this IAtomReader R,
-        ComponentPosition s
-    )
-    {
-        var type = R.GetPrototype(s)?.Type ?? VisualComponentBase.VisualComponentType.Unset;
-        return type == VisualComponentBase.VisualComponentType.Printed && !R.GetComponent(s).IsItem
-            ? VisualComponentBase.VisualComponentType.Deck
-            : type;
-    }
-
-    /// <summary>
-    /// The cards in a deck, top first.
-    /// </summary>
-    public static List<ComponentPosition> TokensOn(this IAtomReader R, ComponentPosition deck)
-    {
-        var cards = R.Get(ComponentPosition.ByLocation, deck.ContentsKey);
-        cards.Reverse();
-        return cards;
-    }
-
-    /// <summary>
-    /// Whether <paramref name="c"/> is a card in a deck.
-    /// </summary>
-    public static bool IsInDeck(this IAtomReader R, ComponentPosition c)
-    {
-        if (R.Get(ComponentPosition.ById, c.KeyOf(c.ContainerRef)) is { } container)
-        {
-            return R.Kind(container) == VisualComponentBase.VisualComponentType.Deck;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Whether <paramref name="c"/> is out of sight in a bag.
-    /// </summary>
-    public static bool IsHidden(this IAtomReader R, ComponentPosition c)
-    {
-        // we recurse in case the container is in a bag
-        if (R.Get(ComponentPosition.ById, c.KeyOf(c.ContainerRef)) is { } container)
-            return !R.IsInDeck(c) || R.IsHidden(container);
-
-        return false;
-    }
 }
