@@ -254,7 +254,10 @@ public sealed class StagedIdentity()
     : Identity<ComponentPosition, PositionKey>(r => new(r.StageRef, r.Id))
 {
     internal override IAtomStore NewStore(Func<Type, IAtomStore> storeOf) =>
-        new StagedStore((AtomStore<Stage, Ref<Stage>>)storeOf(typeof(Stage)));
+        new StagedStore(
+            (AtomStore<Stage, Ref<Stage>>)storeOf(typeof(Stage)),
+            (AtomStore<Component, Ref<Component>>)storeOf(typeof(Component))
+        );
 }
 
 /// <summary>

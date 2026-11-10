@@ -14,11 +14,15 @@ public class StagedStoreTests
 {
     private readonly Timeline _timeline = new();
     private readonly AtomStore<Stage, Ref<Stage>> _stages = new(Stage.ById);
+    private readonly AtomStore<Component, Ref<Component>> _components = new(Component.ById);
     private readonly StagedStore _store;
     private bool _bulkLoading;
     private long _clock;
 
-    public StagedStoreTests() => _store = new(_stages);
+    // Set to write positions whose components the test makes itself.
+    private bool _makesComponents;
+
+    public StagedStoreTests() => _store = new(_stages, _components);
 
     private static SnowTag Tag(int counter) => new(Source.Host, counter);
 
@@ -84,14 +88,38 @@ public class StagedStoreTests
     private ComponentPosition Value(int stage, int id) =>
         (ComponentPosition)_store.Find(Key(stage, id)).Value;
 
-    private SnowStamp NextId() => new(++_clock, Source.Host);
+    // Skips a tick, which Record uses for the event that makes an event's components.
+    private SnowStamp NextId() => new(_clock += 2, Source.Host);
 
+    private static Component ComponentOf(int id) => new() { Id = Tag<Component>(id) };
+
+    /// <summary>
+    /// Records <paramref name="e"/> after an event making the components it places, if they're new,
+    /// so a position always has its component unless the test <see cref="_makesComponents"/>.
+    /// </summary>
     private TimelineEvent Record(TimelineEvent e)
+    {
+        var missing = e
+            .Writes.OfType<ComponentPosition>()
+            .Select(p => p.Id)
+            .Distinct()
+            .Where(id => _components.Find(id).Value == null)
+            .Select(id => (Atom)new Component { Id = id })
+            .ToArray();
+        if (missing.Length > 0 && !_makesComponents)
+            Merge(
+                new TimelineEvent { Id = new(e.Id.LogicClock - 1, Source.Host), Writes = missing }
+            );
+        return Merge(e);
+    }
+
+    private TimelineEvent Merge(TimelineEvent e)
     {
         _timeline.Add(e.Id, e);
         var changed = TimelineUndo.Changes(_timeline, e).ToList();
         _store.Apply(_timeline, changed, _bulkLoading);
         _stages.Apply(_timeline, changed, _bulkLoading);
+        _components.Apply(_timeline, changed, _bulkLoading);
         _store.Settle();
         return e;
     }
@@ -101,6 +129,7 @@ public class StagedStoreTests
         _bulkLoading = false;
         _store.FlushBulkLoad();
         _stages.FlushBulkLoad();
+        _components.FlushBulkLoad();
         _store.Settle();
     }
 
@@ -150,6 +179,51 @@ public class StagedStoreTests
 
     private static string Describe(int? x, bool removed, Ref<Stage> stage) =>
         x == null ? "nothing" : $"X = {x} in stage {stage}{(removed ? ", removed" : "")}";
+
+    [Fact]
+    public void APositionWithoutItsComponentShowsNothing()
+    {
+        _makesComponents = true;
+        Write(StageOf(1), StageOf(2, parent: 1));
+        Write(PositionOf(1, 10, x: 5));
+
+        AssertShows(1, 10, null);
+        AssertShows(2, 10, null);
+        AssertIds(_store.Get(ComponentPosition.ByStage, Tag<Stage>(1)));
+    }
+
+    /// <summary>One player undoes a spawn after another player moved what it spawned.</summary>
+    [Fact]
+    public void UndoingTheEventThatMadeAComponentHidesALaterMoveUntilItIsRedone()
+    {
+        _makesComponents = true;
+        Write(StageOf(1));
+        var spawn = Write(ComponentOf(10), PositionOf(1, 10, x: 5));
+        Write(PositionOf(1, 10, x: 7));
+        AssertShows(1, 10, 7);
+
+        var undo = Undo(spawn);
+        AssertShows(1, 10, null);
+        AssertIds(_store.Get(ComponentPosition.ByStage, Tag<Stage>(1)));
+
+        Undo(undo);
+        AssertShows(1, 10, 7);
+    }
+
+    [Fact]
+    public void ACardInADeckWhoseComponentIsGoneShowsNothing()
+    {
+        _makesComponents = true;
+        Write(StageOf(1));
+        var spawn = Write(ComponentOf(10), PositionOf(1, 10));
+        Write(ComponentOf(11), PositionOf(1, 11, x: 3, inside: 10));
+        AssertShows(1, 11, 3);
+
+        var touched = TouchesOf(() => Undo(spawn));
+
+        AssertShows(1, 11, null);
+        Assert.Contains(new Touch(ComponentPosition.ById, Key(1, 11), false), touched);
+    }
 
     [Fact]
     public void AStageShowsItsParentsWrite()
@@ -244,7 +318,8 @@ public class StagedStoreTests
     public void AStoreMadeAfterItsStagesShowsThem()
     {
         Write(StageOf(1), StageOf(2, parent: 1));
-        var late = new StagedStore(_stages) { ShowsRemoved = _store.ShowsRemoved };
+        var late = new StagedStore(_stages, _components) { ShowsRemoved = _store.ShowsRemoved };
+        Write(ComponentOf(10));
 
         var e = new TimelineEvent { Id = NextId(), Writes = [PositionOf(1, 10, x: 5)] };
         _timeline.Add(e.Id, e);

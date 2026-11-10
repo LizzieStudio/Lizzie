@@ -26,6 +26,7 @@ namespace Lizzie.Replication.Machinery;
 public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
 {
     private readonly AtomStore<Stage, Ref<Stage>> _stages;
+    private readonly AtomStore<Component, Ref<Component>> _components;
 
     /// <summary>
     /// The positions as written, by the stage they were written in.
@@ -50,6 +51,9 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
         c.ContainerRef
     );
 
+    // the written positions by their component
+    private readonly Lookup<ComponentPosition, Ref<Component>> _byComponent = new(c => c.Id);
+
     // what changed since the last Settle
     private readonly HashSet<PositionKey> _dirty = new();
     private readonly HashSet<Ref<Stage>> _changedStages = new();
@@ -58,11 +62,17 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
     private List<Touch> _touches = new();
 
     /// <param name="stages">The store of <see cref="Stage"/> atoms, which says each stage's parent.</param>
-    public StagedStore(AtomStore<Stage, Ref<Stage>> stages)
+    /// <param name="components">The store of <see cref="Component"/> atoms, which says whether a position has anything to place.</param>
+    public StagedStore(
+        AtomStore<Stage, Ref<Stage>> stages,
+        AtomStore<Component, Ref<Component>> components
+    )
     {
         _stages = stages;
+        _components = components;
         _raw.Changed += OnRawChanged;
         stages.Changed += OnStagesChanged;
+        components.Changed += OnComponentsChanged;
         _changedStages.UnionWith(stages.Ids);
     }
 
@@ -108,6 +118,18 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
         foreach (var touch in touches)
             if (touch.Query == Stage.ById)
                 _changedStages.Add((Ref<Stage>)touch.Key);
+    }
+
+    private void OnComponentsChanged(IReadOnlyList<Touch> touches)
+    {
+        foreach (var touch in touches)
+        {
+            if (touch.Query != Component.ById)
+                continue;
+
+            foreach (var written in _raw.Get(_byComponent, (Ref<Component>)touch.Key))
+                _dirty.Add(ComponentPosition.ById.Of(written));
+        }
     }
 
     public void Settle()
@@ -210,6 +232,9 @@ public sealed class StagedStore : IAtomStore<ComponentPosition, PositionKey>
     /// </summary>
     private AtomEntry Resolve(PositionKey key)
     {
+        if (_components.Find(key.ComponentRef).Value == null)
+            return default;
+
         bool removed = false;
         for (var stage = key.StageRef; _parents.TryGetValue(stage, out var parent); stage = parent)
         {
