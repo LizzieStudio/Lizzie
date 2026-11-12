@@ -1,6 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
+
+namespace Lizzie;
 
 /// <summary>
 /// A zone is a draggable rectangular component on the table that governs which players may
@@ -9,15 +11,12 @@ using Godot;
 /// </summary>
 public partial class VcZone : VisualComponentBase
 {
-    public const string WidthKey = "Width";
-    public const string DepthKey = "Depth";
-    public const string DefaultIncludedKey = "DefaultIncluded";
-    public const string IncludedSeatsKey = "IncludedSeats";
-    public const string ExcludedSeatsKey = "ExcludedSeats";
-    public const string HiddenWhenExcludedKey = "HiddenWhenExcluded";
-
     private float _width = 2f;
     private float _depth = 2f;
+
+    private bool _defaultIncluded;
+    private bool _hiddenWhenExcluded;
+    private WeakMap<Ref<Seat>, ZoneAccess> _seats = WeakMap<Ref<Seat>, ZoneAccess>.Empty;
 
     private const float HandleLift = 0.08f;
 
@@ -30,7 +29,6 @@ public partial class VcZone : VisualComponentBase
         ComponentType = VisualComponentType.Zone;
 
         MainMesh = GetNodeOrNull<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNodeOrNull<MeshInstance3D>("HighlightMesh");
         _handleMesh = GetNodeOrNull<Node3D>("HandleMesh");
         _handleCollision = GetNodeOrNull<Node3D>("CollisionShape3D");
 
@@ -50,65 +48,29 @@ public partial class VcZone : VisualComponentBase
             _handleCollision.Position = corner;
     }
 
-    public override bool Setup(
-        Dictionary<string, object> parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, R);
+        var p = (ZoneParameters)parameters;
 
         MainMesh = GetNodeOrNull<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNodeOrNull<MeshInstance3D>("HighlightMesh");
 
-        _width = JsonUtilities.TryGetFloat(parameters, WidthKey, _width);
-        _depth = JsonUtilities.TryGetFloat(parameters, DepthKey, _depth);
+        _width = p.Width;
+        _depth = p.Depth;
+
+        _defaultIncluded = p.DefaultIncluded;
+        _hiddenWhenExcluded = p.HiddenWhenExcluded;
+        _seats = p.Seats;
 
         if (MainMesh != null)
             MainMesh.Scale = new Vector3(_width, 1f, _depth);
 
         PositionHandle();
-
-        return true;
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (JsonUtilities.TryGetFloat(parameters, WidthKey) <= 0f)
-            ret.Add("Width must be > 0");
-        if (JsonUtilities.TryGetFloat(parameters, DepthKey) <= 0f)
-            ret.Add("Depth must be > 0");
-
-        return ret;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;
 
     public override float MaxAxisSize => Math.Max(_width, _depth);
-
-    //Zones are always ZOrder -1
-    public override int ZOrder
-    {
-        get => -1;
-        set { }
-    }
 
     /// <summary>
     /// True if the given world position falls within this zone's footprint on the XZ plane.
@@ -119,23 +81,49 @@ public partial class VcZone : VisualComponentBase
         return Mathf.Abs(local.X) <= _width / 2f && Mathf.Abs(local.Z) <= _depth / 2f;
     }
 
-    public bool DefaultIncluded => JsonUtilities.TryGetBool(Parameters, DefaultIncludedKey);
-    public bool HiddenWhenExcluded => JsonUtilities.TryGetBool(Parameters, HiddenWhenExcludedKey);
-    public HashSet<int> IncludedSeats => SeatSetFor(Parameters, IncludedSeatsKey);
-    public HashSet<int> ExcludedSeats => SeatSetFor(Parameters, ExcludedSeatsKey);
+    public bool DefaultIncluded => _defaultIncluded;
+    public bool HiddenWhenExcluded => _hiddenWhenExcluded;
 
     /// <summary>
     /// Whether the given seat is considered "included" by this zone's rules.
     /// </summary>
-    public bool SeatIncluded(int seatIndex)
-    {
-        if (ExcludedSeats.Contains(seatIndex))
-            return false;
-        if (IncludedSeats.Contains(seatIndex))
-            return true;
-        return DefaultIncluded;
-    }
+    public bool SeatIncluded(Ref<Seat> seat) =>
+        _seats.GetValueOrDefault(seat) switch
+        {
+            ZoneAccess.Allowed => true,
+            ZoneAccess.Blocked => false,
+            _ => DefaultIncluded,
+        };
+}
 
-    public static HashSet<int> SeatSetFor(Dictionary<string, object> p, string key) =>
-        JsonUtilities.TryGetIntSet(p, key);
+/// <summary>
+/// What a zone's rule for one seat says.
+/// </summary>
+public enum ZoneAccess
+{
+    /// <summary>
+    /// Follows <see cref="ZoneParameters.DefaultIncluded"/>, like a seat with no rule.
+    /// </summary>
+    Default,
+    Allowed,
+    Blocked,
+}
+
+[JsonName("ZoneParameters")]
+public sealed record ZoneParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Zone;
+
+    public float Width { get; init; } = 2f;
+    public float Depth { get; init; } = 2f;
+    public bool DefaultIncluded { get; init; }
+    public bool HiddenWhenExcluded { get; init; }
+
+    /// <summary>
+    /// Each seat's rule. A removed seat's rule stays while the seat could come back.
+    /// </summary>
+    public WeakMap<Ref<Seat>, ZoneAccess> Seats { get; init; } =
+        WeakMap<Ref<Seat>, ZoneAccess>.Empty;
 }

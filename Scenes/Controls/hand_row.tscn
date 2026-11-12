@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://g1hurherohq0"]
+
+[ext_resource type="Script" uid="uid://dd2f0xkhtb4vl" path="res://Scripts/UI/HandRow.cs" id="1_row"]
+[ext_resource type="PackedScene" uid="uid://bhyk8cr0w1cbl" path="res://Scenes/Controls/hand_card.tscn" id="2_card"]
+
+[node name="HandRow" type="Control" unique_id=1418628004]
+script = ExtResource("1_row")
+_cardScene = ExtResource("2_card")
+PixelsPerCm = 21.0
+Separation = 6.0

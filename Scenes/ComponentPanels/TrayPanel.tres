@@ -8,5 +8,4 @@ script = ExtResource("2_hm3uw")
 ComponentName = "Tray"
 Icon = ExtResource("1_jip0n")
 DefinitionDialogName = "res://Scenes/ComponentPanels/tray_panel.tscn"
-PrototypeName = "res://Scenes/VisualComponents/VcTray.tscn"
 ComponentType = "Tray"

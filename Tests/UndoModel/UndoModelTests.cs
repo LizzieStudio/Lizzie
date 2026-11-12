@@ -1,0 +1,253 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using CsCheck;
+using Lizzie.Replication.Machinery;
+using Xunit;
+
+namespace Lizzie.Tests;
+
+/// <summary>
+/// Model-based properties. Random sessions of actions, transitions, reversals, departures and odd flags
+/// are played out, with <see cref="Expected"/> deciding what each reversal writes,
+/// and <see cref="Actual"/> must give the same answer to every question about the timeline.
+/// </summary>
+/// <remarks>
+/// A failure prints the shrunk operations, the question that got different answers, and the timeline.
+/// Rerun one exactly by passing the printed seed to <c>Sample</c>.
+/// </remarks>
+public abstract class UndoModelTests : UndoTestBase
+{
+    protected abstract IUndoApi Expected { get; }
+
+    /// <summary>The scopes every finished session is asked about.</summary>
+    private static readonly TestScope[] Scopes =
+    [
+        new(ScopeKind.Mine, 0),
+        new(ScopeKind.Others, 0),
+        new(ScopeKind.Anyone, 0),
+        new(ScopeKind.Anyone, 0b0101),
+        new(ScopeKind.Mine, 0b0110),
+        new(ScopeKind.Others, 0b1010),
+    ];
+
+    #region Undo and redo
+
+    [Fact]
+    public void UndoPicksTheSameTarget() =>
+        Sample(
+            UndoSessions.All,
+            ops =>
+            {
+                var session = UndoSession.Play(
+                    ops,
+                    Expected,
+                    (s, op) =>
+                    {
+                        if (op is Op.Reversal { Redo: false } reversal)
+                            SameUndo(s, reversal.Source, reversal.Scope);
+                    }
+                );
+                foreach (var me in UndoSession.Sources)
+                foreach (var scope in Scopes)
+                    SameUndo(session, me, scope);
+            }
+        );
+
+    [Fact]
+    public void RedoPicksTheSameTarget() =>
+        Sample(
+            UndoSessions.All,
+            ops =>
+            {
+                var session = UndoSession.Play(
+                    ops,
+                    Expected,
+                    (s, op) =>
+                    {
+                        if (op is Op.Reversal { Redo: true } reversal)
+                            SameRedo(s, reversal.Source, reversal.Scope);
+                    }
+                );
+                foreach (var me in UndoSession.Sources)
+                foreach (var scope in Scopes)
+                    SameRedo(session, me, scope);
+            }
+        );
+
+    [Fact]
+    public void EmptyLogHasNothingToUndo()
+    {
+        Gen.Select(UndoSessions.AnySource, UndoSessions.Scope)
+            .Sample(query =>
+            {
+                var (me, scope) = query;
+                var session = UndoSession.Play([], Expected);
+                SameUndo(session, me, scope);
+                SameRedo(session, me, scope);
+            });
+    }
+
+    #endregion
+
+    #region In effect
+
+    [Fact]
+    public void SameEventsAreInEffect() =>
+        Sample(UndoSessions.All, ops => SameInEffect(UndoSession.Play(ops, Expected)));
+
+    [Fact]
+    public void NothingIsUndoneWithoutFlags() =>
+        Sample(UndoSessions.WithoutFlags, ops => SameInEffect(UndoSession.Play(ops, Expected)));
+
+    /// <summary>
+    /// A store, told about each event as it's recorded along with what the event changed, holds what the naive model says,
+    /// so no atom ever holds a draft of a transition that has ended.
+    /// </summary>
+    [Fact]
+    public void SameValues() =>
+        Sample(
+            UndoSessions.All,
+            ops =>
+            {
+                var session = new UndoSession(Expected);
+                var store = new AtomStore<TestAtom, Ref<TestAtom>>(TestAtom.ById);
+                session.Recorded += e =>
+                    store.Apply(
+                        session.Timeline,
+                        Actual.Changes(session.Timeline, e).ToList(),
+                        false
+                    );
+                foreach (var op in ops)
+                    session.Apply(op);
+
+                for (int atom = 1; atom <= UndoSession.AtomCount; atom++)
+                {
+                    var id = new Ref<TestAtom>(atom);
+                    Same(
+                        session,
+                        $"What r{atom} holds",
+                        session.Describe(NaiveUndo.Holds(session.Timeline, id)),
+                        session.Describe((TestAtom)store.Find(id).Value)
+                    );
+                }
+            }
+        );
+
+    [Fact]
+    public void SameChanges() =>
+        Sample(
+            UndoSessions.All,
+            ops =>
+            {
+                var session = UndoSession.Play(ops, Expected);
+                foreach (var e in session.Timeline.Values)
+                    Same(
+                        session,
+                        $"What {session.Name(e.Id)} may have changed",
+                        Show(session, Expected.Changes(session.Timeline, e).OrderBy(c => c.Id)),
+                        Show(session, Actual.Changes(session.Timeline, e).OrderBy(c => c.Id))
+                    );
+            }
+        );
+
+    #endregion
+
+    #region Transitions
+
+    [Fact]
+    public void SameTransitionsAreOpen() =>
+        Sample(
+            UndoSessions.All,
+            ops =>
+            {
+                var session = UndoSession.Play(
+                    ops,
+                    Expected,
+                    (s, op) =>
+                    {
+                        if (op is Op.Leave leave)
+                            SameOpenTransitions(s, leave.Source);
+                    }
+                );
+                foreach (var source in UndoSession.Sources)
+                    SameOpenTransitions(session, source);
+            }
+        );
+
+    [Fact]
+    public void SessionsWithoutTransitionsHaveNoneOpen() =>
+        Sample(
+            UndoSessions.WithoutTransitions,
+            ops =>
+            {
+                var session = UndoSession.Play(ops, Expected);
+                foreach (var source in UndoSession.Sources)
+                    SameOpenTransitions(session, source);
+            }
+        );
+
+    #endregion
+
+    #region Helpers
+
+    private void SameInEffect(UndoSession s) =>
+        Same(
+            s,
+            "Events in effect, newest first",
+            Show(s, Expected.InEffect(s.Timeline)),
+            Show(s, Actual.InEffect(s.Timeline))
+        );
+
+    private void SameUndo(UndoSession s, Source me, TestScope scope) =>
+        Same(
+            s,
+            $"Undo by s{me} in {scope}",
+            s.Describe(Expected.Undo(s.Timeline, me, scope.For(me))),
+            s.Describe(Actual.Undo(s.Timeline, me, scope.For(me)))
+        );
+
+    private void SameRedo(UndoSession s, Source me, TestScope scope) =>
+        Same(
+            s,
+            $"Redo by s{me} in {scope}",
+            s.Describe(Expected.Redo(s.Timeline, me, scope.For(me))),
+            s.Describe(Actual.Redo(s.Timeline, me, scope.For(me)))
+        );
+
+    private void SameOpenTransitions(UndoSession s, Source source) =>
+        Same(
+            s,
+            $"Open transitions of s{source}",
+            Show(s, Expected.OpenTransitions(s.Timeline, source)),
+            Show(s, Actual.OpenTransitions(s.Timeline, source))
+        );
+
+    private void Same<T>(UndoSession session, string question, T expected, T actual)
+    {
+        if (!EqualityComparer<T>.Default.Equals(expected, actual))
+            Assert.Fail(
+                $"{question}\n  {Expected.Name}: {expected}\n  {Actual.Name}: {actual}\nlog:\n{session.Dump()}"
+            );
+    }
+
+    private static string Show(UndoSession s, List<Transition> transitions) =>
+        transitions == null
+            ? "null"
+            : "["
+                + string.Join(", ", transitions.Select(t => t.Start).Order().Select(s.Name))
+                + "]";
+
+    private static string Show(UndoSession s, IEnumerable<TimelineEvent> events) =>
+        events == null ? "null" : "[" + string.Join(", ", events.Select(e => s.Name(e.Id))) + "]";
+
+    #endregion
+}
+
+/// <summary>The game's implementation against the naive model.</summary>
+public sealed class CurrentMatchesNaive : UndoModelTests
+{
+    protected override IUndoApi Actual { get; } = new CurrentUndo();
+    protected override IUndoApi Expected { get; } = new NaiveUndo();
+}

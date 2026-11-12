@@ -1,0 +1,401 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using ImGuiNET;
+using Lizzie.Replication.Machinery;
+using SysVec2 = System.Numerics.Vector2;
+using SysVec4 = System.Numerics.Vector4;
+
+namespace Lizzie;
+
+/// <summary>
+/// In-game Dear ImGui debug console.
+/// Toggle with the backtick (`) key.
+/// Open the events panel with <c>/events</c>.
+/// </summary>
+public partial class DebugConsole : Node
+{
+    private bool _consoleOpen;
+    private bool _eventsOpen;
+    private bool _prevToggleDown;
+    private bool _focusInput;
+    private bool _scrollOutputToBottom;
+    private string _input = "";
+    private readonly List<string> _output = new() { "Type /help for commands." };
+
+    public override void _Ready()
+    {
+        // Keep the console usable even if the game tree is paused.
+        ProcessMode = ProcessModeEnum.Always;
+    }
+
+    public override void _Process(double delta)
+    {
+        bool toggleDown = Input.IsKeyPressed(Key.Quoteleft);
+        if (toggleDown && !_prevToggleDown)
+        {
+            _consoleOpen = !_consoleOpen;
+            if (_consoleOpen)
+                _focusInput = true;
+        }
+        _prevToggleDown = toggleDown;
+
+        if (ImGui.GetCurrentContext() == IntPtr.Zero)
+            return;
+
+        var io = ImGui.GetIO();
+        ReleaseIfPhantom(io, ImGuiMouseButton.Left, MouseButton.Left);
+        ReleaseIfPhantom(io, ImGuiMouseButton.Right, MouseButton.Right);
+        ReleaseIfPhantom(io, ImGuiMouseButton.Middle, MouseButton.Middle);
+
+        if (_consoleOpen)
+            DrawConsole();
+        if (_eventsOpen)
+            DrawEvents();
+    }
+
+    private void DrawConsole()
+    {
+        string submitted = null;
+
+        ImGui.SetNextWindowSize(new SysVec2(520, 320), ImGuiCond.FirstUseEver);
+        if (ImGui.Begin("Console", ref _consoleOpen))
+        {
+            float footer = ImGui.GetFrameHeightWithSpacing();
+            if (ImGui.BeginChild("##output", new SysVec2(0, -footer)))
+            {
+                foreach (var line in _output)
+                    ImGui.TextUnformatted(line);
+
+                if (_scrollOutputToBottom)
+                {
+                    ImGui.SetScrollHereY(1.0f);
+                    _scrollOutputToBottom = false;
+                }
+            }
+            ImGui.EndChild();
+
+            ImGui.Separator();
+
+            if (_focusInput)
+            {
+                ImGui.SetKeyboardFocusHere();
+                _focusInput = false;
+            }
+
+            _input = _input.Replace("`", "");
+
+            ImGui.SetNextItemWidth(-1);
+            if (ImGui.InputText("##cmd", ref _input, 256, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
+                submitted = _input;
+                _input = "";
+                _focusInput = true;
+            }
+        }
+        ImGui.End();
+
+        // Commands run outside the window, so one that throws can't leave it unended.
+        if (submitted != null)
+            RunCommand(submitted);
+    }
+
+    private void RunCommand(string raw)
+    {
+        var cmd = raw.Trim();
+        if (cmd.Length == 0)
+            return;
+
+        Log("> " + cmd);
+        try
+        {
+            ExecuteCommand(cmd);
+        }
+        catch (Exception e)
+        {
+            Log($"Failed: {e.Message}");
+            GD.PushError($"Console command '{cmd}' failed: {e}");
+        }
+    }
+
+    private void ExecuteCommand(string cmd)
+    {
+        if (cmd.StartsWith("/spam"))
+        {
+            var arg = cmd["/spam".Length..].Trim();
+            if (int.TryParse(arg.Length == 0 ? "1000" : arg, out int count) && count > 0)
+                Spam(count);
+            else
+                Log("Usage: /spam [count]");
+            return;
+        }
+
+        if (cmd.StartsWith("/reject"))
+        {
+            SendRejectedEvent(cmd["/reject".Length..].Trim());
+            return;
+        }
+
+        switch (cmd)
+        {
+            case "/events":
+                _eventsOpen = true;
+                Log("Opened the timeline inspector.");
+                break;
+            case "/highlights":
+                ComponentHighlight.Enabled = !ComponentHighlight.Enabled;
+                Log(
+                    ComponentHighlight.Enabled
+                        ? "Highlights on."
+                        : "Highlights off: the mask render and the compute pass are stopped."
+                );
+                break;
+            case "/help":
+                Log("Commands: /events, /highlights, /reject [future|past], /spam [count], /help");
+                break;
+            default:
+                Log($"Unknown command: {cmd}");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Fills the timeline with undoable no-op events for performance testing.
+    /// Each rewrites a component with its current state.
+    /// </summary>
+    private void Spam(int count)
+    {
+        var states = Atoms
+            .R?.Get(
+                ComponentPosition.ByStage,
+                ProjectService.Instance.GameObjects.ShownStage(Atoms.R)
+            )
+            .ToArray();
+        if (EventSynchronizer.Instance == null || states == null || states.Length == 0)
+        {
+            Log("Spam needs at least one component on the table.");
+            return;
+        }
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+        // bulk loading sends one change notification at the end instead of one per event
+        EventSynchronizer.Instance.BulkLoading = true;
+        try
+        {
+            for (int i = 0; i < count; i++)
+                EventSynchronizer.Instance.Submit(TimelineEvent.Now([states[i % states.Length]]));
+        }
+        finally
+        {
+            ProjectService.Instance.EndBulkLoad();
+        }
+
+        Log(
+            $"Added {count} events in {watch.ElapsedMilliseconds} ms ({EventSynchronizer.Instance.Timeline.Count} total)."
+        );
+    }
+
+    /// <summary>
+    /// Sends an event the host will refuse, to test that this client drops it and stays in sync.
+    /// It moves a component on the table 5 cm, stamped in a way the host refuses:
+    /// <list type="bullet">
+    /// <item>by default, as an admin event, which only the host may send</item>
+    /// <item>"future", an hour ahead of the clock</item>
+    /// <item>"past", two minutes behind the clock</item>
+    /// </list>
+    /// The component should jump, then jump back when the host's refusal arrives.
+    /// </summary>
+    private void SendRejectedEvent(string how)
+    {
+        var multiplayer = MultiplayerManager.Instance;
+        if (multiplayer?.IsMultiplayerActive != true || multiplayer.IsServer)
+        {
+            Log("Only a guest's events can be refused. Join another instance's game first.");
+            return;
+        }
+
+        var moved = Atoms
+            .R.Get(
+                ComponentPosition.ByStage,
+                ProjectService.Instance.GameObjects.ShownStage(Atoms.R)
+            )
+            .FirstOrDefault(c => c.IsOnTable);
+        if (moved == null)
+        {
+            Log("Reject needs at least one component on the table.");
+            return;
+        }
+
+        long clock = SnowStamp.Clock;
+        long Minutes(int n) => (n * 60_000L) << SnowStamp.TickBits;
+        SnowStamp id;
+        string stamped;
+        switch (how)
+        {
+            case "":
+                id = new SnowStamp(clock, Source.Admin);
+                stamped = "as admin";
+                break;
+            case "future":
+                id = new SnowStamp(clock + Minutes(60), Source.Me);
+                stamped = "an hour ahead";
+                break;
+            case "past" when clock > Minutes(2):
+                id = new SnowStamp(clock - Minutes(2), Source.Me);
+                // an older write loses to a newer one, so the jump only shows on a component left alone that long
+                stamped = "two minutes behind (it only jumps if it hasn't changed since then)";
+                break;
+            case "past":
+                Log("The game has to be two minutes old before an event can be that far behind.");
+                return;
+            default:
+                Log("Usage: /reject [future|past]");
+                return;
+        }
+
+        EventSynchronizer.Instance.Submit(
+            new TimelineEvent { Id = id, Writes = [moved with { X = moved.X + 500 }] }
+        );
+        Log(
+            $"Sent event {id} {stamped}. The host should refuse it, and the component should jump back."
+        );
+    }
+
+    private void Log(string line)
+    {
+        _output.Add(line);
+        _scrollOutputToBottom = true;
+    }
+
+    /// <summary>
+    /// The most recent <see cref="DebugTimings"/>, newest first.
+    /// </summary>
+    private static void DrawTimings()
+    {
+        if (!ImGui.CollapsingHeader("Timings"))
+            return;
+
+        if (DebugTimings.Recent.Count == 0)
+            ImGui.TextDisabled("Nothing timed yet.");
+
+        foreach (var t in DebugTimings.Recent.Reverse())
+            ImGui.TextUnformatted(
+                $"{t.Label, -6} {t.Milliseconds, 9:F2} ms   at {t.EventCount} events"
+            );
+
+        ImGui.Separator();
+    }
+
+    /// <summary>
+    /// Infinite-scrolling list of events, newest first.
+    /// Only the rows on screen are read from the timeline.
+    /// </summary>
+    private unsafe void DrawEvents()
+    {
+        ImGui.SetNextWindowSize(new SysVec2(360, 480), ImGuiCond.FirstUseEver);
+        if (ImGui.Begin("Timeline", ref _eventsOpen))
+        {
+            var timeline = EventSynchronizer.Instance?.Timeline;
+            int count = timeline?.Count ?? 0;
+
+            ImGui.TextUnformatted($"{count} events");
+            ImGui.TextDisabled("amber = undo/redo   sN = source");
+            ImGui.Separator();
+
+            DrawTimings();
+
+            if (ImGui.BeginChild("##eventlist") && count > 0)
+            {
+                var amber = new SysVec4(1f, 0.78f, 0.28f, 1f);
+
+                var clipper = new ImGuiListClipperPtr(
+                    ImGuiNative.ImGuiListClipper_ImGuiListClipper()
+                );
+                clipper.Begin(count);
+                while (clipper.Step())
+                {
+                    for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                    {
+                        int i = count - 1 - row;
+                        var e = timeline.GetAt(i).Value;
+                        bool colored = e.Undo != null;
+                        if (colored)
+                            ImGui.PushStyleColor(ImGuiCol.Text, amber);
+
+                        string line = $"{i, 5}  s{e.Id.Source, -3} {Describe(e)}";
+                        if (e.Undo is { } u)
+                        {
+                            int target = timeline.IndexOf(u.Reverses);
+                            line += target >= 0 ? $"  → #{target}" : "  → #?";
+                            // other presses it retires with it
+                            if (u.Also != null)
+                                foreach (var also in u.Also)
+                                    line += timeline.IndexOf(also) is var at and >= 0
+                                        ? $", #{at}"
+                                        : ", #?";
+                        }
+                        ImGui.TextUnformatted(line);
+
+                        if (colored)
+                            ImGui.PopStyleColor();
+                    }
+                }
+                clipper.End();
+                clipper.Destroy();
+            }
+            ImGui.EndChild();
+        }
+        ImGui.End();
+    }
+
+    /// <summary>
+    /// A label for events. Either the command that made it or the atoms it writes.
+    /// </summary>
+    private static string Describe(TimelineEvent e)
+    {
+        if (e.Command is { } command)
+            return command.Value;
+
+        if (e.Undo is { } u)
+            return u.ByRedo ? "Redo" : "Undo";
+
+        if (e.Writes.Length == 0 && e.Unsets.Length == 0)
+            return e.Ends != Transition.None ? "Cancel" : "(empty)";
+
+        return string.Join(
+            ", ",
+            e.Writes.Select(AtomLabel)
+                .Concat(
+                    e.Unsets.Select(u =>
+                        u.Query is IdQuery
+                            ? $"Unset {u.Query.AtomType.Name}"
+                            : $"Unset {u.Query.AtomType.Name}.{u.Query.Name}"
+                    )
+                )
+                .GroupBy(label => label)
+                .Select(g => g.Count() > 1 ? $"{g.Key}×{g.Count()}" : g.Key)
+        );
+    }
+
+    /// <summary>
+    /// Bug fix for right-click context menu.
+    /// </summary>
+    private static void ReleaseIfPhantom(
+        ImGuiIOPtr io,
+        ImGuiMouseButton imguiButton,
+        MouseButton godotButton
+    )
+    {
+        if (io.MouseDown[(int)imguiButton] && !Input.IsMouseButtonPressed(godotButton))
+            io.AddMouseButtonEvent((int)imguiButton, false);
+    }
+
+    private static string AtomLabel(Atom atom) =>
+        atom switch
+        {
+            ComponentPosition => "Upsert",
+            _ => atom.GetType().Name,
+        };
+}

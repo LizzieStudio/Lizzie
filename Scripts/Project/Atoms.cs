@@ -1,0 +1,452 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using Lizzie.Replication.Machinery;
+
+namespace Lizzie;
+
+/// <summary>
+/// The project's atoms, worked out from the timeline.
+///
+/// <para>
+/// Read them through its <see cref="IAtomReader"/>, and <see cref="Watch"/> to rerun code when what it read changes.
+/// Each atom type gets its store the first time it's read or written, whether the
+/// write comes from this player, another player, or a loaded save.
+/// </para>
+/// </summary>
+public partial class Atoms : Node, IAtomReader, IAtomsMachinery
+{
+    public static Atoms R { get; private set; }
+
+    // Each atom type's store, made on first use.
+    private readonly Dictionary<Type, IAtomStore> _stores = new();
+
+    private readonly HashSet<Watcher> _watchers = new();
+
+    // which watchers read which query values
+    private readonly DependencyIndex<Watcher> _dependencies = new();
+
+    // watchers to rerun at the end of the frame
+    private readonly HashSet<Watcher> _dirty = new();
+
+    private readonly List<Listener> _listeners = new();
+
+    // events to tell the listeners about at the end of the frame
+    private List<TimelineEvent> _pendingListenerEvents = new();
+
+    private bool _flushQueued;
+
+    private sealed record Listener(Node Owner, CommandName Name, Action<TimelineEvent> Handler)
+    {
+        /// <summary>Whether the local player made <paramref name="e"/> with this listener's command.</summary>
+        public bool ShouldHearEvent(TimelineEvent e) => e.Command == Name && e.Id.Source.IsMe();
+    }
+
+    public override void _EnterTree()
+    {
+        R = this;
+    }
+
+    // After the EventSynchronizer, which is an earlier autoload.
+    public override void _Ready()
+    {
+        EventSynchronizer.Instance.Applied += OnEventApplied;
+        JsonNameAttribute.ThrowIfAnyUnnamed();
+    }
+
+    /// <summary>
+    /// Merges an event into the stores, making the stores for what it writes if they're new,
+    /// and keeps it for the listeners.
+    /// </summary>
+    private void OnEventApplied(TimelineEvent e)
+    {
+        var sync = EventSynchronizer.Instance;
+        var changed = TimelineUndo.Changes(sync.Timeline, e).ToList();
+        var types = changed.SelectMany(c =>
+            c.Writes.Select(a => a.GetType()).Concat(c.Unsets.Select(u => u.Query.AtomType))
+        );
+        foreach (var type in types)
+            if (!_stores.ContainsKey(type))
+                AddStore(NewStore(type));
+
+        foreach (var store in _stores.Values)
+            store.Apply(sync.Timeline, changed, sync.BulkLoading);
+        Settle();
+
+        if (!sync.BulkLoading)
+            ScheduleForListeners(e);
+    }
+
+    /// <summary>
+    /// Creates a new, empty store for atoms of <paramref name="type"/>, made by the type's <see cref="IdQuery"/>.
+    /// </summary>
+    private IAtomStore NewStore(Type type) => IdQuery.For(type).NewStore(StoreOf);
+
+    /// <inheritdoc cref="IAtomStore.Settle"/>
+    private void Settle()
+    {
+        foreach (var store in _stores.Values)
+            store.Settle();
+    }
+
+    private IAtomStore AddStore(IAtomStore store)
+    {
+        _stores.Add(store.AtomType, store);
+        store.Changed += OnAtomsChanged;
+        return store;
+    }
+
+    /// <inheritdoc/>
+    IAtomStore IAtomsMachinery.StoreOf(Type type) => StoreOf(type);
+
+    private IAtomStore<T> StoreOf<T>()
+        where T : Atom => (IAtomStore<T>)StoreOf(typeof(T));
+
+    private IAtomStore StoreOf(Type type) =>
+        _stores.GetValueOrDefault(type) ?? AddStore(NewStore(type));
+
+    /// <inheritdoc/>
+    void IAtomsMachinery.Clear()
+    {
+        foreach (var store in _stores.Values)
+            store.Clear();
+    }
+
+    /// <inheritdoc/>
+    void IAtomsMachinery.FlushBulkLoad()
+    {
+        foreach (var store in _stores.Values)
+            store.FlushBulkLoad();
+        Settle();
+    }
+
+    #region Writing
+
+    /// <summary>
+    /// Writes atoms to all connected clients, including locally.
+    ///
+    /// <para>
+    /// Atoms are identified by their type's <see cref="Identity{T, I}"/>.
+    /// If you Write an atom with a new id, it is created on all clients.
+    /// If you Write an atom using an existing id, that atom is replaced with the new one.
+    /// Write a <see cref="AtomReaderExtensions.Unset"/> to unset one.
+    /// </para>
+    /// <para>
+    /// The <paramref name="changes"/> passed here are bundled in one event which is undone or redone together.
+    /// To bundle multiple discrete events into one undo group, use Open, Append, and Close.
+    /// </para>
+    /// <para>
+    /// Pass the node making the change as <paramref name="source"/>, like <c>Write(this, atom)</c>.
+    /// An Undo will reverse the event if made from the same <see cref="ICommandView"/> with the same open atom.
+    /// If the <c>this</c> doesn't have a view, <c>Write</c> throws.
+    /// </para>
+    /// <para>
+    /// Commands return their changes from <see cref="AtomCommand{T}.Effects"/> instead.
+    /// </para>
+    /// </summary>
+    public void Write(Node source, params IEnumerable<IChange> changes)
+    {
+        var all = changes.ToArray();
+        if (all.Length > 0)
+            Submit(TimelineEvent.Now(all, place: PlaceOf(source)));
+    }
+
+    /// <summary>
+    /// Calls <paramref name="change"/> with the current version of the atom with <paramref name="id"/>,
+    /// then passes the result to <see cref="Write(Node, IEnumerable{IChange})"/>. Does nothing if the atom is missing or unset.
+    ///
+    /// <inheritdoc cref="Write(Node, IEnumerable{IChange})"/>
+    /// </summary>
+    public void Update<T, I>(Node source, Identity<T, I> byId, I id, Func<T, T> change)
+        where T : Atom
+        where I : IAtomRef<T>, IComparable<I>
+    {
+        if (Get(byId, id) is { } atom)
+            Write(source, change(atom));
+    }
+
+    /// <summary>
+    /// Writes changes as one event made by <paramref name="command"/>, even if there are none,
+    /// so the command's listeners hear it.
+    /// </summary>
+    public void Write(Node source, CommandName command, params IEnumerable<IChange> changes) =>
+        Submit(TimelineEvent.Now(changes.ToArray(), command, PlaceOf(source)));
+
+    /// <summary>
+    /// Writes changes as one admin event, which belongs to the project rather than a player,
+    /// so no one can undo it. Only the host or a solo player can write one. Does nothing without changes.
+    /// </summary>
+    public void WriteAdmin(params IEnumerable<IChange> changes)
+    {
+        var all = changes.ToArray();
+        if (all.Length > 0)
+            Submit(TimelineEvent.Admin(all));
+    }
+
+    /// <summary>
+    /// Starts a transition, like a drag, by writing its first event from <paramref name="source"/>.
+    ///
+    /// <list type="number">
+    /// <item><paramref name="drafts"/> are seen by everyone but stamped with the transition in <see cref="Atom.Transitions"/>.</item>
+    /// <item>Call <see cref="Append"/> to add to <paramref name="drafts"/>.</item>
+    /// <item>When you call <see cref="Close"/>, all <paramref name="drafts"/> go away, and writes passed to the Close event are shown.</item>
+    /// </list>
+    ///
+    /// <para>
+    /// To "cancel" a transition, call <see cref="Close"/> with no writes.
+    /// All drafts will go away and the atoms will revert to before the open.
+    /// </para>
+    ///
+    /// <para>
+    /// This is used whenever writes are transitional and shouldn't be left in the timeline, like a component being dragged.
+    /// <list type="bullet">
+    /// <item>If a client disconnects with an open transition, the host closes it with no writes (cancels).</item>
+    /// <item>Undo/Redo during a transition skips <paramref name="drafts"/>.</item>
+    /// <item>Undo/Redo after a transition is closed jumps from the closed writes to before the open.</item>
+    /// <item>Other clients that update a transitioning atom should join it due to copying <see cref="Atom.Transitions"/>.</item>
+    /// </list>
+    /// </para>
+    ///
+    /// <para>
+    /// An Atom can have multiple transitions.
+    /// If any of them close, it stops counting.
+    /// One transition closing would still leave it as a draft of another.
+    /// This means that all transitions must close for a write to stay.
+    /// </para>
+    /// </summary>
+    /// <returns>The transition, for <see cref="Append"/> and <see cref="Close"/>.</returns>
+    public Transition Open(Node source, params IEnumerable<Atom> drafts) =>
+        Open(source, null, drafts);
+
+    /// <inheritdoc cref="Open(Node, IEnumerable{Atom})"/>
+    public Transition Open(Node source, CommandName command, params IEnumerable<Atom> drafts) =>
+        Open(source, (CommandName?)command, drafts);
+
+    private Transition Open(Node source, CommandName? command, IEnumerable<Atom> drafts)
+    {
+        var e = TimelineEvent.Now(drafts.ToArray(), command, PlaceOf(source));
+        var transition = new Transition(e.Id);
+        e.Writes = Stamped(e.Writes, transition);
+        Submit(e);
+        return transition;
+    }
+
+    /// <summary>
+    /// Writes drafts as one event in the open <paramref name="transition"/>. Does nothing without drafts.
+    /// </summary>
+    public void Append(Transition transition, params IEnumerable<Atom> drafts)
+    {
+        var e = TimelineEvent.Now(Stamped(drafts, transition));
+        if (e.Writes.Length > 0)
+            Submit(e);
+    }
+
+    /// <summary>
+    /// Ends <paramref name="transition"/> with <paramref name="changes"/>, made from <paramref name="source"/>, which is where undo finds it.
+    /// The transition's drafts stop counting, so whatever <paramref name="changes"/> leaves out goes back to how it was before the transition.
+    /// Without changes it cancels the transition.
+    /// The atoms in <paramref name="changes"/> leave this transition but stay in others.
+    /// </summary>
+    public void Close(Node source, Transition transition, params IEnumerable<IChange> changes) =>
+        Close(source, transition, null, changes);
+
+    /// <inheritdoc cref="Close(Node, Transition, IEnumerable{IChange})"/>
+    public void Close(
+        Node source,
+        Transition transition,
+        CommandName command,
+        params IEnumerable<IChange> changes
+    ) => Close(source, transition, (CommandName?)command, changes);
+
+    private void Close(
+        Node source,
+        Transition transition,
+        CommandName? command,
+        IEnumerable<IChange> changes
+    )
+    {
+        var e = TimelineEvent.Now(
+            changes
+                .Select(c =>
+                {
+                    if (c is Atom atom)
+                        return atom with { Transitions = atom.Transitions.Without(transition) };
+                    return c;
+                })
+                .ToArray(),
+            command,
+            PlaceOf(source)
+        );
+        e.Ends = transition;
+        Submit(e);
+    }
+
+    private static Atom[] Stamped(IEnumerable<Atom> drafts, Transition transition) =>
+        drafts
+            .Select(atom => atom with { Transitions = atom.Transitions.With(transition) })
+            .ToArray();
+
+    private static void Submit(TimelineEvent e) => EventSynchronizer.Instance?.Submit(e);
+
+    private ViewPlace PlaceOf(Node source) => CommandViews.Require(source).Place(this);
+
+    /// <inheritdoc/>
+    IEnumerable<AtomEntry> IAtomsMachinery.SavedAtoms() =>
+        _stores.Values.SelectMany(s => s.SavedAtoms(EventSynchronizer.Instance.Timeline));
+
+    #endregion
+
+    /// <summary>
+    /// Runs <paramref name="sync"/> at the end of the frame, then again whenever an atom it
+    /// read changes, until <paramref name="owner"/> leaves the tree. Call from _EnterTree.
+    /// The first run is deferred so callers can configure the node after adding it.
+    /// </summary>
+    public void Watch(Node owner, Action<IWatchReader> sync)
+    {
+        var watcher = new Watcher(owner, sync, this, _dependencies);
+        _watchers.Add(watcher);
+        owner.Connect(
+            Node.SignalName.TreeExiting,
+            Callable.From(() => Unwatch(watcher)),
+            (uint)ConnectFlags.OneShot
+        );
+        MarkDirty(watcher);
+    }
+
+    /// <summary>
+    /// Schedules a rerun of the Node's Watch functions at the end of the frame.
+    /// Does nothing if the Node is not in the tree.
+    /// </summary>
+    public void QueueSync(Node owner)
+    {
+        foreach (var watcher in _watchers.Where(w => w.Owner == owner))
+        {
+            MarkDirty(watcher);
+        }
+    }
+
+    private void Unwatch(Watcher watcher)
+    {
+        _watchers.Remove(watcher);
+        _dirty.Remove(watcher);
+        _dependencies.Clear(watcher);
+    }
+
+    /// <summary>
+    /// Calls <paramref name="handler"/> with each event the local player makes with <paramref name="command"/>.
+    /// </summary>
+    public void Listen(Node owner, Command command, Action<TimelineEvent> handler) =>
+        AddListener(new Listener(owner, command.Name, handler));
+
+    private void AddListener(Listener listener)
+    {
+        _listeners.Add(listener);
+        listener.Owner.Connect(
+            Node.SignalName.TreeExiting,
+            Callable.From(() => _listeners.Remove(listener)),
+            (uint)ConnectFlags.OneShot
+        );
+    }
+
+    /// <summary>
+    /// Keeps an event made by a command, undos and redos included, for the listeners.
+    /// </summary>
+    private void ScheduleForListeners(TimelineEvent e)
+    {
+        if (e.Command == null || _listeners.Count == 0)
+            return;
+        _pendingListenerEvents.Add(e);
+        QueueFlush();
+    }
+
+    private void OnAtomsChanged(IReadOnlyList<Touch> touched)
+    {
+        foreach (var watcher in _dependencies.Affected(touched))
+            MarkDirty(watcher);
+    }
+
+    void IAtomsMachinery.MarkDirty(Watcher watcher) => MarkDirty(watcher);
+
+    private void MarkDirty(Watcher watcher)
+    {
+        if (_watchers.Contains(watcher))
+        {
+            _dirty.Add(watcher);
+            QueueFlush();
+        }
+    }
+
+    private void QueueFlush()
+    {
+        if (_flushQueued)
+            return;
+        _flushQueued = true;
+        Callable.From(Flush).CallDeferred();
+    }
+
+    /// <summary>
+    /// Runs the dirty watchers, parents before their descendants, so a parent removes or
+    /// replaces a child before the child can sync an atom that no longer fits it.
+    /// Watchers at the same depth run in the order they were registered.
+    /// Then tells the listeners about the events, in the order they arrived.
+    /// </summary>
+    private void Flush()
+    {
+        _flushQueued = false;
+
+        var batch = _dirty.OrderBy(w => Depth(w.Owner)).ThenBy(w => w.Sequence).ToArray();
+        _dirty.Clear();
+        foreach (var watcher in batch)
+        {
+            if (_watchers.Contains(watcher) && IsInstanceValid(watcher.Owner))
+                watcher.Run();
+        }
+
+        // A handler that makes an event is heard in the next flush.
+        var events = _pendingListenerEvents;
+        _pendingListenerEvents = new();
+        foreach (var e in events)
+        {
+            foreach (var listener in _listeners.Where(l => l.ShouldHearEvent(e)).ToList())
+            {
+                if (_listeners.Contains(listener) && IsInstanceValid(listener.Owner))
+                    listener.Handler(e);
+            }
+        }
+    }
+
+    private static int Depth(Node node)
+    {
+        if (!IsInstanceValid(node))
+            return 0;
+
+        int depth = 0;
+        for (var n = node.GetParent(); n != null; n = n.GetParent())
+            depth++;
+        return depth;
+    }
+
+    #region IAtomReader
+
+    public Atom Get(IAtomRef atom) => StoreOf(atom.AtomType).Find(atom).Value;
+
+    public SnowStamp Version(Atom atom) => EntryOf(atom).LastUpdate;
+
+    public bool IsRemoved(ComponentPosition position) => EntryOf(position).Removed;
+
+    private AtomEntry EntryOf(Atom atom) =>
+        StoreOf(atom.GetType()).Find(IdQuery.For(atom.GetType()).Of(atom));
+
+    public T Get<T, I>(Identity<T, I> byId, I id)
+        where T : Atom
+        where I : IAtomRef<T>, IComparable<I> => (T)((IAtomStore<T, I>)StoreOf<T>()).Find(id).Value;
+
+    public List<T> Get<T, K>(Lookup<T, K> lookup, K key)
+        where T : Atom => StoreOf<T>().Get(lookup, key);
+
+    public int Count<T, K>(Lookup<T, K> lookup, K key)
+        where T : Atom => StoreOf<T>().Count(lookup, key);
+
+    #endregion
+}

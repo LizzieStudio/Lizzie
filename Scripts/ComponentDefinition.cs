@@ -1,10 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-public partial class ComponentDefinition : Window
+namespace Lizzie;
+
+public partial class ComponentDefinition : Window, ICommandView
 {
+    public ViewPlace Place(IAtomReader R) =>
+        ViewPlace.Of(this, _mapPrototype == null ? null : _mapPrototype.Id);
+
     // Called when the node enters the scene tree for the first time.
     [Export]
     private ComponentTemplate[] _components;
@@ -22,8 +26,6 @@ public partial class ComponentDefinition : Window
     private Button _cancelButton;
     private Button _updateButton;
 
-    private TextureFactory _textureFactory;
-
     public Project CurrentProject { get; set; }
 
     private AcceptDialog _errorDialog;
@@ -39,49 +41,20 @@ public partial class ComponentDefinition : Window
         _createButton.Pressed += CreateClicked;
 
         _cancelButton = GetNode<Button>("%CancelButton");
-        _cancelButton.Pressed += CancelClicked;
+        _cancelButton.Pressed += QueueFree;
+        CloseRequested += QueueFree;
 
         _updateButton = GetNode<Button>("%UpdateButton");
         _updateButton.Pressed += UpdateClicked;
 
-        if (_initRequired)
-        {
-            LocalInit();
-        }
-        if (_editMode)
-            SetEditMode();
+        buttonPanel = GetNode<VBoxContainer>("%CompButtonStrip");
+        _componentPanel = GetNode<Panel>("%ComponentPanel");
     }
-
-    private bool _initRequired;
-
-    private bool _isInitialized;
 
     public void Initialize(Project curProject)
     {
         CurrentProject = curProject;
-        if (IsNodeReady())
-        {
-            LocalInit();
-        }
-        else
-        {
-            _initRequired = true;
-        }
-    }
-
-    private void LocalInit()
-    {
-        _initRequired = false;
-
         Visible = true;
-
-        if (_isInitialized)
-            return;
-
-        _isInitialized = true;
-
-        buttonPanel = GetNode<VBoxContainer>("%CompButtonStrip");
-        _componentPanel = GetNode<Panel>("%ComponentPanel");
 
         var bg = new ButtonGroup();
 
@@ -96,8 +69,8 @@ public partial class ComponentDefinition : Window
 
             if (ci is ComponentPanelDialogResult cpdr)
             {
-                cpdr.TextureFactory = _textureFactory;
                 cpdr.CurrentProject = CurrentProject;
+                cpdr.SubmittableChanged += ShowSubmittable;
             }
 
             _componentPanel.AddChild(ci);
@@ -110,16 +83,6 @@ public partial class ComponentDefinition : Window
                 CurName = c.ComponentName;
                 firstButton = false;
             }
-
-            if (_editMode)
-            {
-                UpdatePanelVisibility(CurName);
-            }
-        }
-
-        if (_editMode && _mapPrototype != null)
-        {
-            MapPrototypeToPanel(_mapPrototype);
         }
     }
 
@@ -129,46 +92,22 @@ public partial class ComponentDefinition : Window
     {
         if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
         {
-            var errors = r.ValidateParameters(r.GetParams());
-            if (errors != null && errors.Count > 0)
-            {
-                _errorDialog.DialogText = string.Join("\n", errors);
-                _errorDialog.PopupCentered();
+            var result = r.GetParams();
+            if (ShowErrors(r, result))
                 return;
-            }
 
-            CreateObjectEventArgs e = new()
+            var prototype = new Prototype
             {
-                ComponentType = r.ComponentType,
-                Params = r.GetParams(),
-                PrototypeRef = Guid.NewGuid(),
-                DataSet = r.DataSet,
-                MultipleCreateMode = r.MultipleCreateMode,
-                WidthHint = r.WidthHint,
-                HeightHint = r.HeightHint,
+                Id = Ref<Prototype>.Create(),
+                Parameters = result,
+                Name = r.PrototypeName,
             };
+            Atoms.R.Write(this, prototype);
 
-            if (!e.Params.ContainsKey("BaseName"))
-            {
-                e.Params.Add("BaseName", CurName);
-            }
-
-            var cd = _components.First(x => x.ComponentName == CurName);
-
-            if (
-                cd.PrototypeNames != null
-                && cd.PrototypeNames.Length > 0
-                && r.PrototypeIndex < cd.PrototypeNames.Length
-            )
-            {
-                e.PrototypeName = cd.PrototypeNames[r.PrototypeIndex];
-            }
-            else
-            {
-                e.PrototypeName = cd.PrototypeName;
-            }
-
-            CreateObject?.Invoke(this, e);
+            EventBus.Instance.Publish(
+                new SpawnPrototypeEvent { PrototypeRef = prototype.Id, AllRows = true }
+            );
+            QueueFree();
         }
         else
         {
@@ -181,46 +120,52 @@ public partial class ComponentDefinition : Window
         if (_mapPrototype == null)
             return;
 
-        if (_panelDictionary[CurName] is ComponentPanelDialogResult r)
-        {
-            var errors = r.ValidateParameters(r.GetParams());
-            if (errors != null && errors.Count > 0)
-            {
-                _errorDialog.DialogText = string.Join("\n", errors);
-                _errorDialog.PopupCentered();
-                return;
-            }
-        }
+        if (_panelDictionary[CurName] is not ComponentPanelDialogResult r)
+            return;
+
+        var newParams = r.GetParams();
+        if (ShowErrors(r, newParams))
+            return;
 
         //update the project prototype
 
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                _mapPrototype.PrototypeRef,
-                out var prototype
-            )
-        )
+        var prototype = Atoms.R.Get(Prototype.ById, _mapPrototype.Id);
+        if (prototype == null)
             return;
 
-        prototype.Parameters = (
-            _panelDictionary[CurName] as ComponentPanelDialogResult
-        )?.GetParams();
-        prototype.Name = Utility.GetParam<string>(prototype.Parameters, "ComponentName");
-        prototype.IsDirty = true;
+        prototype = prototype with { Parameters = newParams, Name = r.PrototypeName };
 
-        EventBus.Instance.Publish(
-            new PrototypeChangedEvent { PrototypeId = prototype.PrototypeRef }
+        Atoms.R.Write(
+            this,
+            [
+                prototype,
+                .. newParams is PrintedParameters printed
+                    ? DeckReconciliation.Changes(Atoms.R, prototype.Id, printed)
+                    : [],
+            ]
         );
 
-        CloseDialog?.Invoke(this, EventArgs.Empty);
+        QueueFree();
     }
 
-    private void CancelClicked()
+    /// <summary>
+    /// Shows what's wrong with the panel's name and <paramref name="parameters"/>, if anything.
+    /// </summary>
+    /// <returns>True if there were errors to show.</returns>
+    private bool ShowErrors(ComponentPanelDialogResult panel, ComponentParameters parameters)
     {
-        CancelDialog?.Invoke(this, EventArgs.Empty);
+        var errors = panel.ValidateParameters(parameters);
+        if (string.IsNullOrEmpty(panel.PrototypeName))
+            errors.Insert(0, "Name may not be blank");
+        if (errors.Count == 0)
+            return false;
+
+        _errorDialog.DialogText = string.Join("\n", errors);
+        _errorDialog.PopupCentered();
+        return true;
     }
 
-    public string CurName
+    private string CurName
     {
         get => _curItem;
         set
@@ -228,6 +173,18 @@ public partial class ComponentDefinition : Window
             _curItem = value;
             UpdatePanelVisibility(_curItem);
         }
+    }
+
+    /// <summary>
+    /// Enables Create and Update when the shown panel's parameters can be submitted.
+    /// </summary>
+    private void ShowSubmittable()
+    {
+        bool submittable =
+            _panelDictionary.GetValueOrDefault(CurName) is not ComponentPanelDialogResult panel
+            || panel.Submittable;
+        _createButton.Disabled = !submittable;
+        _updateButton.Disabled = !submittable;
     }
 
     private void UpdatePanelVisibility(string name)
@@ -249,18 +206,7 @@ public partial class ComponentDefinition : Window
                 }
             }
         }
-    }
-
-    public void SetTextureFactory(TextureFactory tf)
-    {
-        _textureFactory = tf;
-        foreach (var kv in _panelDictionary)
-        {
-            if (kv.Value is ComponentPanelDialogResult cpdr)
-            {
-                cpdr.TextureFactory = tf;
-            }
-        }
+        ShowSubmittable();
     }
 
     private Button CreateButton(string name, Texture2D icon, ButtonGroup bg)
@@ -300,29 +246,6 @@ public partial class ComponentDefinition : Window
         return null;
     }
 
-    public event EventHandler<CreateObjectEventArgs> CreateObject;
-    public event EventHandler<EventArgs> CancelDialog;
-    public event EventHandler<EventArgs> CloseDialog;
-
-    public VisualComponentBase.VisualComponentType NameToType(string name)
-    {
-        return Enum.Parse<VisualComponentBase.VisualComponentType>(
-            _components.First(x => x.ComponentName == name).ComponentType
-        );
-    }
-
-    public string TypeToName(VisualComponentBase.VisualComponentType componentType)
-    {
-        if (componentType == VisualComponentBase.VisualComponentType.Deck)
-            return "Printed";
-        return _components.First(x => x.ComponentType == componentType.ToString()).ComponentName;
-    }
-
-    public void SetCurrentComponentType(VisualComponentBase.VisualComponentType type)
-    {
-        CurName = TypeToName(type);
-    }
-
     private Prototype _mapPrototype;
 
     public void DisplayPrototype(Prototype prototype)
@@ -331,13 +254,10 @@ public partial class ComponentDefinition : Window
             return;
 
         _mapPrototype = prototype;
-        var t = TypeToName(prototype.Type);
-        CurName = t;
-
-        if (IsNodeReady())
-        {
-            MapPrototypeToPanel(prototype);
-        }
+        CurName = _components
+            .First(x => x.ComponentType == prototype.Type.ToString())
+            .ComponentName;
+        MapPrototypeToPanel(prototype);
     }
 
     private void MapPrototypeToPanel(Prototype prototype)
@@ -357,27 +277,9 @@ public partial class ComponentDefinition : Window
     public void SetEditMode()
     {
         _editMode = true;
-        if (IsNodeReady())
-        {
-            _updateButton.Visible = true;
-            _createButton.Visible = false;
-            buttonPanel.Visible = false;
-        }
+        Title = "Edit Component";
+        _updateButton.Visible = true;
+        _createButton.Visible = false;
+        buttonPanel.Visible = false;
     }
-}
-
-public class CreateObjectEventArgs : EventArgs
-{
-    public Dictionary<string, object> Params { get; set; }
-    public VisualComponentBase.VisualComponentType ComponentType { get; set; }
-
-    public string PrototypeName { get; set; }
-
-    public Guid PrototypeRef { get; set; }
-
-    public DataSet DataSet { get; set; }
-
-    public bool MultipleCreateMode { get; set; }
-    public float WidthHint { get; set; }
-    public float HeightHint { get; set; }
 }

@@ -1,0 +1,784 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Lizzie.Replication.Machinery;
+using Xunit;
+
+namespace Lizzie.Tests;
+
+/// <summary>
+/// Undo and redo walked through by hand, one reversal at a time.
+/// </summary>
+public class UndoScenarioTests
+{
+    private static readonly Source Admin = Source.Admin;
+    private static readonly Source Me = new(1);
+    private static readonly Source Other = new(2);
+
+    private static bool Mine(Source author, TimelineEvent _) => author == Me;
+
+    private static bool Others(Source author, TimelineEvent _) => author != Me;
+
+    private static readonly ViewPlace Here = new("here", null);
+    private static readonly ViewPlace There = new("there", null);
+
+    private readonly Timeline _timeline = new();
+    private long _clock;
+
+    private SnowStamp NextId(Source source) => new(++_clock, source);
+
+    /// <summary>
+    /// Records an action that writes <paramref name="atom"/>, made in <paramref name="place"/> if given.
+    /// The write is a draft of <paramref name="transitions"/> if given, as one made from a draft is.
+    /// </summary>
+    private SnowStamp Act(
+        Source source,
+        int atom = 1,
+        ViewPlace? place = null,
+        TransitionSet transitions = default
+    )
+    {
+        var id = NextId(source);
+        _timeline.Add(
+            id,
+            new TimelineEvent
+            {
+                Id = id,
+                Place = place,
+                Writes = [new Prototype { Id = new(atom), Transitions = transitions }],
+            }
+        );
+        return id;
+    }
+
+    /// <summary>
+    /// Records the first event of a transition, which drafts <paramref name="atom"/>,
+    /// inside the transitions <paramref name="inside"/> if given.
+    /// </summary>
+    private Transition Start(
+        Source source,
+        int atom = 1,
+        ViewPlace? place = null,
+        TransitionSet inside = default
+    )
+    {
+        var id = Act(source, atom, place);
+        var transition = new Transition(id);
+        _timeline[id].Writes =
+        [
+            new Prototype { Id = new(atom), Transitions = inside.With(transition) },
+        ];
+        return transition;
+    }
+
+    /// <summary>
+    /// Records the event that ends <paramref name="transition"/>, writing <paramref name="atom"/>,
+    /// which commits unless it's still a draft of <paramref name="transitions"/>.
+    /// </summary>
+    private SnowStamp Close(
+        Transition transition,
+        Source source,
+        int atom = 1,
+        ViewPlace? place = null,
+        TransitionSet transitions = default
+    )
+    {
+        var id = Act(source, atom, place, transitions);
+        _timeline[id].Ends = transition;
+        return id;
+    }
+
+    /// <summary>Records an event that cancels <paramref name="transition"/>.</summary>
+    private TimelineEvent Cancel(Transition transition, Source source)
+    {
+        var id = NextId(source);
+        var e = new TimelineEvent { Id = id, Ends = transition };
+        _timeline.Add(id, e);
+        return e;
+    }
+
+    /// <summary>Records a reversal directly, as the host does, as an admin event, for a player who left.</summary>
+    private TimelineEvent AddFlag(SnowStamp reverses, Source source)
+    {
+        var id = NextId(source);
+        var e = new TimelineEvent
+        {
+            Id = id,
+            Undo = new UndoFlag { Reverses = reverses },
+        };
+        _timeline.Add(id, e);
+        return e;
+    }
+
+    private UndoFlag Undo(TimelineUndo.Scope scope, Source? source = null) =>
+        Reversal(TimelineUndo.Undo(_timeline, source ?? Me, scope), source ?? Me);
+
+    private UndoFlag Redo(TimelineUndo.Scope scope, Source? source = null) =>
+        Reversal(TimelineUndo.Redo(_timeline, source ?? Me, scope), source ?? Me);
+
+    private UndoFlag Reversal(UndoFlag flag, Source source)
+    {
+        if (flag != null)
+        {
+            var id = NextId(source);
+            _timeline.Add(id, new TimelineEvent { Id = id, Undo = flag });
+        }
+        return flag;
+    }
+
+    private bool IsUndone(SnowStamp id) =>
+        !TimelineUndo.InEffect(_timeline).Contains(_timeline[id]);
+
+    /// <summary>The ids of the events <paramref name="e"/> may have changed, oldest first.</summary>
+    private SnowStamp[] Changes(TimelineEvent e) =>
+        TimelineUndo.Changes(_timeline, e).Select(c => c.Id).Order().ToArray();
+
+    /// <summary>The action a reversal changes, which its chain of reversals comes down to.</summary>
+    private SnowStamp Changed(UndoFlag flag) => NaiveUndo.ActionOf(_timeline, flag.Reverses);
+
+    [Fact]
+    public void UndoWalksBackThroughOwnActions()
+    {
+        var a = Act(Me);
+        var b = Act(Me);
+
+        Assert.Equal(b, Changed(Undo(Mine)));
+        Assert.Equal(a, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+        Assert.True(IsUndone(a));
+        Assert.True(IsUndone(b));
+    }
+
+    [Fact]
+    public void UndoUnfoldsPastANewAction()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        var b = Act(Me);
+
+        // History is A, undo A, B, and each reversal walks back one step of it.
+        Assert.Equal(b, Changed(Undo(Mine)));
+        Assert.True(IsUndone(b));
+
+        Assert.Equal(a, Changed(Undo(Mine)));
+        Assert.False(IsUndone(a));
+
+        Assert.Equal(a, Changed(Undo(Mine)));
+        Assert.True(IsUndone(a));
+
+        Assert.Null(Undo(Mine));
+    }
+
+    [Fact]
+    public void RedoReversesUndosInTurn()
+    {
+        var a = Act(Me);
+        var b = Act(Me);
+        Undo(Mine);
+        Undo(Mine);
+
+        Assert.Equal(a, Changed(Redo(Mine)));
+        Assert.Equal(b, Changed(Redo(Mine)));
+        Assert.Null(Redo(Mine));
+        Assert.False(IsUndone(a));
+        Assert.False(IsUndone(b));
+    }
+
+    [Fact]
+    public void RedoReversesAnUnfoldingUndo()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        var b = Act(Me);
+        Undo(Mine); // undoes B
+        Undo(Mine); // restores A
+
+        Assert.Equal(a, Changed(Redo(Mine)));
+        Assert.True(IsUndone(a));
+
+        Assert.Equal(b, Changed(Redo(Mine)));
+        Assert.False(IsUndone(b));
+
+        Assert.Null(Redo(Mine));
+        Assert.True(IsUndone(a));
+        Assert.False(IsUndone(b));
+    }
+
+    /// <summary>
+    /// Redo retraces the undos in reverse, even when unfolding flagged the same move more than once.
+    /// </summary>
+    [Fact]
+    public void RedoRetracesAnUnfoldedHistory()
+    {
+        var a = Act(Me); // create at A
+        var b = Act(Me); // move to B
+        Undo(Mine); // back to A
+        var c = Act(Me); // move to C
+        Assert.Equal(c, Position());
+
+        Undo(Mine);
+        Assert.Equal(a, Position());
+        Undo(Mine);
+        Assert.Equal(b, Position());
+        Undo(Mine);
+        Assert.Equal(a, Position());
+
+        Redo(Mine);
+        Assert.Equal(b, Position());
+        Redo(Mine);
+        Assert.Equal(a, Position());
+        Redo(Mine);
+        Assert.Equal(c, Position());
+        Assert.Null(Redo(Mine));
+    }
+
+    /// <summary>
+    /// After redoing everything, undoing walks the same history again, unfolding included.
+    /// </summary>
+    [Fact]
+    public void UndoUnfoldsAgainAfterRedo()
+    {
+        var a = Act(Me); // create at A
+        var b = Act(Me); // move to B
+        Undo(Mine); // back to A
+        var c = Act(Me); // move to C
+
+        Undo(Mine); // A
+        Undo(Mine); // B
+        Undo(Mine); // A
+        Redo(Mine); // B
+        Redo(Mine); // A
+        Redo(Mine); // C
+        Assert.Equal(c, Position());
+
+        Undo(Mine);
+        Assert.Equal(a, Position());
+        Undo(Mine);
+        Assert.Equal(b, Position());
+        Undo(Mine);
+        Assert.Equal(a, Position());
+    }
+
+    /// <summary>
+    /// An undo that was redone cancels out with its redo, so a new action has nothing to unfold.
+    /// </summary>
+    [Fact]
+    public void RedoneUndoLeavesNoHistory()
+    {
+        var a = Act(Me); // create at A
+        var b = Act(Me); // move to B
+        Undo(Mine); // back to A
+        Redo(Mine); // B again
+        var c = Act(Me); // move to C
+
+        Undo(Mine);
+        Assert.Equal(b, Position());
+        Undo(Mine);
+        Assert.Equal(a, Position());
+        Undo(Mine);
+        Assert.Equal(SnowStamp.Empty, Position());
+        Assert.Null(Undo(Mine));
+    }
+
+    /// <summary>
+    /// A new action unfolds only the undos that weren't redone.
+    /// </summary>
+    [Fact]
+    public void OnlyUndosLeftUndoneUnfold()
+    {
+        var a = Act(Me); // create at A
+        var b = Act(Me); // move to B
+        Undo(Mine); // back to A
+        Undo(Mine); // gone
+        Redo(Mine); // A again
+        var c = Act(Me); // move to C
+        Assert.Equal(c, Position());
+
+        Undo(Mine);
+        Assert.Equal(a, Position());
+        Undo(Mine);
+        Assert.Equal(b, Position());
+        Undo(Mine);
+        Assert.Equal(a, Position());
+        Undo(Mine);
+        Assert.Equal(SnowStamp.Empty, Position());
+        Assert.Null(Undo(Mine));
+    }
+
+    /// <summary>Where the component is: the newest action still in effect, or Empty if none is.</summary>
+    private SnowStamp Position() =>
+        _timeline.Values.LastOrDefault(e => e.Undo == null && !IsUndone(e.Id))?.Id
+        ?? SnowStamp.Empty;
+
+    [Fact]
+    public void NewActionClearsRedo()
+    {
+        Act(Me);
+        Undo(Mine);
+        Act(Me);
+
+        Assert.Null(Redo(Mine));
+    }
+
+    /// <summary>A transition is nothing to undo until it ends, and then its end is.</summary>
+    [Fact]
+    public void ATransitionIsUndoneByItsEnd()
+    {
+        var t = Start(Me, atom: 1);
+        Act(Me, atom: 2, transitions: [t]);
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
+
+        var end = Close(t, Me, atom: 1);
+
+        Assert.Equal(end, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+    }
+
+    [Fact]
+    public void AReversalChangesTheActionItComesDownTo()
+    {
+        var a = Act(Other, atom: 1);
+        Act(Other, atom: 2);
+        var undo = AddFlag(a, Admin);
+        var redo = AddFlag(undo.Id, Admin);
+
+        Assert.Equal([a], Changes(undo));
+        Assert.Equal([a], Changes(redo));
+    }
+
+    [Fact]
+    public void StreamsKeepToTheirAuthors()
+    {
+        var mine = Act(Me);
+        var theirs = Act(Other);
+
+        Assert.Equal(mine, Changed(Undo(Mine)));
+        Assert.Equal(theirs, Changed(Undo(Others)));
+    }
+
+    [Fact]
+    public void AnotherPlayersUndoIsTheirAction()
+    {
+        var theirs = Act(Other);
+        Undo((author, _) => author == Other, source: Other);
+        Assert.True(IsUndone(theirs));
+
+        // Undoing their undo restores what they undid.
+        Assert.Equal(theirs, Changed(Undo(Others)));
+        Assert.False(IsUndone(theirs));
+    }
+
+    [Fact]
+    public void UndoingOthersStaysInTheirStream()
+    {
+        var theirs = Act(Other);
+        var mine = Act(Me);
+        Undo(Others);
+
+        // Undoing their action isn't one of mine, so it neither blocks nor joins my history.
+        Assert.Equal(mine, Changed(Undo(Mine)));
+        Assert.Equal(theirs, Changed(Redo(Others)));
+        Assert.False(IsUndone(theirs));
+    }
+
+    [Fact]
+    public void FlagOnAnUnknownTargetDoesNothing()
+    {
+        var a = Act(Me);
+        var missing = new SnowStamp(999, Me);
+        var id = NextId(Me);
+        _timeline.Add(
+            id,
+            new TimelineEvent
+            {
+                Id = id,
+                Undo = new UndoFlag { Reverses = missing },
+            }
+        );
+
+        Assert.Empty(Changes(_timeline[id]));
+        Assert.False(IsUndone(a));
+        Assert.Equal(a, Changed(TimelineUndo.Undo(_timeline, Me, Mine)));
+    }
+
+    [Fact]
+    public void TransitionInProgressIsPassedOver()
+    {
+        var mine = Act(Me);
+        Act(Other);
+        Start(Me, atom: 2); // my drag, still going
+
+        // Neither my undo nor another player's lands on the drag.
+        Assert.Equal(mine, Changed(TimelineUndo.Undo(_timeline, Me, Mine)));
+        Assert.Equal(
+            mine,
+            Changed(TimelineUndo.Undo(_timeline, Other, (author, _) => author != Other))
+        );
+    }
+
+    [Fact]
+    public void FlagOnATransitionInProgressIsPassedOver()
+    {
+        var t = Start(Other);
+        AddFlag(t.Start, Admin);
+
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Others));
+    }
+
+    [Fact]
+    public void TransitionInProgressDoesNotBlockRedo()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        Start(Me, atom: 2);
+
+        Assert.Equal(a, Changed(Redo(Mine)));
+    }
+
+    [Fact]
+    public void AbandonedTransitionIsCanceled()
+    {
+        var open = Start(Other, atom: 1);
+        Act(Other, atom: 2, transitions: [open]);
+        var finished = Start(Other, atom: 3);
+        Close(finished, Other, atom: 4);
+        Start(Me, atom: 5);
+
+        Assert.Equal([open], TimelineUndo.OpenTransitions(_timeline, Other));
+
+        // What the host, me here, writes when the player leaves.
+        Cancel(open, Me);
+
+        Assert.Empty(TimelineUndo.OpenTransitions(_timeline, Other));
+    }
+
+    [Fact]
+    public void ATransitionInsideAnotherIsOpenToo()
+    {
+        var outer = Start(Other);
+        var inner = Start(Other, inside: [outer]);
+
+        Assert.Equal([outer, inner], TimelineUndo.OpenTransitions(_timeline, Other));
+    }
+
+    /// <summary>A transition inside another is nothing to undo until the outer one ends, and then the outer end is.</summary>
+    [Fact]
+    public void NestedTransitionsAreUndoneByTheOuterEnd()
+    {
+        var outer = Start(Me);
+        var inner = Start(Me, inside: [outer]);
+        Close(inner, Me, transitions: [outer]);
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
+
+        var end = Close(outer, Me);
+
+        Assert.Equal(end, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+    }
+
+    /// <summary>When the outer transition ends first, its end is a draft of the inner one, so the inner end is undone.</summary>
+    [Fact]
+    public void NestedTransitionsAreUndoneByTheLastEnd()
+    {
+        var outer = Start(Me);
+        var inner = Start(Me, inside: [outer]);
+        Close(outer, Me, transitions: [inner]);
+        Assert.Null(TimelineUndo.Undo(_timeline, Me, Mine));
+
+        var end = Close(inner, Me);
+
+        Assert.Equal(end, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+    }
+
+    [Fact]
+    public void ACancelChangesTheDraftsOfTransitionsInsideIt()
+    {
+        var outer = Start(Me);
+        var inner = Start(Me, inside: [outer]);
+        var innerEnd = Close(inner, Me, transitions: [outer]);
+
+        var cancel = Cancel(outer, Me);
+
+        Assert.Equal([outer.Start, inner.Start, innerEnd, cancel.Id], Changes(cancel));
+    }
+
+    [Fact]
+    public void ACancelChangesWhatItsTransitionDrafted()
+    {
+        var t = Start(Me, atom: 1);
+        var move = Act(Me, atom: 2, transitions: [t]);
+        Assert.Equal([t], TimelineUndo.OpenTransitions(_timeline, Me));
+
+        var cancel = Cancel(t, Me);
+
+        Assert.Empty(TimelineUndo.OpenTransitions(_timeline, Me));
+        // What the transition drafted goes back, so its atoms are recomputed.
+        Assert.Equal([t.Start, move, cancel.Id], Changes(cancel));
+    }
+
+    [Fact]
+    public void UndoPassesOverACanceledTransition()
+    {
+        var a = Act(Me);
+        Cancel(Start(Me, atom: 2), Me);
+
+        Assert.Equal(a, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+    }
+
+    /// <summary>A canceled transition isn't a new action, so the undo before it is still there to redo.</summary>
+    [Fact]
+    public void CanceledTransitionLeavesRedo()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        Cancel(Start(Me, atom: 2), Me);
+
+        Assert.Equal(a, Changed(Redo(Mine)));
+        Assert.Null(Redo(Mine));
+    }
+
+    /// <summary>A canceled transition isn't a new action either, so undo doesn't start unfolding past it.</summary>
+    [Fact]
+    public void CanceledTransitionDoesNotUnfold()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        Cancel(Start(Me, atom: 2), Me);
+
+        Assert.Null(Undo(Mine));
+        Assert.True(IsUndone(a));
+    }
+
+    [Fact]
+    public void CancelAfterCloseDoesNothing()
+    {
+        var t = Start(Me, atom: 1);
+        var end = Close(t, Me, atom: 2);
+        Cancel(t, Me);
+
+        Assert.Equal(end, Changed(Undo(Mine)));
+    }
+
+    [Fact]
+    public void AnEndChangesTheWritesMadeFromItsDrafts()
+    {
+        var t = Start(Me, atom: 1);
+        var theirs = Act(Other, atom: 1, transitions: [t]);
+        var close = Close(t, Me, atom: 1);
+
+        Assert.Equal([t.Start, theirs, close], Changes(_timeline[close]));
+    }
+
+    [Fact]
+    public void AWriteMadeFromADraftIsNotUndoneOnItsOwn()
+    {
+        var theirs = Act(Other, atom: 2);
+        var t = Start(Me, atom: 1);
+        Act(Other, atom: 1, transitions: [t]);
+
+        Assert.Equal(theirs, Changed(Undo(Others)));
+    }
+
+    [Fact]
+    public void AnEventThatChangesNothingIsNotUndone()
+    {
+        var a = Act(Me);
+        var nothing = NextId(Me);
+        _timeline.Add(nothing, new TimelineEvent { Id = nothing });
+
+        Assert.Equal(a, Changed(Undo(Mine)));
+    }
+
+    /// <summary>
+    /// History is the only truth: two reversals that reverse the same action both have to be reversed
+    /// before it's back. Undo and Redo reverse both at once (see SimultaneousUndoTests); these are
+    /// written by hand, one at a time.
+    /// </summary>
+    [Fact]
+    public void TwoUndosOfOneActionNeedBothReversed()
+    {
+        var x = Act(Me);
+        var mine = AddFlag(x, Me);
+        var theirs = AddFlag(x, Other);
+        Assert.True(IsUndone(x));
+
+        AddFlag(mine.Id, Me);
+        Assert.True(IsUndone(x));
+
+        AddFlag(theirs.Id, Other);
+        Assert.False(IsUndone(x));
+    }
+
+    /// <summary>
+    /// My reversal that reverses another player's undo is my undo of their action, so it walks in the
+    /// Others stream, even though what comes back is my own work.
+    /// </summary>
+    [Fact]
+    public void RedoOthersRedoesMyUndoOfTheirUndo()
+    {
+        var mine = Act(Me);
+        Undo((author, _) => true, source: Other); // they undo my action
+        Assert.True(IsUndone(mine));
+
+        Undo(Others); // I undo their undo
+        Assert.False(IsUndone(mine));
+
+        Assert.NotNull(Redo(Others));
+        Assert.True(IsUndone(mine));
+    }
+
+    /// <summary>
+    /// Another player's undo that they redid is gone from history for everyone,
+    /// so Undo Others passes over it.
+    /// </summary>
+    [Fact]
+    public void UndoOthersPassesTheirRedoneUndo()
+    {
+        var first = Act(Other);
+        var second = Act(Other);
+        Undo((author, _) => author == Other, source: Other);
+        Redo((author, _) => author == Other, source: Other);
+
+        Assert.Equal(second, Changed(Undo(Others)));
+        Assert.True(IsUndone(second));
+
+        Assert.Equal(first, Changed(Undo(Others)));
+        Assert.True(IsUndone(first));
+    }
+
+    /// <summary>
+    /// A loaded save is one admin event holding the whole table, so no undo reaches it,
+    /// whoever presses and in whatever scope.
+    /// </summary>
+    [Fact]
+    public void LoadedSaveIsNeverUndone()
+    {
+        var save = Act(Admin, atom: 1);
+
+        Assert.Null(Undo(Mine));
+        Assert.Null(Undo(Others));
+        Assert.Null(Undo((_, _) => true, source: Other));
+
+        // Walking back through my own history stops before it.
+        var mine = Act(Me, atom: 2);
+        Assert.Equal(mine, Changed(Undo(Mine)));
+        Assert.Null(Undo(Mine));
+        Assert.False(IsUndone(save));
+    }
+
+    /// <summary>Undo This on an atom no one has changed since the save loaded has nothing to undo.</summary>
+    [Fact]
+    public void UntouchedAtomHasNothingToUndo()
+    {
+        Act(Admin, atom: 1);
+
+        Assert.Null(Undo(Changing(1)));
+    }
+
+    /// <summary>An unset is in scope when what it unsets is, so Undo This brings an unset atom back.</summary>
+    [Fact]
+    public void UnsetIsInTheScopeOfWhatItUnsets()
+    {
+        Act(Admin, atom: 1);
+        var id = Unsetting(new Unset(Prototype.ById, new Ref<Prototype>(1)));
+
+        Assert.Equal(id, Changed(Undo(Changing(1))));
+    }
+
+    /// <summary>A lookup unset is in scope for the atoms whose newest write before it was under its key.</summary>
+    [Fact]
+    public void LookupUnsetIsInTheScopeOfWhatItCovered()
+    {
+        Act(Admin, atom: 1);
+        Write(Admin, new Prototype { Id = new(2), Deleted = true });
+        var id = Unsetting(new Unset(Prototype.Live, (bool?)true));
+
+        Assert.Null(Undo(Changing(2)));
+        Assert.Equal(id, Changed(Undo(Changing(1))));
+    }
+
+    /// <summary>Undo This on the prototypes with these ids.</summary>
+    private TimelineUndo.Scope Changing(params int[] prototypes) =>
+        UndoScopes.Changing(
+            _timeline,
+            prototypes.Select(p => (IAtomRef)new Ref<Prototype>(p)).ToHashSet()
+        );
+
+    /// <summary>Records my event that makes <paramref name="unset"/>.</summary>
+    private SnowStamp Unsetting(Unset unset)
+    {
+        var id = NextId(Me);
+        _timeline.Add(id, new TimelineEvent { Id = id, Unsets = [unset] });
+        return id;
+    }
+
+    /// <summary>Records an event that writes <paramref name="atom"/>.</summary>
+    private void Write(Source source, Atom atom)
+    {
+        var id = NextId(source);
+        _timeline.Add(id, new TimelineEvent { Id = id, Writes = [atom] });
+    }
+
+    /// <summary>The host's bookkeeping, like giving a seat its hand, doesn't take away a player's redo.</summary>
+    [Fact]
+    public void AdminEventDoesNotBlockRedo()
+    {
+        var a = Act(Me);
+        Undo(Mine);
+        Act(Admin, atom: 2);
+
+        Assert.NotNull(Redo((_, _) => true));
+        Assert.False(IsUndone(a));
+    }
+
+    /// <summary>Undo in a view passes over what the player did in another view.</summary>
+    [Fact]
+    public void UndoPassesOverChangesMadeElsewhere()
+    {
+        var here = Act(Me, place: Here);
+        Act(Me, atom: 2, place: There);
+
+        Assert.Equal(here, Changed(Undo(UndoScopes.Mine(Me, Here))));
+        Assert.Null(Undo(UndoScopes.Mine(Me, Here)));
+    }
+
+    /// <summary>A transition is undone where it ends, as that's where its end is made.</summary>
+    [Fact]
+    public void TransitionIsUndoneWhereItEnds()
+    {
+        var t = Start(Me, place: There);
+        var end = Close(t, Me, place: Here);
+
+        Assert.Null(Undo(UndoScopes.Mine(Me, There)));
+        Assert.Equal(end, Changed(Undo(UndoScopes.Mine(Me, Here))));
+    }
+
+    /// <summary>Undo Others passes over another player's selection, but not their other changes.</summary>
+    [Fact]
+    public void UndoOthersPassesOverSelections()
+    {
+        var change = Act(Other, place: Here);
+        var id = NextId(Other);
+        _timeline.Add(
+            id,
+            new TimelineEvent
+            {
+                Id = id,
+                Place = Here,
+                Writes =
+                [
+                    new Selection
+                    {
+                        Id = new(3),
+                        Player = Other,
+                        Place = Here,
+                    },
+                ],
+            }
+        );
+
+        Assert.Equal(change, Changed(Undo(UndoScopes.Others(Me, Here))));
+    }
+}

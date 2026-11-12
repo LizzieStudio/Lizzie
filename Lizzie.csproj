@@ -1,15 +1,42 @@
-<Project Sdk="Godot.NET.Sdk/4.7.1">
+<Project Sdk="Godot.NET.Sdk/4.7.2">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>Lizzie</RootNamespace>
+    <!-- Required by ImGui -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="Scripts\AssetManagement\README.md" />
-    <None Include="Scripts\Container\ParametersSerializationGuide.md" />
-    <None Include="Scripts\JsonUtilities\ParseDeckGuide.md" />
-    <None Include="Scripts\Multiplayer\README.md" />
-    <None Include="Scripts\Templating\SaveBeforeCloseFeature.md" />
-    <None Include="Scripts\VisualComponents\JaggedArrayConversionGuide.md" />
+    <!-- Must match the version the imgui-godot addon was built against. -->
+    <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+    <PackageReference Include="Superpower" Version="3.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The test project builds separately and references this one. -->
+    <Compile Remove="Tests/**" />
+    <None Remove="Tests/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\SequenceExpressions.md" />
+  </ItemGroup>
+  <!-- The GdUnit4 engine tests in GodotTests/ are only included in Debug builds so they aren't exported with Lizzie.exe. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <!-- gdUnit4.api depends on an older GodotSharp than the Godot SDK's. -->
+    <NoWarn>$(NoWarn);NU1605</NoWarn>
+    <VSTestTestAdapterPath>none</VSTestTestAdapterPath>
+    <TestFramework>GdUnit4</TestFramework>
+    <!-- The Godot binary comes from the GODOT_BIN environment variable. -->
+    <RunSettingsFilePath>$(MSBuildProjectDirectory)/GodotTests/GdUnit4.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+  <!-- Private, so they don't flow into Tests/ through its reference to this project. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" PrivateAssets="all" />
+    <PackageReference Include="gdUnit4.api" Version="5.1.0-rc5" PrivateAssets="all" />
+    <PackageReference Include="gdUnit4.test.adapter" Version="3.1.1" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Compile Remove="GodotTests/**" />
+    <!-- The runner script the test adapter installs into the project. -->
+    <Compile Remove="gdunit4_testadapter_v5/**" />
   </ItemGroup>
 </Project>

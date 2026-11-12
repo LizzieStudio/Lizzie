@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
+
+namespace Lizzie;
 
 public abstract partial class VisualComponentBase : Area3D
 {
     public enum VisualComponentType
     {
-        Cube = 0,
-        Disc = 1,
-        Token = 3,
+        Unset = 0,
+        Cube = 1,
+        Disc = 2,
+        Printed = 3,
         Deck = 6,
         Die = 7,
         Mesh = 8,
@@ -18,345 +22,274 @@ public abstract partial class VisualComponentBase : Area3D
         Zone = 12,
     }
 
-    public bool TextureReady { get; set; }
-    public bool TextureChanged { get; set; }
-
     public virtual VisualComponentType ComponentType { get; set; }
     protected GeometryInstance3D MainMesh;
 
-    private MeshInstance3D _highlightMesh;
+    /// <summary>
+    /// The component's Rotation.
+    /// </summary>
+    public new virtual Vector3 Rotation
+    {
+        get => base.Rotation;
+        set => base.Rotation = value;
+    }
 
     public virtual List<OffsetShape2D> ShapeProfiles { get; set; } = new();
 
-    protected MeshInstance3D HighlightMesh
+    public override void _EnterTree()
     {
-        get => _highlightMesh;
+        base._EnterTree();
+
+        // Normal nodes never change, since the StageView replaces the node when its Component does.
+        // Previews have no atom and keep their own.
+        if (State is { } atom)
+        {
+            var component = Atoms.R.GetComponent(atom);
+            PrototypeRef = component.PrototypeRef;
+            Item = component.Item;
+        }
+
+        // Builds first, so the first placement knows the component's height.
+        Atoms.R.Watch(this, Sync);
+        Atoms.R.Watch(this, SyncState);
+        Atoms.R.Watch(this, SyncSelection);
+        Atoms.R.Watch(this, SyncResetMark);
+    }
+
+    private void SyncResetMark(IWatchReader R)
+    {
+        _markedForReset = ProjectService.Instance.GameObjects.IsMarkedForReset(R, Key);
+        UpdateHighlight();
+    }
+
+    private void SyncSelection(IWatchReader R)
+    {
+        var key = Key;
+        var place = ViewPlace.Of<GameObjects>(key.StageRef);
+        var selections = R.Get(Selection.ByPlace, place);
+        var mine = selections.FirstOrDefault(s => s.Player.IsMe())?.Targets;
+        _isMine = mine?.Contains(key) == true;
+        _localColor = R.SeatColor(Source.Me);
+        // We're avoiding using GetSelection here, which would watch every selected component.
+        ICommandView table = ProjectService.Instance.GameObjects;
+        _nothingSelected = !_isMine && mine?.Any(t => table.CanSelect(R, t)) != true;
+        var other = selections
+            .Where(s => !s.Player.IsMe() && s.Targets.Contains(key))
+            .MaxBy(R.Version);
+        _othersColor = other == null ? null : R.SeatColor(other.Player);
+        UpdateHighlight();
+    }
+
+    /// <summary>
+    /// Raised after each Sync that builds the component.
+    /// </summary>
+    public event Action Built;
+
+    /// <summary>
+    /// An unsaved prototype shown instead of <see cref="PrototypeRef"/>.
+    /// Used for the editor preview, since there is no protoype atom yet.
+    /// </summary>
+    public Prototype DraftPrototype
+    {
+        get;
         set
         {
-            _highlightMesh = value;
-            if (_highlightMesh != null)
-                UpdateHighlight();
+            field = value;
+            Atoms.R.QueueSync(this);
         }
     }
 
-    [Export]
-    private float _highlightScale = 1.1f;
+    /// <summary>The prototype this component shows. Possibly a draft or even deleted.</summary>
+    public Prototype GetPrototype(IAtomReader R) =>
+        DraftPrototype ?? R.Get(Prototype.ById, PrototypeRef);
 
-    public const int TooltipTime = 1000;
-    private float _curScale = 1;
+    private Tween _yTween;
+    private float _targetY;
 
-    //original creation parameters
-    public Dictionary<string, object> Parameters
-    {
-        get
-        {
-            if (ProjectService.Instance.CurrentProject == null)
-                return new();
-            if (
-                !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                    PrototypeRef,
-                    out var proto
-                )
-            )
-            {
-                return new();
-            }
-
-            return proto.Parameters;
-        }
-    }
-
-    public override void _Ready()
-    {
-        _curScale = 1;
-
-        IsMouseSelected = false;
-
-        //MouseEntered += _on_mouse_entered;
-        MouseExited += _on_mouse_exited;
-
-        base._Ready();
-    }
-
-    public override void _InputEvent(
-        Camera3D camera,
-        InputEvent @event,
-        Vector3 eventPosition,
-        Vector3 normal,
-        int shapeIdx
-    )
-    {
-        if (@event is InputEventMouseMotion mouse && !IsDragging)
-        {
-            if (shapeIdx == 0)
-            {
-                SetHighlightColor(Colors.White);
-                CanDrag = true;
-                IsDrawSelected = false;
-            }
-            else
-            {
-                SetHighlightColor(Colors.CornflowerBlue);
-                IsDrawSelected = true;
-                CanDrag = false;
-            }
-            _on_mouse_entered();
-        }
-        base._InputEvent(camera, @event, eventPosition, normal, shapeIdx);
-    }
+    // This is to make it where the first y position is instant.
+    // Otherwise the components start out squished onto the table.
+    private bool _stackedAtLeastOnce;
 
     public void MoveToTargetY(float y)
     {
-        var tween = GetTree().CreateTween();
-
-        var newPos = new Vector3(Position.X, y, Position.Z);
-        tween.TweenProperty(this, "position", newPos, 0.2f);
-    }
-
-    public virtual bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        return Setup(parameters, DataSetRow, textureFactory);
-    }
-
-    public virtual bool Setup(
-        Dictionary<string, object> parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
-    {
-        TextureFactory = textureFactory;
-        TextureReady = false;
-
-        if (parameters.ContainsKey(nameof(ComponentName)))
+        if (!_stackedAtLeastOnce)
         {
-            ComponentName = parameters[nameof(ComponentName)].ToString();
+            _stackedAtLeastOnce = true;
+            Position = Position with { Y = y };
+            return;
         }
 
-        if (!string.IsNullOrEmpty(dataSetRow))
-            DataSetRow = dataSetRow;
+        bool tweening = IsInstanceValid(_yTween) && _yTween.IsRunning();
+        if (Mathf.IsEqualApprox(tweening ? _targetY : Position.Y, y))
+            return;
 
+        if (IsInstanceValid(_yTween))
+            _yTween.Kill();
+        _targetY = y;
+        _yTween = GetTree().CreateTween();
+        _yTween.TweenProperty(this, "position:y", y, 0.2f);
+    }
+
+    /// <summary>
+    /// Builds the component from its prototype's parameters.
+    /// </summary>
+    protected virtual void Setup(ComponentParameters parameters, IAtomReader R)
+    {
+        ShapeProfiles.Clear();
+    }
+
+    private void Sync(IWatchReader R)
+    {
+        var proto = GetPrototype(R);
+        if (proto == null)
+            return;
+
+        ComponentName = proto.Name;
+        Setup(proto.Parameters, R);
+        RebuildHighlight();
+        Built?.Invoke();
+
+        // A rebuild can change the component's size, so the view restacks.
+        OwningView?.NotifyChanged();
+    }
+
+    /// <summary>
+    /// The StageView node of this component, or null for a preview.
+    /// </summary>
+    protected StageView OwningView
+    {
+        get
+        {
+            for (var n = GetParent(); n != null; n = n.GetParent())
+                if (n is StageView view)
+                    return view;
+            return null;
+        }
+    }
+
+    // whether SyncState has placed the node yet
+    private bool _placed;
+
+    /// <summary>
+    /// Applies the component's atom, animated by the command that wrote it if the write is recent enough.
+    /// </summary>
+    private void SyncState(IWatchReader R)
+    {
+        var s = R.Get(ComponentPosition.ById, Key);
+        if (s == null)
+            return;
+
+        LogicalVisible = s.IsOnTable || R.IsInDeck(s) || s.Location is Dragged { OverHand: false };
+
+        _removed = R.IsRemoved(s);
+        UpdateHighlight();
+
+        // A new state ends any slide toward the old one.
+        if (IsInstanceValid(_slide))
+            _slide.Kill();
+
+        // Only a recent write animates. Anything older jumps into place, to catch up.
+        long age = R.Version(s).GetAgeMsec();
+        var cutoff = ProjectService.Instance.GameObjects.AnimationCutoff;
+        var writtenBy = _placed && age <= cutoff ? R.WrittenBy(s) : null;
+
+        // A dragged node is placed by the cursor dragging it.
+        if (!s.IsDragged)
+        {
+            var target = s.PositionAt(_placed || _stackedAtLeastOnce ? Position.Y : YHeight / 2f);
+            if (writtenBy != DragCommands.Drop || !Slide(target, age))
+                Position = target;
+        }
+        if (!PlayTransition(s, writtenBy, age))
+            Rotation = s.Rotation;
+        _placed = true;
+
+        OwningView?.NotifyChanged();
+    }
+
+    private Tween _slide;
+
+    /// <summary>
+    /// Slides across the table to <paramref name="target"/> at <see cref="GameObjects.DropSpeed"/>,
+    /// minus the <paramref name="msecSinceStart"/> that's already gone by.
+    /// </summary>
+    /// <returns>true when it still has movement to go</returns>
+    private bool Slide(Vector3 target, long msecSinceStart)
+    {
+        var from = new Vector2(Position.X, Position.Z);
+        var to = new Vector2(target.X, target.Z);
+        var speed = OwningView?.GetParentOrNull<GameObjects>()?.DropSpeed ?? 0;
+        if (speed <= 0)
+            return false;
+        float remaining = from.DistanceTo(to) / speed - msecSinceStart / 1000f;
+        if (remaining <= 0)
+            return false;
+
+        _slide = CreateTween().SetParallel();
+        _slide.SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        _slide.TweenProperty(this, "position:x", target.X, remaining);
+        _slide.TweenProperty(this, "position:z", target.Z, remaining);
         return true;
     }
 
-    public virtual bool Setup(Guid prototypeRef, TextureFactory textureFactory)
+    /// <summary>
+    /// The components to spawn along with this one, such as a deck's cards, bottom first,
+    /// as their positions and the Components they need.
+    /// <strong>The positions' ranks do not come assigned.</strong>
+    /// </summary>
+    /// <param name="self">The position this component spawns with.</param>
+    public virtual IEnumerable<Atom> GetSpawnStack(ComponentPosition self)
     {
-        return Setup(prototypeRef, string.Empty, textureFactory);
-    }
-
-    public virtual bool Setup(Guid prototypeRef, string dataSetRow, TextureFactory textureFactory)
-    {
-        TextureFactory = textureFactory;
-        TextureReady = false;
-
-        if (ProjectService.Instance.CurrentProject == null)
-            return false;
-
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var proto
-            )
-        )
-        {
-            return false;
-        }
-
-        PrototypeRef = prototypeRef;
-        if (!string.IsNullOrEmpty(dataSetRow))
-            DataSetRow = dataSetRow;
-
-        Setup(proto.Parameters, textureFactory);
-
-        return true;
-    }
-
-    public virtual void Build() { }
-
-    public virtual void SpawnBuild(
-        Guid prototypeRef,
-        VcSyncDto syncDto,
-        TextureFactory textureFactory
-    )
-    {
-        syncDto.ApplyToComponent(this);
-        Setup(prototypeRef, syncDto.DataSetRow, textureFactory);
+        yield break;
     }
 
     /// <summary>
-    /// Updates the textures, size, etc, without recreating any child objects.
+    /// Animates toward <paramref name="state"/> as <paramref name="writtenBy"/>, the command that wrote it, calls for.
+    /// <paramref name="MsecSinceStart"/> is how many milliseconds ago the write was made.
+    /// <paramref name="writtenBy"/> is null for a write too old to animate (see <see cref="GameObjects.AnimationCutoff"/>).
+    /// Returns false when there's nothing to animate, so the state is applied immediately.
     /// </summary>
-    /// <param name="parameters"></param>
-    /// <param name="textureFactory"></param>
-    /// <returns></returns>
-    public virtual bool Refresh(TextureFactory textureFactory)
-    {
-        var result = Setup(PrototypeRef, DataSetRow, textureFactory);
-        if (result)
-            Build();
-        return result;
-    }
-
-    public virtual void Delete()
-    {
-        QueueFree();
-    }
-
-    /// <summary>
-    /// Checks the parameter dictionary to make sure that everything required for this
-    /// component type is included.
-    /// </summary>
-    /// <param name="parameters"></param>
-    /// <returns>List of error messages. If all OK, return zero-element list</returns>
-    public abstract List<string> ValidateParameters(Dictionary<string, object> parameters);
-
-    /// <summary>
-    /// Process a Command object
-    /// </summary>
-    /// <param name="command"></param>
-    /// <returns>true if action consumed by object. Else false</returns>
-    public virtual CommandResponse ProcessCommand(VisualCommand command)
-    {
-        if (command == VisualCommand.ToggleLock)
-        {
-            Locked = !Locked;
-
-            return new CommandResponse(true, null);
-        }
-
-        if (command == VisualCommand.RotateCcw)
-        {
-            var c = new Change
-            {
-                Component = this,
-                Action = Change.ChangeType.Transform,
-                Begin = this.Transform,
-            };
-
-            float rotation = ProjectService.Instance.RotationStep;
-            SetRotation(RotationDegrees + new Vector3(0, rotation, 0));
-            c.End = Transform;
-
-            return new CommandResponse(true, c);
-        }
-
-        if (command == VisualCommand.RotateCw)
-        {
-            var c = new Change
-            {
-                Component = this,
-                Action = Change.ChangeType.Transform,
-                Begin = this.Transform,
-            };
-
-            float rotation = -1 * ProjectService.Instance.RotationStep;
-            SetRotation(RotationDegrees + new Vector3(0, rotation, 0));
-            c.End = Transform;
-
-            return new CommandResponse(true, c);
-        }
-
-        if (command == VisualCommand.Delete)
-        {
-            Visible = false;
-            IsMouseSelected = false;
-            IsClickSelected = false;
-            IsDragging = false;
-            IsHovered = false;
-
-            return new CommandResponse(
-                true,
-                new Change { Component = this, Action = Change.ChangeType.Deletion }
-            );
-        }
-
-        if (command == VisualCommand.Refresh)
-        {
-            Refresh(TextureFactory);
-            return new CommandResponse(true, null);
-        }
-
-        if (command == VisualCommand.Duplicate)
-        {
-            EventBus.Instance.Publish(
-                new SpawnPrototypeEvent { PrototypeRef = PrototypeRef, DataSetRow = DataSetRow }
-            );
-            return new CommandResponse(true, null);
-        }
-
-        if (command == VisualCommand.Edit)
-        {
-            EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = PrototypeRef });
-        }
-
-        if (command == VisualCommand.MakeUnique)
-        {
-            EventBus.Instance.Publish(new MakePrototypeUniqueEvent { PrototypeId = PrototypeRef });
-        }
-
-        return new CommandResponse(false, null);
-    }
-
-    /// <summary>
-    /// Override in subclasses that support quantity-based commands (e.g. Draw N, Deal N).
-    /// The base implementation returns an unconsumed response.
-    /// <paramref name="quantity"/> is Int32.MaxValue when the user chose "All".
-    /// </summary>
-    public virtual CommandResponse ProcessCommandWithQuantity(VisualCommand command, int quantity)
-    {
-        return new CommandResponse(false, null);
-    }
-
-    protected TextureFactory TextureFactory;
-
-    public virtual List<MenuCommand> GetMenuCommands()
-    {
-        var l = new List<MenuCommand>();
-
-        //l.Add(new MenuCommand(VisualCommand.ToggleLock, Locked));
-        switch (Layer)
-        {
-            case LayerType.Normal:
-                l.Add(new MenuCommand(VisualCommand.Freeze));
-                l.Add(new MenuCommand(VisualCommand.Tuck));
-                break;
-            case LayerType.Frozen:
-                l.Add(new MenuCommand(VisualCommand.Unfreeze));
-                break;
-            case LayerType.Tucked:
-                l.Add(new MenuCommand(VisualCommand.Untuck));
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-        l.Add(new MenuCommand(VisualCommand.RotateCw));
-        l.Add(new MenuCommand(VisualCommand.RotateCcw));
-        l.Add(new MenuCommand(VisualCommand.Delete));
-        l.Add(new MenuCommand(VisualCommand.Refresh));
-        l.Add(new MenuCommand(VisualCommand.Duplicate));
-        l.Add(new MenuCommand(VisualCommand.Edit));
-        l.Add(new MenuCommand(VisualCommand.MakeUnique));
-        return l;
-    }
+    public virtual bool PlayTransition(
+        ComponentPosition state,
+        CommandName? writtenBy,
+        long MsecSinceStart
+    ) => false;
 
     public virtual string ComponentName { get; set; }
 
-    public virtual Guid PrototypeRef { get; set; }
+    public virtual Ref<Prototype> PrototypeRef { get; set; }
 
-    public virtual Guid Reference { get; set; } = Guid.NewGuid();
-
-    /// <summary>
-    /// Guid of the parent that created this object. Primarily used for decks for recovering
-    /// all the cards
-    /// </summary>
-    public virtual Guid Parent { get; set; }
+    private Ref<Component> _componentRef = Ref<Component>.Create();
 
     /// <summary>
-    /// Which row in the DataSet supplies the data for templating
+    /// The component this node shows. Must be set before adding the node to the tree.
     /// </summary>
-    public virtual string DataSetRow { get; set; }
+    public Ref<Component> ComponentRef
+    {
+        get => _componentRef;
+        set
+        {
+            if (IsInsideTree())
+                throw new InvalidOperationException("ComponentRef can't change once in the tree.");
+            _componentRef = value;
+        }
+    }
 
-    public virtual Polygon2D YProjection { get; private set; }
+    /// <summary>
+    /// The component's atom, or null for a node without one, such as a spawn preview.
+    /// Also null between its atom being unset and the view removing it at the end of the frame.
+    /// </summary>
+    public ComponentPosition State => Atoms.R.Get(ComponentPosition.ById, Key);
+
+    /// <summary>
+    /// The id of the component atom this node shows, in the stage its table shows.
+    /// </summary>
+    public PositionKey Key => new(OwningView?.StageRef ?? Ref<Stage>.None, ComponentRef);
+
+    /// <summary>
+    /// Which of its prototype's items this is, or null.
+    /// </summary>
+    public PrototypeItemRef Item { get; set; }
 
     protected float _yHeight;
 
@@ -371,72 +304,16 @@ public abstract partial class VisualComponentBase : Area3D
         protected set => _yHeight = value;
     }
 
-    public enum LayerType
-    {
-        Normal,
-        Frozen,
-        Tucked,
-    }
-
-    private LayerType _layer = LayerType.Normal;
-
-    public LayerType Layer
-    {
-        get => _layer;
-        set
-        {
-            if (_layer == value)
-                return;
-
-            _layer = value;
-            SyncRequired = true;
-        }
-    }
-
-    /// <summary>
-    /// Sets the Z-order for stacking. A "0" is the lowest - on the table.
-    /// If two items have the same Z-Order (should never happen), then
-    /// there is no guarantee which will go first.
-    /// </summary>
-    private int _zOrder;
-
-    public virtual int ZOrder
-    {
-        get => _zOrder;
-        set
-        {
-            if (_zOrder == value)
-                return;
-
-            _zOrder = value;
-            SyncRequired = true;
-        }
-    }
-
     /// <summary>
     /// The set of Shape3Ds that define the collision volume. Will be a single Shape3D for most items.
     /// </summary>
     public virtual Shape3D[] Bounds { get; protected set; }
 
-    private bool _isMouseSelected;
-
-    public virtual bool IsMouseSelected
-    {
-        get => _isMouseSelected;
-        set
-        {
-            if (_isMouseSelected == value)
-                return;
-
-            _isMouseSelected = value;
-
-            UpdateHighlight();
-        }
-    }
-
     private bool _isDrawSelected;
 
-    //Component is selected for drawing tokens, cards, etc. Relevant for containers.
+    /// <summary>
+    /// Whether the mouse is over a container's draw area, so a drag draws from it.
+    /// </summary>
     public bool IsDrawSelected
     {
         get => _isDrawSelected;
@@ -447,54 +324,222 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    protected bool _locked;
+    private bool _isHovered;
 
-    public virtual bool Locked
+    /// <summary>
+    /// Whether the mouse is over the component.
+    /// </summary>
+    public bool IsHovered
     {
-        get => Layer == LayerType.Frozen;
+        get => _isHovered;
         set
         {
-            if (_locked != value)
-            {
-                _locked = value;
-                SyncRequired = true;
-                LockChanged();
-            }
-        }
-    }
-
-    protected void LockChanged()
-    {
-        UpdateHighlight();
-        IsClickSelected = false;
-    }
-
-    public virtual bool IsHovered { get; set; }
-
-    private bool _isClickSelected;
-
-    public virtual bool IsClickSelected
-    {
-        get => _isClickSelected;
-        set
-        {
-            if (_isClickSelected == value)
+            if (_isHovered == value)
                 return;
 
-            _isClickSelected = !Locked && value;
+            _isHovered = value;
 
             UpdateHighlight();
         }
     }
 
-    public bool IsSelected => IsMouseSelected || IsClickSelected;
+    // whether the local player has this component selected
+    private bool _isMine;
 
+    // the local player's seat color, which their selection shows in
+    private Color _localColor;
+
+    // whether the local player has nothing selected on the table, so keys act on the hovered component
+    private bool _nothingSelected = true;
+
+    // the color of the other player who most recently selected this component, or null
+    private Color? _othersColor;
+
+    // whether it's marked because a reset would delete it
+    private bool _markedForReset;
+
+    // whether it's shown only because removed components are, since it or one it's in was removed
+    private bool _removed;
+
+    private bool? _previewSelected;
+
+    /// <summary>
+    /// Whether a box selection in progress will select this component.
+    /// Shown in place of the selection until the box is released. Null when not boxing.
+    /// </summary>
+    public bool? PreviewSelected
+    {
+        get => _previewSelected;
+        set
+        {
+            if (_previewSelected == value)
+                return;
+
+            _previewSelected = value;
+
+            UpdateHighlight();
+        }
+    }
+
+    private bool _isDropTarget;
+
+    /// <summary>
+    /// Whether what the local player holds would drop into this component.
+    /// </summary>
+    public bool IsDropTarget
+    {
+        get => _isDropTarget;
+        set
+        {
+            if (_isDropTarget == value)
+                return;
+
+            _isDropTarget = value;
+
+            UpdateHighlight();
+        }
+    }
+
+    // The outline of a drop target.
+    private static readonly Color DropTargetColor = Colors.Yellow;
+
+    // The outline over a container's draw area.
+    private static readonly Color DrawAreaColor = Colors.CornflowerBlue;
+
+    // The outline of a plain hover.
+    private static readonly Color PlainHoverColor = Colors.White;
+
+    /// <summary>
+    /// Outlines the component when it's a drop target, hovered, or selected by anyone,
+    /// paints it when a reset would delete it, and hatches it while it's removed.
+    /// </summary>
     protected virtual void UpdateHighlight()
     {
-        if (HighlightMesh == null)
+        var mine = PreviewSelected ?? _isMine;
+        Color? hover =
+            IsDrawSelected ? DrawAreaColor
+            : _nothingSelected ? PlainHoverColor
+            : null;
+        SetHighlight(
+            NeverHighlight ? null
+                : IsDropTarget ? DropTargetColor
+                : IsHovered && hover != null ? hover
+                : mine ? _localColor
+                : _othersColor,
+            !NeverHighlight && _markedForReset,
+            !NeverHighlight && _removed
+        );
+    }
+
+    // Flat copies of the component's meshes that draw it into the highlight mask.
+    private readonly List<MeshInstance3D> _maskCopies = new();
+    private (Color? Outline, bool Painted, bool Hatched) _highlight;
+
+    // The outline color reserved with ComponentHighlight.
+    private Color? _reservedColor;
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete)
+            ReleaseOutlineColor();
+    }
+
+    private void ReleaseOutlineColor()
+    {
+        if (_reservedColor is Color held)
+            ComponentHighlight.Release(held);
+        _reservedColor = null;
+    }
+
+    private void SetHighlight(Color? outline, bool painted, bool hatched)
+    {
+        if (
+            (outline, painted, hatched) == _highlight
+            && (_highlight == default || _maskCopies.Count > 0)
+        )
             return;
 
-        HighlightMesh.Visible = IsSelected && !NeverHighlight && !Locked;
+        _highlight = (outline, painted, hatched);
+        if (_highlight == default)
+        {
+            ClearMaskCopies();
+            return;
+        }
+
+        if (_maskCopies.Count == 0)
+            BuildMaskCopies();
+
+        ReleaseOutlineColor();
+        var material = ComponentHighlight.Reserve(outline, painted, hatched);
+        _reservedColor = outline;
+        foreach (var copy in _maskCopies)
+            copy.MaterialOverride = material;
+    }
+
+    /// <summary>
+    /// Remakes the mask copies after the component's meshes change.
+    /// </summary>
+    private void RebuildHighlight()
+    {
+        ClearMaskCopies();
+        var (outline, painted, hatched) = _highlight;
+        _highlight = default;
+        SetHighlight(outline, painted, hatched);
+    }
+
+    private void ClearMaskCopies()
+    {
+        ReleaseOutlineColor();
+        foreach (var copy in _maskCopies)
+        {
+            if (!IsInstanceValid(copy))
+                continue;
+            copy.GetParent()?.RemoveChild(copy);
+            copy.QueueFree();
+        }
+        _maskCopies.Clear();
+    }
+
+    /// <summary>
+    /// The meshes whose shape the highlight outlines and paints.
+    /// </summary>
+    protected virtual IEnumerable<MeshInstance3D> HighlightMeshes()
+    {
+        var meshes = new List<MeshInstance3D>();
+        CollectMeshes(this, meshes);
+        return meshes;
+    }
+
+    private void BuildMaskCopies()
+    {
+        // Each copy of a mesh is a child of that mesh.
+        // That way if we animate the mesh, the highlight moves with it.
+        foreach (var mesh in HighlightMeshes())
+        {
+            var copy = new MeshInstance3D
+            {
+                Mesh = mesh.Mesh,
+                Layers = ComponentHighlight.MaskLayer,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            mesh.AddChild(copy, false, InternalMode.Back);
+            _maskCopies.Add(copy);
+        }
+    }
+
+    private void CollectMeshes(Node node, List<MeshInstance3D> meshes)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            if (child is VisualComponentBase { State: not null })
+                continue;
+            if (
+                child is MeshInstance3D { Mesh: not null } mesh
+                && (mesh.Layers & ComponentHighlight.MaskLayer) == 0
+            )
+                meshes.Add(mesh);
+            CollectMeshes(child, meshes);
+        }
     }
 
     public Aabb Aabb
@@ -512,33 +557,6 @@ public abstract partial class VisualComponentBase : Area3D
 
     public abstract float MaxAxisSize { get; }
 
-    private void _on_mouse_entered()
-    {
-        IsMouseSelected = true;
-        IsHovered = true;
-    }
-
-    private void _on_mouse_exited()
-    {
-        if (!IsDragging)
-        {
-            IsMouseSelected = false;
-            IsHovered = false;
-        }
-
-        //TODO only call this when necessary
-        SetHighlightColor(Colors.White); //reset in case we were a drag target
-    }
-
-    //these two events are used when the component itself is creating / removing
-    //other components. Example: Card being drawn from a deck, token from a tray
-    public event EventHandler<VisualComponentEventArgs> AddComponentToObjects;
-
-    protected void OnComponentAdded(VisualComponentBase component)
-    {
-        AddComponentToObjects?.Invoke(this, new VisualComponentEventArgs(component));
-    }
-
     private bool _neverHighlight = false;
 
     public bool NeverHighlight
@@ -551,55 +569,9 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    private bool _isDragging;
-
     public abstract GeometryInstance3D DragMesh { get; }
 
-    public bool IsDragging
-    {
-        get => _isDragging;
-        set
-        {
-            if (!CanDrag)
-                return;
-            if (_isDragging == value)
-                return;
-            _isDragging = value;
-            if (!value)
-            {
-                IsMouseSelected = false;
-            }
-        }
-    }
-
-    public bool CanDrag { get; set; } = true;
-
     public virtual bool CanAcceptDrop { get; set; } = false;
-
-    public virtual bool DragOver(IEnumerable<VisualComponentBase> dragObjects)
-    {
-        if (CanObjectsBeDropped(dragObjects))
-        {
-            SetHighlightColor(Colors.Yellow);
-            return true;
-        }
-
-        return false;
-    }
-
-    public void DragOverExit()
-    {
-        SetHighlightColor(Colors.White);
-    }
-
-    public virtual bool CanObjectsBeDropped(IEnumerable<VisualComponentBase> dragObjects)
-    {
-        return true;
-    }
-
-    public virtual void DropObjects(IEnumerable<VisualComponentBase> dragObjects) { }
-
-    public virtual string GetPreviewComponentScene() => string.Empty;
 
     public virtual void SetColor(Color color)
     {
@@ -607,31 +579,6 @@ public abstract partial class VisualComponentBase : Area3D
         var mat = new StandardMaterial3D();
         mat.AlbedoColor = color;
         objMesh.MaterialOverride = mat;
-    }
-
-    public virtual void SetHighlightColor(Color color)
-    {
-        var mat = _highlightMesh.GetActiveMaterial(0);
-        if (mat is ShaderMaterial sm)
-        {
-            sm.SetShaderParameter("outline_color", color);
-        }
-    }
-
-    protected ImageTexture LoadTexture(string filename)
-    {
-        var image = new Image();
-        var err = image.Load(filename);
-        GD.Print(err);
-
-        if (err == Error.Ok)
-        {
-            var texture = new ImageTexture();
-            texture.SetImage(image);
-            return texture;
-        }
-
-        return new ImageTexture();
     }
 
     /// <summary>
@@ -653,75 +600,18 @@ public abstract partial class VisualComponentBase : Area3D
         }
     }
 
-    public enum ComponentLocation
-    {
-        Board,
-        Container,
-        Hand,
-    }
+    /// <summary>
+    /// Local-only. While dragged, the height this component rests at within its dragged group.
+    /// </summary>
+    public float DragFloor { get; set; }
 
-    private ComponentLocation _location;
-
-    public ComponentLocation Location
-    {
-        get => _location;
-        set
-        {
-            if (_location == value)
-                return;
-            SyncRequired = true;
-            _location = value;
-            SetVisibility(value == ComponentLocation.Board);
-        }
-    }
-
-    //public Vector3 TargetPosition { get; set; }
-    //public Vector3 TargetRotationDegrees { get; set; }
-
-    public void SetPositionAndRotation(Vector3 position, Vector3 rotation)
-    {
-        Position = position;
-        RotationDegrees = rotation;
-        SyncRequired = true;
-    }
-
-    public void SetPosition(Vector3 position)
-    {
-        if (position == Position)
-            return;
-        Position = position;
-        SyncRequired = true;
-    }
-
-    public void SetRotation(Vector3 rotation)
-    {
-        if (rotation == RotationDegrees)
-            return;
-        RotationDegrees = rotation;
-        SyncRequired = true;
-    }
-
-    public void SetRotationDegrees(Vector3 rotationDegrees)
-    {
-        if (rotationDegrees == RotationDegrees)
-            return;
-        RotationDegrees = rotationDegrees;
-        SyncRequired = true;
-    }
-
-    public void SetVisibility(bool visible)
-    {
-        if (visible == LogicalVisible)
-            return;
-        LogicalVisible = visible;
-        SyncRequired = true;
-    }
+    /// <summary>True while this component is being dragged by any player's cursor.</summary>
+    public bool IsDragging => State is { IsDragged: true };
 
     private bool _logicalVisible = true;
 
     /// <summary>
-    /// Whether or not the component is visible for all players, unrelated to zones.
-    /// This is the value that syncs across the network.
+    /// Visibility of this component, but overriden by zones.
     /// </summary>
     public bool LogicalVisible
     {
@@ -757,61 +647,10 @@ public abstract partial class VisualComponentBase : Area3D
     /// </summary>
     public bool LocallyMovable { get; set; } = true;
 
-    public void ApplyEffectiveVisibility()
+    private void ApplyEffectiveVisibility()
     {
         Visible = _logicalVisible && !_zoneHidden;
     }
-
-    public bool SuppressSync { get; set; }
-
-    private bool _syncRequired;
-
-    public bool SyncRequired
-    {
-        get => _syncRequired;
-        set
-        {
-            _syncRequired = value;
-            if (value && !SuppressSync && !ExcludeFromSync)
-                EventBus.Instance.Publish(new ComponentPropertyChangedEvent(this));
-        }
-    }
-
-    /// <summary>
-    /// If true, this component will not be synced to other nodes
-    /// </summary>
-    public bool ExcludeFromSync { get; set; }
-
-    #region Spawn
-
-    public virtual List<VisualComponentBase> SpawnComponents(
-        Guid prototypeRef,
-        TextureFactory textureFactory
-    )
-    {
-        var l = new List<VisualComponentBase>();
-
-        var c = Setup(prototypeRef, textureFactory);
-
-        return [];
-    }
-
-    /// <summary>
-    /// The delta from trh cursoe prosition for this object in spawn mode
-    /// </summary>
-    public Vector3 SpawnDelta { get; set; } = Vector3.Zero;
-
-    #endregion
-}
-
-public class VisualComponentEventArgs : EventArgs
-{
-    public VisualComponentEventArgs(VisualComponentBase component)
-    {
-        Component = component;
-    }
-
-    public VisualComponentBase Component { get; set; }
 }
 
 public class OffsetShape2D(Shape2D shape, Vector2 offset)

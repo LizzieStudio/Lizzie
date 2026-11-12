@@ -1,6 +1,8 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
+
+namespace Lizzie;
 
 public partial class TrayPanelDialogResult : ComponentPanelDialogResult
 {
@@ -10,12 +12,11 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
     private LineEdit _lengthInput;
     private ColorPickerButton _colorPicker;
     private ComponentPreview _preview;
-    private OptionButton _prototypeList;
-    private string _selectedPrototypeKey;
+    private AtomSelector _prototypeList;
+    private readonly WatchableValue<Ref<Prototype>> _selectedPrototypeRef = new();
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Tray;
         _nameInput = GetNode<LineEdit>("%ItemName");
         _heightInput = GetNode<LineEdit>("%Height");
         _heightInput.TextChanged += t => UpdatePreview();
@@ -29,61 +30,26 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _colorPicker = GetNode<ColorPickerButton>("%Color");
         _colorPicker.ColorChanged += ColorPickerOnColorChanged;
 
-        _prototypeList = GetNode<OptionButton>("%PrototypeList");
-        LoadPrototypeList();
-        _prototypeList.ItemSelected += PrototypeSelected;
-
-        UpdatePrototypeSelection();
+        _prototypeList = GetNode<AtomSelector>("%PrototypeList");
+        _prototypeList.List(
+            R => R.Get(Prototype.Live).Select(p => (p.Id, p.Name)),
+            new(
+                R => R.Get(_selectedPrototypeRef),
+                id =>
+                {
+                    _selectedPrototypeRef.Value = id;
+                    UpdatePreview();
+                }
+            )
+        );
 
         _preview = GetNode<ComponentPreview>("%Preview");
-    }
-
-    private void UpdatePrototypeSelection()
-    {
-        if (_prototypeList == null)
-            return;
-
-        if (!string.IsNullOrEmpty(_selectedPrototypeKey))
-        {
-            for (int i = 0; i < _prototypeList.GetItemCount(); i++)
-            {
-                if (_prototypeList.GetItemMetadata(i).ToString() == _selectedPrototypeKey)
-                {
-                    _prototypeList.Selected = i;
-                    break;
-                }
-            }
-        }
-    }
-
-    private void LoadPrototypeList()
-    {
-        _prototypeList.Clear();
-        _prototypeList.AddItem("(none)", 0);
-
-        int i = 1;
-
-        foreach (var p in ProjectService.Instance.CurrentProject.Prototypes)
-        {
-            _prototypeList.AddItem(p.Value.Name, i);
-            _prototypeList.SetItemMetadata(i, p.Key.ToString());
-            i++;
-        }
-    }
-
-    private void PrototypeSelected(long index)
-    {
-        _selectedPrototypeKey = _prototypeList.GetItemMetadata((int)index).ToString();
-        UpdatePreview();
     }
 
     private void ColorPickerOnColorChanged(Color color)
     {
         UpdatePreview();
     }
-
-    private bool _subviewportInitComplete;
-    private int _subViewportFrames = 3;
 
     public override void Activate()
     {
@@ -102,23 +68,22 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
         _preview.ClearComponent();
     }
 
-    public override Dictionary<string, object> GetParams()
-    {
-        var d = new Dictionary<string, object>();
+    public override string PrototypeName => _nameInput.Text;
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", ParamToFloat(_heightInput.Text));
-        d.Add("Width", ParamToFloat(_widthInput.Text));
-        d.Add("Length", ParamToFloat(_lengthInput.Text));
-        d.Add("Color", _colorPicker.Color);
-        d.Add("Prototype", _selectedPrototypeKey);
-        return d;
+    public override ComponentParameters GetParams()
+    {
+        return new TrayParameters
+        {
+            Height = ParamToFloat(_heightInput.Text),
+            Width = ParamToFloat(_widthInput.Text),
+            Length = ParamToFloat(_lengthInput.Text),
+            Color = _colorPicker.Color,
+            DispenseRef = _selectedPrototypeRef.Value,
+        };
     }
 
     private void UpdatePreview()
     {
-        var d = new Dictionary<string, object>();
-
         //normalize the size
         var h = ParamToFloat(_heightInput.Text);
         var w = ParamToFloat(_widthInput.Text);
@@ -132,79 +97,43 @@ public partial class TrayPanelDialogResult : ComponentPanelDialogResult
 
         _preview.SetComponentVisibility(true);
 
-        //normalize dimensions to 10x10x10 outer extants
-        //var scale = 10f / Math.Max(h, Math.Max(w, l));
-        var scale = 1;
-
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", h * scale);
-        d.Add("Width", w * scale);
-        d.Add("Length", l * scale);
-        d.Add("Color", _colorPicker.Color);
-        d.Add("Prototype", _selectedPrototypeKey);
-        _preview.Build(d, TextureFactory);
-    }
-
-    public override void DisplayPrototype(Guid prototypeId)
-    {
-        var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
-        DisplayPrototype(prototype);
+        var p = new TrayParameters
+        {
+            Height = h,
+            Width = w,
+            Length = l,
+            Color = _colorPicker.Color,
+            DispenseRef = _selectedPrototypeRef.Value,
+        };
+        _preview.Build(p);
     }
 
     public override void DisplayPrototype(Prototype prototype)
     {
+        var p = (TrayParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
-            ? prototype.Parameters["Height"].ToString()
-            : "";
-        _widthInput.Text = prototype.Parameters.ContainsKey("Width")
-            ? prototype.Parameters["Width"].ToString()
-            : "";
-        _lengthInput.Text = prototype.Parameters.ContainsKey("Length")
-            ? prototype.Parameters["Length"].ToString()
-            : "";
-        _colorPicker.Color = prototype.Parameters.ContainsKey("Color")
-            ? (Color)prototype.Parameters["Color"]
-            : Colors.Red;
+        _heightInput.Text = p.Height.ToString();
+        _widthInput.Text = p.Width.ToString();
+        _lengthInput.Text = p.Length.ToString();
+        _colorPicker.Color = p.Color;
 
-        _selectedPrototypeKey = prototype.Parameters.ContainsKey("Prototype")
-            ? prototype.Parameters["Prototype"].ToString()
-            : string.Empty;
-
-        UpdatePrototypeSelection();
+        _selectedPrototypeRef.Value = p.DispenseRef;
 
         Activate();
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as TrayParameters;
 
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey("ComponentName"))
-        {
-            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
-                ret.Add("Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
+        if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
-
-        var w = Utility.GetParam<float>(parameters, "Width");
-        if (w <= 0)
+        if ((p?.Width ?? 0) <= 0)
             ret.Add("Width must be > 0");
-
-        var l = Utility.GetParam<float>(parameters, "Length");
-        if (l <= 0)
+        if ((p?.Length ?? 0) <= 0)
             ret.Add("Length must be > 0");
-
-        var p = Utility.GetParam<string>(parameters, "Prototype");
-        if (string.IsNullOrEmpty(p))
+        if (p?.DispenseRef.IsNone ?? true)
             ret.Add("Component must be specified");
 
         return ret;

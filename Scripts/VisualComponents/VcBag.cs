@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Godot;
+
+namespace Lizzie;
 
 public partial class VcBag : VisualComponentGroup
 {
-    private VisualComponentBase _contents;
-    private string _contentsDataRow;
     private Label3D _componentCount;
 
     public override void _Ready()
@@ -15,53 +16,37 @@ public partial class VcBag : VisualComponentGroup
         ComponentType = VisualComponentType.Bag;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _componentCount = GetNode<Label3D>("ComponentCount");
         DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
-        UpdateComponentCount();
         CanAcceptDrop = true;
     }
 
-    private void UpdateComponentCount()
+    public override void _EnterTree()
     {
-        _componentCount.Text = Children.Count().ToString();
+        base._EnterTree();
+        Atoms.R.Watch(this, SyncCount);
     }
 
-    public override bool Setup(
-        Dictionary<string, object> parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    private void SyncCount(IWatchReader R) =>
+        _componentCount.Text = R.Count(ComponentPosition.ByLocation, LocationKey.Inside(Key))
+            .ToString();
+
+    private IEnumerable<ComponentPosition> Contents(IAtomReader R) =>
+        R.Get(ComponentPosition.ByLocation, LocationKey.Inside(Key));
+
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    private TextureFactory _textureFactory;
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        _textureFactory = textureFactory;
-
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, R);
+        var p = (BagParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                return false;
-            Height = h / 10f;
+        if (p.Height <= 0)
+            return;
 
-            var d = Utility.GetParam<float>(parameters, "Diameter");
-            Diameter = d / 10f;
-
-            if (parameters["Color"] is Color color)
-            {
-                BagColor = color;
-            }
-        }
+        Height = p.Height / 10f;
+        Diameter = p.Diameter / 10f;
+        BagColor = p.Color;
 
         //create cube
         if (Diameter <= 0)
@@ -77,44 +62,12 @@ public partial class VcBag : VisualComponentGroup
 
         SetColor(BagColor);
         _componentCount = GetNode<Label3D>("ComponentCount");
-        var _showCount = Utility.GetParam<bool>(parameters, "ShowCount");
-        _componentCount.Visible = _showCount;
+        _componentCount.Visible = p.ShowCount;
 
         var c = new CircleShape2D();
         c.Radius = Diameter / 2;
 
         ShapeProfiles.Add(new OffsetShape2D(c));
-
-        return true;
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                ret.Add("Height must be > 0");
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        return ret;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;
@@ -125,29 +78,24 @@ public partial class VcBag : VisualComponentGroup
     private float Diameter;
     private Color BagColor;
 
-    private Vector3 _lastScale;
-
-    private void UpdateChildScale(Node3D c)
+    public override (ComponentPosition[], Atom[]) DragDraw()
     {
-        if (Math.Abs(c.Scale.Length() - _lastScale.Length()) >= 0.05f)
-        {
-            var s = c.Scale;
-            _lastScale = new Vector3(s.X / Diameter, s.Y / Height, s.Z / Diameter);
-            c.Scale = _lastScale;
-        }
+        var contents = Contents(Atoms.R).ToList();
+        return contents.Count == 0
+            ? ([], [])
+            : ([contents[Random.Shared.Next(contents.Count)] with { Position = Vector3.Zero }], []);
     }
+}
 
-    protected override void OnChildrenChanged()
-    {
-        UpdateComponentCount();
-    }
+[JsonName("BagParameters")]
+public sealed record BagParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Bag;
 
-    public override void DragDraw(int quantity)
-    {
-        var gList = DrawRandom(quantity).ToList();
-        if (!gList.Any())
-            return;
-
-        EventBus.Instance.Publish(new ShowAndDragComponentEvent { ComponentList = gList });
-    }
+    public float Height { get; init; }
+    public float Diameter { get; init; }
+    public Color Color { get; init; } = Colors.Black;
+    public bool ShowCount { get; init; }
 }

@@ -1,0 +1,119 @@
+[gd_scene format=3 uid="uid://dbskxotmh6h06"]
+
+[ext_resource type="Script" uid="uid://f4x6b8o7klni" path="res://Scripts/Dataset/DatasetEditor.cs" id="1_aexr7"]
+[ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="2_o5pyl"]
+[ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/AtomSelector.tscn" id="3_dssel"]
+[ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="4_cmdbtn"]
+
+[node name="DatasetEditor" type="Window" unique_id=1927636890]
+oversampling_override = 1.0
+title = "Dataset Editor"
+position = Vector2i(0, 36)
+size = Vector2i(800, 500)
+script = ExtResource("1_aexr7")
+
+[node name="Panel" type="Panel" parent="." unique_id=175242177]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_o5pyl")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=1832742373]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Toolbar2" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=672584365]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="DatasetList" parent="Panel/VBoxContainer/Toolbar2" unique_id=1848543083 instance=ExtResource("3_dssel")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.9882353, 1, 0, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 1, 0, 1)
+clip_text = true
+
+[node name="New" type="Button" parent="Panel/VBoxContainer/Toolbar2" unique_id=2069448569]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New Dataset"
+
+[node name="Panel" type="Panel" parent="Panel/VBoxContainer/Toolbar2" unique_id=1038972778]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Toolbar" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=1866594890]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="AddRow" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1105667042]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.add_row"
+ShowIcon = false
+
+[node name="DeleteRow" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=922142654]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.delete_row"
+ShowIcon = false
+
+[node name="AddColumn" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1268024575]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.add_column"
+ShowIcon = false
+
+[node name="DeleteColumn" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=233397807]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.delete_column"
+ShowIcon = false
+
+[node name="Link" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=1399230963]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Import"
+
+[node name="UpdateDecks" type="Button" parent="Panel/VBoxContainer/Toolbar" unique_id=2125368111]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("4_cmdbtn")
+CommandName = "dataset.update_decks"
+ShowIcon = false
+
+[node name="GridMargin" type="MarginContainer" parent="Panel/VBoxContainer" unique_id=227603288]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="MainContainer" type="VBoxContainer" parent="Panel/VBoxContainer/GridMargin" unique_id=1285152825]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ReorderDropZone" type="Control" parent="Panel/VBoxContainer/GridMargin" unique_id=1546599744]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2

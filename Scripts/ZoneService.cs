@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using Godot;
+
+namespace Lizzie;
 
 /// <summary>
 /// The permission tier a zone grants a given player over a component inside it.
@@ -24,27 +25,17 @@ public static class ZoneService
     /// True when the local player's seat is flagged admin in the project settings.
     /// Admins always see and move everything, regardless of zone rules.
     /// </summary>
-    public static bool LocalSeatIsAdmin()
-    {
-        var settings = ProjectService.Instance?.CurrentProject?.GameSettings;
-        if (settings == null)
-            return false;
-
-        int seat = PlayerHandService.LocalSeatIndex();
-        if (seat < 0 || seat >= settings.Players.Count)
-            return false;
-
-        return settings.Players[seat].IsAdmin;
-    }
+    public static bool LocalSeatIsAdmin() =>
+        Atoms.R.Get(Seat.ById, Atoms.R.LocalSeat())?.IsAdmin == true;
 
     /// <summary>
     /// Resolve the effective tier for a component given the zones on the table and the local
     /// player's seat. Overlapping/nested zones combine most-restrictively.
     /// </summary>
-    public static ZoneTier ResolveTier(
+    private static ZoneTier ResolveTier(
         VisualComponentBase component,
         IReadOnlyList<VcZone> zones,
-        int localSeat,
+        Ref<Seat> localSeat,
         bool isAdmin
     )
     {
@@ -72,7 +63,7 @@ public static class ZoneService
 
     public static void Recompute(
         IEnumerable<VisualComponentBase> components,
-        int localSeat,
+        Ref<Seat> localSeat,
         bool isAdmin
     )
     {

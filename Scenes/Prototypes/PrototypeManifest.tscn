@@ -7,13 +7,13 @@
 [ext_resource type="Texture2D" uid="uid://b0rfd7n0nm6f" path="res://Textures/UI/bottom.png" id="4_ibthu"]
 [ext_resource type="Texture2D" uid="uid://dbkp2tyv4uxrj" path="res://Textures/UI/content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg" id="5_fexkd"]
 [ext_resource type="Texture2D" uid="uid://cetgsjrqd6vjj" path="res://Textures/UI/trash-can.png" id="6_pxctx"]
-[ext_resource type="Texture2D" uid="uid://cx5dv08dde75e" path="res://Textures/UI/arrowup16.png" id="7_vhjdj"]
+[ext_resource type="Script" uid="uid://0trm78fpi5a" path="res://Scripts/Commands/CommandButton.cs" id="8_cmdbtn"]
 
 [node name="PrototypeManifest" type="Window" unique_id=1414249263]
 oversampling_override = 1.0
-title = "Prototype Manifest"
+title = "Components"
 initial_position = 1
-size = Vector2i(800, 600)
+size = Vector2i(800, 560)
 script = ExtResource("1_i7yhx")
 
 [node name="Margin" type="MarginContainer" parent="." unique_id=1239742681]
@@ -52,28 +52,35 @@ anchor_right = 1.0
 offset_bottom = 31.0
 grow_horizontal = 2
 
+[node name="CreateComponent" type="Button" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=51711801]
+layout_mode = 2
+theme_override_constants/icon_max_width = 20
+script = ExtResource("8_cmdbtn")
+CommandName = "editor.create_component"
+ShowCaption = false
+
 [node name="EditProto" type="Button" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=1183893659]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Edit Prototype"
+tooltip_text = "Edit Component"
 icon = ExtResource("3_xpn7p")
 
 [node name="SpawnProto" type="Button" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=6763301]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Spawn Prototype"
+tooltip_text = "Add to Table"
 icon = ExtResource("4_ibthu")
 
 [node name="CloneProto" type="Button" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=424107275]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Clone Prototype"
+tooltip_text = "Duplicate Component"
 icon = ExtResource("5_fexkd")
 
 [node name="DeleteProto" type="Button" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=117428559]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Delete Prototype"
+tooltip_text = "Delete Component"
 icon = ExtResource("6_pxctx")
 
 [node name="Panel2" type="Panel" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=351257397]
@@ -89,15 +96,6 @@ text = "Hide Unused"
 unique_name_in_owner = true
 layout_mode = 2
 text = "Delete Unused"
-
-[node name="Panel" type="Panel" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=1148527077]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Close" type="Button" parent="Margin/Panel/VBoxContainer/Panel/Toolbar" unique_id=1683803417]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Close"
 
 [node name="GridMargin" type="MarginContainer" parent="Margin/Panel/VBoxContainer" unique_id=227603288]
 layout_mode = 2

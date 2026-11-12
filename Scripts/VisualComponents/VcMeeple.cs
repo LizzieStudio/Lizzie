@@ -1,6 +1,9 @@
-using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 using Godot;
+
+namespace Lizzie;
 
 public partial class VcMeeple : VisualComponentBase
 {
@@ -10,21 +13,12 @@ public partial class VcMeeple : VisualComponentBase
         ComponentType = VisualComponentType.Meeple;
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    public override bool Setup(
-        Dictionary<string, object> parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, R);
+        var p = (MeepleParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("MeshAnchor");
 
@@ -33,12 +27,10 @@ public partial class VcMeeple : VisualComponentBase
             child.QueueFree();
         }
 
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
-
-        var h = Utility.GetParam<float>(parameters, "Height") / 10;
-        var t = Utility.GetParam<float>(parameters, "Thickness") / 10;
-        var c = Utility.GetParam<Color>(parameters, "Color");
-        var g = Utility.GetParam<bool[][]>(parameters, "Grid");
+        var h = p.Height / 10;
+        var t = p.Thickness / 10;
+        var c = p.Color;
+        var g = p.Grid;
 
         Height = h;
 
@@ -84,13 +76,9 @@ public partial class VcMeeple : VisualComponentBase
             }
         }
 
-        HighlightMesh.Scale = new Vector3(h, t, h);
-
         YHeight = t;
 
         SetColor(c);
-
-        return true;
     }
 
     #region Shape Profiles
@@ -149,45 +137,11 @@ public partial class VcMeeple : VisualComponentBase
         }
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            if (parameters[nameof(Height)] is int h)
-            {
-                if (h <= 0)
-                    ret.Add("Height must be > 0");
-            }
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        return ret;
-    }
-
     public override GeometryInstance3D DragMesh => MainMesh;
 
-    public override float MaxAxisSize => Math.Max(Math.Max(Height, Width), Length);
+    public override float MaxAxisSize => Height;
 
     private float Height;
-    private float Width;
-    private float Length;
-    private Color CubeColor;
 
     /// <summary>
     /// Creates a cube mesh object with specified parameters
@@ -197,7 +151,7 @@ public partial class VcMeeple : VisualComponentBase
     /// <param name="x">X position</param>
     /// <param name="z">Y position (Z in 3D space)</param>
     /// <returns>MeshInstance3D of the created cube</returns>
-    public MeshInstance3D CreateCubeMesh(float s, float t, Color c, float x, float y)
+    private MeshInstance3D CreateCubeMesh(float s, float t, Color c, float x, float y)
     {
         // Create a new MeshInstance3D
         var meshInstance = new MeshInstance3D();
@@ -222,4 +176,18 @@ public partial class VcMeeple : VisualComponentBase
 
         return meshInstance;
     }
+}
+
+[JsonName("MeepleParameters")]
+public sealed record MeepleParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Meeple;
+
+    public float Height { get; init; }
+    public float Thickness { get; init; }
+    public Color Color { get; init; } = Colors.Black;
+    public ImmutableArray<ImmutableArray<bool>> Grid { get; init; } =
+        ImmutableArray<ImmutableArray<bool>>.Empty;
 }

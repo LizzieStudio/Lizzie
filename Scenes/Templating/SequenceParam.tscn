@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://cdfxahdjs7vkw"]
+
+[ext_resource type="Script" uid="uid://cwlx0v6ao2cwk" path="res://Scripts/Templating/NumericParamControl.cs" id="1_param"]
+[ext_resource type="PackedScene" uid="uid://c1m4xx5vxyd0r" path="res://Scenes/Controls/text_sequence_edit.tscn" id="2_edit"]
+[ext_resource type="Texture2D" uid="uid://cip23cunm7y51" path="res://Textures/UI/menu16.png" id="3_menu"]
+
+[node name="SequenceParam" type="HBoxContainer" unique_id=1105658958]
+script = ExtResource("1_param")
+
+[node name="Caption" type="Label" parent="." unique_id=1615190903]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Caption"
+
+[node name="LineEdit" parent="." unique_id=733164379 instance=ExtResource("2_edit")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Formula" type="Button" parent="." unique_id=537116526]
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+icon = ExtResource("3_menu")

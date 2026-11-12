@@ -1,9 +1,10 @@
-using System;
 using System.Collections.Generic;
 using Godot;
 
+namespace Lizzie;
+
 /// <summary>
-/// Modal dialog that lets the local player pick a player position (or observer).
+/// Dialog that lets the local player pick a seat, or none.
 /// Instantiate, add to the scene tree, then call Show().
 /// The dialog frees itself when the player confirms or cancels.
 /// </summary>
@@ -12,8 +13,8 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     private ItemList _seatList;
     private Label _statusLabel;
 
-    // Maps list index -> seatIndex (-1 = observer)
-    private readonly List<int> _seatIndexMap = new();
+    // Maps list index -> seat, or None for no seat
+    private readonly List<Ref<Seat>> _seatIndexMap = new();
 
     public override void _Ready()
     {
@@ -21,7 +22,6 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         OkButtonText = "Confirm";
         CancelButtonText = "Cancel";
         MinSize = new Vector2I(360, 300);
-        Exclusive = true;
 
         _seatList = GetNode<ItemList>("%SeatList");
         _seatList.CustomMinimumSize = new Vector2(340, 180);
@@ -34,15 +34,16 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         Confirmed += OnConfirmed;
         Canceled += OnCanceled;
 
-        EventBus.Instance?.Subscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
         EventBus.Instance?.Subscribe<RequestPlayerPositionEvent>(OnReprompt);
+    }
 
-        PopulateList();
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
     }
 
     public override void _ExitTree()
     {
-        EventBus.Instance?.Unsubscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
         EventBus.Instance?.Unsubscribe<RequestPlayerPositionEvent>(OnReprompt);
     }
 
@@ -58,41 +59,50 @@ public partial class PlayerPositionDialog : ConfirmationDialog
     // Internal
     // -------------------------------------------------------------------------
 
-    private void PopulateList()
+    private void Sync(IWatchReader R)
     {
+        var selected = _seatList.GetSelectedItems();
+        var selectedSeat = selected.Length > 0 ? _seatIndexMap[selected[0]] : R.LocalSeat();
+        // A player without a seat starts on the first free one, unless they picked No Seat.
+        bool keep = selected.Length > 0 || !selectedSeat.IsNone;
+
         _seatList.Clear();
         _seatIndexMap.Clear();
 
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
-        if (settings == null)
-            return;
-
-        for (int i = 0; i < settings.Players.Count; i++)
+        var seats = R.Get(Seat.Live);
+        for (int i = 0; i < seats.Count; i++)
         {
-            var player = settings.Players[i];
-            bool available = PlayerSeatManager.Instance?.IsAvailable(i) ?? true;
+            var seat = seats[i];
+            bool current = R.LocalSeat() == seat.Id;
+            bool available = current || !R.IsSeatTaken(seat.Id);
 
-            var label = $"Player {i + 1}: {player.Name}";
-            if (!available)
+            var label = seat.Label(i);
+            if (current)
+                label += "  [current]";
+            else if (!available)
                 label += "  [taken]";
 
             _seatList.AddItem(label);
             _seatList.SetItemDisabled(_seatList.ItemCount - 1, !available);
 
-            // Colour the icon using the player's configured colour
-            var colour = new Color(player.ColorR, player.ColorG, player.ColorB, player.ColorA);
-            _seatList.SetItemCustomFgColor(_seatList.ItemCount - 1, colour);
+            // Color the icon using the seat's color
+            _seatList.SetItemCustomFgColor(_seatList.ItemCount - 1, seat.Color);
 
-            _seatIndexMap.Add(i);
+            _seatIndexMap.Add(seat.Id);
         }
 
-        if (settings.AllowObservers)
+        _seatList.AddItem("No Seat");
+        _seatIndexMap.Add(Ref<Seat>.None);
+
+        // Keep the player's choice selected while it's still available
+        var kept = keep ? _seatIndexMap.IndexOf(selectedSeat) : -1;
+        if (kept >= 0 && !_seatList.IsItemDisabled(kept))
         {
-            _seatList.AddItem("Observer  (watch only)");
-            _seatIndexMap.Add(-1);
+            _seatList.Select(kept);
+            return;
         }
 
-        // Pre-select first available entry
+        // Otherwise pre-select the first available entry
         for (int i = 0; i < _seatList.ItemCount; i++)
         {
             if (!_seatList.IsItemDisabled(i))
@@ -110,14 +120,11 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         {
             ShowStatus("Please select a position first.");
             // Re-open so the player can choose
-            CallDeferred(nameof(PopupCentered));
+            Callable.From(() => PopupCentered()).CallDeferred();
             return;
         }
 
-        int listIdx = selected[0];
-        int seatIdx = _seatIndexMap[listIdx];
-
-        PlayerSeatManager.Instance?.ClaimSeat(seatIdx);
+        PresenceSynchronizer.Instance?.RequestSeat(_seatIndexMap[selected[0]]);
         // The dialog will be freed once the claim result comes back (or immediately for local).
         QueueFree();
     }
@@ -127,21 +134,10 @@ public partial class PlayerPositionDialog : ConfirmationDialog
         QueueFree();
     }
 
-    private void OnSeatClaimed(PlayerSeatClaimedEvent evt)
-    {
-        if (!evt.Accepted)
-        {
-            // Seat was taken between listing and confirmation; refresh.
-            ShowStatus($"That seat was just taken. Please choose another.");
-            PopulateList();
-            // Don't free — let the player pick again (OnReprompt handles re-showing).
-        }
-    }
-
     private void OnReprompt(RequestPlayerPositionEvent _)
     {
         // Another player claimed a seat; refresh availability.
-        PopulateList();
+        Atoms.R.QueueSync(this);
     }
 
     private void ShowStatus(string message)

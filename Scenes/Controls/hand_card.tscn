@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://bhyk8cr0w1cbl"]
+
+[ext_resource type="Script" uid="uid://bieppen1i26w0" path="res://Scripts/UI/HandCard.cs" id="1_card"]
+[ext_resource type="PackedScene" uid="uid://bwkfdirtxku3d" path="res://Scenes/Controls/card_face.tscn" id="2_face"]
+[ext_resource type="Shader" uid="uid://clh1issg4vtqh" path="res://Shaders/component_paint.gdshader" id="3_paint"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_paint"]
+shader = ExtResource("3_paint")
+shader_parameter/stripe = 4.0
+shader_parameter/speed = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hatch"]
+shader = ExtResource("3_paint")
+shader_parameter/stripe = 4.0
+shader_parameter/period = 5
+shader_parameter/speed = 0.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_white"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_black"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 1)
+
+[node name="HandCard" type="PanelContainer" unique_id=821400318 node_paths=PackedStringArray("_hatch", "_paint")]
+mouse_filter = 2
+script = ExtResource("1_card")
+_hatch = NodePath("Face/Hatch")
+_paint = NodePath("Face/Paint")
+
+[node name="Face" parent="." unique_id=1266918473 instance=ExtResource("2_face")]
+layout_mode = 2
+
+[node name="Paint" type="ColorRect" parent="Face" unique_id=266501428]
+visible = false
+material = SubResource("ShaderMaterial_paint")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Hatch" type="ColorRect" parent="Face" unique_id=1248077510]
+visible = false
+material = SubResource("ShaderMaterial_hatch")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Border" type="Panel" parent="Face" unique_id=613703949]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_white")
+
+[node name="Inner" type="Panel" parent="Face/Border" unique_id=802091197]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 1.0
+offset_top = 1.0
+offset_right = -1.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_black")

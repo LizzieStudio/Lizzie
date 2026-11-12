@@ -1,0 +1,19 @@
+{
+  "metadata": [
+    {
+      "src": [{ "src": "..", "files": ["Lizzie.csproj"] }],
+      "dest": "api",
+      "filter": "filterConfig.yml"
+    }
+  ],
+  "build": {
+    "content": [{ "files": ["**/*.{md,yml}"], "exclude": ["_site/**", "filterConfig.yml"] }],
+    "template": ["default", "modern"],
+    "output": "_site",
+    "globalMetadata": {
+      "_appName": "Lizzie Studio",
+      "_appTitle": "Lizzie Studio",
+      "_enableSearch": true
+    }
+  }
+}

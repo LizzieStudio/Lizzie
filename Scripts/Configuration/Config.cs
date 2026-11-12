@@ -1,12 +1,13 @@
 using System;
-using System.Collections.Generic;
 using Godot;
+
+namespace Lizzie;
 
 public partial class Config : Node
 {
     const string DEFAULT_SECTION = "AppState";
     public static Config Registry = new();
-    public const string CONFIG_FILE_PATH = "user://lizzie-config.cfg";
+    private const string CONFIG_FILE_PATH = "user://lizzie-config.cfg";
     ConfigFile config = new();
 
     Config()

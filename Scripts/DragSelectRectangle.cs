@@ -1,5 +1,6 @@
-using System;
 using Godot;
+
+namespace Lizzie;
 
 public partial class DragSelectRectangle : Control
 {
@@ -30,9 +31,9 @@ public partial class DragSelectRectangle : Control
 
     public Rect2 CurRectangle { get; private set; }
 
-    public void StartDragSelect()
+    public void StartDragSelect(Vector2 from)
     {
-        _dragSelectOrigin = GetGlobalMousePosition();
+        _dragSelectOrigin = GetCanvasTransform().AffineInverse() * from;
         _dragSelectInProcess = true;
     }
 

@@ -1,16 +1,14 @@
 using System;
 using Godot;
-using Lizzie.Scripts.Templating;
+
+namespace Lizzie;
 
 public partial class ImageParamControl : HBoxContainer, IParamControl
 {
     private Label _label;
     private LineEdit _value;
-    private ColorPickerButton _colorPicker;
     private MenuButton _iconList;
     private PopupMenu _popupMenu;
-
-    private OptionButton _qtyPicker;
     private TemplateParameter _parameter;
     private bool _readyComplete;
 
@@ -56,8 +54,6 @@ public partial class ImageParamControl : HBoxContainer, IParamControl
         icons.LoadPopupMenu(_popupMenu);
     }
 
-    private string _fieldName;
-
     private void MapParam()
     {
         _initializing = true;
@@ -91,8 +87,7 @@ public partial class ImageParamControl : HBoxContainer, IParamControl
 
     private void OnOptionSelected(long index)
     {
-        string value = string.Empty;
-        value = _popupMenu.GetItemText((int)index);
+        string value = _popupMenu.GetItemText((int)index);
 
         _parameter.Value = value;
         _value.Text = _parameter.Value;

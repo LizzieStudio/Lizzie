@@ -1,0 +1,55 @@
+using System.Collections.Generic;
+using System.Linq;
+using Lizzie.Replication.Machinery;
+
+namespace Lizzie;
+
+/// <summary>
+/// The scopes <see cref="UndoCommands"/> pass to <see cref="TimelineUndo.Undo"/> and <see cref="TimelineUndo.Redo"/>.
+/// An action is made where it says, in <see cref="TimelineEvent.Place"/>, and a transition where it ends.
+/// </summary>
+public static class UndoScopes
+{
+    /// <summary>
+    /// The player's own actions made in <paramref name="place"/>.
+    /// </summary>
+    public static TimelineUndo.Scope Mine(Source me, ViewPlace place) =>
+        (author, action) => author == me && action.Place == place;
+
+    /// <summary>
+    /// Other players' actions made in <paramref name="place"/>.
+    /// Ones that only change selections are passed over. That's too far.
+    /// </summary>
+    public static TimelineUndo.Scope Others(Source me, ViewPlace place) =>
+        (author, action) =>
+            author != me
+            && action.Place == place
+            && (
+                action.Writes.Any(atom => atom is not Selection)
+                || action.Unsets.Any(unset => unset.Query.AtomType != typeof(Selection))
+            );
+
+    /// <summary>
+    /// Anyone's actions that change one of <paramref name="targets"/>, wherever they were made.
+    /// An unset changes the atom with its id, or for a lookup, each target whose newest write before it matches.
+    /// </summary>
+    public static TimelineUndo.Scope Changing(Timeline timeline, IReadOnlySet<IAtomRef> targets) =>
+        (_, action) =>
+            action.Writes.Any(atom => targets.Contains(IAtomRef.To(atom)))
+            || action.Unsets.Any(unset =>
+                unset.Query is IdQuery
+                    ? targets.Contains((IAtomRef)unset.Key)
+                    : targets.Any(target =>
+                        WriteBefore(timeline, action.Id, target) is { } write
+                        && unset.Matches(write)
+                    )
+            );
+
+    private static Atom WriteBefore(Timeline timeline, SnowStamp before, IAtomRef target) =>
+        TimelineUndo
+            .InEffect(timeline)
+            .SkipWhile(e => e.Id.CompareTo(before) >= 0)
+            .SelectMany(e => Enumerable.Reverse(e.Writes))
+            .Where(TimelineUndo.Counts(timeline))
+            .FirstOrDefault(atom => target.Equals(IAtomRef.To(atom)));
+}

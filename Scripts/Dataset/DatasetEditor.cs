@@ -1,0 +1,1083 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using Godot;
+using Lizzie.Replication.Machinery;
+
+namespace Lizzie;
+
+public partial class DatasetEditor : Window, ICommandView
+{
+    /// <summary>
+    /// One displayed row.
+    /// </summary>
+    private sealed class RowView
+    {
+        public HBoxContainer Box;
+        public PanelContainer Header;
+        public Label Number;
+        public readonly List<LineEdit> Cells = new();
+        public DataRow Row;
+
+        /// <summary>
+        /// What the store holds in each cell, in column order.
+        /// </summary>
+        public string[] Values;
+
+        /// <summary>
+        /// What clicking its header selects.
+        /// </summary>
+        public IAtomRef Target => Row.Id;
+    }
+
+    private VBoxContainer _mainContainer;
+    private Button _newButton;
+    private AtomSelector _datasetList;
+    private Button _linkButton;
+
+    private ScrollContainer _headerScroll;
+    private HBoxContainer _headerContainer;
+    private ScrollContainer _dataScrollContainer;
+    private VBoxContainer _dataContainer;
+    private ColorRect _dropIndicator;
+
+    private ConfirmationDialog _newDatasetDialog;
+    private LineEdit _newDatasetNameInput;
+    private Label _newDatasetErrorLabel;
+
+    // The grid is built for one dataset's column layout and rebuilt when either changes.
+    private Ref<Dataset> _shownDatasetRef = Ref<Dataset>.None;
+    private List<Ref<DataColumn>> _columnRefs = new();
+    private readonly List<HeaderCell> _headerCells = new();
+    private readonly Dictionary<Ref<DataColumn>, float> _columnWidths = new();
+
+    // Rows are reconciled by id so edits don't lose focus.
+    private List<RowView> _views = new();
+
+    // The line under the last row, holding only a button that adds a row.
+    private HBoxContainer _addRowLine;
+
+    private Ref<DataRow> _revealRowRef = Ref<DataRow>.None;
+
+    // The columns the last grid rebuild added to the shown dataset, for an insert's listener to rename.
+    private List<Ref<DataColumn>> _addedColumnRefs = [];
+
+    // Whether a cell is being edited. Updated once focus settles: ShortcutRelay drops focus on a click
+    // outside the focused cell before this window sees it, and the grid should still be editing,
+    // so the click edits the cell it lands on.
+    private bool _editing;
+
+    // Where Shift+click selects from: the last row, column or cell selected without Shift.
+    private IAtomRef _anchor;
+
+    // The row or column being dragged with Godot's drag and drop, or null.
+    private ReorderDrag _reorder;
+
+    // Over the grid, so a dragged row or column can be dropped anywhere on it.
+    // It lets the mouse through except during one of those drags, since the cells would refuse the drop.
+    private Control _dropZone;
+
+    // The drop indicator's color.
+    private static readonly Color Accent = Color.FromHtml("8cb1ff");
+
+    // The local player's own selection shows white, as on the table, so it's never mistaken for a player's color.
+
+    private const float RowHeaderWidth = 48f;
+    private const float DefaultColumnWidth = 120f;
+    private const float MinColumnWidth = 50f;
+    private const float HeaderHeight = 30f;
+    private const float RowHeight = 30f;
+    private const float ScrollbarAllowance = 24f;
+    private const float IndicatorThickness = 3f;
+    private const float AutoScrollMargin = 24f;
+    private const float AutoScrollSpeed = 600f;
+
+    public override void _Ready()
+    {
+        InitializeSpreadsheet();
+
+        CloseRequested += CloseDialog;
+        MoveToCenter();
+    }
+
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
+
+        // The local player's inserts focus the row they add, or start renaming the column,
+        // once the grid shows it. A row insert writes only the new row.
+        foreach (
+            var insert in new Command[] { InsertRowAbove, InsertRowBelow, DatasetCommands.AddRow }
+        )
+            Atoms.R.Listen(
+                this,
+                insert,
+                e => FocusCell(ViewOf(e.Writes.OfType<DataRow>().Single().Id), 0)
+            );
+
+        foreach (
+            var insert in new Command[]
+            {
+                InsertColumnLeft,
+                InsertColumnRight,
+                DatasetCommands.AddColumn,
+            }
+        )
+            Atoms.R.Listen(
+                this,
+                insert,
+                _ =>
+                    _headerCells
+                        .FirstOrDefault(h => _addedColumnRefs.Contains(h.ColumnRef))
+                        ?.BeginRename()
+            );
+
+        EventBus.Instance.Subscribe<RenameColumnEvent>(OnRenameColumn);
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance.Unsubscribe<RenameColumnEvent>(OnRenameColumn);
+    }
+
+    #region ICommandView
+
+    /// <summary>
+    /// The shown dataset, or <see cref="Ref{T}.None"/> for none. It opens on the first one.
+    /// A shown one that's gone was undone, so the editor stays on it, where redo brings it back.
+    /// </summary>
+    public WatchableValue<Ref<Dataset>> ShownDatasetRef { get; } = new();
+
+    public ViewPlace Place(IAtomReader R) => ViewPlace.Of(this, R.Get(ShownDatasetRef));
+
+    public bool CanSelect(IAtomReader R, IAtomRef target) =>
+        target is CellId cell
+            ? DataCell.InGrid(R, cell)
+            : R.Get(target) is { } atom && atom is not DataRow { Deleted: true };
+
+    /// <summary>
+    /// The commands only the editor offers, since they act on its grid.
+    /// </summary>
+    public IReadOnlyList<Command> Commands =>
+        [InsertRowAbove, InsertRowBelow, InsertColumnLeft, InsertColumnRight, RenameColumn];
+
+    #endregion
+
+    public override void _Notification(int what)
+    {
+        // Godot tells every node when any drag begins and ends.
+        if (what == NotificationDragBegin)
+        {
+            _reorder = GetViewport().GuiGetDragData().As<GodotObject>() as ReorderDrag;
+            if (_reorder != null)
+                _dropZone.MouseFilter = Control.MouseFilterEnum.Stop;
+        }
+        else if (what == NotificationDragEnd && _reorder != null)
+        {
+            _reorder = null;
+            _dropZone.MouseFilter = Control.MouseFilterEnum.Ignore;
+            _dropIndicator.Visible = false;
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_reorder == null)
+            return;
+
+        // Holding a drag near an edge scrolls toward it.
+        var at = _dropZone.GetGlobalMousePosition();
+        int i = (int)_reorder.Axis;
+        var rect = _dataScrollContainer.GetGlobalRect();
+        int step = (int)(AutoScrollSpeed * delta);
+        int direction =
+            at[i] < rect.Position[i] + AutoScrollMargin ? -1
+            : at[i] > rect.End[i] - AutoScrollMargin ? 1
+            : 0;
+        if (_reorder.Axis == Vector2.Axis.Y)
+            _dataScrollContainer.ScrollVertical += direction * step;
+        else
+            _dataScrollContainer.ScrollHorizontal += direction * step;
+        ShowDrop(_reorder.Axis, at);
+    }
+
+    // Cells only show their values until one is being edited, so clicks on them select instead,
+    // a right press included, for the command menu. Double-clicking one edits it.
+    // While editing, every cell is a text box, but Shift or Ctrl+click still selects without editing.
+    // Handled before the GUI, since a click would focus the cell, which edits it and selects it alone.
+    public override void _Input(InputEvent e)
+    {
+        if (
+            e
+                is not InputEventMouseButton
+                {
+                    ButtonIndex: MouseButton.Left or MouseButton.Right
+                } click
+            || CellOf(GuiGetHoveredControl()) is not { } cell
+        )
+            return;
+
+        bool modified = click.ShiftPressed || click.IsCommandOrControlPressed();
+        if (_editing && !(modified && click.ButtonIndex == MouseButton.Left))
+            return;
+
+        if (click is { ButtonIndex: MouseButton.Left, Pressed: true })
+        {
+            SelectTarget(cell, click);
+            if (click.DoubleClick && !modified)
+                BeginEdit(cell);
+        }
+        else if (click is { ButtonIndex: MouseButton.Right, Pressed: true })
+            SelectForMenu(cell);
+        SetInputAsHandled();
+    }
+
+    // Cells consume these keys while focused, so this only sees them when nothing is being edited.
+    public override void _UnhandledKeyInput(InputEvent e)
+    {
+        if (e is not InputEventKey { Pressed: true } key || key.GetModifiersMask() != 0)
+            return;
+
+        switch (key.Keycode)
+        {
+            case Key.Escape when !MySelection().IsEmpty:
+                Select([]);
+                break;
+            // Like a spreadsheet, Enter edits the selection's top-left cell.
+            case Key.Enter or Key.KpEnter when TopLeftCell() is { } cell:
+                BeginEdit(cell);
+                break;
+            default:
+                return;
+        }
+        SetInputAsHandled();
+    }
+
+    private void Sync(IWatchReader R)
+    {
+        var ds = R.Get(Dataset.ById, R.Get(ShownDatasetRef));
+        if (ds == null)
+            ClearGrid();
+        else
+            ShowDataset(R, ds);
+    }
+
+    private void ShowDataset(IAtomReader R, Dataset ds)
+    {
+        var columns = R.Get(DataColumn.ByDataset, ds.Id);
+        var columnIds = columns.Select(c => c.Id).ToList();
+        if (ds.Id != _shownDatasetRef || !columnIds.SequenceEqual(_columnRefs))
+        {
+            _addedColumnRefs =
+                ds.Id == _shownDatasetRef ? columnIds.Except(_columnRefs).ToList() : [];
+            ClearGrid();
+            _shownDatasetRef = ds.Id;
+            _columnRefs = columnIds;
+            BuildGrid();
+        }
+
+        for (int i = 0; i < _headerCells.Count; i++)
+            _headerCells[i].SetHeaderText(columns[i].Name);
+
+        ReconcileRows(R, R.Get(DataRow.ByDataset, ds.Id));
+        SyncSelection(R, ds.Id);
+
+        if (ViewOf(_revealRowRef) is { } view)
+        {
+            // defer so the grid has time to complete its layout
+            Callable
+                .From(() => _dataScrollContainer.EnsureControlVisible(view.Box))
+                .CallDeferred();
+        }
+        _revealRowRef = Ref<DataRow>.None;
+    }
+
+    private void InitializeSpreadsheet()
+    {
+        _mainContainer = GetNode<VBoxContainer>("%MainContainer");
+        _mainContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+
+        // The header scrolls horizontally with the data but stays put vertically.
+        _headerScroll = new ScrollContainer();
+        _mainContainer.AddChild(_headerScroll);
+        _headerScroll.CustomMinimumSize = new Vector2(0, HeaderHeight);
+        _headerScroll.HorizontalScrollMode = ScrollContainer.ScrollMode.ShowNever;
+        _headerScroll.VerticalScrollMode = ScrollContainer.ScrollMode.Disabled;
+
+        _headerContainer = new HBoxContainer();
+        _headerScroll.AddChild(_headerContainer);
+
+        _dataScrollContainer = new ScrollContainer();
+        _mainContainer.AddChild(_dataScrollContainer);
+        _dataScrollContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        _dataScrollContainer.HorizontalScrollMode = ScrollContainer.ScrollMode.Auto;
+        _dataScrollContainer.VerticalScrollMode = ScrollContainer.ScrollMode.Auto;
+        _dataScrollContainer.FollowFocus = true;
+        _dataScrollContainer.GetHScrollBar().ValueChanged += v =>
+            _headerScroll.ScrollHorizontal = (int)v;
+
+        _dataContainer = new VBoxContainer();
+        _dataScrollContainer.AddChild(_dataContainer);
+
+        _dropIndicator = new ColorRect();
+        AddChild(_dropIndicator);
+        _dropIndicator.TopLevel = true;
+        _dropIndicator.MouseFilter = Control.MouseFilterEnum.Ignore;
+        _dropIndicator.Color = Accent;
+        _dropIndicator.Visible = false;
+
+        _dropZone = GetNode<Control>("%ReorderDropZone");
+        _dropZone.SetDragForwarding(
+            default,
+            Callable.From<Vector2, Variant, bool>(
+                (_, data) => data.As<GodotObject>() is ReorderDrag
+            ),
+            Callable.From<Vector2, Variant>(
+                (at, data) =>
+                    DropReorder(
+                        (ReorderDrag)data.As<GodotObject>(),
+                        _dropZone.GetGlobalTransform() * at
+                    )
+            )
+        );
+
+        _linkButton = GetNode<Button>("%Link");
+        _linkButton.Pressed += OnImportPressed;
+
+        _newButton = GetNode<Button>("%New");
+        _newButton.Pressed += OnNewDatasetPressed;
+
+        _datasetList = GetNode<AtomSelector>("%DatasetList");
+        _datasetList.List(R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)), ShownDatasetRef);
+        ShownDatasetRef.Value = Atoms.R.Get(Dataset.All).FirstOrDefault()?.Id ?? Ref<Dataset>.None;
+
+        InitializeNewDatasetDialog();
+    }
+
+    /// <summary>
+    /// Selects a row of the shown dataset and scrolls it into view.
+    /// </summary>
+    public void RevealRow(Ref<DataRow> rowId)
+    {
+        Select([rowId]);
+        _revealRowRef = rowId;
+        Atoms.R.QueueSync(this);
+    }
+
+    private void OnNewDatasetPressed()
+    {
+        _newDatasetNameInput.Clear();
+        _newDatasetErrorLabel.Text = string.Empty;
+        _newDatasetDialog.GetOkButton().Disabled = true;
+        _newDatasetDialog.PopupCentered();
+    }
+
+    private void InitializeNewDatasetDialog()
+    {
+        _newDatasetDialog = new ConfirmationDialog();
+        _newDatasetDialog.Title = "New Dataset";
+        _newDatasetDialog.OkButtonText = "Create";
+
+        var vbox = new VBoxContainer();
+        vbox.CustomMinimumSize = new Vector2(300, 0);
+
+        var label = new Label();
+        label.Text = "Dataset name:";
+        vbox.AddChild(label);
+
+        _newDatasetNameInput = new LineEdit();
+        _newDatasetNameInput.PlaceholderText = "Enter unique name...";
+        _newDatasetNameInput.TextChanged += OnNewDatasetNameChanged;
+        vbox.AddChild(_newDatasetNameInput);
+
+        _newDatasetErrorLabel = new Label();
+        _newDatasetErrorLabel.AddThemeColorOverride("font_color", new Color(1, 0.3f, 0.3f));
+        vbox.AddChild(_newDatasetErrorLabel);
+
+        _newDatasetDialog.AddChild(vbox);
+        _newDatasetDialog.Confirmed += OnNewDatasetConfirmed;
+        AddChild(_newDatasetDialog);
+    }
+
+    private void OnNewDatasetNameChanged(string text)
+    {
+        var isEmpty = string.IsNullOrWhiteSpace(text);
+        _newDatasetErrorLabel.Text = string.Empty;
+        _newDatasetDialog.GetOkButton().Disabled = isEmpty;
+    }
+
+    private void OnNewDatasetConfirmed()
+    {
+        var name = _newDatasetNameInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            return;
+
+        var ds = new Dataset { Id = Ref<Dataset>.Create(), Name = name };
+        ShownDatasetRef.Value = ds.Id;
+        Atoms.R.Write(this, ds);
+    }
+
+    private void CloseDialog()
+    {
+        // Writes the cell being edited.
+        GuiReleaseFocus();
+        QueueFree();
+    }
+
+    private float ColumnWidth(Ref<DataColumn> id) =>
+        _columnWidths.GetValueOrDefault(id, DefaultColumnWidth);
+
+    private void BuildGrid()
+    {
+        var corner = new Control();
+        _headerContainer.AddChild(corner);
+        corner.CustomMinimumSize = new Vector2(RowHeaderWidth, HeaderHeight);
+
+        foreach (var id in _columnRefs)
+        {
+            var header = new HeaderCell();
+            _headerContainer.AddChild(header);
+            header.ColumnRef = id;
+            header.CustomMinimumSize = new Vector2(ColumnWidth(id), HeaderHeight);
+            header.WidthDragged += OnColumnWidthDragged;
+            header.NameCommitted += OnColumnRenamed;
+            header.Clicked += (columnId, click) => SelectTarget(columnId, click);
+            header.RightPressed += columnId => SelectForMenu(columnId);
+            _headerCells.Add(header);
+        }
+
+        _headerContainer.AddChild(AddButton(DatasetCommands.AddColumn, HeaderHeight));
+
+        // Lets the header scroll as far as the data, whose view is narrowed by its vertical scrollbar.
+        var spacer = new Control();
+        _headerContainer.AddChild(spacer);
+        spacer.CustomMinimumSize = new Vector2(ScrollbarAllowance, 0);
+
+        _addRowLine = new HBoxContainer();
+        _dataContainer.AddChild(_addRowLine);
+        _addRowLine.AddChild(AddButton(DatasetCommands.AddRow, RowHeaderWidth));
+    }
+
+    // A "+" icon after the last row or column, doing what the toolbar's button does.
+    private CommandButton AddButton(Command command, float width) =>
+        new()
+        {
+            ShowCaption = false,
+            IconAlignment = HorizontalAlignment.Center,
+            Command = command,
+            CustomMinimumSize = new Vector2(width, RowHeight),
+            FocusMode = Control.FocusModeEnum.None,
+        };
+
+    private void ClearGrid()
+    {
+        foreach (var view in _views)
+            FreeRowView(view);
+        _views = new List<RowView>();
+
+        _addRowLine?.GetParent().RemoveChild(_addRowLine);
+        _addRowLine?.QueueFree();
+        _addRowLine = null;
+
+        foreach (var c in _headerContainer.GetChildren())
+        {
+            _headerContainer.RemoveChild(c);
+            c.QueueFree();
+        }
+        _headerCells.Clear();
+
+        _shownDatasetRef = Ref<Dataset>.None;
+        _columnRefs = new List<Ref<DataColumn>>();
+    }
+
+    private RowView CreateRowView()
+    {
+        var view = new RowView { Box = new HBoxContainer() };
+        _dataContainer.AddChild(view.Box);
+        view.Box.CustomMinimumSize = new Vector2(0, RowHeight);
+
+        // Like a column's header: click to select, drag to reorder.
+        view.Header = new PanelContainer();
+        view.Box.AddChild(view.Header);
+        view.Header.CustomMinimumSize = new Vector2(RowHeaderWidth, RowHeight);
+        view.Header.MouseDefaultCursorShape = Control.CursorShape.Move;
+        view.Header.MouseFilter = Control.MouseFilterEnum.Stop;
+        view.Header.GuiInput += e => OnRowHeaderInput(view, e);
+        // Dragging it moves the row, through Godot's drag and drop.
+        view.Header.SetDragForwarding(
+            Callable.From<Vector2, ReorderDrag>(_ => new ReorderDrag
+            {
+                Axis = Vector2.Axis.Y,
+                MovedRef = view.Row.Id.Tag,
+            }),
+            default,
+            default
+        );
+
+        view.Number = new Label();
+        view.Header.AddChild(view.Number);
+        view.Number.HorizontalAlignment = HorizontalAlignment.Center;
+        view.Number.VerticalAlignment = VerticalAlignment.Center;
+        view.Number.Modulate = new Color(1, 1, 1, 0.5f);
+
+        for (int i = 0; i < _columnRefs.Count; i++)
+        {
+            var column = i;
+            var cell = new LineEdit();
+            view.Box.AddChild(cell);
+            cell.CustomMinimumSize = new Vector2(ColumnWidth(_columnRefs[i]), RowHeight);
+            cell.SizeFlagsHorizontal = Control.SizeFlags.Fill;
+            cell.SizeFlagsVertical = Control.SizeFlags.Fill;
+
+            cell.FocusEntered += () => OnCellFocused(view, column);
+            cell.FocusExited += () =>
+            {
+                CommitRow(view);
+                // Once focus has settled, which may be on another cell.
+                Callable.From(SyncEditing).CallDeferred();
+            };
+            cell.GuiInput += e => OnCellInput(view, column, e);
+
+            view.Cells.Add(cell);
+        }
+
+        return view;
+    }
+
+    private static void FreeRowView(RowView view)
+    {
+        // Detach first: removing a focused cell fires FocusExited, which must not write the row.
+        view.Row = null;
+        view.Box.GetParent()?.RemoveChild(view.Box);
+        view.Box.QueueFree();
+    }
+
+    private void BindRowView(IAtomReader R, RowView view, DataRow row, int index)
+    {
+        view.Row = row;
+        view.Number.Text = (index + 1).ToString();
+        view.Values = _columnRefs
+            .Select(c => R.Get(DataCell.ById, new CellId(row.Id, c))?.Value ?? string.Empty)
+            .ToArray();
+
+        for (int i = 0; i < view.Cells.Count; i++)
+        {
+            var cell = view.Cells[i];
+            // Leave the cell being typed in alone; it commits when focus leaves.
+            if (!cell.HasFocus() && cell.Text != view.Values[i])
+                cell.Text = view.Values[i];
+        }
+    }
+
+    private void ReconcileRows(IAtomReader R, IReadOnlyList<DataRow> rows)
+    {
+        var existing = _views.ToDictionary(v => v.Row.Id);
+        var next = new List<RowView>(rows.Count);
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (!existing.Remove(rows[i].Id, out var view))
+                view = CreateRowView();
+            BindRowView(R, view, rows[i], i);
+            _dataContainer.MoveChild(view.Box, i);
+            next.Add(view);
+        }
+
+        foreach (var gone in existing.Values)
+            FreeRowView(gone);
+
+        _views = next;
+        _dataContainer.MoveChild(_addRowLine, _dataContainer.GetChildCount() - 1);
+        ShowEditing();
+    }
+
+    /// <summary>The cell <paramref name="control"/> shows, or null if it isn't one.</summary>
+    private CellId? CellOf(Control control)
+    {
+        foreach (var view in _views)
+        {
+            int column = view.Cells.IndexOf(control as LineEdit);
+            if (column >= 0)
+                return new CellId(view.Row.Id, _columnRefs[column]);
+        }
+        return null;
+    }
+
+    /// <summary>The text box showing <paramref name="cell"/>, or null if it isn't shown.</summary>
+    private LineEdit CellControl(CellId cell)
+    {
+        int column = _columnRefs.IndexOf(cell.ColumnRef);
+        return column >= 0 ? ViewOf(cell.RowRef)?.Cells[column] : null;
+    }
+
+    // Updates whether a cell is being edited, which makes every cell a text box.
+    private void SyncEditing()
+    {
+        _editing = CellOf(GuiGetFocusOwner()) != null;
+        ShowEditing();
+    }
+
+    // Cells show the text cursor only while editing, when a click places the caret.
+    private void ShowEditing()
+    {
+        var shape = _editing ? Control.CursorShape.Ibeam : Control.CursorShape.Arrow;
+        foreach (var view in _views)
+        foreach (var cell in view.Cells)
+            cell.MouseDefaultCursorShape = shape;
+    }
+
+    /// <summary>Starts editing <paramref name="cell"/>, with the caret after its text.</summary>
+    private void BeginEdit(CellId cell)
+    {
+        if (CellControl(cell) is not { } edit)
+            return;
+        edit.GrabFocus();
+        // After the select-all that focusing from the keyboard queues.
+        Callable
+            .From(() =>
+            {
+                edit.Deselect();
+                edit.CaretColumn = edit.Text.Length;
+            })
+            .CallDeferred();
+    }
+
+    /// <summary>The top-left of the block of selected cells, or null without any.</summary>
+    private CellId? TopLeftCell()
+    {
+        var cells = MySelection().OfType<CellId>().ToList();
+        var row = _views.FirstOrDefault(v => cells.Any(c => c.RowRef == v.Row.Id));
+        var column = _columnRefs.FirstOrDefault(
+            id => cells.Any(c => c.ColumnRef == id),
+            Ref<DataColumn>.None
+        );
+        return row != null && !column.IsNone ? new CellId(row.Row.Id, column) : null;
+    }
+
+    private RowView Neighbor(RowView view, int step)
+    {
+        int i = _views.IndexOf(view) + step;
+        return i >= 0 && i < _views.Count ? _views[i] : null;
+    }
+
+    private static void FocusCell(RowView view, int column)
+    {
+        if (view != null && column >= 0 && column < view.Cells.Count)
+            view.Cells[column].GrabFocus();
+    }
+
+    private void OnCellFocused(RowView view, int column)
+    {
+        SyncEditing();
+
+        // The cell being edited is selected, so it shows the highlight too.
+        SelectTarget(new CellId(view.Row.Id, _columnRefs[column]));
+
+        // Keyboard navigation selects the whole cell, like a spreadsheet; a click places the caret.
+        if (!Input.IsMouseButtonPressed(MouseButton.Left))
+            view.Cells[column].CallDeferred(LineEdit.MethodName.SelectAll);
+    }
+
+    private void OnCellInput(RowView view, int column, InputEvent e)
+    {
+        var cell = view.Cells[column];
+
+        if (e is not InputEventKey { Pressed: true } key)
+            return;
+
+        // Cells copied from a spreadsheet spread across the grid; anything else pastes as usual.
+        if (e.IsActionPressed("ui_paste"))
+        {
+            var text = DisplayServer.ClipboardGet().TrimEnd('\r', '\n');
+            if (text.Contains('\t') || text.Contains('\n'))
+            {
+                // Writes the cell first, so the paste starts from what it shows.
+                // Then it pastes as Ctrl+V would outside a cell.
+                GuiReleaseFocus();
+                var paste = DatasetCommands.PasteCells;
+                paste.Run(
+                    CommandResolver.TargetsFor(
+                        paste,
+                        CommandContext.Of(this, Atoms.R, keys: true),
+                        Atoms.R,
+                        menu: false
+                    ),
+                    this
+                );
+                cell.AcceptEvent();
+            }
+            return;
+        }
+
+        switch (key.Keycode)
+        {
+            case Key.Enter or Key.KpEnter:
+                CommitRow(view);
+                // Enter on the last row adds a row below it.
+                if (!key.ShiftPressed && view == _views[^1])
+                    AddRow();
+                else
+                    FocusCell(Neighbor(view, key.ShiftPressed ? -1 : 1), 0);
+                break;
+            case Key.Up:
+                FocusCell(Neighbor(view, -1), column);
+                break;
+            case Key.Down:
+                FocusCell(Neighbor(view, 1), column);
+                break;
+            // Like a spreadsheet, Escape drops the cell's change and stops editing, leaving it selected.
+            case Key.Escape:
+                cell.Text = view.Values[column];
+                GuiReleaseFocus();
+                break;
+            default:
+                return;
+        }
+        cell.AcceptEvent();
+    }
+
+    /// <summary>
+    /// Writes the row's cells that changed, in one event. Emptied cells are unset.
+    /// </summary>
+    private void CommitRow(RowView view)
+    {
+        if (view.Row == null)
+            return;
+
+        var changes = new List<IChange>();
+        for (int i = 0; i < view.Cells.Count; i++)
+        {
+            var text = view.Cells[i].Text;
+            if (text == view.Values[i])
+                continue;
+            changes.AddRange(DataCell.Set(Atoms.R, new CellId(view.Row.Id, _columnRefs[i]), text));
+            view.Values[i] = text;
+        }
+        if (changes.Count > 0)
+            Atoms.R.Write(this, changes);
+    }
+
+    /// <summary>Adds an empty row after the last, which its listener then focuses.</summary>
+    private void AddRow() => DatasetCommands.AddRow.Run([ShownDatasetRef.Value], this);
+
+    private RowView ViewOf(Ref<DataRow> rowId) => _views.FirstOrDefault(v => v.Row.Id == rowId);
+
+    /// <summary>Moves <paramref name="row"/> so it sits at <paramref name="index"/> among the other rows.</summary>
+    private void MoveRow(DataRow row, int index)
+    {
+        var others = _views.Select(v => v.Row).Where(r => r.Id != row.Id).ToList();
+        if (others.Count == 0)
+            return;
+
+        Atoms.R.Write(this, row with { Rank = SnowRank.At(others, index) });
+    }
+
+    // The rows' or the columns' controls, for a drag along that axis.
+    private List<Control> DragItems(Vector2.Axis axis) =>
+        axis == Vector2.Axis.Y
+            ? _views.Select(v => (Control)v.Box).ToList()
+            : _headerCells.Cast<Control>().ToList();
+
+    // Where a dragged row or column would land: how many of the others are before the pointer.
+    private int DropIndex(Vector2.Axis axis, Vector2 at) =>
+        DragItems(axis).Count(c => c.GetGlobalRect().GetCenter()[(int)axis] < at[(int)axis]);
+
+    // Selects the row on a click, or for the menu on a right press.
+    private void OnRowHeaderInput(RowView view, InputEvent e)
+    {
+        switch (e)
+        {
+            // A drag takes the release from the header, so one that gets here is a click.
+            case InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } release:
+                SelectTarget(view.Target, release);
+                break;
+            case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }:
+                SelectForMenu(view.Target);
+                break;
+            default:
+                return;
+        }
+        view.Header.AcceptEvent();
+    }
+
+    /// <summary>
+    /// Shows a line where a dragged row or column would land.
+    /// A row's line runs across the data; a column's runs down the header and the data.
+    /// </summary>
+    private void ShowDrop(Vector2.Axis axis, Vector2 at)
+    {
+        var items = DragItems(axis);
+        if (items.Count == 0)
+            return;
+
+        int i = (int)axis;
+        int index = DropIndex(axis, at);
+        float line =
+            index < items.Count
+                ? items[index].GetGlobalRect().Position[i]
+                : items[^1].GetGlobalRect().End[i];
+
+        var data = _dataScrollContainer.GetGlobalRect();
+        var span = axis == Vector2.Axis.Y ? data : _headerScroll.GetGlobalRect().Merge(data);
+        var position = span.Position;
+        var size = span.Size;
+        position[i] = Mathf.Clamp(line, span.Position[i], span.End[i]) - IndicatorThickness / 2;
+        size[i] = IndicatorThickness;
+
+        _dropIndicator.Position = position;
+        _dropIndicator.Size = size;
+        _dropIndicator.Visible = true;
+    }
+
+    /// <summary>Moves the dragged row or column to where it was dropped, at <paramref name="at"/> in the window.</summary>
+    private void DropReorder(ReorderDrag drag, Vector2 at)
+    {
+        if (drag.Axis == Vector2.Axis.Y)
+            DropRow(new(drag.MovedRef), at);
+        else
+            DropColumn(new(drag.MovedRef), at);
+    }
+
+    private void DropRow(Ref<DataRow> rowId, Vector2 at)
+    {
+        var view = ViewOf(rowId);
+        int from = _views.IndexOf(view);
+        if (from < 0)
+            return;
+
+        int to = DropIndex(Vector2.Axis.Y, at);
+        if (to == from || to == from + 1)
+            return;
+
+        MoveRow(view.Row, to > from ? to - 1 : to);
+    }
+
+    private void DropColumn(Ref<DataColumn> columnId, Vector2 at)
+    {
+        var columns = Atoms.R.Get(DataColumn.ByDataset, ShownDatasetRef.Value);
+        int from = columns.FindIndex(c => c.Id == columnId);
+        if (from < 0)
+            return;
+
+        int to = DropIndex(Vector2.Axis.X, at);
+        if (to == from || to == from + 1)
+            return;
+
+        var column = columns[from];
+        columns.RemoveAt(from);
+        Atoms.R.Write(this, column with { Rank = SnowRank.At(columns, to > from ? to - 1 : to) });
+    }
+
+    private void OnColumnRenamed(Ref<DataColumn> columnId, string name)
+    {
+        if (Atoms.R.Get(DataColumn.ById, columnId) is { } column)
+            Atoms.R.Write(this, column with { Name = name });
+    }
+
+    /// <summary>What the local player has selected in the shown dataset.</summary>
+    private ImmutableHashSet<IAtomRef> MySelection() =>
+        Atoms.R.GetSelection(this)?.Targets ?? ImmutableHashSet<IAtomRef>.Empty;
+
+    /// <summary>Replaces what the local player has selected in the shown dataset.</summary>
+    private void Select(IEnumerable<IAtomRef> targets) => Atoms.R.SetSelection(targets, this);
+
+    /// <summary>
+    /// Selects a row, column or cell, as a click on it does. With Shift, it selects everything from the
+    /// last one selected without Shift; with Ctrl (or Cmd), it's added or removed; otherwise it's selected alone.
+    /// Only one kind is selected at a time, so Delete acts on rows or columns, never both.
+    /// A click takes focus from the cell being edited, so keys like Delete go to the selection.
+    /// Focusing a cell selects it without a click.
+    /// </summary>
+    private void SelectTarget(IAtomRef target, InputEventWithModifiers click = null)
+    {
+        var mine = MySelection();
+        var kind = mine.Where(t => t.AtomType == target.AtomType);
+        if (
+            click?.ShiftPressed == true
+            && _anchor is { } anchor
+            && anchor.AtomType == target.AtomType
+        )
+            Select(Range(anchor, target));
+        else
+        {
+            _anchor = target;
+            Select(
+                click?.IsCommandOrControlPressed() != true ? [target]
+                : mine.Contains(target) ? kind.Where(t => !t.Equals(target))
+                : kind.Append(target)
+            );
+        }
+
+        if (click != null)
+            GuiReleaseFocus();
+    }
+
+    /// <summary>Everything from one row, column or cell to another, in the grid's order. Cells make a rectangle.</summary>
+    private IEnumerable<IAtomRef> Range(IAtomRef from, IAtomRef to)
+    {
+        var rows = _views.Select(v => v.Row.Id).ToList();
+        return (from, to) switch
+        {
+            (CellId a, CellId b) => Span(rows, a.RowRef, b.RowRef)
+                .SelectMany(r =>
+                    Span(_columnRefs, a.ColumnRef, b.ColumnRef).Select(c => new CellId(r, c))
+                )
+                .Cast<IAtomRef>(),
+            (Ref<DataRow> a, Ref<DataRow> b) => Span(rows, a, b).Cast<IAtomRef>(),
+            (Ref<DataColumn> a, Ref<DataColumn> b) => Span(_columnRefs, a, b).Cast<IAtomRef>(),
+            _ => [to],
+        };
+    }
+
+    // The ids from one to the other, both included, in order. Just the last if either is gone.
+    private static IEnumerable<T> Span<T>(List<T> order, T from, T to)
+    {
+        int i = order.IndexOf(from);
+        int j = order.IndexOf(to);
+        return i < 0 || j < 0 ? [to] : order.Skip(Math.Min(i, j)).Take(Math.Abs(i - j) + 1);
+    }
+
+    /// <summary>
+    /// Right clicking a row, column, or cell selects it.
+    /// If it was already selected, it does nothing, so as not to clear the selection.
+    /// Right clicking on empty space keeps the selection.
+    /// </summary>
+    private void SelectForMenu(IAtomRef target)
+    {
+        if (!MySelection().Contains(target))
+            SelectTarget(target);
+    }
+
+    /// <summary>
+    /// Highlights the selected rows, columns and cells in the colors <see cref="LocalSelection.SelectionColors"/> gives them.
+    /// </summary>
+    private void SyncSelection(IAtomReader R, Ref<Dataset> datasetId)
+    {
+        var colors = R.SelectionColors(ViewPlace.Of(this, datasetId));
+        foreach (var header in _headerCells)
+            SelectionHighlight.Outline(header, "panel", colors, header.ColumnRef);
+        foreach (var view in _views)
+        {
+            SelectionHighlight.Outline(view.Header, "panel", colors, view.Target);
+            for (int i = 0; i < view.Cells.Count; i++)
+                SelectionHighlight.Outline(
+                    view.Cells[i],
+                    "normal",
+                    colors,
+                    new CellId(view.Row.Id, _columnRefs[i]),
+                    view.Target,
+                    _columnRefs[i]
+                );
+        }
+    }
+
+    // Every editor shares these. The editor's listeners focus the row an insert adds
+    // or start renaming the column.
+
+    [Command("dataset.rename_column")]
+    private static readonly AtomCommand<DataColumn> RenameColumn = new()
+    {
+        Icon = CommandIcons.Edit,
+        Caption = "Rename Column",
+        MaxTargets = 1,
+        Effects = (_, columns) =>
+        {
+            EventBus.Instance.Publish(new RenameColumnEvent { ColumnRef = columns[0].Id });
+            return null;
+        },
+    };
+
+    [Command("dataset.insert_row_above")]
+    private static readonly AtomCommand<DataRow> InsertRowAbove = new()
+    {
+        Icon = CommandIcons.InsertRowAbove,
+        Caption = "Insert Row Above",
+        MaxTargets = 1,
+        Effects = (R, rows) => DatasetCommands.NewRow(R, rows[0].DatasetRef, RowIndex(R, rows[0])),
+    };
+
+    [Command("dataset.insert_row_below")]
+    private static readonly AtomCommand<DataRow> InsertRowBelow = new()
+    {
+        Icon = CommandIcons.InsertRowBelow,
+        Caption = "Insert Row Below",
+        MaxTargets = 1,
+        Effects = (R, rows) =>
+            DatasetCommands.NewRow(R, rows[0].DatasetRef, RowIndex(R, rows[0]) + 1),
+    };
+
+    [Command("dataset.insert_column_left")]
+    private static readonly AtomCommand<DataColumn> InsertColumnLeft = new()
+    {
+        Icon = CommandIcons.InsertColumnLeft,
+        Caption = "Insert Column Left",
+        MaxTargets = 1,
+        Effects = (R, columns) =>
+            DatasetCommands.NewColumn(R, columns[0].DatasetRef, ColumnIndex(R, columns[0])),
+    };
+
+    [Command("dataset.insert_column_right")]
+    private static readonly AtomCommand<DataColumn> InsertColumnRight = new()
+    {
+        Icon = CommandIcons.InsertColumnRight,
+        Caption = "Insert Column Right",
+        MaxTargets = 1,
+        Effects = (R, columns) =>
+            DatasetCommands.NewColumn(R, columns[0].DatasetRef, ColumnIndex(R, columns[0]) + 1),
+    };
+
+    // The row's place in its dataset.
+    private static int RowIndex(IAtomReader R, DataRow row) =>
+        R.Get(DataRow.ByDataset, row.DatasetRef).FindIndex(r => r.Id == row.Id);
+
+    // The column's place in its dataset.
+    private static int ColumnIndex(IAtomReader R, DataColumn column) =>
+        R.Get(DataColumn.ByDataset, column.DatasetRef).FindIndex(c => c.Id == column.Id);
+
+    private void OnRenameColumn(RenameColumnEvent e)
+    {
+        // Deferred so the closing menu doesn't take focus back from the name box.
+        if (_headerCells.FirstOrDefault(h => h.ColumnRef == e.ColumnRef) is { } header)
+            Callable.From(header.BeginRename).CallDeferred();
+    }
+
+    private void OnImportPressed()
+    {
+        if (Atoms.R.Get(Dataset.ById, ShownDatasetRef.Value) is not { } dataset)
+            return;
+
+        var dialog = new FileDialog
+        {
+            FileMode = FileDialog.FileModeEnum.OpenFile,
+            Access = FileDialog.AccessEnum.Filesystem,
+            Title = "Import CSV",
+            Filters = new[] { "*.csv ; CSV Files", "*.txt ; Text Files" },
+            Unresizable = false,
+        };
+
+        dialog.FileSelected += path =>
+        {
+            CsvImport.Replace(this, Atoms.R, dataset, path);
+            dialog.QueueFree();
+        };
+        dialog.Canceled += dialog.QueueFree;
+
+        AddChild(dialog);
+        dialog.PopupCentered(new Vector2I(700, 450));
+    }
+
+    private void OnColumnWidthDragged(Ref<DataColumn> columnId, float width)
+    {
+        int index = _columnRefs.IndexOf(columnId);
+        if (index < 0)
+            return;
+
+        width = Mathf.Max(width, MinColumnWidth);
+        _columnWidths[columnId] = width;
+
+        _headerCells[index].CustomMinimumSize = new Vector2(width, HeaderHeight);
+        foreach (var view in _views)
+            view.Cells[index].CustomMinimumSize = new Vector2(width, RowHeight);
+    }
+}

@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://ieh7fliilcb0"]
+
+[ext_resource type="Script" uid="uid://rkus14o3uk6n" path="res://Scripts/TextureFactory.cs" id="1_texture"]
+
+[node name="TextureFactory" type="Node" unique_id=1949857502]
+
+[node name="TextureFactory" type="SubViewport" parent="." unique_id=1135922229 node_paths=PackedStringArray("Drawings")]
+handle_input_locally = false
+render_target_update_mode = 4
+script = ExtResource("1_texture")
+Drawings = NodePath("../Drawings")
+
+[node name="Drawings" type="Node" parent="." unique_id=92325547]

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Lizzie.Tests": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "TESTINGPLATFORM_NOBANNER": "1"
+      }
+    }
+  }
+}

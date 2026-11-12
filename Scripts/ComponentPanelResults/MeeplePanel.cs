@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using Godot;
+
+namespace Lizzie;
 
 public partial class MeeplePanel : ComponentPanelDialogResult
 {
     private int _gridSize = 8;
     private float _cellSize = 30f;
 
-    private bool[][] _gridState;
+    private bool[,] _gridState;
     private Panel[,] _gridCells;
     private GridContainer _gridContainer;
     private CenterContainer _matrixContainer;
@@ -18,7 +22,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private Color _onColor = new Color(0.2f, 0.6f, 1.0f); // Blue
     private Color _offColor = new Color(0.15f, 0.15f, 0.15f); // Dark gray
-    private Color _hoverColor = new Color(0.3f, 0.3f, 0.3f); // Light gray
 
     private LineEdit _nameInput;
     private LineEdit _heightInput;
@@ -29,7 +32,6 @@ public partial class MeeplePanel : ComponentPanelDialogResult
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Meeple;
         _nameInput = GetNode<LineEdit>("%ItemName");
         _heightInput = GetNode<LineEdit>("%Height");
         _heightInput.TextChanged += t => UpdatePreview();
@@ -112,18 +114,9 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private void InitializeGrid()
     {
-        _gridState = new bool[_gridSize][];
+        // all cells default to false
+        _gridState = new bool[_gridSize, _gridSize];
         _gridCells = new Panel[_gridSize, _gridSize];
-
-        // Initialize all cells to off
-        for (int row = 0; row < _gridSize; row++)
-        {
-            _gridState[row] = new bool[_gridSize];
-            for (int col = 0; col < _gridSize; col++)
-            {
-                _gridState[row][col] = false;
-            }
-        }
     }
 
     private void CreateGridUI()
@@ -199,9 +192,9 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private void SetCellOn(int row, int col)
     {
-        if (!_gridState[row][col])
+        if (!_gridState[row, col])
         {
-            _gridState[row][col] = true;
+            _gridState[row, col] = true;
             UpdateCellVisual(row, col);
             UpdatePreview();
         }
@@ -209,9 +202,9 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
     private void SetCellOff(int row, int col)
     {
-        if (_gridState[row][col])
+        if (_gridState[row, col])
         {
-            _gridState[row][col] = false;
+            _gridState[row, col] = false;
             UpdateCellVisual(row, col);
             UpdatePreview();
         }
@@ -224,7 +217,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
         if (styleBox != null)
         {
-            styleBox.BgColor = _gridState[row][col] ? _onColor : _offColor;
+            styleBox.BgColor = _gridState[row, col] ? _onColor : _offColor;
         }
     }
 
@@ -242,7 +235,7 @@ public partial class MeeplePanel : ComponentPanelDialogResult
 
         // Hover effect for off cells
         var styleBox = panel.GetThemeStylebox("panel") as StyleBoxFlat;
-        if (styleBox != null && !_gridState[row][col])
+        if (styleBox != null && !_gridState[row, col])
         {
             //styleBox.BorderColor = new Color(0.8f, 0.8f, 0.8f);
             styleBox.SetBorderWidthAll(2);
@@ -252,46 +245,30 @@ public partial class MeeplePanel : ComponentPanelDialogResult
     private void OnCellMouseExited(Panel panel, int row, int col)
     {
         var styleBox = panel.GetThemeStylebox("panel") as StyleBoxFlat;
-        if (styleBox != null && !_gridState[row][col])
+        if (styleBox != null && !_gridState[row, col])
         {
             styleBox.BorderColor = new Color(0.4f, 0.4f, 0.4f);
             styleBox.SetBorderWidthAll(1);
         }
     }
 
-    #region Public API
-
-    /// <summary>
-    /// Get the current state of the grid
-    /// </summary>
-    public bool[][] GetGridState()
+    private ImmutableArray<ImmutableArray<bool>> GetImmutableGridState()
     {
-        // Deep copy of jagged array
-        var copy = new bool[_gridSize][];
-        for (int i = 0; i < _gridSize; i++)
-        {
-            copy[i] = new bool[_gridSize];
-            Array.Copy(_gridState[i], copy[i], _gridSize);
-        }
-        return copy;
-    }
-
-    /// <summary>
-    /// Set the state of a specific cell
-    /// </summary>
-    public void SetCell(int row, int col, bool state)
-    {
-        if (row >= 0 && row < _gridSize && col >= 0 && col < _gridSize)
-        {
-            _gridState[row][col] = state;
-            UpdateCellVisual(row, col);
-        }
+        return Enumerable
+            .Range(0, _gridSize)
+            .Select(row =>
+                Enumerable
+                    .Range(0, _gridSize)
+                    .Select(col => _gridState[row, col])
+                    .ToImmutableArray()
+            )
+            .ToImmutableArray();
     }
 
     /// <summary>
     /// Set the entire grid state
     /// </summary>
-    public void SetGridState(bool[][] state)
+    private void SetGridState(bool[][] state)
     {
         if (state.Length != _gridSize || (state.Length > 0 && state[0].Length != _gridSize))
         {
@@ -303,76 +280,27 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         {
             for (int col = 0; col < _gridSize; col++)
             {
-                _gridState[row][col] = state[row][col];
+                _gridState[row, col] = state[row][col];
                 UpdateCellVisual(row, col);
             }
         }
     }
 
-    /// <summary>
-    /// Clear all cells (set to off)
-    /// </summary>
-    public void ClearGrid()
+    public override string PrototypeName => _nameInput.Text;
+
+    public override ComponentParameters GetParams()
     {
-        for (int row = 0; row < _gridSize; row++)
+        return new MeepleParameters
         {
-            for (int col = 0; col < _gridSize; col++)
-            {
-                _gridState[row][col] = false;
-                UpdateCellVisual(row, col);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Fill all cells (set to on)
-    /// </summary>
-    public void FillGrid()
-    {
-        for (int row = 0; row < _gridSize; row++)
-        {
-            for (int col = 0; col < _gridSize; col++)
-            {
-                _gridState[row][col] = true;
-                UpdateCellVisual(row, col);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Invert all cells
-    /// </summary>
-    public void InvertGrid()
-    {
-        for (int row = 0; row < _gridSize; row++)
-        {
-            for (int col = 0; col < _gridSize; col++)
-            {
-                _gridState[row][col] = !_gridState[row][col];
-                UpdateCellVisual(row, col);
-            }
-        }
-    }
-
-    #endregion
-
-    public override Dictionary<string, object> GetParams()
-    {
-        var d = new Dictionary<string, object>();
-
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", ParamToFloat(_heightInput.Text));
-        d.Add("Thickness", ParamToFloat(_thicknessInput.Text));
-        d.Add("Color", _colorPicker.Color);
-        d.Add("Grid", _gridState);
-
-        return d;
+            Height = ParamToFloat(_heightInput.Text),
+            Thickness = ParamToFloat(_thicknessInput.Text),
+            Color = _colorPicker.Color,
+            Grid = GetImmutableGridState(),
+        };
     }
 
     private void UpdatePreview()
     {
-        var d = new Dictionary<string, object>();
-
         //normalize the size
         var h = ParamToFloat(_heightInput.Text);
         var t = ParamToFloat(_thicknessInput.Text);
@@ -388,85 +316,44 @@ public partial class MeeplePanel : ComponentPanelDialogResult
         //normalize dimensions to 10x10x10 outer extants
         var scale = 10f / h;
 
-        d.Add("ComponentName", _nameInput.Text);
-        d.Add("Height", 10f);
-        d.Add("Thickness", t * scale);
-        d.Add("Color", _colorPicker.Color);
-        d.Add("Grid", _gridState);
+        var p = new MeepleParameters
+        {
+            Height = 10f,
+            Thickness = t * scale,
+            Color = _colorPicker.Color,
+            Grid = GetImmutableGridState(),
+        };
 
-        _preview.Build(d, TextureFactory);
-    }
-
-    public override void DisplayPrototype(Guid prototypeId)
-    {
-        var prototype = ProjectService.Instance.CurrentProject.Prototypes[prototypeId];
-        DisplayPrototype(prototype);
+        _preview.Build(p);
     }
 
     public override void DisplayPrototype(Prototype prototype)
     {
+        var p = (MeepleParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _heightInput.Text = prototype.Parameters.ContainsKey("Height")
-            ? prototype.Parameters["Height"].ToString()
-            : "";
-        _thicknessInput.Text = prototype.Parameters.ContainsKey("Thickness")
-            ? prototype.Parameters["Thickness"].ToString()
-            : "";
-        _colorPicker.Color = prototype.Parameters.ContainsKey("Color")
-            ? (Color)prototype.Parameters["Color"]
-            : Colors.Red;
+        _heightInput.Text = p.Height.ToString();
+        _thicknessInput.Text = p.Thickness.ToString();
+        _colorPicker.Color = p.Color;
 
-        if (
-            prototype.Parameters.ContainsKey("Grid")
-            && prototype.Parameters["Grid"] is bool[][] grid
-        )
+        if (p.Grid.Length > 0)
         {
-            SetGridState(grid);
+            SetGridState(p.Grid.Select(row => row.ToArray()).ToArray());
         }
 
         Activate();
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as MeepleParameters;
 
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey("ComponentName"))
-        {
-            if (string.IsNullOrEmpty(parameters["ComponentName"].ToString()))
-                ret.Add("Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        var h = Utility.GetParam<float>(parameters, "Height");
-        if (h <= 0)
+        if ((p?.Height ?? 0) <= 0)
             ret.Add("Height must be > 0");
-
-        var w = Utility.GetParam<float>(parameters, "Thickness");
-        if (w <= 0)
+        if ((p?.Thickness ?? 0) <= 0)
             ret.Add("Thickness must be > 0");
 
-        //check grid
-        bool found = false;
-        foreach (var i in _gridState)
-        {
-            foreach (var j in i)
-            {
-                if (j)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (found)
-                break;
-        }
-
-        if (!found)
+        if (!_gridState.Cast<bool>().Contains(true))
         {
             ret.Add("Grid must have at least one active cell");
         }

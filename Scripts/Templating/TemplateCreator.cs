@@ -1,18 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Threading;
 using Godot;
-using Lizzie.Scripts.Templating;
 
-public partial class TemplateCreator : Window
+namespace Lizzie;
+
+public partial class TemplateCreator : Window, ICommandView
 {
+    public ViewPlace Place(IAtomReader R) => ViewPlace.Of(this, CurrentTemplate?.Id);
+
     [Export]
     private TextureRect _preview;
-
-    [Export]
-    private Texture2D _d4_overlay;
 
     [Export]
     private Texture2D _d6_overlay;
@@ -37,7 +38,6 @@ public partial class TemplateCreator : Window
     private Button _showOverlayButton;
 
     private Button _textButton;
-    private Button _closeButton;
     private Button _imageButton;
 
     private MenuButton _otherElementButton;
@@ -52,12 +52,12 @@ public partial class TemplateCreator : Window
     private PackedScene _stringParam;
     private PackedScene _numberParam;
     private PackedScene _colorParam;
-    private PackedScene _anchorParam;
     private PackedScene _boolParam;
     private PackedScene _horJustifyParam;
     private PackedScene _verJustifyParam;
     private PackedScene _imageParam;
     private PackedScene _trackTypeParam;
+    private PackedScene _sequenceParam;
 
     private ITemplateElement _selectedElement;
     private TreeItem _rootItem;
@@ -66,26 +66,43 @@ public partial class TemplateCreator : Window
     private TextureContext _textureContext = new();
 
     private OptionButton _templateNameSelector;
+
     private OptionButton _cardSizes;
     private LineEdit _heightInput;
     private LineEdit _widthInput;
 
-    private Timer _updateTimer;
+    private Godot.Timer _updateTimer;
     private bool _updateRequired;
 
     private Button _newButton;
     private Button _saveButton;
-    private Button _duplicateButton;
-    private Button _zoomButton;
     private Panel _previewWindow;
-    private OptionButton _dataSetSelector;
+    private AtomSelector _datasetSelector;
 
     private PageControl _pageControl;
 
     private AcceptDialog _acceptDialog;
     private ConfirmationDialog _saveBeforeCloseDialog;
 
+    /// <summary>True when the current template has edits that haven't been saved.</summary>
+    private bool _hasUnsavedChanges;
+
     // Called when the node enters the scene tree for the first time.
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
+    }
+
+    private void Sync(IWatchReader R)
+    {
+        LoadTemplateNameSelector(R);
+        _templateNameSelector.Select(
+            _templateNameSelector.GetItemIndex(CurrentTemplate?.Id.Tag ?? SnowTag.None)
+        );
+
+        SyncDataset(R);
+    }
+
     public override void _Ready()
     {
         InitPreview();
@@ -107,28 +124,22 @@ public partial class TemplateCreator : Window
         InitializeSaveBeforeCloseDialog();
 
         this.VisibilityChanged += UpdateScrollBarVisibility;
-        this.CloseRequested += OnCloseRequested;
+        this.CloseRequested += RequestClose;
 
         UpdateProject();
-
-        if (!string.IsNullOrWhiteSpace(_tempTemplateName))
-        {
-            SetTemplateByName(_tempTemplateName);
-        }
     }
 
     public override void _Process(double delta)
     {
         if (_fitRequired)
         {
-            OnStandardSizeChanged(0);
+            ShowSize();
         }
     }
 
     private void InitToolbar()
     {
         _templateNameSelector = GetNode<OptionButton>("%TemplateName");
-        LoadTemplateNameSelector();
         _templateNameSelector.ItemSelected += ChangeTemplate;
 
         _newButton = GetNode<Button>("%NewButton");
@@ -137,16 +148,13 @@ public partial class TemplateCreator : Window
         _saveButton = GetNode<Button>("%SaveButton");
         _saveButton.Pressed += SaveTemplate;
 
-        _duplicateButton = GetNode<Button>("%DuplicateButton");
-
-        _closeButton = GetNode<Button>("%CloseButton");
-        _closeButton.Pressed += OnClose;
-
         _heightInput = GetNode<LineEdit>("%Height");
-        _heightInput.TextChanged += HeightWidthChange;
+        _heightInput.TextChanged += OnSizeTyped;
+        _heightInput.TextChanged += _ => SetHasUnsavedChanges();
 
         _widthInput = GetNode<LineEdit>("%Width");
-        _widthInput.TextChanged += HeightWidthChange;
+        _widthInput.TextChanged += OnSizeTyped;
+        _widthInput.TextChanged += _ => SetHasUnsavedChanges();
 
         _sizeControls = GetNode<HBoxContainer>("%SizeControls");
         _overlayControls = GetNode<HBoxContainer>("%OverlayControls");
@@ -155,28 +163,38 @@ public partial class TemplateCreator : Window
 
         _cardSizes = GetNode<OptionButton>("%StandardSize");
         _cardSizes.ItemSelected += OnStandardSizeChanged;
+        _cardSizes.ItemSelected += _ => SetHasUnsavedChanges();
         InitializeStandardSizes();
-        OnStandardSizeChanged(0);
 
-        _dataSetSelector = GetNode<OptionButton>("%Dataset");
-        _dataSetSelector.ItemSelected += OnDatasetChanged;
-        InitializeDataSets();
+        _datasetSelector = GetNode<AtomSelector>("%Dataset");
+        _datasetSelector.List(
+            R => R.Get(Dataset.All).Select(d => (d.Id, d.Name)),
+            new(R => R.Get(_currentTemplate)?.DatasetRef ?? Ref<Dataset>.None, OnDatasetChanged)
+        );
 
         _pageControl = GetNode<PageControl>("%PageControl");
         _pageControl.Hide();
         _pageControl.ItemSelected += ChangePage;
     }
 
-    private void OnClose()
+    private void RequestClose()
     {
-        // Show save confirmation dialog
+        if (!_hasUnsavedChanges)
+        {
+            QueueFree();
+            return;
+        }
+
         _saveBeforeCloseDialog.PopupCentered();
     }
 
-    private void OnCloseRequested()
+    /// <summary>Flags the current template as having unsaved edits.</summary>
+    private void SetHasUnsavedChanges()
     {
-        // When user clicks X button, show save confirmation instead of closing immediately
-        _saveBeforeCloseDialog.PopupCentered();
+        if (CurrentTemplate == null)
+            return;
+
+        _hasUnsavedChanges = true;
     }
 
     private void InitializeSaveBeforeCloseDialog()
@@ -201,7 +219,7 @@ public partial class TemplateCreator : Window
     private void OnSaveAndClose()
     {
         SaveTemplate();
-        Closed?.Invoke(this, EventArgs.Empty);
+        QueueFree();
     }
 
     private void OnCancelClose()
@@ -214,68 +232,76 @@ public partial class TemplateCreator : Window
         if (action == "dont_save")
         {
             // Close without saving
-            Closed?.Invoke(this, EventArgs.Empty);
+            QueueFree();
         }
     }
 
-    public event EventHandler Closed;
+    private readonly WatchableValue<Template> _currentTemplate = new();
 
-    private Template _currentTemplate;
-
-    public Template CurrentTemplate
+    /// <summary>
+    /// Switches the edited template and rebuilds the whole editor UI from it.
+    /// Edits made from within the editor must go through <see cref="EditCurrentTemplate"/> instead.
+    /// </summary>
+    private Template CurrentTemplate
     {
-        get => _currentTemplate;
+        get => _currentTemplate.Value;
         set
         {
-            _currentTemplate = value;
+            _currentTemplate.Value = value;
             MapTemplate();
         }
     }
 
-    private string _tempTemplateName = string.Empty;
-
-    public void SetTemplateByName(string name)
+    /// <summary>Replaces the current template without rebuiling the editor UI.</summary>
+    private void EditCurrentTemplate(Func<Template, Template> edit)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return;
+        if (_currentTemplate.Value is { } template)
+            _currentTemplate.Value = edit(template);
+    }
 
-        if (!IsNodeReady())
+    public void SetTemplateById(Ref<Template> id)
+    {
+        var idx = _templateNameSelector.GetItemIndex(id.Tag);
+        if (idx >= 0)
         {
-            _tempTemplateName = name;
-            return;
-        }
-
-        if (Templates.TryGetValue(name, out var template))
-        {
-            for (int i = 0; i < _templateNameSelector.ItemCount; i++)
-            {
-                var n = _templateNameSelector.GetItemText(i);
-                if (n == name)
-                {
-                    _templateNameSelector.Selected = i;
-                    ChangeTemplate(i);
-                }
-            }
+            _templateNameSelector.Selected = idx;
+            ChangeTemplate(idx);
         }
     }
 
     private void MapTemplate()
     {
-        //change sizes
-        var size = CurrentTemplate.SizeTemplate;
-
-        if (!string.IsNullOrEmpty(size))
+        try
         {
-            for (int i = 0; i < _cardSizes.ItemCount; i++)
-            {
-                if (_cardSizes.GetItemText(i) == size)
-                {
-                    _cardSizes.Select(i);
-                    OnStandardSizeChanged(i);
-                    break;
-                }
-            }
+            MapTemplateInternal();
         }
+        finally
+        {
+            _hasUnsavedChanges = false;
+        }
+    }
+
+    private void MapTemplateInternal()
+    {
+        if (CurrentTemplate == null)
+        {
+            _elementTree.Clear();
+            _rootItem = _elementTree.CreateItem();
+            _templateElements.Clear();
+            ClearParameterBox();
+            return;
+        }
+
+        //change sizes
+        var size = _standardSizes.ContainsKey(CurrentTemplate.SizeTemplate ?? "")
+            ? CurrentTemplate.SizeTemplate
+            : CustomSize;
+        // Templates can't change from printed to dice or vice versa, so they only list valid sizes.
+        _cardSizes.Clear();
+        foreach (var name in _standardSizes.Keys.Where(n => IsDie(n) == CurrentTemplate.Sides > 0))
+            _cardSizes.AddItem(name);
+        SelectSize(_cardSizes, size);
+        OnStandardSizeChanged(_cardSizes.Selected);
 
         //set up element tree
         _elementTree.Clear();
@@ -285,17 +311,14 @@ public partial class TemplateCreator : Window
 
         ClearParameterBox();
 
-        int id = 0;
         foreach (var t in CurrentTemplate.Elements)
         {
             var te = TemplateEngine.BuildTemplateElement(t);
 
             var ni = _elementTree.CreateItem(_rootItem);
 
-            if (te.Id == 0)
-                te.Id = id;
+            te.Id = SnowTag.Create();
             ni.SetMetadata(0, te.Id);
-            id++;
             ni.SetText(0, te.ElementName);
 
             _templateElements.Add(te);
@@ -342,31 +365,37 @@ public partial class TemplateCreator : Window
 
     private void ChangeTemplate(long index)
     {
-        string name = _templateNameSelector.GetItemText((int)index);
-        UpdateTemplate(CurrentTemplate);
+        if (index < 0 || index >= _templateNameSelector.ItemCount)
+            return;
 
-        if (Templates.ContainsKey(name))
+        var switched = Atoms.R.Get(
+            Template.ById,
+            new Ref<Template>(_templateNameSelector.GetItemId((int)index))
+        );
+        if (switched != null)
         {
             SaveTemplate(); //save current template before switching
-            CurrentTemplate = Templates[name];
+            CurrentTemplate = switched;
         }
     }
 
     private void SaveTemplate()
     {
-        CurrentTemplate.Elements = TemplateEngine.MapTemplateElementsToProjectFormat(
-            _hierarchicalElements
-        );
-        ProjectService.Instance.SaveProject(ProjectService.Instance.CurrentProject);
-        EventBus.Instance.Publish(
-            new TemplateChangedEvent
+        if (CurrentTemplate == null)
+            return;
+
+        EditCurrentTemplate(t =>
+            t with
             {
-                TemplateName = _currentTemplate.Name,
-                Template = _currentTemplate,
+                Elements = TemplateEngine
+                    .MapTemplateElementsToProjectFormat(_hierarchicalElements)
+                    .Select(d => d.ToImmutableDictionary())
+                    .ToImmutableArray(),
             }
         );
+        Atoms.R.Write(this, CurrentTemplate);
 
-        EventBus.Instance.Publish<ProjectChangedEvent>();
+        _hasUnsavedChanges = false;
     }
 
     private ScrollBar _previewHScroll;
@@ -379,7 +408,7 @@ public partial class TemplateCreator : Window
         _boundsRect.Hide();
         _boundsRect.BoundsChanged += BoundsChanged;
 
-        _updateTimer = GetNode<Timer>("Timer");
+        _updateTimer = GetNode<Godot.Timer>("Timer");
         _updateTimer.Timeout += UpdateTimerExpired;
         _updateTimer.Start();
 
@@ -438,15 +467,15 @@ public partial class TemplateCreator : Window
         _stringParam = GD.Load<PackedScene>("res://Scenes/Templating/StringParam.tscn");
         _numberParam = GD.Load<PackedScene>("res://Scenes/Templating/NumericParam.tscn");
         _colorParam = GD.Load<PackedScene>("res://Scenes/Templating/ColorParam.tscn");
-        _anchorParam = GD.Load<PackedScene>("res://Scenes/Templating/AnchorParam.tscn");
         _boolParam = GD.Load<PackedScene>("res://Scenes/Templating/BooleanParam.tscn");
         _horJustifyParam = GD.Load<PackedScene>("res://Scenes/Templating/HorJustifyParam.tscn");
         _verJustifyParam = GD.Load<PackedScene>("res://Scenes/Templating/VerJustifyParam.tscn");
         _imageParam = GD.Load<PackedScene>("res://Scenes/Templating/ImageParam.tscn");
         _trackTypeParam = GD.Load<PackedScene>("res://Scenes/Templating/TrackTypeParam.tscn");
+        _sequenceParam = GD.Load<PackedScene>("res://Scenes/Templating/SequenceParam.tscn");
     }
 
-    private void HeightWidthChange(string newtext)
+    private void HeightWidthChange()
     {
         InitializeCardFit();
         _updateRequired = true;
@@ -471,6 +500,8 @@ public partial class TemplateCreator : Window
         if (_textureContext.ParentSize.X == 0 || _textureContext.ParentSize.Y == 0)
             return;
 
+        SetHasUnsavedChanges();
+
         var m = _boundsRect.GetBounds();
 
         int w = (int)_textureContext.ParentSize.X - m.l - m.r;
@@ -479,16 +510,15 @@ public partial class TemplateCreator : Window
         float scaleX = 100 / _textureContext.ParentSize.X;
         float scaleY = 100 / _textureContext.ParentSize.Y;
 
-        UpdateParamControl(
-            "X",
-            ((int)(scaleX * (m.l + w / 2f))).ToString(CultureInfo.InvariantCulture)
-        );
-        UpdateParamControl(
-            "Y",
-            ((int)(scaleY * (m.t + h / 2f))).ToString(CultureInfo.InvariantCulture)
-        );
-        UpdateParamControl("Width", ((int)(scaleX * w)).ToString(CultureInfo.InvariantCulture));
-        UpdateParamControl("Height", ((int)(scaleY * h)).ToString(CultureInfo.InvariantCulture));
+        static string Percent(float value) =>
+            MathF
+                .Round(value, 2, MidpointRounding.AwayFromZero)
+                .ToString(CultureInfo.InvariantCulture);
+
+        UpdateParamControl("X", Percent(scaleX * (m.l + w / 2f)));
+        UpdateParamControl("Y", Percent(scaleY * (m.t + h / 2f)));
+        UpdateParamControl("Width", Percent(scaleX * w));
+        UpdateParamControl("Height", Percent(scaleY * h));
 
         _updateRequired = true;
     }
@@ -553,7 +583,7 @@ public partial class TemplateCreator : Window
         _acceptDialog.DialogText =
             $"Are you sure you want to delete element {_selectedElement.ElementName}?";
         _acceptDialog.Confirmed += DeleteCurrentElement;
-        _acceptDialog.Show();
+        _acceptDialog.PopupCentered();
     }
 
     private void DeleteCurrentElement()
@@ -570,6 +600,7 @@ public partial class TemplateCreator : Window
         ClearParameterBox();
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
         _updateRequired = true;
     }
 
@@ -579,6 +610,7 @@ public partial class TemplateCreator : Window
             return;
         var ti = _elementTree.GetSelected();
         ti.SetEditable(0, true);
+        SetHasUnsavedChanges();
     }
 
     private void DuplicateCurrentElement()
@@ -586,65 +618,26 @@ public partial class TemplateCreator : Window
         if (_selectedElement == null)
             return;
 
-        var max = GetMaxId(_rootItem) + 1;
+        var id = SnowTag.Create();
 
-        TemplateElement t = new TextElement(); //for now - delete once all switch elements are populated
+        var t = TemplateEngine.BuildTemplateElement(
+            TemplateEngine.MapTemplateElementToProjectFormat(_selectedElement)
+        );
 
-        switch (_selectedElement.ElementType)
-        {
-            case ITemplateElement.TemplateElementType.Text:
-                t = new TextElement();
-                break;
-            case ITemplateElement.TemplateElementType.Box:
-                break;
-            case ITemplateElement.TemplateElementType.Image:
-                t = new ImageElement();
-                break;
-            case ITemplateElement.TemplateElementType.Note:
-                break;
-            case ITemplateElement.TemplateElementType.Cirlce:
-                break;
-            case ITemplateElement.TemplateElementType.Polygon:
-                break;
-            case ITemplateElement.TemplateElementType.Table:
-                break;
-            case ITemplateElement.TemplateElementType.Line:
-                break;
-            case ITemplateElement.TemplateElementType.Container:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-        var elementName = $"{_selectedElement.ElementName}{max}";
+        var elementName = CreateUniqueElementName(_selectedElement.ElementName);
 
         var ni = _elementTree.CreateItem(_rootItem); //update so that it places item as sibling to selected
-        ni.SetMetadata(0, max);
+        ni.SetMetadata(0, id);
         ni.SetText(0, elementName);
 
-        t.Id = max;
+        t.Id = id;
         t.ElementName = elementName;
-
-        t.Parameters.Clear();
-
-        foreach (var e in _selectedElement.Parameters)
-        {
-            t.Parameters.Add(
-                new TemplateParameter
-                {
-                    Name = e.Name,
-                    Value = e.Value,
-                    Type = e.Type,
-                }
-            );
-        }
-
         _templateElements.Add(t);
-        { }
 
         _elementTree.SetSelected(ni, 0);
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
     }
 
     #endregion
@@ -678,9 +671,9 @@ public partial class TemplateCreator : Window
 
     private void AddTextureElement(ITemplateElement.TemplateElementType type)
     {
-        var max = GetMaxId(_rootItem) + 1;
+        var id = SnowTag.Create();
 
-        TemplateElement t = new TextElement();
+        TemplateElement t;
 
         string prefix = type.ToString();
 
@@ -690,22 +683,8 @@ public partial class TemplateCreator : Window
                 t = new TextElement();
                 break;
 
-            case ITemplateElement.TemplateElementType.Box:
-                break;
             case ITemplateElement.TemplateElementType.Image:
                 t = new ImageElement();
-                break;
-            case ITemplateElement.TemplateElementType.Note:
-                break;
-            case ITemplateElement.TemplateElementType.Cirlce:
-                break;
-            case ITemplateElement.TemplateElementType.Polygon:
-                break;
-            case ITemplateElement.TemplateElementType.Table:
-                break;
-            case ITemplateElement.TemplateElementType.Line:
-                break;
-            case ITemplateElement.TemplateElementType.Container:
                 break;
             case ITemplateElement.TemplateElementType.Frame:
                 t = new FrameElement();
@@ -717,43 +696,37 @@ public partial class TemplateCreator : Window
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
 
-        var elementName = $"{prefix}{max}";
+        var elementName = CreateUniqueElementName(prefix);
 
         var ni = _elementTree.CreateItem(_rootItem);
-        ni.SetMetadata(0, max);
+        ni.SetMetadata(0, id);
         ni.SetText(0, elementName);
 
-        t.Id = max;
+        t.Id = id;
         t.ElementName = elementName;
         _templateElements.Add(t);
 
         _elementTree.SetSelected(ni, 0);
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
     }
 
     /// <summary>
-    /// Recursively iterates through all TreeItems starting from a given item.
+    /// Takes <paramref name="prefix"/> and adds an increment to make it unique.
     /// </summary>
-    private int GetMaxId(TreeItem item)
+    private string CreateUniqueElementName(string prefix)
     {
-        int maxId = 0;
+        var names = _templateElements.Select(e => e.ElementName).ToHashSet();
 
-        if (item == null)
-            return 0;
-
-        var id = item.GetMetadata(0).AsInt32();
-        maxId = Math.Max(maxId, id);
-
-        // Iterate over children
-        TreeItem child = item.GetFirstChild();
-        while (child != null)
+        for (int i = 2; i < int.MaxValue; i++)
         {
-            maxId = Math.Max(GetMaxId(child), maxId); // Recursive call
-            child = child.GetNext();
+            var candidate = $"{prefix}{i}";
+            if (!names.Contains(candidate))
+                return candidate;
         }
 
-        return maxId;
+        throw new Exception("unique name not found");
     }
 
     private void RemapParameters()
@@ -778,9 +751,6 @@ public partial class TemplateCreator : Window
                 case TemplateParameter.TemplateParameterType.Color:
                     t = _colorParam.Instantiate<ColorParamControl>();
                     break;
-                case TemplateParameter.TemplateParameterType.Anchor:
-                    t = _anchorParam.Instantiate<ListParamControl>();
-                    break;
                 case TemplateParameter.TemplateParameterType.Boolean:
                     t = _boolParam.Instantiate<BooleanParamControl>();
                     break;
@@ -803,6 +773,10 @@ public partial class TemplateCreator : Window
                     t = _trackTypeParam.Instantiate<PopupParamControl>();
                     break;
 
+                case TemplateParameter.TemplateParameterType.Sequence:
+                    t = _sequenceParam.Instantiate<NumericParamControl>();
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -819,6 +793,7 @@ public partial class TemplateCreator : Window
 
     private void OnTextureUpdate(object sender, EventArgs e)
     {
+        SetHasUnsavedChanges();
         UpdateTexture(true, false);
     }
 
@@ -829,11 +804,16 @@ public partial class TemplateCreator : Window
 
         var td = TemplateEngine.GenerateTextureDefinition(_hierarchicalElements, _textureContext);
 
-        TextureFactory.GenerateTexture(td, UpdatePreview);
+        UpdatePreview(td);
 
         if (updateBounds)
             UpdateBoundsRect();
     }
+
+    /// <summary>
+    /// Used to cancel drawing the preview, but only if it hasn't started yet.
+    /// </summary>
+    private CancellationTokenSource _previewDrawing = new();
 
     private void ClearParameters()
     {
@@ -870,8 +850,8 @@ public partial class TemplateCreator : Window
         if (d.Count == 1)
         {
             var te = d[0];
-            var p = new Vector2I(te.CenterX, te.CenterY);
-            br = new Rect2I(p, te.Width, te.Height);
+            var p = new Vector2I((int)te.CenterX, (int)te.CenterY);
+            br = new Rect2I(p, (int)te.Width, (int)te.Height);
         }
         else
         {
@@ -936,16 +916,28 @@ public partial class TemplateCreator : Window
         UpdateTexture(true, true);
     }
 
-    private void UpdatePreview(ImageTexture texture)
+    private async void UpdatePreview(TextureFactory.TextureDefinition definition)
     {
-        _preview.Texture = texture;
+        _previewDrawing.Cancel();
+        _previewDrawing = new();
+        var token = _previewDrawing.Token;
+        var image = await TextureFactory.Instance.Render(definition, token);
+        if (!token.IsCancellationRequested)
+            _preview.Texture = ImageTexture.CreateFromImage(image);
     }
 
-    public TextureFactory TextureFactory { get; set; }
+    public override void _ExitTree() => _previewDrawing.Cancel();
 
     #region Sizes
 
-    private Dictionary<string, (float, float)> _standardSizes;
+    private const string CustomSize = "Custom";
+    private const float MmPerInch = 25.4f;
+
+    /// <summary>
+    /// Card sizes in inches. "Custom" is the template's own size.
+    /// Dice have their number of sides as the width and 0 as the height.
+    /// </summary>
+    private Dictionary<string, (float Width, float Height)> _standardSizes;
 
     private void InitializeStandardSizes()
     {
@@ -954,83 +946,92 @@ public partial class TemplateCreator : Window
         _standardSizes.Add("Bridge", (2.25f, 3.5f));
         _standardSizes.Add("Mini Euro", (1.75f, 2.5f));
         _standardSizes.Add("Tarot", (2.75f, 4.75f));
-        _standardSizes.Add("Custom", (0, 0));
-
-        _cardSizes.Clear();
-        foreach (var kv in _standardSizes)
-        {
-            _cardSizes.AddItem(kv.Key);
-        }
-
-        //die standard sizes have the die size as width and 0 as height.
-
-        _standardSizes.Add("D4", (4, 0));
-        _standardSizes.Add("D6", (6, 0));
-        _standardSizes.Add("D8", (8, 0));
-        _standardSizes.Add("D10", (10, 0));
-        _standardSizes.Add("D12", (12, 0));
-        _standardSizes.Add("D20", (20, 0));
-
-        _cardSizes.AddSeparator();
-        _cardSizes.AddItem("D4");
-        _cardSizes.AddItem("D6");
-        _cardSizes.AddItem("D8");
-        _cardSizes.AddItem("D10");
-        _cardSizes.AddItem("D12");
-        _cardSizes.AddItem("D20");
+        _standardSizes.Add(CustomSize, (0, 0));
+        _standardSizes.Add("D6", (0, 0));
+        _standardSizes.Add("D8", (0, 0));
+        _standardSizes.Add("D10", (0, 0));
+        _standardSizes.Add("D12", (0, 0));
+        _standardSizes.Add("D20", (0, 0));
     }
 
-    private float _curHeight;
-    private float _curWidth;
-    private string _curSizeType;
+    private static bool IsDie(string size) => Template.SidesOf(size) > 0;
+
+    private static string Millimeters(float inches) => (inches * MmPerInch).ToString("f1");
+
+    private static void SelectSize(OptionButton sizes, string size)
+    {
+        for (int i = 0; i < sizes.ItemCount; i++)
+        {
+            if (sizes.GetItemText(i) == size)
+                sizes.Select(i);
+        }
+    }
 
     private void OnStandardSizeChanged(long index)
     {
         if (CurrentTemplate == null)
             return;
 
-        _curSizeType = _cardSizes.Text;
+        var name = _cardSizes.GetItemText((int)index);
+        var size =
+            name == CustomSize
+                ? (CurrentTemplate.Width, CurrentTemplate.Height)
+                : _standardSizes[name];
+        EditCurrentTemplate(t =>
+            t with
+            {
+                SizeTemplate = name,
+                Width = size.Width,
+                Height = size.Height,
+            }
+        );
+        ShowSize();
+    }
 
-        if (!_standardSizes.TryGetValue(_curSizeType, out var size))
+    private void OnSizeTyped(string text)
+    {
+        if (CurrentTemplate == null)
             return;
 
-        _curWidth = size.Item1;
-        _curHeight = size.Item2;
-        CurrentTemplate.SizeTemplate = _curSizeType;
+        float.TryParse(_widthInput.Text, out var w);
+        float.TryParse(_heightInput.Text, out var h);
+        SelectSize(_cardSizes, CustomSize);
+        EditCurrentTemplate(t =>
+            t with
+            {
+                SizeTemplate = CustomSize,
+                Width = w / MmPerInch,
+                Height = h / MmPerInch,
+            }
+        );
+        HeightWidthChange();
+    }
 
-        if (_curWidth == 0 && _curHeight == 0)
-        {
-            ShowCardMode();
-            _heightInput.Text = (CurrentTemplate.Height).ToString("f1");
-            _widthInput.Text = (CurrentTemplate.Width).ToString("f1");
-            _curWidth = CurrentTemplate.Width;
-            _curHeight = CurrentTemplate.Height;
-            HeightWidthChange(string.Empty);
+    private void ShowSize()
+    {
+        if (CurrentTemplate == null)
             return;
-            //both = 0 means custom size.
-        }
 
-        if (_curHeight == 0)
+        _textureContext.TriangleFaces = CurrentTemplate.TriangleFaces;
+
+        if (CurrentTemplate.Sides > 0)
         {
-            //die mode
-            ShowDieMode(_curWidth);
+            ShowDieMode(CurrentTemplate.Sides);
             return;
         }
 
         ShowCardMode();
 
-        float conversion = 25.4f;
+        _widthInput.Text = Millimeters(CurrentTemplate.Width);
+        _heightInput.Text = Millimeters(CurrentTemplate.Height);
 
-        _heightInput.Text = (_curHeight * conversion).ToString("f1");
-        _widthInput.Text = (_curWidth * conversion).ToString("f1");
-
-        HeightWidthChange(string.Empty);
+        HeightWidthChange();
     }
 
-    private void ShowDieMode(float index)
+    private void ShowDieMode(int sides)
     {
         _sizeControls.Visible = false;
-        InitOverlay((int)index);
+        InitOverlay(sides);
         _overlayControls.Visible = true;
         OnOverlayToggle();
     }
@@ -1054,18 +1055,11 @@ public partial class TemplateCreator : Window
 
     private void InitOverlay(int sides)
     {
-        var h = 256;
-        var w = 256;
-
         Texture2D t;
 
         switch (sides)
         {
-            case 4:
-                t = _d4_overlay;
-                break;
             case 6:
-                h = 170;
                 t = _d6_overlay;
                 break;
             case 8:
@@ -1085,32 +1079,14 @@ public partial class TemplateCreator : Window
                 throw new ArgumentOutOfRangeException(nameof(sides), sides, null);
         }
 
-        _curWidth = w;
-        _curHeight = h;
-
-        InitializeFit(w, h);
+        var (width, height) = DieTemplate.Size(sides);
+        InitializeFit(width * MmPerInch, height * MmPerInch);
 
         var image = t.GetImage();
         var s = _preview.GetSize();
         image.Resize((int)s.X, (int)s.Y);
         var t2 = ImageTexture.CreateFromImage(image);
         _previewOverlay.Texture = t2;
-    }
-
-    private void InitializeDataSets()
-    {
-        _dataSetSelector.Clear();
-        _dataSetSelector.AddItem("(none)", 0);
-
-        var i = 1;
-
-        foreach (var d in ProjectService.Instance.CurrentProject.Datasets)
-        {
-            _dataSetSelector.AddItem(d.Key, i);
-            i++;
-        }
-
-        _dataSetSelector.Select(0);
     }
 
     #endregion
@@ -1123,6 +1099,7 @@ public partial class TemplateCreator : Window
     private LineEdit _newTemplateName;
     private LineEdit _newTemplateWidth;
     private LineEdit _newTemplateHeight;
+    private Control _newTemplateSizeFields;
     private OptionButton _newTemplateSize;
 
     private void InitializeNewTemplateDialog()
@@ -1138,20 +1115,23 @@ public partial class TemplateCreator : Window
         _newTemplateName.TextChanged += _ => UpdateNewTemplateOkButton();
 
         _newTemplateWidth = GetNode<LineEdit>("%NTWidth");
-        _newTemplateWidth.TextChanged += _ => UpdateNewTemplateOkButton();
+        _newTemplateWidth.TextChanged += NewTemplateSizeTyped;
 
         _newTemplateHeight = GetNode<LineEdit>("%NTHeight");
-        _newTemplateHeight.TextChanged += _ => UpdateNewTemplateOkButton();
+        _newTemplateHeight.TextChanged += NewTemplateSizeTyped;
+
+        _newTemplateSizeFields = GetNode<Control>("%NTSizeFields");
 
         _newTemplateSize = GetNode<OptionButton>("%NTSize");
         _newTemplateSize.ItemSelected += NewTemplateStandardSizeChanged;
-        NewTemplateStandardSizeChanged(0);
 
         _newTemplateSize.Clear();
         foreach (var kv in _standardSizes)
         {
             _newTemplateSize.AddItem(kv.Key);
         }
+        _newTemplateSize.Select(0);
+        NewTemplateStandardSizeChanged(0);
     }
 
     private void UpdateNewTemplateOkButton()
@@ -1161,29 +1141,30 @@ public partial class TemplateCreator : Window
 
         _newTemplateOk.Disabled =
             string.IsNullOrWhiteSpace(_newTemplateName.Text)
-            || Templates.ContainsKey(_newTemplateName.Text)
-            || h <= 0
-            || w <= 0;
+            || !IsDie(_newTemplateSize.Text) && (h <= 0 || w <= 0);
     }
 
     private void OnNewTemplateOkPressed()
     {
-        //save current template
-        UpdateTemplate(CurrentTemplate);
-
-        var t = new Template { Name = _newTemplateName.Text, SizeTemplate = _newTemplateSize.Text };
-
+        var size = _newTemplateSize.Text;
         float.TryParse(_newTemplateWidth.Text, out var w);
         float.TryParse(_newTemplateHeight.Text, out var h);
+        var inches =
+            size == CustomSize
+                ? (Width: w / MmPerInch, Height: h / MmPerInch)
+                : _standardSizes[size];
 
-        t.Width = w;
-        t.Height = h;
-
-        Templates.Add(t.Name, t);
-        _templateNameSelector.AddItem(t.Name);
-        _templateNameSelector.Select(_templateNameSelector.GetItemCount() - 1);
+        var t = new Template
+        {
+            Id = Ref<Template>.Create(),
+            Name = _newTemplateName.Text,
+            SizeTemplate = size,
+            Width = inches.Width,
+            Height = inches.Height,
+        };
 
         CurrentTemplate = t;
+        Atoms.R.Write(this, t);
 
         _newTemplateName.Clear();
 
@@ -1194,133 +1175,52 @@ public partial class TemplateCreator : Window
 
     #region Template management
 
-    private Dictionary<string, Template> _templates = new();
-
-    public Dictionary<string, Template> Templates
+    private void LoadTemplateNameSelector(IAtomReader R)
     {
-        get
-        {
-            var p = ProjectService.Instance.CurrentProject;
-            if (p == null)
-                return new();
-            return p.Templates;
-        }
-    }
-
-    private void LoadTemplateNameSelector()
-    {
-        if (_templateNameSelector == null)
-            return;
-
         _templateNameSelector.Clear();
 
-        foreach (var kv in Templates.OrderBy(x => x.Key))
+        foreach (var t in R.Get(Template.All).OrderBy(v => v.Name))
         {
-            _templateNameSelector.AddItem(kv.Key);
+            _templateNameSelector.AddItem(t.Name, t.Id.Tag);
         }
     }
 
     private void NewTemplateStandardSizeChanged(long index)
     {
-        var cardType = _newTemplateSize.Text;
+        var name = _newTemplateSize.GetItemText((int)index);
+        _newTemplateSizeFields.Visible = !IsDie(name);
 
-        if (!_standardSizes.TryGetValue(cardType, out var size))
-            return;
+        if (name != CustomSize && !IsDie(name))
+        {
+            _newTemplateWidth.Text = Millimeters(_standardSizes[name].Width);
+            _newTemplateHeight.Text = Millimeters(_standardSizes[name].Height);
+        }
 
-        var w = size.Item1;
-        var h = size.Item2;
-
-        if (w == 0 || h == 0)
-            return;
-
-        float conversion = 25.4f;
-
-        _newTemplateHeight.Text = (h * conversion).ToString("f1");
-        _newTemplateWidth.Text = (w * conversion).ToString("f1");
-
-        HeightWidthChange(string.Empty);
+        UpdateNewTemplateOkButton();
     }
 
-    /*
-    private TemplateElement BuildTemplateElement(Dictionary<string, string> parameters)
+    private void NewTemplateSizeTyped(string text)
     {
-        TemplateElement te;
-
-        if (!parameters.TryGetValue("Type", out var type)) return null;
-
-        switch (type)
-        {
-            case "Text":
-                te = new TextElement();
-                break;
-            case "Image":
-                te = new ImageElement();
-                break;
-
-            default:
-                return null;
-        }
-
-        te.ElementName = parameters.TryGetValue("Name", out var name) ? name : string.Empty;
-        te.Id = parameters.TryGetValue("Id", out var id) ? int.Parse(id) : 0;
-
-
-        foreach (var kv in parameters)
-        {
-            te.SetParameterValue(kv.Key, kv.Value);
-        }
-
-        return te;
-    }
-    */
-
-    private Dictionary<string, string> ExportTemplateElement(ITemplateElement te)
-    {
-        var parameters = new Dictionary<string, string>();
-
-        parameters.Add("Name", te.ElementName);
-
-        foreach (var p in te.Parameters)
-        {
-            parameters.Add(p.Name, p.Value);
-        }
-
-        var tp = "Text";
-        if (te is ImageElement)
-            tp = "Image";
-
-        parameters.Add("Type", tp);
-
-        return parameters;
-    }
-
-    private void UpdateTemplate(Template template)
-    {
-        template.SizeTemplate = _curSizeType;
-        template.Width = _curWidth;
-        template.Height = _curHeight;
-
-        template.Elements.Clear();
-        foreach (var e in _templateElements)
-        {
-            template.Elements.Add(ExportTemplateElement(e));
-        }
+        SelectSize(_newTemplateSize, CustomSize);
+        UpdateNewTemplateOkButton();
     }
 
     private void UpdateProject()
     {
-        _templateNameSelector.Clear();
-        foreach (var kv in ProjectService.Instance.CurrentProject.Templates)
+        LoadTemplateNameSelector(Atoms.R);
+
+        if (_templateNameSelector.ItemCount == 0)
         {
-            _templateNameSelector.AddItem(kv.Key);
+            CurrentTemplate = null;
+            return;
         }
 
         _templateNameSelector.Select(0);
-        CurrentTemplate = ProjectService.Instance.CurrentProject.Templates[
-            _templateNameSelector.GetItemText(0)
-        ];
+        CurrentTemplate = Atoms.R.Get(
+            Template.ById,
+            new Ref<Template>(_templateNameSelector.GetItemId(0))
+        );
 
-        InitializeDataSets();
         MapDataset();
     }
 
@@ -1463,6 +1363,7 @@ public partial class TemplateCreator : Window
         _elementTree.SetSelected(newItem, 0);
 
         MapTreeToElements();
+        SetHasUnsavedChanges();
         _updateRequired = true;
     }
 
@@ -1633,8 +1534,6 @@ public partial class TemplateCreator : Window
 
     private const float MarginScale = 0.9f;
 
-    private float _previewDpi;
-
     private void InitializeCardFit()
     {
         float.TryParse(_widthInput.Text, out var w);
@@ -1645,7 +1544,7 @@ public partial class TemplateCreator : Window
     //It may take a few frames for the Size of the preview window to be set properly
     private bool _fitRequired;
 
-    public void InitializeFit(float w, float h)
+    private void InitializeFit(float w, float h)
     {
         if (w <= 0 || h <= 0)
             return;
@@ -1680,10 +1579,8 @@ public partial class TemplateCreator : Window
         //_previewOverlay.SetSize(new Vector2(sw, sh));
         //_previewOverlay.SetPosition(new Vector2((wSize.X - sw) / 2, (wSize.Y - sh) / 2));
 
-        _previewDpi = 25.4f * sw / w;
-
         _textureContext.ParentSize = new Vector2(sw, sh);
-        _textureContext.Dpi = 25.4f * _textureContext.ParentSize.Y / h;
+        _textureContext.Dpi = MmPerInch * _textureContext.ParentSize.Y / h;
 
         ZoomFit();
     }
@@ -1692,64 +1589,41 @@ public partial class TemplateCreator : Window
 
     #region Datasets
 
-    private void ChangePage(object sender, ItemSelectedEventArgs e)
-    {
-        _textureContext.CurrentRowName = e.Caption;
-        _updateRequired = true;
-    }
+    private void ChangePage(object sender, ItemSelectedEventArgs e) => Atoms.R.QueueSync(this);
 
     //Different dataset has been selected by the user
-    private void OnDatasetChanged(long index)
+    private void OnDatasetChanged(Ref<Dataset> datasetRef)
     {
-        if (index == 0)
-        {
-            _textureContext.DataSet = null;
-            _textureContext.CurrentRowName = string.Empty;
-            _pageControl.Hide();
-            CurrentTemplate.DataSet = string.Empty;
-        }
-        else
-        {
-            var n = _dataSetSelector.GetItemText((int)index);
-            CurrentTemplate.DataSet = n;
-        }
-
-        UpdateTextureContext(CurrentTemplate.DataSet);
-
-        _updateRequired = true;
-    }
-
-    private void UpdateTextureContext(string datasetName)
-    {
-        if (ProjectService.Instance.CurrentProject.Datasets.ContainsKey(datasetName))
-        {
-            CurrentTemplate.DataSet = datasetName;
-            _textureContext.DataSet = ProjectService.Instance.CurrentProject.Datasets[datasetName];
-            _textureContext.CurrentRowName = _textureContext.DataSet.Rows.First().Key;
-        }
+        EditCurrentTemplate(t => t with { DatasetRef = datasetRef });
+        SetHasUnsavedChanges();
+        _pageControl.CurrentItem = 0;
+        Atoms.R.QueueSync(this);
     }
 
     private void MapDataset()
     {
-        int index = 0;
+        _pageControl.CurrentItem = 0;
+        Atoms.R.QueueSync(this);
+    }
 
-        for (var i = 0; i < _dataSetSelector.GetItemCount(); i++)
+    private void SyncDataset(IAtomReader R)
+    {
+        _updateRequired = true;
+
+        var datasetRef = CurrentTemplate?.DatasetRef ?? Ref<Dataset>.None;
+        var dataset = R.Get(Dataset.ById, datasetRef);
+        if (dataset == null)
         {
-            if (_dataSetSelector.GetItemText(i) == CurrentTemplate.DataSet)
-            {
-                index = i;
-                break;
-            }
+            _textureContext.Values = null;
+            _pageControl.Hide();
+            return;
         }
 
-        _dataSetSelector.Select(index);
-
-        UpdateTextureContext(CurrentTemplate.DataSet);
-
-        _pageControl.SetItemLabels(_textureContext.DataSet.Rows.Select(x => x.Key).ToArray());
+        var rows = R.Get(DataRow.ByDataset, datasetRef);
+        _pageControl.SetItemCount(rows.Count);
         _pageControl.Show();
 
-        _updateRequired = true;
+        _textureContext.Values = rows.Count > 0 ? R.Values(rows[_pageControl.CurrentItem]) : null;
     }
 
     #endregion
@@ -1760,7 +1634,13 @@ public class TextureContext()
     public Vector2 ParentSize { get; set; }
     public float Dpi { get; set; }
 
-    public DataSet DataSet { get; set; }
+    /// <summary>
+    /// The value of each column by name, for the row being drawn, or null when there's no row.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Values { get; set; }
 
-    public string CurrentRowName { get; set; }
+    /// <summary>
+    /// Fits text and icons inside a triangle, for the faces of a d8 or d20.
+    /// </summary>
+    public bool TriangleFaces { get; set; }
 }

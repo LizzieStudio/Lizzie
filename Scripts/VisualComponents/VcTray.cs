@@ -1,12 +1,16 @@
 using System;
-using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
 using Godot;
+
+namespace Lizzie;
 
 public partial class VcTray : VisualComponentGroup
 {
     private Prototype _prototype;
-    private VisualComponentBase _contents;
-    private string _contentsDataRow;
+
+    // What the tray shows and hands out: its prototype's first item, such as a printed prototype's first card.
+    private PrototypeItemRef _item;
     private Node3D _prototypeSpawnPoint;
 
     public override void _Ready()
@@ -15,67 +19,40 @@ public partial class VcTray : VisualComponentGroup
         ComponentType = VisualComponentType.Tray;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
         _prototypeSpawnPoint = GetNode<Node3D>("ProtoAnchor");
         DragDropCollider = GetNode<CollisionShape3D>("DrawCollider");
     }
 
     public override void _Process(double delta)
     {
-        if (_trayProtoBuildNeeded)
-        {
-            CreateTrayPrototype(_textureFactory);
-        }
-
         foreach (var c in _prototypeSpawnPoint.GetChildren())
         {
             if (c is Node3D n)
             {
-                UpdateChildScale(n);
                 n.Rotate(Vector3.Up, (float)delta);
                 //n.Rotate(Vector3.Right, (float)(delta * 1.3));
             }
         }
     }
 
-    public override bool Setup(
-        Dictionary<string, object> parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
-        return Setup(parameters, textureFactory);
+        base.Setup(parameters, R);
+        Apply((TrayParameters)parameters, R);
     }
 
-    private TextureFactory _textureFactory;
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    /// <summary>Sizes the tray and shows the prototype it hands out.</summary>
+    private void Apply(TrayParameters p, IAtomReader R)
     {
-        _textureFactory = textureFactory;
-
-        base.Setup(parameters, string.Empty, textureFactory);
-
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                return false;
-            Height = h / 10f;
+        if (p.Height <= 0)
+            return;
 
-            var w = Utility.GetParam<float>(parameters, "Width");
-            Width = w / 10f;
-
-            var l = Utility.GetParam<float>(parameters, "Length");
-            Length = l / 10f;
-
-            if (parameters["Color"] is Color color)
-            {
-                CubeColor = color;
-            }
-        }
+        Height = p.Height / 10f;
+        Width = p.Width / 10f;
+        Length = p.Length / 10f;
+        CubeColor = p.Color;
 
         //create cube
         if (Width <= 0 || Length <= 0)
@@ -87,6 +64,8 @@ public partial class VcTray : VisualComponentGroup
             Scale = new Vector3(Width, Height, Length);
         }
 
+        _prototypeSpawnPoint.Scale = Vector3.One / Scale;
+
         YHeight = Height * 2;
 
         SetColor(CubeColor);
@@ -96,45 +75,14 @@ public partial class VcTray : VisualComponentGroup
 
         ShapeProfiles.Add(new OffsetShape2D(r));
 
-        var pKey = Utility.GetParam<string>(parameters, "Prototype");
-        if (Guid.TryParse(pKey, out var gKey))
-        {
-            ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(gKey, out _prototype);
-        }
+        _prototype = R.Get(Prototype.ById, p.DispenseRef);
+        _item =
+            _prototype == null
+                ? null
+                : PrototypeItemRef.All(_prototype.Parameters, R).FirstOrDefault();
 
         UpdateNameLabel();
-        CreateTrayPrototype(textureFactory);
-
-        return true;
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                ret.Add("Height must be > 0");
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        return ret;
+        CreateTrayPrototype();
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;
@@ -162,56 +110,49 @@ public partial class VcTray : VisualComponentGroup
         //_nameLabel.Position = new Vector3(0, Height + 0.01f, 0);
     }
 
-    private bool _trayProtoBuildNeeded;
-
-    private void CreateTrayPrototype(TextureFactory textureFactory)
+    private void CreateTrayPrototype()
     {
-        if (!IsNodeReady())
-        {
-            _trayProtoBuildNeeded = true;
-            return;
-        }
-
-        _trayProtoBuildNeeded = false;
-
         foreach (var child in _prototypeSpawnPoint.GetChildren())
             child.QueueFree();
 
         if (_prototype == null)
             return;
 
-        var c = ProjectService.Instance.SpawnDisconnectedVisualComponent(
-            _prototype,
-            string.Empty,
-            textureFactory
-        );
-        UpdateChildScale(c);
+        var c = ProjectService.Instance.SpawnDisconnectedVisualComponent(_prototype, _item);
+        c.Built += () => c.Position = new Vector3(0, c.YHeight, 0);
         _prototypeSpawnPoint.AddChild(c);
-        c.Position += new Vector3(0, c.YHeight, 0);
     }
 
-    private Vector3 _lastScale;
-
-    private void UpdateChildScale(Node3D c)
+    public override (ComponentPosition[], Atom[]) DragDraw()
     {
-        if (Math.Abs(c.Scale.Length() - _lastScale.Length()) >= 0.05f)
-        {
-            var s = c.Scale;
-            _lastScale = new Vector3(s.X / Width, s.Y / Height, s.Z / Length);
-            c.Scale = _lastScale;
-        }
-    }
-
-    protected override void OnChildrenChanged() { }
-
-    public override void DragDraw(int quantity)
-    {
-        EventBus.Instance.Publish(
-            new SpawnPrototypeEvent
-            {
-                PrototypeRef = _prototype.PrototypeRef,
-                StartInDragMode = true,
-            }
+        if (_prototype == null)
+            return ([], []);
+        var id = Ref<Component>.Create();
+        return (
+            [new ComponentPosition { Id = id, StageRef = Key.StageRef }],
+            [
+                new Component
+                {
+                    Id = id,
+                    PrototypeRef = _prototype.Id,
+                    Item = _item,
+                },
+            ]
         );
     }
+}
+
+[JsonName("TrayParameters")]
+public sealed record TrayParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Tray;
+
+    public float Height { get; init; }
+    public float Width { get; init; }
+    public float Length { get; init; }
+    public Color Color { get; init; } = Colors.Black;
+
+    public Ref<Prototype> DispenseRef { get; init; }
 }

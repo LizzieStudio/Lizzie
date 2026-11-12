@@ -1,0 +1,7 @@
+apiRules:
+  # The imgui-godot addon
+  - exclude:
+      uidRegex: ^ImGuiGodot
+  # Godot's source-generated name classes on every node
+  - exclude:
+      uidRegex: \.(MethodName|PropertyName|SignalName)$

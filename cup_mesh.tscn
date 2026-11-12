@@ -1,9 +1,0 @@
-[gd_scene format=3 uid="uid://giaw21jf4gqk"]
-
-[ext_resource type="PackedScene" uid="uid://wmyd5o2hcgvs" path="res://Scenes/VisualComponents/cup.glb" id="1_0njcb"]
-[ext_resource type="ArrayMesh" uid="uid://b8gu6yva74y2g" path="res://cup_mesh.tres" id="2_o6jdu"]
-
-[node name="cup" unique_id=831802489 instance=ExtResource("1_0njcb")]
-
-[node name="Cylinder" parent="." index="0" unique_id=848401103]
-mesh = ExtResource("2_o6jdu")

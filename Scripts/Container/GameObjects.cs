@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using Godot;
+using Lizzie.Replication.Machinery;
 
-public partial class GameObjects : Node
+namespace Lizzie;
+
+public partial class GameObjects : Node3D, ICommandView
 {
     [Export]
     private DragPlane _dragPlane;
@@ -12,158 +14,245 @@ public partial class GameObjects : Node
     [Export]
     private DragSelectRectangle _selectionRectangle;
 
+    /// <summary>
+    /// How fast a dropped component slides into place, in cm per second.
+    /// </summary>
+    [Export(PropertyHint.Range, "1,30,1,suffix:cm/s")]
+    public float DropSpeed { get; set; } = 10f;
+
+    /// <summary>
+    /// <para>How old a write can be and still animate a component, like a drop sliding or a flip turning, in milliseconds.</para>
+    /// <para>
+    /// An older write jumps into place, so a table catches up to what other players already see:
+    /// a write that arrived late, or an undo or cancel putting back an earlier one.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// We should actually have specific checks per animation, but this is a stopgap fallback.
+    /// </remarks>
+    [Export(PropertyHint.Range, "0,2000,10,suffix:ms")]
+    public int AnimationCutoff { get; set; } = 500;
+
+    // set when a component changes, and handled once the frame's updates are in, before it's drawn
+    private bool _viewChanged;
+
     [Export]
-    private int _stackingUpdateFrames = 3; //Test hack to avoid issue with stacking not seeing colliders
+    private HandManager _handManager;
 
-    [Signal]
-    public delegate void CameraActivationEventHandler(bool cameraActivated);
+    /// <summary>
+    /// The stage the local player picked to show, or <see cref="Ref{T}.None"/> for the current table.
+    /// </summary>
+    public WatchableValue<Ref<Stage>> PickedStageRef { get; } = new();
 
-    private int _stackingUpdateRequired;
-    private readonly SpawnQueue _spawnQueue = new();
-    private readonly ComponentPropertyQueue _componentPropertyQueue = new();
-    private const int MaxPropertySyncsPerFrame = 3;
-    private readonly List<PendingSpawnRequest> _pendingSpawns = new();
+    /// <summary>
+    /// Whether to mark components that a reset would delete.
+    /// </summary>
+    public WatchableValue<bool> MarksTemporary { get; } = new();
 
-    private GameController _gameController;
+    /// <summary>
+    /// Whether the component in <paramref name="key"/> is marked as temporary.
+    /// </summary>
+    public bool IsMarkedForReset(IAtomReader R, PositionKey key) =>
+        R.Get(MarksTemporary) && ComponentPosition.GoesOnReset(R, key);
+
+    /// <summary>
+    /// Gets the stage to show locally.
+    /// </summary>
+    public Ref<Stage> ShownStage(IAtomReader R) =>
+        R.Get(PickedStageRef) is var picked && Stage.Reachable(R, picked)
+            ? picked
+            : R.Get(CurrentTable.Only).StageRef;
+
+    /// <summary>
+    /// Gets the list of stages shown at the top of the app.
+    /// </summary>
+    public List<Stage> PickableStages(IAtomReader R)
+    {
+        var stages = Stage.Chain(R, R.Get(CurrentTable.Only).StageRef).Reverse().ToList();
+        var shown = ShownStage(R);
+        return stages.Any(s => s.Id == shown)
+            ? stages
+            : [.. Stage.Chain(R, shown).Reverse(), .. stages.TakeLast(1)];
+    }
+
+    /// <summary>
+    /// Holds the nodes for the shown stage's components, and any spawn previews.
+    /// </summary>
+    private StageView _view;
+
+    /// <summary>
+    /// The shown stage's components.
+    /// </summary>
+    private IReadOnlyList<VisualComponentBase> ComponentNodes => _view.Nodes;
 
     public CursorMode CursorMode { get; private set; }
 
-    public override void _Ready()
-    {
-        EventBus.Instance.Subscribe<DataSetChangedEvent>(OnDataSetChanged);
-        EventBus.Instance.Subscribe<TemplateChangedEvent>(OnTemplateChanged);
-        EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
-        EventBus.Instance.Subscribe<PrototypeChangedEvent>(OnPrototypeChanged);
-        EventBus.Instance.Subscribe<SyncTransformEvent>(SyncTransform);
-        EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
-        EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
-        EventBus.Instance.Subscribe<AddComponentToSceneEvent>(OnAddComponentToScene);
-        EventBus.Instance.Subscribe<ComponentPropertyChangedEvent>(OnComponentPropertyChanged);
-        EventBus.Instance.Subscribe<ShowAndDragComponentEvent>(EnterDragUnhideMode);
-        EventBus.Instance.Subscribe<QueueStackingUpdateEvent>(QueueStackingUpdate);
-        EventBus.Instance.Subscribe<ReturnFromHandEvent>(OnReturnFromHand);
-    }
+    // The local player's drag, from its pickup until it's dropped or Godot's drag ends, or null.
+    private ComponentDrag _drag;
 
-    private void OnReturnFromHand(ReturnFromHandEvent obj)
+    /// <summary>
+    /// Starts a drag of the atoms in <paramref name="pickup"/>,
+    /// which are in stacking order and whose positions are their offsets from the pointer.
+    /// The pickup also writes <paramref name="alongside"/>, which the drop keeps and a cancel takes back.
+    /// </summary>
+    private void StartDrag(IEnumerable<ComponentPosition> pickup, IEnumerable<Atom> alongside)
     {
-        var card = obj.Card;
-        if (card == null)
+        bool overHand = HandRow.Under(GetViewport()) != null;
+        var seat = Atoms.R.LocalSeat();
+        var picked = pickup.ToList();
+        var ranks = SnowRank.AfterAll(picked.Count);
+        var atoms = picked.Select(
+            (s, i) => s with { Location = new Dragged(seat, overHand), Rank = ranks[i] }
+        );
+        // Players without a seat can't drag.
+        if (atoms.Count() == 0 || seat.IsNone)
             return;
 
-        card.Location = VisualComponentBase.ComponentLocation.Board;
-
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        card.SetPosition(new Vector3(_lastDragPosition.X, card.YHeight, _lastDragPosition.Z));
-
+        _drag = new ComponentDrag
+        {
+            Transition = Atoms.R.Open(this, DragCommands.Pickup, atoms.Concat(alongside)),
+            Components = atoms.Select(ComponentPosition.ById.Of).ToArray(),
+            Alongside = alongside.Select(IAtomRef.To).ToArray(),
+        };
         CursorMode = CursorMode.Drag;
-        StartDragUndo(card);
-        card.IsDragging = true;
-
-        QueueStackingUpdate();
+        _dragOverHand = overHand;
     }
 
-    public void SetGameController(GameController gameController)
+    /// <summary>
+    /// What a press on <paramref name="pressed"/> picks up, in stacking order.
+    /// </summary>
+    private List<VisualComponentBase> PickedUp(VisualComponentBase pressed)
     {
-        _gameController = gameController;
+        // Its atom may have been unset this frame, before the view removes it.
+        if (pressed.State is not { } state)
+            return [];
+        var place = state.Location;
+        return GetSelection()
+            .Select(GetComponent)
+            .Where(o => o?.State != null && o.State.Location == place)
+            .OrderBy(o => o.State.Rank)
+            .ToList();
     }
 
-    private void OnModalClosed()
+    /// <summary>
+    /// Ends a drag with the atoms in <paramref name="drop"/>.
+    /// </summary>
+    private void EndDrag(ComponentDrag drag, IEnumerable<Atom> drop)
     {
-        _modalOpen = false;
+        Atoms.R.Close(
+            this,
+            drag.Transition,
+            DragCommands.Drop,
+            drop.Concat(drag.KeptAlongside(Atoms.R))
+        );
+        _drag = null;
     }
 
-    private bool _modalOpen;
-
-    private void OnModalOpened()
+    /// <summary>
+    /// Called after the local player's drag ends to perform state cleanup.
+    /// </summary>
+    private void CleanupDrag()
     {
-        _modalOpen = true;
+        if (_drag != null)
+            Atoms.R.Close(this, _drag.Transition);
+        _drag = null;
+        CursorMode = CursorMode.Normal;
+        _dragOverHand = false;
+        _handManager.HideDragPreview();
+        SetDropTarget(null);
     }
 
-    private void OnDataSetChanged(DataSetChangedEvent obj)
+    /// <summary>
+    /// The full-screen control under the UI that takes the view's mouse input.
+    /// It lets events pass through so that the camera and spawning can be handled in _UnhandledInput.
+    /// </summary>
+    [Export]
+    private Control _tableMouseControl;
+
+    public override void _Ready()
     {
-        //naive approach for now
-        foreach (var c in this.GetChildren())
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
+        _view = CreateStageView();
+
+        _tableMouseControl.SetDragForwarding(
+            Callable.From<Vector2, Variant>(GetDragData),
+            Callable.From<Vector2, Variant, bool>(
+                (_, data) => data.As<GodotObject>() is ComponentDrag
+            ),
+            Callable.From<Vector2, Variant>(
+                (at, data) => DropOnTable((ComponentDrag)data.AsGodotObject(), ViewportPoint(at))
+            )
+        );
+        _tableMouseControl.GuiInput += OnTableInput;
+
+        Atoms.R.Watch(this, SyncShownStage);
+
+        PresenceSynchronizer.Instance?.SetContext(_dragPlane);
+        CommandList.RegisterKeys();
+        ShortcutRelay.Install(GetTree());
+        ClickRouting.Install(GetTree().Root);
+        CommandViews.Attach(GetTree().Root, this);
     }
 
-    private void OnProjectChanged(ProjectChangedEvent obj)
+    public override void _ExitTree()
     {
-        //naive approach for now
-        foreach (var c in this.GetChildren())
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-        RetryPendingSpawns();
+        PresenceSynchronizer.Instance?.ClearContext();
     }
 
-    private void OnTemplateChanged(TemplateChangedEvent obj)
+    /// <summary>
+    /// Replaces the StageView when the shown stage changes.
+    /// </summary>
+    private void SyncShownStage(IWatchReader R)
     {
-        //naive approach for now
-        foreach (var c in this.GetChildren())
-        {
-            if (c is VisualComponentBase vc)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
+        if (ShownStage(R) != _view.StageRef)
+            ResetView();
     }
 
-    private void OnPrototypeChanged(PrototypeChangedEvent e)
+    public override void _Notification(int notification)
     {
-        foreach (var c in this.GetChildren())
-        {
-            if (c is VisualComponentBase vc && vc.PrototypeRef == e.PrototypeId)
-            {
-                vc.ProcessCommand(VisualCommand.Refresh);
-            }
-        }
-        RetryPendingSpawns();
+        if (notification == NotificationDragEnd && CursorMode == CursorMode.Drag)
+            CleanupDrag();
+        // Godot's drag outlives the window losing focus, potentially causing bugs.
+        else if (notification == NotificationApplicationFocusOut && _drag != null)
+            GetViewport().GuiCancelDrag();
     }
 
-    public VisualComponentBase GetComponent(Guid reference)
+    // A point on the table's control, in the viewport.
+    private Vector2 ViewportPoint(Vector2 local) =>
+        _tableMouseControl.GetGlobalTransformWithCanvas() * local;
+
+    private StageView CreateStageView()
     {
-        return GetChildren()
-            .OfType<VisualComponentBase>()
-            .FirstOrDefault(vc => vc.Reference == reference);
+        var view = new StageView { Name = "StageView", StageRef = ShownStage(Atoms.R) };
+        view.Changed += QueueViewUpdate;
+        view.ComponentRemoved += OnComponentRemoved;
+        AddChild(view);
+        return view;
     }
 
-    public override void _PhysicsProcess(double delta)
+    /// <summary>
+    /// Forgets a removed component so nothing touches its freed node.
+    /// </summary>
+    private void OnComponentRemoved(VisualComponentBase c)
     {
-        base._PhysicsProcess(delta);
-        if (_stackingUpdateRequired > 0)
-        {
-            _stackingUpdateRequired--;
-
-            if (_stackingUpdateRequired <= 0)
-            {
-                UpdateStackingHeights();
-                _stackingUpdateRequired = 0;
-            }
-        }
+        if (_currentDragDropTarget == c)
+            _currentDragDropTarget = null;
+        if (_hover.Component == c)
+            UpdateHover();
     }
+
+    public VisualComponentBase GetComponent(Ref<Component> component) =>
+        _view.GetComponent(component);
+
+    /// <summary>The nodes for the given atoms, skipping any that have none yet.</summary>
+    private IEnumerable<VisualComponentBase> Nodes(IEnumerable<ComponentPosition> atoms) =>
+        atoms.Select(s => GetComponent(s.Id)).Where(c => c != null);
 
     public override void _Process(double delta)
     {
         base._Process(delta);
 
-        ProcessSpawnQueue();
-        ProcessComponentPropertyQueue();
+        ProcessActiveDrags();
         RecomputeZones();
-
-        /*
-        if (_modalOpen) return;
-        {
-            return; //don't do anything if a modal dialog is open
-        }
-        */
 
         switch (CursorMode)
         {
@@ -171,98 +260,37 @@ public partial class GameObjects : Node
                 HandleSpawnMode();
                 break;
             case CursorMode.Drag:
-                HandleDrag();
+                UpdateDrag(_drag, GetViewport().GetMousePosition());
                 break;
             case CursorMode.DragSelect:
-                HandleDragSelection();
-                break;
-            case CursorMode.PopupMenu:
-                HandlePopupMenu();
+                PreviewSelection(_selectionRectangle.CurRectangle);
                 break;
             default:
                 HandleNormalMode();
                 break;
         }
 
-        UpdateHoveredComponent();
+        UpdateHover();
     }
-
-    private void UpdateHoveredComponent()
-    {
-        foreach (var c in GetChildren())
-        {
-            if (c is VisualComponentBase vcb && vcb.IsHovered)
-            {
-                if (_hoveredComponent != vcb)
-                {
-                    _hoveredComponent = vcb;
-                    HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(vcb));
-                    return;
-                }
-
-                return;
-            }
-        }
-
-        if (_hoveredComponent == null)
-            return;
-
-        _hoveredComponent = null;
-        HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(null));
-    }
-
-    private VisualComponentBase _hoveredComponent;
 
     public event EventHandler<HoveredComponentChangeEventArgs> HoveredComponentChange;
 
-    // Specific function to handle normal mode mouse event only outside of GUI elements
     public override void _UnhandledInput(InputEvent @event)
     {
         base._UnhandledInput(@event);
+
         if (CursorMode == CursorMode.Spawn)
         {
             if (@event.IsActionPressed("spawn_component"))
             {
-                SpawnComponents();
-                QueueStackingUpdate();
+                CreateComponents(_spawnComponents.Select(s => s.Component));
                 GetViewport().SetInputAsHandled();
             }
             else if (@event.IsActionPressed("exit_mode"))
             {
                 ExitSpawnMode();
-                QueueStackingUpdate();
+                QueueViewUpdate();
                 GetViewport().SetInputAsHandled();
-            }
-        }
-        else if (
-            CursorMode == CursorMode.Normal
-            && @event is InputEventMouseButton buttonEvent
-            && buttonEvent.Pressed
-        )
-        {
-            if (buttonEvent.ButtonIndex == MouseButton.Right && IsAnyObjectHovered())
-            {
-                StartPopupMenu();
-            }
-            else if (buttonEvent.ButtonIndex == MouseButton.Left)
-            {
-                var go = GetMouseSelectedObject();
-                if (go == null)
-                {
-                    DeselectComponents();
-                    StartDragSelection();
-                }
-                else
-                {
-                    if (go.IsDrawSelected && go is VisualComponentGroup vcg)
-                    {
-                        vcg.DragDraw(1);
-                    }
-                    else
-                    {
-                        EnterDragMode(go);
-                    }
-                }
             }
         }
         else if (@event.IsActionPressed("component_preview"))
@@ -275,690 +303,487 @@ public partial class GameObjects : Node
         }
     }
 
+    #region ICommandView
+
+    public ViewPlace Place(IAtomReader R) => ViewPlace.Of(this, ShownStage(R));
+
+    public bool CanSelect(IAtomReader R, IAtomRef target) =>
+        R.Get(target) is ComponentPosition c && !R.IsHidden(c);
+
+    public IEnumerable<IAtomRef> Hovered() =>
+        CursorMode is CursorMode.DragSelect or CursorMode.Spawn
+        || GetHoveredObject() is not { } hovered
+        || hovered.State == null
+            ? []
+            : [hovered.Key];
+
+    public IReadOnlyList<Command> Commands => [DuplicateComponent, ZoomToComponent];
+
+    [Command("table.duplicate")]
+    private static readonly Command DuplicateComponent = new AtomCommand<ComponentPosition>
+    {
+        Icon = CommandIcons.Duplicate,
+        Caption = "Duplicate Component",
+        Keys = [Shortcuts.Ctrl(Key.D)],
+        MaxTargets = 1,
+        Effects = (R, cs) =>
+        {
+            var component = R.GetComponent(cs[0]);
+            EventBus.Instance.Publish(
+                new SpawnPrototypeEvent
+                {
+                    PrototypeRef = component.PrototypeRef,
+                    Item = component.Item,
+                }
+            );
+            return null;
+        },
+    };
+
+    [Command("table.zoom")]
+    private static readonly Command ZoomToComponent = new AtomCommand<ComponentPosition>
+    {
+        Icon = CommandIcons.Zoom,
+        Caption = "Zoom to Component",
+        Keys = [Shortcuts.Key(Key.Z)],
+        MaxTargets = 1,
+        // Cards in a hand or a bag aren't on the table to zoom to.
+        AppliesTo = (R, c) => c.Location is null or Dragged || R.IsInDeck(c),
+        Effects = (_, cs) =>
+        {
+            if (ProjectService.Instance.GameObjects.GetComponent(cs[0].Id) is { } node)
+                CameraManager.Instance?.ZoomTo(node);
+            return null;
+        },
+    };
+    #endregion
+
     #region Components
 
 
-    private void OnAddComponentToScene(AddComponentToSceneEvent e)
+    private void AddComponentToScene(VisualComponentBase component)
     {
-        AddComponentToScene(e.Component, true);
+        if (component.ComponentRef.IsNone)
+        {
+            GD.PrintErr("component somehow lost its ComponentRef");
+            return;
+        }
+
+        _view.AddChild(component);
+
+        QueueViewUpdate();
     }
 
-    public void AddComponentToScene(VisualComponentBase component, bool syncCreation = true)
+    private void CreateComponents(IEnumerable<VisualComponentBase> components)
     {
-        component.ZOrder = GetMaxComponentZ() + 1;
-        var vv = component.Position;
+        var atoms = new List<Atom>();
 
-        GD.Print($"Adding component: {component.GetType()} subtype: {component.ComponentType}");
-
-        AddChild(component);
-        component.Build();
-        component.AddComponentToObjects += ComponentOnAddComponentToObjects;
-
-        // Add networked object for multiplayer sync
-        if (MultiplayerManager.Instance?.IsMultiplayerActive == true && !component.ExcludeFromSync)
+        foreach (var component in components)
         {
-            var networkedObject = new NetworkedObject();
-            networkedObject.Component = component;
-            component.AddChild(networkedObject);
-
-            if (syncCreation)
+            var self = new ComponentPosition
             {
-                SyncCreation(component);
-            }
-        }
-
-        QueueStackingUpdate();
-    }
-
-    private void ComponentOnAddComponentToObjects(object sender, VisualComponentEventArgs e)
-    {
-        AddComponentToScene(e.Component);
-    }
-
-    private void DeleteComponents()
-    {
-        Update update = new();
-        foreach (var go in GetSelectedObjects())
-        {
-            go.Hide();
-            SyncDeletion(go);
-            var change = new Change { Component = go, Action = Change.ChangeType.Deletion };
-            update.Add(change);
-        }
-
-        if (update.Count > 0)
-        {
-            UndoService.Instance.Add(update);
-        }
-
-        QueueStackingUpdate();
-    }
-
-    public Dictionary<Guid, int> PrototypeCounts()
-    {
-        Dictionary<Guid, int> counts = new();
-        foreach (var c in GetChildren())
-        {
-            if (c is VisualComponentBase vcb && vcb.PrototypeRef != Guid.Empty && vcb.Visible)
-            {
-                if (!counts.TryAdd(vcb.PrototypeRef, 1))
+                Id = Ref<Component>.Create(),
+                StageRef = component.Key.StageRef,
+                Position = component.Position,
+                Rotation = component.Rotation,
+            };
+            atoms.Add(
+                new Component
                 {
-                    counts[vcb.PrototypeRef]++;
+                    Id = self.Id,
+                    PrototypeRef = component.PrototypeRef,
+                    Item = component.Item,
                 }
-            }
-        }
-        return counts;
-    }
-
-    #endregion
-
-    #region GameState
-
-    /// <summary>
-    /// Snapshot all VisualComponent children into a named GameState and store it
-    /// in the current project.  If a state with the same name already exists it
-    /// is overwritten.
-    /// </summary>
-    public GameState CaptureGameState(string name, string description = "")
-    {
-        var state = new GameState
-        {
-            Name = name,
-            CapturedAt = DateTime.UtcNow,
-            Description = description,
-        };
-
-        foreach (var child in GetChildren())
-        {
-            if (child is VisualComponentBase vcb)
-            {
-                state.Components.Add(GameStateComponent.FromComponent(vcb));
-            }
-        }
-
-        var project = ProjectService.Instance.CurrentProject;
-        if (project != null)
-        {
-            project.GameStates[name] = state;
-            ProjectService.Instance.SaveProject(project);
-            EventBus.Instance.Publish(new GameStateChangedEvent());
-        }
-
-        GD.Print($"GameState '{name}' captured ({state.Components.Count} components).");
-        return state;
-    }
-
-    /// <summary>
-    /// Restore the scene to a previously captured GameState.  Components that
-    /// existed in the snapshot but are no longer in the scene are re-spawned;
-    /// components present in the scene but absent from the snapshot are deleted;
-    /// components in both are repositioned/updated.
-    /// </summary>
-    public void RestoreGameState(string name)
-    {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null || !project.GameStates.TryGetValue(name, out var state))
-        {
-            GD.PrintErr($"RestoreGameState: no state named '{name}' found.");
-            return;
-        }
-
-        RestoreGameState(state);
-    }
-
-    /// <summary>
-    /// Restore the scene directly from a <see cref="GameState"/> object.
-    /// </summary>
-    public void RestoreGameState(GameState state)
-    {
-        if (state == null)
-            return;
-
-        // Build a lookup of the saved components by their reference Guid.
-        var saved = state.Components.ToDictionary(c => c.ComponentRef);
-
-        // Build a lookup of live components.
-        var live = GetChildren().OfType<VisualComponentBase>().ToDictionary(c => c.Reference);
-
-        // Update or delete live components.
-        foreach (var (refId, component) in live)
-        {
-            if (saved.TryGetValue(refId, out var entry))
-            {
-                entry.ApplyToComponent(component);
-            }
-            else
-            {
-                // Component not present in snapshot — remove it.
-                component.QueueFree();
-            }
-        }
-
-        // Spawn components that exist in the snapshot but not in the live scene.
-        foreach (var (refId, entry) in saved)
-        {
-            if (live.ContainsKey(refId))
-                continue; // Already handled above.
-
-            var project = ProjectService.Instance.CurrentProject;
-            if (
-                project == null
-                || !project.Prototypes.TryGetValue(entry.PrototypeRef, out var proto)
-            )
-            {
-                GD.PrintErr(
-                    $"RestoreGameState: prototype {entry.PrototypeRef} not found for component {refId}."
-                );
-                continue;
-            }
-
-            var scenePath = Utility.ComponentTypeToScenePath(
-                proto.Type,
-                proto.Parameters,
-                entry.DataSetRow
             );
-            if (string.IsNullOrEmpty(scenePath))
-            {
-                GD.PrintErr($"RestoreGameState: could not resolve scene for {proto.Type}.");
-                continue;
-            }
+            atoms.Add(self);
 
-            var scene = GD.Load<PackedScene>(scenePath).Instantiate();
-            if (scene is not VisualComponentBase newComponent)
-            {
-                GD.PrintErr($"RestoreGameState: spawned scene is not a VisualComponentBase.");
-                scene.QueueFree();
-                continue;
-            }
-
-            newComponent.Reference = refId;
-            newComponent.PrototypeRef = entry.PrototypeRef;
-            newComponent.ExcludeFromSync = true;
-
-            entry.ApplyToComponent(newComponent);
-            newComponent.Setup(entry.PrototypeRef, entry.DataSetRow, TextureFactory);
-
-            AddComponentToScene(newComponent, false);
+            atoms.AddRange(component.GetSpawnStack(self));
         }
 
-        GD.Print($"GameState '{state.Name}' restored ({state.Components.Count} entries).");
-    }
+        // Ranked in the order they were added, so each stack goes above its component, bottom first.
+        var ranks = SnowRank.AfterAll(atoms.Count(a => a is ComponentPosition));
+        int next = 0;
+        for (int i = 0; i < atoms.Count; i++)
+            if (atoms[i] is ComponentPosition s)
+                atoms[i] = s with { Rank = ranks[next++] };
 
-    /// <summary>
-    /// Remove a named GameState from the current project.
-    /// </summary>
-    public bool DeleteGameState(string name)
-    {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null)
-            return false;
-
-        if (!project.GameStates.Remove(name))
-            return false;
-
-        ProjectService.Instance.SaveProject(project);
-        EventBus.Instance.Publish(new GameStateChangedEvent());
-        GD.Print($"GameState '{name}' deleted.");
-        return true;
+        Atoms.R.Write(this, atoms);
     }
 
     #endregion
 
     #region Hover
-    public bool IsAnyObjectHovered()
+
+    // What the mouse is over, while nothing is being dragged.
+    private TableHit _hover;
+
+    /// <summary>The component under the mouse, on the table or in a hand, or null.</summary>
+    public VisualComponentBase GetHoveredObject() => _hover.Component;
+
+    /// <inheritdoc cref="TableHit"/>
+    private TableHit GetComponentAtPoint(Vector2 point)
     {
-        return GetChildren().Any(n => n is VisualComponentBase { IsHovered: true });
+        var (component, shape) = Raycast(point, _ => true);
+        return new TableHit
+        {
+            Component = component,
+            DrawArea = component is VisualComponentGroup g && shape == g.DragDropCollider,
+        };
     }
 
-    public VisualComponentBase GetHoveredObject()
+    /// <summary>
+    /// The closest component under <paramref name="point"/> that <paramref name="pickable"/> allows
+    /// and the collision shape it was hit on. Hidden components, what anyone is dragging,
+    /// and colliders that aren't <see cref="CollisionObject3D.InputRayPickable"/> are skipped.
+    /// </summary>
+    private (VisualComponentBase Component, CollisionShape3D Shape) Raycast(
+        Vector2 point,
+        Func<VisualComponentBase, bool> pickable
+    )
     {
-        return GetChildren().FirstOrDefault(n => n is VisualComponentBase { IsHovered: true })
-            as VisualComponentBase;
+        var camera = GetViewport().GetCamera3D();
+        if (camera == null)
+            return default;
+
+        var from = camera.ProjectRayOrigin(point);
+        var ray = new PhysicsRayQueryParameters3D
+        {
+            From = from,
+            To = from + camera.ProjectRayNormal(point) * 500f,
+            CollideWithAreas = true,
+            CollideWithBodies = false,
+        };
+        var skipped = new Godot.Collections.Array<Rid>();
+        var space = GetViewport().FindWorld3D().DirectSpaceState;
+
+        // Looks past each skipped hit to the next one along the ray.
+        for (int tries = 0; tries < 32; tries++)
+        {
+            var hit = space.IntersectRay(ray);
+            if (!hit.TryGetValue("collider", out var found))
+                return default;
+
+            var collider = found.As<CollisionObject3D>();
+            if (
+                collider.InputRayPickable
+                && collider is VisualComponentBase c
+                && c.IsVisibleInTree()
+                && !c.IsDragging
+                && pickable(c)
+            )
+            {
+                var owner = collider.ShapeFindOwner(hit["shape"].AsInt32());
+                return (c, collider.ShapeOwnerGetOwner(owner) as CollisionShape3D);
+            }
+
+            skipped.Add(hit["rid"].AsRid());
+            ray.Exclude = skipped;
+        }
+        return default;
     }
 
-    public VisualComponentBase GetHoveredDropTarget()
+    private void UpdateHover()
     {
-        return GetChildren()
-                .FirstOrDefault(x =>
-                    x
-                        is VisualComponentBase
-                        {
-                            IsHovered: true,
-                            CanAcceptDrop: true,
-                            IsDragging: false
-                        }
-                ) as VisualComponentBase;
+        var hovered = CursorMode == CursorMode.Normal ? GetViewport().GuiGetHoveredControl() : null;
+        var hit =
+            hovered == _tableMouseControl ? GetComponentAtPoint(GetViewport().GetMousePosition())
+            : hovered is HandRow row && row.HoveredCard() is { } card
+                ? new TableHit { Component = GetComponent(card) }
+            : default;
+
+        // A hand card's node is hidden, so its hover isn't drawn.
+        var before = _hover.Component;
+        var after = hit.Component;
+        if (before != after && before != null)
+        {
+            before.IsHovered = false;
+            before.IsDrawSelected = false;
+        }
+        if (after != null)
+        {
+            after.IsHovered = true;
+            after.IsDrawSelected = hit.DrawArea;
+        }
+
+        _hover = hit;
+        if (before != after)
+            HoveredComponentChange?.Invoke(this, new HoveredComponentChangeEventArgs(after));
     }
 
     #endregion
 
     #region Selection
-    public bool IsAnyObjectSelected()
-    {
-        return GetChildren().Any(n => n is VisualComponentBase { IsSelected: true });
-    }
+    /// <summary>The components the local player has selected, read from their selection atom.</summary>
+    private HashSet<Ref<Component>> GetSelection() =>
+        Atoms.R.GetSelection(ComponentPosition.ById, this).Select(k => k.ComponentRef).ToHashSet();
 
-    public bool IsAnyObjectMouseSelected()
-    {
-        return GetChildren().Any(n => n is VisualComponentBase { IsMouseSelected: true });
-    }
+    /// <summary>Replaces the local player's selected components.</summary>
+    public void SetSelection(IEnumerable<Ref<Component>> components) =>
+        Atoms.R.SetSelection(ComponentPosition.ById, components.Select(ShownKey), this);
 
-    public VisualComponentBase GetSelectedObject()
+    /// <summary>
+    /// Previews a box selection on the nodes. Nothing is written until <see cref="EndDragSelection"/>.
+    /// </summary>
+    private void PreviewSelection(Rect2 area)
     {
-        return GetChildren().FirstOrDefault(n => n is VisualComponentBase { IsSelected: true })
-            as VisualComponentBase;
-    }
-
-    public IEnumerable<VisualComponentBase> GetSelectedObjects()
-    {
-        return GetChildren()
-            .Where(n => n is VisualComponentBase { IsSelected: true })
-            .Cast<VisualComponentBase>();
-    }
-
-    public VisualComponentBase GetMouseSelectedObject()
-    {
-        return GetChildren().FirstOrDefault(n => n is VisualComponentBase { IsMouseSelected: true })
-            as VisualComponentBase;
-    }
-
-    public void SelectComponents(Rect2 area)
-    {
-        foreach (var go in GetChildren())
+        var camera = GetViewport().GetCamera3D();
+        foreach (var c in ComponentNodes.OfType<VisualComponentBase>())
         {
-            // Zones are not selected by marquee selection.
-            if (go is VisualComponentBase vcb and not VcZone)
-            {
-                var screenPos = GetViewport().GetCamera3D().UnprojectPosition(vcb.Position);
-                vcb.IsClickSelected = PointInRect(screenPos, area);
-            }
-        }
-    }
-
-    public void DeselectComponents()
-    {
-        foreach (var go in GetChildren())
-        {
-            if (go is VisualComponentBase v)
-            {
-                v.IsClickSelected = false;
-            }
+            // Zones and hidden components are not selected by marquee selection.
+            c.PreviewSelected =
+                c is not VcZone
+                && c.Visible
+                && PointInRect(camera.UnprojectPosition(c.GlobalPosition), area);
         }
     }
     #endregion
 
     #region Stacking
 
-    private void MoveToTop()
+    /// <summary>
+    /// The view's columns from the last stacking pass,
+    /// sorted from highest ceiling to lowest.
+    /// Used during dragging to compute component height.
+    /// </summary>
+    private StackColumns _tableTops = StackColumns.Empty;
+
+    /// <summary>
+    /// Rests each table component on the highest top among the components below it.
+    /// </summary>
+    private void UpdateStackingHeights()
     {
-        var go = GetSelectedObject();
-        if (go == null)
-            return;
-        MoveToTop(go);
-    }
+        var table = Nodes(Atoms.R.Get(ComponentPosition.ByLocation, ShownTable)).ToArray();
+        var floors = Stacking.Floors(table, out _tableTops);
 
-    private void MoveToTop(VisualComponentBase go)
-    {
-        var curZ = go.ZOrder;
-        var maxZ = GetMaxComponentZ();
-
-        //move everything above the selected object one lower
-        foreach (var g in GetChildren())
-        {
-            if (g is VisualComponentBase vcb && vcb.ZOrder > curZ)
-            {
-                vcb.ZOrder--;
-            }
-        }
-
-        go.ZOrder = maxZ;
-        QueueStackingUpdate();
-    }
-
-    private void MoveToBottom()
-    {
-        var go = GetSelectedObject();
-        if (go == null)
-            return;
-
-        MoveToBottom(go);
-    }
-
-    private void MoveToBottom(VisualComponentBase go)
-    {
-        var curZ = go.ZOrder;
-
-        //move everything below the selected object one higher
-        foreach (var g in GetChildren())
-        {
-            if (g is VisualComponentBase vcb && vcb.ZOrder < curZ)
-            {
-                vcb.ZOrder++;
-            }
-        }
-
-        go.ZOrder = 1;
-        QueueStackingUpdate();
+        for (int i = 0; i < table.Length; i++)
+            table[i].MoveToTargetY(floors[i] + (table[i].YHeight / 2f));
     }
 
     /// <summary>
-    /// Determines the maximum y-stacking height for the dragged objects.
+    /// Stacks each cursor's dragged components among themselves, so a dragged deck keeps its shape.
     /// </summary>
-    /// <returns></returns>
-    private float GetDragHeight()
+    private void UpdateDragFloors()
     {
-        var _dragObjects = GetDraggingObjects().ToList();
-        if (!_dragObjects.Any())
+        foreach (var group in GetDraggingObjects().GroupBy(c => c.State.Location))
+        {
+            var dragged = group.ToArray();
+            var floors = Stacking.Floors(dragged, out _);
+            for (int i = 0; i < dragged.Length; i++)
+                dragged[i].DragFloor = floors[i];
+        }
+    }
+
+    /// <summary>
+    /// The highest top among the components in the view under a dragged group, which it floats above.
+    /// The group is placed around its dragging <paramref name="cursor"/>.
+    /// </summary>
+    private float DragLift(List<VisualComponentBase> dragged, Vector3 cursor)
+    {
+        var footprints = dragged
+            .Where(c => c.ShapeProfiles.Count > 0)
+            .Select(c => new Footprint(0, c, cursor))
+            .ToList();
+        if (footprints.Count == 0)
             return 0;
 
-        var children = GetChildren();
+        var bounds = footprints[0].Bounds;
+        foreach (var f in footprints)
+            bounds = bounds.Merge(f.Bounds);
 
-        //make a list of all the objects that are 'in line' with the shapes of the moving objects
-        float maxFloor = 0;
-
-        foreach (var d in _dragObjects)
+        float lift = 0;
+        for (int column = 0; column < _tableTops.Count; column++)
         {
-            foreach (var c in children)
-            {
-                if (c is VisualComponentBase vcb)
-                {
-                    if (_dragObjects.Contains(vcb))
-                        continue;
-
-                    if (CheckOverlap(d, vcb))
-                    {
-                        maxFloor = Mathf.Max(maxFloor, vcb.Position.Y + vcb.YHeight / 2);
-                    }
-                }
-            }
-        }
-
-        return maxFloor;
-    }
-
-    private void UpdateStackingHeights()
-    {
-        //var children = GetChildren();
-        var children = GetNotDraggingObjects().ToArray();
-
-        //this dictionary keeps track of objects that are below a certain object. The key is the object id
-        //(in the children array), and the list elements are the object ids of the things that are under it.
-        Dictionary<int, List<int>> underneath = new();
-        for (int i = 0; i < children.Length; i++)
-        {
-            var ci = children[i] as VisualComponentBase;
-
-            if (ci == null)
-            {
-                GD.PrintErr($"{children[i].Name} not VCB");
+            if (_tableTops.Top(column) <= lift)
+                break;
+            var shape = _tableTops.Shape(column);
+            if (!bounds.Intersects(shape.Bounds, includeBorders: true))
                 continue;
-            }
-
-            if (ci.ShapeProfiles.Count == 0)
+            if (!footprints.Exists(f => Stacking.Overlaps(f, shape)))
                 continue;
 
-            for (int j = 0; j < children.Length; j++)
+            foreach (var (c, top) in _tableTops.Members(column))
             {
-                var cj = children[j] as VisualComponentBase;
-
-                if (cj == null)
+                if (top <= lift)
+                    break;
+                if (IsInstanceValid(c) && c.State is { IsOnTable: true })
                 {
-                    GD.PrintErr($"{children[j].Name} not VCB");
-                    continue;
-                }
-
-                if (cj.ZOrder < ci.ZOrder && CheckOverlap(ci, cj)) //lower zOrders are below other items
-                {
-                    //GD.PrintErr($"Area {i} overlaps Area {j}");
-                    //add to dictionary
-                    if (underneath.ContainsKey(i))
-                    {
-                        underneath[i].Add(j);
-                    }
-                    else
-                    {
-                        underneath.Add(i, new List<int> { j });
-                    }
+                    lift = top;
+                    break;
                 }
             }
         }
 
-        GD.Print("Collision check complete");
-
-        //uncomment the below to get a printout of the Underneath dictionary
-
-        /*
-        foreach (var r in underneath)
-        {
-            string s = String.Empty;
-            foreach (var q in r.Value)
-            {
-                s += $"{q} ";
-            }
-
-            GD.PrintErr($"{r.Key} is above {s}");
-        }
-        */
-
-        //loop through all the objects and check the dictionary (which is in Z order) and stack
-        //The y coordinate is set to the sum of all of the YHeight values below it.
-        //We loop through all the children (and not just the UNDERNEATH dictionary entries)
-        //in case there's nothing underneath them. The dictionary only contains items with something below
-        //them
-
-        for (int i = 0; i < children.Length; i++)
-        {
-            var ci = children[i] as VisualComponentBase;
-            if (ci is null)
-                continue;
-
-            float floor = 0;
-
-            if (underneath.TryGetValue(i, out var elements))
-            {
-                foreach (var o in elements)
-                {
-                    if (children[o] is VisualComponentBase co)
-                        floor += co.YHeight;
-                }
-            }
-
-            //GD.Print($"New pos for {i}: {floor + (ci.YHeight / 2f)}");
-
-            ci.MoveToTargetY(floor + (ci.YHeight / 2f));
-            //ci.Position = new Vector3(ci.Position.X, floor + (ci.YHeight / 2f), ci.Position.Z);
-        }
+        return lift;
     }
 
-    private int GetMaxComponentZ()
+    /// <summary>
+    /// Restacks the view once the changes made this frame are in, before the frame is drawn.
+    /// Components sync at the end of a frame, so a call made while they sync still lands in that frame.
+    /// </summary>
+    private void QueueViewUpdate()
     {
-        if (GetChildren().Count == 0)
-            return 0;
-
-        return GetChildren()
-            .Where(c => c is VisualComponentBase)
-            .Cast<VisualComponentBase>()
-            .Max(vch => vch.ZOrder);
+        if (_viewChanged)
+            return;
+        _viewChanged = true;
+        Callable.From(UpdateView).CallDeferred();
     }
 
-    private void QueueStackingUpdate()
+    private void UpdateView()
     {
-        if (_stackingUpdateRequired == 0)
-        {
-            _stackingUpdateRequired = _stackingUpdateFrames;
-        }
+        _viewChanged = false;
+        UpdateDragFloors();
+        UpdateStackingHeights();
     }
     #endregion
 
-    #region Normal Interaction
+    #region Normal Mode
     private void HandleNormalMode()
     {
         if (GetHoveredObject() == null)
         {
-            Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
+            SetCursor(Control.CursorShape.Arrow);
         }
         else
         {
-            Input.SetDefaultCursorShape(Input.CursorShape.PointingHand);
+            SetCursor(Control.CursorShape.PointingHand);
         }
-        if (Input.IsActionJustPressed("move_to_top"))
-            MoveToTop();
-        if (Input.IsActionJustPressed("move_to_bottom"))
-            MoveToBottom();
-        if (Input.IsActionJustPressed("component_delete"))
-            DeleteComponents();
     }
+
+    private void SetCursor(Control.CursorShape shape) =>
+        _tableMouseControl.MouseDefaultCursorShape = shape;
     #endregion
 
-    #region Popup Menu
-    public void PopupClosed()
+    #region Mouse Input
+    /// <summary>
+    /// Godot calls this whenever a press becomes a drag.
+    /// <para>
+    /// This returns Godot-style data that the rest of the program can use to make more drop targets.
+    /// For example, player hands are treated like drop targets, but we may have more in the future.
+    /// </para>
+    /// </summary>
+    private Variant GetDragData(Vector2 point)
     {
-        EndPopupMenu();
-    }
+        if (CursorMode != CursorMode.Normal)
+            return default;
 
-    private void StartPopupMenu()
-    {
-        CursorMode = CursorMode.PopupMenu;
-
-        Vector2 mouse = GetViewport().GetMousePosition();
-        Vector2I v = new((int)Math.Floor(mouse.X), (int)Math.Floor(mouse.Y));
-
-        var vch = GetSelectedObjects();
-        if (!vch.Any() && GetHoveredObject() != null)
+        var at = ViewportPoint(point);
+        var hit = GetComponentAtPoint(at);
+        if (hit.Component == null)
         {
-            vch = Enumerable.Repeat(GetHoveredObject(), 1);
+            StartDragSelection(at);
         }
-
-        //EmitSignal(SignalName.ShowComponentPopup, v, new Godot.Collections.Array<VisualComponentBase>(vch));
-        ShowComponentPopup?.Invoke(this, new ShowComponentPopupEventArgs(v, vch));
+        else if (hit.DrawArea)
+        {
+            var (pickup, alongside) = ((VisualComponentGroup)hit.Component).DragDraw();
+            StartDrag(
+                pickup,
+                alongside.Concat(
+                    Atoms.R.NewSelection(
+                        ComponentPosition.ById,
+                        pickup.Select(ComponentPosition.ById.Of),
+                        this
+                    )
+                )
+            );
+        }
+        else if (_dragPlane.Project(at) is { } cursor)
+        {
+            EnterDragMode(hit.Component, cursor);
+        }
+        return DragData();
     }
 
-    public event EventHandler<ShowComponentPopupEventArgs> ShowComponentPopup;
+    /// <summary>
+    /// The Godot-style data of what the local player drags, or nothing if they drag nothing.
+    /// </summary>
+    private Variant DragData() => _drag != null ? _drag : default(Variant);
 
-    private void HandlePopupMenu() { }
-
-    private void EndPopupMenu()
+    private void OnTableInput(InputEvent e)
     {
-        CursorMode = CursorMode.Normal;
+        if (e is not InputEventMouseButton button)
+            return;
+
+        if (
+            CursorMode == CursorMode.DragSelect
+            && button is { ButtonIndex: MouseButton.Left, Pressed: false }
+        )
+            EndDragSelection();
+        else if (CursorMode == CursorMode.Normal && IsSelectingPress(button))
+            Press(GetComponentAtPoint(ViewportPoint(button.Position)).Component?.ComponentRef);
     }
+
+    /// <summary>
+    /// Selects what a press on <paramref name="component"/> selects, or deselects for a press on null.
+    ///
+    /// <para>
+    /// A press on a selected component keeps the selection, and anything else replaces the selection.
+    /// </para>
+    /// </summary>
+    public void Press(Ref<Component>? component)
+    {
+        var selection = GetSelection();
+        SetSelection(
+            component is not { } c ? []
+            : selection.Contains(c) ? selection
+            : [c]
+        );
+    }
+
+    /// <summary>
+    /// Whether <paramref name="button"/> is a press that selects.
+    /// </summary>
+    public static bool IsSelectingPress(InputEventMouseButton button) =>
+        button is { ButtonIndex: MouseButton.Left or MouseButton.Right, Pressed: true };
     #endregion
 
     #region Spawn
-    private List<VisualComponentBase> _spawnComponents;
+    /// <summary>
+    /// The spawn previews and their offsets from the cursor.
+    /// </summary>
+    private List<(VisualComponentBase Component, Vector3 Delta)> _spawnComponents;
 
-    public void EnterSpawnMode(List<VisualComponentBase> components, bool startInDragMode)
+    public void EnterSpawnMode(List<(VisualComponentBase Component, Vector3 Delta)> components)
     {
-        if (startInDragMode)
-        {
-            CursorMode = CursorMode.Drag;
-        }
-        else
-        {
-            CursorMode = CursorMode.Spawn;
-        }
+        if (_spawnComponents != null)
+            ExitSpawnMode();
+
+        CursorMode = CursorMode.Spawn;
+        SetSelection([]);
 
         _spawnComponents = components;
 
-        foreach (var c in components)
+        foreach (var (c, _) in components)
         {
-            c.DimMode(!startInDragMode);
-            c.NeverHighlight = !startInDragMode;
-            c.ExcludeFromSync = !startInDragMode;
-            AddComponentToScene(c, startInDragMode);
+            c.DimMode(true);
+            c.NeverHighlight = true;
+            AddComponentToScene(c);
         }
-
-        if (startInDragMode)
-            EnterDragSpawnMode();
     }
 
     private void HandleSpawnMode()
     {
-        var p = _dragPlane.GetCursorProjection();
+        if (_dragPlane.GetCursorProjection() is not { } p)
+            return;
 
-        foreach (var c in _spawnComponents)
+        foreach (var (c, delta) in _spawnComponents)
         {
-            c.Position = p + c.SpawnDelta;
-        }
-    }
-
-    public TextureFactory TextureFactory { get; set; }
-
-    private void SpawnComponents()
-    {
-        foreach (var c in _spawnComponents)
-        {
-            var newComp = (VisualComponentBase)c.Duplicate();
-            newComp.ExcludeFromSync = false;
-            newComp.PrototypeRef = c.PrototypeRef;
-
-            var spawnPosition = _dragPlane.GetCursorProjection();
-
-            newComp.Setup(c.PrototypeRef, c.DataSetRow, TextureFactory);
-            newComp.Position =
-                new Vector3(spawnPosition.X, newComp.YHeight / 2f, spawnPosition.Z) + c.SpawnDelta;
-
-            newComp.DimMode(false);
-            newComp.NeverHighlight = false;
-
-            AddComponentToScene(newComp);
+            c.Position = new Vector3(p.X, c.YHeight / 2f, p.Z) + delta;
         }
     }
 
     private void ExitSpawnMode()
     {
-        foreach (var c in _spawnComponents)
+        foreach (var (c, _) in _spawnComponents)
         {
-            c.Delete();
+            c.QueueFree();
         }
         _spawnComponents = null;
         CursorMode = CursorMode.Normal;
     }
 
-    /// <summary>
-    /// This routine takes a base name (like "Cube") and checks to
-    /// see if there is an object already called that in the scene.
-    /// If there is, it appends (xx) where xx is a unique number
-    /// </summary>
-    /// <param name="baseName"></param>
-    /// <returns></returns>
-    public string CreateUniqueName(string baseName)
-    {
-        if (string.IsNullOrWhiteSpace(baseName))
-            return baseName;
-
-        //for simplicity pull all the existing names into a List
-        var names = new List<string>();
-        foreach (var c in GetChildren())
-        {
-            if (c is VisualComponentBase vcb)
-                names.Add(vcb.ComponentName);
-        }
-
-        //if we're already unique, we're done
-        if (names.All(x => x != baseName))
-            return baseName;
-
-        //try to append
-        for (int i = 1; i < 1000; i++)
-        {
-            var newName = $"{baseName}({i})";
-            if (names.All(x => x != newName))
-                return newName;
-        }
-
-        //put the above in a loop to avoid an infinite loop in case of horrible weirdness
-        GD.PrintErr($"Error creating new name for {baseName}");
-        return $"{baseName}(ERROR)";
-    }
-
     #endregion
 
     #region Drag
-    private Vector3 _lastDragPosition;
-    private Change _dragChange;
-
-    private static bool HandsEnabled() =>
-        ProjectService.Instance.CurrentProject?.GameSettings?.EnablePlayerHands == true;
 
     /// <summary>
     /// Recompute per-viewer zone visibility and control for all components each frame so the
@@ -967,416 +792,340 @@ public partial class GameObjects : Node
     private void RecomputeZones()
     {
         ZoneService.Recompute(
-            GetChildren().OfType<VisualComponentBase>(),
-            PlayerHandService.LocalSeatIndex(),
+            ComponentNodes.OfType<VisualComponentBase>(),
+            Atoms.R.LocalSeat(),
             ZoneService.LocalSeatIsAdmin()
         );
     }
 
-    private void EnterDragMode(VisualComponentBase go)
+    /// <summary>
+    /// Drags the selection while keeping their offsets from <paramref name="startCursor"/>.
+    /// </summary>
+    private void EnterDragMode(VisualComponentBase component, Vector3 startCursor)
     {
         // Zone control gate.
-        if (!go.LocallyMovable)
-        {
-            GD.Print($"Object {go.ComponentName} is not movable by the local player (zone)");
+        if (!component.LocallyMovable)
             return;
-        }
 
-        // Check if object is locked by another player in multiplayer
-        if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
-        {
-            var networkedObject = go.GetNodeOrNull<NetworkedObject>("NetworkedObject");
-            if (networkedObject != null)
-            {
-                if (networkedObject.IsLockedByAnotherPlayer)
+        StartDrag(
+            PickedUp(component)
+                .Select(o =>
                 {
-                    GD.Print($"Object {go.ComponentName} is locked by another player");
-                    return;
-                }
-
-                // Try to acquire lock
-                if (!networkedObject.TryLock())
-                {
-                    GD.Print($"Failed to lock object {go.ComponentName}");
-                    return;
-                }
-            }
-        }
-
-        CursorMode = CursorMode.Drag;
-        StartDragUndo(go);
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        foreach (var gameObject in GetSelectedObjects())
-        {
-            gameObject.IsDragging = true;
-        }
-
-        QueueStackingUpdate();
+                    var s = ComponentPosition.Of(o);
+                    return s with
+                    {
+                        Position = o.GlobalPosition - startCursor,
+                        Rotation = s.Rotation with
+                        {
+                            Y = s.Rotation.Y + o.GetParent<Node3D>().GlobalRotation.Y,
+                        },
+                    };
+                }),
+            []
+        );
     }
 
     /// <summary>
-    /// Handles when a component is being created as it is dragged away from a tray
+    /// Picks up a card from <paramref name="row"/>.
     /// </summary>
-    private void EnterDragSpawnMode()
+    /// <param name="row">The row that was pressed.</param>
+    /// <param name="cardRef">The card that was pressed.</param>
+    /// <param name="press">Where the press happened, in the viewport.</param>
+    /// <returns>The drag, or nothing if the card can't be picked up.</returns>
+    public Variant GrabFromHand(HandRow row, Ref<Component> cardRef, Vector2 press)
     {
-        CursorMode = CursorMode.Drag;
+        if (CursorMode != CursorMode.Normal || GetComponent(cardRef) is not { } card)
+            return default;
 
-        StartDragUndo(_spawnComponents.First());
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        foreach (var gameObject in _spawnComponents)
-        {
-            gameObject.IsDragging = true;
-            gameObject.Position = _lastDragPosition + gameObject.SpawnDelta;
-        }
-
-        QueueStackingUpdate();
+        StartDrag(
+            PickedUp(card)
+                .Select(c =>
+                {
+                    // In the hand's frame, right on screen is +X and down is +Z.
+                    var offset = (row.MiddleOf(c.Key) - press) / row.PixelsPerCm;
+                    return row.AfterEnteringOrLeaving(ComponentPosition.Of(c)) with
+                    {
+                        Position = new Vector3(offset.X, 0, offset.Y),
+                    };
+                }),
+            []
+        );
+        return DragData();
     }
 
-    /// <summary>
-    /// Handles when a component is being unhidden as it is dragged away from a deck, or bag
-    /// </summary>
-    private void EnterDragUnhideMode(ShowAndDragComponentEvent obj)
-    {
-        if (!obj.ComponentList.Any())
-            return;
-
-        var fg = obj.ComponentList.First();
-        if (fg == Guid.Empty)
-            return;
-
-        var first = GetComponent(fg);
-        if (first == null)
-            return;
-
-        CursorMode = CursorMode.Drag;
-
-        StartDragUndo(first); //undo should also put it back into where it came from
-        _lastDragPosition = _dragPlane.GetCursorProjection();
-        foreach (var g in obj.ComponentList)
-        {
-            var gameObject = GetComponent(g);
-            if (gameObject == null)
-                continue;
-
-            gameObject.Location = VisualComponentBase.ComponentLocation.Board;
-            gameObject.IsDragging = true;
-            gameObject.Position = _lastDragPosition + gameObject.SpawnDelta;
-        }
-
-        QueueStackingUpdate();
-    }
-
+    // The container a drop would go into, outlined while the drag is over it.
     private VisualComponentGroup _currentDragDropTarget;
 
-    private void HandleDrag()
+    // Whether the local player's dragged cards are hovering over the hand.
+    private bool _dragOverHand;
+
+    private void UpdateDrag(ComponentDrag drag, Vector2 point)
     {
-        if (Input.IsMouseButtonPressed(MouseButton.Left))
+        var cards = drag.Cards(Atoms.R).ToList();
+        // Only cards go into a hand, which opens a gap for them itself.
+        var row = cards.Count > 0 ? HandRow.Under(GetViewport()) : null;
+        bool overHand = row != null;
+        // The dragged card nearest the pointer, which a turn into the hand snaps.
+        var nearest = cards.MinBy(s => s.PositionAt(0).LengthSquared());
+
+        // Over a hand, the dragged cards move over the hand, where only the 2D preview shows them.
+        if (overHand != _dragOverHand)
         {
-            var mousePosition = GetViewport().GetMousePosition();
-
-            // The bottom "hand" strip only intercepts the drag when player hands are enabled
-            // and at least one dragged object is a printed component.
-            VcToken previewCard = null;
-            if (HandsEnabled() && mousePosition.Y > _gameController.HandY)
-            {
-                foreach (var go in GetDraggingObjects())
-                {
-                    if (go is VcToken vct)
-                    {
-                        previewCard = vct;
-                        break;
-                    }
-                }
-            }
-
-            if (previewCard != null)
-            {
-                _gameController.HandManager.ShowDragPreview(previewCard, mousePosition);
-                previewCard.LogicalVisible = false;
-                Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
-                return; // don't move the 3D objects while hovering the hand
-            }
-
-            _gameController.HandManager.HideDragPreview();
-
-            var newDragPosition = _dragPlane.GetCursorProjection();
-            var delta = newDragPosition - _lastDragPosition;
-            _lastDragPosition = newDragPosition;
-
-            var _dragHeight = GetDragHeight();
-
-            foreach (var go in GetDraggingObjects())
-            {
-                var p = go.Position + delta;
-                go.SetPosition(new Vector3(p.X, _dragHeight + go.YHeight, p.Z));
-                go.LogicalVisible = true;
-            }
-
-            //check to see if we are over a VisualComponentGroup that can accept a drop,
-            var dragTarget = GetGroupDropTargetUnderDrag();
-
-            if (dragTarget != _currentDragDropTarget)
-            {
-                _currentDragDropTarget?.DragOverExit();
-                if (_currentDragDropTarget != null)
-                {
-                    _currentDragDropTarget.IsHovered = false;
-                    _currentDragDropTarget.IsMouseSelected = false;
-                }
-                _currentDragDropTarget = dragTarget;
-                if (_currentDragDropTarget != null)
-                {
-                    _currentDragDropTarget.IsHovered = true;
-                    _currentDragDropTarget.IsMouseSelected = true;
-                }
-            }
-
-            if (dragTarget != null && dragTarget.DragOver(GetDraggingObjects()))
-            {
-                Input.SetDefaultCursorShape(Input.CursorShape.CanDrop);
-            }
-            else
-            {
-                Input.SetDefaultCursorShape(Input.CursorShape.Drag);
-            }
+            _dragOverHand = overHand;
+            var location = new Dragged(Atoms.R.LocalSeat(), _dragOverHand);
+            float turn = HandTurn(nearest, overHand);
+            Atoms.R.Append(
+                drag.Transition,
+                cards.Select(s => HandCard.Turned(s, turn) with { Location = location })
+            );
         }
-        else
+        if (overHand)
         {
-            EndDrag();
-        }
-    }
-
-    private VisualComponentGroup GetGroupDropTargetUnderDrag()
-    {
-        var camera = GetViewport().GetCamera3D();
-        if (camera == null)
-            return null;
-
-        var mousePos = GetViewport().GetMousePosition();
-
-        // Exclude all dragging objects so the ray passes through them
-        var exclude = new Godot.Collections.Array<Rid>();
-        foreach (var dragging in GetDraggingObjects())
-            exclude.Add(dragging.GetRid());
-
-        foreach (var o in GetChildren())
-        {
-            if (o is VisualComponentBase vcb && vcb is not VisualComponentGroup)
-            {
-                exclude.Add(vcb.GetRid());
-            }
-        }
-
-        var ray = new PhysicsRayQueryParameters3D
-        {
-            From = camera.ProjectRayOrigin(mousePos),
-            To = camera.ProjectRayOrigin(mousePos) + camera.ProjectRayNormal(mousePos) * 500f,
-            CollideWithAreas = true,
-            CollideWithBodies = false,
-            Exclude = exclude,
-        };
-
-        var result = GetViewport().FindWorld3D().DirectSpaceState.IntersectRay(ray);
-        if (!result.ContainsKey("collider"))
-            return null;
-
-        var collider = result["collider"].As<Node>();
-
-        GD.Print($"Collider: {collider.Name} Parent: {collider.GetParent()?.Name}");
-        // If the hit node is not itself a VisualComponentGroup, walk up the parent chain
-        var group = collider as VisualComponentGroup;
-
-        if (group != null)
-            GD.Print($"VCG: {group.Name}");
-
-        if (group == null)
-        {
-            var parent = collider?.GetParent();
-            while (parent != null)
-            {
-                if (parent is VisualComponentGroup g)
-                {
-                    group = g;
-                    break;
-                }
-                parent = parent.GetParent();
-            }
-        }
-
-        if (group == null || !group.CanAcceptDrop || group.IsDragging)
-            return null;
-
-        /*
-        // Verify the ray hit the DragDropCollider specifically, not another shape on the group
-        if (group.DragDropCollider != null)
-        {
-            int hitShapeIndex = result["shape"].AsInt32();
-            int dragDropIndex = 0;
-            foreach (var child in group.GetChildren())
-            {
-                if (child is CollisionShape3D cs)
-                {
-                    if (cs == group.DragDropCollider)
-                        break;
-                    dragDropIndex++;
-                }
-            }
-            if (hitShapeIndex != dragDropIndex) return null;
-        }
-        */
-
-        return group;
-    }
-
-    private IEnumerable<VisualComponentBase> GetDraggingObjects()
-    {
-        foreach (var n in GetChildren())
-        {
-            if (n is VisualComponentBase { IsDragging: true } p)
-            {
-                yield return p;
-            }
-        }
-    }
-
-    private IEnumerable<VisualComponentBase> GetNotDraggingObjects()
-    {
-        foreach (var n in GetChildren())
-        {
-            if (
-                n is VisualComponentBase
-                {
-                    Location: VisualComponentBase.ComponentLocation.Board,
-                    IsDragging: false
-                } p
-            )
-            {
-                yield return p;
-            }
-        }
-    }
-
-    private void EndDrag()
-    {
-        _gameController.HandManager.HideDragPreview();
-
-        var mousePosition = GetViewport().GetMousePosition();
-
-        // Only divert to the hand when hands are enabled, the drop was over the hand strip,
-        // AND there is at least one printed component to hand off.
-        var toHand = new List<VcToken>();
-        if (HandsEnabled() && mousePosition.Y > _gameController.HandY)
-        {
-            foreach (var go in GetDraggingObjects())
-            {
-                if (go is VcToken vct)
-                    toHand.Add(vct);
-            }
-        }
-
-        if (toHand.Count > 0)
-        {
-            // End dragging state before handing off
-            foreach (var go in GetDraggingObjects().ToList())
-            {
-                go.IsDragging = false;
-                if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
-                {
-                    var networkedObject = go.GetNodeOrNull<NetworkedObject>("NetworkedObject");
-                    networkedObject?.Unlock();
-                }
-            }
-
-            _gameController.HandManager.AddToHand(toHand);
-            Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
-            CursorMode = CursorMode.Normal;
-            QueueStackingUpdate();
-            EndDragUndo();
+            _handManager.ShowDragPreview(
+                drag.Cards(Atoms.R).OrderBy(s => s.Rank).ToList(),
+                row,
+                point
+            );
+            SetDropTarget(null);
             return;
         }
+        _handManager.HideDragPreview();
 
+        var target =
+            GetViewport().GuiGetHoveredControl() == _tableMouseControl ? DropTargetAt(point) : null;
+        SetDropTarget(target);
+    }
+
+    /// <summary>
+    /// The rotation dragged cards should have when entering or leaving a hand based on the camera rotation and rotation step.
+    /// </summary>
+    private float HandTurn(ComponentPosition nearest, bool intoHand)
+    {
+        float camera = HandCard.CameraYaw(GetViewport().GetCamera3D());
+        if (!intoHand)
+            return camera;
+
+        float yaw = nearest.Rotation.Y;
+        float step = Mathf.DegToRad(Atoms.R.Get(ProjectGameSettings.Only).RotationStep());
+        return Mathf.Snapped(yaw - camera, step) - yaw;
+    }
+
+    private void SetDropTarget(VisualComponentGroup target)
+    {
+        if (target == _currentDragDropTarget)
+            return;
         if (_currentDragDropTarget != null)
-        {
-            if (_currentDragDropTarget.CanObjectsBeDropped(GetDraggingObjects()))
-                _currentDragDropTarget.DropObjects(GetDraggingObjects());
+            _currentDragDropTarget.IsDropTarget = false;
+        _currentDragDropTarget = target;
+        if (target != null)
+            target.IsDropTarget = true;
+    }
 
-            _currentDragDropTarget.DragOverExit();
-            _currentDragDropTarget.IsHovered = false;
-            _currentDragDropTarget.IsMouseSelected = false;
-            _currentDragDropTarget = null;
-        }
+    /// <summary>
+    /// Gets the drop target under <paramref name="point"/>.
+    /// </summary>
+    private VisualComponentGroup DropTargetAt(Vector2 point) =>
+        Raycast(point, c => c is VisualComponentGroup).Component
+            is VisualComponentGroup { CanAcceptDrop: true } group
+            ? group
+            : null;
+
+    /// <summary>
+    /// The components dragged by any player.
+    /// </summary>
+    private IEnumerable<VisualComponentBase> GetDraggingObjects() =>
+        Nodes(
+            Atoms
+                .R.Get(Seat.Live)
+                .SelectMany(seat =>
+                    new[] { new Dragged(seat.Id, false), new Dragged(seat.Id, true) }
+                )
+                .SelectMany(dragged =>
+                    Atoms.R.Get(ComponentPosition.ByLocation, new(_view.StageRef, dragged))
+                )
+        );
+
+    /// <summary>
+    /// The key of <paramref name="id"/> in the shown stage.
+    /// </summary>
+    private PositionKey ShownKey(Ref<Component> id) => new(_view.StageRef, id);
+
+    /// <summary>
+    /// The table of the shown stage, as <see cref="ComponentPosition.ByLocation"/> lists it.
+    /// </summary>
+    private LocationKey ShownTable => new(_view.StageRef, null);
+
+    /// <summary>
+    /// Drops what <paramref name="drag"/> drags on the table at <paramref name="point"/> or into the container there.
+    /// </summary>
+    private void DropOnTable(ComponentDrag drag, Vector2 point)
+    {
+        // The camera may have moved since the mouse did.
+        UpdateDrag(drag, point);
+        // Pointing above the horizon sets nothing down, so the drag is canceled.
+        if (_dragPlane.Project(point) is not { } cursor)
+            return;
+
+        var dropped = At(cursor, drag.Atoms(Atoms.R));
+        if (_currentDragDropTarget is { } bag)
+            EndDrag(drag, bag.DropObjects(dropped));
         else
-        {
-            var hover = GetHoveredDropTarget();
-            if (
-                hover != null
-                && hover.CanAcceptDrop
-                && hover.CanObjectsBeDropped(GetDraggingObjects())
+            EndDrag(drag, OnTable(dropped));
+    }
+
+    /// <summary>
+    /// Drops what <paramref name="drag"/> drags into the hand <paramref name="row"/> shows.
+    /// </summary>
+    public void DropInHand(ComponentDrag drag, HandRow row, int index)
+    {
+        // Moves the cards over the hand first, if the mouse got there since the last frame.
+        UpdateDrag(drag, GetViewport().GetMousePosition());
+        if (_dragPlane.GetCursorProjection() is not { } cursor)
+            return;
+
+        var cards = PlayerHandService.Inserted(
+            PlayerHandService.GetHand(Atoms.R, _view.StageRef, row.Seat),
+            drag.Cards(Atoms.R).Select(row.AfterEnteringOrLeaving).ToList(),
+            index,
+            row.Seat
+        );
+        var rest = drag.Atoms(Atoms.R)
+            .Where(s => Atoms.R.Kind(s) != VisualComponentBase.VisualComponentType.Printed);
+        EndDrag(drag, cards.Concat(OnTable(At(cursor, rest))));
+    }
+
+    /// <summary>
+    /// The dragged <paramref name="atoms"/> placed where they are on the table, at their offsets from <paramref name="cursor"/>.
+    /// </summary>
+    private static List<ComponentPosition> At(
+        Vector3 cursor,
+        IEnumerable<ComponentPosition> atoms
+    ) => atoms.Select(s => s with { Position = cursor + s.PositionAt(0) }).ToList();
+
+    /// <summary>
+    /// The atoms that set <paramref name="dropped"/> down on the table where they are,
+    /// in their stacking order, snapped onto a card or deck they're dropped near.
+    /// A token that lands exactly on a deck goes into it.
+    /// </summary>
+    private ComponentPosition[] OnTable(List<ComponentPosition> dropped)
+    {
+        var ordered = dropped.OrderBy(s => s.Rank).ToList();
+        var (snapX, snapZ) = SnapDelta(ordered);
+        var decks = Atoms
+            .R.Get(ComponentPosition.ByLocation, ShownTable)
+            .Where(s => Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Deck)
+            .ToList();
+
+        var ranks = SnowRank.AfterAll(ordered.Count);
+        return ordered
+            .Select(
+                (s, i) =>
+                {
+                    var placed = s with
+                    {
+                        Location = null,
+                        X = s.X + snapX,
+                        Z = s.Z + snapZ,
+                        Rank = ranks[i],
+                    };
+                    var deck =
+                        Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Printed
+                            ? decks
+                                .Where(d => d.X == placed.X && d.Z == placed.Z)
+                                .MaxBy(d => d.Rank)
+                            : null;
+                    return deck == null
+                        ? placed
+                        : placed with
+                        {
+                            Location = new InComponent(deck.Id),
+                            X = 0,
+                            Z = 0,
+                            Rotation = placed.Rotation with
+                            {
+                                Y = placed.Rotation.Y - deck.Rotation.Y,
+                            },
+                        };
+                }
             )
-            {
-                hover.DropObjects(GetDraggingObjects());
-            }
-        }
+            .ToArray();
+    }
 
-        //move all the dragged items to the top of the stack
+    /// <summary>
+    /// The offset that snapping should apply to the components.
+    /// If a candidate VcPrinted or deck is found, this offset will snap to a stacked position.
+    /// If no candidate is found, returns (0, 0).
+    /// </summary>
+    private (int X, int Z) SnapDelta(List<ComponentPosition> dropped)
+    {
+        var targets = Atoms
+            .R.Get(ComponentPosition.ByLocation, ShownTable)
+            .Where(s =>
+                Atoms.R.Kind(s)
+                    is VisualComponentBase.VisualComponentType.Printed
+                        or VisualComponentBase.VisualComponentType.Deck
+            )
+            .Select(s => (s.X, s.Z))
+            .ToList();
 
-        foreach (var gameObject in GetDraggingObjects().OrderBy(x => x.ZOrder))
+        foreach (
+            var card in dropped.Where(s =>
+                Atoms.R.Kind(s) == VisualComponentBase.VisualComponentType.Printed
+            )
+        )
         {
-            MoveToTop(gameObject);
-            gameObject.IsDragging = false;
+            var from = (card.X, card.Z);
+            var found = false;
+            (int X, int Z) nearest = (0, 0);
+            long nearestDistance = (long)SnapRange * SnapRange;
 
-            // Release multiplayer lock
-            if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+            foreach (var to in targets)
             {
-                var networkedObject = gameObject.GetNodeOrNull<NetworkedObject>("NetworkedObject");
-                networkedObject?.Unlock();
+                long dx = to.X - from.X;
+                long dz = to.Z - from.Z;
+                long distance = dx * dx + dz * dz;
+                if (distance <= nearestDistance)
+                {
+                    found = true;
+                    nearest = (to.X - from.X, to.Z - from.Z);
+                    nearestDistance = distance;
+                }
             }
+
+            if (found)
+                return nearest;
         }
 
-        Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
-
-        CursorMode = CursorMode.Normal;
-
-        QueueStackingUpdate();
-        EndDragUndo();
+        return (0, 0);
     }
 
-    private void StartDragUndo(VisualComponentBase go)
-    {
-        _dragChange = new() { Component = go, Begin = go.Transform };
-    }
+    /// <summary>How close a dropped card must be to snap, in tenths of a millimeter.</summary>
+    private const int SnapRange = 250;
 
-    private void EndDragUndo()
-    {
-        _dragChange.End = _dragChange.Component.Transform;
-        UndoService.Instance.Add(_dragChange);
-        _dragChange = null;
-    }
     #endregion
 
-    #region Drag Selection
-    private void StartDragSelection()
+    #region Drag-Box Selection
+    /// <summary>
+    /// Starts a box selection from <paramref name="from"/>, in viewport coordinates.
+    /// </summary>
+    private void StartDragSelection(Vector2 from)
     {
         CursorMode = CursorMode.DragSelect;
-        _selectionRectangle.StartDragSelect();
+        _selectionRectangle.StartDragSelect(from);
     }
 
-    private void HandleDragSelection()
-    {
-        if (Input.IsMouseButtonPressed(MouseButton.Left))
-        {
-            SelectComponents(_selectionRectangle.CurRectangle);
-        }
-        else
-        {
-            EndDragSelection();
-        }
-    }
-
+    /// <summary>
+    /// Selects what the selection box covers in one event.
+    /// </summary>
     private void EndDragSelection()
     {
         CursorMode = CursorMode.Normal;
         _selectionRectangle.StopDragSelect();
+
+        var nodes = ComponentNodes.OfType<VisualComponentBase>().ToList();
+        SetSelection(nodes.Where(c => c.PreviewSelected == true).Select(c => c.ComponentRef));
+        foreach (var c in nodes)
+            c.PreviewSelected = null;
     }
     #endregion
 
@@ -1392,612 +1141,88 @@ public partial class GameObjects : Node
         return (point.X >= minX && point.X <= maxX && point.Y >= minY && point.Y <= maxY);
     }
 
-    private static bool CheckOverlap(VisualComponentBase comp1, VisualComponentBase comp2)
-    {
-        foreach (var offsetShape1 in comp1.ShapeProfiles)
-        {
-            // Rotate the offset by the component's rotation, then add to component position
-            var rotatedOffset1 = offsetShape1.Offset.Rotated(comp1.Rotation.Y);
-            var pos1 = new Vector2(comp1.Position.X, comp1.Position.Z) + rotatedOffset1;
-            Transform2D t1 = new(comp1.Rotation.Y, pos1);
-
-            foreach (var offsetShape2 in comp2.ShapeProfiles)
-            {
-                var rotatedOffset2 = offsetShape2.Offset.Rotated(comp2.Rotation.Y);
-                var pos2 = new Vector2(comp2.Position.X, comp2.Position.Z) + rotatedOffset2;
-                Transform2D t2 = new(comp2.Rotation.Y, pos2);
-
-                if (offsetShape1.Shape.Collide(t1, offsetShape2.Shape, t2))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     #region Multiplayer
 
     /// <summary>
-    /// Serialize Parameters dictionary to JSON string
+    /// Resets the game for loading a project.
     /// </summary>
-    private static string SerializeParameters(Dictionary<string, object> parameters)
+    public void ResetForLoad()
     {
-        if (parameters == null)
-            return "{}";
-
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = false,
-            PropertyNameCaseInsensitive = true,
-        };
-
-        return JsonSerializer.Serialize(parameters, options);
+        ResetView();
+        EventSynchronizer.Instance?.Clear();
     }
 
     /// <summary>
-    /// Deserialize JSON string to Parameters dictionary with proper type conversion
+    /// Replaces the StageView with an empty one and forgets the local player's gestures.
     /// </summary>
-    private static Dictionary<string, object> DeserializeParameters(string json)
+    public void ResetView()
     {
-        if (string.IsNullOrEmpty(json))
-            return new Dictionary<string, object>();
+        // Removed now so its watch stops before the new view's starts.
+        var old = _view;
+        RemoveChild(old);
+        old.QueueFree();
+        _view = CreateStageView();
 
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-        var rawDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, options);
-        if (rawDict == null)
-            return new Dictionary<string, object>();
-
-        var result = new Dictionary<string, object>();
-
-        foreach (var kvp in rawDict)
-        {
-            result[kvp.Key] = ConvertJsonElement(kvp.Value);
-        }
-
-        return result;
+        // The gesture went with the view, so there's nothing to cancel.
+        _drag = null;
+        AbandonMode();
+        _hover = default;
     }
 
     /// <summary>
-    /// Convert JsonElement to appropriate .NET type
+    /// Ends the current mode without committing it, back to <see cref="CursorMode.Normal"/>.
     /// </summary>
-    private static object ConvertJsonElement(JsonElement element)
+    private void AbandonMode()
     {
-        return element.ValueKind switch
+        switch (CursorMode)
         {
-            JsonValueKind.String => element.GetString(),
-            JsonValueKind.Number => element.TryGetSingle(out float floatValue)
-                ? floatValue
-                : element.GetDouble(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Null => null,
-            JsonValueKind.Array => ConvertJsonArray(element),
-            JsonValueKind.Object => ConvertJsonObject(element),
-            _ => element.ToString(),
-        };
-    }
-
-    /// <summary>
-    /// Convert JsonElement array to List
-    /// </summary>
-    private static object ConvertJsonArray(JsonElement element)
-    {
-        var list = new List<object>();
-        foreach (var item in element.EnumerateArray())
-        {
-            list.Add(ConvertJsonElement(item));
-        }
-        return list;
-    }
-
-    /// <summary>
-    /// Convert JsonElement object to Dictionary
-    /// </summary>
-    private static object ConvertJsonObject(JsonElement element)
-    {
-        var dict = new Dictionary<string, object>();
-        foreach (var property in element.EnumerateObject())
-        {
-            dict[property.Name] = ConvertJsonElement(property.Value);
-        }
-        return dict;
-    }
-
-    /// <summary>
-    /// Sync object creation across network
-    /// </summary>
-    public void SyncCreation(VisualComponentBase component)
-    {
-        if (!MultiplayerManager.Instance?.IsMultiplayerActive == true)
-            return;
-        if (component == null)
-            return;
-
-        GD.Print(
-            $"Syncing creation for component {component.Reference}. Prototype {component.PrototypeRef}"
-        );
-
-        _spawnQueue.Enqueue(component.Reference);
-    }
-
-    private const int MaxSpawnProcess = 3;
-
-    private void ProcessSpawnQueue()
-    {
-        if (_spawnQueue.Count == 0)
-            return;
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
-
-        int cnt = 0;
-
-        while (_spawnQueue.TryDequeue(out var reference))
-        {
-            var component = GetComponent(reference);
-            if (component == null)
-            {
-                GD.PrintErr($"ProcessSpawnQueue: Component with reference {reference} not found.");
-                continue;
-            }
-
-            var prototypeRef = component.PrototypeRef.ToString();
-            var componentRef = component.Reference.ToString();
-            var parentRef = component.Parent.ToString();
-            var syncDto = new VcSyncDto(component);
-            var syncDtoJson = JsonSerializer.Serialize(syncDto);
-
-            if (MultiplayerManager.Instance.IsServer)
-                Rpc(nameof(ClientSpawnObject), prototypeRef, componentRef, parentRef, syncDtoJson);
-            else
-                RpcId(
-                    1,
-                    nameof(ServerSpawnObject),
-                    prototypeRef,
-                    componentRef,
-                    parentRef,
-                    syncDtoJson
-                );
-
-            cnt++;
-            if (cnt >= MaxSpawnProcess)
+            case CursorMode.Drag:
+                // Ending Godot's drag runs CleanupDrag, which cancels its transition.
+                GetViewport().GuiCancelDrag();
+                break;
+            case CursorMode.DragSelect:
+                _selectionRectangle.StopDragSelect();
+                foreach (var c in ComponentNodes.OfType<VisualComponentBase>())
+                    c.PreviewSelected = null;
+                break;
+            case CursorMode.Spawn:
+                ExitSpawnMode();
                 break;
         }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClientSpawnObject(
-        string prototypeRefStr,
-        string componentRefStr,
-        string parentRefStr,
-        string syncDtoJson
-    )
-    {
-        GD.Print($"Received spawn for {componentRefStr}");
-        if (!TryExecuteSpawn(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson))
-        {
-            GD.Print(
-                $"Prototype {prototypeRefStr} not yet available, queuing spawn for {componentRefStr}"
-            );
-            _pendingSpawns.Add(
-                new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson)
-            );
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ServerSpawnObject(
-        string prototypeRefStr,
-        string componentRefStr,
-        string parentRefStr,
-        string syncDtoJson
-    )
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-
-        var senderId = Multiplayer.GetRemoteSenderId();
-        GD.Print($"Server received spawn request for {componentRefStr} from {senderId}");
-
-        if (!TryExecuteSpawn(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson))
-        {
-            GD.Print(
-                $"Prototype {prototypeRefStr} not yet available on server, queuing spawn for {componentRefStr}"
-            );
-            _pendingSpawns.Add(
-                new PendingSpawnRequest(prototypeRefStr, componentRefStr, parentRefStr, syncDtoJson)
-            );
-        }
-
-        foreach (var player in MultiplayerManager.Instance.Players)
-        {
-            if (player.Key == senderId || player.Key == 1)
-                continue;
-            RpcId(
-                player.Key,
-                nameof(ClientSpawnObject),
-                prototypeRefStr,
-                componentRefStr,
-                parentRefStr,
-                syncDtoJson
-            );
-        }
+        CursorMode = CursorMode.Normal;
     }
 
     /// <summary>
-    /// Attempts to instantiate and add a spawned component to the scene.
-    /// Returns false if the prototype is not yet present — caller should defer the request.
-    /// Returns true when the spawn was executed (even on a fatal data error that should not be retried).
+    /// Moves what each player drags with their cursor.
     /// </summary>
-    private bool TryExecuteSpawn(
-        string prototypeRefStr,
-        string componentRefStr,
-        string parentRefStr,
-        string syncDtoJson
-    )
+    private void ProcessActiveDrags()
     {
-        var prototypeRef = Guid.Parse(prototypeRefStr);
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var proto
-            )
-        )
-            return false;
+        var cursors = PresenceSynchronizer.Instance;
+        if (cursors == null)
+            return;
 
-        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson);
-
-        var path = Utility.ComponentTypeToScenePath(
-            proto.Type,
-            proto.Parameters,
-            syncDto.DataSetRow
-        );
-        var scene = GD.Load<PackedScene>(path).Instantiate();
-
-        if (scene is not VisualComponentBase vcb)
+        foreach (var group in GetDraggingObjects().GroupBy(c => (Dragged)c.State.Location))
         {
-            GD.PrintErr($"Spawned scene for {prototypeRefStr} is not a VisualComponentBase");
-            return true; // Fatal data error — do not retry
-        }
-
-        vcb.Reference = Guid.Parse(componentRefStr);
-        vcb.PrototypeRef = prototypeRef;
-        vcb.Parent = Guid.Parse(parentRefStr);
-
-        vcb.SpawnBuild(prototypeRef, syncDto, TextureFactory);
-
-        AddComponentToScene(vcb, false);
-        return true;
-    }
-
-    /// <summary>
-    /// Re-attempts any spawn requests that were deferred because their prototype
-    /// was not yet available on this client. Re-queues any that still cannot be resolved.
-    /// </summary>
-    private void RetryPendingSpawns()
-    {
-        if (_pendingSpawns.Count == 0)
-            return;
-
-        var pending = _pendingSpawns.ToList();
-        _pendingSpawns.Clear();
-
-        foreach (var r in pending)
-        {
-            GD.Print($"Retrying spawn for {r.ComponentRefStr}");
-            if (
-                !TryExecuteSpawn(
-                    r.PrototypeRefStr,
-                    r.ComponentRefStr,
-                    r.ParentRefStr,
-                    r.SyncDtoJson
-                )
-            )
-            {
-                GD.PrintErr(
-                    $"Still cannot spawn {r.ComponentRefStr} because prototype {r.PrototypeRefStr} is not available"
-                );
-                _pendingSpawns.Add(r); // Prototype still not available — keep in list
-            }
-        }
-    }
-
-    private record PendingSpawnRequest(
-        string PrototypeRefStr,
-        string ComponentRefStr,
-        string ParentRefStr,
-        string SyncDtoJson
-    );
-
-    /// <summary>
-    /// Sync object deletion across network
-    /// </summary>
-    public void SyncDeletion(VisualComponentBase component)
-    {
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
-        if (component == null)
-            return;
-
-        var componentRef = component.Reference.ToString();
-
-        if (MultiplayerManager.Instance.IsServer)
-            Rpc(nameof(ClientDeleteObject), componentRef);
-        else
-            RpcId(1, nameof(ServerDeleteObject), componentRef);
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClientDeleteObject(string componentRef)
-    {
-        GD.Print($"Received delete for: {componentRef}");
-
-        if (!Guid.TryParse(componentRef, out var compGuid))
-            return;
-
-        var component = GetComponent(compGuid);
-        component?.Delete();
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ServerDeleteObject(string componentRef)
-    {
-        if (MultiplayerManager.Instance?.IsServer != true)
-            return;
-
-        if (!Guid.TryParse(componentRef, out var compGuid))
-            return;
-
-        var senderId = Multiplayer.GetRemoteSenderId();
-        GD.Print($"Server received delete request for {componentRef} from {senderId}");
-
-        var component = GetComponent(compGuid);
-        component?.Delete();
-
-        foreach (var player in MultiplayerManager.Instance.Players)
-        {
-            if (player.Key == senderId || player.Key == 1)
-                continue;
-            RpcId(player.Key, nameof(ClientDeleteObject), componentRef);
-        }
-    }
-
-    private void SyncTransform(SyncTransformEvent obj)
-    {
-        return; //for testing
-
-        var component = obj.Component;
-        if (component == null)
-            return;
-
-        var pos = component.Position;
-        var rot = component.Rotation;
-
-        GD.Print(
-            $"Syncing transform for component {component.Reference} - Pos: {pos}, Rot: {rot}, Z: {component.ZOrder}"
-        );
-
-        Rpc(
-            nameof(ServerSyncTransform),
-            component.Reference.ToString(),
-            pos,
-            rot,
-            component.ZOrder
-        );
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
-    )]
-    private void ServerSyncTransform(
-        string componentRef,
-        Vector3 position,
-        Vector3 rotation,
-        int zOrder
-    )
-    {
-        GD.Print(
-            $"Server transform sync for component {componentRef} - Pos: {position}, Rot: {rotation}, Z: {zOrder}"
-        );
-        if (!Guid.TryParse(componentRef, out var compGuid))
-            return;
-        var component = GetComponent(compGuid);
-        if (component == null)
-            return;
-
-        component.Position = position;
-        component.Rotation = rotation;
-        component.ZOrder = zOrder;
-
-        NetworkedObject networkedChild = null;
-        foreach (var n in component.GetChildren())
-        {
-            if (n is NetworkedObject nwc)
-            {
-                networkedChild = nwc;
-                break;
-            }
-        }
-
-        if (!MultiplayerManager.Instance?.IsServer == true)
-            return;
-
-        var senderId = Multiplayer.GetRemoteSenderId();
-        if (networkedChild != null && networkedChild.LockedByPlayer != senderId)
-            return; // Only locked player can update
-
-        // Broadcast to all clients except sender
-        foreach (var player in MultiplayerManager.Instance.Players)
-        {
-            if (player.Key != senderId)
-            {
-                RpcId(
-                    player.Key,
-                    nameof(ClientReceiveTransform),
-                    componentRef,
-                    position,
-                    rotation,
-                    zOrder
-                );
-            }
-        }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
-    )]
-    private void ClientReceiveTransform(
-        string componentRef,
-        Vector3 position,
-        Vector3 rotation,
-        int zOrder
-    )
-    {
-        GD.Print(
-            $"Client transform update for component {componentRef} - Pos: {position}, Rot: {rotation}, Z: {zOrder}"
-        );
-        if (!Guid.TryParse(componentRef, out var compGuid))
-            return;
-        var component = GetComponent(compGuid);
-        if (component == null || component.IsDragging)
-            return;
-
-        component.Position = position;
-        component.Rotation = rotation;
-        component.ZOrder = zOrder;
-    }
-
-    private void OnComponentPropertyChanged(ComponentPropertyChangedEvent e)
-    {
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
-        if (e.Component == null || e.Component.ExcludeFromSync)
-            return;
-        _componentPropertyQueue.Enqueue(e.Component.Reference);
-    }
-
-    private void ProcessComponentPropertyQueue()
-    {
-        if (_componentPropertyQueue.Count == 0)
-            return;
-        if (MultiplayerManager.Instance?.IsMultiplayerActive != true)
-            return;
-
-        int sent = 0;
-        while (
-            sent < MaxPropertySyncsPerFrame && _componentPropertyQueue.TryDequeue(out var reference)
-        )
-        {
-            var component = GetComponent(reference);
-            if (component == null)
+            if (cursors.CursorOf(group.Key.Seat) is not { } cursor)
                 continue;
 
-            var syncDto = new VcSyncDto(component);
-            var syncDtoJson = JsonSerializer.Serialize(syncDto);
-            var componentRef = component.Reference.ToString();
+            // Follow the cursor, then float the group, keeping its shape, above what's below.
+            var dragged = group.ToList();
+            foreach (var c in dragged)
+            {
+                var offset = c.State.PositionAt(0);
+                c.Position = new Vector3(cursor.X + offset.X, c.Position.Y, cursor.Z + offset.Z);
+            }
 
-            if (MultiplayerManager.Instance.IsServer)
-                Rpc(nameof(ClientReceiveProperties), componentRef, syncDtoJson);
-            else
-                RpcId(1, nameof(ServerReceiveProperties), componentRef, syncDtoJson);
-
-            sent++;
+            float lift = DragLift(dragged, cursor);
+            foreach (var c in dragged)
+            {
+                c.Position = c.Position with { Y = lift + c.DragFloor + c.YHeight };
+            }
         }
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.AnyPeer,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ServerReceiveProperties(string componentRef, string syncDtoJson)
-    {
-        if (!MultiplayerManager.Instance?.IsServer == true)
-            return;
-
-        ApplyPropertySyncToComponent(componentRef, syncDtoJson);
-
-        Rpc(nameof(ClientReceiveProperties), componentRef, syncDtoJson);
-    }
-
-    [Rpc(
-        MultiplayerApi.RpcMode.Authority,
-        CallLocal = false,
-        TransferMode = MultiplayerPeer.TransferModeEnum.Reliable
-    )]
-    private void ClientReceiveProperties(string componentRef, string syncDtoJson)
-    {
-        ApplyPropertySyncToComponent(componentRef, syncDtoJson);
     }
 
     #endregion
-
-    private void ApplyPropertySyncToComponent(string componentRef, string syncDtoJson)
-    {
-        //apply it to the server.
-        if (!Guid.TryParse(componentRef, out var compGuid))
-        {
-            GD.PrintErr("ClientReceiveProperties: Can't parse GUID");
-            return;
-        }
-
-        var component = GetComponent(compGuid);
-        if (component == null || component.IsDragging)
-        {
-            GD.PrintErr(
-                $"Client/ServerReceiveProperties: Component {componentRef} not found or is being dragged"
-            );
-            return;
-        }
-
-        var syncDto = JsonSerializer.Deserialize<VcSyncDto>(syncDtoJson);
-        component.SuppressSync = true;
-        try
-        {
-            syncDto.ApplyToComponent(component);
-        }
-        finally
-        {
-            component.SuppressSync = false;
-        }
-    }
-}
-
-public class ShowComponentPopupEventArgs : EventArgs
-{
-    public ShowComponentPopupEventArgs(
-        Vector2I position,
-        IEnumerable<VisualComponentBase> components
-    )
-    {
-        Position = position;
-        Components = components;
-    }
-
-    public Vector2I Position { get; set; }
-    public IEnumerable<VisualComponentBase> Components { get; set; }
 }
 
 public class HoveredComponentChangeEventArgs : EventArgs

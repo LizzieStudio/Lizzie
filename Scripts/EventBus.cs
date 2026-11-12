@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Godot;
-using Lizzie.AssetManagement;
+
+namespace Lizzie;
 
 /// <summary>
 /// Global event bus for decoupled communication between components
@@ -28,10 +29,9 @@ public partial class EventBus : Node
     // Dictionary to store event subscriptions by event type
     private readonly Dictionary<Type, Delegate> _eventDelegates = new();
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
         _instance = this;
-        GD.Print("EventBus initialized");
     }
 
     #region Subscribe/Unsubscribe
@@ -120,7 +120,7 @@ public partial class EventBus : Node
     /// </summary>
     private static bool IsTargetValid(Delegate d)
     {
-        return d.Target is not GodotObject obj || GodotObject.IsInstanceValid(obj);
+        return d.Target is not GodotObject obj || IsInstanceValid(obj);
     }
 
     /// <summary>
@@ -192,38 +192,6 @@ public partial class EventBus : Node
     }
 
     #endregion
-
-    #region Utility
-
-    /// <summary>
-    /// Clear all subscriptions for a specific event type
-    /// </summary>
-    public void ClearSubscriptions<TEvent>()
-        where TEvent : IEvent
-    {
-        var eventType = typeof(TEvent);
-        _eventDelegates.Remove(eventType);
-    }
-
-    /// <summary>
-    /// Clear all event subscriptions
-    /// </summary>
-    public void ClearAllSubscriptions()
-    {
-        _eventDelegates.Clear();
-        GD.Print("All EventBus subscriptions cleared");
-    }
-
-    /// <summary>
-    /// Check if an event type has any subscribers
-    /// </summary>
-    public bool HasSubscribers<TEvent>()
-        where TEvent : IEvent
-    {
-        return _eventDelegates.ContainsKey(typeof(TEvent));
-    }
-
-    #endregion
 }
 
 /// <summary>
@@ -234,157 +202,41 @@ public interface IEvent { }
 
 #region Event Definitions
 
-// Example events - you can define your own by implementing IEvent
-
-/// <summary>
-/// Example: Event with no data
-/// </summary>
-public class GameStartedEvent : IEvent { }
-
-/// <summary>
-/// Example: Event with data
-/// </summary>
-public class TokenMovedEvent : IEvent
-{
-    public string TokenId { get; set; }
-    public Vector2 OldPosition { get; set; }
-    public Vector2 NewPosition { get; set; }
-}
-
-/// <summary>
-/// Example: Event with data
-/// </summary>
-public class DataSetChangedEvent : IEvent
-{
-    public string DataSetName { get; set; } //use ID if item deleted
-    public DataSet DataSet { get; set; }
-}
-
-/// <summary>
-/// Named template has been updated
-/// </summary>
-public class TemplateChangedEvent : IEvent
-{
-    public string TemplateName { get; set; } //use ID if item deleted
-    public Template Template { get; set; }
-}
-
-/// <summary>
-/// Named Image has been added/removed/updated
-/// </summary>
-public class ImageChangedEvent : IEvent
-{
-    public Guid ImageId { get; set; } //use ID if item deleted
-    public Asset Image { get; set; }
-}
-
-/// <summary>
-/// Example: Command executed event
-/// </summary>
-public class CommandExecutedEvent : IEvent
-{
-    public string CommandName { get; set; }
-    public bool Success { get; set; }
-}
-
-public class ProjectChangedEvent : IEvent
-{
-    public Dictionary<ProjectService.ProjectElement, string> ChangedElements { get; set; } = new();
-}
-
-public class GameStateChangedEvent : IEvent { }
-
 public class ShowTemplateEditor : IEvent
 {
-    public string TemplateName { get; set; }
+    public Ref<Template> TemplateRef { get; set; }
 }
 
 public class ShowDatasetEditor : IEvent
 {
-    public string DatasetName { get; set; }
+    public Ref<Dataset> DatasetRef { get; set; }
+
+    public Ref<DataRow> SelectedRowRef { get; set; }
 }
 
 public class ShowImageManagerEvent : IEvent
 {
-    public Guid ImageReference { get; set; }
-}
-
-public class PrototypeChangedEvent : IEvent
-{
-    public Guid PrototypeId { get; set; }
+    public Ref<ImageAsset> ImageRef { get; set; }
 }
 
 public class EditPrototypeEvent : IEvent
 {
-    public Guid PrototypeId { get; set; }
-}
-
-public class MakePrototypeUniqueEvent : IEvent
-{
-    public Guid PrototypeId { get; set; }
-}
-
-public class SyncTransformEvent : IEvent
-{
-    public VisualComponentBase Component { get; set; }
+    public Ref<Prototype> PrototypeRef { get; set; }
 }
 
 /// <summary>
-/// When a dialog is opened, this event is published to disable inputs
+/// Picks up a new component of a prototype, for the local player to place.
 /// </summary>
-public class ModalDialogOpenedEvent : IEvent { }
-
-/// <summary>
-/// When a dialog is closed, this event is published to re-enable inputs
-/// </summary>
-public class ModalDialogClosedEvent : IEvent { }
-
-public class AddComponentToSceneEvent : IEvent
-{
-    public AddComponentToSceneEvent(VisualComponentBase component)
-    {
-        Component = component;
-    }
-
-    public VisualComponentBase Component { get; set; }
-}
-
-public class AssetChangedEvent : IEvent
-{
-    public Asset Asset { get; set; }
-}
-
 public class SpawnPrototypeEvent : IEvent
 {
-    public Guid PrototypeRef { get; set; }
-    public string DataSetRow { get; set; } = string.Empty;
-    public bool StartInDragMode { get; set; }
-}
+    public Ref<Prototype> PrototypeRef { get; set; }
+    public PrototypeItemRef Item { get; set; }
 
-public class ShowAndDragComponentEvent : IEvent
-{
-    public List<Guid> ComponentList { get; set; } = new();
-}
-
-public class DeletePrototypeEvent : IEvent
-{
-    public Guid PrototypeRef { get; set; }
-}
-
-public class QueueStackingUpdateEvent : IEvent { }
-
-/// <summary>
-/// Published by a VisualComponentBase when one of its synced properties changes
-/// and the change needs to be broadcast to other multiplayer clients.
-/// </summary>
-public class ComponentPropertyChangedEvent : IEvent
-{
-    public ComponentPropertyChangedEvent(VisualComponentBase component)
-    {
-        Component = component;
-    }
-
-    public VisualComponentBase Component { get; set; }
+    /// <summary>
+    /// Spawns one component per row of the prototype's dataset, where it has one per row,
+    /// rather than a single component.
+    /// </summary>
+    public bool AllRows { get; set; }
 }
 
 public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IEvent
@@ -392,53 +244,25 @@ public class ShowComponentPreviewDialogEvent(VisualComponentBase component) : IE
     public VisualComponentBase Component { get; set; } = component;
 }
 
-public class AddToHandEvent : IEvent
+/// <summary>
+/// Starts renaming a column in the dataset editor showing it.
+/// </summary>
+public class RenameColumnEvent : IEvent
 {
-    /// <summary>
-    /// Cards to add. For Draw this is the local player's seat; for Deal each card batch
-    /// is published per seat.
-    /// </summary>
-    public IEnumerable<VcToken> Cards { get; set; } = new List<VcToken>();
-
-    /// <summary>
-    /// The seat index that should receive these cards.
-    /// Use -2 to direct to the local player's current seat.
-    /// </summary>
-    public int SeatIndex { get; set; } = -2;
-}
-
-public class ReturnFromHandEvent : IEvent
-{
-    public VcToken Card { get; set; }
+    public Ref<DataColumn> ColumnRef { get; set; }
 }
 
 /// <summary>
-/// Published whenever any player's hand changes (cards added or removed).
-/// Subscribers (HandManager, PlayerHandsPanel) should refresh their display.
+/// Starts renaming a stage in the blueprint manager.
 /// </summary>
-public class HandChangedEvent : IEvent
+public class RenameStageEvent : IEvent
 {
-    public int SeatIndex { get; set; }
+    public Ref<Stage> StageRef { get; set; }
 }
-
-public class ProjectSettingsChangedEvent : IEvent { }
 
 /// <summary>
 /// Published when the local player should be prompted to pick a player position.
 /// </summary>
 public class RequestPlayerPositionEvent : IEvent { }
-
-/// <summary>
-/// Published (host-authoritative) after a seat claim is confirmed or rejected.
-/// SeatIndex: 0-based player slot, -1 = observer, -2 = unclaimed/rejected.
-/// </summary>
-public class PlayerSeatClaimedEvent : IEvent
-{
-    public int PeerId { get; set; }
-    public int SeatIndex { get; set; }
-
-    /// <summary>True if the claim was accepted; false if the seat was already taken.</summary>
-    public bool Accepted { get; set; }
-}
 
 #endregion

@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://h000km435sy6"]
+
+[ext_resource type="Script" path="res://Scripts/VisualComponents/VcPrinted.cs" id="1_c64ht"]
+[ext_resource type="Texture2D" uid="uid://734w72cqft65" path="res://Textures/Shapes/circle.png" id="2_m0fox"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bjoi2"]
+size = Vector3(1, 0.03, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_lwpqf"]
+top_radius = 0.49
+bottom_radius = 0.49
+height = 0.95
+radial_segments = 6
+
+[node name="TokenHexFlat" type="Area3D"]
+script = ExtResource("1_c64ht")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_bjoi2")
+
+[node name="SideMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0, 0)
+mesh = SubResource("CylinderMesh_lwpqf")

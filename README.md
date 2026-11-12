@@ -22,6 +22,37 @@ dotnet tool restore
 dotnet csharpier format .
 ```
 
+### Turn off the Godot Editor's auto-format
+
+By default, Godot's script editor converts indentation to tabs, unlike C# convention. Any script you save from it will change on almost every line. To fix this, change the formatting in Editor > Editor Settings. Turn on Advanced Settings, then go to Text Editor > Behavior. Switch Indent > Type to Spaces, and turn off Files > Convert Indent on Save.
+
+![The Text Editor, Behavior page of the Editor Settings window, with Indent Type set to Spaces and Convert Indent on Save turned off.](./docs/format-settings.png)
+
+## Testing
+
+To run the tests, set the `GODOT_BIN` env var to the path of your Godot executable,
+then use the command
+
+```bash
+dotnet test
+```
+
+## Build the docs
+
+To build the docs, run
+
+```bash
+dotnet tool restore
+rm -rf docs/api docs/_site && dotnet docfx docs/docfx.json
+```
+
+To see the docs on localhost, run
+
+```bash
+dotnet tool restore
+rm -rf docs/api docs/_site && dotnet docfx docs/docfx.json --serve
+```
+
 ### Pre-commit Hook
 
 A pre-commit hook is provided to catch formatting issues before committing.

@@ -2,18 +2,30 @@ using System;
 using System.Linq;
 using Godot;
 
-public partial class PlayerHandsPanel : Panel
+namespace Lizzie;
+
+public partial class PlayerHandsPanel : PanelContainer
 {
     private Button _showHideButton;
     private bool _isHidden = false;
 
     private VBoxContainer _playerHandsContainer;
 
+    [Export]
+    private PackedScene _opponentHandScene;
+
+    [Export]
+    private Control _localPlayerHand;
+
     /// <summary>
-    /// Fired when the show/hide button is pressed.
-    /// The bool argument is <c>true</c> when the panel is now hidden, <c>false</c> when shown.
+    /// The space left between this panel and the hand panel.
     /// </summary>
-    public event EventHandler<bool> ShowHideToggled;
+    [Export(PropertyHint.Range, "0,100,1,suffix:px")]
+    public float HandGap { get; set; } = 6;
+
+    private ScrollContainer _scroll;
+
+    public event EventHandler<bool> IsShowingChanged;
 
     public override void _Ready()
     {
@@ -21,138 +33,62 @@ public partial class PlayerHandsPanel : Panel
         _showHideButton.Pressed += OnShowHideButtonPressed;
 
         _playerHandsContainer = GetNode<VBoxContainer>("%PlayerHands");
-
-        EventBus.Instance.Subscribe<HandChangedEvent>(OnHandChanged);
-        EventBus.Instance.Subscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
-        EventBus.Instance.Subscribe<ProjectChangedEvent>(OnProjectChanged);
-
-        RebuildOpponentHands();
+        _rows = new(_playerHandsContainer, AddRow);
+        _scroll = GetNode<ScrollContainer>("%Scroll");
     }
 
-    public override void _ExitTree()
+    public override void _EnterTree()
     {
-        EventBus.Instance.Unsubscribe<HandChangedEvent>(OnHandChanged);
-        EventBus.Instance.Unsubscribe<PlayerSeatClaimedEvent>(OnSeatClaimed);
-        EventBus.Instance.Unsubscribe<ProjectChangedEvent>(OnProjectChanged);
+        Atoms.R.Watch(this, Sync);
     }
-
-    // -------------------------------------------------------------------------
-    // Event handlers
-    // -------------------------------------------------------------------------
-
-    private void OnHandChanged(HandChangedEvent evt)
-    {
-        // Only need to update if it is an opponent's seat
-        if (evt.SeatIndex != PlayerHandService.LocalSeatIndex())
-            RebuildOpponentHands();
-    }
-
-    private void OnSeatClaimed(PlayerSeatClaimedEvent _) => RebuildOpponentHands();
-
-    private void OnProjectChanged(ProjectChangedEvent _) => RebuildOpponentHands();
-
-    // -------------------------------------------------------------------------
-    // Show/hide toggle
-    // -------------------------------------------------------------------------
 
     private void OnShowHideButtonPressed()
     {
         _isHidden = !_isHidden;
         _showHideButton.Text = _isHidden ? "<" : ">";
-        ShowHideToggled?.Invoke(this, _isHidden);
+        IsShowingChanged?.Invoke(this, !_isHidden);
     }
 
-    // -------------------------------------------------------------------------
-    // Dynamic opponent-hand rows
-    // -------------------------------------------------------------------------
+    private ChildList<Ref<Seat>, VBoxContainer> _rows;
 
-    private void RebuildOpponentHands()
+    private void Sync(IWatchReader R)
     {
-        if (_playerHandsContainer == null)
-            return;
+        var seats = R.Get(Seat.Live);
+        var stage = ProjectService.Instance.GameObjects.ShownStage(R);
+        var localSeat = R.LocalSeat();
 
-        // Remove existing rows
-        foreach (var child in _playerHandsContainer.GetChildren())
+        // the local player is shown in HandManager, not here
+        var others = seats.Where(s => s.Id != localSeat).ToList();
+        var rows = _rows.Show(others, s => s.Id);
+        for (int i = 0; i < others.Count; i++)
         {
-            _playerHandsContainer.RemoveChild(child);
-            child.QueueFree();
-        }
-
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
-        if (settings == null)
-            return;
-
-        int localSeat = PlayerHandService.LocalSeatIndex();
-
-        for (int seatIndex = 0; seatIndex < settings.Players.Count; seatIndex++)
-        {
-            if (seatIndex == localSeat)
-                continue; // local player is shown in HandManager, not here
-
-            var playerSettings = settings.Players[seatIndex];
-            var hand =
-                PlayerHandService.Instance?.GetHand(seatIndex) ?? System.Array.Empty<VcToken>();
-
-            // Row container for this opponent
-            var row = new VBoxContainer();
-            row.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-
-            // Player name label  e.g. "Player 2 (3 cards)"
-            var label = new Label();
-            label.Text = $"{playerSettings.Name}  ({hand.Count})";
-            label.AddThemeColorOverride(
-                "font_color",
-                new Color(
-                    playerSettings.ColorR,
-                    playerSettings.ColorG,
-                    playerSettings.ColorB,
-                    playerSettings.ColorA
-                )
-            );
-            row.AddChild(label);
-
-            // HBoxContainer holding card backs
-            var hbox = new HBoxContainer();
-            hbox.CustomMinimumSize = new Vector2(0, 50);
-            hbox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-
-            foreach (var card in hand)
-            {
-                var tex = new TextureRect();
-                tex.ExpandMode = TextureRect.ExpandModeEnum.FitWidthProportional;
-                tex.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
-                tex.Texture = GetCardBackTexture(card);
-                tex.CustomMinimumSize = new Vector2(35, 50);
-                hbox.AddChild(tex);
-            }
-
-            row.AddChild(hbox);
-            _playerHandsContainer.AddChild(row);
+            var seat = others[i];
+            var label = rows[i].GetNode<Label>("Label");
+            int cards = R.Count(ComponentPosition.ByLocation, new(stage, new InHand(seat.Id)));
+            label.Text = $"{seat.Label(seats.IndexOf(seat))}  ({cards})";
+            label.AddThemeColorOverride("font_color", seat.Color);
         }
     }
 
-    private static ImageTexture GetCardBackTexture(VcToken card)
+    private VBoxContainer AddRow(Ref<Seat> seat)
     {
-        if (card.BackTexture == null)
-            return null;
-
-        var fullImage = card.BackSprite;
-        if (fullImage == null)
-            return null;
-
-        if (fullImage.IsCompressed())
-            fullImage.Decompress();
-
-        int hframes = Math.Max(1, card.BackHframes);
-        int vframes = Math.Max(1, card.BackVframes);
-        int frameW = fullImage.GetWidth() / hframes;
-        int frameH = fullImage.GetHeight() / vframes;
-        int col = card.BackFrame % hframes;
-        int row = card.BackFrame / hframes;
-        var region = new Rect2I(col * frameW, row * frameH, frameW, frameH);
-        var frameImage = fullImage.GetRegion(region);
-        return ImageTexture.CreateFromImage(frameImage);
+        var row = _opponentHandScene.Instantiate<VBoxContainer>();
+        _playerHandsContainer.AddChild(row);
+        row.GetNode<HandRow>("HandRow").Seat = seat;
+        return row;
     }
 
-    public override void _Process(double delta) { }
+    public override void _Process(double delta)
+    {
+        // The panel switches to scrolling when it doesn't have enough room.
+        // There's no Godot layout for this. So we do it ourselves.
+        float rest = Size.Y - _scroll.Size.Y;
+        float room = _localPlayerHand.GlobalPosition.Y - HandGap - GlobalPosition.Y - rest;
+        var max = new Vector2(-1, Math.Max(room, 0));
+        if (_scroll.CustomMaximumSize == max)
+            return;
+        _scroll.CustomMaximumSize = max;
+        // The scroll's minimum size is set by the maximum, but Godot doesn't update it automatically.
+        _scroll.UpdateMinimumSize();
+    }
 }

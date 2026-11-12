@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <GdUnit4>
+    <!-- Without this, Godot opens a window for the test run. -->
+    <Parameters>--headless</Parameters>
+  </GdUnit4>
+</RunSettings>

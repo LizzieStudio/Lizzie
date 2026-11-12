@@ -19,14 +19,13 @@ script = ExtResource("11_m15dm")
 ComponentName = "Zone"
 Icon = ExtResource("10_fr6ym")
 DefinitionDialogName = "res://Scenes/ComponentPanels/zone_panel.tscn"
-PrototypeName = "res://Scenes/VisualComponents/VcZone.tscn"
 ComponentType = "Zone"
 
 [sub_resource type="Theme" id="Theme_a3w6s"]
 
 [node name="ComponentDefintion" type="Window" unique_id=1114688310]
 oversampling_override = 1.0
-title = "Component Creation"
+title = "New Component"
 initial_position = 1
 size = Vector2i(1050, 550)
 script = ExtResource("1_07jbk")

@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using Godot;
+
+namespace Lizzie;
 
 public partial class ComponentPreview : Panel
 {
@@ -26,9 +30,8 @@ public partial class ComponentPreview : Panel
         _parentNode = GetNode<Node3D>("%Node3D");
         _previewLabel = GetNode<Label>("%PreviewLabel");
         _pageControl = GetNode<PageControl>("%PageControl");
-        _pageControl.ItemSelected += ChangePage;
+        _pageControl.ItemSelected += (_, _) => Atoms.R.QueueSync(this);
         _pageControl.Visible = false;
-        _pageControl.SetItemCount(ItemCount);
 
         _spinButton = GetNode<Button>("%SpinButton");
         _spinButton.Pressed += SpinButtonOnPressed;
@@ -59,27 +62,59 @@ public partial class ComponentPreview : Panel
         _camera = _subViewport.GetCamera3D();
     }
 
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
+    }
+
+    /// <summary>
+    /// Shows the item on the current page.
+    /// </summary>
+    private void Sync(IWatchReader R)
+    {
+        if (_component == null)
+            return;
+
+        var items =
+            _fixedItems
+            ?? (
+                _component.GetPrototype(R) is { } prototype
+                    ? PrototypeItemRef.All(prototype.Parameters, R)
+                    : []
+            );
+        _pageControl.ItemCount = items.Count;
+        _pageControl.Visible = items.Count > 1;
+        _previewLabel.Visible = items.Count <= 1;
+
+        var item = items.ElementAtOrDefault(_pageControl.CurrentItem);
+        if (!Equals(item, _component.Item))
+        {
+            _component.Item = item;
+            Atoms.R.QueueSync(_component);
+        }
+    }
+
+    // The items to page through instead of the prototype's, or null.
+    private IReadOnlyList<PrototypeItemRef> _fixedItems;
+
     private void SpinButtonOnPressed()
     {
         _isSpinning = _spinButton.ButtonPressed;
     }
 
-    public override void _Input(InputEvent @event)
+    public override void _GuiInput(InputEvent e)
     {
-        if (!Visible)
-            return;
-
-        if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
+        if (e is InputEventMouseButton { Pressed: true } mouseEvent)
         {
             if (mouseEvent.ButtonIndex == MouseButton.WheelUp)
             {
                 ZoomIn();
-                GetViewport().SetInputAsHandled();
+                AcceptEvent();
             }
             else if (mouseEvent.ButtonIndex == MouseButton.WheelDown)
             {
                 ZoomOut();
-                GetViewport().SetInputAsHandled();
+                AcceptEvent();
             }
         }
     }
@@ -100,38 +135,41 @@ public partial class ComponentPreview : Panel
         {
             _component.Rotation += new Vector3(0, (float)delta, 0);
         }
-
-        if (_buildNeeded && _component != null && _component.IsNodeReady())
-        {
-            Build(_component.Parameters, _row, _textureFactory);
-            _buildNeeded = false;
-            AutoZoomComponent(_component);
-        }
     }
 
-    private bool _zoomInNeeded;
-    private bool _zoomOutNeeded;
-
-    private TextureFactory _textureFactory;
-
     private VisualComponentBase _component;
-    private bool _buildNeeded;
-    private string _row;
 
-    private bool _componentActive;
+    private bool _zoomPending;
 
     public void SetComponent(VisualComponentBase component, Vector3 rotation)
     {
-        if (_componentActive)
-        {
-            ClearComponent();
-        }
+        ClearComponent();
 
         _component = component;
-        _componentActive = true;
-        _component.Rotation = rotation;
+        _parentNode.Scale = Vector3.One;
+        _zoomPending = true;
+        component.Built += () => OnComponentBuilt(component);
         _parentNode.AddChild(_component);
-        AutoZoomComponent(_component);
+        _component.Rotation = rotation;
+        Atoms.R.QueueSync(this);
+    }
+
+    /// <summary>
+    /// Normalizes the size and zooms to fit it.
+    /// </summary>
+    private void OnComponentBuilt(VisualComponentBase component)
+    {
+        if (component != _component)
+            return;
+
+        var z = component.Aabb.GetLongestAxisSize();
+        _parentNode.Scale = z != 0 ? Vector3.One / z : Vector3.One;
+
+        if (_zoomPending)
+        {
+            _zoomPending = false;
+            AutoZoomComponent(component);
+        }
     }
 
     public VisualComponentBase GetComponent()
@@ -145,7 +183,6 @@ public partial class ComponentPreview : Panel
             return;
         _component.QueueFree();
         _component = null;
-        _componentActive = false;
     }
 
     public void SetComponentVisibility(bool visibility)
@@ -237,68 +274,51 @@ public partial class ComponentPreview : Panel
         }
     }
 
-    public void Build(Dictionary<string, object> parameters, TextureFactory textureFactory)
+    /// <summary>
+    /// Shows unsaved <paramref name="parameters"/> on the component set with <see cref="SetComponent"/>.
+    /// </summary>
+    public void Build(ComponentParameters parameters)
     {
-        Build(parameters, string.Empty, textureFactory);
-    }
+        if (_component == null)
+            return;
 
-    public void Build(
-        Dictionary<string, object> parameters,
-        string row,
-        TextureFactory textureFactory
-    )
-    {
-        if (_component != null)
+        var json = JsonSerializer.Serialize(parameters, LizzieJson.EventOptions);
+        // A new id for each change keeps the faces from showing an older draft.
+        if (json != _draftJson)
         {
-            if (string.IsNullOrWhiteSpace(row))
-            {
-                _component.Setup(parameters, textureFactory); //we are doing this because not all components override the Setup method with the row parameter, and we don't want to break those that don't
-                _component.Build();
-            }
-            else
-            {
-                _component.Setup(parameters, row, textureFactory);
-                _component.Build();
-            }
-
-            var z = _component.Aabb.GetLongestAxisSize();
-            if (z != 0)
-                _component.Scale /= z;
+            _draftJson = json;
+            _draftId = Ref<Prototype>.Create();
         }
+        _component.DraftPrototype = new Prototype { Id = _draftId, Parameters = parameters };
+        Atoms.R.QueueSync(this);
     }
 
-    private Dictionary<string, object> ShallowClone(Dictionary<string, object> d)
-    {
-        var o = new Dictionary<string, object>();
-        foreach (var kv in d)
-        {
-            o.Add(kv.Key, kv.Value);
-        }
-        return o;
-    }
+    private string _draftJson;
+    private Ref<Prototype> _draftId;
 
-    public void Build(Prototype prototype, TextureFactory textureFactory)
-    {
-        Build(prototype, string.Empty, textureFactory);
-    }
+    /// <summary>
+    /// Shows <paramref name="prototype"/>, starting on its first item.
+    /// </summary>
+    public void Build(Prototype prototype) => Spawn(prototype, null);
 
-    public void Build(Prototype prototype, string row, TextureFactory textureFactory)
-    {
-        var c = SpawnComponent(prototype, row);
-        _row = row;
-        _buildNeeded = true;
+    /// <summary>
+    /// Shows only <paramref name="item"/> of <paramref name="prototype"/>.
+    /// </summary>
+    public void Build(Prototype prototype, PrototypeItemRef item) => Spawn(prototype, [item]);
 
+    private void Spawn(Prototype prototype, IReadOnlyList<PrototypeItemRef> fixedItems)
+    {
+        var s = Utility.ComponentTypeToScenePath(
+            prototype.Type,
+            prototype.Parameters,
+            Atoms.R,
+            previewMode: true
+        );
+        var c = GD.Load<PackedScene>(s).Instantiate<VisualComponentBase>();
+        c.PrototypeRef = prototype.Id;
+        _fixedItems = fixedItems;
+        _pageControl.CurrentItem = 0;
         SetComponent(c, GetRotationVector(prototype.Type));
-        _textureFactory = textureFactory;
-    }
-
-    private VisualComponentBase SpawnComponent(Prototype prototype, string row)
-    {
-        var s = Utility.ComponentTypeToScenePath(prototype.Type, prototype.Parameters, row, true);
-        var scene = GD.Load<PackedScene>(s);
-        var c = scene.Instantiate<VisualComponentBase>();
-        c.PrototypeRef = prototype.PrototypeRef;
-        return c;
     }
 
     private Vector3 GetRotationVector(VisualComponentBase.VisualComponentType componentType)
@@ -307,8 +327,11 @@ public partial class ComponentPreview : Panel
         {
             VisualComponentBase.VisualComponentType.Cube => new Vector3(Mathf.DegToRad(-10), 0, 0),
             VisualComponentBase.VisualComponentType.Disc => new Vector3(Mathf.DegToRad(-10), 0, 0),
-            VisualComponentBase.VisualComponentType.Token => new Vector3(Mathf.DegToRad(90), 0, 0),
-            VisualComponentBase.VisualComponentType.Deck => new Vector3(Mathf.DegToRad(90), 0, 0),
+            VisualComponentBase.VisualComponentType.Printed => new Vector3(
+                Mathf.DegToRad(90),
+                0,
+                0
+            ),
             VisualComponentBase.VisualComponentType.Die => new Vector3(Mathf.DegToRad(-45), 0, 0),
             VisualComponentBase.VisualComponentType.Tray => new Vector3(Mathf.DegToRad(30), 0, 0),
             VisualComponentBase.VisualComponentType.Mesh => new Vector3(Mathf.DegToRad(-10), 0, 0),
@@ -321,57 +344,6 @@ public partial class ComponentPreview : Panel
         };
         return v;
     }
-
-    #region Multi-preview mode
-
-    private bool _multiItemMode;
-
-    public bool MultiItemMode
-    {
-        get => _multiItemMode;
-        set
-        {
-            _multiItemMode = value;
-            _previewLabel.Visible = !value;
-            _pageControl.Visible = value;
-        }
-    }
-
-    private void ChangePage(object sender, ItemSelectedEventArgs e)
-    {
-        CurrentItem = _pageControl.GetCurrentItem();
-        ItemSelected?.Invoke(this, new ItemSelectedEventArgs(CurrentItem));
-    }
-
-    private int _itemCount = 1;
-
-    public int ItemCount
-    {
-        get => _itemCount;
-        set
-        {
-            if (value < 1)
-            {
-                _itemCount = 1;
-            }
-            else
-            {
-                _itemCount = value;
-            }
-            _pageControl.SetItemCount(_itemCount);
-        }
-    }
-
-    public void SetItemLabels(IList<string> labels)
-    {
-        _pageControl.SetItemLabels(labels);
-    }
-
-    public int CurrentItem { get; set; }
-
-    public event EventHandler<ItemSelectedEventArgs> ItemSelected;
-
-    #endregion
 
     #region Viewing controls
 
@@ -387,47 +359,10 @@ public partial class ComponentPreview : Panel
 
     private bool _isSpinning;
 
-    public void SpinStart()
-    {
-        _isSpinning = true;
-        _spinButton.ButtonPressed = true;
-    }
-
     public void SpinStop()
     {
         _isSpinning = false;
         _spinButton.ButtonPressed = false;
-    }
-
-    public void ShowFace()
-    {
-        _frontView.ButtonPressed = true;
-        ShowView(0);
-    }
-
-    public void ShowBack()
-    {
-        _backView.ButtonPressed = true;
-        ShowView(180);
-    }
-
-    private void DisableFrontViewInternal(bool disable)
-    {
-        _spinButton.ButtonPressed = !disable;
-        _spinButton.Disabled = disable;
-        _frontView.Disabled = disable;
-        _backView.ButtonPressed = disable;
-        ShowBack();
-    }
-
-    public void DisableFrontView()
-    {
-        DisableFrontViewInternal(true);
-    }
-
-    public void EnableFrontView()
-    {
-        DisableFrontViewInternal(false);
     }
 
     #endregion

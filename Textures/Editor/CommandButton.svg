@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,0,-23)">
+        <g id="CommandButton" transform="matrix(1,0,0,1,-198,23)">
+            <rect x="198" y="0" width="16" height="16" style="fill:none;"/>
+            <g transform="matrix(1.010083,0,0,1.010083,197.919439,0.42449)">
+                <path d="M5.5,9C4.669,9 4,9.669 4,10.5L4,12L2,12L2,14L14,14L14,12L12,12L12,10.5C12,9.669 11.331,9 10.5,9L5.5,9Z" style="fill:rgb(142,239,151);fill-rule:nonzero;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,0.447651,0.215497)">
+                <g transform="matrix(0.734247,0,0,0.82865,87.274408,0.732144)">
+                    <path d="M157.683,6.709L155.64,6.709L155.64,0.916L166.535,0.916L166.535,6.709L164.492,6.709" style="fill:none;stroke:rgb(142,239,151);stroke-width:2.04px;"/>
+                </g>
+                <g transform="matrix(0.50623,0,0,0.50623,123.592987,1.574186)">
+                    <path d="M158.938,4.577L164.865,4.577" style="fill:none;stroke:rgb(142,239,151);stroke-width:3.16px;"/>
+                </g>
+                <g transform="matrix(0.891654,0,0,-0.891654,60.67113,14.614549)">
+                    <path d="M160.9,7.308L162.486,8.894L164.072,7.308" style="fill:none;stroke:rgb(142,239,151);stroke-width:1.79px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

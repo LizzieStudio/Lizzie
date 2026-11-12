@@ -1,0 +1,92 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Xunit;
+
+namespace Lizzie.Tests;
+
+/// <summary>
+/// One player's actions, transitions and reversals, among another player's actions they can't undo.
+/// <see cref="UndoTestBase.Actual"/> decides what each reversal writes, and after every step the player's
+/// changes in effect must be the ones <see cref="TextbookUndo{TChange}"/> says.
+/// </summary>
+public abstract class TextbookTests : UndoTestBase
+{
+    [Fact]
+    public void UndoMatchesTextbook() => Sample(UndoSessions.SinglePlayerUndos, MatchesTextbook);
+
+    [Fact]
+    public void UndoAndRedoMatchTextbook() => Sample(UndoSessions.SinglePlayer, MatchesTextbook);
+
+    private void MatchesTextbook(Op[] ops)
+    {
+        var me = UndoSessions.Me;
+        var session = new UndoSession(Actual);
+        var textbook = new TextbookUndo<SnowStamp>();
+
+        for (int step = 0; step < ops.Length; step++)
+        {
+            var op = ops[step];
+            var recorded = session.Apply(op);
+            switch (op)
+            {
+                case Op.Act act when act.Source == me:
+                    textbook.Change(recorded[0].Id);
+                    break;
+
+                case Op.Transition transition when transition.Source == me:
+                    textbook.Change(recorded[^1].Id);
+                    break;
+
+                case Op.Reversal reversal:
+                    bool moved = reversal.Redo ? textbook.Redo() : textbook.Undo();
+                    bool reversed = recorded.Count > 0;
+                    if (moved != reversed)
+                        Fail(
+                            session,
+                            step,
+                            op,
+                            $"the textbook {(moved ? "moves" : "stays put")}, "
+                                + $"but {Actual.Name} {(reversed ? "wrote a reversal" : "wrote nothing")}"
+                        );
+                    break;
+            }
+
+            var inEffect = session
+                .Timeline.Values.Where(e =>
+                    e.Undo == null
+                    && e.Id.Source == me
+                    && NaiveUndo.Commits(e)
+                    && !Actual.IsUndone(session.Timeline, e)
+                )
+                .Select(e => e.Id)
+                .ToHashSet();
+            if (!inEffect.SetEquals(textbook.State))
+                Fail(
+                    session,
+                    step,
+                    op,
+                    $"the textbook has [{Show(session, textbook.State)}] in effect, "
+                        + $"{Actual.Name} has [{Show(session, inEffect)}]"
+                );
+        }
+    }
+
+    private static string Show(UndoSession session, IEnumerable<SnowStamp> actions) =>
+        string.Join(", ", actions.Order().Select(session.Name));
+
+    private static void Fail(UndoSession session, int step, Op op, string message) =>
+        Assert.Fail($"step {step}, {op}: {message}\nlog:\n{session.Dump()}");
+}
+
+/// <summary>The naive model against the textbook one, so each model checks the other.</summary>
+public sealed class NaiveMatchesTextbook : TextbookTests
+{
+    protected override IUndoApi Actual { get; } = new NaiveUndo();
+}
+
+/// <summary>The game's implementation against the textbook model.</summary>
+public sealed class CurrentMatchesTextbook : TextbookTests
+{
+    protected override IUndoApi Actual { get; } = new CurrentUndo();
+}

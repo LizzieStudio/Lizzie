@@ -1,6 +1,8 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
+
+namespace Lizzie;
 
 /// <summary>
 /// Definition dialog for a <see cref="VcZone"/>. Edits footprint size and the per-player
@@ -8,10 +10,6 @@ using Godot;
 /// </summary>
 public partial class ZonePanelDialogResult : ComponentPanelDialogResult
 {
-    private const int OptDefault = 0;
-    private const int OptIncluded = 1;
-    private const int OptExcluded = 2;
-
     private LineEdit _nameInput;
     private LineEdit _widthInput;
     private LineEdit _depthInput;
@@ -19,13 +17,16 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
     private CheckBox _hiddenWhenExcluded;
     private VBoxContainer _seatList;
 
-    // seatIndex -> the per-seat option button
-    private readonly Dictionary<int, OptionButton> _seatOptions = new();
+    private readonly List<(Label Label, OptionButton Option)> _seatRows = new();
+
+    // The seat each row shows, in order.
+    private readonly List<Ref<Seat>> _seats = new();
+
+    // Every seat's rule, removed seats included, so undoing a seat's removal brings back its rule.
+    private WeakMap<Ref<Seat>, ZoneAccess> _access = WeakMap<Ref<Seat>, ZoneAccess>.Empty;
 
     public override void _Ready()
     {
-        ComponentType = VisualComponentBase.VisualComponentType.Zone;
-
         _nameInput = GetNode<LineEdit>("%ItemName");
         _widthInput = GetNode<LineEdit>("%Width");
         _depthInput = GetNode<LineEdit>("%Depth");
@@ -34,132 +35,111 @@ public partial class ZonePanelDialogResult : ComponentPanelDialogResult
         _seatList = GetNode<VBoxContainer>("%SeatList");
     }
 
-    public override void Activate()
+    public override void _EnterTree()
     {
-        RebuildSeatList();
+        Atoms.R.Watch(this, Sync);
     }
 
-    private void RebuildSeatList()
+    private void Sync(IWatchReader R)
     {
-        foreach (var child in _seatList.GetChildren())
-            child.QueueFree();
-        _seatOptions.Clear();
+        var seats = R.Get(Seat.Live);
 
-        var players = (CurrentProject ?? ProjectService.Instance.CurrentProject)
-            ?.GameSettings
-            ?.Players;
-        if (players == null)
-            return;
-
-        for (int i = 0; i < players.Count; i++)
+        while (_seatRows.Count > seats.Count)
         {
-            var row = new HBoxContainer();
-
-            var label = new Label
-            {
-                Text = string.IsNullOrEmpty(players[i].Name) ? $"Seat {i + 1}" : players[i].Name,
-                CustomMinimumSize = new Vector2(150, 0),
-                TooltipText = "Sets the permissions for this seat.",
-                MouseFilter = Control.MouseFilterEnum.Pass,
-            };
-            row.AddChild(label);
-
-            var option = new OptionButton { TooltipText = "Sets the permissions for this seat." };
-            option.AddItem("Default", OptDefault);
-            option.SetItemTooltip(OptDefault, "Follow the zone's 'Allow by default' setting.");
-            option.AddItem("Allowed", OptIncluded);
-            option.SetItemTooltip(OptIncluded, "This player can see and move the zone's contents.");
-            option.AddItem("Block", OptExcluded);
-            option.SetItemTooltip(
-                OptExcluded,
-                "This player cannot move the zone's contents.\nThey can still see the contents unless 'Hide contents' is checked."
-            );
-            row.AddChild(option);
-
-            _seatList.AddChild(row);
-            _seatOptions[i] = option;
+            _seatRows[^1].Label.GetParent().QueueFree();
+            _seatRows.RemoveAt(_seatRows.Count - 1);
         }
+
+        while (_seatRows.Count < seats.Count)
+            _seatRows.Add(AddSeatRow(_seatRows.Count));
+
+        _seats.Clear();
+        _seats.AddRange(seats.Select(s => s.Id));
+        for (int i = 0; i < seats.Count; i++)
+            _seatRows[i].Label.Text = seats[i].Label(i);
+
+        ShowSeatChoices();
     }
 
-    public override Dictionary<string, object> GetParams()
+    private (Label, OptionButton) AddSeatRow(int index)
     {
-        var d = new Dictionary<string, object>
+        var row = new HBoxContainer();
+
+        var label = new Label
         {
-            { "ComponentName", _nameInput.Text },
-            { VcZone.WidthKey, ParamToFloat(_widthInput.Text) },
-            { VcZone.DepthKey, ParamToFloat(_depthInput.Text) },
-            { VcZone.DefaultIncludedKey, _defaultIncluded.ButtonPressed },
-            { VcZone.HiddenWhenExcludedKey, _hiddenWhenExcluded.ButtonPressed },
+            CustomMinimumSize = new Vector2(150, 0),
+            TooltipText = "Sets the permissions for this seat.",
+            MouseFilter = Control.MouseFilterEnum.Pass,
         };
+        row.AddChild(label);
 
-        // List<object> (not int[]) so the values survive the JSON round-trip as a plain array.
-        var included = new List<object>();
-        var excluded = new List<object>();
-        foreach (var kv in _seatOptions)
-        {
-            switch (kv.Value.GetSelectedId())
-            {
-                case OptIncluded:
-                    included.Add(kv.Key);
-                    break;
-                case OptExcluded:
-                    excluded.Add(kv.Key);
-                    break;
-            }
-        }
+        var option = new OptionButton { TooltipText = "Sets the permissions for this seat." };
+        option.AddItem("Default", (int)ZoneAccess.Default);
+        option.SetItemTooltip(
+            (int)ZoneAccess.Default,
+            "Follow the zone's 'Allow by default' setting."
+        );
+        option.AddItem("Allowed", (int)ZoneAccess.Allowed);
+        option.SetItemTooltip(
+            (int)ZoneAccess.Allowed,
+            "This player can see and move the zone's contents."
+        );
+        option.AddItem("Block", (int)ZoneAccess.Blocked);
+        option.SetItemTooltip(
+            (int)ZoneAccess.Blocked,
+            "This player cannot move the zone's contents.\nThey can still see the contents unless 'Hide contents' is checked."
+        );
+        row.AddChild(option);
 
-        d.Add(VcZone.IncludedSeatsKey, included);
-        d.Add(VcZone.ExcludedSeatsKey, excluded);
+        _seatList.AddChild(row);
+        option.ItemSelected += item =>
+            _access = _access.With(_seats[index], (ZoneAccess)option.GetItemId((int)item));
 
-        return d;
+        return (label, option);
     }
 
-    public override void DisplayPrototype(Guid prototypeId)
+    private void ShowSeatChoices()
     {
-        DisplayPrototype(ProjectService.Instance.CurrentProject.Prototypes[prototypeId]);
+        for (int i = 0; i < _seatRows.Count; i++)
+            _seatRows[i].Option.Select((int)_access.GetValueOrDefault(_seats[i]));
+    }
+
+    public override string PrototypeName => _nameInput.Text;
+
+    public override ComponentParameters GetParams()
+    {
+        return new ZoneParameters
+        {
+            Width = ParamToFloat(_widthInput.Text),
+            Depth = ParamToFloat(_depthInput.Text),
+            DefaultIncluded = _defaultIncluded.ButtonPressed,
+            HiddenWhenExcluded = _hiddenWhenExcluded.ButtonPressed,
+            Seats = _access,
+        };
     }
 
     public override void DisplayPrototype(Prototype prototype)
     {
-        RebuildSeatList();
-
-        var p = prototype.Parameters;
+        var p = (ZoneParameters)prototype.Parameters;
         _nameInput.Text = prototype.Name;
-        _widthInput.Text = JsonUtilities.TryGetString(p, VcZone.WidthKey, "2");
-        _depthInput.Text = JsonUtilities.TryGetString(p, VcZone.DepthKey, "2");
-        _defaultIncluded.ButtonPressed = JsonUtilities.TryGetBool(p, VcZone.DefaultIncludedKey);
-        _hiddenWhenExcluded.ButtonPressed = JsonUtilities.TryGetBool(
-            p,
-            VcZone.HiddenWhenExcludedKey
-        );
+        _widthInput.Text = p.Width.ToString();
+        _depthInput.Text = p.Depth.ToString();
+        _defaultIncluded.ButtonPressed = p.DefaultIncluded;
+        _hiddenWhenExcluded.ButtonPressed = p.HiddenWhenExcluded;
 
-        var included = VcZone.SeatSetFor(p, VcZone.IncludedSeatsKey);
-        var excluded = VcZone.SeatSetFor(p, VcZone.ExcludedSeatsKey);
+        _access = p.Seats;
 
-        foreach (var kv in _seatOptions)
-        {
-            if (excluded.Contains(kv.Key))
-                kv.Value.Select(OptExcluded);
-            else if (included.Contains(kv.Key))
-                kv.Value.Select(OptIncluded);
-            else
-                kv.Value.Select(OptDefault);
-        }
+        ShowSeatChoices();
     }
 
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
+    public override List<string> ValidateParameters(ComponentParameters parameters)
     {
         var ret = new List<string>();
+        var p = parameters as ZoneParameters;
 
-        if (
-            !parameters.ContainsKey("ComponentName")
-            || string.IsNullOrEmpty(parameters["ComponentName"].ToString())
-        )
-            ret.Add("Name may not be blank");
-
-        if (Utility.GetParam<float>(parameters, VcZone.WidthKey) <= 0)
+        if ((p?.Width ?? 0) <= 0)
             ret.Add("Width must be > 0");
-        if (Utility.GetParam<float>(parameters, VcZone.DepthKey) <= 0)
+        if ((p?.Depth ?? 0) <= 0)
             ret.Add("Depth must be > 0");
 
         return ret;

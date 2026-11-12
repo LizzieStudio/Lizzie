@@ -1,0 +1,641 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using CsCheck;
+using Lizzie.Replication.Machinery;
+
+namespace Lizzie.Tests;
+
+/// <summary>An atom for sessions to write. Faces are unique, so every write can be told apart.</summary>
+public sealed record TestAtom : Atom
+{
+    public static readonly Identity<TestAtom, Ref<TestAtom>> ById = new(r => r.Id);
+
+    public static readonly All<TestAtom> All = new();
+
+    public required Ref<TestAtom> Id { get; init; }
+
+    public int Face { get; init; }
+}
+
+/// <summary>A singleton atom for sessions to write, like the project settings.</summary>
+public sealed record TestValue : Atom
+{
+    public string Text { get; init; }
+}
+
+/// <summary>Whose changes a scope takes.</summary>
+public enum ScopeKind
+{
+    Mine,
+    Others,
+    Anyone,
+}
+
+/// <summary>
+/// An undo scope, as a view or command would give one: whose changes it takes, and which atoms,
+/// by the bits of <paramref name="Mask"/>. A mask of 0 takes every atom, the singleton included.
+/// </summary>
+public sealed record TestScope(ScopeKind Kind, int Mask)
+{
+    public TimelineUndo.Scope For(Source me) =>
+        (author, action) =>
+            Kind switch
+            {
+                ScopeKind.Mine => author == me,
+                ScopeKind.Others => author != me,
+                _ => true,
+            }
+            && (
+                action.Writes.Any(atom => Mask == 0 || atom is TestAtom r && Masked(r.Id))
+                || action.Unsets.Any(unset =>
+                    Mask == 0 || unset.Key is Ref<TestAtom> id && Masked(id)
+                )
+            );
+
+    private bool Masked(Ref<TestAtom> id) => (Mask & (1 << (id.Tag - 1))) != 0;
+
+    public override string ToString() => Mask == 0 ? $"{Kind}" : $"{Kind} atoms {Mask}";
+}
+
+/// <summary>Something a player does, played out by <see cref="UndoSession"/>.</summary>
+public abstract record Op
+{
+    /// <summary>
+    /// An action writing atoms <paramref name="First"/> and <paramref name="Second"/> (0 for none)
+    /// and <paramref name="Values"/> writes to the singleton.
+    /// An atom's write is a draft of whatever transitions the value it replaces is a draft of, as one made with <c>with</c> is.
+    /// </summary>
+    public sealed record Act(Source Source, int First, int Second, int Values) : Op;
+
+    /// <summary>Starts a transition, inside any the player has open.</summary>
+    public sealed record Start(Source Source, int Atom) : Op;
+
+    /// <summary>
+    /// Ends the player's newest open transition, or their oldest for <paramref name="Outer"/>,
+    /// with a drop writing <paramref name="Atom"/>, or cancels it for 0.
+    /// </summary>
+    public sealed record End(Source Source, int Atom, bool Outer = false) : Op;
+
+    /// <summary>Unsets <paramref name="Atom"/>, or every atom for 0.</summary>
+    public sealed record Reset(Source Source, int Atom) : Op;
+
+    /// <summary>Reversals Undo or Redo. The expected implementation decides the flag.</summary>
+    public sealed record Reversal(Source Source, bool Redo, TestScope Scope) : Op;
+
+    /// <summary>Cancels the player's newest open transition, if one is going.</summary>
+    public sealed record Cancel(Source Source) : Op;
+
+    /// <summary>
+    /// A whole transition that's canceled: its first event, <paramref name="Moves"/> more, and the cancel,
+    /// all but the cancel writing <paramref name="Atom"/>. It's inside any the player has open.
+    /// </summary>
+    public sealed record CanceledTransition(Source Source, int Atom, int Moves) : Op;
+
+    /// <summary>The player leaves, and the host cancels their open transitions.</summary>
+    public sealed record Leave(Source Source) : Op;
+
+    /// <summary>
+    /// A reversal no Undo or Redo would write, reversing whatever <paramref name="Pick"/> lands on:
+    /// an event, or a missing id.
+    /// </summary>
+    public sealed record RawFlag(Source Source, int Pick, bool ByRedo) : Op;
+
+    /// <summary>
+    /// A whole transition: its first event, <paramref name="Moves"/> more, and the drop that closes it,
+    /// all writing <paramref name="Atom"/>. It's inside any the player has open.
+    /// </summary>
+    public sealed record Transition(Source Source, int Atom, int Moves) : Op;
+
+    /// <summary>
+    /// An action that arrives late, with an id <paramref name="Back"/> steps older than the newest.
+    /// Its write is made from what the atom held before it, as <see cref="Act"/>'s are.
+    /// </summary>
+    public sealed record Late(Source Source, int Atom, int Back) : Op;
+
+    /// <summary>
+    /// Reversals Undo or Redo before other players' events among the newest <paramref name="Back"/>
+    /// have arrived, so the reversal is decided without them, as when players press at the same time.
+    /// It sorts after everything the player has seen, and after the oldest <paramref name="After"/>
+    /// of the events they haven't, as when those players' clocks were behind.
+    /// </summary>
+    public sealed record Concurrent(Source Source, bool Redo, TestScope Scope, int Back, int After)
+        : Op;
+}
+
+/// <summary>
+/// A timeline built by playing out operations, the way the game would build it.
+/// </summary>
+public sealed class UndoSession
+{
+    public const int AtomCount = 4;
+    public static readonly Source[] Sources = [new(1), new(2), new(3), new(4)];
+
+    public readonly Timeline Timeline = new();
+
+    // decides undos, redos and which transitions a leaving player left open
+    private readonly IUndoApi _driver;
+
+    // each player's open transitions, oldest first
+    private readonly Dictionary<Source, List<Transition>> _open = new();
+
+    // Events take even clock values, so late events can take the odd ones between.
+    private long _clock;
+
+    // the events the operation being applied has recorded
+    private readonly List<TimelineEvent> _recorded = new();
+
+    public UndoSession(IUndoApi driver) => _driver = driver;
+
+    /// <summary>
+    /// Plays out <paramref name="ops"/>, with <paramref name="driver"/> deciding what reversals and departures write.
+    /// <paramref name="before"/> sees the session before each operation.
+    /// </summary>
+    public static UndoSession Play(
+        IEnumerable<Op> ops,
+        IUndoApi driver,
+        Action<UndoSession, Op> before = null
+    )
+    {
+        var session = new UndoSession(driver);
+        foreach (var op in ops)
+        {
+            before?.Invoke(session, op);
+            session.Apply(op);
+        }
+        return session;
+    }
+
+    /// <summary>Plays out one operation, and returns the events it recorded, oldest first.</summary>
+    public IReadOnlyList<TimelineEvent> Apply(Op op)
+    {
+        _recorded.Clear();
+        switch (op)
+        {
+            case Op.Act a:
+                Record(new TimelineEvent { Id = NextId(a.Source) }, a.First, a.Second, a.Values);
+                break;
+
+            case Op.Reset r:
+                Record(
+                    new TimelineEvent
+                    {
+                        Id = NextId(r.Source),
+                        Unsets =
+                        [
+                            r.Atom == 0
+                                ? new Unset(TestAtom.All, true)
+                                : new Unset(TestAtom.ById, new Ref<TestAtom>(r.Atom)),
+                        ],
+                    }
+                );
+                break;
+
+            case Op.Transition g:
+                var head = Start(g.Source, g.Atom, g.Moves);
+                Record(new TimelineEvent { Id = NextId(g.Source), Ends = head }, g.Atom);
+                break;
+
+            case Op.CanceledTransition c:
+                Record(CancelOnly(Start(c.Source, c.Atom, c.Moves), c.Source));
+                break;
+
+            case Op.Cancel c when Take(c.Source, outer: false) is { } canceled:
+                Record(CancelOnly(canceled, c.Source));
+                break;
+
+            case Op.Start s:
+                var started = Start(s.Source, s.Atom, 0);
+                if (!_open.TryGetValue(s.Source, out var open))
+                    _open[s.Source] = open = new();
+                open.Add(started);
+                break;
+
+            case Op.End { Atom: 0 } e when Take(e.Source, e.Outer) is { } canceledByEnd:
+                Record(CancelOnly(canceledByEnd, e.Source));
+                break;
+
+            case Op.End e when Take(e.Source, e.Outer) is { } ended:
+                Record(new TimelineEvent { Id = NextId(e.Source), Ends = ended }, e.Atom);
+                break;
+
+            case Op.Reversal p:
+                var flag = Decide(Timeline, p.Source, p.Redo, p.Scope);
+                if (flag != null)
+                    Record(new TimelineEvent { Id = NextId(p.Source), Undo = flag });
+                break;
+
+            case Op.Concurrent c:
+                var unseen = Timeline
+                    .Keys.Skip(Math.Max(0, Timeline.Count - c.Back))
+                    .Where(key => key.Source != c.Source)
+                    .ToList();
+                var seen = new Timeline();
+                foreach (var (key, known) in Timeline)
+                    if (!unseen.Contains(key))
+                        seen.Add(key, known);
+
+                var concurrent = Decide(seen, c.Source, c.Redo, c.Scope);
+                if (concurrent == null)
+                    break;
+                // HLC: newer than everything the player has seen, and than the oldest After they haven't.
+                var after = seen.Count > 0 ? seen.GetAt(seen.Count - 1).Key : SnowStamp.Empty;
+                foreach (var key in unseen.Take(c.After))
+                    if (key.CompareTo(after) > 0)
+                        after = key;
+                var reversalId = Id(after.LogicClock + 1, c.Source);
+                if (Timeline.ContainsKey(reversalId))
+                    break;
+                Record(new TimelineEvent { Id = reversalId, Undo = concurrent });
+                // Everything after is newer, as the player's clock has moved on too.
+                while (_clock < reversalId.LogicClock)
+                    _clock += 2;
+                break;
+
+            case Op.Leave l when l.Source != Source.Host:
+                foreach (var left in _driver.OpenTransitions(Timeline, l.Source))
+                    Record(CancelOnly(left, Source.Host));
+                _open.Remove(l.Source);
+                break;
+
+            case Op.RawFlag r when Timeline.Count > 0:
+                var picked = Timeline.GetAt(r.Pick / 4 % Timeline.Count).Value;
+                var reverses =
+                    r.Pick % 4 == 1
+                        ? Id(_clock + 1, new Source(7)) // never used: sources are 0 to 4
+                        : picked.Id;
+                Record(
+                    new TimelineEvent
+                    {
+                        Id = NextId(r.Source),
+                        Undo = new UndoFlag { Reverses = reverses, ByRedo = r.ByRedo },
+                    }
+                );
+                break;
+
+            case Op.Late l when 2 * l.Back - 1 < _clock:
+                var id = Id(_clock - (2 * l.Back - 1), l.Source);
+                if (Timeline.ContainsKey(id))
+                    break;
+                Record(new TimelineEvent { Id = id }, l.Atom);
+                break;
+        }
+        return _recorded.ToArray();
+    }
+
+    private UndoFlag Decide(Timeline timeline, Source source, bool redo, TestScope scope) =>
+        redo
+            ? _driver.Redo(timeline, source, scope.For(source))
+            : _driver.Undo(timeline, source, scope.For(source));
+
+    /// <summary>Takes the player's newest open transition, or their oldest for <paramref name="outer"/>, if they have one.</summary>
+    private Transition? Take(Source source, bool outer)
+    {
+        if (!_open.TryGetValue(source, out var open) || open.Count == 0)
+            return null;
+        int at = outer ? 0 : open.Count - 1;
+        var transition = open[at];
+        open.RemoveAt(at);
+        return transition;
+    }
+
+    /// <summary>
+    /// Records a transition's first event and <paramref name="moves"/> more, all drafting <paramref name="atom"/>.
+    /// </summary>
+    private Transition Start(Source source, int atom, int moves)
+    {
+        var first = NextId(source);
+        var transition = new Transition(first);
+        Record(new TimelineEvent { Id = first }, atom, drafting: transition);
+        for (int i = 0; i < moves; i++)
+            Record(new TimelineEvent { Id = NextId(source) }, atom, drafting: transition);
+        return transition;
+    }
+
+    private TimelineEvent CancelOnly(Transition transition, Source source) =>
+        new() { Id = NextId(source), Ends = transition };
+
+    private SnowStamp NextId(Source source)
+    {
+        _clock += 2;
+        return Id(_clock, source);
+    }
+
+    private static SnowStamp Id(long clock, Source source) => new(clock, source);
+
+    /// <summary>Raised for each event as it's recorded.</summary>
+    public event Action<TimelineEvent> Recorded;
+
+    /// <summary>
+    /// Records the event in id order, with the given atoms and values written.
+    /// An atom's write is made from what the atom held before, as the game makes it:
+    /// it's a draft of the same transitions, and of <paramref name="drafting"/> if given,
+    /// except for the one the event ends.
+    /// Every write gets a unique face or value, so the one that wins can be told apart.
+    /// </summary>
+    private void Record(
+        TimelineEvent e,
+        int first = 0,
+        int second = 0,
+        int values = 0,
+        Transition drafting = default
+    )
+    {
+        var atoms = new List<Atom>();
+        foreach (var atom in new[] { first, second }.Where(r => r != 0))
+        {
+            var held = HeldTransitions(e, new(atom));
+            atoms.Add(
+                new TestAtom
+                {
+                    Id = new(atom),
+                    Face = (int)(long)e.Id * 10 + atoms.Count,
+                    Transitions =
+                        drafting != Transition.None ? held.With(drafting) : held.Without(e.Ends),
+                }
+            );
+        }
+        for (int i = 0; i < values; i++)
+            atoms.Add(new TestValue { Text = $"{e.Id}.{atoms.Count}" });
+        if (atoms.Count > 0)
+            e.Writes = atoms.ToArray();
+
+        int at = Timeline.Count;
+        while (at > 0 && Timeline.GetAt(at - 1).Key.CompareTo(e.Id) > 0)
+            at--;
+        Timeline.Insert(at, e.Id, e);
+        _recorded.Add(e);
+        Recorded?.Invoke(e);
+    }
+
+    /// <summary>
+    /// The transitions that what <paramref name="atom"/> held before <paramref name="e"/> is a draft of,
+    /// which a write made from it with <c>with</c> keeps.
+    /// </summary>
+    private TransitionSet HeldTransitions(TimelineEvent e, Ref<TestAtom> atom)
+    {
+        var before = new Timeline();
+        foreach (var (key, earlier) in Timeline)
+            if (key.CompareTo(e.Id) < 0)
+                before.Add(key, earlier);
+        return NaiveUndo.Holds(before, atom)?.Transitions ?? default;
+    }
+
+    #region Descriptions for failures
+
+    /// <summary>An event's name in <see cref="Dump"/>: its place in the timeline.</summary>
+    public string Name(SnowStamp id) => Timeline.IndexOf(id) is var i and >= 0 ? $"#{i}" : $"?{id}";
+
+    public string Describe(UndoFlag flag) =>
+        flag == null
+            ? "nothing"
+            : $"{(flag.ByRedo ? "redo" : "undo")} reversing {Name(flag.Reverses)}"
+                + (
+                    flag.Also is { Length: > 0 } also
+                        ? $" and {string.Join(", ", also.Order().Select(Name))}"
+                        : ""
+                );
+
+    /// <summary>A write of an atom, with its face and the transitions it's a draft of.</summary>
+    public string Describe(TestAtom r) =>
+        r == null ? "nothing"
+        : r.Transitions.IsEmpty ? $"r{r.Id}={r.Face}"
+        : $"r{r.Id}={r.Face} draft of {string.Join(", ", r.Transitions.Select(t => Name(t.Start)))}";
+
+    /// <summary>The timeline, one event per line, oldest first.</summary>
+    public string Dump() =>
+        string.Join(
+            "\n",
+            Timeline.Values.Select(e =>
+            {
+                string end = e.Ends == Transition.None ? "" : $" ends {Name(e.Ends.Start)}";
+                string what = e.Undo is { } f
+                    ? Describe(f)
+                    : string.Join(
+                        " ",
+                        e.Writes.Select(atom =>
+                                atom switch
+                                {
+                                    TestAtom r => Describe(r),
+                                    TestValue v => $"v={v.Text}",
+                                    _ => atom.GetType().Name,
+                                }
+                            )
+                            .Concat(
+                                e.Unsets.Select(u =>
+                                    u.Key is Ref<TestAtom> id ? $"unset r{id}" : "unset all"
+                                )
+                            )
+                    );
+                return $"  {Name(e.Id)} s{e.Id.Source}{end}: {what}";
+            })
+        );
+
+    #endregion
+}
+
+/// <summary>Generators for random sessions.</summary>
+public static class UndoSessions
+{
+    /// <summary>Any of the four players.</summary>
+    public static readonly Gen<Source> AnySource = Gen.Int[1, 4].Select(s => new Source(s));
+    private static readonly Gen<int> Atom = Gen.Int[1, UndoSession.AtomCount];
+    private static readonly Gen<int> MaybeAtom = Gen.Int[0, UndoSession.AtomCount];
+
+    public static readonly Gen<TestScope> Scope = Gen.Select(
+        Gen.OneOfConst(ScopeKind.Mine, ScopeKind.Others, ScopeKind.Anyone),
+        Gen.Int[0, 15],
+        (kind, mask) => new TestScope(kind, mask)
+    );
+
+    private static readonly Gen<Op> Acts = Gen.Select(
+        AnySource,
+        MaybeAtom,
+        MaybeAtom,
+        Gen.Int[0, 2],
+        (s, first, second, values) => (Op)new Op.Act(s, first, second, values)
+    );
+
+    private static readonly Gen<Op> Starts = Gen.Select(
+        AnySource,
+        Atom,
+        (s, atom) => (Op)new Op.Start(s, atom)
+    );
+
+    private static readonly Gen<Op> Ends = Gen.Select(
+        AnySource,
+        MaybeAtom,
+        Gen.Bool,
+        (s, atom, outer) => (Op)new Op.End(s, atom, outer)
+    );
+
+    private static readonly Gen<Op> Reversals = Gen.Select(
+        AnySource,
+        Gen.Bool,
+        Scope,
+        (s, redo, scope) => (Op)new Op.Reversal(s, redo, scope)
+    );
+
+    private static readonly Gen<Op> Leaves = Gen.Int[2, 4]
+        .Select(s => (Op)new Op.Leave(new Source(s)));
+
+    private static readonly Gen<Op> Resets = Gen.Select(
+        AnySource,
+        MaybeAtom,
+        (s, atom) => (Op)new Op.Reset(s, atom)
+    );
+
+    private static readonly Gen<Op> Cancels = AnySource.Select(s => (Op)new Op.Cancel(s));
+
+    private static readonly Gen<Op> CanceledTransitions = Gen.Select(
+        AnySource,
+        Atom,
+        Gen.Int[0, 2],
+        (s, atom, moves) => (Op)new Op.CanceledTransition(s, atom, moves)
+    );
+
+    private static readonly Gen<Op> RawFlags = Gen.Select(
+        AnySource,
+        Gen.Int[0, 1000],
+        Gen.Bool,
+        (s, pick, byRedo) => (Op)new Op.RawFlag(s, pick, byRedo)
+    );
+
+    private static readonly Gen<Op> Transitions = Gen.Select(
+        AnySource,
+        Atom,
+        Gen.Int[0, 2],
+        (s, atom, moves) => (Op)new Op.Transition(s, atom, moves)
+    );
+
+    private static readonly Gen<Op> Lates = Gen.Select(
+        AnySource,
+        Atom,
+        Gen.Int[1, 5],
+        (s, atom, back) => (Op)new Op.Late(s, atom, back)
+    );
+
+    private static readonly Gen<Op> Concurrents = Gen.Select(
+        AnySource,
+        Gen.Bool,
+        Scope,
+        Gen.Int[1, 4],
+        Gen.Int[0, 4],
+        (s, redo, scope, back, after) => (Op)new Op.Concurrent(s, redo, scope, back, after)
+    );
+
+    /// <summary>Sessions with everything players can do, and reversals no Undo or Redo would write.</summary>
+    public static readonly Gen<Op[]> All = Gen.Frequency(
+        (30, Acts),
+        (5, Transitions),
+        (10, Starts),
+        (10, Ends),
+        (4, Cancels),
+        (3, CanceledTransitions),
+        (30, Reversals),
+        (10, Concurrents),
+        (3, Leaves),
+        (6, Resets),
+        (5, RawFlags),
+        (7, Lates)
+    ).Array[0, 30];
+
+    private static readonly Gen<Source> Players = Gen.Int[1, 3].Select(s => new Source(s));
+    private static readonly Gen<TestScope> WholeScope = Gen.OneOfConst(
+        new TestScope(ScopeKind.Mine, 0),
+        new TestScope(ScopeKind.Others, 0),
+        new TestScope(ScopeKind.Anyone, 0)
+    );
+
+    /// <summary>
+    /// Three players acting and pressing, often at the same time, on few atoms,
+    /// so their reversals often land on the same things.
+    /// </summary>
+    public static readonly Gen<Op[]> Simultaneous = Gen.Frequency(
+        (20, Gen.Select(Players, Gen.Int[1, 2], (s, r) => (Op)new Op.Act(s, r, 0, 0))),
+        (
+            30,
+            Gen.Select(
+                Players,
+                Gen.Bool,
+                WholeScope,
+                (s, redo, scope) => (Op)new Op.Reversal(s, redo, scope)
+            )
+        ),
+        (
+            30,
+            Gen.Select(
+                Players,
+                Gen.Bool,
+                WholeScope,
+                Gen.Int[1, 3],
+                Gen.Int[0, 3],
+                (s, redo, scope, back, after) => (Op)new Op.Concurrent(s, redo, scope, back, after)
+            )
+        )
+    ).Array[0, 16];
+
+    /// <summary>Sessions that never undo anything.</summary>
+    public static readonly Gen<Op[]> WithoutFlags = Gen.Frequency(
+        (30, Acts),
+        (10, Starts),
+        (10, Ends),
+        (7, Lates)
+    ).Array[0, 30];
+
+    /// <summary>Sessions without transitions.</summary>
+    public static readonly Gen<Op[]> WithoutTransitions = Gen.Frequency(
+        (30, Acts),
+        (30, Reversals),
+        (7, Lates)
+    ).Array[0, 30];
+
+    /// <summary>The player single-player sessions are about.</summary>
+    public static readonly Source Me = new(1);
+
+    private static readonly Gen<Op> MyActs = Atom.Select(r => (Op)new Op.Act(Me, r, 0, 0));
+    private static readonly Gen<Op> OthersActs = Atom.Select(r =>
+        (Op)new Op.Act(new Source(2), r, 0, 0)
+    );
+    private static readonly Gen<Op> MyTransitions = Gen.Select(
+        Atom,
+        Gen.Int[0, 2],
+        (atom, moves) => (Op)new Op.Transition(Me, atom, moves)
+    );
+    private static readonly Gen<Op> MyCanceledTransitions = Gen.Select(
+        Atom,
+        Gen.Int[0, 2],
+        (atom, moves) => (Op)new Op.CanceledTransition(Me, atom, moves)
+    );
+    private static readonly Gen<Op> MyUndos = Gen.Const(
+        (Op)new Op.Reversal(Me, false, new TestScope(ScopeKind.Mine, 0))
+    );
+    private static readonly Gen<Op> MyRedos = Gen.Const(
+        (Op)new Op.Reversal(Me, true, new TestScope(ScopeKind.Mine, 0))
+    );
+
+    /// <summary>
+    /// One player's actions, transitions (some canceled) and Undo reversals in their own scope,
+    /// among another player's actions they can't undo.
+    /// </summary>
+    public static readonly Gen<Op[]> SinglePlayerUndos = Gen.Frequency(
+        (30, MyActs),
+        (10, MyTransitions),
+        (5, MyCanceledTransitions),
+        (10, OthersActs),
+        (30, MyUndos)
+    ).Array[0, 40];
+
+    /// <summary>The same, with Redo reversals too.</summary>
+    public static readonly Gen<Op[]> SinglePlayer = Gen.Frequency(
+        (30, MyActs),
+        (10, MyTransitions),
+        (5, MyCanceledTransitions),
+        (10, OthersActs),
+        (30, MyUndos),
+        (25, MyRedos)
+    ).Array[0, 40];
+
+    public static string Print(Op[] ops) =>
+        ops.Length == 0 ? "(no operations)" : "\n" + string.Join("\n", ops.Select(op => $"  {op}"));
+}

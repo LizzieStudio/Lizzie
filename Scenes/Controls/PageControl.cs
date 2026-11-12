@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Godot;
+
+namespace Lizzie;
 
 public partial class PageControl : HBoxContainer
 {
@@ -29,25 +29,6 @@ public partial class PageControl : HBoxContainer
         _lastItem.Pressed += () => SetPreviewItem(int.MaxValue);
     }
 
-    public void SetCurrentItem(int index)
-    {
-        _curItemLabel.Text = $"Item {index}";
-    }
-
-    public int GetCurrentItem()
-    {
-        return CurrentItem;
-    }
-
-    public void SetItemLabels(IList<string> items)
-    {
-        _itemLabels = items;
-        ItemCount = items.Count();
-        UpdateMultiLabel();
-    }
-
-    private IList<string> _itemLabels;
-
     public void SetItemCount(int count)
     {
         ItemCount = count;
@@ -64,14 +45,7 @@ public partial class PageControl : HBoxContainer
 
     private void UpdateMultiLabel()
     {
-        if (_itemLabels == null || !_itemLabels.Any())
-        {
-            _curItemLabel.Text = $"{CurrentItem + 1} of {ItemCount}";
-        }
-        else
-        {
-            _curItemLabel.Text = _itemLabels[CurrentItem];
-        }
+        _curItemLabel.Text = $"{CurrentItem + 1} of {ItemCount}";
     }
 
     private void SetPreviewItem(int item)
@@ -96,6 +70,7 @@ public partial class PageControl : HBoxContainer
             {
                 _itemCount = value;
             }
+            CurrentItem = Math.Min(CurrentItem, _itemCount - 1);
             UpdateMultiLabel();
         }
     }

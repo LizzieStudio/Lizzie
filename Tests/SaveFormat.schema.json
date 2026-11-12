@@ -1,0 +1,1167 @@
+{
+  "type": [
+    "object",
+    "null"
+  ],
+  "properties": {
+    "id": true,
+    "command": true,
+    "place": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "view": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subject": true
+      },
+      "additionalProperties": false
+    },
+    "writes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "required": [
+          "$type"
+        ],
+        "anyOf": [
+          {
+            "properties": {
+              "$type": {
+                "const": "Component"
+              },
+              "id": true,
+              "prototypeRef": true,
+              "item": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "$type"
+                ],
+                "anyOf": [
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "DieItem"
+                      },
+                      "rowRef": true
+                    },
+                    "required": [
+                      "rowRef"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "PrintedItem"
+                      },
+                      "front": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "FrameFace"
+                              },
+                              "frame": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "frame"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickFace"
+                              },
+                              "suitRef": true,
+                              "value": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "suitRef",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "RowFace"
+                              },
+                              "rowRef": true
+                            },
+                            "required": [
+                              "rowRef"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "back": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "FrameFace"
+                              },
+                              "frame": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "frame"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickFace"
+                              },
+                              "suitRef": true,
+                              "value": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "suitRef",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "RowFace"
+                              },
+                              "rowRef": true
+                            },
+                            "required": [
+                              "rowRef"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "front",
+                      "back"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "deckRef": true,
+              "retired": {
+                "type": "boolean"
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "ComponentPosition"
+              },
+              "id": true,
+              "stageRef": true,
+              "removed": {
+                "type": "boolean"
+              },
+              "x": {
+                "type": "integer"
+              },
+              "z": {
+                "type": "integer"
+              },
+              "rotation": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "stamp": true,
+                        "place": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "location": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "$type"
+                ],
+                "anyOf": [
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "Dragged"
+                      },
+                      "seat": true,
+                      "overHand": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "seat",
+                      "overHand"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "InComponent"
+                      },
+                      "component": true
+                    },
+                    "required": [
+                      "component"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "InHand"
+                      },
+                      "seat": true
+                    },
+                    "required": [
+                      "seat"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "CurrentTable"
+              },
+              "stageRef": true,
+              "transitions": true
+            },
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "DataCell"
+              },
+              "id": {
+                "type": "object",
+                "properties": {
+                  "rowRef": true,
+                  "columnRef": true
+                },
+                "additionalProperties": false
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "DataColumn"
+              },
+              "id": true,
+              "datasetRef": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "DataRow"
+              },
+              "id": true,
+              "datasetRef": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Dataset"
+              },
+              "id": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "ImageAsset"
+              },
+              "id": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cloudPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "layout": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "integer"
+                  },
+                  "rows": {
+                    "type": "integer"
+                  },
+                  "count": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "ProjectGameSettings"
+              },
+              "startIn2D": {
+                "type": "boolean"
+              },
+              "enablePlayerHands": {
+                "type": "boolean"
+              },
+              "tableWidth": {
+                "type": "number"
+              },
+              "tableHeight": {
+                "type": "number"
+              },
+              "tableUnits": {
+                "type": "integer"
+              },
+              "tableColor": true,
+              "rotationStepIndex": {
+                "type": "integer"
+              },
+              "gameTitle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "designers": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "graphicDesign": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "artists": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contactInfo": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "visionStatement": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "transitions": true
+            },
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Prototype"
+              },
+              "id": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "$type"
+                ],
+                "anyOf": [
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "BagParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "diameter": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "showCount": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "CubeParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "length": {
+                        "type": "number"
+                      },
+                      "color": true
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "DieParameters"
+                      },
+                      "size": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "sideCount": {
+                        "type": "integer"
+                      },
+                      "faces": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "imageRef": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "order": {
+                                "type": "array"
+                              },
+                              "suits": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "additionalProperties": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "background": true,
+                                    "foreground": true,
+                                    "values": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "icon": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "showText": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "templateRef": true,
+                              "datasetRef": true,
+                              "quantityRef": true
+                            },
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "DiscParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "diameter": {
+                        "type": "number"
+                      },
+                      "color": true
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "MeepleParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "thickness": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "grid": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "PrintedParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "thickness": {
+                        "type": "number"
+                      },
+                      "shape": {
+                        "type": "integer"
+                      },
+                      "front": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "imageRef": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "order": {
+                                "$ref": "#/properties/writes/items/anyOf/9/properties/parameters/anyOf/2/properties/faces/anyOf/1/properties/order"
+                              },
+                              "suits": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "additionalProperties": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "background": true,
+                                    "foreground": true,
+                                    "values": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "icon": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "showText": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "templateRef": true,
+                              "datasetRef": true,
+                              "quantityRef": true
+                            },
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "back": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "$type"
+                        ],
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "ImageSide"
+                              },
+                              "imageRef": true,
+                              "frames": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "QuickSide"
+                              },
+                              "order": {
+                                "$ref": "#/properties/writes/items/anyOf/9/properties/parameters/anyOf/2/properties/faces/anyOf/1/properties/order"
+                              },
+                              "suits": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "additionalProperties": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "background": true,
+                                    "foreground": true,
+                                    "values": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "icon": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "showText": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "properties": {
+                              "$type": {
+                                "const": "TemplateSide"
+                              },
+                              "templateRef": true,
+                              "datasetRef": true,
+                              "quantityRef": true
+                            },
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "type": {
+                        "type": "integer"
+                      },
+                      "spawnDeck": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "TrayParameters"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "length": {
+                        "type": "number"
+                      },
+                      "color": true,
+                      "dispenseRef": true
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "properties": {
+                      "$type": {
+                        "const": "ZoneParameters"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "depth": {
+                        "type": "number"
+                      },
+                      "defaultIncluded": {
+                        "type": "boolean"
+                      },
+                      "hiddenWhenExcluded": {
+                        "type": "boolean"
+                      },
+                      "seats": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "additionalProperties": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Seat"
+              },
+              "id": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "color": true,
+              "isAdmin": {
+                "type": "boolean"
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Seating"
+              },
+              "seats": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "transitions": true
+            },
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Selection"
+              },
+              "id": true,
+              "player": true,
+              "place": {
+                "type": "object",
+                "properties": {
+                  "view": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "subject": true
+                },
+                "additionalProperties": false
+              },
+              "targets": {
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Stage"
+              },
+              "id": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parentRef": true,
+              "rank": {
+                "type": "object",
+                "properties": {
+                  "side": {
+                    "type": "integer"
+                  },
+                  "steps": {
+                    "$ref": "#/properties/writes/items/anyOf/1/properties/rank/properties/steps"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "isTable": {
+                "type": "boolean"
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "$type": {
+                "const": "Template"
+              },
+              "id": true,
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sizeTemplate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              },
+              "elements": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "datasetRef": true,
+              "transitions": true
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "unsets": {
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "undo": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "reverses": true,
+        "byRedo": {
+          "type": "boolean"
+        },
+        "also": {
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ends": true
+  },
+  "additionalProperties": false,
+  "title": "Lizzie save format 1.20"
+}
