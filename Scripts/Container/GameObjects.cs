@@ -787,14 +787,15 @@ public partial class GameObjects : Node3D, ICommandView
 
     /// <summary>
     /// Recompute per-viewer zone visibility and control for all components each frame so the
-    /// local render mask tracks moving pieces, moving zones, and seat/admin changes.
+    /// local render mask tracks moving pieces, moving zones, seat/admin changes, and switching
+    /// between a table and a blueprint.
     /// </summary>
     private void RecomputeZones()
     {
         ZoneService.Recompute(
             ComponentNodes.OfType<VisualComponentBase>(),
             Atoms.R.LocalSeat(),
-            ZoneService.LocalSeatIsAdmin()
+            Atoms.R.Get(Stage.ById, _view.StageRef) is { IsTable: false }
         );
     }
 

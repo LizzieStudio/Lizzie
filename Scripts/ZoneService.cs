@@ -22,13 +22,6 @@ public enum ZoneTier
 public static class ZoneService
 {
     /// <summary>
-    /// True when the local player's seat is flagged admin in the project settings.
-    /// Admins always see and move everything, regardless of zone rules.
-    /// </summary>
-    public static bool LocalSeatIsAdmin() =>
-        Atoms.R.Get(Seat.ById, Atoms.R.LocalSeat())?.IsAdmin == true;
-
-    /// <summary>
     /// Resolve the effective tier for a component given the zones on the table and the local
     /// player's seat. Overlapping/nested zones combine most-restrictively.
     /// </summary>
@@ -36,10 +29,10 @@ public static class ZoneService
         VisualComponentBase component,
         IReadOnlyList<VcZone> zones,
         Ref<Seat> localSeat,
-        bool isAdmin
+        bool seesAll
     )
     {
-        if (isAdmin || zones.Count == 0)
+        if (seesAll || zones.Count == 0)
             return ZoneTier.SeeAndMove;
 
         var tier = ZoneTier.SeeAndMove;
@@ -64,9 +57,10 @@ public static class ZoneService
     public static void Recompute(
         IEnumerable<VisualComponentBase> components,
         Ref<Seat> localSeat,
-        bool isAdmin
+        bool isBlueprint
     )
     {
+        var seesAll = isBlueprint || Atoms.R.Get(Seat.ById, localSeat)?.IsAdmin == true;
         var all = components as IList<VisualComponentBase> ?? components.ToList();
         var zones = all.OfType<VcZone>().ToList();
 
@@ -80,7 +74,7 @@ public static class ZoneService
                 continue;
             }
 
-            var tier = ResolveTier(c, zones, localSeat, isAdmin);
+            var tier = ResolveTier(c, zones, localSeat, seesAll);
             c.ZoneHidden = tier == ZoneTier.Hidden;
             c.LocallyMovable = tier == ZoneTier.SeeAndMove;
         }
