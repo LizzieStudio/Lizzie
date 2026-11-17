@@ -1,0 +1,245 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+
+namespace Lizzie;
+
+/// <summary>
+/// <para>Shows a player's hand of cards or tokens.</para>
+///
+/// <inheritdoc cref="HandLayout"/>
+/// </summary>
+public partial class HandRow : Control
+{
+    /// <summary>
+    /// The scene each card in the row is made from.
+    /// </summary>
+    [Export]
+    private PackedScene _cardScene;
+
+    /// <summary>
+    /// The space between cards that fit.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,40,1,suffix:px")]
+    public float Separation { get; set; } = 6;
+
+    private Ref<Seat> _seat;
+
+    /// <summary>
+    /// The seat whose hand this row shows. <see cref="Ref{T}.None"/>, no seat, shows no cards.
+    /// </summary>
+    public Ref<Seat> Seat
+    {
+        get => _seat;
+        set
+        {
+            if (_seat == value)
+                return;
+            _seat = value;
+            Atoms.R.QueueSync(this);
+        }
+    }
+
+    /// <summary>
+    /// Whether this row should show the opposite side of the cards (for opponent's hands).
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="HandRow"/> is used for the user's hand and to show other user's hands.
+    /// </remarks>
+    [Export]
+    public bool FacesAway { get; set; }
+
+    /// <summary>
+    /// Gets the <see cref="ComponentPosition"/> of a card after it's dragged into or out of this hand.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="HandRow"/> is used for the user's hand and to show other user's hands,
+    /// and you can drag a card into another user's hand, so we need a way to set it to the right orientation.
+    /// </remarks>
+    public ComponentPosition AfterEnteringOrLeaving(ComponentPosition card) =>
+        FacesAway ? ComponentCommands.Flipped(card) : card;
+
+    private ChildList<PositionKey, HandCard> _cards;
+
+    private IReadOnlyList<HandCard> _order = [];
+
+    private int _hovered = -1;
+
+    private int _gapAt = -1;
+    private float _gapWidth;
+
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
+    }
+
+    public override void _Ready()
+    {
+        _cards = new(this, AddCard);
+    }
+
+    /// <summary>
+    /// The row under the mouse, or null.
+    /// </summary>
+    public static HandRow Under(Viewport viewport) => viewport.GuiGetHoveredControl() as HandRow;
+
+    /// <summary>
+    /// The card under the mouse, or null.
+    /// </summary>
+    public Ref<Component>? HoveredCard() =>
+        Under(GetViewport()) == this
+            ? CardAt(GetLocalMousePosition().X)?.Reference.ComponentRef
+            : null;
+
+    // The card at x, found without the spread or the gap, which would move the cards out from under the pointer.
+    private HandCard CardAt(float x) =>
+        Layout(-1, -1).CardAt(x) is var i and >= 0 ? _order[i] : null;
+
+    // Picks up the card where it was pressed.
+    public override Variant _GetDragData(Vector2 at) =>
+        CardAt(at.X) is { } card
+            ? ProjectService.Instance.GameObjects.GrabFromHand(
+                this,
+                card.Reference.ComponentRef,
+                GetGlobalTransformWithCanvas() * at
+            )
+            : default;
+
+    public override void _GuiInput(InputEvent e)
+    {
+        if (e is InputEventMouseButton button && GameObjects.IsSelectingPress(button))
+        {
+            ProjectService.Instance.GameObjects.Press(
+                CardAt(button.Position.X)?.Reference.ComponentRef
+            );
+            AcceptEvent();
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        if (!IsVisibleInTree())
+            return;
+
+        var mouse = GetLocalMousePosition();
+        bool hovered = Under(GetViewport()) == this;
+        // The widths of the cards being dragged, which the row opens a gap for, side by side.
+        List<float> dragged = GetViewport().GuiGetDragData().As<GodotObject>() is ComponentDrag drag
+            ? drag.Cards(Atoms.R)
+                .Select(s =>
+                    CardSize(
+                        TableSize(Atoms.R.GetPrototype(s)?.Parameters as PrintedParameters),
+                        HandCard.ScreenRotation(s.Rotation.Y)
+                    ).Width
+                )
+                .ToList()
+            : [];
+
+        // Found without the spread or the gap, like CardAt.
+        var plain = Layout(-1, -1);
+        _hovered = hovered && !GetViewport().GuiIsDragging() ? plain.CardAt(mouse.X) : -1;
+        _gapAt = hovered && dragged.Count > 0 ? plain.InsertIndexAt(mouse.X) : -1;
+        _gapWidth = dragged.Sum() + Separation * Math.Max(dragged.Count - 1, 0);
+
+        // The spread and the gap follow the mouse, so the cards are placed every frame.
+        Place();
+    }
+
+    // Dragged cards drop in where they're let go.
+    public override bool _CanDropData(Vector2 at, Variant data) =>
+        data.As<GodotObject>() is ComponentDrag drag && drag.Cards(Atoms.R).Any();
+
+    public override void _DropData(Vector2 at, Variant data) =>
+        ProjectService.Instance.GameObjects.DropInHand(
+            (ComponentDrag)data.AsGodotObject(),
+            this,
+            InsertIndexAt(at)
+        );
+
+    private void Sync(IWatchReader R)
+    {
+        var hand = PlayerHandService.GetHand(
+            R,
+            ProjectService.Instance.GameObjects.ShownStage(R),
+            Seat
+        );
+        // Later cards draw over earlier ones.
+        _order = _cards.Show(hand, ComponentPosition.ById.Of);
+    }
+
+    private HandCard AddCard(PositionKey id)
+    {
+        var card = _cardScene.Instantiate<HandCard>();
+        AddChild(card);
+        card.Reference = id;
+        return card;
+    }
+
+    /// <summary>
+    /// How many pixels a centimeter on the table takes in the row, so cards keep their sizes relative to each other.
+    ///
+    /// <para>
+    /// The default fits an upright poker card, 8.89 cm tall, to the 188 pixels a hand starts with.
+    /// A player can resize the hand to fit bigger cards.
+    /// </para>
+    /// </summary>
+    [Export(PropertyHint.Range, "1,100,0.1,or_greater,suffix:px/cm")]
+    public float PixelsPerCm { get; set; } = 21;
+
+    /// <summary>
+    /// The size of a card with <paramref name="p"/> on the table, in cm, or a standard card's size.
+    /// </summary>
+    public static Vector2 TableSize(PrintedParameters p) =>
+        p is { Height: > 0 } ? new(p.Width / 10, p.Height / 10) : new(6.35f, 8.89f);
+
+    /// <summary>
+    /// The size of a card <paramref name="tableSize"/> on the table in cm, turned <paramref name="rotation"/> on screen,
+    /// and the width it takes in the row.
+    /// </summary>
+    public (Vector2 Size, float Width) CardSize(Vector2 tableSize, float rotation)
+    {
+        var size = tableSize * PixelsPerCm;
+        float sin = Math.Abs(Mathf.Sin(rotation));
+        float cos = Math.Abs(Mathf.Cos(rotation));
+        return (size, size.X * cos + size.Y * sin);
+    }
+
+    private HandLayout Layout(int hovered, int gapAt) =>
+        HandLayout.Place(
+            _order
+                .Select(c => CardSize(c.TableSize, HandCard.ScreenRotation(c.Yaw)).Width)
+                .ToList(),
+            Size.X,
+            Separation,
+            hovered,
+            gapAt,
+            _gapWidth
+        );
+
+    private void Place()
+    {
+        var layout = Layout(_hovered, _gapAt);
+        for (int i = 0; i < _order.Count; i++)
+        {
+            var card = _order[i];
+            float rotation = HandCard.ScreenRotation(card.Yaw);
+            var (size, width) = CardSize(card.TableSize, rotation);
+            card.Size = size;
+            card.PivotOffset = size / 2;
+            card.Rotation = rotation;
+            card.Position = new Vector2(layout.Lefts[i] + width / 2, Size.Y / 2) - size / 2;
+        }
+    }
+
+    /// <summary>
+    /// The middle of the card showing <paramref name="id"/> as a point on the viewport.
+    /// </summary>
+    public Vector2 MiddleOf(PositionKey id)
+    {
+        var card = _cards[id];
+        return card.GetGlobalTransformWithCanvas() * (card.Size / 2);
+    }
+
+    private int InsertIndexAt(Vector2 at) => Layout(-1, -1).InsertIndexAt(at.X);
+}

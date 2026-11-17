@@ -1,37 +1,11 @@
+using System;
 using System.Collections.Generic;
 using Godot;
-using Lizzie.Scripts.Templating;
+
+namespace Lizzie;
 
 public static class TemplateEngine
 {
-    public static List<TextureFactory.TextureDefinition> GenerateTextureDefinitions(
-        Template template,
-        TextureContext _textureContext
-    )
-    {
-        var l = new List<TextureFactory.TextureDefinition>();
-
-        var t = new TextureContext
-        {
-            DataSet = _textureContext.DataSet,
-            ParentSize = _textureContext.ParentSize,
-        };
-
-        if (t.DataSet == null) //no dataset, so just return a single base texture
-        {
-            l.Add(GenerateTextureDefinition(template, t));
-            return l;
-        }
-
-        foreach (var r in _textureContext.DataSet.Rows)
-        {
-            t.CurrentRowName = r.Key;
-            l.Add(GenerateTextureDefinition(template, t));
-        }
-
-        return l; //new List<TextureFactory.TextureDefinition>()
-    }
-
     public static TextureFactory.TextureDefinition GenerateTextureDefinition(
         Template template,
         TextureContext _textureContext
@@ -50,7 +24,6 @@ public static class TemplateEngine
             BackgroundColor = Colors.White,
             Height = (int)_textureContext.ParentSize.Y,
             Width = (int)_textureContext.ParentSize.X,
-            Shape = TextureFactory.TokenShape.Square,
         };
 
         foreach (var element in templateElements)
@@ -67,23 +40,25 @@ public static class TemplateEngine
         TextureContext _textureContext
     )
     {
-        foreach (var l in element.GetElementData(_textureContext))
-        {
-            float sW = _textureContext.ParentSize.X / 100f;
-            float sH = _textureContext.ParentSize.Y / 100f;
+        var size = _textureContext.ParentSize;
+        static float Pixels(float size, float percent) =>
+            MathF.Round(size * percent / 100f, MidpointRounding.AwayFromZero);
 
+        var objects = element.IsVisible(_textureContext)
+            ? element.GetElementData(_textureContext)
+            : [];
+        foreach (var l in objects)
+        {
             td.Objects.Add(
                 new TextureFactory.TextureObject
                 {
-                    Width = (int)(sW * l.Width),
-                    Height = (int)(sH * l.Height),
-                    CenterX = (int)(sW * l.CenterX),
-                    CenterY = (int)(sH * l.CenterY),
-                    Anchor = l.Anchor,
+                    Width = Pixels(size.X, l.Width),
+                    Height = Pixels(size.Y, l.Height),
+                    CenterX = Pixels(size.X, l.CenterX),
+                    CenterY = Pixels(size.Y, l.CenterY),
                     Multiline = l.Multiline,
                     Text = l.Text,
                     ForegroundColor = l.ForegroundColor,
-                    Font = new SystemFont(),
                     FontSize = l.FontSize,
                     Autosize = l.Autosize,
                     HorizontalAlignment = l.HorizontalAlignment,
@@ -92,17 +67,21 @@ public static class TemplateEngine
                     Stretch = l.Stretch,
                     BackgroundColor = l.BackgroundColor,
                     RotationDegrees = l.RotationDegrees,
+                    Quantity = l.Quantity,
+                    TriangleFace = _textureContext.TriangleFaces,
                 }
             );
+        }
 
-            foreach (var c in element.Children)
-            {
-                MapElementToObject(td, c, _textureContext);
-            }
+        foreach (var c in element.Children)
+        {
+            MapElementToObject(td, c, _textureContext);
         }
     }
 
-    public static ITemplateElement BuildTemplateElement(Dictionary<string, string> parameters)
+    public static ITemplateElement BuildTemplateElement(
+        IReadOnlyDictionary<string, string> parameters
+    )
     {
         TemplateElement te;
 
@@ -130,7 +109,6 @@ public static class TemplateEngine
         }
 
         te.ElementName = parameters.TryGetValue("Name", out var name) ? name : string.Empty;
-        te.Id = parameters.TryGetValue("Id", out var id) ? int.Parse(id) : 0;
 
         foreach (var kv in parameters)
         {
@@ -140,7 +118,7 @@ public static class TemplateEngine
         return te;
     }
 
-    public static List<ITemplateElement> BuildTemplateElements(Template template)
+    private static List<ITemplateElement> BuildTemplateElements(Template template)
     {
         var l = new List<ITemplateElement>();
         foreach (var t in template.Elements)
@@ -187,8 +165,6 @@ public static class TemplateEngine
         {
             { "Type", element.ElementType.ToString() },
             { "Name", element.ElementName },
-            { "Id", element.Id.ToString() },
-            { "Parent", element.Parent.ToString() },
         };
         foreach (var p in element.Parameters)
         {
@@ -196,65 +172,5 @@ public static class TemplateEngine
         }
 
         return d;
-    }
-
-    public static List<QuickCardData> GenerateQuickCards(
-        List<QuickCardData> quickSuitData,
-        int suitCount
-    )
-    {
-        var outCards = new List<QuickCardData>();
-
-        for (int i = 0; i < suitCount; i++)
-        {
-            var values = Utility.ParseValueRanges(quickSuitData[i].Caption);
-
-            foreach (var v in values)
-            {
-                var c = new QuickCardData
-                {
-                    BackgroundColor = quickSuitData[i].BackgroundColor,
-                    Caption = v,
-                    CardBackColor = quickSuitData[i].CardBackColor,
-                    CardBackValue = quickSuitData[i].CardBackValue,
-                };
-
-                outCards.Add(c);
-            }
-        }
-
-        return outCards;
-    }
-
-    public static QuickCardData GenerateQuickCardByRow(
-        List<QuickCardData> quickSuitData,
-        int suitCount,
-        int row
-    )
-    {
-        int curRow = 1;
-
-        for (int i = 0; i < suitCount; i++)
-        {
-            var values = Utility.ParseValueRanges(quickSuitData[i].Caption);
-
-            foreach (var v in values)
-            {
-                var c = new QuickCardData
-                {
-                    BackgroundColor = quickSuitData[i].BackgroundColor,
-                    Caption = v,
-                    CardBackColor = quickSuitData[i].CardBackColor,
-                    CardBackValue = quickSuitData[i].CardBackValue,
-                };
-
-                if (curRow == row)
-                    return c;
-
-                curRow++;
-            }
-        }
-
-        return new QuickCardData();
     }
 }

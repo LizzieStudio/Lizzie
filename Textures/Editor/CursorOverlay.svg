@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="16px" height="16px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-91,-11)">
+        <g id="CursorOverlay" transform="matrix(1,0,0,1,-0.055118,-1)">
+            <rect x="91.055" y="12" width="16" height="16" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="91.055" y="12" width="16" height="16"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(0.850853,-0.49124,0.49124,0.850853,3.971153,53.360833)">
+                    <g transform="matrix(2.906667,0,-0,1.943657,-182.6848,-16.810869)">
+                        <path d="M97.313,14.254L99.378,19.595L95.249,19.595L97.313,14.254Z" style="fill:rgb(142,239,151);"/>
+                    </g>
+                    <g transform="matrix(1.221627,0,0,1.221627,-22.270275,1.10201)">
+                        <path d="M100.23,14.778L100.23,20.611" style="fill:none;stroke:rgb(142,239,151);stroke-width:2.6px;"/>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

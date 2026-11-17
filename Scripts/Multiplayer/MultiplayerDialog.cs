@@ -1,5 +1,7 @@
-using System;
 using Godot;
+using Lizzie.Replication.Machinery;
+
+namespace Lizzie;
 
 /// <summary>
 /// UI dialog for hosting or joining multiplayer sessions
@@ -7,7 +9,6 @@ using Godot;
 public partial class MultiplayerDialog : Window
 {
     private LineEdit _portInput;
-    private SpinBox _maxPlayersInput;
     private Button _hostButton;
     private LineEdit _addressInput;
     private LineEdit _clientPortInput;
@@ -17,7 +18,6 @@ public partial class MultiplayerDialog : Window
     private ItemList _playerList;
 
     private const int DefaultPort = 7777;
-    private const int DefaultMaxPlayers = 4;
 
     public override void _Ready()
     {
@@ -33,12 +33,18 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.ServerStarted += OnServerStarted;
             MultiplayerManager.Instance.PlayerConnected += OnPlayerConnected;
             MultiplayerManager.Instance.PlayerDisconnected += OnPlayerDisconnected;
+            MultiplayerManager.Instance.PlayersChanged += OnPlayersChanged;
             MultiplayerManager.Instance.ConnectionFailed += OnConnectionFailed;
         }
 
         UpdateUI();
 
-        OnDisconnectPressed(); // Ensure we start in a disconnected state
+        CloseRequested += QueueFree;
+    }
+
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
     }
 
     public override void _ExitTree()
@@ -49,6 +55,7 @@ public partial class MultiplayerDialog : Window
             MultiplayerManager.Instance.ServerStarted -= OnServerStarted;
             MultiplayerManager.Instance.PlayerConnected -= OnPlayerConnected;
             MultiplayerManager.Instance.PlayerDisconnected -= OnPlayerDisconnected;
+            MultiplayerManager.Instance.PlayersChanged -= OnPlayersChanged;
             MultiplayerManager.Instance.ConnectionFailed -= OnConnectionFailed;
         }
     }
@@ -57,7 +64,6 @@ public partial class MultiplayerDialog : Window
     {
         _statusLabel = GetNode<Label>("%StatusLabel");
         _portInput = GetNode<LineEdit>("%PortInput");
-        _maxPlayersInput = GetNode<SpinBox>("%MaxPlayerInput");
         _hostButton = GetNode<Button>("%HostButton");
         _addressInput = GetNode<LineEdit>("%AddressInput");
         _clientPortInput = GetNode<LineEdit>("%ClientPortInput");
@@ -66,8 +72,6 @@ public partial class MultiplayerDialog : Window
         _disconnectButton = GetNode<Button>("%DisconnectButton");
 
         //_portInput.Text = DefaultPort.ToString();
-
-        _maxPlayersInput.Value = DefaultMaxPlayers;
 
         _hostButton.Pressed += OnHostPressed;
 
@@ -92,13 +96,11 @@ public partial class MultiplayerDialog : Window
         _portInput.Editable = !isConnected;
         _addressInput.Editable = !isConnected;
         _clientPortInput.Editable = !isConnected;
-        _maxPlayersInput.Editable = !isConnected;
         _disconnectButton.Disabled = !isConnected;
 
         if (!isConnected)
         {
             _statusLabel.Text = "Not connected";
-            _playerList.Clear();
         }
         else if (isServer)
         {
@@ -109,20 +111,30 @@ public partial class MultiplayerDialog : Window
             _statusLabel.Text = $"Connected to {_addressInput.Text}:{_clientPortInput.Text}";
         }
 
-        UpdatePlayerList();
+        Atoms.R.QueueSync(this);
     }
 
-    private void UpdatePlayerList()
+    private void Sync(IWatchReader R)
     {
         _playerList.Clear();
 
-        if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+        var mm = MultiplayerManager.Instance;
+        if (mm?.IsMultiplayerActive != true)
+            return;
+
+        var seats = R.Get(Seat.Live);
+        foreach (var player in mm.Players.Values)
         {
-            foreach (var player in MultiplayerManager.Instance.Players.Values)
-            {
-                var displayName = player.IsLocal ? $"{player.PlayerName} (You)" : player.PlayerName;
-                _playerList.AddItem(displayName);
-            }
+            var seatRef = R.SeatOf(player.Source);
+            int place = seats.FindIndex(s => s.Id == seatRef);
+
+            var label = place < 0 ? "No Seat" : seats[place].Label(place);
+            if (player.IsLocal)
+                label += " (you)";
+
+            int idx = _playerList.AddItem(label);
+            if (place >= 0)
+                _playerList.SetItemCustomFgColor(idx, seats[place].Color);
         }
     }
 
@@ -133,20 +145,10 @@ public partial class MultiplayerDialog : Window
             port = DefaultPort;
         }
 
-        int maxPlayers = (int)_maxPlayersInput.Value;
-
-        var error = MultiplayerManager.Instance.HostServer(port, maxPlayers);
+        var error = MultiplayerManager.Instance.HostServer(port);
         if (error != Error.Ok)
         {
             _statusLabel.Text = $"Failed to host server: {error}";
-        }
-        else
-        {
-            // Request project sync setup
-            ProjectSynchronizer.Instance?.RequestProjectSync();
-
-            // Prompt the host to choose a seat right away.
-            EventBus.Instance?.Publish(new RequestPlayerPositionEvent());
         }
     }
 
@@ -172,17 +174,16 @@ public partial class MultiplayerDialog : Window
         {
             _statusLabel.Text = "Connecting...";
 
-            // Request project sync after connection
-            CallDeferred(nameof(RequestProjectSyncDeferred));
+            CallDeferred(nameof(RequestCatchupDeferred));
         }
     }
 
-    private void RequestProjectSyncDeferred()
+    private void RequestCatchupDeferred()
     {
-        // Wait a frame for connection to establish
+        // Wait a moment for the connection to establish
         GetTree().CreateTimer(0.5).Timeout += () =>
         {
-            ProjectSynchronizer.Instance?.RequestProjectSync();
+            EventSynchronizer.Instance?.RequestCatchup();
         };
     }
 
@@ -206,6 +207,11 @@ public partial class MultiplayerDialog : Window
     private void OnPlayerDisconnected(int playerId)
     {
         GD.Print($"Player disconnected: {playerId}");
+        CallDeferred(nameof(UpdateUI));
+    }
+
+    private void OnPlayersChanged()
+    {
         CallDeferred(nameof(UpdateUI));
     }
 

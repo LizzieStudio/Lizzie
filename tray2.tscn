@@ -1,9 +1,0 @@
-[gd_scene format=3 uid="uid://ctnmh6aq70wmb"]
-
-[ext_resource type="PackedScene" uid="uid://1d1rgl0b24dy" path="res://Scenes/VisualComponents/tray.glb" id="1_tpe3b"]
-[ext_resource type="ArrayMesh" uid="uid://bwswocbm2vgi3" path="res://tray_mesh.tres" id="2_4drjb"]
-
-[node name="tray" unique_id=1735209341 instance=ExtResource("1_tpe3b")]
-
-[node name="Cube" parent="." index="0" unique_id=863980174]
-mesh = ExtResource("2_4drjb")

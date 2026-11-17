@@ -1,0 +1,182 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using Godot;
+
+namespace Lizzie;
+
+/// <summary>
+/// What one player has selected in one place, which every player sees.
+/// Each player writes only their own, so selections never overwrite each other.
+/// Selections are not saved with the project.
+/// </summary>
+[NotSaved]
+[JsonName("Selection")]
+public record Selection : Atom
+{
+    public static readonly Identity<Selection, Ref<Selection>> ById = new(r => r.Id);
+
+    /// <summary>
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
+    /// </summary>
+    public required Ref<Selection> Id { get; init; }
+
+    /// <summary>
+    /// Every player's selection in each place, by <see cref="Place"/>.
+    /// </summary>
+    public static readonly Lookup<Selection, ViewPlace> ByPlace = new(s => s.Place);
+
+    /// <summary>
+    /// Each player's selections, by <see cref="Player"/>.
+    /// </summary>
+    public static readonly Lookup<Selection, Source> ByPlayer = new(s => s.Player);
+
+    /// <summary>The source of the player who owns this selection.</summary>
+    public Source Player { get; init; }
+
+    /// <summary>
+    /// Where this selection lives.
+    ///
+    /// <para>
+    /// A player has one selection in each place, so each view undoes only its own.
+    /// </para>
+    /// </summary>
+    public ViewPlace Place { get; init; }
+
+    /// <summary>The selected things.</summary>
+    public ImmutableHashSet<IAtomRef> Targets { get; init; } = ImmutableHashSet<IAtomRef>.Empty;
+}
+
+/// <summary>
+/// Reads and writes the local player's <see cref="Selection"/>, and computes selection highlights.
+/// </summary>
+public static class LocalSelection
+{
+    /// <summary>
+    /// The selection color to show each target in.
+    /// <paramref name="place"/> is where the selections live, like the stage the view shows.
+    ///
+    /// <para>
+    /// A target shows in the seat color of the player who selected it most recently,
+    /// with the local player taking priority.
+    /// </para>
+    /// </summary>
+    public static IReadOnlyDictionary<IAtomRef, Color> SelectionColors(
+        this IAtomReader R,
+        ViewPlace place
+    )
+    {
+        var colors = new Dictionary<IAtomRef, Color>();
+        var newestFirst = R.Get(Selection.ByPlace, place)
+            .OrderByDescending(s => s.Player.IsMe())
+            .ThenByDescending(R.Version);
+        foreach (var selection in newestFirst)
+        {
+            var color = R.SeatColor(selection.Player);
+            foreach (var target in selection.Targets)
+                colors.TryAdd(target, color);
+        }
+        return colors;
+    }
+
+    /// <summary>
+    /// The local player's selection in <paramref name="view"/>, holding only the targets it <see cref="ICommandView.CanSelect"/>.
+    /// Null if they have not yet selected anything there.
+    /// </summary>
+    /// <remarks>
+    /// A target the view no longer shows stays in the written selection, so undoing its delete selects it again,
+    /// but it's left out here, so changing the selection around it never writes an event that shows nothing.
+    /// </remarks>
+    public static Selection GetSelection(this IAtomReader R, ICommandView view) =>
+        R.Get(Selection.ByPlace, view.Place(R)).FirstOrDefault(s => s.Player.IsMe())
+            is { } selection
+            ? selection with
+            {
+                Targets = selection.Targets.Where(t => view.CanSelect(R, t)).ToImmutableHashSet(),
+            }
+            : null;
+
+    /// <summary>
+    /// The ids of the atoms of <paramref name="byId"/>'s type the local player has selected in <paramref name="view"/>.
+    /// </summary>
+    /// <param name="byId">Names the atom type and its id type, which the call infers from it.</param>
+    public static IEnumerable<I> GetSelection<T, I>(
+        this IAtomReader R,
+        Identity<T, I> byId,
+        ICommandView view
+    )
+        where T : Atom
+        where I : IAtomRef<T>, IComparable<I> => R.GetSelection(view)?.Targets.OfType<I>() ?? [];
+
+    /// <summary>
+    /// Replaces the local player's selected atoms of <paramref name="byId"/>'s type in <paramref name="view"/>,
+    /// keeping everything else they have selected there.
+    /// Submits an event only when it changes, which undo can reverse like any other.
+    /// </summary>
+    public static void SetSelection<T, I>(
+        this IAtomReader R,
+        Identity<T, I> byId,
+        IEnumerable<I> ids,
+        ICommandView view
+    )
+        where T : Atom
+        where I : IAtomRef<T>, IComparable<I> =>
+        Atoms.R.Write((Node)view, R.NewSelection(byId, ids, view));
+
+    /// <summary>
+    /// The atom that <see cref="SetSelection{T, I}(IAtomReader, Identity{T, I}, IEnumerable{I}, ICommandView)"/> writes,
+    /// or none when the selection wouldn't change.
+    /// </summary>
+    public static Selection[] NewSelection<T, I>(
+        this IAtomReader R,
+        Identity<T, I> byId,
+        IEnumerable<I> ids,
+        ICommandView view
+    )
+        where T : Atom
+        where I : IAtomRef<T>, IComparable<I>
+    {
+        var old = R.GetSelection(view)?.Targets ?? ImmutableHashSet<IAtomRef>.Empty;
+        return R.NewSelection(old.Where(t => t is not I).Concat(ids.Cast<IAtomRef>()), view);
+    }
+
+    /// <summary>
+    /// Replaces the local player's whole selection in <paramref name="view"/>.
+    /// Submits an event only when it changes, which undo can reverse like any other.
+    /// </summary>
+    public static void SetSelection(
+        this IAtomReader R,
+        IEnumerable<IAtomRef> targets,
+        ICommandView view
+    )
+    {
+        Atoms.R.Write((Node)view, R.NewSelection(targets, view));
+    }
+
+    /// <summary>
+    /// The atom that will set the selection to <paramref name="targets"/>,
+    /// or none when the selection wouldn't change.
+    /// </summary>
+    private static Selection[] NewSelection(
+        this IAtomReader R,
+        IEnumerable<IAtomRef> targets,
+        ICommandView view
+    )
+    {
+        var current = R.GetSelection(view);
+        var next = targets.ToImmutableHashSet();
+        if (next.SetEquals(current?.Targets ?? ImmutableHashSet<IAtomRef>.Empty))
+            return [];
+
+        var atom =
+            current
+            ?? new Selection
+            {
+                Id = Ref<Selection>.Create(),
+                Player = Source.Me,
+                Place = view.Place(R),
+            };
+        return [atom with { Targets = next }];
+    }
+}

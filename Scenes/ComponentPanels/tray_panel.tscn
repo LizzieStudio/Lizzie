@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://ubfpfptrakn7" path="res://Scripts/ComponentPanelResults/TrayPanelDialogResult.cs" id="1_jxaa8"]
 [ext_resource type="PackedScene" uid="uid://ojs61k8nlddj" path="res://Scenes/ComponentPanels/ComponentPreview.tscn" id="2_bxrya"]
+[ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/AtomSelector.tscn" id="3_selector"]
 
 [node name="TrayPanel" type="MarginContainer" unique_id=176904258]
 anchors_preset = 15
@@ -121,7 +122,7 @@ layout_mode = 2
 text = "Component  "
 horizontal_alignment = 2
 
-[node name="PrototypeList" type="OptionButton" parent="HBoxContainer/GridContainer" unique_id=1409556126]
+[node name="PrototypeList" parent="HBoxContainer/GridContainer" unique_id=1409556126 instance=ExtResource("3_selector")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2

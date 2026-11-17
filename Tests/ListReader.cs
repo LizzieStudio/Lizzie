@@ -1,0 +1,32 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Lizzie.Replication.Machinery;
+
+namespace Lizzie.Tests;
+
+/// <summary>Reads from a fixed list of atoms.</summary>
+public sealed class ListReader(params Atom[] atoms) : IAtomReader
+{
+    public Atom Get(IAtomRef atomRef) => atoms.FirstOrDefault(a => IAtomRef.To(a).Equals(atomRef));
+
+    public SnowStamp Version(Atom atom) => SnowStamp.Empty;
+
+    /// <summary>
+    /// The positions, of those listed, that read only because removed positions are shown.
+    /// </summary>
+    public ComponentPosition[] Removed { get; init; } = [];
+
+    public bool IsRemoved(ComponentPosition position) => Removed.Contains(position);
+
+    public T Get<T, I>(Identity<T, I> byId, I id)
+        where T : Atom
+        where I : IAtomRef<T>, IComparable<I> =>
+        atoms.OfType<T>().FirstOrDefault(a => byId.Of(a).Equals(id));
+
+    public List<T> Get<T, K>(Lookup<T, K> lookup, K key)
+        where T : Atom => lookup.Ordered(atoms.OfType<T>().Where(a => Equals(lookup.Of(a), key)));
+
+    public int Count<T, K>(Lookup<T, K> lookup, K key)
+        where T : Atom => Get(lookup, key).Count;
+}

@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://0wsvxlpthnkp"]
 
 [ext_resource type="Script" uid="uid://blvugxyae05ee" path="res://Scripts/Templating/TemplateCreator.cs" id="1_wn7e0"]
-[ext_resource type="Texture2D" uid="uid://cyt6b8i7mho8a" path="res://Textures/Dice/d4overlay.png" id="2_20sb7"]
 [ext_resource type="Texture2D" uid="uid://73pb5eqwq0y4" path="res://Textures/Shapes/square.png" id="2_cvjoa"]
 [ext_resource type="Texture2D" uid="uid://t7ascv1jxv5n" path="res://Textures/UI/text.png" id="3_5nlvd"]
 [ext_resource type="PackedScene" uid="uid://c1a1y6r1hea4l" path="res://Scenes/Controls/page_control.tscn" id="3_275yv"]
@@ -23,6 +22,7 @@
 [ext_resource type="Texture2D" uid="uid://c2xtoa1ewjtfd" path="res://Textures/UI/zoom-in.png" id="11_275yv"]
 [ext_resource type="StyleBox" uid="uid://c67lytp8wdsgx" path="res://Themes/PanelBackgroundStylebox.tres" id="13_275yv"]
 [ext_resource type="Texture2D" uid="uid://4fhs1s6om6ta" path="res://Textures/Dice/die.png" id="16_uraoc"]
+[ext_resource type="PackedScene" uid="uid://dwilf0o810jwb" path="res://Scenes/Controls/AtomSelector.tscn" id="17_dssel"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hnkns"]
 bg_color = Color(0.99736375, 0.793054, 0.8017672, 1)
@@ -34,7 +34,6 @@ position = Vector2i(0, 36)
 size = Vector2i(1100, 600)
 script = ExtResource("1_wn7e0")
 _preview = NodePath("Panel/MarginContainer/VBoxContainer/HBoxContainer/PreviewWindow/TemplatePreview")
-_d4_overlay = ExtResource("2_20sb7")
 _d6_overlay = ExtResource("3_j014s")
 _d8_overlay = ExtResource("4_78jf6")
 _d10_overlay = ExtResource("5_lgkf3")
@@ -81,15 +80,6 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Duplicate"
 
-[node name="Panel" type="Panel" parent="Panel/MarginContainer/VBoxContainer/Toolbar" unique_id=72002178]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="CloseButton" type="Button" parent="Panel/MarginContainer/VBoxContainer/Toolbar" unique_id=385841374]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Close"
-
 [node name="InfoBar" type="HBoxContainer" parent="Panel/MarginContainer/VBoxContainer" unique_id=116647639]
 layout_mode = 2
 
@@ -135,7 +125,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 selected = 0
-item_count = 12
+item_count = 11
 popup/item_0/text = "Poker"
 popup/item_0/id = 0
 popup/item_1/text = "Bridge"
@@ -148,18 +138,16 @@ popup/item_4/text = "Custom"
 popup/item_4/id = 4
 popup/item_5/id = 5
 popup/item_5/separator = true
-popup/item_6/text = "D4"
+popup/item_6/text = "D6"
 popup/item_6/id = 6
-popup/item_7/text = "D6"
+popup/item_7/text = "D8"
 popup/item_7/id = 7
-popup/item_8/text = "D8"
+popup/item_8/text = "D10"
 popup/item_8/id = 8
-popup/item_9/text = "D10"
+popup/item_9/text = "D12"
 popup/item_9/id = 9
-popup/item_10/text = "D12"
+popup/item_10/text = "D20"
 popup/item_10/id = 10
-popup/item_11/text = "D20"
-popup/item_11/id = 11
 
 [node name="SizeControls" type="HBoxContainer" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=513603256]
 unique_name_in_owner = true
@@ -179,6 +167,10 @@ unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Height"
 
+[node name="Unit" type="Label" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer/SizeControls" unique_id=1333305317]
+layout_mode = 2
+text = "mm"
+
 [node name="OverlayControls" type="HBoxContainer" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=785369400]
 unique_name_in_owner = true
 visible = false
@@ -196,14 +188,9 @@ size_flags_horizontal = 3
 text = "Dataset:  "
 horizontal_alignment = 2
 
-[node name="Dataset" type="OptionButton" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=16413708]
+[node name="Dataset" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=16413708 instance=ExtResource("17_dssel")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-selected = 0
-item_count = 1
-popup/item_0/text = "(none)"
-popup/item_0/id = 0
 
 [node name="PageControl" parent="Panel/MarginContainer/VBoxContainer/InfoBar/MarginContainer2/HBoxContainer" unique_id=202467306 instance=ExtResource("3_275yv")]
 unique_name_in_owner = true
@@ -568,20 +555,28 @@ popup/item_3/id = 3
 popup/item_4/text = "Custom"
 popup/item_4/id = 4
 
-[node name="NTWidth" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=595419660]
+[node name="NTSizeFields" type="HBoxContainer" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1790214724]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="NTWidth" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=595419660]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Width"
 
-[node name="NTX" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1031830595]
+[node name="NTX" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=1031830595]
 unique_name_in_owner = true
 layout_mode = 2
 text = "x"
 
-[node name="NTHeight" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer" unique_id=345043771]
+[node name="NTHeight" type="LineEdit" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=345043771]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Height"
+
+[node name="NTUnit" type="Label" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer/HBoxContainer/NTSizeFields" unique_id=911673429]
+layout_mode = 2
+text = "mm"
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="NewTemplateDialog/Panel/MarginContainer/VBoxContainer" unique_id=1435365704]
 layout_mode = 2
@@ -599,4 +594,5 @@ layout_mode = 2
 text = "Cancel"
 
 [node name="ConfirmationDialog" type="ConfirmationDialog" parent="." unique_id=1991483538]
+oversampling_override = 1.0
 initial_position = 2

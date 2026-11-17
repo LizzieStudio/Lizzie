@@ -1,41 +1,42 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices.ObjectiveC;
+using System.Threading;
+using System.Threading.Tasks;
 using Godot;
+
+namespace Lizzie;
 
 public partial class TextureFactory : SubViewport
 {
-    private Texture2D _circleShape;
-    private Texture2D _rectShape;
-    private Texture2D _hexPointShape;
-    private Texture2D _hexFlatShape;
-    private Texture2D _roundedRectShape;
-    private Texture2D _triangleShape;
-    private Texture2D _starShape;
-    private Texture2D _pentagonShape;
-    private IconLibrary _iconLibrary = new();
+    public static TextureFactory Instance { get; private set; }
 
-    // Called when the node enters the scene tree for the first time.
-    public override void _Ready()
+    public override void _EnterTree() => Instance = this;
+
+    public override void _ExitTree()
     {
-        _viewport = this;
-
-        _circleShape = ResourceLoader.Load("res://Textures/Shapes/circle.png") as Texture2D;
-        _rectShape = ResourceLoader.Load("res://Textures/Shapes/square.png") as Texture2D;
-        _hexPointShape = ResourceLoader.Load("res://Textures/Shapes/hex.png") as Texture2D;
-        _hexFlatShape = ResourceLoader.Load("res://Textures/Shapes/hexflat.png") as Texture2D;
-        _roundedRectShape =
-            ResourceLoader.Load("res://Textures/Shapes/RoundedRectangle.png") as Texture2D;
-        _triangleShape = ResourceLoader.Load("res://Textures/Shapes/triangle.png") as Texture2D;
-        _starShape = ResourceLoader.Load("res://Textures/Shapes/star.png") as Texture2D;
-        _pentagonShape = ResourceLoader.Load("res://Textures/Shapes/pentagon.png") as Texture2D;
+        if (Instance == this)
+            Instance = null;
     }
 
-    private int _frameCount;
-    private bool _generated;
+    private IconLibrary _iconLibrary = new();
+
+    /// <summary>
+    /// Holds the nodes that keep faces up to date.
+    /// </summary>
+    /// <remarks>
+    /// This allows us to use <see cref="Atoms.Watch"/> calls.
+    /// </remarks>
+    [Export]
+    public Node Drawings { get; set; }
+
+    /// <summary>
+    /// The font to use.
+    /// </summary>
+    /// <remarks>
+    /// We're currently using Noto Sans, which is free and has a lot of coverage.
+    /// </remarks>
+    private static Font TextFont => ThemeDB.GetProjectTheme().DefaultFont;
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta)
@@ -58,14 +59,22 @@ public partial class TextureFactory : SubViewport
             }
         }
 
-        if (!_waitingForAsset && _activeQueueEntry == null && _textureGenerationQueue.Count > 0)
+        while (
+            !_waitingForAsset
+            && _activeQueueEntry == null
+            && _textureGenerationQueue.TryDequeue(out var entry)
+        )
         {
-            _activeQueueEntry = _textureGenerationQueue.Dequeue();
-            PreFetchAssetsAndInitiate(_activeQueueEntry.TextureDefinition);
+            if (entry.Token.IsCancellationRequested)
+            {
+                entry.Done.SetResult(null);
+                continue;
+            }
+            _activeQueueEntry = entry;
+            PreFetchAssetsAndInitiate(entry.TextureDefinition);
         }
     }
 
-    SubViewport _viewport;
     private int _viewportUpdating;
     private TextureQueueEntry _activeQueueEntry;
     private int _skip;
@@ -75,22 +84,16 @@ public partial class TextureFactory : SubViewport
     private Queue<TextureQueueEntry> _textureGenerationQueue = new();
 
     /// <summary>
-    /// Generate a texture
+    /// Draws <paramref name="definition"/>.
     /// </summary>
-    public void GenerateTexture(
-        TextureDefinition definition,
-        Action<ImageTexture> textureReadyCallback
-    )
+    /// <returns>The drawing, or null if <paramref name="token"/> was canceled before it started.</returns>
+    public Task<Image> Render(TextureDefinition definition, CancellationToken token)
     {
         ExpandMultipleShapes(definition);
 
-        var tqe = new TextureQueueEntry
-        {
-            TextureDefinition = definition,
-            TextureReadyCallback = textureReadyCallback,
-        };
-
-        _textureGenerationQueue.Enqueue(tqe);
+        var entry = new TextureQueueEntry { TextureDefinition = definition, Token = token };
+        _textureGenerationQueue.Enqueue(entry);
+        return entry.Done.Task;
     }
 
     private async void PreFetchAssetsAndInitiate(TextureDefinition definition)
@@ -98,14 +101,16 @@ public partial class TextureFactory : SubViewport
         var project = ProjectService.Instance.CurrentProject;
         if (project != null)
         {
-            var pendingAssets = new System.Collections.Generic.List<Lizzie.AssetManagement.Asset>();
+            var pendingAssets = new List<ImageAsset>();
             foreach (var obj in definition.Objects)
             {
                 if (obj.Text != null && obj.Text.StartsWith("u:"))
                 {
                     string imageName = obj.Text.Substring(2);
-                    var asset = project.Images.Values.FirstOrDefault(a => a.Name == imageName);
-                    if (asset != null && !asset.AssetDownloaded)
+                    var asset = Atoms
+                        .R.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
+                        .FirstOrDefault();
+                    if (asset != null && AssetImageCache.Instance.GetImage(asset) == null)
                     {
                         pendingAssets.Add(asset);
                     }
@@ -115,17 +120,12 @@ public partial class TextureFactory : SubViewport
             if (pendingAssets.Count > 0)
             {
                 _waitingForAsset = true;
-                var tasks = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+                var tasks = new List<Task>();
                 foreach (var asset in pendingAssets)
                 {
-                    var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
-                    await ProjectService.Instance.FetchImageAsync(
-                        asset,
-                        _ => tcs.TrySetResult(true)
-                    );
-                    tasks.Add(tcs.Task);
+                    tasks.Add(AssetImageCache.Instance.FetchImageAsync(asset));
                 }
-                await System.Threading.Tasks.Task.WhenAll(tasks);
+                await Task.WhenAll(tasks);
                 _waitingForAsset = false;
             }
         }
@@ -136,53 +136,26 @@ public partial class TextureFactory : SubViewport
     private void InitiateTextureGeneration(TextureDefinition definition)
     {
         // For drawing, we need to render to a texture using a viewport
-        // Create a SubViewport for rendering
-        _viewport.Size = new Vector2I(definition.Width, definition.Height);
-        _viewport.RenderTargetClearMode = SubViewport.ClearMode.Always;
-        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
-        _viewport.TransparentBg = true;
+        Size = new Vector2I(definition.Width, definition.Height);
+        RenderTargetClearMode = SubViewport.ClearMode.Always;
+        RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        TransparentBg = true;
 
         var tr = new TextureRect();
 
-        Texture2D texture;
-
-        switch (definition.Shape)
-        {
-            case TokenShape.Square:
-                texture = _rectShape;
-                break;
-            case TokenShape.Circle:
-                texture = _circleShape;
-                break;
-            case TokenShape.HexPoint:
-                texture = _hexPointShape;
-                break;
-            case TokenShape.HexFlat:
-                texture = _hexFlatShape;
-                break;
-            case TokenShape.RoundedRect:
-                texture = _roundedRectShape;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-        var image = texture.GetImage();
         tr.Size = new Vector2(
             _activeQueueEntry.TextureDefinition.Width,
             _activeQueueEntry.TextureDefinition.Height
         );
-        tr.ClipChildren = CanvasItem.ClipChildrenMode.Only;
-        tr.Texture = ImageTexture.CreateFromImage(image);
 
         var bgRect = new ColorRect();
         bgRect.Color = definition.BackgroundColor;
         bgRect.Size = new Vector2(definition.Width, definition.Height);
         tr.AddChild(bgRect);
 
-        _viewport.AddChild(tr);
+        AddChild(tr);
 
-        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
 
         _viewportUpdating = 2;
         _skip = 0;
@@ -191,29 +164,23 @@ public partial class TextureFactory : SubViewport
     private void GenerateSecondaryTexture(TextureDefinition definition)
     {
         //cleanup
-        foreach (var c in _viewport.GetChildren())
+        foreach (var c in GetChildren())
             c.QueueFree();
 
-        // Create a ColorRect for the background
-        var bgRect = new ColorRect();
-        bgRect.Color = definition.BackgroundColor;
-        bgRect.Size = new Vector2(definition.Width, definition.Height);
-        //_viewport.AddChild(bgRect);
-
         var tr = new TextureRect();
-        var texture = _viewport.GetTexture();
+        var texture = GetTexture();
         var image = texture.GetImage();
         tr.Size = new Vector2(
             _activeQueueEntry.TextureDefinition.Width,
             _activeQueueEntry.TextureDefinition.Height
         );
         tr.Texture = ImageTexture.CreateFromImage(image);
-        _viewport.AddChild(tr);
+        AddChild(tr);
 
         RenderObjects(definition);
 
         // Get the rendered texture
-        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
 
         _viewportUpdating = 2;
         _skip++;
@@ -251,7 +218,9 @@ public partial class TextureFactory : SubViewport
             bgRect.Color = obj.BackgroundColor;
             bgRect.Position = new Vector2(pW, pH);
             bgRect.Size = new Vector2(scaleWidth, scaleHeight);
-            _viewport.AddChild(bgRect);
+            bgRect.PivotOffset = new Vector2(scaleWidth / 2, scaleHeight / 2);
+            bgRect.RotationDegrees = obj.RotationDegrees;
+            AddChild(bgRect);
         }
 
         var tr = new ReferenceRect();
@@ -265,7 +234,7 @@ public partial class TextureFactory : SubViewport
         tr.PivotOffset = new Vector2(scaleWidth / 2, scaleHeight / 2);
         tr.RotationDegrees = obj.RotationDegrees;
 
-        _viewport.AddChild(tr);
+        AddChild(tr);
     }
 
     private void RenderText(TextureObject obj)
@@ -278,11 +247,6 @@ public partial class TextureFactory : SubViewport
         {
             RenderRectangleText(obj, obj.Multiline);
         }
-    }
-
-    public static Vector2 GetTextBounds(Font font, int fontSize, string text)
-    {
-        return font.GetStringSize(text, fontSize: fontSize);
     }
 
     private void RenderRectangleText(TextureObject obj, bool wrap = false)
@@ -307,7 +271,7 @@ public partial class TextureFactory : SubViewport
         int fontSize = obj.FontSize;
         if (obj.Autosize)
         {
-            fontSize = AutosizeFont(measureText, obj.Font, obj.Height, obj.Width, 6, 72, wrap);
+            fontSize = AutosizeFont(measureText, TextFont, obj.Height, obj.Width, 6, 72, wrap);
         }
 
         if (fontSize == 0)
@@ -318,7 +282,7 @@ public partial class TextureFactory : SubViewport
         {
             // Measure the wrapped size and clamp to obj.Height.
             float wrapWidth = obj.Width * 0.9f;
-            Vector2 wrappedSize = obj.Font.GetMultilineStringSize(
+            Vector2 wrappedSize = TextFont.GetMultilineStringSize(
                 measureText,
                 width: (int)wrapWidth,
                 fontSize: fontSize
@@ -334,7 +298,7 @@ public partial class TextureFactory : SubViewport
         {
             // Single-line: shrink the label to the measured text size so that
             // MoveOriginForAlignment places it correctly for all three alignments.
-            Vector2 singleSize = obj.Font.GetStringSize(measureText, fontSize: fontSize);
+            Vector2 singleSize = TextFont.GetStringSize(measureText, fontSize: fontSize);
 
             if (singleSize.X == 0 || singleSize.Y == 0)
                 return;
@@ -351,8 +315,10 @@ public partial class TextureFactory : SubViewport
         label.ScrollActive = false;
         label.Size = labelSize;
         label.AddThemeColorOverride("default_color", obj.ForegroundColor);
-        label.AddThemeFontOverride("normal_font", obj.Font);
         label.AddThemeFontSizeOverride("normal_font_size", fontSize);
+        label.AddThemeFontSizeOverride("bold_font_size", fontSize);
+        label.AddThemeFontSizeOverride("italics_font_size", fontSize);
+        label.AddThemeFontSizeOverride("bold_italics_font_size", fontSize);
 
         if (wrap)
         {
@@ -363,7 +329,7 @@ public partial class TextureFactory : SubViewport
 
         // Build content segment by segment so [img] tags become real AddImage calls,
         // scaled to match the font line height.
-        PopulateRichTextLabel(label, obj.Text, obj.Font, fontSize, obj.ForegroundColor);
+        PopulateRichTextLabel(label, obj.Text, TextFont, fontSize, obj.ForegroundColor);
 
         if (wrap)
             label.Pop();
@@ -371,7 +337,7 @@ public partial class TextureFactory : SubViewport
         label.Position = MoveOriginForAlignment(obj, labelSize);
         label.PivotOffset = new Vector2(labelSize.X / 2f, labelSize.Y / 2f);
         label.RotationDegrees = obj.RotationDegrees;
-        _viewport.AddChild(label);
+        AddChild(label);
     }
 
     // Matches [iconname] or [iconname color=value], excluding the BBCode tags [b], [/b], [i], [/i], [u], [/u].
@@ -495,51 +461,30 @@ public partial class TextureFactory : SubViewport
         return true;
     }
 
-    private bool IsIconUserDefined(string name)
-    {
-        if (
-            ProjectService.Instance.CurrentProject.Images.Any(x =>
-                string.Equals(x.Value.Name, name, StringComparison.CurrentCultureIgnoreCase)
-            )
-        )
-            return true;
-        return false;
-    }
+    private bool IsIconUserDefined(string name) =>
+        Atoms.R.Get(ImageAsset.ByName, ImageAsset.NameKey(name)).Count > 0;
 
     private Texture2D ResolveIconTexture(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
             return _iconLibrary.TextureFromKey(string.Empty);
 
-        if (IsIconUserDefined(name))
+        foreach (var useName in new string[] { name, name.Replace('_', ' ') })
         {
-            var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a =>
-                string.Equals(a.Name, name, StringComparison.CurrentCultureIgnoreCase)
-            );
-
-            if (asset?.Image != null)
+            if (IsIconUserDefined(useName))
             {
-                return ImageTexture.CreateFromImage(asset.Image);
+                var asset = Atoms
+                    .R.Get(ImageAsset.ByName, ImageAsset.NameKey(useName))
+                    .FirstOrDefault();
+
+                var image = AssetImageCache.Instance.GetImage(asset);
+                if (image != null)
+                {
+                    return ImageTexture.CreateFromImage(image);
+                }
+
+                return _iconLibrary.TextureFromKey(string.Empty);
             }
-
-            return _iconLibrary.TextureFromKey(string.Empty);
-        }
-
-        var uname = name.Replace('_', ' ');
-        if (IsIconUserDefined(uname))
-        {
-            var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a =>
-                string.Equals(a.Name, uname, StringComparison.CurrentCultureIgnoreCase)
-            );
-
-            if (asset?.Image != null)
-            {
-                return ImageTexture.CreateFromImage(asset.Image);
-            }
-
-            return _iconLibrary.TextureFromKey(string.Empty);
         }
 
         // Try exact key first, then case-insensitive search
@@ -786,7 +731,7 @@ public partial class TextureFactory : SubViewport
         if (obj.Quantity < 5)
         {
             //triangles for 2-4
-            int b4 = obj.Width / 4;
+            int b4 = (int)(obj.Width / 4);
             h2 = (int)(Math.Sqrt(3) * obj.Width / 4);
 
             tris[0] = new Vector3(0, h2, 0);
@@ -802,7 +747,7 @@ public partial class TextureFactory : SubViewport
             float s2 = 0.7f;
             float x2 = 0.1f;
             h2 = (int)(Math.Sqrt(3) * obj.Width / 6);
-            b6 = obj.Width / 6;
+            b6 = (int)(obj.Width / 6);
             tris[0] = new Vector3(0, 2 * h2, 0);
             tris[1] = new Vector3(-b6, h2 * x1, 0);
             tris[2] = new Vector3(0, h2 * 2 * s1, 180);
@@ -904,7 +849,7 @@ public partial class TextureFactory : SubViewport
 
     private void RenderTriangleText(TextureObject obj)
     {
-        Vector2 textSize = obj.Font.GetStringSize(obj.Text, fontSize: 12);
+        Vector2 textSize = TextFont.GetStringSize(obj.Text, fontSize: 12);
         if (textSize.Y == 0)
             return;
 
@@ -922,7 +867,6 @@ public partial class TextureFactory : SubViewport
         {
             CenterX = (int)newX,
             CenterY = (int)newY,
-            Font = obj.Font,
             Height = (int)bounds.Y,
             Width = (int)bounds.X,
             Multiline = obj.Multiline,
@@ -936,7 +880,7 @@ public partial class TextureFactory : SubViewport
         RenderRectangleText(o, o.Multiline);
     }
 
-    private static Vector2 ScaleRectangleInTriangle(int triangleSide, float aspectRatio)
+    private static Vector2 ScaleRectangleInTriangle(float triangleSide, float aspectRatio)
     {
         if (aspectRatio == 0)
         {
@@ -978,7 +922,6 @@ public partial class TextureFactory : SubViewport
         {
             CenterX = (int)newX,
             CenterY = (int)newY,
-            Font = obj.Font,
             Height = (int)bounds.Y,
             Width = (int)bounds.X,
             Multiline = obj.Multiline,
@@ -1003,11 +946,13 @@ public partial class TextureFactory : SubViewport
         if (obj.Text != null && obj.Text.StartsWith("u:"))
         {
             string imageName = obj.Text.Substring(2);
-            var project = ProjectService.Instance.CurrentProject;
-            var asset = project?.Images.Values.FirstOrDefault(a => a.Name == imageName);
-            if (asset?.Image != null)
+            var asset = Atoms
+                .R.Get(ImageAsset.ByName, ImageAsset.NameKey(imageName))
+                .FirstOrDefault();
+            var assetImage = AssetImageCache.Instance.GetImage(asset);
+            if (assetImage != null)
             {
-                texture = ImageTexture.CreateFromImage(asset.Image);
+                texture = ImageTexture.CreateFromImage(assetImage);
             }
             else
             {
@@ -1081,30 +1026,27 @@ public partial class TextureFactory : SubViewport
         //tr.PivotOffset = new Vector2(halfWidth, halfHeight);
         tr.RotationDegrees = obj.RotationDegrees;
 
-        _viewport.AddChild(tr);
+        AddChild(tr);
     }
 
     private void AfterRender()
     {
-        var texture = _viewport.GetTexture();
-        var image = texture.GetImage();
-
-        // Create ImageTexture from the rendered image
-        var imageTexture = ImageTexture.CreateFromImage(image);
-
-        _activeQueueEntry.TextureReadyCallback?.Invoke(imageTexture);
+        var image = GetTexture().GetImage();
+        var done = _activeQueueEntry.Done;
 
         //cleanup
-        foreach (var c in _viewport.GetChildren())
+        foreach (var c in GetChildren())
             c.QueueFree();
         _activeQueueEntry = null;
+
+        done.SetResult(image);
     }
 
     private static int AutosizeFont(
         string caption,
         Font font,
-        int height,
-        int width,
+        float height,
+        float width,
         int minSize,
         int maxSize,
         bool wrap = false
@@ -1120,11 +1062,8 @@ public partial class TextureFactory : SubViewport
                 ? font.GetMultilineStringSize(caption, width: (int)targetWidth, fontSize: size)
                 : font.GetStringSize(caption, fontSize: size);
 
-            bool tooBig = wrap
-                ? measured.Y > targetHeight
-                : measured.X > targetWidth || measured.Y > targetHeight;
-
-            if (tooBig)
+            // A single word bigger than one line won't wrap, so we still have to measure.
+            if (measured.X > targetWidth || measured.Y > targetHeight)
                 return last;
 
             last = size;
@@ -1134,61 +1073,22 @@ public partial class TextureFactory : SubViewport
 
     public enum TextureObjectType
     {
-        Text,
-        CoreShape,
-        ExtendedShape,
-        UserShape,
-        RectangleFrame,
-        /*
-        RectangleShape,
-        CircleShape,
-        HexFlatUpShape,
-        HexPointUpShape,
-        TriangleShape,
-        StarShape,
-        PentagonShape
-        */
-    }
-
-    public enum TokenShape
-    {
-        Square = 0,
-        Circle = 1,
-        HexPoint = 2,
-        HexFlat = 3,
-        RoundedRect = 4,
+        Text = 0,
+        CoreShape = 1,
+        RectangleFrame = 2,
     }
 
     public class TextureDefinition
     {
         public int Width { get; set; } = 256;
         public int Height { get; set; } = 256;
-        public TokenShape Shape { get; set; } = TokenShape.Square;
         public Color BackgroundColor { get; set; } = Colors.White;
         public List<TextureObject> Objects { get; set; } = new List<TextureObject>();
     }
 
     public class TextureObject
     {
-        public enum AnchorPoint
-        {
-            TopLeft,
-            TopCenter,
-            TopRight,
-            MiddleLeft,
-            MiddleCenter,
-            MiddleRight,
-            BottomLeft,
-            BottomCenter,
-            BottomRight,
-        };
-
-        public TextureObject()
-        {
-            CenterX = Width / 2;
-            CenterY = Height / 2;
-            Anchor = AnchorPoint.MiddleCenter;
-        }
+        public TextureObject() { }
 
         public TextureObject(TextureObject obj)
         {
@@ -1196,12 +1096,10 @@ public partial class TextureFactory : SubViewport
             TriangleFace = obj.TriangleFace;
             Text = obj.Text;
             ForegroundColor = obj.ForegroundColor;
-            Font = obj.Font;
             Height = obj.Height;
             Width = obj.Width;
             CenterX = obj.CenterX;
             CenterY = obj.CenterY;
-            Anchor = obj.Anchor;
             RotationDegrees = obj.RotationDegrees;
             Quantity = obj.Quantity;
             Multiline = obj.Multiline;
@@ -1215,19 +1113,17 @@ public partial class TextureFactory : SubViewport
         public string Text { get; set; }
         public Color ForegroundColor { get; set; } = Colors.Black;
         public Color BackgroundColor { get; set; } = Colors.Transparent;
-        public Font Font { get; set; }
 
         public int FontSize { get; set; } = 12;
 
         public bool Autosize { get; set; } = true;
-        public int Height { get; set; }
-        public int Width { get; set; }
-        public int CenterX { get; set; }
-        public int CenterY { get; set; }
+        public float Height { get; set; }
+        public float Width { get; set; }
+        public float CenterX { get; set; }
+        public float CenterY { get; set; }
 
         public float Scale { get; set; } = 1f;
 
-        public AnchorPoint Anchor { get; set; }
         public int RotationDegrees { get; set; }
         public bool Multiline { get; set; }
 
@@ -1237,70 +1133,6 @@ public partial class TextureFactory : SubViewport
         public VerticalAlignment VerticalAlignment { get; set; } = VerticalAlignment.Top;
 
         public bool Stretch { get; set; } = false;
-
-        public static AnchorPoint AnchorStringToEnum(string anchor)
-        {
-            switch (anchor.ToLower())
-            {
-                case "tl":
-                    return AnchorPoint.TopLeft;
-                case "tc":
-                    return AnchorPoint.TopCenter;
-                case "tr":
-                    return AnchorPoint.TopRight;
-                case "ml":
-                    return AnchorPoint.MiddleLeft;
-                case "mc":
-                    return AnchorPoint.MiddleCenter;
-                case "mr":
-                    return AnchorPoint.MiddleRight;
-                case "bl":
-                    return AnchorPoint.BottomLeft;
-                case "bc":
-                    return AnchorPoint.BottomCenter;
-                case "br":
-                    return AnchorPoint.BottomRight;
-
-                default:
-                    return AnchorPoint.TopLeft;
-            }
-        }
-
-        public static string AnchorEnumToString(AnchorPoint anchorEnum)
-        {
-            switch (anchorEnum)
-            {
-                case AnchorPoint.TopLeft:
-                    return "TL";
-
-                case AnchorPoint.TopCenter:
-                    return "TC";
-
-                case AnchorPoint.TopRight:
-                    return "TR";
-
-                case AnchorPoint.MiddleLeft:
-                    return "ML";
-
-                case AnchorPoint.MiddleCenter:
-                    return "MC";
-
-                case AnchorPoint.MiddleRight:
-                    return "MR";
-
-                case AnchorPoint.BottomLeft:
-                    return "BL";
-
-                case AnchorPoint.BottomCenter:
-                    return "BC";
-
-                case AnchorPoint.BottomRight:
-                    return "BR";
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(anchorEnum), anchorEnum, null);
-            }
-        }
 
         public static TrackElement.TrackTypeEnum TrackStringToEnum(string trackType)
         {
@@ -1317,10 +1149,10 @@ public partial class TextureFactory : SubViewport
         }
     }
 
-    public class TextureQueueEntry
+    private class TextureQueueEntry
     {
-        public TextureDefinition TextureDefinition { get; set; }
-        public bool InProcess { get; set; }
-        public Action<ImageTexture> TextureReadyCallback { get; set; }
+        public TextureDefinition TextureDefinition { get; init; }
+        public CancellationToken Token { get; init; }
+        public TaskCompletionSource<Image> Done { get; } = new();
     }
 }

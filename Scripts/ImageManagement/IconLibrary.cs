@@ -1,7 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+
+namespace Lizzie;
 
 public class IconLibrary : Dictionary<string, IconEntry>
 {
@@ -119,12 +120,12 @@ public class IconLibrary : Dictionary<string, IconEntry>
         Add(key, new IconEntry { FileName = value, IsCore = isCore });
     }
 
-    public List<string> GetCoreIconList()
+    private List<string> GetCoreIconList()
     {
         return this.Where(x => x.Value.IsCore).Select(x => x.Key).OrderBy(key => key).ToList();
     }
 
-    public List<string> GetExtendedIconList()
+    private List<string> GetExtendedIconList()
     {
         return this.Where(x => !x.Value.IsCore).Select(x => x.Key).OrderBy(key => key).ToList();
     }
@@ -139,7 +140,7 @@ public class IconLibrary : Dictionary<string, IconEntry>
         return ResourceLoader.Load(BaseFolder + this[key].FileName) as Texture2D;
     }
 
-    public void LoadOptionButton(OptionButton button)
+    public void LoadOptionButton(OptionButton button, IAtomReader R)
     {
         int id = 0;
 
@@ -150,56 +151,13 @@ public class IconLibrary : Dictionary<string, IconEntry>
         }
 
         //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Images.Count > 0)
+        var assets = R.Get(ImageAsset.All);
+        if (assets.Count > 0)
         {
             button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Images)
+            foreach (var img in assets)
             {
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Images.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Images)
-            {
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Images.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Images)
-            {
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Images.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Images)
-            {
-                button.AddItem($"u:{img.Value.Name}", id);
-                id++;
-            }
-        }
-
-        //put in user-image block
-        if (ProjectService.Instance.CurrentProject.Images.Count > 0)
-        {
-            button.AddSeparator();
-            foreach (var img in ProjectService.Instance.CurrentProject.Images)
-            {
-                button.AddItem($"u:{img.Value.Name}", id);
+                button.AddItem($"u:{img.Name}", id);
                 id++;
             }
         }
@@ -231,14 +189,6 @@ public class IconLibrary : Dictionary<string, IconEntry>
         {
             menu.AddItem(icon, id);
             id++;
-        }
-    }
-
-    public void LoadOptionButtonExtended(OptionButton button)
-    {
-        foreach (var icon in GetExtendedIconList())
-        {
-            button.AddItem(icon);
         }
     }
 }

@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using System.Globalization;
 using Godot;
 
-namespace Lizzie.Scripts.Templating;
+namespace Lizzie;
 
 public class ImageElement : TemplateElement
 {
@@ -55,16 +54,15 @@ public class ImageElement : TemplateElement
                 Type = TemplateParameter.TemplateParameterType.Boolean,
             }
         );
-        UpdateBounds();
-    }
 
-    private void UpdateBounds()
-    {
-        var textSize = TextureFactory.GetTextBounds(new SystemFont(), 12, "Lipsum Orem");
-        SetParameterValue("Width", "100");
-        SetParameterValue("Height", "100");
-        SetParameterValue("X", "70");
-        SetParameterValue("Y", "70");
+        Parameters.Add(
+            new TemplateParameter
+            {
+                Name = "Quantity",
+                Value = "1",
+                Type = TemplateParameter.TemplateParameterType.Number,
+            }
+        );
     }
 
     public override List<TextureFactory.TextureObject> GetElementData(TextureContext context)
@@ -84,6 +82,7 @@ public class ImageElement : TemplateElement
         t.Text = EvaluateTextParameter(Parameters, "Image", context);
         t.ForegroundColor = EvaluateColorParameter(Parameters, "Foreground", context);
         t.Stretch = EvaluateBooleanParameter(Parameters, "Stretch", context);
+        t.Quantity = EvaluateNumberParameter(Parameters, "Quantity", context);
         l.Add(t);
         return l;
     }

@@ -1,6 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Godot;
+
+namespace Lizzie;
 
 public partial class VcCube : VisualComponentBase
 {
@@ -10,43 +12,22 @@ public partial class VcCube : VisualComponentBase
         ComponentType = VisualComponentType.Cube;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
     }
 
-    public override bool Setup(
-        Dictionary<string, object> parameters,
-        string dataSetRow,
-        TextureFactory textureFactory
-    )
+    protected override void Setup(ComponentParameters parameters, IAtomReader R)
     {
-        return Setup(parameters, textureFactory);
-    }
-
-    public override bool Setup(Dictionary<string, object> parameters, TextureFactory textureFactory)
-    {
-        base.Setup(parameters, string.Empty, textureFactory);
+        base.Setup(parameters, R);
+        var p = (CubeParameters)parameters;
 
         MainMesh = GetNode<GeometryInstance3D>("ObjectMesh");
-        HighlightMesh = GetNode<MeshInstance3D>("HighlightMesh");
 
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                return false;
-            Height = h / 10f;
+        if (p.Height <= 0)
+            return;
 
-            var w = Utility.GetParam<float>(parameters, "Width");
-            Width = w / 10f;
-
-            var l = Utility.GetParam<float>(parameters, "Length");
-            Length = l / 10f;
-
-            if (parameters["Color"] is Color color)
-            {
-                CubeColor = color;
-            }
-        }
+        Height = p.Height / 10f;
+        Width = p.Width / 10f;
+        Length = p.Length / 10f;
+        CubeColor = p.Color;
 
         //create cube
         if (Width <= 0 || Length <= 0)
@@ -66,37 +47,6 @@ public partial class VcCube : VisualComponentBase
         r.Size = new Vector2(Width, Length);
 
         ShapeProfiles.Add(new OffsetShape2D(r));
-
-        return true;
-    }
-
-    public override List<string> ValidateParameters(Dictionary<string, object> parameters)
-    {
-        var ret = new List<string>();
-
-        //must have a name and height. Width/length optional
-        if (parameters.ContainsKey(nameof(ComponentName)))
-        {
-            if (string.IsNullOrEmpty(parameters[nameof(ComponentName)].ToString()))
-                ret.Add("Instance Name may not be blank");
-        }
-        else
-        {
-            ret.Add("Instance Name not included");
-        }
-
-        if (parameters.ContainsKey(nameof(Height)))
-        {
-            var h = Utility.GetParam<float>(parameters, "Height");
-            if (h <= 0)
-                ret.Add("Height must be > 0");
-        }
-        else
-        {
-            ret.Add("Height not included");
-        }
-
-        return ret;
     }
 
     public override GeometryInstance3D DragMesh => MainMesh;
@@ -107,4 +57,17 @@ public partial class VcCube : VisualComponentBase
     private float Width;
     private float Length;
     private Color CubeColor;
+}
+
+[JsonName("CubeParameters")]
+public sealed record CubeParameters : ComponentParameters
+{
+    [JsonIgnore]
+    public override VisualComponentBase.VisualComponentType ComponentType =>
+        VisualComponentBase.VisualComponentType.Cube;
+
+    public float Height { get; init; }
+    public float Width { get; init; }
+    public float Length { get; init; }
+    public Color Color { get; init; } = Colors.Black;
 }

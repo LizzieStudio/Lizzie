@@ -1,61 +1,144 @@
-using System;
+using System.Collections.Generic;
 using Godot;
-using Lizzie.AssetManagement;
 
-public partial class ImageManager : Window
+namespace Lizzie;
+
+public partial class ImageManager : Window, ICommandView
 {
+    private Button _backButton;
     private Button _addNewButton;
     private Button _removeButton;
-    private Button _closeButton;
 
-    private Panel _addPanel;
+    private PanelContainer _addPanel;
     private Button _addImageButton;
     private Button _cancelImageButton;
 
-    private OptionButton _cloudServiceOption;
     public LineEdit _urlInput;
     public LineEdit _nameInput;
 
+    private Control _library;
     private HFlowContainer _tileContainer;
 
+    private Control _imageView;
+    private TextureRect _image;
+    private ShaderMaterial _frameGrid;
+
+    private SpinBox _columns;
+    private SpinBox _rows;
+    private CheckBox _countSet;
+    private SpinBox _count;
+
+    private readonly Dictionary<Ref<ImageAsset>, ImageTile> _tiles = new();
+
+    /// <summary>
+    /// The image open in the view, or <see cref="Ref{T}.None">.
+    /// </summary>
+    private Ref<ImageAsset> _openRef = Ref<ImageAsset>.None;
+
+    /// <summary>
+    /// The ImageAsset that <see cref="_image"/> was loaded for.
+    /// </summary>
+    private Ref<ImageAsset> _loadedRef = Ref<ImageAsset>.None;
+
     private const string _tileScenePath = "res://Scenes/Controls/image_tile.tscn";
+
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
+    }
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        _backButton = GetNode<Button>("%BackButton");
+        _backButton.Pressed += () => Open(Ref<ImageAsset>.None);
         _addNewButton = GetNode<Button>("%AddNewButton");
         _removeButton = GetNode<Button>("%RemoveButton");
-        _closeButton = GetNode<Button>("%CloseButton");
         _addNewButton.Pressed += OnAddNewPressed;
         _removeButton.Pressed += OnRemovePressed;
-        _closeButton.Pressed += OnClosePressed;
+        CloseRequested += QueueFree;
 
-        _addPanel = GetNode<Panel>("%AddImagePanel");
+        _addPanel = GetNode<PanelContainer>("%AddImagePanel");
         _addImageButton = GetNode<Button>("%AddImageButton");
         _addImageButton.Pressed += OnAddImagePressed;
         _cancelImageButton = GetNode<Button>("%CancelImageButton");
         _cancelImageButton.Pressed += OnCancelImagePressed;
 
+        _library = GetNode<Control>("%Library");
         _tileContainer = GetNode<HFlowContainer>("%TileContainer");
 
-        _cloudServiceOption = GetNode<OptionButton>("%CloudService");
+        _imageView = GetNode<Control>("%ImageView");
+        _image = GetNode<TextureRect>("%Image");
+        _frameGrid = (ShaderMaterial)_image.Material;
+
         _urlInput = GetNode<LineEdit>("%UrlInput");
         _nameInput = GetNode<LineEdit>("%NameInput");
 
-        InitializeTiles();
+        _columns = GetNode<SpinBox>("%Columns");
+        var columnsEdits = _columns.GetNode<FocusEditTransition>("FocusEditTransition");
+        _columns.ValueChanged += value =>
+            columnsEdits.Update(
+                ImageAsset.ById,
+                _openRef,
+                a => a with { Layout = a.Layout with { Columns = (int)value } }
+            );
+
+        _rows = GetNode<SpinBox>("%Rows");
+        var rowsEdits = _rows.GetNode<FocusEditTransition>("FocusEditTransition");
+        _rows.ValueChanged += value =>
+            rowsEdits.Update(
+                ImageAsset.ById,
+                _openRef,
+                a => a with { Layout = a.Layout with { Rows = (int)value } }
+            );
+
+        _countSet = GetNode<CheckBox>("%CountSet");
+        _countSet.Toggled += on =>
+            Atoms.R.Update(
+                this,
+                ImageAsset.ById,
+                _openRef,
+                a =>
+                    a with
+                    {
+                        Layout = a.Layout with
+                        {
+                            Count = on ? a.Layout.Columns * a.Layout.Rows : null,
+                        },
+                    }
+            );
+
+        _count = GetNode<SpinBox>("%Count");
+        var countEdits = _count.GetNode<FocusEditTransition>("FocusEditTransition");
+        _count.ValueChanged += value =>
+            countEdits.Update(
+                ImageAsset.ById,
+                _openRef,
+                a => a with { Layout = a.Layout with { Count = (int)value } }
+            );
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta) { }
 
-    public event EventHandler Closed;
-
-    private void OnClosePressed()
+    private void OnRemovePressed()
     {
-        Closed?.Invoke(this, EventArgs.Empty);
+        if (Atoms.R.Get(ImageAsset.ById, _openRef) is { } image)
+            Atoms.R.Write(this, Atoms.R.Unset(image));
     }
 
-    private void OnRemovePressed() { }
+    /// <summary>
+    /// For when the user clicks an image to see it,
+    /// or <see cref="Ref{T}.None"/> when they go back to the thumbnails.
+    /// An image's edit button opens the manager on it with this too.
+    /// </summary>
+    public void Open(Ref<ImageAsset> image)
+    {
+        // Ends the edits to the previous image's layout.
+        GuiReleaseFocus();
+        _openRef = image;
+        Atoms.R.QueueSync(this);
+    }
 
     private void UpdateButtons(bool enable)
     {
@@ -74,35 +157,19 @@ public partial class ImageManager : Window
         _addPanel.Visible = false;
         UpdateButtons(true);
 
-        //TODO - Check that name and URL exist and are unique
-        //plus other validation
-
         //create the new asset
-        var asset = new Asset
+        var asset = new ImageAsset
         {
+            Id = Ref<ImageAsset>.Create(),
             Name = _nameInput.Text,
-            Type = Asset.AssetType.Image,
             CloudPath = _urlInput.Text,
         };
 
-        switch (_cloudServiceOption.Selected)
-        {
-            case 0:
-                asset.ProviderType = CloudProviderType.GoogleDrive;
-                break;
-            case 1:
-                asset.ProviderType = CloudProviderType.Dropbox;
-                break;
-            case 2:
-                asset.ProviderType = CloudProviderType.OneDrive;
-                break;
-            default:
-                GD.PrintErr("Invalid cloud service selected");
-                return;
-        }
+        Atoms.R.Write(this, asset);
+        Open(asset.Id);
 
-        AddImageTile(asset);
-        ProjectService.Instance.UpdateImage(asset);
+        _nameInput.Text = string.Empty;
+        _urlInput.Text = string.Empty;
     }
 
     private void OnCancelImagePressed()
@@ -111,22 +178,64 @@ public partial class ImageManager : Window
         UpdateButtons(true);
     }
 
-    private void AddImageTile(Asset asset)
+    private void Sync(IWatchReader R)
+    {
+        var (removed, added) = R.Diff(ImageAsset.All);
+
+        foreach (var r in removed)
+            RemoveImageTile(r.Id);
+        foreach (var a in added)
+            AddImageTile(a.Id);
+
+        var open = R.Get(ImageAsset.ById, _openRef);
+        _library.Visible = _addNewButton.Visible = open == null;
+        _imageView.Visible = _backButton.Visible = _removeButton.Visible = open != null;
+        Title = open == null ? "Images" : $"Images: {open.Name}";
+        if (open == null)
+            return;
+
+        if (_loadedRef != open.Id)
+            LoadImage(open);
+
+        var layout = open.Layout;
+        _frameGrid.SetShaderParameter("columns", layout.Columns);
+        _frameGrid.SetShaderParameter("rows", layout.Rows);
+        _frameGrid.SetShaderParameter("count", layout.FrameCount());
+        _columns.SetValueNoSignal(layout.Columns);
+        _rows.SetValueNoSignal(layout.Rows);
+        _countSet.SetPressedNoSignal(layout.Count != null);
+        _count.Editable = layout.Count != null;
+        _count.SetValueNoSignal(layout.Count ?? layout.Columns * layout.Rows);
+    }
+
+    private async void LoadImage(ImageAsset asset)
+    {
+        _loadedRef = asset.Id;
+        _image.Texture = null;
+        var image = await AssetImageCache.Instance.FetchImageAsync(asset);
+        // safety checks to make sure nothing changed during the load
+        if (IsInstanceValid(this) && _loadedRef == asset.Id && image != null)
+            _image.Texture = ImageTexture.CreateFromImage(image);
+    }
+
+    private void AddImageTile(Ref<ImageAsset> id)
     {
         var tileScene = GD.Load<PackedScene>(_tileScenePath);
         var tile = tileScene.Instantiate<ImageTile>();
-        tile.SetAsset(asset);
+        tile.ImageRef = id;
+        tile.Clicked += Open;
         _tileContainer.AddChild(tile);
-
-        _nameInput.Text = string.Empty;
-        _urlInput.Text = string.Empty;
+        _tiles[id] = tile;
     }
 
-    private void InitializeTiles()
+    private void RemoveImageTile(Ref<ImageAsset> id)
     {
-        foreach (var i in ProjectService.Instance.CurrentProject.Images)
-        {
-            AddImageTile(i.Value);
-        }
+        if (!_tiles.Remove(id, out var tile))
+            return;
+        _tileContainer.RemoveChild(tile);
+        tile.QueueFree();
+
+        if (_openRef == id)
+            _openRef = Ref<ImageAsset>.None;
     }
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-22,-23)">
+        <g id="CommandMenuButton" transform="matrix(1,0,0,1,-154.927955,-43)">
+            <rect x="176.928" y="66" width="16" height="16" style="fill:none;"/>
+            <g transform="matrix(0.833333,0,0,0.833333,49.541307,127.232568)">
+                <g transform="matrix(1.101371,0,0,1.242975,-14.952934,-66.238762)">
+                    <rect x="155.64" y="0.916" width="10.896" height="5.793" style="fill:none;stroke:rgb(142,239,151);stroke-width:1.7px;"/>
+                </g>
+                <g transform="matrix(0.759345,0,0,0.759345,39.524935,-64.975699)">
+                    <path d="M158.938,4.577L164.865,4.577" style="fill:none;stroke:rgb(142,239,151);stroke-width:2.63px;"/>
+                </g>
+            </g>
+            <path d="M180.928,71C179.824,71 178.928,70.104 178.928,69C178.928,67.896 179.824,67 180.928,67L188.928,67C190.032,67 190.928,67.896 190.928,69C190.928,70.104 190.032,71 188.928,71L180.928,71ZM184.928,70.25L187.428,67.75L182.428,67.75L184.928,70.25Z" style="fill:rgb(142,239,151);"/>
+        </g>
+    </g>
+</svg>

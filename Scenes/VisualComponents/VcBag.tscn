@@ -1,23 +1,14 @@
 [gd_scene format=3 uid="uid://42w15c1u0733"]
 
 [ext_resource type="Script" uid="uid://b8plyiyorugjs" path="res://Scripts/VisualComponents/VcBag.cs" id="1_7onit"]
-[ext_resource type="ArrayMesh" uid="uid://b8gu6yva74y2g" path="res://cup_mesh.tres" id="2_7onit"]
-[ext_resource type="Shader" uid="uid://3ivexy0xee6l" path="res://Shaders/backface.gdshader" id="3_7dijs"]
+[ext_resource type="ArrayMesh" uid="uid://b8gu6yva74y2g" path="res://Scenes/VisualComponents/cup_mesh.tres" id="2_7onit"]
 [ext_resource type="Texture2D" uid="uid://b221bw3deh1g3" path="res://Textures/UI/drag_white_bg.png" id="4_bojv1"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_7dijs"]
+size = Vector3(0.35, 0.1, 0.35)
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_4nge1"]
 radius = 0.85791016
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_4nge1"]
-render_priority = 0
-shader = ExtResource("3_7dijs")
-shader_parameter/outline_color = Color(1, 1, 1, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_72lon"]
-material = SubResource("ShaderMaterial_4nge1")
-height = 1.0
 
 [node name="Bag" type="Area3D" unique_id=769039983]
 script = ExtResource("1_7onit")
@@ -27,16 +18,11 @@ mesh = ExtResource("2_7onit")
 skeleton = NodePath("")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=644837911]
-transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, -1.0666493, 0.952, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.067, 1, 0)
 shape = SubResource("BoxShape3D_7dijs")
 
 [node name="DrawCollider" type="CollisionShape3D" parent="." unique_id=2080289539]
 shape = SubResource("CylinderShape3D_4nge1")
-
-[node name="HighlightMesh" type="MeshInstance3D" parent="." unique_id=1832133218]
-transform = Transform3D(2.1, 0, 0, 0, 2.1, 0, 0, 0, 2.1, 0, 0, 0)
-visible = false
-mesh = SubResource("CylinderMesh_72lon")
 
 [node name="ProtoAnchor" type="Node3D" parent="." unique_id=1832270472]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.397, -0.303)
@@ -44,6 +30,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.397, -0.303)
 [node name="DragPatch" type="Sprite3D" parent="." unique_id=512471132]
 transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -1.0656493, 1.004, 0)
 axis = 1
+transparent = false
 texture = ExtResource("4_bojv1")
 
 [node name="ComponentCount" type="Label3D" parent="." unique_id=1262537943]

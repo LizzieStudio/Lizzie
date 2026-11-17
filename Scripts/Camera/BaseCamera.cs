@@ -1,5 +1,7 @@
-using System.ComponentModel;
+using System.Collections.Generic;
 using Godot;
+
+namespace Lizzie;
 
 public abstract partial class BaseCamera : Node3D, ICamera
 {
@@ -35,76 +37,137 @@ public abstract partial class BaseCamera : Node3D, ICamera
         ActualCamera = GetCameraNode();
         _initialTransform = Transform;
         _initialCameraTransform = ActualCamera.Transform;
-        EventBus.Instance.Subscribe<ModalDialogOpenedEvent>(OnModalOpened);
-        EventBus.Instance.Subscribe<ModalDialogClosedEvent>(OnModalClosed);
     }
 
-    private void OnModalClosed()
-    {
-        _modalOpen = false;
-    }
+    private bool AcceptsInput =>
+        Current && _gameObjects.CursorMode != CursorMode.DragSelect && !CommandMenu.IsOpen;
 
-    private bool _modalOpen;
+    /// <summary>The keys that move the camera while held.</summary>
+    private static readonly StringName[] HeldActions =
+    [
+        "zoom_in",
+        "zoom_out",
+        "pan_left",
+        "pan_right",
+        "pan_up",
+        "pan_down",
+        "reset_view",
+    ];
 
-    private void OnModalOpened()
-    {
-        _modalOpen = true;
-    }
+    /// <summary>
+    /// The held actions, like holding W to move the camera forward.
+    /// </summary>
+    private readonly HashSet<StringName> _held = new();
+
+    private bool Held(StringName action) => _held.Contains(action);
 
     public override void _Process(double delta)
     {
         base._Process(delta);
 
-        if (_modalOpen)
-            return;
-
-        if (
-            !Current
-            || _gameObjects.CursorMode == CursorMode.DragSelect
-            || _gameObjects.CursorMode == CursorMode.PopupMenu
-        )
+        if (!AcceptsInput)
             return;
 
         // Handle Zoom
-        if (Input.IsActionPressed("zoom_in"))
+        if (Held("zoom_in"))
             UpdateZoom((float)-delta * ContinuousZoomSpeed);
-        if (Input.IsActionPressed("zoom_out"))
+        if (Held("zoom_out"))
             UpdateZoom((float)delta * ContinuousZoomSpeed);
-        if (Input.IsActionJustPressed("component_zoom"))
-            ZoomComponent(_gameObjects.GetMouseSelectedObject());
 
         // Handle Pan
-        UpdatePan(Input.GetVector("pan_left", "pan_right", "pan_up", "pan_down") * (float)delta);
+        var pan = new Vector2(
+            (Held("pan_right") ? 1 : 0) - (Held("pan_left") ? 1 : 0),
+            (Held("pan_down") ? 1 : 0) - (Held("pan_up") ? 1 : 0)
+        );
+        UpdatePan(pan.LimitLength() * (float)delta);
 
         // Reset
-        if (Input.IsActionPressed("reset_view"))
+        if (Held("reset_view"))
             Reset();
     }
 
-    // Controls that use the mouse a better handled in the _Input method because of engine quirks (like Mouse wheel not having a pressed event).
-    public override void _Input(InputEvent @event)
+    public override void _UnhandledKeyInput(InputEvent e)
     {
-        base._Input(@event);
+        foreach (var action in HeldActions)
+            if (Shortcuts.Pressed(e, action))
+                _held.Add(action);
+    }
 
-        if (
-            !Current
-            || _gameObjects.CursorMode == CursorMode.DragSelect
-            || _gameObjects.CursorMode == CursorMode.PopupMenu
-        )
+    public override void _Notification(int what)
+    {
+        // A window or another app took focus.
+        if (what == NotificationApplicationFocusOut || what == NotificationWMWindowFocusOut)
+        {
+            _held.Clear();
+            EndRotate();
+        }
+    }
+
+    public override void _Input(InputEvent e)
+    {
+        base._Input(e);
+
+        foreach (var action in HeldActions)
+            if (e.IsActionReleased(action))
+                _held.Remove(action);
+
+        // _rotateFrom != null
+        if (_rotateFrom is not { } from)
             return;
 
-        if (Input.IsActionPressed("rotate") && @event is InputEventMouseMotion mouseMotion)
+        if (e is InputEventMouseButton && e.IsActionReleased("rotate"))
         {
-            UpdateRotation(mouseMotion.Relative);
+            if (_rotating)
+                GetViewport().SetInputAsHandled();
+            EndRotate();
         }
+        else if (e is InputEventMouseMotion motion)
+        {
+            if (_rotating)
+            {
+                UpdateRotation(motion.Relative);
+                GetViewport().SetInputAsHandled();
+            }
+            // A right click opens the command menu, so wait until a drag threshold is passed.
+            else if (motion.Position.DistanceTo(from) >= GetViewport().GuiDragThreshold)
+            {
+                _rotating = true;
+                Input.MouseMode = Input.MouseModeEnum.Captured;
+                GetViewport().SetInputAsHandled();
+            }
+        }
+    }
 
-        if (@event is InputEventMouseButton)
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (!AcceptsInput || e is not InputEventMouseButton button)
+            return;
+
+        if (e.IsActionPressed("rotate"))
+            _rotateFrom = button.Position;
+        if (e.IsActionPressed("zoom_in"))
+            UpdateZoom(-ZoomSpeed);
+        if (e.IsActionPressed("zoom_out"))
+            UpdateZoom(ZoomSpeed);
+    }
+
+    // Where the rotate click started.
+    private Vector2? _rotateFrom;
+
+    private bool _rotating;
+
+    /// <summary>
+    /// Stops rotating and puts the cursor back where the drag began.
+    /// </summary>
+    private void EndRotate()
+    {
+        if (_rotating)
         {
-            if (@event.IsActionPressed("zoom_in"))
-                UpdateZoom(-ZoomSpeed);
-            if (@event.IsActionPressed("zoom_out"))
-                UpdateZoom(ZoomSpeed);
+            Input.MouseMode = Input.MouseModeEnum.Visible;
+            GetViewport().WarpMouse(_rotateFrom!.Value);
         }
+        _rotating = false;
+        _rotateFrom = null;
     }
 
     protected abstract Camera3D GetCameraNode();
@@ -112,6 +175,9 @@ public abstract partial class BaseCamera : Node3D, ICamera
     protected abstract void UpdateZoom(float zoomValue);
     protected abstract void UpdateRotation(Vector2 mousePosition);
     protected abstract void ZoomComponent(VisualComponentBase component);
+
+    /// <summary>Frames the component.</summary>
+    public void ZoomTo(VisualComponentBase component) => ZoomComponent(component);
 
     protected virtual void Reset()
     {

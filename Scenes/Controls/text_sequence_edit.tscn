@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://c1m4xx5vxyd0r"]
+
+[ext_resource type="Script" uid="uid://f0wgwaxrihun" path="res://Scripts/Controls/SequenceEdit.cs" id="1_edit"]
+
+[node name="TextSequenceEdit" type="LineEdit" unique_id=1645028276]
+script = ExtResource("1_edit")
+Kind = 1
+Syntax = "Separate values with commas: A, 5, VP.
+Specify ranges or letters or numbers with a dash: A-C, 4-2 becomes A, B, C, 4, 3, 2
+Repeat values or ranges with *N: A-B*2 becomes A, B, A, B
+Drop N to repeat indefinitely: C* becomes C, C, C...
+To get every Nth value, use /N: A-F/2 becomes A, C, E
+You can group items with parens: (J, K)*2 becomes J, K, J, K
+wrap values in quotes if they have commas: \"Draw, then discard\""

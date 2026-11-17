@@ -1,0 +1,227 @@
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+
+namespace Lizzie.Replication.Machinery;
+
+/// <summary>
+/// Decides which commands apply and what they act on, for menus, buttons and keyboard shortcuts.
+/// </summary>
+public static class CommandResolver
+{
+    /// <summary>
+    /// The commands a context menu offers: <see cref="CommandList.ContextMenu"/> with the view's own commands.
+    /// </summary>
+    public static IReadOnlyList<Command> ForContextMenu(CommandContext context) =>
+        MenuOrder(context.Local);
+
+    /// <summary>
+    /// The items a menu of <paramref name="commands"/> shows, with what each acts on.
+    /// Commands have properties which decide when they can act on a certain target.
+    /// A command shows when a relevant atom is selected.
+    /// </summary>
+    /// <param name="all">
+    /// Keeps all the commands, even when disabled.
+    /// This is specifically for the Menu Bar, which shouldn't change.
+    /// </param>
+    public static List<(
+        Command Command,
+        IReadOnlyList<IAtomRef> Targets,
+        IReadOnlyList<string> Blocked
+    )> ForMenu(CommandContext context, IEnumerable<Command> commands, bool all = false)
+    {
+        var items =
+            new List<(
+                Command Command,
+                IReadOnlyList<IAtomRef> Targets,
+                IReadOnlyList<string> Blocked
+            )>();
+        foreach (var command in commands)
+        {
+            if (command == Command.Divider)
+            {
+                if (items.Count > 0 && items[^1].Command != Command.Divider)
+                    items.Add((command, [], []));
+                continue;
+            }
+            var item = Resolve(command, context, Atoms.R, menu: true);
+            if (all || ShouldShowInMenu(item))
+                items.Add(item);
+        }
+        if (items.Count > 0 && items[^1].Command == Command.Divider)
+            items.RemoveAt(items.Count - 1);
+        return items;
+    }
+
+    /// <summary>
+    /// Runs the command the key is bound to, on the targets in <paramref name="view"/> it can act on.
+    /// When several commands bound to the same key have targets in the context, none of them run.
+    /// With nothing selected, they act on what's hovered. Without a view, only commands without targets run.
+    /// True when the key belongs to a command, even if it didn't run.
+    /// </summary>
+    public static bool RunShortcut(InputEvent e, ICommandView view)
+    {
+        var context = CommandContext.Of(view, Atoms.R, keys: true);
+        var bound = ForKeys(context).Where(k => k.Command.Matches(e)).ToList();
+        var ready = bound.Where(k => k.Command.Fits(k.Targets.Count)).ToList();
+        if (ready.Count == 1)
+        {
+            var (command, targets, _) = ready[0];
+            if (command is IChoiceCommand choice)
+            {
+                // A number key picks that choice, when there is one.
+                if (
+                    choice.NumberPressed(e) is { } n
+                    && choice.ChoicesFor(targets) is var choices
+                    && n <= choices.Count
+                )
+                    choice.Choose(targets, choices[n - 1].Value, view);
+            }
+            else
+                command.Run(targets, view);
+        }
+        return bound.Count > 0;
+    }
+
+    /// <summary>
+    /// Whether the command's keys would run it in <paramref name="context"/>, using the same logic as <see cref="RunShortcut"/>.
+    /// Menus use this to decide if they should show a command's shortcut.
+    /// </summary>
+    public static bool RunsFromKeys(Command command, CommandContext context) =>
+        ForKeys(context)
+            .Where(k => SharesKey(k.Command, command) && k.Command.Fits(k.Targets.Count))
+            .Select(k => k.Command)
+            .SequenceEqual([command]);
+
+    /// <summary>
+    /// Every command that keyboard shortcuts could run in <paramref name="context"/>,
+    /// with the targets those shortcuts act on.
+    /// </summary>
+    private static IEnumerable<(
+        Command Command,
+        List<IAtomRef> Targets,
+        List<string> Blocked
+    )> ForKeys(CommandContext context) =>
+        CommandList
+            .All.Concat(context.Local)
+            .Select(c => Resolve(c, context, Atoms.R, menu: false));
+
+    /// <summary>
+    /// The command that runs for <paramref name="command"/> in <paramref name="context"/>,
+    /// with what it acts on and why it left out the rest.
+    /// </summary>
+    public static (Command Command, List<IAtomRef> Targets, List<string> Blocked) Resolve(
+        Command command,
+        CommandContext context,
+        IAtomReader R,
+        bool menu
+    )
+    {
+        if (command is not FirstOfCommand first)
+            return (
+                command,
+                TargetsFor(command, context, R, menu),
+                BlockedFor(command, context, R, menu)
+            );
+        var members = first.Members.Select(m => Resolve(m, context, R, menu)).ToList();
+        return members.FirstOrDefault(ShouldShowInMenu, members[0]);
+    }
+
+    private static bool ShouldShowInMenu(
+        (Command Command, List<IAtomRef> Targets, List<string> Blocked) item
+    ) => item.Command.Fits(item.Targets.Count) || item.Targets.Count > 0 || item.Blocked.Count > 0;
+
+    /// <summary>
+    /// Whether both commands share a keyboard shortcut.
+    /// </summary>
+    private static bool SharesKey(Command a, Command b) =>
+        a == b
+        || (a is IChoiceCommand { NumberKeys: true } && b is IChoiceCommand { NumberKeys: true })
+        || KeysOf(a).Any(k => KeysOf(b).Any(o => k.IsMatch(o)));
+
+    private static IEnumerable<InputEvent> KeysOf(Command command) =>
+        command.Action != null && InputMap.HasAction(command.Action)
+            ? InputMap.ActionGetEvents(command.Action)
+            : [];
+
+    /// <summary>
+    /// <para>The targets for this command.</para>
+    /// Takes the parts of the context in <see cref="Command.ActsOn"/>
+    /// and filters it by those that return true when passed to <see cref="Command.CanActOn"/>.
+    /// </summary>
+    /// <param name="R">What <see cref="Command.CanActOn"/> reads through, like a Watch's reader.</param>
+    public static List<IAtomRef> TargetsFor(
+        Command command,
+        CommandContext context,
+        IAtomReader R,
+        bool menu
+    ) => Candidates(command, context, menu).Where(t => command.CanActOn(R, t)).ToList();
+
+    /// <summary>
+    /// Lists the reasons why <see cref="TargetsFor"/> rejected atoms, if any.
+    /// </summary>
+    private static List<string> BlockedFor(
+        Command command,
+        CommandContext context,
+        IAtomReader R,
+        bool menu
+    ) =>
+        Candidates(command, context, menu)
+            .Select(t => command.Blocked(R, t))
+            .OfType<string>()
+            .Distinct()
+            .ToList();
+
+    private static IEnumerable<IAtomRef> Candidates(
+        Command command,
+        CommandContext context,
+        bool menu
+    )
+    {
+        var acts = command.ActsOn;
+        var targets = acts.HasFlag(Context.Selected) ? context.Selected : [];
+        if (acts.HasFlag(Context.Contents))
+            targets = targets.Union(context.Contents);
+        if (menu && acts.HasFlag(Context.Containers))
+            targets = targets.Union(context.Containers);
+        if (menu && acts.HasFlag(Context.Referenced))
+            targets = targets.Union(context.Referenced);
+        if (acts.HasFlag(Context.Subject))
+            targets = targets.Union(context.Subject);
+        return targets;
+    }
+
+    /// <summary>
+    /// The context menu's commands in order.
+    /// </summary>
+    private static List<Command> MenuOrder(IReadOnlyList<Command> local)
+    {
+        var order = CommandList.ContextMenu.ToList();
+        int previous = -1;
+        foreach (var command in local)
+        {
+            int last = order.FindLastIndex(c =>
+                c != Command.Divider && c.TargetType == command.TargetType
+            );
+            int firstGlobal = order.FindIndex(c => c is GlobalCommand);
+            previous =
+                command == Command.Divider ? previous + 1
+                : last >= 0 ? last + 1
+                : firstGlobal >= 0 ? firstGlobal
+                : order.Count;
+            order.Insert(previous, command);
+        }
+
+        for (int i = order.Count - 1; i > 0; i--)
+        {
+            var (before, after) = (order[i - 1], order[i]);
+            if (
+                before != Command.Divider
+                && after != Command.Divider
+                && before.TargetType != after.TargetType
+            )
+                order.Insert(i, Command.Divider);
+        }
+        return order;
+    }
+}

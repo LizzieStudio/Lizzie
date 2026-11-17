@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Lizzie;
+
 public partial class PerspectiveViewCamera : BaseCamera
 {
     [Export]
@@ -50,7 +52,7 @@ public partial class PerspectiveViewCamera : BaseCamera
     {
         if (component == null)
             return;
-        GlobalPosition = new Vector3(component.Position.X, 0, component.Position.Z);
+        GlobalPosition = new Vector3(component.GlobalPosition.X, 0, component.GlobalPosition.Z);
         ActualCamera.Position = new Vector3(
             0,
             0,

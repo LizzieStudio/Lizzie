@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://bjpotplk7luln" path="res://Scripts/Project/SeatsWindow.cs" id="1_seats"]
+
+[node name="SeatsWindow" type="Window" unique_id=175254839]
+oversampling_override = 1.0
+title = "Seats"
+initial_position = 2
+size = Vector2i(560, 360)
+script = ExtResource("1_seats")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1420263022]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=42592557]
+layout_mode = 2
+
+[node name="Seats" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=1832924726]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/Seats" unique_id=1013190881]
+layout_mode = 2
+
+[node name="SeatList" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Seats/ScrollContainer" unique_id=1036551933]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SeatDropZone" type="Control" parent="MarginContainer/VBoxContainer/Seats" unique_id=1202331337]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="SeatDropLine" type="ColorRect" parent="MarginContainer/VBoxContainer/Seats" unique_id=396257541]
+unique_name_in_owner = true
+visible = false
+top_level = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.54901963, 0.69411767, 1, 1)
+
+[node name="AddSeat" type="Button" parent="MarginContainer/VBoxContainer" unique_id=473137661]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Add Seat"

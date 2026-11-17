@@ -1,0 +1,615 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Lizzie.Replication.Machinery;
+using Xunit;
+
+namespace Lizzie.Tests;
+
+/// <summary>
+/// A store holds each atom by its id, keeps the lookups it has been read through,
+/// and reports which query values each change touched.
+/// </summary>
+public class AtomStoreTests
+{
+    // components by their key, all in stage None
+    private static readonly Identity<ComponentPosition, PositionKey> ById = new(s =>
+        new(s.StageRef, s.Id)
+    );
+
+    private static readonly Lookup<ComponentPosition, SnowTag> ByContainer = new(ContainerOf);
+
+    // the same lookup, from the bottom of each stack up
+    private static readonly Lookup<ComponentPosition, SnowTag> ByStack = new(
+        ContainerOf,
+        IRanked.ByRank
+    );
+
+    // a lookup only components in a container are in
+    private static readonly Lookup<ComponentPosition, SnowTag?> InContainer = new(s =>
+        s.IsOnTable ? null : ContainerOf(s)
+    );
+
+    // the tag of the container s is in, or None
+    private static SnowTag ContainerOf(ComponentPosition s) => s.ContainerRef.Tag;
+
+    private readonly Timeline _timeline = new();
+    private readonly AtomStore<ComponentPosition, PositionKey> _store = new(ById);
+    private long _clock;
+
+    private static SnowTag Tag(int counter) => new(Source.Host, counter);
+
+    private static PositionKey Key(int counter) => new(Ref<Stage>.None, new(Tag(counter)));
+
+    private static InComponent In(int container) => new(new(Tag(container)));
+
+    private static ComponentPosition Component(int id, int container = 0) =>
+        new() { Id = new(Tag(id)), Location = container == 0 ? null : In(container) };
+
+    // ranks from the bottom of a stack up
+    private static readonly IReadOnlyList<SnowRank> Ranks = SnowRank.AfterAll(3);
+
+    private static ComponentPosition Stacked(int id, SnowRank rank) =>
+        Component(id, container: 5) with
+        {
+            Rank = rank,
+        };
+
+    /// <summary>Records an event writing <paramref name="atoms"/>, and merges it into the store.</summary>
+    private TimelineEvent Write(params ComponentPosition[] atoms) =>
+        Record(new TimelineEvent { Id = NextId(), Writes = atoms });
+
+    /// <summary>Records an event unsetting the atom with <paramref name="id"/>, and merges it into the store.</summary>
+    private TimelineEvent Unset(int id) =>
+        Record(new TimelineEvent { Id = NextId(), Unsets = [new Unset(ById, Key(id))] });
+
+    /// <summary>Records an event unsetting every atom in <paramref name="container"/>, and merges it into the store.</summary>
+    private TimelineEvent UnsetAllIn(int container) =>
+        Record(
+            new TimelineEvent { Id = NextId(), Unsets = [new Unset(ByContainer, Tag(container))] }
+        );
+
+    private ComponentPosition Value(int id) => (ComponentPosition)_store.Find(Key(id)).Value;
+
+    private TimelineEvent Undo(TimelineEvent e) =>
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Undo = new UndoFlag { Reverses = e.Id },
+            }
+        );
+
+    /// <summary>
+    /// Records the first event of a transition, drafting <paramref name="atoms"/>, and returns the transition.
+    /// Like <see cref="Atoms.Open(Godot.Node, IEnumerable{Atom})"/>, the drafts stay in any transitions they're in.
+    /// </summary>
+    private Transition Open(params ComponentPosition[] atoms)
+    {
+        var transition = new Transition(NextId());
+        Record(
+            new TimelineEvent
+            {
+                Id = transition.Start,
+                Writes = atoms
+                    .Select(a => a with { Transitions = a.Transitions.With(transition) })
+                    .ToArray(),
+            }
+        );
+        return transition;
+    }
+
+    /// <summary>
+    /// Records the event that ends <paramref name="transition"/>, writing <paramref name="atoms"/>.
+    /// Like <see cref="Atoms.Close(Godot.Node, Transition, IEnumerable{IChange})"/>, they leave only this transition.
+    /// </summary>
+    private TimelineEvent Close(Transition transition, params ComponentPosition[] atoms) =>
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Ends = transition,
+                Writes = atoms
+                    .Select(a => a with { Transitions = a.Transitions.Without(transition) })
+                    .ToArray(),
+            }
+        );
+
+    private void Cancel(Transition transition) =>
+        Record(new TimelineEvent { Id = NextId(), Ends = transition });
+
+    private SnowStamp NextId() => new(++_clock, Source.Host);
+
+    private TimelineEvent Record(TimelineEvent e)
+    {
+        // in id order, as the synchronizer keeps it, for events that arrive late
+        int at = _timeline.Count;
+        while (at > 0 && _timeline.GetAt(at - 1).Key.CompareTo(e.Id) > 0)
+            at--;
+        _timeline.Insert(at, e.Id, e);
+        _store.Apply(_timeline, TimelineUndo.Changes(_timeline, e).ToList(), false);
+        return e;
+    }
+
+    /// <summary>The touches <paramref name="change"/> reports.</summary>
+    private Touch[] TouchesOf(System.Action change)
+    {
+        var touches = new List<Touch>();
+        _store.Changed += touches.AddRange;
+        change();
+        _store.Changed -= touches.AddRange;
+        return touches.ToArray();
+    }
+
+    [StackTraceHidden]
+    private static void AssertTouched(Touch[] touched, params Touch[] expected)
+    {
+        Assert.True(
+            touched.ToHashSet().SetEquals(expected),
+            $"The change touched the wrong query values.\n\nExpected: {string.Join(", ", expected)}\nTouched:  {string.Join(", ", touched)}"
+        );
+    }
+
+    [StackTraceHidden]
+    private static void AssertIds(IEnumerable<ComponentPosition> atoms, params int[] expected)
+    {
+        var ids = atoms.Select(r => r.Id).Order().ToArray();
+        var want = expected.Select(n => new Ref<Component>(Tag(n))).Order().ToArray();
+        Assert.True(
+            ids.SequenceEqual(want),
+            $"Found the wrong atoms.\n\nExpected: {string.Join(", ", want)}\nFound:    {string.Join(", ", ids)}"
+        );
+    }
+
+    [Fact]
+    public void TheNewestWriteOfAnIdIsItsValue()
+    {
+        Write(Component(1, container: 5));
+        Write(Component(1, container: 6));
+
+        Assert.Equal(In(6), Value(1).Location);
+    }
+
+    [Fact]
+    public void UndoingTheNewestWriteBringsBackTheOneBefore()
+    {
+        Write(Component(1, container: 5));
+        var newer = Write(Component(1, container: 6));
+        Undo(newer);
+
+        Assert.Equal(In(5), Value(1).Location);
+    }
+
+    [Fact]
+    public void UnsettingAnAtomRemovesIt()
+    {
+        Write(Component(1, container: 5));
+        Unset(1);
+
+        Assert.Null(Value(1));
+    }
+
+    [Fact]
+    public void AWriteBeatsAnUnsetInTheSameEvent()
+    {
+        Write(Component(1, container: 5));
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Writes = [Component(1, container: 6)],
+                Unsets = [new Unset(ById, Key(1))],
+            }
+        );
+
+        Assert.Equal(In(6), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void ALookupUnsetUnsetsEveryAtomUnderItsKey()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5), Component(3, container: 6));
+        UnsetAllIn(5);
+
+        Assert.Null(Value(1));
+        Assert.Null(Value(2));
+        Assert.Equal(In(6), Value(3)?.Location);
+    }
+
+    [Fact]
+    public void ALookupUnsetCoversAnOlderWriteThatArrivesLate()
+    {
+        var late = NextId();
+        UnsetAllIn(5);
+        Record(new TimelineEvent { Id = late, Writes = [Component(1, container: 5)] });
+
+        Assert.Null(Value(1));
+    }
+
+    [Fact]
+    public void ALookupUnsetSparesNewerWrites()
+    {
+        Write(Component(1, container: 5));
+        UnsetAllIn(5);
+        Write(Component(1, container: 5));
+
+        Assert.Equal(In(5), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void ALookupUnsetJudgesEachAtomByItsNewestWriteBeforeIt()
+    {
+        Write(Component(1, container: 5));
+        Write(Component(1, container: 6));
+        UnsetAllIn(5);
+
+        Assert.Equal(In(6), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void UndoingALookupUnsetBringsItsAtomsBack()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5));
+        Undo(UnsetAllIn(5));
+
+        AssertIds(_store.Get(ByContainer, Tag(5)), 1, 2);
+    }
+
+    [Fact]
+    public void AWriteBeatsALookupUnsetInTheSameEvent()
+    {
+        Write(Component(1, container: 5));
+        Record(
+            new TimelineEvent
+            {
+                Id = NextId(),
+                Writes = [Component(2, container: 5)],
+                Unsets = [new Unset(ByContainer, Tag(5))],
+            }
+        );
+
+        AssertIds(_store.Get(ByContainer, Tag(5)), 2);
+    }
+
+    [Fact]
+    public void ANewerWriteBringsAnUnsetAtomBack()
+    {
+        Write(Component(1, container: 5));
+        Unset(1);
+        Write(Component(1, container: 6));
+
+        Assert.Equal(In(6), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void UndoingAnUnsetBringsTheAtomBack()
+    {
+        Write(Component(1, container: 5));
+        Undo(Unset(1));
+
+        Assert.Equal(In(5), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void UnsettingAnAtomNeverWrittenLeavesNothing()
+    {
+        Unset(1);
+
+        Assert.Null(_store.Find(Key(1)).Value);
+    }
+
+    [Fact]
+    public void ADraftCountsWhileItsTransitionIsOpen()
+    {
+        Write(Component(1, container: 5));
+        Open(Component(1, container: 6));
+
+        Assert.Equal(In(6), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void ClosingATransitionKeepsOnlyWhatTheCloseWrites()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5));
+        var transition = Open(Component(1, container: 6), Component(2, container: 6));
+        Close(transition, Component(1, container: 7));
+
+        Assert.Equal(In(7), Value(1)?.Location);
+        Assert.Equal(In(5), Value(2)?.Location);
+    }
+
+    [Fact]
+    public void CancelingATransitionPutsBackWhatItDrafted()
+    {
+        Write(Component(1, container: 5));
+        Cancel(Open(Component(1, container: 6)));
+
+        Assert.Equal(In(5), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void AWriteMadeFromADraftGoesWithItsTransition()
+    {
+        Write(Component(1, container: 5));
+        var transition = Open(Component(1, container: 6));
+        Write(Value(1) with { X = 10 });
+        Assert.Equal(10, Value(1)?.X);
+
+        Cancel(transition);
+
+        Assert.Equal(0, Value(1)?.X);
+        Assert.Equal(In(5), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void AWriteMadeFromADraftNeverCountsOnceItsTransitionEnded()
+    {
+        Write(Component(1, container: 5));
+        var transition = Open(Component(1, container: 6));
+        var made = Value(1) with { X = 10 };
+        Close(transition, Component(1, container: 7));
+        Write(made);
+
+        Assert.Equal(In(7), Value(1)?.Location);
+        Assert.Equal(0, Value(1)?.X);
+    }
+
+    [Fact]
+    public void UndoingATransitionLeavesItsDraftsOut()
+    {
+        Write(Component(1, container: 5));
+        Undo(Close(Open(Component(1, container: 6)), Component(1, container: 7)));
+
+        Assert.Equal(In(5), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void AnUnsetTakesAnAtomOutOfAnOpenTransition()
+    {
+        Write(Component(1, container: 5));
+        var transition = Open(Component(1, container: 6));
+        Unset(1);
+        Assert.Null(Value(1));
+
+        Cancel(transition);
+
+        Assert.Null(Value(1));
+    }
+
+    [Fact]
+    public void UndoingTheUnsetPutsTheAtomBackInItsTransition()
+    {
+        Write(Component(1, container: 5));
+        var transition = Open(Component(1, container: 6));
+        Undo(Unset(1));
+
+        Assert.Equal<TransitionSet>([transition], Value(1).Transitions);
+        Assert.Equal(In(6), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void ATransitionOpenedOnADraftIsInsideItsTransition()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        var inner = Open(Value(1) with { X = 10 });
+
+        Assert.Equal<TransitionSet>([outer, inner], Value(1).Transitions);
+    }
+
+    [Fact]
+    public void ClosingAnInnerTransitionLeavesItsWritesDraftsOfTheOuter()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        Close(Open(Value(1) with { X = 10 }), Value(1));
+        Assert.Equal<TransitionSet>([outer], Value(1).Transitions);
+        Assert.Equal(10, Value(1).X);
+
+        Cancel(outer);
+
+        Assert.Equal(0, Value(1)?.X);
+        Assert.Equal(In(5), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void CancelingAnInnerTransitionGoesBackToTheOutersDraft()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        Cancel(Open(Value(1) with { X = 10 }));
+
+        Assert.Equal<TransitionSet>([outer], Value(1).Transitions);
+        Assert.Equal(0, Value(1).X);
+        Assert.Equal(In(6), Value(1).Location);
+    }
+
+    [Fact]
+    public void ClosingNestedTransitionsInnerFirstCommitsBoth()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        Close(Open(Value(1) with { X = 10 }), Value(1));
+        Close(outer, Value(1));
+
+        Assert.True(Value(1).Transitions.IsEmpty);
+        Assert.Equal(10, Value(1).X);
+        Assert.Equal(In(6), Value(1).Location);
+    }
+
+    [Fact]
+    public void ClosingTheOuterTransitionFirstLeavesItsWritesDraftsOfTheInner()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        var inner = Open(Value(1) with { X = 10 });
+        Close(outer, Value(1));
+        Assert.Equal<TransitionSet>([inner], Value(1).Transitions);
+
+        Close(inner, Value(1));
+
+        Assert.True(Value(1).Transitions.IsEmpty);
+        Assert.Equal(10, Value(1).X);
+        Assert.Equal(In(6), Value(1).Location);
+    }
+
+    [Fact]
+    public void CancelingTheInnerTransitionAfterTheOuterClosedLosesBoth()
+    {
+        Write(Component(1, container: 5));
+        var outer = Open(Component(1, container: 6));
+        var inner = Open(Value(1) with { X = 10 });
+        Close(outer, Value(1));
+
+        Cancel(inner);
+
+        Assert.Equal(0, Value(1)?.X);
+        Assert.Equal(In(5), Value(1)?.Location);
+    }
+
+    [Fact]
+    public void ASaveHoldsWhatAnOpenTransitionReplaced()
+    {
+        Write(Component(1, container: 5));
+        Open(Component(1, container: 6), Component(2, container: 6));
+
+        Assert.Equal<Atom>(
+            [Component(1, container: 5)],
+            _store.SavedAtoms(_timeline).Select(e => e.Value)
+        );
+    }
+
+    [Fact]
+    public void ALookupReadLaterHoldsTheAtomsWrittenBefore()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5), Component(3, container: 6));
+
+        AssertIds(_store.Get(ByContainer, Tag(5)), 1, 2);
+    }
+
+    [Fact]
+    public void AnAtomMovesBetweenLookupKeys()
+    {
+        Write(Component(1, container: 5));
+        _store.Get(ByContainer, Tag(5));
+        Write(Component(1, container: 6));
+
+        AssertIds(_store.Get(ByContainer, Tag(5)));
+        AssertIds(_store.Get(ByContainer, Tag(6)), 1);
+    }
+
+    [StackTraceHidden]
+    private static void AssertOrder(IEnumerable<ComponentPosition> atoms, params int[] expected)
+    {
+        var ids = atoms.Select(r => r.Id).ToArray();
+        var want = expected.Select(n => new Ref<Component>(Tag(n))).ToArray();
+        Assert.True(
+            ids.SequenceEqual(want),
+            $"Found the atoms in the wrong order.\n\nExpected: {string.Join(", ", want)}\nFound:    {string.Join(", ", ids)}"
+        );
+    }
+
+    [Fact]
+    public void AnOrderedLookupGivesItsAtomsInItsOrder()
+    {
+        Write(Stacked(1, Ranks[2]), Stacked(2, Ranks[0]), Stacked(3, Ranks[1]));
+        AssertOrder(_store.Get(ByStack, Tag(5)), 2, 3, 1);
+
+        Write(Stacked(1, SnowRank.BeforeAll(1)[0]));
+        AssertOrder(_store.Get(ByStack, Tag(5)), 1, 2, 3);
+    }
+
+    [Fact]
+    public void AtomsThatTieInAnOrderedLookupComeInIdOrder()
+    {
+        Write(Stacked(3, Ranks[0]), Stacked(1, Ranks[0]), Stacked(2, Ranks[0]));
+
+        AssertOrder(_store.Get(ByStack, Tag(5)), 1, 2, 3);
+    }
+
+    [Fact]
+    public void ANullLookupKeyLeavesTheAtomOutOfTheLookup()
+    {
+        Write(Component(1), Component(2, container: 5));
+
+        AssertIds(_store.Get(InContainer, Tag(5)), 2);
+        AssertIds(_store.Get(InContainer, null));
+    }
+
+    [Fact]
+    public void LookupsAndCountsLeaveOutUnsetAtoms()
+    {
+        Write(Component(1, container: 5), Component(2, container: 5));
+        Unset(2);
+
+        Assert.Equal(1, _store.Count(ByContainer, Tag(5)));
+        AssertIds(_store.Get(ByContainer, Tag(5)), 1);
+    }
+
+    [Fact]
+    public void MovingAnAtomTouchesItsIdAndBothLookupKeysAndTheirCounts()
+    {
+        Write(Component(1, container: 5));
+        _store.Get(ByContainer, Tag(5));
+
+        AssertTouched(
+            TouchesOf(() => Write(Component(1, container: 6))),
+            new Touch(ById, Key(1), false),
+            new Touch(ByContainer, Tag(5), false),
+            new Touch(ByContainer, Tag(6), false),
+            new Touch(ByContainer, Tag(5), true),
+            new Touch(ByContainer, Tag(6), true)
+        );
+    }
+
+    [Fact]
+    public void ChangingAnAtomWithinItsLookupKeyLeavesTheCountAlone()
+    {
+        Write(Component(1, container: 5));
+        _store.Get(ByContainer, Tag(5));
+
+        AssertTouched(
+            TouchesOf(() => Write(Component(1, container: 5) with { X = 10 })),
+            new Touch(ById, Key(1), false),
+            new Touch(ByContainer, Tag(5), false)
+        );
+    }
+
+    [Fact]
+    public void UnsettingAnAtomChangesItsLookupKeysCount()
+    {
+        Write(Component(1, container: 5));
+        _store.Get(ByContainer, Tag(5));
+
+        AssertTouched(
+            TouchesOf(() => Unset(1)),
+            new Touch(ById, Key(1), false),
+            new Touch(ByContainer, Tag(5), false),
+            new Touch(ByContainer, Tag(5), true)
+        );
+    }
+
+    [Fact]
+    public void AFirstWriteTouchesOnlyItsNewLookupKey()
+    {
+        _store.Get(ByContainer, Tag(5));
+
+        AssertTouched(
+            TouchesOf(() => Write(Component(1, container: 5))),
+            new Touch(ById, Key(1), false),
+            new Touch(ByContainer, Tag(5), false),
+            new Touch(ByContainer, Tag(5), true)
+        );
+    }
+
+    [Fact]
+    public void LookupsNotReadYetAreNotTouched()
+    {
+        Write(Component(1, container: 5));
+
+        AssertTouched(
+            TouchesOf(() => Write(Component(1, container: 6))),
+            new Touch(ById, Key(1), false)
+        );
+    }
+}

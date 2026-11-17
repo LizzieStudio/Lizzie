@@ -8,5 +8,4 @@ script = ExtResource("2_hv28x")
 ComponentName = "Meeple"
 Icon = ExtResource("1_wck64")
 DefinitionDialogName = "res://Scenes/ComponentPanels/MeeplePanel.tscn"
-PrototypeName = "res://Scenes/VisualComponents/VcMeeple.tscn"
 ComponentType = "Meeple"

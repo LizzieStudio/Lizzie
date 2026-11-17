@@ -1,12 +1,12 @@
 using System;
 using Godot;
-using Lizzie.Scripts.Templating;
+
+namespace Lizzie;
 
 public partial class ColorParamControl : HBoxContainer, IParamControl
 {
     private Label _label;
     private LineEdit _value;
-    private Button _script;
     private ColorPickerButton _colorPicker;
 
     private TemplateParameter _parameter;
@@ -17,7 +17,6 @@ public partial class ColorParamControl : HBoxContainer, IParamControl
     {
         _label = GetNode<Label>("Caption");
         _value = GetNode<LineEdit>("LineEdit");
-        _script = GetNode<Button>("Formula");
         _colorPicker = GetNode<ColorPickerButton>("ColorPickerButton");
         _colorPicker.ColorChanged += OnColorChanged;
 

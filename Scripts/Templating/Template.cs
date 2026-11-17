@@ -1,54 +1,60 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
-using Godot;
-using TTSS.Scripts.Templating;
 
-public class Template
+namespace Lizzie;
+
+[JsonName("Template")]
+public record Template : Atom
 {
-    public enum TemplateTarget
+    public static readonly Identity<Template, Ref<Template>> ById = new(r => r.Id);
+
+    /// <summary>
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
+    /// </summary>
+    public required Ref<Template> Id { get; init; }
+
+    public static readonly All<Template> All = new();
+
+    public string Name { get; init; }
+
+    public string SizeTemplate { get; init; }
+    public float Width { get; init; }
+    public float Height { get; init; }
+
+    /// <summary>
+    /// The template's size in whole pixels at <paramref name="pixelsPerInch"/>.
+    /// A die template is the size of its net (<see cref="DieTemplate.Size"/>).
+    /// </summary>
+    public (int Width, int Height) Pixels(float pixelsPerInch)
     {
-        Flat,
-        D4,
-        D6,
-        D8,
-        D10,
-        D12,
-        D20,
+        var (width, height) = Sides > 0 ? DieTemplate.Size(Sides) : (Width, Height);
+        return (
+            (int)MathF.Round(width * pixelsPerInch, MidpointRounding.AwayFromZero),
+            (int)MathF.Round(height * pixelsPerInch, MidpointRounding.AwayFromZero)
+        );
     }
 
-    public string Name { get; set; }
-    public string Description { get; set; }
+    public ImmutableArray<ImmutableDictionary<string, string>> Elements { get; init; } =
+        ImmutableArray<ImmutableDictionary<string, string>>.Empty;
 
-    public string SizeTemplate { get; set; }
-    public float Width { get; set; }
-    public float Height { get; set; }
-    public List<Dictionary<string, string>> Elements { get; set; } = new();
-
+    /// <summary>
+    /// For dice, the number of sides. Otherwise 0 for printed templates
+    /// </summary>
     [JsonIgnore]
-    public TemplateTarget Target
-    {
-        get
-        {
-            switch (SizeTemplate)
-            {
-                case "D4":
-                    return TemplateTarget.D4;
-                case "D6":
-                    return TemplateTarget.D6;
-                case "D8":
-                    return TemplateTarget.D8;
-                case "D10":
-                    return TemplateTarget.D10;
-                case "D12":
-                    return TemplateTarget.D12;
-                case "D20":
-                    return TemplateTarget.D20;
-            }
+    public int Sides => SidesOf(SizeTemplate);
 
-            return TemplateTarget.Flat;
-        }
-    }
+    /// <summary>
+    /// Parses the int out of a die-string, like 8 for "D8".
+    /// </summary>
+    public static int SidesOf(string sizeTemplate) =>
+        sizeTemplate is ['D', .. var sides] && int.TryParse(sides, out var n) ? n : 0;
 
-    public string DataSet { get; set; } = string.Empty;
+    /// <summary>
+    /// Whether or not this is a die with triangle faces.
+    /// </summary>
+    [JsonIgnore]
+    public bool TriangleFaces => Sides is 8 or 20;
+
+    public Ref<Dataset> DatasetRef { get; init; }
 }

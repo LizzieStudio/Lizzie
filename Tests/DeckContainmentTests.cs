@@ -1,0 +1,110 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using Xunit;
+
+namespace Lizzie.Tests;
+
+/// <summary>
+/// A card in a deck is contained by the deck, the way a token in a bag is.
+/// </summary>
+public class DeckContainmentTests
+{
+    private static readonly Ref<Prototype> DeckProto = new(10);
+    private static readonly Ref<Prototype> BagProto = new(11);
+    private static readonly Ref<Component> Deck = new(20);
+    private static readonly Ref<Component> Bag = new(21);
+    private static readonly Ref<Seat> Hand = new(30);
+
+    // ranks from the bottom of a stack up
+    private static readonly IReadOnlyList<SnowRank> Ranks = SnowRank.AfterAll(4);
+
+    private static ComponentPosition State(
+        Ref<Component> id,
+        Location container = null,
+        int order = 0,
+        float yaw = 0
+    ) =>
+        new()
+        {
+            Id = id,
+            Location = container,
+            Rank = Ranks[order],
+            Rotation = new Vector3(0, yaw, 0),
+        };
+
+    private static Component Card(ComponentPosition s) =>
+        new()
+        {
+            Id = s.Id,
+            PrototypeRef = DeckProto,
+            Item = new PrintedItemRef(null, null),
+        };
+
+    // A deck of three cards, a bag with a token in it, a loose token, and a token in a hand.
+    private static readonly ComponentPosition TheDeck = State(Deck);
+    private static readonly ComponentPosition Bottom = State(new(2), new InComponent(Deck), 1);
+    private static readonly ComponentPosition Middle = State(new(3), new InComponent(Deck), 2);
+    private static readonly ComponentPosition Top = State(new(4), new InComponent(Deck), 3);
+    private static readonly ComponentPosition TheBag = State(Bag);
+    private static readonly ComponentPosition InBag = State(new(6), new InComponent(Bag));
+    private static readonly ComponentPosition Loose = State(new(7));
+    private static readonly ComponentPosition InHand = State(new(8), new InHand(Hand));
+
+    private static readonly ListReader R = new(
+        new Prototype { Id = DeckProto, Parameters = new PrintedParameters() },
+        new Prototype { Id = BagProto, Parameters = new BagParameters() },
+        new Component { Id = Deck, PrototypeRef = DeckProto },
+        new Component { Id = Bag, PrototypeRef = BagProto },
+        Card(Bottom),
+        Card(Middle),
+        Card(Top),
+        Card(InBag),
+        Card(Loose),
+        Card(InHand),
+        TheDeck,
+        Bottom,
+        Middle,
+        Top,
+        TheBag,
+        InBag,
+        Loose,
+        InHand
+    );
+
+    [Fact]
+    public void ADecksCardsAreItsContainedComponentsTopFirst()
+    {
+        Assert.Equal([Top.Id, Middle.Id, Bottom.Id], R.TokensOn(TheDeck).Select(c => c.Id));
+    }
+
+    [Fact]
+    public void ACardIsContainedByItsDeck()
+    {
+        Assert.Equal([IAtomRef.To(TheDeck)], Top.Containers(R));
+        Assert.Equal(
+            new[] { Bottom, Middle, Top }.Select(IAtomRef.To).ToHashSet(),
+            TheDeck.Contents(R).ToHashSet()
+        );
+        Assert.Empty(Loose.Containers(R));
+    }
+
+    [Fact]
+    public void OnlyACardInADeckIsInADeck()
+    {
+        Assert.True(R.IsInDeck(Top));
+        Assert.False(R.IsInDeck(Loose));
+        Assert.False(R.IsInDeck(InBag));
+        Assert.False(R.IsInDeck(InHand));
+    }
+
+    [Fact]
+    public void WhatsInABagIsHidden()
+    {
+        Assert.True(R.IsHidden(InBag));
+        Assert.False(R.IsHidden(Top));
+        Assert.False(R.IsHidden(Loose));
+        Assert.False(R.IsHidden(InHand));
+    }
+}

@@ -1,62 +1,62 @@
 using System;
 using Godot;
-using Lizzie.AssetManagement;
+
+namespace Lizzie;
 
 public partial class ImageTile : MarginContainer
 {
     private Label _imageName;
     private TextureRect _thumbnail;
 
-    private bool _refreshRequired;
+    private Ref<ImageAsset> _imageRef;
+
+    /// <summary>The asset this tile shows.</summary>
+    public Ref<ImageAsset> ImageRef
+    {
+        get => _imageRef;
+        set
+        {
+            _imageRef = value;
+            Atoms.R.QueueSync(this);
+        }
+    }
+
+    public event Action<Ref<ImageAsset>> Clicked;
+
+    public override void _EnterTree()
+    {
+        Atoms.R.Watch(this, Sync);
+    }
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         _imageName = GetNode<Label>("%ImageName");
         _thumbnail = GetNode<TextureRect>("%Thumbnail");
-        EventBus.Instance.Subscribe<AssetChangedEvent>(OnAssetChanged);
-        if (_refreshRequired)
+
+        MouseFilter = MouseFilterEnum.Stop;
+    }
+
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
         {
-            Refresh();
-            _refreshRequired = false;
+            Clicked?.Invoke(ImageRef);
         }
     }
 
-    private void OnAssetChanged(AssetChangedEvent obj)
+    private async void Sync(IWatchReader R)
     {
-        if (obj == null || obj.Asset == null || _asset == null)
+        var asset = R.Get(ImageAsset.ById, ImageRef);
+        if (asset == null)
             return;
 
-        if (obj.Asset.AssetId == _asset.AssetId)
-        {
-            Refresh();
-        }
-    }
-
-    private Asset _asset;
-
-    public void SetAsset(Asset asset)
-    {
-        _asset = asset;
-
-        if (IsNodeReady())
-        {
-            Refresh();
-        }
-        else
-        {
-            _refreshRequired = true;
-        }
-    }
-
-    public async void Refresh()
-    {
-        _imageName.Text = _asset.Name;
-        await ProjectService.Instance.FetchImageAsync(_asset, OnImageFetched);
-    }
-
-    private void OnImageFetched(Asset asset)
-    {
-        _thumbnail.Texture = ImageTexture.CreateFromImage(_asset.Image);
+        _imageName.Text = asset.Name;
+        var image = await AssetImageCache.Instance.FetchImageAsync(asset);
+        // The tile may have been removed or retargeted while the image loaded.
+        if (!IsInstanceValid(this) || asset.Id != ImageRef)
+            return;
+        if (image != null)
+            _thumbnail.Texture = ImageTexture.CreateFromImage(image);
     }
 }

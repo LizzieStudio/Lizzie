@@ -1,0 +1,196 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Lizzie;
+
+/// <summary>
+/// A blueprint or a table, which is played on.
+/// </summary>
+[JsonName("Stage")]
+public sealed record Stage : Atom, IRanked
+{
+    public static readonly Identity<Stage, Ref<Stage>> ById = new(s => s.Id);
+
+    /// <summary>
+    /// Stages that are not deleted, by the stage they build on, with <see cref="Ref{T}.None"/> for the roots,
+    /// in the order the blueprint manager shows them.
+    /// </summary>
+    public static readonly Lookup<Stage, Ref<Stage>?> Children = new(
+        s => s.Deleted ? null : s.ParentRef,
+        IRanked.ByRank
+    );
+
+    /// <summary>
+    /// This atom's identity, created with <see cref="Ref{T}.Create"/>.
+    /// </summary>
+    public required Ref<Stage> Id { get; init; }
+
+    public string Name { get; init; }
+
+    /// <summary>
+    /// The stage this one builds on, or <see cref="Ref{T}.None"/> for a root.
+    /// </summary>
+    public Ref<Stage> ParentRef { get; init; }
+
+    /// <summary>
+    /// Its position among its siblings.
+    /// </summary>
+    /// <remarks>
+    /// This is purely aesthetics.
+    /// It is only used for the blueprint tree in the blueprint manager.
+    /// </remarks>
+    public SnowRank Rank { get; init; }
+
+    /// <summary>
+    /// Whether this is a table rather than a blueprint.
+    /// </summary>
+    public bool IsTable { get; init; }
+
+    public bool Deleted { get; init; }
+
+    /// <summary>
+    /// Gets a new empty table, last under <paramref name="parent"/>.
+    /// </summary>
+    public static Stage NewTable(IAtomReader R, Ref<Stage> parent)
+    {
+        var siblings = R.Get(Children, parent);
+        return new()
+        {
+            Id = Ref<Stage>.Create(),
+            Name = NextTableName(R),
+            ParentRef = parent,
+            Rank = SnowRank.At(siblings, siblings.Count),
+            IsTable = true,
+        };
+    }
+
+    /// <summary>
+    /// Gets a new empty blueprint, last under <paramref name="parent"/>.
+    /// A root is named "Blueprint N", and one under a "Parent" is named "Parent-N".
+    /// </summary>
+    public static Stage NewBlueprint(IAtomReader R, Ref<Stage> parent)
+    {
+        var siblings = R.Get(Children, parent);
+        int n = siblings.Count(s => !s.IsTable) + 1;
+        return new()
+        {
+            Id = Ref<Stage>.Create(),
+            Name = R.Get(ById, parent) is { } p ? $"{p.Name}-{n}" : $"Blueprint {n}",
+            ParentRef = parent,
+            Rank = SnowRank.At(siblings, siblings.Count),
+        };
+    }
+
+    /// <summary>
+    /// "Table N", numbered one past the highest "Table N" anywhere in the tree.
+    /// </summary>
+    public static string NextTableName(IAtomReader R)
+    {
+        int Highest(Ref<Stage> parent) =>
+            R.Get(Children, parent)
+                .Select(s =>
+                    Math.Max(
+                        s.Name?.StartsWith("Table ") == true && int.TryParse(s.Name[6..], out int n)
+                            ? n
+                            : 0,
+                        Highest(s.Id)
+                    )
+                )
+                .DefaultIfEmpty()
+                .Max();
+        return $"Table {Highest(Ref<Stage>.None) + 1}";
+    }
+
+    /// <summary>
+    /// Gets whether the current table is <paramref name="id"/> or builds on it.
+    /// </summary>
+    public static bool IsCurrentTableOrAncestor(IAtomReader R, Ref<Stage> id) =>
+        Chain(R, R.Get(CurrentTable.Only).StageRef).Any(s => s.Id == id);
+
+    /// <summary>
+    /// Gets what <paramref name="into"/> must write to merge in <paramref name="from"/>.
+    /// The later stages take priority over earlier stages.
+    /// </summary>
+    public static IEnumerable<ComponentPosition> Union(
+        IAtomReader R,
+        Ref<Stage> into,
+        params Ref<Stage>[] from
+    ) =>
+        from.SelectMany(s => R.Get(ComponentPosition.WrittenIn, s))
+            .GroupBy(c => c.Id)
+            .Select(g => g.Last())
+            .Where(c => c.StageRef != into)
+            .Select(c => c with { StageRef = into });
+
+    /// <summary>
+    /// Gets the changes that delete <paramref name="stage"/> and replace it in the tree with its children.
+    /// </summary>
+    public static IEnumerable<IChange> Dissolve(IAtomReader R, Stage stage)
+    {
+        var siblings = R.Get(Children, stage.ParentRef);
+        int index = siblings.IndexOf(stage);
+        siblings.RemoveAt(index);
+        var children = R.Get(Children, stage.Id);
+        var ranks = SnowRank.At(siblings, index, children.Count);
+        return
+        [
+            stage with
+            {
+                Deleted = true,
+            },
+            .. children.Select(
+                (child, i) => child with { ParentRef = stage.ParentRef, Rank = ranks[i] }
+            ),
+        ];
+    }
+
+    /// <summary>
+    /// The stage of <paramref name="id"/> and the stages it builds on, nearest first,
+    /// or nothing if it isn't <see cref="Reachable(IAtomReader, Ref{Stage})"/>.
+    /// </summary>
+    public static IEnumerable<Stage> Chain(IAtomReader R, Ref<Stage> id)
+    {
+        if (!Reachable(R, id))
+            yield break;
+        for (var stage = R.Get(ById, id); stage != null; stage = R.Get(ById, stage.ParentRef))
+            yield return stage;
+    }
+
+    /// <summary>
+    /// Gets whether the stage <paramref name="id"/> is live,
+    /// meaning neither it nor any of its ancestors have been removed.
+    /// </summary>
+    public static bool Reachable(IAtomReader R, Ref<Stage> id) =>
+        Reachable(id, s => R.Get(ById, s) is { Deleted: false } stage ? stage.ParentRef : null);
+
+    /// <inheritdoc cref="Reachable(IAtomReader, Ref{Stage})"/>
+    /// <param name="parentOf">A stage's parent, or null if it's missing or deleted.</param>
+    public static bool Reachable(Ref<Stage> id, Func<Ref<Stage>, Ref<Stage>?> parentOf)
+    {
+        var walked = new HashSet<Ref<Stage>>();
+        for (var stage = id; walked.Add(stage); )
+        {
+            if (parentOf(stage) is not { } parent)
+                return false;
+            if (parent.IsNone)
+                return true;
+            stage = parent;
+        }
+        return false;
+    }
+}
+
+/// <summary>
+/// The table being played, which everyone sees unless they pick another stage.
+/// </summary>
+[JsonName("CurrentTable")]
+public sealed record CurrentTable : Atom
+{
+    public static readonly Singleton<CurrentTable> Only = new();
+
+    /// <summary>
+    /// The table's <see cref="Stage"/>.
+    /// </summary>
+    public Ref<Stage> StageRef { get; init; }
+}

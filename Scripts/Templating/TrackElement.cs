@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
-using Lizzie.Scripts.Templating;
+
+namespace Lizzie;
 
 public class TrackElement : TemplateElement
 {
@@ -68,7 +70,7 @@ public class TrackElement : TemplateElement
             {
                 Name = "Box Text",
                 Value = string.Empty,
-                Type = TemplateParameter.TemplateParameterType.Text,
+                Type = TemplateParameter.TemplateParameterType.Sequence,
             }
         );
 
@@ -80,39 +82,23 @@ public class TrackElement : TemplateElement
                 Type = TemplateParameter.TemplateParameterType.Color,
             }
         );
-
-        UpdateBounds();
-    }
-
-    private void UpdateBounds()
-    {
-        SetParameterValue("Width", "100");
-        SetParameterValue("Height", "100");
-        SetParameterValue("X", "70");
-        SetParameterValue("Y", "70");
     }
 
     public override List<TextureFactory.TextureObject> GetElementData(TextureContext context)
     {
         var l = new List<TextureFactory.TextureObject>();
 
-        var boxValues = Utility.ParseValueRanges(
-            EvaluateTextParameter(Parameters, "Box Text", context)
-        );
-        var spaceValue = EvaluateNumberParameter(Parameters, "# of Boxes", context);
-
-        //the number of spaces on the track is the greater of the defined contents or just the number entered by the user
-        var spaceCount = Math.Max(boxValues.Length, spaceValue);
+        var spaceCount = EvaluateNumberParameter(Parameters, "# of Boxes", context);
 
         var foregroundColor = EvaluateColorParameter(Parameters, "Stroke Color", context);
         var fontColor = EvaluateColorParameter(Parameters, "Text Color", context);
         var strokeWidth = EvaluateNumberParameter(Parameters, "Stroke Width", context);
         var backgroundColor = EvaluateColorParameter(Parameters, "Background Color", context);
 
-        var centerX = EvaluateNumberParameter(Parameters, "X", context);
-        var centerY = EvaluateNumberParameter(Parameters, "Y", context);
-        var height = EvaluateNumberParameter(Parameters, "Height", context);
-        var width = EvaluateNumberParameter(Parameters, "Width", context);
+        var centerX = EvaluateFloatParameter(Parameters, "X", context);
+        var centerY = EvaluateFloatParameter(Parameters, "Y", context);
+        var height = EvaluateFloatParameter(Parameters, "Height", context);
+        var width = EvaluateFloatParameter(Parameters, "Width", context);
 
         if (height == 0 || width == 0)
         {
@@ -131,6 +117,13 @@ public class TrackElement : TemplateElement
         {
             spaceCount = Math.Max(1, spaceCount); //Make sure there's at least one space. Maybe just don't render instead?
         }
+
+        SequenceExpressions.TryParseStrings(
+            EvaluateTextParameter(Parameters, "Box Text", context),
+            out var parsed,
+            spaceCount
+        );
+        var boxValues = SequenceExpressions.Cycle(parsed, spaceCount).ToArray();
 
         var spaces = new List<SpaceDef>();
 
@@ -183,12 +176,12 @@ public class TrackElement : TemplateElement
             if (factors.Length > 0)
             {
                 bool wide = true;
-                float ratio = (float)height / width;
+                float ratio = height / width;
 
                 if (ratio > 1)
                 {
                     wide = false;
-                    ratio = (float)width / height;
+                    ratio = width / height;
                 }
 
                 int f1 = 0;
@@ -291,8 +284,8 @@ public class TrackElement : TemplateElement
             }
 
             //now calculate the final cell widths and heights
-            int cw = width / (wCount + 1);
-            int ch = height / (hCount + 1);
+            var cw = width / (wCount + 1);
+            var ch = height / (hCount + 1);
 
             //do it in four stripes, starting with the upper left (0,0)
             var cx = cw / 2;
@@ -429,10 +422,10 @@ public class TrackElement : TemplateElement
 
     private struct SpaceDef
     {
-        public int Height;
-        public int Width;
-        public int CenterX;
-        public int CenterY;
+        public float Height;
+        public float Width;
+        public float CenterX;
+        public float CenterY;
         public string Contents;
     }
 }

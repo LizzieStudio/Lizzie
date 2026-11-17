@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cq55sjgsvfk67"
+path="res://.godot/imported/component_highlight.glsl-c1ba981c7df9aadb54380faef9020bfe.res"
+
+[deps]
+
+source_file="res://Shaders/component_highlight.glsl"
+dest_files=["res://.godot/imported/component_highlight.glsl-c1ba981c7df9aadb54380faef9020bfe.res"]
+
+[params]
+

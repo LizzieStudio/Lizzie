@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://boxmo6a5jmo47"]
+
+[ext_resource type="Script" uid="uid://f0wgwaxrihun" path="res://Scripts/Controls/SequenceEdit.cs" id="1_edit"]
+
+[node name="NumberSequenceEdit" type="LineEdit" unique_id=1705041120]
+script = ExtResource("1_edit")
+Syntax = "Separate numbers with commas: 1, 4, 6.
+Specify ranges with a dash: 1-3, 4-2 becomes 1, 2, 3, 4, 3, 2
+Repeat values or ranges with *N: 1-2*2 becomes 1, 2, 1, 2
+Drop N to repeat indefinitely: 5* becomes 5, 5, 5...
+To get every Nth value, use /N: 1-6/2 becomes 1, 3, 5
+You can group items with parens: (1, 5)*2 becomes 1, 5, 1, 5"

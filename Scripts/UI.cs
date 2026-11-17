@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using Godot;
 
+namespace Lizzie;
+
 public partial class UI : CanvasLayer
 {
-    [Export]
-    private Color highlightFontColor;
-
-    [Export]
-    private Color baseFontColor;
-
     private HBoxContainer modeButtons;
 
     public event EventHandler<SceneModeChangeArgs> SceneModeChange;
@@ -19,29 +14,12 @@ public partial class UI : CanvasLayer
     private ComponentDefinition _componentDefinition;
     private TemplateCreator _templateCreator;
 
-    private PopupMenu _editMenu;
-    private PopupMenu _insertMenu;
-    private PopupMenu _helpMenu;
-    private PopupMenu _fileMenu;
-
-    private PopupMenu _componentPopup;
-    private PopupMenu _restoreSnapshotMenu;
     private Label _componentName;
-
-    private GameController _gameController;
-    private GameObjects _gameObjects;
-
-    private TabContainer _componentTabs;
-
-    private ProjectManager _projectManager;
-
-    private TextureFactory _textureFactory;
 
     private DatasetEditor _datasetEditor;
     private PrototypeManifest _prototypeManifest;
     private MultiplayerDialog _multiplayerDialog;
     private ImageManager _imageManager;
-    private ComponentPreviewPopup _componentPreviewPopup;
     private PlayerPositionDialog _playerPositionDialog;
 
     private HandManager _handManager;
@@ -56,94 +34,163 @@ public partial class UI : CanvasLayer
 
     private OptionButton _rotationStep;
 
+    // the toggle buttons that pick the stage the view shows, one for each in the current table's chain
+    private HBoxContainer _stages;
+    private readonly ButtonGroup _stageGroup = new();
+
+    // The style for the stage buttons.
+    private readonly (string State, StyleBox Box)[] _blueprintStyles = StageStyles(isTable: false);
+    private readonly (string State, StyleBox Box)[] _tableStyles = StageStyles(isTable: true);
+
+    /// <summary>
+    /// The color that marks a stage, green for a table and blue for a blueprint, at <paramref name="lightness"/>.
+    /// </summary>
+    public static Color StageColor(bool isTable, float lightness) =>
+        Color.FromOkHsl(isTable ? 0.40f : 0.73f, 0.6f, lightness);
+
+    private static (string State, StyleBox Box)[] StageStyles(bool isTable)
+    {
+        // The default button box, so only the color differs.
+        StyleBox Box(string state, float lightness)
+        {
+            var box = (StyleBoxFlat)
+                ThemeDB.GetDefaultTheme().GetStylebox(state, "Button").Duplicate();
+            box.BgColor = StageColor(isTable, lightness);
+            return box;
+        }
+        var pressed = Box("pressed", 0.42f);
+        return
+        [
+            ("normal", Box("normal", 0.25f)),
+            ("hover", Box("hover", 0.32f)),
+            ("pressed", pressed),
+            ("hover_pressed", pressed),
+        ];
+    }
+
+    private BlueprintManager _blueprintManager;
+    private SeatsWindow _seats;
+
     private Node _modalDialogs;
+
+    public override void _EnterTree()
+    {
+        _instance = this;
+        Atoms.R.Watch(this, Sync);
+        Atoms.R.Watch(this, SyncStages);
+        Atoms.R.Watch(this, PromptIfSeatRemoved);
+    }
+
+    // A copy of the local player's seat to detect changes for reprompting them.
+    private Ref<Seat> _currentSeat;
+
+    private void PromptIfSeatRemoved(IWatchReader R)
+    {
+        var seat = R.Get(Seating.Only).Seats.GetValueOrDefault(Source.Me);
+        var wasRemoved = R.Get(Seat.ById, seat) is { Deleted: true };
+        if (wasRemoved && seat != _currentSeat)
+            ShowPlayerSeatingDialog();
+        _currentSeat = wasRemoved ? seat : Ref<Seat>.None;
+    }
+
+    private void SyncStages(IWatchReader R)
+    {
+        foreach (var old in _stages.GetChildren())
+        {
+            _stages.RemoveChild(old);
+            old.QueueFree();
+        }
+
+        var current = R.Get(CurrentTable.Only).StageRef;
+        var shown = ProjectService.Instance.GameObjects.ShownStage(R);
+        foreach (var stage in ProjectService.Instance.GameObjects.PickableStages(R))
+        {
+            // Picking the current table follows it, even when another becomes current.
+            var pick = stage.Id == current ? Ref<Stage>.None : stage.Id;
+            var button = new Button
+            {
+                Text = stage.Name,
+                ToggleMode = true,
+                ButtonGroup = _stageGroup,
+                ButtonPressed = stage.Id == shown,
+            };
+            foreach (var (state, box) in stage.IsTable ? _tableStyles : _blueprintStyles)
+                button.AddThemeStyleboxOverride(state, box);
+            button.Pressed += () => ProjectService.Instance.GameObjects.PickedStageRef.Value = pick;
+            _stages.AddChild(button);
+        }
+    }
+
+    private void Sync(IWatchReader R)
+    {
+        var s = R.Get(ProjectGameSettings.Only);
+        HandManager.Visible = s.EnablePlayerHands;
+        _opponentHands.Visible = s.EnablePlayerHands;
+        _rotationStep.Selected = s.RotationStepIndex;
+    }
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        // don't close automatically in case their are unsaved changes
+        GetTree().AutoAcceptQuit = false;
+
         modeButtons = GetNode<HBoxContainer>("Mode");
-        var buttons = modeButtons.GetChildren();
-        baseFontColor = new Color(1, 1, 1, 1);
 
         SetSceneMode(Config.Registry.Get<SceneMode>("SceneMode"));
-
-        _fileMenu = GetNode<PopupMenu>("%File");
-        _fileMenu.AddSeparator();
-        _fileMenu.AddItem("Save Snapshot...", 3);
-
-        _restoreSnapshotMenu = new PopupMenu();
-        _restoreSnapshotMenu.Name = "RestoreSnapshotMenu";
-        _restoreSnapshotMenu.IdPressed += OnRestoreSnapshotSelected;
-        _fileMenu.AddChild(_restoreSnapshotMenu);
-        _fileMenu.AddSubmenuNodeItem("Restore Snapshot", _restoreSnapshotMenu, 4);
-
-        _fileMenu.AddItem("Snapshot Manager...", 5);
-        _fileMenu.AddSeparator();
-        _fileMenu.AddItem("Multiplayer...", 10);
-        _fileMenu.IdPressed += FileMenuOnIdPressed;
-        _fileMenu.AboutToPopup += RebuildRestoreSnapshotMenu;
-
-        _editMenu = GetNode<PopupMenu>("%Edit");
-        _editMenu.AddItem("Templates", 1);
-        _editMenu.AddItem("Datasets", 2);
-        _editMenu.AddItem("Prototype Manifest", 3);
-        _editMenu.AddItem("Images", 4);
-        _editMenu.AddItem("Project Settings", 5);
-        _editMenu.IdPressed += OnEditMenuSelection;
-
-        _insertMenu = GetNode<PopupMenu>("%Insert");
-        _insertMenu.AddItem("Existing Component", 1);
-        _insertMenu.AddItem("New Component", 2);
-        _insertMenu.AddItem("Zone", 3);
-        _insertMenu.IdPressed += OnInsertMenuSelection;
-
-        _helpMenu = GetNode<PopupMenu>("%Help");
-        _helpMenu.AddItem("Test Function", 1);
-        _helpMenu.IdPressed += OnHelpMenuSelection;
 
         _rotationStep = GetNode<OptionButton>("%RotationStep");
         _rotationStep.ItemSelected += RotationStepSelected;
 
-        _componentPopup = GetNode<PopupMenu>("ComponentPopup");
-        _componentPopup.IdPressed += PopupMenuCommandSelected;
-        _componentPopup.CloseRequested += ComponentPopupClosed;
+        _stages = GetNode<HBoxContainer>("%Stages");
+
+        var viewOptions = GetNode<MenuButton>("%ViewOptions").GetPopup();
+        viewOptions.HideOnCheckableItemSelection = false;
+        viewOptions.SetItemTooltip(0, "Shows components from parent blueprints that were removed.");
+        viewOptions.SetItemTooltip(1, "Marks the components that would be deleted by a reset.");
+        viewOptions.IndexPressed += index =>
+        {
+            int i = (int)index;
+            viewOptions.ToggleItemChecked(i);
+            bool on = viewOptions.IsItemChecked(i);
+            if (i == 0)
+                ComponentPosition.ShowRemoved(on);
+            else
+                ProjectService.Instance.GameObjects.MarksTemporary.Value = on;
+        };
 
         _componentName = GetNode<Label>("%ComponentName");
-
-        _textureFactory = GetNode<TextureFactory>("%TextureFactory");
 
         _modalDialogs = GetNode("%ModalDialogs");
 
         _handManager = GetNode<HandManager>("%Hand");
         _opponentHands = GetNode<PlayerHandsPanel>("%PlayerHandsPanel");
-        _opponentHands.ShowHideToggled += OnOpponentHandsShowHideToggled;
+        _opponentHands.IsShowingChanged += OnOpponentHandsShowHideToggled;
 
         // Defer position capture until layout is resolved.
         CallDeferred(nameof(InitOpponentHandsPositions));
 
-        EventBus.Instance.Subscribe<ProjectChangedEvent>(ProjectChanged);
-        EventBus.Instance.Subscribe<GameStateChangedEvent>(OnGameStateChanged);
         EventBus.Instance.Subscribe<EditPrototypeEvent>(ShowComponentEditDialog);
         EventBus.Instance.Subscribe<ShowTemplateEditor>(ShowTemplateEditorFromEvent);
         EventBus.Instance.Subscribe<ShowDatasetEditor>(ShowDatasetEditorFromEvent);
         EventBus.Instance.Subscribe<ShowImageManagerEvent>(ShowImageManagerFromEvent);
         EventBus.Instance.Subscribe<ShowComponentPreviewDialogEvent>(ShowComponentPreviewDialog);
-        EventBus.Instance.Subscribe<ProjectSettingsChangedEvent>(OnProjectSettingsChanged);
         EventBus.Instance.Subscribe<RequestPlayerPositionEvent>(OnRequestPlayerPosition);
+        ProjectService.Instance.ProjectReplaced += CloseProjectWindows;
     }
 
-    private void OnProjectSettingsChanged()
+    /// <summary>
+    /// Closes the windows open on the project, like the editors, which would still show the one replaced.
+    /// </summary>
+    /// <remarks>
+    /// This is a stopgap and could be replaced at some point.
+    /// In the future I want to reload the whole scene to catch everything.
+    /// </remarks>
+    private void CloseProjectWindows()
     {
-        var s = ProjectService.Instance.CurrentProject.GameSettings;
-
-        if (_handManager != null)
-        {
-            HandManager.Visible = s.EnablePlayerHands;
-            _opponentHands.Visible = s.EnablePlayerHands;
-        }
-
-        if (_rotationStep != null)
-            _rotationStep.Selected = s.RotationStepIndex;
+        foreach (var window in _modalDialogs.GetChildren().OfType<Window>())
+            if (window is not (ProjectManager or MultiplayerDialog or AcceptDialog))
+                window.QueueFree();
     }
 
     private void InitOpponentHandsPositions()
@@ -165,15 +212,17 @@ public partial class UI : CanvasLayer
         _opponentHandsHiddenOffsetRight = _opponentHandsOpenOffsetRight + slideAmount;
     }
 
-    private void OnOpponentHandsShowHideToggled(object sender, bool isHidden)
+    private void OnOpponentHandsShowHideToggled(object sender, bool isShowing)
     {
         if (_opponentHands == null)
             return;
 
-        float targetLeft = isHidden ? _opponentHandsHiddenOffsetLeft : _opponentHandsOpenOffsetLeft;
-        float targetRight = isHidden
-            ? _opponentHandsHiddenOffsetRight
-            : _opponentHandsOpenOffsetRight;
+        float targetLeft = isShowing
+            ? _opponentHandsOpenOffsetLeft
+            : _opponentHandsHiddenOffsetLeft;
+        float targetRight = isShowing
+            ? _opponentHandsOpenOffsetRight
+            : _opponentHandsHiddenOffsetRight;
 
         _opponentHandsTween?.Kill();
         _opponentHandsTween = _opponentHands.CreateTween();
@@ -190,17 +239,12 @@ public partial class UI : CanvasLayer
 
     private void OnRequestPlayerPosition(RequestPlayerPositionEvent _)
     {
-        ShowPlayerPositionDialog();
+        ShowPlayerSeatingDialog();
     }
 
-    private void ShowPlayerPositionDialog()
+    private void ShowPlayerSeatingDialog()
     {
-        var settings = ProjectService.Instance.CurrentProject?.GameSettings;
-        if (settings == null)
-            return;
-
-        // Don't open if there are no player slots and observers are not allowed.
-        if (settings.Players.Count == 0 && !settings.AllowObservers)
+        if (BroughtForward(_playerPositionDialog))
             return;
 
         string s = "res://Scenes/Controls/player_position_dialog.tscn";
@@ -213,749 +257,410 @@ public partial class UI : CanvasLayer
     private void ShowComponentPreviewDialog(ShowComponentPreviewDialogEvent obj)
     {
         string s = "res://Scenes/Controls/ComponentPreviewPopup.tscn";
-        _componentPreviewPopup = GD.Load<PackedScene>(s).Instantiate<ComponentPreviewPopup>();
-        _componentPreviewPopup.CloseDialog += ComponentPreviewPopupOnClosed;
-        _modalDialogs.AddChild(_componentPreviewPopup);
+        var popup = GD.Load<PackedScene>(s).Instantiate<ComponentPreviewPopup>();
+        _modalDialogs.AddChild(popup);
 
-        _componentPreviewPopup.ShowComponent(obj.Component, _textureFactory);
-    }
-
-    private void ComponentPreviewPopupOnClosed(object sender, EventArgs e)
-    {
-        _componentPreviewPopup.CloseDialog -= ComponentPreviewPopupOnClosed;
-        _componentPreviewPopup.Hide();
-        _componentPreviewPopup.QueueFree();
+        popup.ShowComponent(obj.Component);
     }
 
     private void RotationStepSelected(long index)
     {
-        var text = _rotationStep.GetItemText((int)index);
-
-        // Strip off the last character (the degree symbol '°')
-        if (!string.IsNullOrEmpty(text))
-        {
-            text = text.Substring(0, text.Length - 1);
-            if (float.TryParse(text, out var step))
-            {
-                ProjectService.Instance.RotationStep = step;
-            }
-        }
+        var settings = Atoms.R.Get(ProjectGameSettings.Only);
+        Atoms.R.Write(this, settings with { RotationStepIndex = (int)index });
     }
 
-    private void ProjectChanged(ProjectChangedEvent obj)
+    // Brings the window forward if it's open, so its command never opens a second one.
+    // False when it isn't open.
+    private static bool BroughtForward(Window window)
     {
-        RebuildRestoreSnapshotMenu();
-    }
-
-    private void OnGameStateChanged(GameStateChangedEvent e)
-    {
-        RebuildRestoreSnapshotMenu();
-    }
-
-    private void RebuildRestoreSnapshotMenu()
-    {
-        if (_restoreSnapshotMenu == null)
-            return;
-
-        _restoreSnapshotMenu.Clear();
-
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null || project.GameStates.Count == 0)
-        {
-            _restoreSnapshotMenu.AddItem("(no snapshots)", -1);
-            _restoreSnapshotMenu.SetItemDisabled(0, true);
-            return;
-        }
-
-        int id = 0;
-        foreach (var name in project.GameStates.Keys.OrderBy(k => k))
-        {
-            _restoreSnapshotMenu.AddItem(name, id);
-            id++;
-        }
-    }
-
-    private void OnRestoreSnapshotSelected(long id)
-    {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null)
-            return;
-
-        var name = _restoreSnapshotMenu.GetItemText((int)id);
-        _gameController.MainScene.GameObjects.RestoreGameState(name);
+        if (!IsInstanceValid(window) || window.IsQueuedForDeletion())
+            return false;
+        window.GrabFocus();
+        return true;
     }
 
     private void ShowComponentDefinition()
     {
+        if (BroughtForward(_componentDefinition))
+            return;
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
         _componentDefinition = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _componentDefinition.Initialize(ProjectService.Instance.CurrentProject);
-        _componentDefinition.SetTextureFactory(_textureFactory);
-
-        _componentDefinition.CreateObject += OnCreateObject;
-        _componentDefinition.CancelDialog += OnCancelCreate;
-
         _modalDialogs.AddChild(_componentDefinition);
+
+        _componentDefinition.Initialize(ProjectService.Instance.CurrentProject);
     }
 
     private void ShowPrototypeManifest()
     {
+        if (BroughtForward(_prototypeManifest))
+            return;
         var s = "res://Scenes/Prototypes/PrototypeManifest.tscn";
         _prototypeManifest = GD.Load<PackedScene>(s).Instantiate<PrototypeManifest>();
-        _prototypeManifest.TextureFactory = _textureFactory;
-        _prototypeManifest.Refresh(_gameController.MainScene.GameObjects.PrototypeCounts());
-        _prototypeManifest.Closed += PrototypeManifestOnClosed;
-
         _modalDialogs.AddChild(_prototypeManifest);
-    }
-
-    private void PrototypeManifestOnClosed(object sender, EventArgs e)
-    {
-        _prototypeManifest.Closed -= PrototypeManifestOnClosed;
-        _prototypeManifest.Hide();
-        _prototypeManifest.QueueFree();
     }
 
     private void ShowTemplateEditor()
     {
-        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateName = null });
+        ShowTemplateEditorFromEvent(new ShowTemplateEditor { TemplateRef = Ref<Template>.None });
     }
 
     private void ShowTemplateEditorFromEvent(ShowTemplateEditor e)
     {
-        string s = "res://Scenes/Templating/TemplateCreator.tscn";
-        _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
-        _templateCreator.TextureFactory = _textureFactory;
-        _templateCreator.Closed += TemplateCreatorOnClosed;
-        _templateCreator.SetTemplateByName(e.TemplateName);
-        _modalDialogs.AddChild(_templateCreator);
-    }
-
-    private void TemplateCreatorOnClosed(object sender, EventArgs e)
-    {
-        _templateCreator.Closed -= TemplateCreatorOnClosed;
-        _templateCreator.Hide();
-        _templateCreator.QueueFree();
+        if (!BroughtForward(_templateCreator))
+        {
+            string s = "res://Scenes/Templating/TemplateCreator.tscn";
+            _templateCreator = GD.Load<PackedScene>(s).Instantiate<TemplateCreator>();
+            _modalDialogs.AddChild(_templateCreator);
+        }
+        _templateCreator.SetTemplateById(e.TemplateRef);
     }
 
     private void ShowDatasetEditor()
     {
-        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetName = null });
+        ShowDatasetEditorFromEvent(new ShowDatasetEditor { DatasetRef = Ref<Dataset>.None });
     }
 
     private void ShowDatasetEditorFromEvent(ShowDatasetEditor e)
     {
-        string s = "res://Scenes/DataSet/DatasetEditor.tscn";
-        _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
-        _datasetEditor.Closed += DatasetEditorOnClosed;
-
-        _modalDialogs.AddChild(_datasetEditor);
-    }
-
-    private void DatasetEditorOnClosed(object sender, EventArgs e)
-    {
-        _datasetEditor.Closed -= DatasetEditorOnClosed;
-        _datasetEditor.Hide();
-        _datasetEditor.QueueFree();
+        if (!BroughtForward(_datasetEditor))
+        {
+            string s = "res://Scenes/Dataset/DatasetEditor.tscn";
+            _datasetEditor = GD.Load<PackedScene>(s).Instantiate<DatasetEditor>();
+            _modalDialogs.AddChild(_datasetEditor);
+        }
+        if (!e.DatasetRef.IsNone)
+            _datasetEditor.ShownDatasetRef.Value = e.DatasetRef;
+        if (!e.SelectedRowRef.IsNone)
+            _datasetEditor.RevealRow(e.SelectedRowRef);
     }
 
     private void ShowImageManager()
     {
-        ShowImageManagerFromEvent(new ShowImageManagerEvent { ImageReference = Guid.Empty });
+        ShowImageManagerFromEvent(new ShowImageManagerEvent());
     }
 
     private void ShowProjectSettings()
     {
+        if (BroughtForward(_projectSettings))
+            return;
         string s = "res://Scenes/Project/ProjectSettings.tscn";
-        _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettings>();
-        _projectSettings.Closed += ProjectSettingsOnClosed;
+        _projectSettings = GD.Load<PackedScene>(s).Instantiate<ProjectSettingsDialog>();
         _modalDialogs.AddChild(_projectSettings);
     }
 
-    private void ProjectSettingsOnClosed(object sender, EventArgs e)
+    private void ShowSeats()
     {
-        _projectSettings.Closed -= ProjectSettingsOnClosed;
-        _projectSettings.Hide();
-        _projectSettings.QueueFree();
+        if (BroughtForward(_seats))
+            return;
+        var s = "res://Scenes/Project/SeatsWindow.tscn";
+        _seats = GD.Load<PackedScene>(s).Instantiate<SeatsWindow>();
+        _modalDialogs.AddChild(_seats);
+    }
+
+    private void ShowBlueprintManager()
+    {
+        if (BroughtForward(_blueprintManager))
+            return;
+        var s = "res://Scenes/Project/BlueprintManager.tscn";
+        _blueprintManager = GD.Load<PackedScene>(s).Instantiate<BlueprintManager>();
+        _modalDialogs.AddChild(_blueprintManager);
     }
 
     private void ShowImageManagerFromEvent(ShowImageManagerEvent e)
     {
-        string s = "res://Scenes/Controls/ImageManager.tscn";
-        _imageManager = GD.Load<PackedScene>(s).Instantiate<ImageManager>();
-        _imageManager.Closed += ImageManagerOnClosed;
-        _modalDialogs.AddChild(_imageManager);
-    }
-
-    private void ImageManagerOnClosed(object sender, EventArgs e)
-    {
-        _imageManager.Closed -= ImageManagerOnClosed;
-        _imageManager.Hide();
-        _imageManager.QueueFree();
-    }
-
-    public void SetGameController(GameController gameController)
-    {
-        _gameController = gameController;
-    }
-
-    private void FileMenuOnIdPressed(long id)
-    {
-        switch (id)
+        if (!BroughtForward(_imageManager))
         {
-            case 0:
-                ShowProjectManager();
-                break;
+            string s = "res://Scenes/Controls/ImageManager.tscn";
+            _imageManager = GD.Load<PackedScene>(s).Instantiate<ImageManager>();
+            _modalDialogs.AddChild(_imageManager);
+        }
+        if (!e.ImageRef.IsNone)
+            _imageManager.Open(e.ImageRef);
+    }
 
-            case 1:
-                var p = ProjectService.Instance.LoadProject(ProjectService.SampleProjectName);
-                ProjectService.Instance.CurrentProject = p;
-                // Local project open: ask the player which seat they want.
-                if (p != null)
-                    ShowPlayerPositionDialog();
-                break;
+    /// <summary>
+    /// Tells the player about a problem, like one opening or saving a project.
+    /// </summary>
+    /// <param name="host">What the message opens over.</param>
+    public static void ShowMessage(Node host, string title, string message)
+    {
+        var dialog = new AcceptDialog
+        {
+            Title = title,
+            DialogText = message,
+            DialogAutowrap = true,
+            Exclusive = false,
+        };
+        dialog.GetLabel().CustomMinimumSize = new Vector2(480, 0);
+        dialog.Confirmed += dialog.QueueFree;
+        dialog.Canceled += dialog.QueueFree;
+        host.AddChild(dialog);
+        dialog.PopupCentered();
+    }
 
-            case 2:
-                ProjectService.Instance.SaveProject();
-                break;
+    /// <summary>
+    /// Opens the project opened last, or the project manager when there's none or it can't open.
+    /// </summary>
+    public void OpenLastProject()
+    {
+        var last = ProjectLibrary.LastOpened;
+        string error = null;
+        if (System.IO.Directory.Exists(last) && TryOpenProject(last, out error))
+            return;
+        ProjectService.Instance.NewGame();
+        ShowProjectManager();
+        // Over the manager, or the manager would hide it.
+        if (error != null)
+            ShowMessage(_projectManager, "Can't Open Project", error);
+    }
 
-            case 3:
-                ShowSaveSnapshotDialog();
-                break;
-
-            // case 4 is handled by the _restoreSnapshotMenu submenu
-
-            case 5:
-                ShowSnapshotManager();
-                break;
-
-            case 10:
-                ShowMultiplayerDialog();
-                break;
+    private bool TryOpenProject(string folder, out string error)
+    {
+        error = null;
+        try
+        {
+            ProjectService.Instance.OpenProject(folder, out var warning);
+            if (warning != null)
+                ShowMessage(_modalDialogs, "Older Save Opened", warning);
+            return true;
+        }
+        catch (ProjectLoadException e)
+        {
+            error = e.Message;
+            return false;
         }
     }
 
-    private void ShowSaveSnapshotDialog()
+    private void OpenFromProjectManager(string folder)
     {
-        var dialog = new ConfirmationDialog();
-        dialog.Title = "Save Snapshot";
-        dialog.OkButtonText = "Save";
+        bool managerOpen =
+            IsInstanceValid(_projectManager) && !_projectManager.IsQueuedForDeletion();
+        PromptToCloseProject(
+            $"Opening \"{ProjectFolder.NameOf(folder)}\"",
+            "Open",
+            leavesGame: true,
+            managerOpen ? _projectManager : _modalDialogs,
+            () =>
+            {
+                if (MultiplayerManager.Instance?.IsMultiplayerActive == true)
+                    MultiplayerManager.Instance.Disconnect();
+                if (!TryOpenProject(folder, out var error))
+                    ShowMessage(_modalDialogs, "Can't Open Project", error);
+                else if (IsInstanceValid(_projectManager))
+                    _projectManager.QueueFree();
+            }
+        );
+    }
 
-        var vbox = new VBoxContainer();
-        vbox.CustomMinimumSize = new Vector2(300, 0);
+    private void Save()
+    {
+        var current = ProjectService.Instance.CurrentProject;
+        if (current != null && current.Folder == null)
+            ShowSaveAsDialog();
+        else
+            TrySaveProject(_modalDialogs);
+    }
 
-        var nameLabel = new Label();
-        nameLabel.Text = "Snapshot name:";
-        vbox.AddChild(nameLabel);
+    private static bool TrySaveProject(Node host)
+    {
+        if (ProjectService.Instance?.SaveProject() == true)
+            return true;
+        var folder = ProjectService.Instance?.CurrentProject?.Folder;
+        ShowMessage(
+            host,
+            "Can't Save Project",
+            $"Lizzie couldn't save to \"{folder}\". The folder may have been moved or deleted, "
+                + "or something else may be using it. Use Save Project As to save it somewhere else."
+        );
+        return false;
+    }
 
-        var input = new LineEdit();
-        input.PlaceholderText = "Enter snapshot name...";
-        vbox.AddChild(input);
+    /// <summary>
+    /// Asks for a name and location, then saves the project into a new folder there and keeps saving to it.
+    /// </summary>
+    /// <param name="onSaved">Runs once it's saved.</param>
+    /// <param name="host">What the dialogs open over.</param>
+    private void ShowSaveAsDialog(Action onSaved = null, Node host = null)
+    {
+        host ??= _modalDialogs;
+        var dialog = ProjectNameDialog.CreateForNew(
+            "Save Project As",
+            "Save",
+            ProjectLibrary.Location
+        );
+        dialog.OnChosen += (location, name) =>
+        {
+            string folder;
+            try
+            {
+                folder = ProjectFolder.Create(location, name);
+            }
+            catch (Exception e) when (ProjectFolder.IsFileError(e))
+            {
+                ShowMessage(
+                    host,
+                    "Can't Save Project",
+                    $"Lizzie couldn't make a folder for \"{name}\".\n\n{e.Message}"
+                );
+                return;
+            }
+            ProjectLibrary.Location = location;
+            if (!ProjectService.Instance.SaveProjectAs(folder))
+            {
+                // Nothing was saved, so the folder it made goes too.
+                try
+                {
+                    System.IO.Directory.Delete(folder);
+                }
+                catch (Exception e) when (ProjectFolder.IsFileError(e)) { }
+                ShowMessage(host, "Can't Save Project", $"Lizzie couldn't save into \"{folder}\".");
+                return;
+            }
+            onSaved?.Invoke();
+        };
+        host.AddChild(dialog);
+        dialog.Open();
+    }
 
-        var descLabel = new Label();
-        descLabel.Text = "Description (optional):";
-        vbox.AddChild(descLabel);
+    /// <summary>
+    /// On closing the project, prompt the user if necessary, then call <paramref name="done"/>.
+    /// </summary>
+    /// <param name="reason">What closes it, like "Opening \"My Game\"", for the questions.</param>
+    /// <param name="okText">The button that goes ahead when there's nothing to save, like "Open".</param>
+    /// <param name="leavesGame">True when <paramref name="done"/> leaves or ends the multiplayer game.</param>
+    /// <param name="host">What the dialogs open over.</param>
+    private void PromptToCloseProject(
+        string reason,
+        string okText,
+        bool leavesGame,
+        Node host,
+        Action done
+    )
+    {
+        var unsaved = ProjectService.Instance?.HasUnsavedChanges == true;
+        var game = leavesGame ? LeavingGameWarning(reason) : null;
+        if (!unsaved && game == null)
+        {
+            done();
+            return;
+        }
 
-        var descInput = new TextEdit();
-        descInput.CustomMinimumSize = new Vector2(300, 80);
-        descInput.PlaceholderText = "Enter a description...";
-        descInput.WrapMode = TextEdit.LineWrappingMode.Boundary;
-        vbox.AddChild(descInput);
-
-        dialog.AddChild(vbox);
+        var lines = new List<string>();
+        if (game != null)
+            lines.Add(game);
+        if (unsaved)
+            lines.Add(
+                $"This project has unsaved changes. Save before {char.ToLowerInvariant(reason[0])}{reason[1..]}?"
+            );
+        var dialog = new ConfirmationDialog
+        {
+            Title = unsaved ? "Unsaved Changes" : "Leave Game",
+            DialogText = string.Join("\n\n", lines),
+            DialogAutowrap = true,
+            OkButtonText = unsaved ? "Save" : okText,
+        };
+        dialog.GetLabel().CustomMinimumSize = new Vector2(380, 0);
+        if (unsaved)
+            dialog.AddButton("Don't Save", true, "discard");
 
         dialog.Confirmed += () =>
         {
-            var name = input.Text.Trim();
-            if (!string.IsNullOrEmpty(name))
-            {
-                _gameController.MainScene.GameObjects.CaptureGameState(name, descInput.Text.Trim());
-                EventBus.Instance.Publish(new GameStateChangedEvent());
-            }
             dialog.QueueFree();
+            if (unsaved)
+                SaveThen(done, host);
+            else
+                PromptToCloseProject(reason, okText, leavesGame: false, host, done);
         };
-        dialog.Canceled += () => dialog.QueueFree();
+        dialog.CustomAction += action =>
+        {
+            if (action != "discard")
+                return;
+            dialog.QueueFree();
+            done();
+        };
+        dialog.Canceled += dialog.QueueFree;
 
-        _modalDialogs.AddChild(dialog);
+        host.AddChild(dialog);
         dialog.PopupCentered();
     }
 
-    private void ShowSnapshotManager()
+    private static string LeavingGameWarning(string doing)
     {
-        var project = ProjectService.Instance.CurrentProject;
-        if (project == null)
+        var multiplayer = MultiplayerManager.Instance;
+        if (multiplayer?.IsMultiplayerActive != true)
+            return null;
+        return multiplayer.IsServer
+            ? $"{doing} will end the game you're hosting."
+            : $"{doing} will leave the game you joined.";
+    }
+
+    private void SaveThen(Action then, Node host)
+    {
+        if (ProjectService.Instance?.CurrentProject is { Folder: null })
+            ShowSaveAsDialog(then, host);
+        else if (TrySaveProject(host))
+            then();
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationWMCloseRequest)
+            HandleCloseRequest();
+    }
+
+    private void HandleCloseRequest() =>
+        PromptToCloseProject(
+            "Closing",
+            "Quit",
+            leavesGame: false,
+            _modalDialogs,
+            () => GetTree().Quit()
+        );
+
+    private ProjectManager _projectManager;
+
+    public void ShowProjectManager()
+    {
+        if (BroughtForward(_projectManager))
             return;
-
-        var dialog = new Window();
-        dialog.Title = "Snapshot Manager";
-        dialog.Size = new Vector2I(400, 300);
-        dialog.Unresizable = false;
-
-        var vbox = new VBoxContainer();
-        vbox.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        vbox.OffsetLeft = 8;
-        vbox.OffsetTop = 8;
-        vbox.OffsetRight = -8;
-        vbox.OffsetBottom = -8;
-        dialog.AddChild(vbox);
-
-        var list = new ItemList();
-        list.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        vbox.AddChild(list);
-
-        void RefreshList()
-        {
-            list.Clear();
-            foreach (var name in project.GameStates.Keys.OrderBy(k => k))
-                list.AddItem(name);
-        }
-
-        RefreshList();
-
-        var hbox = new HBoxContainer();
-        vbox.AddChild(hbox);
-
-        var restoreBtn = new Button();
-        restoreBtn.Text = "Restore";
-        restoreBtn.Pressed += () =>
-        {
-            var sel = list.GetSelectedItems();
-            if (sel.Length == 0)
-                return;
-            var name = list.GetItemText(sel[0]);
-            _gameController.MainScene.GameObjects.RestoreGameState(name);
-        };
-        hbox.AddChild(restoreBtn);
-
-        var deleteBtn = new Button();
-        deleteBtn.Text = "Delete";
-        deleteBtn.Pressed += () =>
-        {
-            var sel = list.GetSelectedItems();
-            if (sel.Length == 0)
-                return;
-            var name = list.GetItemText(sel[0]);
-            _gameController.MainScene.GameObjects.DeleteGameState(name);
-            EventBus.Instance.Publish(new GameStateChangedEvent());
-            RefreshList();
-        };
-        hbox.AddChild(deleteBtn);
-
-        var closeBtn = new Button();
-        closeBtn.Text = "Close";
-        closeBtn.Pressed += () => dialog.QueueFree();
-        hbox.AddChild(closeBtn);
-
-        dialog.CloseRequested += () => dialog.QueueFree();
-
-        _modalDialogs.AddChild(dialog);
-        dialog.PopupCentered();
-    }
-
-    private void ShowProjectManager()
-    {
-        var s = "res://Scenes/project_manager.tscn";
+        var s = "res://Scenes/Project/ProjectManager.tscn";
         _projectManager = GD.Load<PackedScene>(s).Instantiate<ProjectManager>();
-        _projectManager.Closed += ProjectManagerClosed;
+        _projectManager.OpenRequested += OpenFromProjectManager;
         _modalDialogs.AddChild(_projectManager);
-    }
-
-    private void ProjectManagerClosed(object sender, EventArgs e)
-    {
-        _projectManager.Closed -= ProjectManagerClosed;
-        _projectManager.QueueFree();
     }
 
     private void ShowMultiplayerDialog()
     {
-        if (_multiplayerDialog != null && _multiplayerDialog.Visible)
-        {
-            // Dialog already open, just bring it to front
-            _multiplayerDialog.MoveToForeground();
+        if (BroughtForward(_multiplayerDialog))
             return;
-        }
 
         var d = GD.Load<PackedScene>("res://Scenes/Controls/multiplayer_connect.tscn");
         _multiplayerDialog = d.Instantiate<MultiplayerDialog>();
-        _multiplayerDialog.CloseRequested += MultiplayerDialogClosed;
         _modalDialogs.AddChild(_multiplayerDialog);
         _multiplayerDialog.PopupCentered();
     }
 
-    private void MultiplayerDialogClosed()
-    {
-        if (_multiplayerDialog != null)
-        {
-            _multiplayerDialog.CloseRequested -= MultiplayerDialogClosed;
-            _multiplayerDialog.QueueFree();
-            _multiplayerDialog = null;
-        }
-    }
-
-    private ComponentDefinition _editPanel;
-    private Guid _editingPrototypeId;
-
     private void ShowComponentEditDialog(EditPrototypeEvent editEvent)
     {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                editEvent.PrototypeId,
-                out var p
-            )
-        )
+        var p = Atoms.R.Get(Prototype.ById, editEvent.PrototypeRef);
+        if (p == null)
         {
             return;
         }
-        _editingPrototypeId = editEvent.PrototypeId;
 
         var s = "res://Scenes/ComponentPanels/component_definition.tscn";
-        _editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
-        _editPanel.SetEditMode();
-        _editPanel.SetTextureFactory(_textureFactory);
-        _editPanel.DisplayPrototype(p);
-        _editPanel.Initialize(ProjectService.Instance.CurrentProject);
+        var editPanel = GD.Load<PackedScene>(s).Instantiate<ComponentDefinition>();
+        _modalDialogs.AddChild(editPanel);
 
-        _editPanel.CancelDialog += ComponentEditDialogCancel;
-        _editPanel.CloseDialog += ComponentEditDialogClose;
-        _modalDialogs.AddChild(_editPanel);
+        editPanel.SetEditMode();
+        editPanel.Initialize(ProjectService.Instance.CurrentProject);
+        editPanel.DisplayPrototype(p);
     }
 
-    private void ComponentEditDialogCancel(object sender, EventArgs e)
-    {
-        CloseComponentEditDialog();
-    }
-
-    private void ComponentEditDialogClose(object sender, EventArgs e)
-    {
-        EventBus.Instance.Publish(new PrototypeChangedEvent { PrototypeId = _editingPrototypeId });
-        CloseComponentEditDialog();
-    }
-
-    private void CloseComponentEditDialog()
-    {
-        _editPanel.Hide();
-        _editPanel.QueueFree();
-        _editingPrototypeId = Guid.Empty;
-    }
-
-    public override void _Process(double delta)
-    {
-        //Below is a hack to work around the CloseRequested signal not getting fired properly
-
-        if (_popupShown && _componentPopup.Visible)
-        {
-            _popupShown = false;
-            ComponentPopupClosed();
-        }
-
-        if (_modalDialogs == null)
-        {
-            ModalDialogShown = false;
-        }
-        else
-        {
-            ModalDialogShown = _modalDialogs.GetChildCount() > 0;
-        }
-    }
-
-    /// <summary>
-    /// Check to see if there are any modal dialogs open, and see if the flag needs to be flipped.
-    /// If so, send the appropriate event signal.
-    /// NOTE: All modal dialogs should be added as children to the ModalDialogs node for this to work properly. This is a bit hacky but it works for now and saves us from having to add event hooks for every single dialog we create.
-    /// </summary>
-    private bool _modalDialogShown;
-
-    public bool ModalDialogShown
-    {
-        get => _modalDialogShown;
-        set
-        {
-            if (value == _modalDialogShown)
-                return;
-            _modalDialogShown = value;
-
-            if (value)
-            {
-                EventBus.Instance.Publish<ModalDialogOpenedEvent>();
-            }
-            else
-            {
-                EventBus.Instance.Publish<ModalDialogClosedEvent>();
-            }
-        }
-    }
-
-    private void ComponentPopupClosed()
-    {
-        GetParent<GameController>().ComponentPopupClosed();
-    }
-
-    private void AddItemToPopupMenu(
-        PopupMenu popup,
-        VisualCommand command,
-        string caption,
-        string icon,
-        bool enabled = true,
-        bool checkable = false,
-        bool isChecked = false,
-        bool addQtySubmenu = false
-    )
-    {
-        int index = -1;
-        int id = (int)command;
-
-        if (checkable)
-        {
-            if (!string.IsNullOrEmpty(icon))
-            {
-                popup.AddCheckItem(caption, id);
-            }
-            else
-            {
-                //TODO Enable icon
-                popup.AddCheckItem(caption, id);
-            }
-
-            index = popup.GetItemIndex(id);
-            popup.SetItemChecked(index, isChecked);
-        }
-        else
-        {
-            if (!string.IsNullOrEmpty(icon))
-            {
-                popup.AddItem(caption, id);
-            }
-            else
-            {
-                //TODO Enable icon
-                popup.AddItem(caption, id);
-            }
-
-            index = popup.GetItemIndex(id);
-        }
-
-        popup.SetItemDisabled(index, !enabled);
-
-        if (addQtySubmenu)
-        {
-            // Submenu item IDs are encoded as: baseId * 100 + qty
-            // qty 1-5 = draw that many; qty 0 = draw all
-            var sub = new PopupMenu();
-            sub.Name = $"QtySubmenu_{id}";
-
-            for (int qty = 1; qty <= MAX_CARD_DEAL; qty++)
-                sub.AddItem(qty.ToString(), id * 100 + qty);
-            sub.AddItem("All", id * 100 + 0);
-
-            sub.IdPressed += OnQtySubmenuItemSelected;
-            popup.AddChild(sub);
-            popup.SetItemSubmenu(index, sub.Name);
-        }
-    }
-
-    public const int MAX_CARD_DEAL = 8;
-
-    //we need to save which components are being affected by the right-click menu when it pops up
-    private List<VisualComponentBase> _popupComponents;
-
-    public void BuildPopupMenu(List<VisualComponentBase> components)
-    {
-        if (components.Count == 0)
-            return; //TODO Right click menu for table surface?
-
-        _popupComponents = components;
-
-        bool excludeSingle = components.Count > 1;
-        var comDic = new Dictionary<VisualCommand, int>();
-
-        var fullCommands = new List<MenuCommand>();
-
-        foreach (var c in components)
-        {
-            var cList = c.GetMenuCommands();
-            foreach (var m in cList)
-            {
-                if (m.SingleOnly && excludeSingle)
-                    continue; //skip commands that are single only if we have more than one comp selected
-
-                fullCommands.Add(m);
-                if (comDic.ContainsKey(m.Command))
-                {
-                    comDic[m.Command]++;
-                }
-                else
-                {
-                    comDic.Add(m.Command, 1);
-                }
-            }
-        }
-
-        //only include menu commands that are valid for all selected items
-        var commands = comDic.Where(x => x.Value == components.Count).Select(y => y.Key);
-
-        _componentPopup.Clear();
-
-        // Build a menu from the commands that are valid for all selected items
-        foreach (var command in commands)
-        {
-            var menuCommand = fullCommands.First(x => x.Command == command); // Get the MenuCommand object to access IsChecked and other properties
-
-            switch (command)
-            {
-                case VisualCommand.ToggleLock:
-                    AddItemToPopupMenu(
-                        _componentPopup,
-                        command,
-                        "Frozen",
-                        string.Empty, // Icon path, currently empty
-                        true, // Enabled by default, handled by command logic
-                        true, // Checkable
-                        menuCommand.IsChecked
-                    );
-                    break;
-
-                case VisualCommand.Deal:
-                case VisualCommand.Draw:
-                    AddItemToPopupMenu(
-                        _componentPopup,
-                        command,
-                        menuCommand.Caption,
-                        string.Empty,
-                        true,
-                        false,
-                        false,
-                        addQtySubmenu: true
-                    );
-                    break;
-
-                default:
-                    AddItemToPopupMenu(
-                        _componentPopup,
-                        command,
-                        menuCommand.Caption,
-                        string.Empty, // Icon path, currently empty
-                        true, // Enabled by default, handled by command logic
-                        false
-                    ); // Not checkable
-                    break;
-            }
-        }
-    }
-
-    private void PopupMenuCommandSelected(long id)
-    {
-        // Submenu items handled by OnQtySubmenuItemSelected; skip raw command IDs
-        // that belong to commands with qty submenus (they are parent labels, not actions).
-        if (id >= (int)VisualCommand.MaximumVC)
-            return;
-
-        VisualCommand vc = (VisualCommand)id;
-        if (GetParent() is GameController gc)
-        {
-            gc.ProcessPopupCommand(vc, _popupComponents);
-        }
-    }
-
-    private void OnQtySubmenuItemSelected(long encodedId)
-    {
-        // Decode: baseId * 100 + qty  (qty 0 = All)
-        int qty = (int)(encodedId % 100);
-        VisualCommand vc = (VisualCommand)(encodedId / 100);
-
-        if (qty == 0)
-            qty = int.MaxValue; // sentinel meaning "all"
-
-        if (GetParent() is GameController gc)
-        {
-            gc.ProcessPopupCommandWithQuantity(vc, _popupComponents, qty);
-        }
-    }
-
-    private void OnHelpMenuSelection(long id)
-    {
-        var p = GetParent<GameController>();
-        p.TestFunction();
-    }
-
-    private void OnInsertMenuSelection(long id)
-    {
-        if (id == 1)
-        {
-            ShowPrototypeManifest();
-        }
-
-        if (id == 2)
-        {
-            ShowComponentDefinition();
-        }
-    }
-
-    private void OnEditMenuSelection(long id)
-    {
-        if (id == 1)
-        {
-            ShowTemplateEditor();
-        }
-
-        if (id == 2)
-        {
-            ShowDatasetEditor();
-        }
-
-        if (id == 3)
-        {
-            ShowPrototypeManifest();
-        }
-
-        if (id == 4)
-        {
-            ShowImageManager();
-        }
-
-        if (id == 5)
-        {
-            ShowProjectSettings();
-        }
-    }
-
-    private void OnInsertPressed()
-    {
-        _componentDefinition.Visible = true;
-    }
-
-    public event EventHandler<CreateObjectEventArgs> CreateObject;
-
-    private void OnCreateObject(object sender, CreateObjectEventArgs args)
-    {
-        _componentDefinition.Visible = false;
-        _componentDefinition.QueueFree();
-        CreateObject?.Invoke(this, args);
-    }
-
-    private void OnCancelCreate(object sender, EventArgs e)
-    {
-        _componentDefinition.Visible = false;
-        _componentDefinition.QueueFree();
-    }
-
-    private bool _popupShown;
-    private ProjectSettings _projectSettings;
-
-    public void ShowComponentPopup(Vector2I position)
-    {
-        _componentPopup.Visible = true;
-        _componentPopup.Position = position;
-        _popupShown = true;
-    }
-
-    public void HideComponentPopup()
-    {
-        _componentPopup.Visible = false;
-    }
+    private ProjectSettingsDialog _projectSettings;
 
     private void SetSceneMode(SceneMode mode)
     {
-        GD.Print($"Set Master Mode {mode}");
         var buttons = modeButtons.GetChildren();
         foreach (var i in buttons)
         {
@@ -970,7 +675,7 @@ public partial class UI : CanvasLayer
             case SceneMode.TwoD:
                 buttonNum = 0;
                 break;
-            case SceneMode.ThreeDFixed:
+            case SceneMode.ThreeD:
                 buttonNum = 1;
                 break;
             default:
@@ -991,16 +696,7 @@ public partial class UI : CanvasLayer
 
     private void _on_play_3d_pressed()
     {
-        SetSceneMode(SceneMode.ThreeDFixed);
-    }
-
-    private void TextureTest()
-    {
-        var sv = GetNode<SubViewport>("SubViewport");
-        var target = GetNode<TextureRect>("TestRect");
-
-        var t = sv.GetTexture();
-        target.Texture = t;
+        SetSceneMode(SceneMode.ThreeD);
     }
 
     public void UpdateHoveredName(VisualComponentBase component)
@@ -1014,85 +710,7 @@ public partial class UI : CanvasLayer
         _componentName.Text = component.ComponentName;
     }
 
-    public const int LongClickTime = 1000;
-
-    public float HandY => _handManager.HandY;
-
     public HandManager HandManager => _handManager;
-
-    #region UI Texture Paths
-
-    private const string _texUiBase = "res://Textures/UI/";
-
-    public const string TextureUI_Add = _texUiBase + "add16.png";
-    public const string TextureUI_ArrowDown = _texUiBase + "arrowdown16.png";
-    public const string TextureUI_ArrowUp = _texUiBase + "arrowup16.png";
-    public const string TextureUI_BackSurface = _texUiBase + "back_surface16.png";
-    public const string TextureUI_Bottom = _texUiBase + "bottom.png";
-    public const string TextureUI_Bounds = _texUiBase + "bounds16.png";
-    public const string TextureUI_Center = _texUiBase + "center.png";
-    public const string TextureUI_Checkbox = _texUiBase + "checkbox16.png";
-    public const string TextureUI_Circle =
-        _texUiBase + "circle_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_ContentCopy =
-        _texUiBase + "content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_CropLandscape =
-        _texUiBase + "crop_landscape_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_CropPortrait =
-        _texUiBase + "crop_portrait_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_Cube128 = _texUiBase + "cube128.png";
-    public const string TextureUI_Cube64 = _texUiBase + "cube64.png";
-    public const string TextureUI_Cube3d =
-        _texUiBase + "deployed_code_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_Flip =
-        _texUiBase + "flip_camera_android_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg";
-    public const string TextureUI_FolderOpen =
-        _texUiBase + "folder_open_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_FrontSurface = _texUiBase + "front_surface16.png";
-    public const string TextureUI_Fullscreen = _texUiBase + "fullscreen.png";
-    public const string TextureUI_Grid16 = _texUiBase + "Grid16.png";
-    public const string TextureUI_Grid24 =
-        _texUiBase + "grid_on_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_HorTrack = _texUiBase + "HorTrack.png";
-    public const string TextureUI_Die =
-        _texUiBase + "ifl_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_Image = _texUiBase + "image16.png";
-    public const string TextureUI_Inventory =
-        _texUiBase + "inventory_2_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_Inventory_Alt =
-        _texUiBase + "inventory_2_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24 (1).svg";
-    public const string TextureUI_Share =
-        _texUiBase + "ios_share_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_Left = _texUiBase + "left.png";
-    public const string TextureUI_Lock16 =
-        _texUiBase + "lock_16dp_F0F0F0_FILL0_wght400_GRAD0_opsz20.svg";
-    public const string TextureUI_Lock24 =
-        _texUiBase + "lock_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_Meeple24 = _texUiBase + "meeple24.png";
-    public const string TextureUI_Meeple32 = _texUiBase + "meeple32.png";
-    public const string TextureUI_MeepleOutline24 = _texUiBase + "meepleo24.png";
-    public const string TextureUI_MenuWhite = _texUiBase + "menu white.png";
-    public const string TextureUI_Menu = _texUiBase + "menu.png";
-    public const string TextureUI_Menu16 = _texUiBase + "menu16.png";
-    public const string TextureUI_Menu24 = _texUiBase + "menu24.png";
-    public const string TextureUI_Menu32 = _texUiBase + "menu32.png";
-    public const string TextureUI_Middle = _texUiBase + "middle.png";
-    public const string TextureUI_Outbox24 =
-        _texUiBase + "outbox_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
-    public const string TextureUI_Pencil = _texUiBase + "pencil.png";
-    public const string TextureUI_PerimTrack = _texUiBase + "PerimTrack.png";
-    public const string TextureUI_Right = _texUiBase + "right.png";
-    public const string TextureUI_RotateRight = _texUiBase + "rotate-right.png";
-    public const string TextureUI_Text = _texUiBase + "text.png";
-    public const string TextureUI_Top = _texUiBase + "top.png";
-    public const string TextureUI_TrashCan = _texUiBase + "trash-can.png";
-    public const string TextureUI_VerTrack = _texUiBase + "VerTrack.png";
-    public const string TextureUI_Visibility = _texUiBase + "visibility16.png";
-    public const string TextureUI_VisibilityOff = _texUiBase + "visibility_off16.png";
-    public const string TextureUI_ZoomIn = _texUiBase + "zoom-in.png";
-    public const string TextureUI_ZoomOut = _texUiBase + "zoom-out.png";
-
-    #endregion
 }
 
 public class SceneModeChangeArgs : EventArgs

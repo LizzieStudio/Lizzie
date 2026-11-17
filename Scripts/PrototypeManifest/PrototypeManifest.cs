@@ -1,16 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Channels;
 using Godot;
 
-public partial class PrototypeManifest : Window
+namespace Lizzie;
+
+public partial class PrototypeManifest : Window, ICommandView
 {
     private SplitContainer _mainContainer;
     private Tree _prototypeTree;
     private TreeItem _root;
-
-    private Button _close;
 
     private ComponentPreview _preview;
 
@@ -19,14 +17,11 @@ public partial class PrototypeManifest : Window
     private Button _spawnProto;
     private Button _deleteProto;
 
-    private Button _deleteAllUnused;
-    private Button _hideUnused;
-
     private Prototype _selectedPrototype;
-    public Prototype SelectedPrototype
+    private Prototype SelectedPrototype
     {
         get => _selectedPrototype;
-        private set
+        set
         {
             _selectedPrototype = value;
             OnPrototypeSelected();
@@ -42,8 +37,7 @@ public partial class PrototypeManifest : Window
         _preview = GetNode<ComponentPreview>("%ComponentPreview");
         _preview.SetComponentX(-200);
 
-        _close = GetNode<Button>("%Close");
-        _close.Pressed += OnClose;
+        CloseRequested += QueueFree;
 
         _editProto = GetNode<Button>("%EditProto");
         _editProto.Pressed += () =>
@@ -51,7 +45,7 @@ public partial class PrototypeManifest : Window
             if (SelectedPrototype != null)
             {
                 EventBus.Instance.Publish(
-                    new EditPrototypeEvent { PrototypeId = SelectedPrototype.PrototypeRef }
+                    new EditPrototypeEvent { PrototypeRef = SelectedPrototype.Id }
                 );
             }
         };
@@ -65,45 +59,17 @@ public partial class PrototypeManifest : Window
         _deleteProto = GetNode<Button>("%DeleteProto");
         _deleteProto.Pressed += DeletePrototype;
 
-        _deleteAllUnused = GetNode<Button>("%DeleteUnused");
-        _hideUnused = GetNode<Button>("%HideUnused");
+        EventBus.Instance.Subscribe<SpawnPrototypeEvent>(OnSpawn);
 
         InitializePrototypeGrid();
-
-        if (_refreshRequired)
-        {
-            Refresh(_prototypeCounts);
-        }
-
-        EventBus.Instance.Subscribe<PrototypeChangedEvent>(RefreshSelectedPrototype);
     }
 
-    public event EventHandler Closed;
+    // Gets out of the way of placing a component, whether it's added from here or just created.
+    private void OnSpawn(SpawnPrototypeEvent _) => QueueFree();
 
-    private void OnClose()
+    public override void _EnterTree()
     {
-        Hide();
-        Closed?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void RefreshSelectedPrototype(PrototypeChangedEvent e)
-    {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(e.PrototypeId, out var p)
-        )
-            return;
-
-        SelectedPrototype = p;
-
-        var selectedItem = _prototypeTree.GetSelected();
-        if (selectedItem == null)
-            return;
-
-        var prototypeRef = Guid.Parse(selectedItem.GetMetadata(0).AsString());
-        if (prototypeRef == SelectedPrototype.PrototypeRef)
-        {
-            selectedItem.SetText(0, p.Name);
-        }
+        Atoms.R.Watch(this, Sync);
     }
 
     private void InitializePrototypeGrid()
@@ -114,7 +80,6 @@ public partial class PrototypeManifest : Window
         _prototypeTree.SelectMode = Tree.SelectModeEnum.Row;
         _prototypeTree.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         _prototypeTree.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _prototypeTree.ButtonClicked += PrototypeEditClicked;
 
         _prototypeTree.ColumnTitlesVisible = true;
         _prototypeTree.SetColumnTitle(0, "Name");
@@ -145,104 +110,34 @@ public partial class PrototypeManifest : Window
         _root = _prototypeTree.CreateItem();
     }
 
-    private void PrototypeEditClicked(TreeItem item, long column, long id, long mouseButtonIndex)
-    {
-        var prototypeRef = Guid.Parse(item.GetMetadata(0).AsString());
-
-        switch (id)
-        {
-            case 0:
-                EventBus.Instance.Publish(new EditPrototypeEvent { PrototypeId = prototypeRef });
-                break;
-
-            case 1:
-                SpawnPrototype(prototypeRef);
-                break;
-
-            case 2:
-                DuplicatePrototype(prototypeRef);
-                break;
-
-            case 3:
-                DeletePrototype(prototypeRef);
-                break;
-        }
-    }
-
     private void SpawnPrototype()
     {
         if (_selectedPrototype != null)
         {
-            SpawnPrototype(_selectedPrototype.PrototypeRef);
+            EventBus.Instance.Publish(
+                new SpawnPrototypeEvent { PrototypeRef = _selectedPrototype.Id }
+            );
         }
-    }
-
-    private void SpawnPrototype(Guid prototypeRef)
-    {
-        OnClose();
-        EventBus.Instance.Publish(new SpawnPrototypeEvent { PrototypeRef = prototypeRef });
     }
 
     private void DeletePrototype()
     {
-        if (_selectedPrototype != null)
-        {
-            DeletePrototype(_selectedPrototype.PrototypeRef);
-        }
-    }
-
-    private void DeletePrototype(Guid prototypeRef)
-    {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var prototype
-            )
-        )
+        if (_selectedPrototype == null)
             return;
 
-        var dialog = new ConfirmationDialog();
-        dialog.Title = "Delete Prototype";
-        dialog.DialogText = $"Delete \"{prototype.Name}\"? This cannot be undone.";
-        dialog.OkButtonText = "Delete";
-
-        dialog.Confirmed += () =>
-        {
-            ProjectService.Instance.DeletePrototype(prototypeRef);
-            Refresh(_prototypeCounts);
-            dialog.QueueFree();
-        };
-        dialog.Canceled += () => dialog.QueueFree();
-
-        AddChild(dialog);
-        dialog.PopupCentered();
+        Atoms.R.Write(this, _selectedPrototype with { Deleted = true });
     }
 
     private void DuplicatePrototype()
     {
-        if (_selectedPrototype != null)
-        {
-            DuplicatePrototype(_selectedPrototype.PrototypeRef);
-        }
-    }
-
-    private void DuplicatePrototype(Guid prototypeRef)
-    {
-        if (
-            !ProjectService.Instance.CurrentProject.Prototypes.TryGetValue(
-                prototypeRef,
-                out var original
-            )
-        )
+        if (_selectedPrototype == null)
             return;
 
-        var existingNames = ProjectService
-            .Instance.CurrentProject.Prototypes.Values.Select(p => p.Name)
-            .ToHashSet();
+        var existingNames = Atoms.R.Get(Prototype.Live).Select(p => p.Name).ToHashSet();
 
         // Strip any existing trailing " (N)" suffix before generating the new name
         var baseName = System.Text.RegularExpressions.Regex.Replace(
-            original.Name,
+            _selectedPrototype.Name,
             @"\s*\(\d+\)$",
             string.Empty
         );
@@ -257,53 +152,46 @@ public partial class PrototypeManifest : Window
 
         var duplicate = new Prototype
         {
-            PrototypeRef = Guid.NewGuid(),
+            Id = Ref<Prototype>.Create(),
             Name = newName,
-            Type = original.Type,
-            Parameters = new Dictionary<string, object>(original.Parameters),
+            Parameters = _selectedPrototype.Parameters,
         };
-        duplicate.Parameters["ComponentName"] = newName;
 
-        ProjectService.Instance.UpdatePrototype(duplicate);
-        Refresh(_prototypeCounts);
+        Atoms.R.Write(this, duplicate);
     }
 
-    private bool _refreshRequired;
-
-    public void Refresh(Dictionary<Guid, int> prototypeCounts)
+    private void Sync(IWatchReader R)
     {
-        _prototypeCounts = prototypeCounts;
-
-        if (!IsNodeReady())
-        {
-            _refreshRequired = true;
-            return;
-        }
-        _preview.ClearComponent();
-        _preview.SetComponentVisibility(false);
-        LoadPrototypes(prototypeCounts);
-        _refreshRequired = false;
-    }
-
-    private Dictionary<Guid, int> _prototypeCounts;
-
-    private void LoadPrototypes(Dictionary<Guid, int> prototypeCounts)
-    {
-        if (ProjectService.Instance?.CurrentProject == null)
-            return;
-
-        /*
-        Texture2D pencil = ResourceLoader.Load<Texture2D>("res://Textures/UI/pencil.png");
-        Texture2D trash = ResourceLoader.Load<Texture2D>("res://Textures/UI/trash-can.png");
-        Texture2D copy =
-            ResourceLoader.Load<Texture2D>("res://Textures/UI/content_copy_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg");
-        Texture2D spawn = ResourceLoader.Load<Texture2D>("res://Textures/UI/bottom.png");
-        */
-
         _prototypeTree.Clear();
         _root = _prototypeTree.CreateItem();
 
-        var prototypes = ProjectService.Instance.CurrentProject.Prototypes.Values.ToList();
+        var prototypes = R.Get(Prototype.Live);
+
+        // The Qty column, counted on the stage the view shows, leaving out the removed components.
+        // A prototype that spawns decks counts its decks, not their cards.
+        var counts = R.Get(
+                ComponentPosition.ByStage,
+                ProjectService.Instance.GameObjects.ShownStage(R)
+            )
+            .Where(s => !R.IsRemoved(s))
+            .Select(R.GetComponent)
+            .Where(c =>
+                !(
+                    c.IsItem
+                    && R.Get(Prototype.ById, c.PrototypeRef)?.Parameters
+                        is PrintedParameters { SpawnDeck: true }
+                )
+            )
+            .GroupBy(c => c.PrototypeRef)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var selectedRef = _selectedPrototype?.Id ?? Ref<Prototype>.None;
+        _selectedPrototype = prototypes.FirstOrDefault(p => p.Id == selectedRef);
+        if (_selectedPrototype == null)
+        {
+            _preview.ClearComponent();
+            _preview.SetComponentVisibility(false);
+        }
 
         if (_sortColumn == 0)
         {
@@ -324,27 +212,13 @@ public partial class PrototypeManifest : Window
             item.SetText(0, prototype.Name ?? "");
             item.SetText(1, prototype.Type.ToString());
 
-            if (
-                prototypeCounts != null
-                && prototypeCounts.TryGetValue(prototype.PrototypeRef, out var count)
-            )
-            {
-                item.SetText(2, count.ToString());
-            }
-            else
-            {
-                item.SetText(2, "0");
-            }
+            item.SetText(2, counts.GetValueOrDefault(prototype.Id).ToString());
             item.SetTextAlignment(2, HorizontalAlignment.Center);
 
-            item.SetMetadata(0, prototype.PrototypeRef.ToString());
+            item.SetMetadata(0, prototype.Id);
 
-            /*
-            item.AddButton(2, pencil);
-            item.AddButton(2, spawn);
-            item.AddButton(2, copy);
-            item.AddButton(2, trash);
-            */
+            if (prototype == _selectedPrototype)
+                item.Select(0);
         }
     }
 
@@ -363,7 +237,7 @@ public partial class PrototypeManifest : Window
             _sortAscending = true;
         }
 
-        LoadPrototypes(_prototypeCounts);
+        Atoms.R.QueueSync(this);
     }
 
     private void OnTreeItemSelected()
@@ -372,17 +246,14 @@ public partial class PrototypeManifest : Window
         if (selectedItem == null)
             return;
 
-        var prototypeRef = Guid.Parse(selectedItem.GetMetadata(0).AsString());
+        var prototypeRef = (Ref<Prototype>)selectedItem.GetMetadata(0);
 
-        if (
-            ProjectService.Instance?.CurrentProject?.Prototypes.TryGetValue(
-                prototypeRef,
-                out var prototype
-            ) == true
-        )
-        {
+        if (prototypeRef == _selectedPrototype?.Id)
+            return;
+
+        var prototype = Atoms.R.Get(Prototype.ById, prototypeRef);
+        if (prototype != null)
             SelectedPrototype = prototype;
-        }
     }
 
     private void OnPrototypeSelected()
@@ -390,22 +261,6 @@ public partial class PrototypeManifest : Window
         //update the preview
         _preview.ClearComponent();
 
-        string row = "0";
-
-        var datasetParam = Utility.GetParam<string>(SelectedPrototype.Parameters, "Dataset");
-        if (!string.IsNullOrEmpty(datasetParam))
-        {
-            ProjectService.Instance.CurrentProject.Datasets.TryGetValue(
-                datasetParam,
-                out var dataset
-            );
-
-            if (dataset != null)
-                row = dataset.Rows.First().Key;
-        }
-
-        _preview.Build(SelectedPrototype, row, TextureFactory);
+        _preview.Build(SelectedPrototype);
     }
-
-    public TextureFactory TextureFactory { get; set; }
 }

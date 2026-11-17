@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Reflection;
+using System.Text.RegularExpressions;
 using Godot;
+using static Lizzie.TextureFactory.TextureObject;
 
-namespace Lizzie.Scripts.Templating;
+namespace Lizzie;
 
 public class TemplateElement : ITemplateElement
 {
@@ -20,7 +22,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "X",
-                Value = "{HalfWidth}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -28,7 +30,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "Y",
-                Value = "{HalfHeight}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -36,7 +38,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "Width",
-                Value = "{Width}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -44,7 +46,7 @@ public class TemplateElement : ITemplateElement
             {
                 Type = TemplateParameter.TemplateParameterType.Number,
                 Name = "Height",
-                Value = "{Height}",
+                Value = "50",
             }
         );
         Parameters.Add(
@@ -55,10 +57,17 @@ public class TemplateElement : ITemplateElement
                 Value = "0",
             }
         );
+        Parameters.Add(
+            new TemplateParameter()
+            {
+                Type = TemplateParameter.TemplateParameterType.Boolean,
+                Name = "Visible",
+                Value = "True",
+            }
+        );
     }
 
-    public int Id { get; set; }
-    public int Parent { get; set; } = -1; //top level
+    public SnowTag Id { get; set; } = SnowTag.None;
 
     public void SetParameterValue(string name, string value)
     {
@@ -76,25 +85,23 @@ public class TemplateElement : ITemplateElement
         return new List<TextureFactory.TextureObject>();
     }
 
+    public bool IsVisible(TextureContext context) =>
+        EvaluateBooleanParameter(_parameters, "Visible", context);
+
     public List<ITemplateElement> Children { get; } = new();
 
     protected void UpdateCoreParameterData(TextureFactory.TextureObject to, TextureContext context)
     {
-        to.CenterX = EvaluateNumberParameter(_parameters, "X", context);
-        to.CenterY = EvaluateNumberParameter(_parameters, "Y", context);
-        to.Anchor = EvaluateAnchorParameter(_parameters, "Anchor", context);
-        to.Height = EvaluateNumberParameter(_parameters, "Height", context);
-        to.Width = EvaluateNumberParameter(_parameters, "Width", context);
+        to.CenterX = EvaluateFloatParameter(_parameters, "X", context);
+        to.CenterY = EvaluateFloatParameter(_parameters, "Y", context);
+        to.Height = EvaluateFloatParameter(_parameters, "Height", context);
+        to.Width = EvaluateFloatParameter(_parameters, "Width", context);
         to.RotationDegrees = EvaluateNumberParameter(_parameters, "Rotation", context);
     }
 
-    public event EventHandler<EventArgs> ElementUpdated;
-
-    protected virtual void OnElementUpdated() => ElementUpdated?.Invoke(this, EventArgs.Empty);
-
     #region Parameter Processing
 
-    public TemplateParameter GetParameterByName(string name) =>
+    private TemplateParameter GetParameterByName(string name) =>
         _parameters.FirstOrDefault(x => x.Name == name);
 
     public string EvaluateTextParameter(
@@ -107,10 +114,27 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return string.Empty;
 
-        return ProcessKeywords(p.Value, context);
+        return Substitute(p.Value, context);
     }
 
+    /// <summary>
+    /// The number parameter <paramref name="key"/>, rounded to a whole number.
+    /// </summary>
     public int EvaluateNumberParameter(
+        IList<TemplateParameter> parameters,
+        string key,
+        TextureContext context
+    ) =>
+        (int)
+            MathF.Round(
+                EvaluateFloatParameter(parameters, key, context),
+                MidpointRounding.AwayFromZero
+            );
+
+    /// <summary>
+    /// The number parameter <paramref name="key"/>, or 0 when it's missing or isn't a number.
+    /// </summary>
+    public float EvaluateFloatParameter(
         IList<TemplateParameter> parameters,
         string key,
         TextureContext context
@@ -120,9 +144,12 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return 0;
 
-        var o = ProcessKeywords(p.Value, context);
-
-        _ = int.TryParse(o, out var result) ? result : 0;
+        float.TryParse(
+            Substitute(p.Value, context),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var result
+        );
         return result;
     }
 
@@ -136,7 +163,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return HorizontalAlignment.Left;
 
-        var o = ProcessKeywords(p.Value, context);
+        var o = Substitute(p.Value, context);
 
         switch (o)
         {
@@ -161,7 +188,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return VerticalAlignment.Top;
 
-        var o = ProcessKeywords(p.Value, context);
+        var o = Substitute(p.Value, context);
 
         switch (o)
         {
@@ -186,7 +213,7 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return Colors.Black;
 
-        var s = ProcessKeywords(p.Value, context);
+        var s = Substitute(p.Value, context);
 
         return Color.FromString(s, Colors.Black);
     }
@@ -201,28 +228,11 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return false;
 
-        var o = ProcessKeywords(p.Value, context);
-
-        if (string.IsNullOrWhiteSpace(o))
-            return false;
-
-        var c = o.ToUpper()[0];
-
-        return (c == 'T' || c == 'Y' || c == '1');
+        return IsTruthy(Substitute(p.Value, context));
     }
 
-    public TextureFactory.TextureObject.AnchorPoint EvaluateAnchorParameter(
-        IList<TemplateParameter> parameters,
-        string key,
-        TextureContext context
-    )
-    {
-        var p = parameters.FirstOrDefault(x => x.Name == key);
-        if (p == null)
-            return TextureFactory.TextureObject.AnchorPoint.TopLeft;
-
-        return TextureFactory.TextureObject.AnchorStringToEnum(ProcessKeywords(p.Value, context));
-    }
+    public static bool IsTruthy(string value) =>
+        value.Trim().ToLowerInvariant() is not ("" or "0" or "false" or "f" or "no" or "n");
 
     public TrackElement.TrackTypeEnum EvaluateTrackParameter(
         IList<TemplateParameter> parameters,
@@ -234,71 +244,21 @@ public class TemplateElement : ITemplateElement
         if (p == null)
             return TrackElement.TrackTypeEnum.Horizontal;
 
-        return TextureFactory.TextureObject.TrackStringToEnum(ProcessKeywords(p.Value, context));
-    }
-
-    private string ProcessKeywords(string parameterVal, TextureContext context)
-    {
-        var s = parameterVal.Replace(
-            "{Width}",
-            context.ParentSize.X.ToString(),
-            StringComparison.InvariantCultureIgnoreCase
-        );
-
-        s = s.Replace(
-            "{Height}",
-            context.ParentSize.Y.ToString(),
-            StringComparison.InvariantCultureIgnoreCase
-        );
-
-        s = s.Replace(
-            "{HalfWidth}",
-            ((int)(context.ParentSize.X / 2)).ToString(),
-            StringComparison.InvariantCultureIgnoreCase
-        );
-
-        s = s.Replace(
-            "{HalfHeight}",
-            ((int)(context.ParentSize.Y / 2)).ToString(),
-            StringComparison.InvariantCultureIgnoreCase
-        );
-
-        //check dataset to column match
-        if (
-            context.DataSet != null
-            && !string.IsNullOrEmpty(context.CurrentRowName)
-            && context.DataSet.Rows.ContainsKey(context.CurrentRowName)
-        )
-        {
-            s = s.Replace(
-                "{Name}",
-                context.CurrentRowName,
-                StringComparison.InvariantCultureIgnoreCase
-            );
-
-            for (int i = 0; i < context.DataSet.Columns.Count; i++)
-            {
-                var r = "{" + context.DataSet.Columns[i] + "}";
-                s = s.Replace(r, context.DataSet.Rows[context.CurrentRowName].Data[i]);
-            }
-        }
-
-        return s;
+        return TrackStringToEnum(Substitute(p.Value, context));
     }
 
     /// <summary>
-    /// Retrieves all public static Color fields from the Godot.Colors class.
+    /// Replaces each {Column} in <paramref name="text"/> with the current row's value.
     /// </summary>
-    private List<(string Name, Color Value)> GetAllColors()
-    {
-        var colorType = typeof(Colors);
-
-        return colorType
-            .GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(f => f.FieldType == typeof(Color))
-            .Select(f => (f.Name, (Color)f.GetValue(null)!))
-            .ToList();
-    }
+    public static string Substitute(string text, TextureContext context) =>
+        Regex.Replace(
+            text,
+            @"\{([^{}]+)\}",
+            match =>
+                context.Values?.GetValueOrDefault(match.Groups[1].Value) is { } value
+                    ? value
+                    : match.Value
+        );
 
     #endregion
 }
@@ -308,14 +268,7 @@ public interface ITemplateElement
     public enum TemplateElementType
     {
         Text,
-        Box,
         Image,
-        Note,
-        Cirlce,
-        Polygon,
-        Table,
-        Line,
-        Container,
         Frame,
         Track,
     }
@@ -328,8 +281,9 @@ public interface ITemplateElement
 
     IList<TextureFactory.TextureObject> GetElementData(TextureContext context);
 
-    int Id { get; set; }
-    int Parent { get; set; }
+    bool IsVisible(TextureContext context);
+
+    SnowTag Id { get; set; }
 
     List<ITemplateElement> Children { get; }
 
@@ -343,12 +297,12 @@ public class TemplateParameter
         Text,
         Number,
         Color,
-        Anchor,
         Boolean,
         HorizontalAlignment,
         VerticalAlignment,
         Image,
         TrackType,
+        Sequence,
     }
 
     public TemplateParameterType Type { get; set; }

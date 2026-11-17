@@ -1,0 +1,69 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Godot;
+
+namespace Lizzie;
+
+/// <param name="renumber">
+/// Replaces each tag as it's written.
+/// </param>
+public sealed class SnowTagJsonConverter(IReadOnlyDictionary<SnowTag, SnowTag> renumber = null)
+    : JsonConverter<SnowTag>
+{
+    public override void Write(Utf8JsonWriter writer, SnowTag tag, JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue((int)Renumbered(tag));
+    }
+
+    public override SnowTag Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
+    {
+        if (!reader.TryGetInt32(out var value))
+        {
+            GD.PrintErr("SnowTag from json could not be parsed");
+            return SnowTag.None;
+        }
+        return new SnowTag(value);
+    }
+
+    public override void WriteAsPropertyName(
+        Utf8JsonWriter writer,
+        SnowTag tag,
+        JsonSerializerOptions options
+    )
+    {
+        writer.WritePropertyName(Renumbered(tag).ToString());
+    }
+
+    public override SnowTag ReadAsPropertyName(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
+    {
+        return SnowTag.TryParse(reader.GetString(), out var tag) ? tag : SnowTag.None;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tag"/> can be written, which in a save means the save reaches it.
+    /// </summary>
+    public bool Writes(SnowTag tag) =>
+        renumber == null || tag == SnowTag.None || renumber.ContainsKey(tag);
+
+    private SnowTag Renumbered(SnowTag tag)
+    {
+        if (renumber == null || tag == SnowTag.None)
+            return tag;
+        return renumber.TryGetValue(tag, out var to)
+            ? to
+            : throw new InvalidOperationException(
+                $"SnowTag {tag} was written but JsonWalker never found it, so it has no new number. "
+                    + "A converter probably writes a SnowTag the walker can't see into."
+            );
+    }
+}
